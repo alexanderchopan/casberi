@@ -223,8 +223,18 @@ struct AddressesSection: View {
         s.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive], locale: .current)
     }
 
+    /// One row's height: a 44pt target with 12pt of air, so 36pt faces stand
+    /// 20pt apart (they were 6pt apart on 46pt rows — "overlapping").
+    static let rowPitch: CGFloat = 56
+
     // MARK: - The list (section 1: Recent, then Everyone alphabetical)
 
+    /// Recent, then everyone under LETTER headings (the design pass,
+    /// 2026-09-25 — user: "the avatars seem like they are overlapping"): the
+    /// rows are 56pt on a 36pt face, so the faces stand 20pt apart, and a
+    /// letter says where you are the way Apple's own book does. Recent wears
+    /// the day divider's hue because it names a time (§740); a letter does
+    /// not, so it stays grey. No index bar (§752).
     private var list: some View {
         let recent = shown.filter { ($0.lastActedAt ?? .distantPast) > Date.now.addingTimeInterval(-30 * 86400) }
             .sorted { ($0.lastActedAt ?? .distantPast) > ($1.lastActedAt ?? .distantPast) }
@@ -232,28 +242,38 @@ struct AddressesSection: View {
             if l.isUnnamed != r.isUnnamed { return !l.isUnnamed }
             return l.name.localizedStandardCompare(r.name) == .orderedAscending
         }
-        return VStack(alignment: .leading, spacing: DS.Space.s6) {
+        return LazyVStack(alignment: .leading, spacing: 0) {
             if !recent.isEmpty {
-                group(Text("Recent"), rows: recent)
+                heading(Text("Recent"), tone: DS.brandInk)
+                ForEach(recent) { contact in row(contact) }
             }
-            group(recent.isEmpty ? nil : Text("Everyone"), rows: everyone)
+            ForEach(Self.lettered(everyone), id: \.letter) { section in
+                heading(Text(verbatim: section.letter), tone: DS.textTertiary)
+                ForEach(section.rows) { contact in row(contact) }
+            }
         }
     }
 
-    private func group(_ name: Text?, rows: [Contact]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let name {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    name.dsText(.heading17).foregroundStyle(DS.textPrimary)
-                    Text(rows.count.formatted())
-                        .dsText(.subhead12).monospacedDigit().foregroundStyle(DS.textTertiary)
-                    Spacer(minLength: 0)
-                }
-            }
-            LazyVStack(spacing: DS.Space.s1) {
-                ForEach(rows) { contact in row(contact) }
-            }
+    private func heading(_ text: Text, tone: Color) -> some View {
+        text
+            .dsText(.label12)
+            .foregroundStyle(tone)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s1)
+    }
+
+    /// The letter a name files under: its first letter, folded; `#` for a
+    /// digit, a symbol or an auto-name (`…44b1` files last, under `#`).
+    static func lettered(_ rows: [Contact]) -> [(letter: String, rows: [Contact])] {
+        var out: [(letter: String, rows: [Contact])] = []
+        for contact in rows {
+            let first = fold(contact.name).first
+            let letter = (contact.isUnnamed || first?.isLetter != true) ? "#" : String(first!).uppercased()
+            if let i = out.firstIndex(where: { $0.letter == letter }) { out[i].rows.append(contact) }
+            else { out.append((letter, [contact])) }
         }
+        return out
     }
 
     private func row(_ contact: Contact) -> some View {
@@ -261,7 +281,7 @@ struct AddressesSection: View {
             opened = contact
         } label: {
             HStack(spacing: DS.Space.s3) {
-                ContactFace(contact: contact, size: DS.Mark.tile)
+                ContactFace(contact: contact, size: DS.Face.list)
                 // The face and the name, nothing under it (user, 2026-09-25:
                 // "why is a second line necessary under each name") — the
                 // sheet says every address the contact carries.
@@ -272,6 +292,7 @@ struct AddressesSection: View {
                 Spacer(minLength: DS.Space.s2)
                 DSPushRowTrail()
             }
+            .frame(minHeight: Self.rowPitch)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -317,7 +338,32 @@ struct ContactFace: View {
     var size: CGFloat = DS.Face.list
 
     var body: some View {
-        AddressMark(entry: entry, size: size)
+        // A wallet keeps its identicon and a contract, Safe or key its
+        // glyph (`AddressMark`'s rules); everybody else with no picture
+        // wears their INITIALS in the ring — forty identical grey
+        // silhouettes told nobody apart (the design pass, 2026-09-25;
+        // §753's rule for a face with no picture).
+        if contact.avatar == nil, contact.lead.kind != .wallet,
+           contact.kind == .person || contact.kind == .organization || contact.kind == .publication {
+            Circle()
+                .fill(DS.fillFaint)
+                .frame(width: size, height: size)
+                .overlay {
+                    Text(Self.initials(contact.name))
+                        .font(.system(size: size * 0.42, weight: .semibold, design: .rounded))
+                        .foregroundStyle(DS.textSecondary)
+                }
+        } else {
+            AddressMark(entry: entry, size: size)
+        }
+    }
+
+    /// Up to two initials: the first letters of the first two words, or
+    /// the first letter alone for a handle or a one-word name.
+    static func initials(_ name: String) -> String {
+        let words = name.split(whereSeparator: { $0 == " " || $0 == "-" }).prefix(2)
+        let letters = words.compactMap { $0.first(where: \.isLetter) }.map { String($0).uppercased() }
+        return letters.isEmpty ? "#" : letters.joined()
     }
 
     private var entry: AddressBook.Entry {
@@ -432,7 +478,7 @@ struct ContactSheet: View {
                     // No section word (user, 2026-09-25: "you can't say
                     // 'identities' … doesn't even need a section descriptor"):
                     // the rows are the addresses, under the name.
-                    VStack(spacing: DS.Space.s1) {
+                    VStack(spacing: 0) {
                         ForEach(contact.identities, id: \.key) { identity in
                             identityRow(identity)
                         }
@@ -440,7 +486,7 @@ struct ContactSheet: View {
                     if !withYou.isEmpty {
                         VStack(alignment: .leading, spacing: DS.Space.s2) {
                             Text("With you").dsText(.heading17).foregroundStyle(DS.textPrimary)
-                            VStack(spacing: DS.Space.s1) {
+                            VStack(spacing: 0) {
                                 ForEach(withYou) { row in withYouRow(row) }
                             }
                         }
@@ -537,6 +583,7 @@ struct ContactSheet: View {
             .dsTapTarget()
             .accessibilityLabel(Text("Copy"))
         }
+        .frame(minHeight: AddressesSection.rowPitch)
         .dsListRow()
     }
 
@@ -570,6 +617,7 @@ struct ContactSheet: View {
                 Spacer(minLength: DS.Space.s2)
                 DSPushRowTrail()
             }
+            .frame(minHeight: AddressesSection.rowPitch)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
