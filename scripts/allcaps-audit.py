@@ -129,6 +129,11 @@ KNOWN_ACRONYMS: set[str] = {
     # with it beside the registry's own label. Re-casing it would invent a
     # spelling nobody, including ENS, uses (prd §597).
     "ENS",
+    # Solana Name Service — Bonfida's, the `.sol` registry the wallet field has
+    # resolved since prd §85. web3.bio files a `.sol` record under this
+    # platform and `Web3Bio.Platform.sns.label` names it beside ENS (prd
+    # §916); the same reasoning as ENS's exemption, one initialism over.
+    "SNS",
 }
 
 MIN_WORD = 3
