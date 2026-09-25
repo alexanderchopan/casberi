@@ -133,7 +133,10 @@ struct DSGlyphLead: View {
                 .frame(width: size, height: size)
             Image(systemName: glyph)
                 .accessibilityHidden(true)
-                .dsGlyph(.caption, weight: .semibold)
+                // The rung follows the disc: `caption` in the 26pt feed lead,
+                // `subhead` in a 36pt face — a 12pt glyph in a 36pt disc read
+                // as a speck (review, 2026-09-25).
+                .dsGlyph(size >= DS.Face.list ? .subhead : .caption, weight: .semibold)
                 .foregroundStyle(tint)
                 // A row that flips in place (Theme) swaps its glyph; a glyph
                 // that never changes never transitions.

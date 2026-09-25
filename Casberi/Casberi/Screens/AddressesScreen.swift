@@ -38,8 +38,25 @@ struct AddressesSection: View {
     @State private var verdict: String?
     @State private var naming = false
     @State private var draft = ""
-    /// The "Same person?" sheet is up (the one row's door).
-    @State private var asking = false
+    /// The "Same person?" sheet's pair (the one row's door) — an ITEM, so a
+    /// suggestion that clears between the tap and the present raises nothing
+    /// rather than an empty sheet (review, 2026-09-25).
+    @State private var asked: AskedPair?
+    /// What the row body reads per contact, computed ONCE in `refresh()` so a
+    /// row carries values and never walks its identities per render (§626).
+    @State private var extras: [String: RowExtras] = [:]
+
+    struct AskedPair: Identifiable {
+        let link: ContactLink
+        let a: Contact
+        let b: Contact
+        var id: String { link.pairKey }
+    }
+
+    struct RowExtras {
+        let marks: [String]
+        let arrival: TimeInterval?
+    }
     /// The wave this list stands on (`LeadCycle`'s rule): a contact whose
     /// saved `addedAt` is later than this AND fresh turns its face once. Set
     /// at the first refresh, so the book you open to is at rest and only a
@@ -103,28 +120,27 @@ struct AddressesSection: View {
             ContactSheet(contact: contact)
                 .dsReadSheet()
         }
-        .sheet(isPresented: $asking) {
-            if let suggestion,
-               let a = ContactIndexSources.contact(forKey: suggestion.a),
-               let b = ContactIndexSources.contact(forKey: suggestion.b) {
-                SamePersonSheet(a: a, b: b, whereA: Self.where(a, suggestion),
-                                whereB: Self.where(b, suggestion), verdict: verdict) {
-                    ContactLinksStore.shared.confirm(suggestion.a, suggestion.b)
-                    asking = false
-                    Task { await refresh() }
-                } no: {
-                    ContactLinksStore.shared.decline(suggestion.a, suggestion.b)
-                    asking = false
-                    Task { await refresh() }
-                }
-                .dsReadSheet()
+        .sheet(item: $asked) { pair in
+            SamePersonSheet(a: pair.a, b: pair.b, whereA: Self.where(pair.a, pair.link),
+                            whereB: Self.where(pair.b, pair.link), verdict: verdict) {
+                ContactLinksStore.shared.confirm(pair.link.a, pair.link.b)
+                asked = nil
+                Task { await refresh() }
+            } no: {
+                ContactLinksStore.shared.decline(pair.link.a, pair.link.b)
+                asked = nil
+                Task { await refresh() }
             }
+            .dsReadSheet()
         }
     }
 
     private func refresh() async {
         if waveAt == nil { waveAt = Date.timeIntervalSinceReferenceDate }
         contacts = ContactIndexSources.rebuild(context: modelContext)
+        extras = Dictionary(uniqueKeysWithValues: contacts.map {
+            ($0.id, RowExtras(marks: Self.marks(of: $0), arrival: Self.arrival(of: $0)))
+        })
         nudge = Self.newestUnnamed(context: modelContext)
         let next = ContactSuggest.next(in: ContactLinksStore.shared.ledger,
                                        known: { ContactIndexSources.contact(forKey: $0) != nil })
@@ -159,7 +175,7 @@ struct AddressesSection: View {
     /// It was four rows of doors before anybody appeared; now it is a row.
     private func suggestionRow(_ link: ContactLink, a: Contact, b: Contact) -> some View {
         Button {
-            asking = true
+            asked = AskedPair(link: link, a: a, b: b)
         } label: {
             HStack(spacing: DS.Space.s3) {
                 PairFace(a: a, b: b)
@@ -369,16 +385,19 @@ struct AddressesSection: View {
         return hit.kind == .contact ? nil : hit.label
     }
 
-    /// When this contact was SAVED by hand (`ContactBook`, or the wallet
-    /// book's own stamp), in `LeadCycle`'s clock — nil for a seat-fed row,
-    /// which never cycles: a seat's sweep is not you adding somebody.
-    private func arrival(of contact: Contact) -> TimeInterval? {
+    /// When this contact was SAVED by hand, in `LeadCycle`'s clock: a
+    /// `ContactBook` entry (only the person writes that store), or a wallet
+    /// book entry with NO provenance — a seat's own naming carries one
+    /// (`setName(provenance:)`), and a seat's sweep is not you adding
+    /// somebody. Nil for every seat-fed row, which never cycles.
+    static func arrival(of contact: Contact) -> TimeInterval? {
         var latest: Date?
         for identity in contact.identities {
             if let saved = ContactBook.shared.entries[identity.key]?.addedAt {
                 latest = max(latest ?? .distantPast, saved)
             } else if identity.kind == .wallet,
-                      let entry = AddressBook.shared.entry(for: identity.body) {
+                      let entry = AddressBook.shared.entry(for: identity.body),
+                      entry.provenance == nil {
                 latest = max(latest ?? .distantPast, entry.addedAt)
             }
         }
@@ -395,7 +414,7 @@ struct AddressesSection: View {
                     // category's glyph and back, once (§901's cycle, the
                     // Addresses caller — see `LeadCycle`).
                     .faceCycle(category: contact.categories.first,
-                               arrival: arrival(of: contact),
+                               arrival: extras[contact.id]?.arrival,
                                fact: contact.name, size: DS.Face.list)
                 // The face and the name, nothing under it (user, 2026-09-25:
                 // "why is a second line necessary under each name") — the
@@ -417,7 +436,7 @@ struct AddressesSection: View {
                 // The seats this contact is on, as the dock's own marks — the
                 // sheet's icon tiles at a glance (the design pass). A fact,
                 // never a count or money (§345, user 2026-08-21).
-                SeatMarks(names: Self.marks(of: contact))
+                SeatMarks(names: extras[contact.id]?.marks ?? [])
             }
             .frame(minHeight: Self.rowPitch)
             .contentShape(Rectangle())
@@ -437,6 +456,16 @@ struct AddressesSection: View {
             if out.count == SeatMarks.cap { break }
         }
         return out
+    }
+}
+
+extension AddressesSection {
+    /// The ground a pinned head and a mark's ring are cut from: the page's
+    /// own colour — or NOTHING over a photo theme, where a flat band would be
+    /// a plate on the person's picture (§782; review, 2026-09-25). A head
+    /// over a photo pins transparent, and the rows show through it.
+    static var ground: Color {
+        ThemeStore.shared.backgroundPhoto == nil ? DS.page : .clear
     }
 }
 
@@ -461,7 +490,7 @@ private struct LetterHead: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s1)
-            .background(DS.page)
+            .background(AddressesSection.ground)
             .onGeometryChange(for: Int.self) { proxy in
                 FeedSeam.side(ofTop: proxy.frame(in: .scrollView).minY)
             } action: { _, now in
@@ -482,7 +511,7 @@ struct SeatMarks: View {
             ForEach(names, id: \.self) { name in
                 BridgeIcon(name: name, size: DS.Face.badge, circular: true)
                     .padding(2)
-                    .background(Circle().fill(DS.page))
+                    .background(Circle().fill(AddressesSection.ground))
             }
         }
         .accessibilityElement(children: .ignore)
@@ -503,7 +532,7 @@ private struct PairFace: View {
             ContactFace(contact: a, size: DS.Face.badge)
             ContactFace(contact: b, size: DS.Face.badge)
                 .padding(2)
-                .background(Circle().fill(DS.page))
+                .background(Circle().fill(AddressesSection.ground))
                 .offset(x: DS.Face.list - DS.Face.badge - 2, y: DS.Face.list - DS.Face.badge - 2)
         }
         .frame(width: DS.Face.list, height: DS.Face.list, alignment: .topLeading)

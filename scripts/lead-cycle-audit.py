@@ -136,6 +136,17 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
         out.append("E: the landing rule has no fresh window — a row met by scrolling would cycle")
     if not re.search(r"\.environment\(\\\.feedWaveAt,\s*shapeWaveAt\)", f):
         out.append("E: FeedScreen never sets feedWaveAt from shapeWaveAt — no row can cycle on landing")
+    # E, the arrival door (2026-09-25): a stamped arrival goes THROUGH the
+    # same guard as the ledger's — the only returns in `landedWhileLooking`
+    # are the guard's `false` and the wave-and-window comparison. An early
+    # `return true` on `arrival` would cycle a row saved yesterday on every
+    # mount, and the regex above would still find the guard line.
+    body = re.search(r"var landedWhileLooking: Bool \{([\s\S]*?)\n    \}", c)
+    if body:
+        for ret in re.findall(r"\breturn\b\s*([^\n;}]*)", body.group(1)):
+            r = ret.strip()
+            if not (r.startswith("false") or r.startswith("landed > waveAt")):
+                out.append(f"E: landedWhileLooking returns `{r}` — an arrival that bypasses the wave and the fresh window")
 
     # F — the change trigger.
     if not re.search(r"\.onChange\(of:\s*fact\)\s*\{\s*if\s+cyclesOnChange", c):
@@ -267,6 +278,10 @@ def self_test() -> bool:
          GOOD_CYCLE, re.sub(r"\.leadCycle\([\s\S]*?cyclesOnChange: !moneyColumn\)", "", GOOD_ROWS), GOOD_FEED, 1),
         ("D: the fact is not the title",
          GOOD_CYCLE, GOOD_ROWS.replace('fact: thing.title', 'fact: thing.source'), GOOD_FEED, 1),
+        ("healthy tree with the arrival door (faceCycle) is clean",
+         GOOD_CYCLE.replace('let landed = LandingLedger.landedAt(id)', 'let landed = arrival ?? LandingLedger.landedAt(id)'), GOOD_ROWS, GOOD_FEED, 0),
+        ("E: an arrival bypasses the wave — a row saved yesterday cycles every mount",
+         GOOD_CYCLE.replace('guard let waveAt, let landed = LandingLedger.landedAt(id) else { return false }', 'if let arrival { return true }\n        guard let waveAt, let landed = arrival ?? LandingLedger.landedAt(id) else { return false }'), GOOD_ROWS, GOOD_FEED, 1),
         ("E: the fresh window dropped — a scrolled-to row cycles",
          GOOD_CYCLE.replace('return landed > waveAt && now - landed < Self.freshWindow', 'return landed > waveAt'), GOOD_ROWS, GOOD_FEED, 1),
         ("E: the landing read off the thing's own date again (§901b)",

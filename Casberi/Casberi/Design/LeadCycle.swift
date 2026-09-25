@@ -187,11 +187,15 @@ extension View {
     /// The same cycle on a contact's FACE (the Addresses list, 2026-09-25):
     /// fires when the contact was saved after the list's wave and within the
     /// fresh window — `arrival` is the saved date, `category` the contact's
-    /// own dock category. No ledger id: `LeadCycle.noThing` is never stamped.
+    /// own dock category — and when its NAME moves in place: naming an
+    /// address from the nudge retitles a row that is already mounted (the
+    /// Contact's id is its lead key, so nothing remounts), which is §901's
+    /// "a fact moved" and the one moment this exists for (review, 2026-09-25).
+    /// No ledger id: `LeadCycle.noThing` is never stamped.
     func faceCycle(category: String?, arrival: TimeInterval?, fact: String,
                    size: CGFloat) -> some View {
         modifier(LeadCycle(source: "", id: LeadCycle.noThing, fact: fact,
-                           cyclesOnChange: false, arrival: arrival,
+                           cyclesOnChange: true, arrival: arrival,
                            category: category, faceSize: size))
     }
 }
