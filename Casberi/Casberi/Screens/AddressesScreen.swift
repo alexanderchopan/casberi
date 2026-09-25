@@ -137,7 +137,11 @@ struct AddressesSection: View {
 
     private func refresh() async {
         if waveAt == nil { waveAt = Date.timeIntervalSinceReferenceDate }
+        // You are not an address you deal with (`ContactIndexSources.isYours`):
+        // Manage holds your accounts, and a sheet offering to unfollow
+        // yourself is a dead verb.
         contacts = ContactIndexSources.rebuild(context: modelContext)
+            .filter { !ContactIndexSources.isYours($0) }
         extras = Dictionary(uniqueKeysWithValues: contacts.map {
             ($0.id, RowExtras(marks: Self.marks(of: $0), arrival: Self.arrival(of: $0)))
         })

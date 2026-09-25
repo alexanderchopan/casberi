@@ -5752,6 +5752,7 @@ enum DemoSeedAll {
                 a.displayName = $0.name
                 a.bio = $0.bio
                 a.avatarURL = avatarArt($0.handle)
+                a.mine = $0.handle == "you"
                 return a
             }
         }

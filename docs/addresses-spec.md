@@ -128,6 +128,12 @@ name services), Social (Farcaster, Bluesky, Nostr, X), Work (GitHub, email at a 
   a pasted full address matches its row exactly. Empty query draws the room as it was. It is a
   filter, not a resolver: an unknown name typed here lands nothing and offers nothing — the
   follow field on the seat pages is where a new address is asked for (§690).
+- **You are not a row (2026-09-25, user: "fix the demo thing" — the demo listed "you", "You" and
+  "You" as three strangers).** A contact carrying a social account marked `mine`, or anything the
+  join verified onto one, is filtered out of the LIST by `ContactIndexSources.isYours`; the index
+  still builds it, so a transfer between your own wallets keeps its name. Nostr's account gained
+  the `mine` flag the other two carry. Your accounts live under Manage; a sheet that offered to
+  unfollow yourself was a dead verb (§83).
 - **The second design pass (2026-09-25, user: "do all" on the /design brief).** Eight moves, seven
   built, one refused by a ruling:
   1. The nudge ("Name 0xab…12?") and the suggestion ("Same person?") are each ONE row in the list's

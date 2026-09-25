@@ -53,6 +53,11 @@ final class NostrStore {
         var likes = false
         /// Watch MENTIONS of them (`#p` tag) — notes naming this account land.
         var mentions = false
+        /// This account is YOURS — the flag Farcaster and Bluesky already
+        /// carry. Nostr has no inbound half to switch on yet; the one reader
+        /// is the Addresses list, which keeps you out of a directory of the
+        /// parties you deal with (2026-09-25).
+        var mine = false
 
         init(input: String, pubkeyHex: String = "") {
             self.input = input
@@ -72,6 +77,7 @@ final class NostrStore {
             nip05 = try c.decodeIfPresent(String.self, forKey: .nip05)
             likes = try c.decodeIfPresent(Bool.self, forKey: .likes) ?? false
             mentions = try c.decodeIfPresent(Bool.self, forKey: .mentions) ?? false
+            mine = try c.decodeIfPresent(Bool.self, forKey: .mine) ?? false
         }
     }
 

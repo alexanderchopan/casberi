@@ -168,6 +168,34 @@ enum ContactIndexSources {
         return built
     }
 
+    // MARK: - Yourself
+
+    /// Whether a contact IS the person — it carries a social account marked
+    /// `mine`, or anything the join verified onto one (your Farcaster
+    /// account's verified wallets ride with it). The Addresses list is the
+    /// parties behind your accounts, and you are not one of them: Manage
+    /// holds your accounts, and the demo showed "you", "You" and "You" as
+    /// three strangers (user, 2026-09-25). The index still BUILDS the
+    /// contact, so a transfer between your own wallets keeps its name.
+    static func isYours(_ contact: Contact) -> Bool {
+        contact.identities.contains { yourKeys.contains($0.key) }
+    }
+
+    /// The keys of every account marked yours, read live from the stores.
+    private static var yourKeys: Set<String> {
+        var out = Set<String>()
+        for a in FarcasterStore.shared.accounts where a.mine {
+            out.insert(Identity.make(.farcaster, a.username).key)
+        }
+        for a in BlueskyStore.shared.accounts where a.mine {
+            out.insert(Identity.make(.bluesky, a.handle).key)
+        }
+        for a in NostrStore.shared.accounts where a.mine && !a.pubkeyHex.isEmpty {
+            out.insert(Identity.make(.nostr, a.pubkeyHex).key)
+        }
+        return out
+    }
+
     // MARK: - The seam (section 2.5)
 
     /// The contact a thing is from or about, or nil when the app holds none.
@@ -201,6 +229,9 @@ enum ContactIndexSources {
         var lines = ["\(built.count) contacts | seeds: \(seeds(context: context).count) | links: v=\(ledger.filter { $0.tier == .verified }.count) s=\(ledger.filter { $0.tier == .suggested }.count) st=\(ledger.filter { $0.tier == .stated }.count) declined=\(ledger.filter(\.declined).count)"]
         let linked = built.filter { $0.identities.count > 1 }
         lines.append("linked: \(linked.count) of \(built.count) contacts carry more than one identity")
+        // Yourself, built and then kept off the list (`isYours`).
+        let yours = built.filter(isYours)
+        lines.append("yours: \(yours.count) hidden from the list | \(yours.map(\.name).joined(separator: ", "))")
         for contact in built {
             let ids = contact.identities.map { id -> String in
                 let how = id.tier.map { " (\($0.rawValue)\(id.source == "you" ? ", you" : ""))" } ?? ""
