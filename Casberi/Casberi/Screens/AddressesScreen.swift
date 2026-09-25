@@ -352,7 +352,20 @@ struct ContactSheet: View {
     let contact: Contact
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @State private var pushed: Door?
+    /// "With you" (section 1): the things across the corpus that involve
+    /// this contact — VALUE snapshots, never a held `[Thing]` (the liveness
+    /// class in CLAUDE.md); a tap refetches by id.
+    @State private var withYou: [WithYouRow] = []
+    @State private var openedThing: Thing?
+
+    struct WithYouRow: Identifiable, Equatable {
+        let id: UUID
+        let title: String
+        let source: String
+        let when: Date
+    }
 
     /// The key this contact was saved under, when the person saved it.
     private var savedKey: String? {
@@ -399,6 +412,14 @@ struct ContactSheet: View {
                             identityRow(identity)
                         }
                     }
+                    if !withYou.isEmpty {
+                        VStack(alignment: .leading, spacing: DS.Space.s2) {
+                            Text("With you").dsText(.heading17).foregroundStyle(DS.textPrimary)
+                            VStack(spacing: DS.Space.s1) {
+                                ForEach(withYou) { row in withYouRow(row) }
+                            }
+                        }
+                    }
                     // A contact YOU saved can be un-saved here; a seat-fed one
                     // is removed on its seat's page (§690), so no row is drawn.
                     if let saved = savedKey {
@@ -413,6 +434,8 @@ struct ContactSheet: View {
             }
             .dsPageBackground()
             .toolbar(.hidden, for: .navigationBar)
+            .task { withYou = Self.things(for: contact, context: modelContext) }
+            .sheet(item: $openedThing) { thing in ThingSheetView(thing: thing) }
             .navigationDestination(item: $pushed) { door in
                 switch door {
                 case .address(let entry): AddressCard(entry: entry)
@@ -481,6 +504,68 @@ struct ContactSheet: View {
             try? await Task.sleep(for: .seconds(1.2))
             if copied == key { withAnimation(DS.Motion.standard) { copied = nil } }
         }
+    }
+
+    // MARK: - With you
+
+    private func withYouRow(_ row: WithYouRow) -> some View {
+        Button {
+            let id = row.id
+            let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.id == id })
+            openedThing = (try? modelContext.fetch(descriptor))?.first
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: row.source, size: DS.Face.list, circular: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(row.title).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                    Text(row.when.formatted(date: .abbreviated, time: .omitted))
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                }
+                Spacer(minLength: DS.Space.s2)
+                DSPushRowTrail()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .dsListRow()
+    }
+
+    /// Every thing whose `contact(for:)` would be this contact — one string
+    /// predicate per identity (a `.contains` predicate traps, CLAUDE.md), the
+    /// union sorted newest first and capped at 20.
+    static func things(for contact: Contact, context: ModelContext) -> [WithYouRow] {
+        var found: [UUID: WithYouRow] = [:]
+        func take(_ descriptor: FetchDescriptor<Thing>) {
+            var d = descriptor
+            d.sortBy = [SortDescriptor(\Thing.capturedAt, order: .reverse)]
+            d.fetchLimit = 40
+            for thing in (try? context.fetch(d)) ?? [] {
+                if thing.sourceRef?.hasPrefix("gh:notif:") == true { continue }
+                found[thing.id] = WithYouRow(id: thing.id, title: thing.title,
+                                             source: thing.source, when: thing.capturedAt)
+            }
+        }
+        for identity in contact.identities {
+            let body = identity.body
+            switch identity.kind {
+            case .wallet:
+                take(FetchDescriptor(predicate: #Predicate { $0.counterpartyAddress == body }))
+            case .email:
+                take(FetchDescriptor(predicate: #Predicate { $0.authorEmail == body }))
+            case .farcaster:
+                take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Farcaster" }))
+            case .bluesky:
+                take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Bluesky" }))
+            case .nostr:
+                take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Nostr" }))
+            case .github:
+                take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "GitHub" }))
+            case .contact, .ens, .basename, .linea, .lens, .worldApp, .feed:
+                continue
+            }
+        }
+        return found.values.sorted { $0.when > $1.when }.prefix(20).map { $0 }
     }
 
     private func door(for identity: Identity) -> (() -> Void)? {
