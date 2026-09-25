@@ -489,6 +489,7 @@ struct ContactSheet: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .dsTapTarget()
             .accessibilityLabel(Text("Copy"))
         }
         .dsListRow()

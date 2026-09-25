@@ -197,7 +197,9 @@ fi
 # self-move's Name disc back on, both of which render as "fine".
 grep -q 'struct SwapStage' "$STAGE" \
   || { echo "✗ SwapStage is gone — a swap's rate line has nothing to divide"; exit 1; }
-grep -q 'MovedStage(thing) == nil ? nameCounterpartyAction : nil' "$SHEET" \
+# Since prd §916 the disc also names a sender, a poster or a login
+# (`nameIdentityAction`); the self-move guard is the SAME `MovedStage` gate.
+grep -q 'MovedStage(thing) == nil ? (nameCounterpartyAction ?? nameIdentityAction) : nil' "$SHEET" \
   || { echo "✗ the Name disc no longer stands down on a self-move"; exit 1; }
 
 # The probe. An absent receipt has six causes and only two are bugs; without
