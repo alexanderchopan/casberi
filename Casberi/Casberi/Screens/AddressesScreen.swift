@@ -353,6 +353,7 @@ struct ContactSheet: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(ShellChrome.self) private var chrome
     @State private var pushed: Door?
     /// "With you" (section 1): the things across the corpus that involve
     /// this contact — VALUE snapshots, never a held `[Thing]` (the liveness
@@ -365,6 +366,30 @@ struct ContactSheet: View {
         let title: String
         let source: String
         let when: Date
+    }
+
+    /// The social accounts this contact stands for that the app WATCHES —
+    /// the pairs their own stores know them by (`SocialUnfollow`'s shape).
+    private var watchedSocial: [(source: String, handle: String)] {
+        // Compared against each store's own spelling, folded — not through
+        // `SocialPeople.isWatched`, whose Bluesky arm normalizes a bare
+        // handle to its full domain and so missed "nils" (measured).
+        contact.identities.compactMap { identity in
+            let body = identity.body
+            switch identity.kind {
+            case .farcaster:
+                guard let a = FarcasterStore.shared.accounts.first(where: { $0.username.lowercased() == body }) else { return nil }
+                return ("Farcaster", a.username)
+            case .bluesky:
+                guard let a = BlueskyStore.shared.accounts.first(where: { $0.handle.lowercased() == body }) else { return nil }
+                return ("Bluesky", a.handle)
+            case .nostr:
+                guard let a = NostrStore.shared.accounts.first(where: { $0.pubkeyHex.lowercased() == body }) else { return nil }
+                return ("Nostr", a.input)
+            default:
+                return nil
+            }
+        }
     }
 
     /// The key this contact was saved under, when the person saved it.
@@ -417,6 +442,26 @@ struct ContactSheet: View {
                             Text("With you").dsText(.heading17).foregroundStyle(DS.textPrimary)
                             VStack(spacing: DS.Space.s1) {
                                 ForEach(withYou) { row in withYouRow(row) }
+                            }
+                        }
+                    }
+                    // UNFOLLOW, from the sheet (user, 2026-09-25: "we need the
+                    // unfollow doors"). A starter pack's people are rows here
+                    // like anyone you watch, and §511's rule holds: the row IS
+                    // the watch, so it must carry the verb that ends it. One
+                    // door per watched social account; nothing for a card, a
+                    // wallet (its own page unwatches) or a name.
+                    let followed = watchedSocial
+                    if !followed.isEmpty {
+                        VStack(spacing: DS.Space.s1) {
+                            ForEach(followed, id: \.handle) { pair in
+                                DSDoorRow(icon: "person.badge.minus",
+                                          title: Text("Unfollow @\(pair.handle) on \(pair.source)"),
+                                          role: .destructive) {
+                                    SocialUnfollow.perform([pair], name: contact.name,
+                                                           context: modelContext, chrome: chrome)
+                                    dismiss()
+                                }
                             }
                         }
                     }

@@ -46,13 +46,21 @@ enum SocialUnfollow {
     static func perform(_ entry: AddressBook.Entry,
                         context: ModelContext,
                         chrome: ShellChrome) {
-        let pairs = AddressBookPeople.unfollowable(entry)
+        perform(AddressBookPeople.unfollowable(entry), name: entry.name, context: context, chrome: chrome)
+    }
+
+    /// The same act from the Addresses sheet (prd §916 amendment, 2026-09-25 —
+    /// user: "we need the unfollow doors"): a starter pack's forty people are
+    /// rows there too, and §511's rule stands — a row with no verb is a dead
+    /// row, and the row IS the watch, so unfollowing drops the watch, the row
+    /// and the posts in one act, with the same Undo.
+    static func perform(_ pairs: [(source: String, handle: String)], name: String,
+                        context: ModelContext, chrome: ShellChrome) {
         guard !pairs.isEmpty else { return }
         DSHaptic.tap()
         for pair in pairs {
             HandleBridge(rawValue: pair.source)?.removeName(pair.handle, context: context)
         }
-        let name = entry.name
         chrome.flash(pairs.count == 1
                      ? String(localized: "Unfollowed \(name) · their posts are out of your feed")
                      : String(localized: "Unfollowed \(name) on \(pairs.count) networks"),
