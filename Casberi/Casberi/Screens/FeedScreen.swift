@@ -2616,8 +2616,6 @@ struct FeedScreen: View {
         /// A head that had only its sentence (prd §760). Held as the head rather
         /// than as the string so the balance mask is read when it is drawn.
         var quietHead: SourceHead? = nil
-        /// The lead's foot (prd §766): `leadFooter` over the whole room.
-        var footer: String? = nil
         /// The kind tiles of a kind-tile room (prd §815, §816),
         /// read over the whole room BEFORE the pick narrows it — a presence
         /// read off the narrowed list would leave only the picked kind, and
@@ -2930,21 +2928,6 @@ struct FeedScreen: View {
     /// where `liveStream` and `anniversary` live because they hold `Thing`s and
     /// can never be cached — is worth far more than a short-circuit that saves
     /// four switch statements.
-    /// **THE FACT AT THE FOOT OF EVERY LEAD (prd §766).** How many things the
-    /// room holds and since when — true of every room, stated nowhere else,
-    /// and computed over the WHOLE room with the head (`fullRoomRows`), so it
-    /// never counts the bounded list. It says nothing about freshness: no seat
-    /// records a last successful sync, and a "updated 2m ago" read off
-    /// `capturedAt` would be §83's fake status. All has no foot.
-    @MainActor
-    private static func leadFooter(source: String, rows: [Thing]) -> String? {
-        guard source != "All", let oldest = rows.lazy.map(\.capturedAt).min() else { return nil }
-        let since = oldest.formatted(.dateTime.month(.abbreviated).year())
-        // `String(localized:)` never applies `inflect` — only the attributed
-        // form runs the grammar agreement, so the foot drew the raw markup.
-        return String(AttributedString(localized: "^[\(rows.count) thing](inflect: true) since \(since)").characters)
-    }
-
     @MainActor
     private func recomputeHeads() {
         // `.live` at the read, inside the task: `visible` is re-read here rather
@@ -2971,8 +2954,7 @@ struct FeedScreen: View {
             // whole point is a feed that has stopped producing rows, so a
             // verdict derived from the room's contents could not see it.
             feedHealth: FeedRoomHealthSource.standing(for: source),
-            quietHead: quiet ? head : nil,
-            footer: Self.leadFooter(source: source, rows: rows))
+            quietHead: quiet ? head : nil)
         if let kindRoom = RoomKindTiles.Room(source: source) {
             let kinds = kindRoomReading(kindRoom, rows: rows)
             computed.kindTiles = kinds.tiles
@@ -6142,7 +6124,6 @@ struct FeedScreen: View {
         .onAppear { SwipeClock.finish() }
         .environment(\.defaultMinListHeaderHeight, 0)
         // Every lead in the room reads its foot from here (prd §766).
-        .environment(\.dsLeadFooter, heads?.footer)
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
         // The pull's WIND-UP feed (2026-08-04): raw top overscroll, which
@@ -7782,7 +7763,6 @@ struct FeedScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 content
                 Spacer(minLength: 0)
-                DSRoomChassis.LeadFooter()
             }
             .frame(maxWidth: .infinity, minHeight: box, maxHeight: box, alignment: .topLeading)
             .clipped()

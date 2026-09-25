@@ -1167,10 +1167,8 @@ private struct InsightCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: DS.Space.s2) { content }
-            // The foot, pinned (prd §766) — only where the card is the lead.
             if fillsLead {
                 Spacer(minLength: 0)
-                DSRoomChassis.LeadFooter()
             }
         }
             // Every room's lead is one height (prd §760): the card's outer
@@ -1317,7 +1315,6 @@ struct OnThisDayHero: View {
                         .padding(.top, DS.Space.s1)
                 }
                 Spacer(minLength: 0)
-                DSRoomChassis.LeadFooter()
             }
             // The lead's one height (prd §760), inside the card's padding.
             .frame(maxWidth: .infinity,

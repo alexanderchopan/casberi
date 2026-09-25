@@ -111,7 +111,6 @@ struct CloudflareRunwayCard: View {
                         .padding(.top, DS.Space.s3)
                 }
                 Spacer(minLength: 0)
-                DSRoomChassis.LeadFooter()
             }
         }
         .dsRoomHeadBlock()

@@ -236,12 +236,12 @@ esac
 grep -q 'Text(words)' "$TMP/lede.nocomment" \
   || { echo "✗ the cover's title block no longer draws \`words\` (prd §756) — the post"; \
        echo "  branch would be computed and thrown away."; exit 1; }
-# THE COVER IS A LEAD LIKE ANY OTHER (prd §766): the head's block and well, the
-# pinned foot, and words at the FIT's rung — never a length-picked one.
+# THE COVER IS A LEAD LIKE ANY OTHER (prd §766): the head's block and well, and words at the FIT's rung — never a length-picked one.
 grep -q '\.dsRoomHeadBlock()' "$TMP/lede.nocomment" \
   || { echo "✗ the cover no longer draws the head template's block and well (prd §766)"; exit 1; }
-grep -q 'LeadFooter()' "$TMP/lede.nocomment" \
-  || { echo "✗ the cover lost the lead's pinned foot (prd §766)"; exit 1; }
+# The foot's count is DELETED (prd §914, user: "people don't want to know").
+! grep -q 'LeadFooter' "$TMP/lede.nocomment" \
+  || { echo "✗ the cover draws the lead's count foot again (prd §914)"; exit 1; }
 # THE LADDER GROWS (prd §905): the words, the lede and the cast shelf take the
 # rung the FIT names, and the fit is chosen by what fits the box — never by a
 # string's length (§766's reason, kept) and never a third rung (§762's ramp).

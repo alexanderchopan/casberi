@@ -199,11 +199,7 @@ extension DSRoomChassis {
                         }
                         .padding(.top, DSRoomChassis.headBlockGap)
                     }
-                    // The foot is pinned to the bottom of the box (prd §766),
-                    // so every lead has a lower edge that is not air. `LeadFit`
-                    // measures it with the rest, so rows give way before it.
                     Spacer(minLength: 0)
-                    LeadFooter()
                 }
             }
             .dsRoomHeadBlock())
@@ -247,27 +243,6 @@ extension DSRoomChassis {
     /// A stretch of the card below the notes: a drawing, a set of rows, a link.
     /// It owns the gap above itself, so a block a room declines to draw takes
     /// no air with it.
-    /// **THE LEAD'S FOOT (prd §766, user: "proposed with the well").** One quiet
-    /// line pinned to the bottom of every lead — how many things the room holds
-    /// and since when — so the box states its lower edge with a fact instead
-    /// of leaving 200pt of air under a short head. The room sets it once
-    /// (`FeedScreen.leadFooter`, through `dsLeadFooter`); a lead drawn outside
-    /// a room (no value) draws nothing here.
-    struct LeadFooter: View {
-        @Environment(\.dsLeadFooter) private var fact
-
-        var body: some View {
-            if let fact {
-                Text(verbatim: fact)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, DS.Space.s2)
-            }
-        }
-    }
-
     struct Block<Content: View>: View {
         let content: Content
 
@@ -751,10 +726,6 @@ extension DSRoomChassis.Row where Measure == EmptyView {
     }
 }
 
-private struct DSLeadFooterKey: EnvironmentKey {
-    static let defaultValue: String? = nil
-}
-
 private struct DSHeadRowLimitKey: EnvironmentKey {
     static let defaultValue: Int? = nil
 }
@@ -765,12 +736,6 @@ extension EnvironmentValues {
     var dsHeadRowLimit: Int? {
         get { self[DSHeadRowLimitKey.self] }
         set { self[DSHeadRowLimitKey.self] = newValue }
-    }
-
-    /// The fact `DSRoomChassis.LeadFooter` draws (prd §766). Set by the room.
-    var dsLeadFooter: String? {
-        get { self[DSLeadFooterKey.self] }
-        set { self[DSLeadFooterKey.self] = newValue }
     }
 }
 

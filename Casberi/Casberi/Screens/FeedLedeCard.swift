@@ -221,12 +221,12 @@ struct FeedLedeCard: View {
                 // where the mock put it: the picture leads, the title names
                 // it, the source says where it is from. Every other face keeps
                 // the eyebrow first (§766: one y for the statement).
-                if face != .pictureAspect { eyebrow }
+                if face != .pictureAspect { eyebrow(castFace: face == .cast) }
                 Group {
                     switch face {
                     case .picture:         titleBlock(underArt: true, fit: fit)
                     case .pictureAspect:   tallPictureBlock
-                    case .cast:            castBlock(rungs)
+                    case .cast:            castBlock(rungs, fit: fit)
                     case .dateTile:        dateTileBlock
                     case .stateWord:       stateWordBlock(extra.stateWord ?? "", fit: fit)
                     case .prose:           proseBlock(extra.prose)
@@ -260,9 +260,7 @@ struct FeedLedeCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, DS.Space.s2)
                 }
-                // The foot, pinned to the well's bottom (prd §766).
                 Spacer(minLength: 0)
-                DSRoomChassis.LeadFooter()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -458,8 +456,13 @@ struct FeedLedeCard: View {
 
     /// The disc: the author's picture on a post, the seat's mark on everything
     /// else — `PostCard`'s own lead, at this card's rung.
-    @ViewBuilder private var postDisc: some View {
-        if isPost, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
+    ///
+    /// **On the cast face the disc is the seat's mark (user, 2026-09-24).**
+    /// The cast is the picture, and the person the eyebrow names is already
+    /// its first face; their avatar in the disc too drew the same face twice,
+    /// one row apart.
+    @ViewBuilder private func postDisc(castFace: Bool) -> some View {
+        if isPost, !castFace, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
             RemoteThumb(urlString: avatar, size: DS.Face.list,
                         fallback: thing.source, circular: true)
         } else {
@@ -491,9 +494,9 @@ struct FeedLedeCard: View {
     /// this row. The name stays because dropping it would lose the source on
     /// the feed's cover for every seat whose `BridgeIcon` has no bundled art,
     /// which is a real regression to buy a tidier line.
-    private var eyebrow: some View {
+    private func eyebrow(castFace: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
-            postDisc
+            postDisc(castFace: castFace)
             // The person leads on a post (prd §756), in the primary tier, and
             // the network follows in the quiet one — the order the row itself
             // uses, and the order that makes "who" the first thing read.
@@ -586,7 +589,12 @@ struct FeedLedeCard: View {
     /// the ladder's own cast rung, read once in `liveBody`; this face draws
     /// it itself and passes the ladder nothing, so the shelf is never drawn
     /// twice.
-    @ViewBuilder private func castBlock(_ rungs: [BodyRung]) -> some View {
+    ///
+    /// The sentence takes the FIT's rung and lines (prd §905), not a fixed
+    /// `body17` × 3: every spelling of this face was identical, so the ladder
+    /// had nothing to choose between and a short sentence stood over half a
+    /// well of air (user, 2026-09-24).
+    @ViewBuilder private func castBlock(_ rungs: [BodyRung], fit: Fit) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             ForEach(Array(rungs.enumerated()), id: \.offset) { _, rung in
                 if case .cast(let roll) = rung {
@@ -594,10 +602,10 @@ struct FeedLedeCard: View {
                 }
             }
             Text(words)
-                .dsText(.body17)
+                .dsText(fit.statementRung)
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
-                .lineLimit(3)
+                .lineLimit(fit.statementLines)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
