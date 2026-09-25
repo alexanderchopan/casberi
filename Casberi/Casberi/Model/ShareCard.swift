@@ -139,6 +139,9 @@ enum ShareCard {
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
         request.timeoutInterval = 8
+        // A picture the card fetches is a host reached, so it is a receipt
+        // like every other read (prd §277, `receipts-coverage-audit.py`).
+        NetworkLedger.shared.record(request)
         guard let (data, _) = try? await URLSession.shared.data(for: request) else { return nil }
         return await Task.detached(priority: .userInitiated) { UIImage(data: data) }.value
     }
