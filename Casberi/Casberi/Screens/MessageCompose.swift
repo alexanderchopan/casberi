@@ -1,7 +1,7 @@
 import SwiftUI
 import MessageUI
 
-/// The system composers, as sheets (docs/social-spec.md §0, §3). The card
+/// The system composers, as sheets (docs/social-spec.md section 0, section 3). The card
 /// rides as a PNG attachment and the thing's link as the body; the person
 /// taps Send, the app never does — a composer is the one sanctioned write
 /// for Messages and Mail, and it ends on its own Cancel or Send, which is
@@ -9,7 +9,7 @@ import MessageUI
 ///
 /// Recipients are prefilled only from what the thing already carries
 /// (`detectedTel` / `detectedMailto`); the unified address book's
-/// `PersonIndex.person(for:)` takes over that line when it lands (§5).
+/// `ContactIndex.contact(for:)` takes over that line when it lands (section 5).
 enum MessageCompose {
     /// Whether this device can raise the Messages composer at all — false on
     /// the simulator and on a Mac with no Messages account, in which case the

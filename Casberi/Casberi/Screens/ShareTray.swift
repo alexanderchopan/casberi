@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The share tray (docs/social-spec.md §3) — what the dial's Share disc
+/// The share tray (docs/social-spec.md section 3) — what the dial's Share disc
 /// raises: the card, drawn at width so the person sees exactly what goes
 /// out, then the doors as rows (§746: a verb is a row). Messages and Mail
 /// open the system composer with the card attached and the link in the
@@ -10,12 +10,30 @@ import SwiftUI
 /// Rows the device cannot honour are not drawn (§83): the simulator and a
 /// Mac with no Messages account have no Messages row; there is always
 /// `Share…`. Recipients come from the thing's own detector results until
-/// `ContactIndex.contact(for:)` lands (§5).
+/// `ContactIndex.contact(for:)` lands (section 5).
 struct ShareTray: View {
-    let thing: Thing
+    /// What the card is of: one thing, or a room's own figure (section 6,
+    /// item 3 — `RoomShareCard`).
+    enum Source {
+        case thing(Thing)
+        case room(RoomShareCard.Input)
+    }
+    let source: Source
+
+    init(thing: Thing) { source = .thing(thing) }
+    init(room: RoomShareCard.Input) { source = .room(room) }
+
+    /// The thing, when the card is of one — every read of it is guarded.
+    private var thing: Thing? {
+        if case .thing(let t) = source { return t }
+        return nil
+    }
     @State private var model: ShareCard.Model?
     @State private var image: UIImage?
     @State private var composer: Composer?
+    /// The room could not draw a card (nothing this week, nothing read) —
+    /// said in the slot, never a spinner that spins for ever (§83).
+    @State private var nothingToDraw = false
 
     private enum Composer: String, Identifiable {
         case messages, mail
@@ -33,7 +51,7 @@ struct ShareTray: View {
     }
 
     var body: some View {
-        if thing.isLive { liveBody }
+        if let thing, !thing.isLive { EmptyView() } else { liveBody }
     }
 
     private var liveBody: some View {
@@ -51,8 +69,8 @@ struct ShareTray: View {
                         DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
                     }
                     if let image {
-                        ShareLink(item: ShareCardItem(image: image, link: model?.link, title: thing.title),
-                                  preview: SharePreview(thing.title, image: Image(uiImage: image))) {
+                        ShareLink(item: ShareCardItem(image: image, link: model?.link, title: shareTitle),
+                                  preview: SharePreview(shareTitle, image: Image(uiImage: image))) {
                             DSDoorRowLabel(icon: "square.and.arrow.up", title: Text("Share…"))
                         }
                         .buttonStyle(.plain)
@@ -66,12 +84,12 @@ struct ShareTray: View {
             switch which {
             case .messages:
                 TextComposer(body: composeBody, attachment: image?.pngData(), attachmentName: "casberi.png",
-                             recipients: MessageCompose.phone(fromTel: thing.detectedTel).map { [$0] } ?? [])
+                             recipients: MessageCompose.phone(fromTel: thing?.detectedTel).map { [$0] } ?? [])
                     .ignoresSafeArea()
             case .mail:
-                MailComposer(subject: thing.title, body: composeBody, attachment: image?.pngData(),
+                MailComposer(subject: shareTitle, body: composeBody, attachment: image?.pngData(),
                              attachmentName: "casberi.png",
-                             recipients: MessageCompose.address(fromMailto: thing.detectedMailto).map { [$0] } ?? [])
+                             recipients: MessageCompose.address(fromMailto: thing?.detectedMailto).map { [$0] } ?? [])
                     .ignoresSafeArea()
             }
         }
@@ -86,25 +104,54 @@ struct ShareTray: View {
                 .resizable()
                 .scaledToFit()
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        } else if nothingToDraw {
+            Text("Nothing to draw yet.")
+                .dsText(.body17)
+                .foregroundStyle(DS.textTertiary)
         } else {
             DSSpinner()
         }
     }
 
-    /// The composer's body: the thing's link when it has one, else its title.
+    /// The subject and the preview's name: the thing's title, or the room's
+    /// figure said in words ("12 contributions this week").
+    private var shareTitle: String {
+        if let thing, thing.isLive { return thing.title }
+        if let model, let figure = model.figure {
+            return [figure, model.caption].compactMap { $0 }.joined(separator: " ")
+        }
+        return model?.sourceName ?? ""
+    }
+
+    /// The composer's body: the thing's link when it has one, else the
+    /// subject.
     private var composeBody: String {
         if let link = model?.link { return link.absoluteString }
-        return thing.title
+        return shareTitle
     }
 
     /// Build the model on main, fetch the pictures off it, render on main.
     @MainActor private func build() async {
-        guard let base = ShareCard.model(for: thing) else { return }
-        model = base
-        let pixels = thing.isLive ? thing.previewImageData : nil
-        let filled = await ShareCard.fetchingPictures(base, storedPixels: pixels)
-        guard !Task.isCancelled else { return }
-        model = filled
-        image = ShareCard.render(filled)
+        switch source {
+        case .thing(let thing):
+            guard let base = ShareCard.model(for: thing) else { return }
+            model = base
+            let pixels = thing.isLive ? thing.previewImageData : nil
+            let filled = await ShareCard.fetchingPictures(base, storedPixels: pixels)
+            guard !Task.isCancelled else { return }
+            model = filled
+            image = ShareCard.render(filled)
+        case .room(let input):
+            let built = await RoomShareCard.model(input)
+            guard !Task.isCancelled else { return }
+            #if DEBUG
+            NSLog("roomShare| source=%@ rows=%d model=%@", input.source, input.rows.count,
+                  built == nil ? "nil" : "ok")
+            #endif
+            guard let built else { nothingToDraw = true; return }
+            model = built
+            image = ShareCard.render(built)
+            if image == nil { nothingToDraw = true }
+        }
     }
 }

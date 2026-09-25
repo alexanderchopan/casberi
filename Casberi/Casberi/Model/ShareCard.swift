@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// The share card — one image of a thing, in the app's own hand, that a
-/// person sends out (docs/social-spec.md §2, 2026-09-24).
+/// person sends out (docs/social-spec.md section 2, 2026-09-24).
 ///
 /// This is the app's first OUTWARD-facing surface: the card goes into a text
 /// thread, a mail, a post, and is the only thing about Casberi the person on
@@ -45,6 +45,14 @@ enum ShareCard {
         let faceURL: String?
         var picture: UIImage? = nil
         var face: UIImage? = nil
+        /// A room's figure (a week's contributions, a streak) — the big
+        /// number, its caption, and seven days of bars, today last. A
+        /// thing's card has none of these.
+        var figure: String? = nil
+        var caption: String? = nil
+        var bars: [Int]? = nil
+        /// A workout's measurements: (value, unit), drawn as columns.
+        var stats: [(String, String)] = []
     }
 
     /// The model, or nil for a thing the sheet cannot draw (a tombstone).
@@ -55,7 +63,8 @@ enum ShareCard {
         let handle = (thing.authorHandle ?? "").trimmingCharacters(in: .whitespaces)
         let post = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let isPost = !post.isEmpty && !handle.isEmpty
-        let body = isPost ? post : bodyWords(thing, link: link)
+        let stats = workoutStats(thing)
+        let body = isPost ? post : (stats.isEmpty ? bodyWords(thing, link: link) : "")
         // A post's title is `titleLine()`'s 80-character clamp of the same
         // words, so the card draws the words once, as the statement. Any
         // other title splits at its one seam (prd §915): the name is the
@@ -72,7 +81,20 @@ enum ShareCard {
                      link: link,
                      artURL: thing.previewImageURL.flatMap { $0.isEmpty ? nil : $0 },
                      faceURL: isPost ? thing.authorAvatarURL : nil,
-                     picture: StoredPixels.cached(for: thing))
+                     picture: StoredPixels.cached(for: thing),
+                     stats: stats)
+    }
+
+    /// A workout's measurements off its facts — `HealthIngest.workoutFacts`
+    /// writes km, Duration, Pace / km and kcal as `.metric` facts, and the
+    /// card draws those as columns rather than a line of prose.
+    private static func workoutStats(_ thing: Thing) -> [(String, String)] {
+        let facts = thing.facts.compactMap(ThingFact.init(encoded:)).filter { $0.action == .metric }
+        guard !facts.isEmpty else { return [] }
+        let order = ["km", "Duration", "Pace / km", "kcal"]
+        return order.compactMap { label in
+            facts.first { $0.label == label }.map { ($0.value, label == "Pace / km" ? "/km" : label) }
+        }
     }
 
     /// The words under a title. `content` is the row's own words, except

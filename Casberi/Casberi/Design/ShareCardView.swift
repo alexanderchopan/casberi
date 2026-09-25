@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The share card's drawing (docs/social-spec.md §2). Four zones, top to
+/// The share card's drawing (docs/social-spec.md section 2). Four zones, top to
 /// bottom: the seat or the author, the picture if there is one, the words,
 /// and a foot pinned to the bottom that carries the mark and the app's name
 /// in the brand ink — the one place the brand hue lands on the card, because
@@ -31,8 +31,14 @@ struct ShareCardView: View {
                     .frame(width: ShareCard.size.width - pad * 2, height: 200, alignment: .top)
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             }
-            words
+            if let figure = model.figure {
+                figureBlock(figure)
+            } else {
+                words
+            }
+            if !model.stats.isEmpty { statsBlock }
             Spacer(minLength: 0)
+            if let bars = model.bars, !bars.isEmpty { barsBlock(bars) }
             foot
         }
         .padding(pad)
@@ -109,6 +115,62 @@ struct ShareCardView: View {
         }
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A room's figure: the number at the price rung, its caption under it,
+    /// and the room's one line of words if it has one.
+    private func figureBlock(_ figure: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: figure)
+                .dsText(.price64)
+                .foregroundStyle(ink.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+            if let caption = model.caption {
+                Text(verbatim: caption).dsText(.body17).foregroundStyle(ink.secondary)
+            }
+            if !model.words.isEmpty {
+                Text(model.words).dsText(.subhead12).foregroundStyle(ink.tertiary).padding(.top, 4)
+            }
+        }
+    }
+
+    /// A workout's measurements as columns: the value at `price40`, the
+    /// unit under it.
+    private var statsBlock: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
+            ForEach(Array(model.stats.enumerated()), id: \.offset) { _, stat in
+                VStack(alignment: .leading, spacing: 2) {
+                    // A clock ("26:00") is wider than a distance; the column
+                    // yields size before it yields a digit.
+                    Text(verbatim: stat.0).dsText(.price40).foregroundStyle(ink.primary)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    Text(verbatim: stat.1).dsText(.subhead12).foregroundStyle(ink.tertiary)
+                }
+            }
+        }
+        .padding(.top, 6)
+    }
+
+    /// Seven days, today last, a bar per day and a gap where nothing
+    /// happened — the `ActivityBars` idiom, drawn here in the card's own
+    /// resolved ink because the renderer cannot resolve `DS.tint`. The bars
+    /// encode a value, so they are not a rail (the infographic rule).
+    private func barsBlock(_ bars: [Int]) -> some View {
+        Canvas { ctx, size in
+            let peak = CGFloat(max(bars.max() ?? 0, 4))
+            let slot = size.width / CGFloat(bars.count)
+            let width = min(slot * 0.55, 22)
+            for (i, count) in bars.enumerated() where count > 0 {
+                let h = max(3, CGFloat(count) / peak * (size.height - 2))
+                let rect = CGRect(x: slot * CGFloat(i) + (slot - width) / 2,
+                                  y: size.height - h, width: width, height: h)
+                ctx.fill(Path(roundedRect: rect, cornerRadius: min(4, width / 2)),
+                         with: .color(ink.primary))
+            }
+        }
+        .frame(width: ShareCard.size.width - pad * 2, height: 56)
+        .padding(.bottom, 10)
     }
 
     private var foot: some View {

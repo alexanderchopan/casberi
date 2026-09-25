@@ -1,16 +1,34 @@
 # Social — the people in your inbox, and what you can do about them
 
 **JOINT SPEC, half A (2026-09-24).** This file is half A — share and act —
-and its §0 binds both halves. **Half B is `docs/addresses-spec.md`** — the
+and its section 0 binds both halves. **Half B is `docs/addresses-spec.md`** — the
 record — `Contact` with a `kind`, `ContactIndex`, `PeopleBook`. Neither session edits the other's file;
-disagreements go in the seam sections (§5 here, §2.5 there). §1 here is a
+disagreements go in the seam sections (section 5 here, section 2.5 there). section 1 here is a
 pointer and the facts the seam needs. Rulings referenced: §83 (honesty), §239 (social's inbound half),
 §434 (map / list / card), §701 (the cookie-session read), §736 (a row that
 names a place is a button), §746 (a verb is a row), §756 (the cover draws a
 post as a post), §867 (every disc presses).
 
-**Grade: SPEC (2026-09-24).** Nothing below is built yet. Each pass says
-what it draws, what it writes, and what it will not do.
+**Grade: SECTIONS 2, 3 AND 6.3 BUILT (2026-09-24, commits `17dc737f` and
+the one after it); 6.1 waits on a phone with Developer Mode on; 6.2 waits on
+half B's `ContactIndex`; section 4 is BLOCKED on a ruling** — the 2026-07-15
+ledger entry "every bridge stays read-only" (Goal ③ reversed, `docs/prd.md`
+~2874) declined exactly the acts section 4 lists, GitHub, Calendar and the
+social replies by name. Building any of them reverses that ruling, which
+only the user can do. Each pass says what it draws, what it writes, and what
+it will not do.
+
+**Room cards, as built (6.3).** `Model/RoomShareCard.swift`: a door row
+(`Share this week` / `Share your streak`) under whatever leads a room, drawn
+by `FeedScreen.roomShareDoor` from `groupedSections`, so a kind-tiled room
+(GitHub) and a tile-less one (Duolingo) both get it. The tap copies the
+rows' dates and titles out (`RoomShareCard.Input`), so the sheet never holds
+a `Thing`. GitHub draws the contribution calendar's last seven days when the
+store holds one, else the rows that landed this week under a caption that
+says so; Duolingo draws the profile's streak when the profile answers, else
+the week's XP off the rows, and never a streak it did not read. A workout's
+card draws its `.metric` facts as columns (km, Duration, /km). A room that
+cannot draw a card says "Nothing to draw yet." in the slot, never a spinner.
 
 ---
 
@@ -47,7 +65,7 @@ ever leave through a browser-session cookie. Writes go through:
 ## 1. The person — see `docs/addresses-spec.md`
 
 The design is there. What this half needs from it is one call
-(`ContactIndex.contact(for:)`, §5) and the facts below, read off the tree so
+(`ContactIndex.contact(for:)`, section 5) and the facts below, read off the tree so
 the seam points at something real. What a `Thing` names today:
 
 | Seat | Field | Shape |
@@ -96,7 +114,7 @@ every messaging and social surface previews whole. One frame, no scroll.
    screenshot or photo; `previewImageURL` when already cached). Art over
    words, never beside (§915). `DS.Radius.widget`, aspect-fill, clipped.
 3. The words: title in `heading24` (or `heading40` when short and there is
-   no picture — the rung is chosen by fit, never by character count, §766a),
+   no picture — the rung is chosen by fit, never by character count, §766 (its amendment)),
    then `postText` / the lede / `content` in `body17`, capped by the box,
    never a count.
 4. The foot, pinned to the bottom: `CasberiMark(size: 20)` and the word
@@ -135,12 +153,12 @@ rows (§746 — a verb is a row):
 
 | Row | Glyph | Opens | Prefilled |
 |---|---|---|---|
-| Send in Messages | `message` | `MFMessageComposeViewController` | the card as a PNG attachment, the thing's link as the body; the recipient from §5 |
-| Send in Mail | `envelope` | `MFMailComposeViewController` | subject = title, the card attached, the link in the body; recipient from §5 |
+| Send in Messages | `message` | `MFMessageComposeViewController` | the card as a PNG attachment, the thing's link as the body; the recipient from section 5 |
+| Send in Mail | `envelope` | `MFMailComposeViewController` | subject = title, the card attached, the link in the body; recipient from section 5 |
 | Share… | `square.and.arrow.up` | `ShareLink` (`.plain`, per `sharelink-style-audit.py`) | the card, then the link |
 
 **Call** stays a dial disc, because it is one tap and needs no card: it reads
-`detectedTel` today and the person's phone from §5 tomorrow. **Email** as a
+`detectedTel` today and the person's phone from section 5 tomorrow. **Email** as a
 dial disc (a reply to the sender) is unchanged; the tray's Mail row is a
 different act — sending the thing ON, not answering it.
 
@@ -153,7 +171,7 @@ a Mac with no Messages account, an iPad with no SIM — hides that row rather
 than drawing a dead one; there is always `Share…`. The composer's own Cancel
 and Send end it; the app reads only the result to dismiss.
 
-**Not in scope.** No recipient search of its own (that is §1's). No group
+**Not in scope.** No recipient search of its own (that is section 1's). No group
 send. No scheduling. Nothing is sent without the composer's own Send.
 
 ---
@@ -161,7 +179,7 @@ send. No scheduling. Nothing is sent without the composer's own Send.
 ## 4. Acts by seat (share-card session, LATER — not in the first pass)
 
 Each is an official write behind a sign-in the person already made. Listed
-so the seam in §5 is designed for them; none is built until ruled.
+so the seam in section 5 is designed for them; none is built until ruled.
 
 | Seat | Act | Door | Cost |
 |---|---|---|---|
@@ -172,7 +190,7 @@ so the seam in §5 is designed for them; none is built until ruled.
 | Bluesky | DM | `chat.bsky.convo.*`, app password | a new read + write seat |
 | Farcaster | Direct cast | Warpcast API key, per user | a key the person fetches |
 
-**Declined on purpose.** Any write on a cookie-session seat (§0). DMs with
+**Declined on purpose.** Any write on a cookie-session seat (section 0). DMs with
 no published API (Instagram, TikTok, X, WhatsApp). A following timeline
 (`SocialFollows.swift` doc: it would turn a corpus into a timeline). NFC or
 QR follow (parked 2026-09-19).
@@ -181,7 +199,7 @@ QR follow (parked 2026-09-19).
 
 ## 5. The seam (edited by agreement)
 
-One call, owned by `addresses-spec.md`, read by §3:
+One call, owned by `addresses-spec.md`, read by section 3:
 
 ```swift
 /// The contact a thing is from or about, resolved through the unified
@@ -189,25 +207,25 @@ One call, owned by `addresses-spec.md`, read by §3:
 ContactIndex.contact(for thing: Thing) -> Contact?
 ```
 
-§3 takes a phone and an email from the `Contact`'s `.contact` identity's
+section 3 takes a phone and an email from the `Contact`'s `.contact` identity's
 facts (the `.call` / `.mail` facts `ContactsIngest.facts(for:)` already
 writes) when present, and from `detectedTel` / `detectedMailto` when not.
-Until `ContactIndex` lands, §3 ships with the detector fallback alone; the
+Until `ContactIndex` lands, section 3 ships with the detector fallback alone; the
 tray's rows do not change shape when the person arrives, only their prefill.
 The planned `ThingStage.swift` hunk on the people side is in `MovedStage`,
 not `VerbDial`, so the two hunks do not meet.
 
-**Add to Addresses** (half B §2.6, user 2026-09-24; the room is named Addresses, never People) is a dial VERB
+**Add to Addresses** (half B section 2.6, user 2026-09-24; the room is named Addresses, never People) is a dial VERB
 (`Verb.Action.addToPeople`, reading `Open person` once the person exists),
 built in `Verbs.swift` by half B. The share tray adds no second door for it:
 a "Save sender" row here would be the same act behind a different word.
 
 Paths, so neither session's `git add` takes the other's work:
 
-- §1: `Model/Contacts*`, `Model/AddressBook*`, `Model/Person*`,
+- section 1: `Model/Contacts*`, `Model/AddressBook*`, `Model/Person*`,
   `Screens/PersonRoomScreen.swift`, `Model/SocialRoomSource.swift`, and
   `Shared/Thing.swift` if a field is added.
-- §3: `Model/ShareCard.swift`, `Design/ShareCardView.swift`,
+- section 3: `Model/ShareCard.swift`, `Design/ShareCardView.swift`,
   `Screens/ShareTray.swift`, `Screens/MessageCompose.swift`, one hunk in
   `Screens/ThingStage.swift` (`VerbDial`'s Share disc), three keys in
   `Localizable.xcstrings`.
@@ -219,10 +237,10 @@ Both commit through a temp index scoped to their own paths (memory:
 
 ## 6. Order of work
 
-1. §2 + §3 with the detector fallback — one sheet, the card, three rows.
+1. section 2 + section 3 with the detector fallback — one sheet, the card, three rows.
    Verified on the simulator for the card and the tray; the composers cannot
    run there (`canSendText()` is false), so their proof is a device.
-2. §1 lands; §5's `reach(for:)` wires in as one line per row.
+2. section 1 lands; section 5's `reach(for:)` wires in as one line per row.
 3. Card sources beyond a thing: a week on GitHub, a run, a streak — each a
    `ShareCard.Model` built by its room, same drawing.
-4. §4, one seat at a time, each behind a ruling.
+4. section 4, one seat at a time, each behind a ruling.

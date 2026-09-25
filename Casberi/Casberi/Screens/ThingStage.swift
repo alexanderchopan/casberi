@@ -166,7 +166,7 @@ struct VerbDial: View {
                 .buttonStyle(PressSpring())
             }
             // The Share disc raises the share tray — the card, then Messages,
-            // Mail and the system sheet as rows (docs/social-spec.md §3,
+            // Mail and the system sheet as rows (docs/social-spec.md section 3,
             // 2026-09-24). The feed row's context menu keeps the bare
             // `ThingShareLink`; the dial is where the card is.
             Button { sharing = true } label: {

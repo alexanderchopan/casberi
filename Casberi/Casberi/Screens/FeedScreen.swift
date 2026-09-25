@@ -124,6 +124,10 @@ struct FeedScreen: View {
 
     /// across the person's own swipes instead of all at once on launch.
     @State private var everBuilt = false
+    /// The room's own share card, raised by the door under its tiles
+    /// (docs/social-spec.md section 6, item 3). Presented from the screen's
+    /// root, never from the row that asks for it.
+    @State private var roomShare: RoomShareCard.Input?
 
     /// Source-scoped since 2026-07-21 (perf audit): the pager keeps every
     /// neighbor page MOUNTED (doc above), so an unfiltered `@Query` here used
@@ -6247,6 +6251,9 @@ struct FeedScreen: View {
         .sheet(item: $feedSheet) { route in
             sheetContent(route)
         }
+        .sheet(item: $roomShare) { input in
+            ShareTray(room: input)
+        }
         #if !targetEnvironment(macCatalyst)
         .translationPresentation(isPresented: $showTranslate, text: translateText)
         #endif
@@ -7644,6 +7651,26 @@ struct FeedScreen: View {
         }
     }
 
+    /// The door to a room's own share card — a week on GitHub, a streak on
+    /// Duolingo (`RoomShareCard.doorLabel`). One row in the rows' column,
+    /// under the tiles, never at the top of the screen (prd §752). The tap
+    /// copies the rows' bare facts out, so the sheet never holds a `Thing`.
+    @ViewBuilder private func roomShareDoor(_ visible: [Thing]) -> some View {
+        if let label = RoomShareCard.doorLabel(source: source), !visible.isEmpty {
+            Section {
+                DSDoorRow(icon: "square.and.arrow.up", label: LocalizedStringKey(label)) {
+                    let rows = visible.filter(\.isLive)
+                        .map { RoomShareCard.Input.Row(at: $0.capturedAt, title: $0.title) }
+                    roomShare = RoomShareCard.Input(source: source, rows: rows)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+            }
+        }
+    }
+
     /// A SOURCE room's day grouping, memoized (PERF 2026-08-01, prd §263).
     ///
     /// The All room's grouping has been memoized since §258; every OTHER room
@@ -8592,6 +8619,10 @@ struct FeedScreen: View {
             groups.flatMap { $0.1 }.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
         }
         if let coverThing { Section { ledeListRow(coverThing) } }
+        // The room's own share door stands under whatever leads — the cover
+        // here, or the tiles a kind-tiled room drew before calling this —
+        // and above the first day, in every room that offers one.
+        roomShareDoor(groups.flatMap { $0.1 })
         ForEach(window.shown, id: \.0) { label, rows in
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
                        replies: replies, coarse: coarse.contains(label),
