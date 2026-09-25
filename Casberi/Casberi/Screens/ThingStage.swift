@@ -122,6 +122,8 @@ struct VerbDial: View {
     /// an outcome the parent is still computing (§83): `DSPasteboard.copy`
     /// cannot fail, which is why this is the one verb that gets it.
     @State private var copied: Verb.ID?
+    /// The share tray, raised by the Share disc.
+    @State private var sharing = false
 
     /// Six discs fit a phone at the resting size; a seventh (four verbs, Name,
     /// Pin and Share — the wallet's fullest dial) takes the tighter cut rather
@@ -163,15 +165,16 @@ struct VerbDial: View {
                 }
                 .buttonStyle(PressSpring())
             }
-            ThingShareLink(thing: thing) {
+            // The Share disc raises the share tray — the card, then Messages,
+            // Mail and the system sheet as rows (docs/social-spec.md §3,
+            // 2026-09-24). The feed row's context menu keeps the bare
+            // `ThingShareLink`; the dial is where the card is.
+            Button { sharing = true } label: {
                 disc(icon: "square.and.arrow.up", label: "Share")
             }
-            // `PressSpring`, not `.plain`, for the same reason as the five
-            // discs beside it — and it satisfies `sharelink-style-audit.py`
-            // for the reason that audit exists: any style but the automatic
-            // one takes the button out of a `List` row's hands (prd §693).
             .buttonStyle(PressSpring())
         }
+        .sheet(isPresented: $sharing) { ShareTray(thing: thing) }
         .frame(maxWidth: .infinity)
         // Bound to `copied`, so SwiftUI cancels it when the sheet goes and
         // restarts it when a second copy lands before the first has cleared.
