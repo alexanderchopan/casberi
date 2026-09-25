@@ -60,7 +60,7 @@ struct ShareCardView: View {
                         .dsText(.subhead12).foregroundStyle(ink.tertiary).lineLimit(1)
                 }
             } else {
-                BridgeIcon(name: model.source, size: DS.Mark.row, circular: true)
+                BridgeIcon(name: model.source, size: DS.Face.row, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(model.sourceName).dsText(.label12).foregroundStyle(ink.primary).lineLimit(1)
                     Text(model.day).dsText(.subhead12).foregroundStyle(ink.tertiary).lineLimit(1)
@@ -75,12 +75,12 @@ struct ShareCardView: View {
             Image(uiImage: face)
                 .resizable()
                 .scaledToFill()
-                .frame(width: DS.Mark.row, height: DS.Mark.row)
+                .frame(width: DS.Face.row, height: DS.Face.row)
                 .clipShape(Circle())
         } else {
             Circle()
                 .fill(ink.fill)
-                .frame(width: DS.Mark.row, height: DS.Mark.row)
+                .frame(width: DS.Face.row, height: DS.Face.row)
                 .overlay {
                     Text(String(author.drop(while: { $0 == "@" }).prefix(1)).uppercased())
                         .dsText(.label12)
