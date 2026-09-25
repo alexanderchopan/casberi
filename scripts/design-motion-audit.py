@@ -68,6 +68,12 @@ SOURCES = [
 # --- Exemptions -------------------------------------------------------------
 # Each entry is a ruling. "<file basename>:<struct>" -> why.
 KNOWN_EXEMPT = {
+    # ShareCardView is never on screen. `ShareCard.render` draws it once
+    # through `ImageRenderer` into the PNG that is sent, and the tray previews
+    # that bitmap, not the view. An entrance animation would render as its
+    # first frame, a half-faded card in someone's text thread
+    # (docs/social-spec.md section 2). A conscious ruling, not a snooze.
+    "ShareCardView.swift:ShareCardView": "rendered off screen to a PNG; an entrance would ship its first frame",
     # RootShell's flagged `withAnimation` is not an entrance: it is the
     # `-openAppsDelay` DEBUG probe hook, which animates a delayed navigation
     # push so a headless recording can film the Apps door opening. It ships in
