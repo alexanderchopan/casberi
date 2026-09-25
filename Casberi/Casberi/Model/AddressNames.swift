@@ -150,8 +150,8 @@ final class AddressNames {
         UserDefaults.standard.set(data, forKey: Self.storeKey)
     }
 
-    #if DEBUG
-    /// Everything known, for `-weiNameProbe`.
+    /// Everything known — for `-weiNameProbe`, and since prd §916 for the
+    /// Addresses index, which turns every verified name here into a link
+    /// (so it compiles in Release too; the first archive found it DEBUG-only).
     var allRecords: [String: Record] { records }
-    #endif
 }
