@@ -2233,6 +2233,15 @@ harness "GitHub event-shape pure-logic self-test" "github-event self-test" "scri
 # that the family order still asks the specific suffixes before ENS's
 # catch-all, and that a resolved name never overwrites one somebody typed.
 harness "Wei/Gwei name pure-logic self-test" "wei-names self-test" "scripts/wei-names-selftest.sh" "the Wei/Gwei name self-test failed — run scripts/wei-names-selftest.sh"
+# web3.bio (prd §916) — the resolver behind `ENS` and the linked Base/Linea/
+# Farcaster/Lens rows on an address card. What it catches: a reverse answer
+# that names OTHER addresses read as this address's names (web3.bio's graph
+# joins them in — measured on vitalik's, three of four rows), a 404 or an
+# unreadable body cached as "no names", the placeholder row read as a name,
+# a throttle cached as a miss, the demo reaching out, and a `/` turning the
+# query into a path. Compiles the file whole over a canned network; 13
+# mutations.
+harness "web3.bio pure-logic self-test" "web3bio self-test" "scripts/web3bio-selftest.sh" "the web3.bio self-test failed — run scripts/web3bio-selftest.sh"
 
 # World ID (prd §785). The read is one `eth_call` whose every failure arrives as
 # the same silence, and the silence is also the CORRECT answer for almost every

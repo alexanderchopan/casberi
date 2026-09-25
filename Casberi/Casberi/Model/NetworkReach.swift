@@ -244,8 +244,12 @@ enum NetworkReach {
                  // public usernames service, and the host its pictures are
                  // served from. Also asked for a counterparty met on World
                  // Chain, which is the one reach the sentence below adds.
-                 purpose: "Resolves .eth, .sol, .wei and .gwei names, World App usernames, and their avatars — for the wallets you watch, for an address when you open it in your address book, for the other side of a World Chain transfer, and for a World App username you type to follow. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
-                 hosts: ["api.ensideas.com", "metadata.ens.domains", "app.ens.domains",
+                 purpose: "Resolves .eth, .sol, .wei and .gwei names, Base and Linea names, World App usernames, and their avatars — for the wallets you watch, for an address when you open it in your address book, for the other side of a World Chain transfer, and for a World App username you type to follow — and reads the Farcaster, Lens and Base names an address has linked to itself. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
+                 // web3.bio joined 2026-09-24 (prd §916): one keyless lookup
+                 // that answers every name service at once; ensideas is the
+                 // fallback. Avatars it returns live on third-party image
+                 // hosts, loaded the way ENS avatars always were.
+                 hosts: ["api.web3.bio", "api.ensideas.com", "metadata.ens.domains", "app.ens.domains",
                          "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag",
                          "usernames.worldcoin.org",
                          "static.usernames.app-backend.toolsforhumanity.com"]),

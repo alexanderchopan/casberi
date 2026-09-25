@@ -102,7 +102,8 @@ enum NameResolve {
         let name: String
     }
 
-    /// Every primary name an address has set, across ENS, WNS and GNS.
+    /// Every primary name an address has set, across ENS, WNS and GNS — and
+    /// since prd §916 the Base, Linea, Farcaster and Lens names it linked.
     ///
     /// ENS leads because it is the one people mean by "their name", and the
     /// order is FIXED rather than ranked — a ranking would be a claim about
@@ -134,6 +135,23 @@ enum NameResolve {
         for (registry, name) in await WeiNamesSource.primaryNames(for: hexAddress) {
             out.append(PrimaryName(label: registry.label, name: name))
         }
+        // The names an address linked to itself elsewhere — Base, Linea,
+        // Farcaster, Lens — off web3.bio (prd §916). Each clears §599's two
+        // bars: the record's own address is this one (`names(for:)`), and the
+        // forward query for that platform and identity comes back to it
+        // (`verified`). A record web3.bio joined through its graph — the
+        // Farcaster row it returns for vitalik's ENS address carries a
+        // DIFFERENT address, measured — never reaches this list.
+        // One name, one row: a Basename the ENS step already listed is
+        // relabelled `Base` in place, never listed twice (`Web3Bio.fold`).
+        var named = out.map { Web3Bio.Named(label: $0.label, name: $0.name) }
+        for record in await Web3Bio.names(for: hexAddress) where record.platform.isLinkedEVMName {
+            guard await Web3Bio.verified(record, is: hexAddress) else { continue }
+            Web3Bio.fold(Web3Bio.Named(label: record.platform.label,
+                                       name: record.platform.display(record.identity)),
+                         into: &named)
+        }
+        out = named.map { PrimaryName(label: $0.label, name: $0.name) }
         // World App's username (prd §795), forward-verified inside the lookup —
         // the same bar as the three above. Last: it is an app's handle, not a
         // name registry the address chose on chain.

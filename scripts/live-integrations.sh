@@ -1493,6 +1493,22 @@ print(":".join([
 fi
 
 hr
+# ── web3.bio (prd §916) ──────────────────────────────────────────────────────
+# The resolver behind `ENS` since 2026-09-24, keyless. When it stops answering
+# the app falls back to ensideas for ENS and goes QUIET for Base/Linea/
+# Farcaster/Lens names — no row breaks, the linked rows simply never draw
+# (§311's shape). Pinned to a name whose ENS record cannot lapse quietly.
+print -P "%Bweb3.bio%b  (keyless name lookup, api.web3.bio/ns)"
+w3b=$(curl -s --max-time "$TIMEOUT" "https://api.web3.bio/ns/vitalik.eth" 2>/dev/null)
+if [[ -z "$w3b" ]]; then
+  warn "web3.bio — /ns/vitalik.eth did not answer; ENS falls back to ensideas, linked names go quiet"
+elif [[ "$w3b" == \[* && "$w3b" == *'"platform":"ens"'* && "$w3b" == *'0xd8da6bf26964af9d7eed9e03e53415d37aa96045'* ]]; then
+  pass "web3.bio — /ns answers an array with the ENS record at the measured address"
+else
+  fail "web3.bio — /ns/vitalik.eth answered in a shape the app does not parse: $(print -r -- "$w3b" | cut -c1-80)"
+fi
+hr
+
 # ── Wei / Gwei name services (prd §597) ─────────────────────────────────────
 # The drift class `wei-names-selftest.sh` structurally cannot see: that harness
 # proves the ENCODING is right against fixtures, never that the two contracts

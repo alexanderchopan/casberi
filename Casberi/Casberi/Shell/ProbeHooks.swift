@@ -3314,6 +3314,18 @@ enum ProbeHooks {
                 for line in lines { NSLog("weiName| %@", line) }
             }
         },
+        // `-web3bioProbe <name|0x…>` — every record web3.bio holds for one
+        // query (prd §916): platform, identity, the record's OWN address, and
+        // for an address the two verdicts §599 needs — whether the record
+        // names this address at all (web3.bio's graph joins others in) and
+        // whether the forward query comes back to it. An empty answer is the
+        // ordinary one; the lines say which silence it is.
+        Hook(key: "web3bioProbe") { spec, _ in
+            Task { @MainActor in
+                let lines = await Web3Bio.probe(spec)
+                for line in lines { NSLog("web3bio| %@", line) }
+            }
+        },
         // `-worldIDProbe <0x…|YES>` — World ID's address book, step by step
         // (prd §785): the contract, the computed selector, the calldata, the
         // RAW word that came back, and the verdict. Bare `YES` reads the

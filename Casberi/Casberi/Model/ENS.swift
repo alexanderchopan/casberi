@@ -35,11 +35,19 @@ enum ENS {
     /// fixed the same day. A gate on the one caller would leave every future
     /// caller exposed to the same miss; gating the three functions here closes
     /// it structurally.
+    ///
+    /// **web3.bio first, ensideas after (prd §916, 2026-09-24).** web3.bio
+    /// answers Basenames and Linea names, which ensideas may not, and its
+    /// records are what `NameResolve.primaryNames` reads for the linked
+    /// Farcaster/Lens/Base rows — so the forward check §599 requires runs
+    /// against the same service that made the claim. ensideas stays as the
+    /// fallback so an outage costs nothing that worked before.
     static func resolve(_ raw: String) async -> String? {
         guard !DemoMode.isActive else { return nil }
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard looksLikeName(name),
-              let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+        guard looksLikeName(name) else { return nil }
+        if let hex = await Web3Bio.resolve(name), isHexAddress(hex) { return hex }
+        guard let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let root = await IngestSupport.getJSON(
                 "https://api.ensideas.com/ens/resolve/\(encoded)") as? [String: Any],
               let address = root["address"] as? String,
@@ -64,7 +72,13 @@ enum ENS {
         guard isHexAddress(addr) else { return nil }
         if let cached = reverseCache[addr] { return cached }
         var name: String?
-        if let root = await IngestSupport.getJSON(
+        // web3.bio first (prd §916): the ENS record whose own address is this
+        // one. `names(for:)` already drops the rows web3.bio linked through
+        // its graph, so the forward check in `NameResolve` is the only other
+        // bar left to clear.
+        if let ens = await Web3Bio.names(for: addr).first(where: { $0.platform == .ens }) {
+            name = ens.identity
+        } else if let root = await IngestSupport.getJSON(
             "https://api.ensideas.com/ens/resolve/\(addr)") as? [String: Any],
            let n = root["name"] as? String, !n.isEmpty {
             name = n
@@ -92,7 +106,9 @@ enum ENS {
         guard !key.isEmpty else { return nil }
         if let cached = avatarCache[key] { return cached }
         var avatar: String?
-        if let encoded = key.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+        if let found = await Web3Bio.avatar(for: key) {
+            avatar = found
+        } else if let encoded = key.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
            let root = await IngestSupport.getJSON(
             "https://api.ensideas.com/ens/resolve/\(encoded)") as? [String: Any],
            let a = root["avatar"] as? String,

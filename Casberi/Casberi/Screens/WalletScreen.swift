@@ -103,6 +103,18 @@ struct WalletScreen: View {
             more: { moreBlock },
             keySheet: { EmptyView() }
         )
+        #if DEBUG
+        // `-openAddressCard <0x…>` — raise the card for one book entry the
+        // moment this page appears (prd §916's screenshots): the card is the
+        // only surface that draws an address's linked names, and a simulator
+        // tap has to find the row under two permission sheets first.
+        .onAppear {
+            guard let asked = UserDefaults.standard.string(forKey: "openAddressCard"),
+                  let entry = AddressBook.shared.entry(for: asked) else { return }
+            NSLog("openAddressCard: %@", entry.name)
+            sheet = .card(id: entry.id)
+        }
+        #endif
     }
 
     /// The act. The FIRST address while there is none; the book's door once
