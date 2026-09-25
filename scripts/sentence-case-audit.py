@@ -238,6 +238,9 @@ KNOWN_PROPER: set[str] = {
     "Rabby", "SafePal", "Trezor", "Raycast", "Takeout", "SteamID", "Venmo",
     "BNB", "SegWit", "MyActivity", "AuthKey", "Siri", "Mac", "Safari",
     "Spotlight", "Keychain",
+    # Apple's Messages app, named by the share tray's row ("Send in
+    # Messages", docs/social-spec.md section 3). Mail is a catalog seat.
+    "Messages",
     # In-app surfaces referenced by name — the chips and screens a sentence
     # points at ("add one from Apps", "washes the top of All").
     "All", "Apps", "Pinned", "Home", "Settings",
