@@ -104,12 +104,21 @@ quit_app() { pkill -f "$DD/Build/Products/Debug-maccatalyst/Casberi.app" 2>/dev/
 
 # launch <logfile> <args...> — cold-launch the Mac app with stderr captured.
 # Always scratch-stored and past onboarding; callers add their own probe args.
+#
+# `-ApplePersistenceIgnoreState YES` (2026-09-25): `quit_app` force-kills, and
+# AppKit answers the NEXT launch of an app that "closed unexpectedly" with a
+# modal "reopen windows?" alert BEFORE the first frame — so every cycle after
+# any failed one timed out with "process alive, frozen at launch", the main
+# thread parked in `-[NSPersistentUIRestorer promptToIgnorePersistentState…]`
+# → `-[NSAlert runModal]` (sampled). The container's defaults are TCC-walled
+# from `defaults write`; the argument domain is not. Harness-only: it changes
+# what the person's Mac restores on THEIR launches not at all.
 launch() {
   local logfile="$1"; shift
   quit_app
   : > "$logfile"
   open -n "$APP" --stderr "$logfile" --stdout /dev/null \
-    --args -storeScratch YES -onboarded YES "$@" 2>/dev/null
+    --args -storeScratch YES -onboarded YES -ApplePersistenceIgnoreState YES "$@" 2>/dev/null
 }
 
 # wait_for <logfile> <extended-regex> <seconds> — poll the captured stderr.
