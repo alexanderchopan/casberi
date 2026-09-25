@@ -112,10 +112,11 @@ name services), Social (Farcaster, Bluesky, Nostr, X), Work (GitHub, email at a 
   the room opens; fewer than two kinds draws no tiles. Work is GitHub people (and any later work
   seat that watches a person); Feeds is every `publication` row. A wallet row that is a contract
   or a Safe stays under Wallets with its own mark. Each tile needs its `ScopeTileGlyph` constant named for its own case.
-- **Rows:** `DSFeedRow`. Lead: the person's face (contact photo, then a social avatar, then an
-  ENS avatar, then the monogram — `Kind.isMonogram`'s rule). Title: the display name, one line.
-  Line (`subhead12`): their identities in a fixed order, e.g. `@jesse · jesse.base.eth · Farcaster, Base`.
-  Trailing slot: **empty**. No money, no counts (§345: a per-face number was a fake status).
+- **Rows:** the person's face (contact photo, then a social avatar, then an ENS avatar, then
+  the monogram — `Kind.isMonogram`'s rule) and the display name on one line — **and nothing
+  under it** (RULED, user 2026-09-25: "why is a second line necessary under each name"; the
+  sheet names every address). Trailing slot: **empty**. No money, no counts (§345: a per-face
+  number was a fake status). The category chips are A–Z, as the Accounts strip is (user).
 - **Sections:** not by day. Two groups, `dated: false`: **Recent** (people with any thing in the
   last 30 days, newest act first) then **Everyone** (alphabetical by display name). The day
   divider's pink is only for time (§740).
@@ -134,12 +135,23 @@ name services), Social (Farcaster, Bluesky, Nostr, X), Work (GitHub, email at a 
 
 **The sheet.** `PersonCard` (already the contact sheet) grows into the person sheet:
 
-1. Face, name, the Role · Company line where a contact carries one.
-2. **Identities**, one row each, every one a door: a contact row opens Apple Contacts
+1. Face, name, the Role · Company line where a contact carries one. **No kind word** under the
+   name (user, 2026-09-25: "what does that even mean … his smart account presumably is in the
+   list as wallet"): the kind shapes the face and the list; the wallet row's own card says
+   what the address is.
+2. The addresses, one row each, **with no section word above them** (user, 2026-09-25: "you
+   can't say 'identities', it needs to just say Addresses, and tbh doesn't even need a section
+   descriptor" — the word "identity" is the model's, never the screen's), every one a door: a contact row opens Apple Contacts
    (`contacts://` UNMEASURED — else the reachable facts stay inline as today); a wallet row
    opens `AddressCard`; a social row opens `PersonRoomScreen`; a GitHub row opens the profile.
-   Each row's line says how the app knows it (section 3's tier word): *verified*, *you confirmed*,
-   *from their contact card*.
+   ~~Each row's line says how the app knows it (section 3's tier word)~~ RULED OUT (user,
+   2026-09-25: "not sure we need 'verified', that just becomes questionable what it really
+   means"), and then no line at all (user: "even the name of the service is redundant if we
+   are using the icon"); the tier stays in the model, where it decides merging. Each row LEADS with the seat's mark — the dock's own chip (user: "icon tiles …
+   like the source chips we have in our dock"), drawn as a CIRCLE as the dock draws it (user:
+   "they should be circles, like they are in our dock"), at the dock folder's own size
+   (`DS.Face.list`, 36pt — user: "are they the same size as they are in our dock? should they
+   be?"; and "they look like they are touching", so the rows take `s3` air), never a glyph.
 3. The reachable and standing facts a contact already draws (call, mail, address, birthday).
 4. **With you** — the person's things across the whole corpus, newest first, capped at 20 with
    a `Show older` door: transfers whose `counterpartyAddress` is one of their addresses, posts

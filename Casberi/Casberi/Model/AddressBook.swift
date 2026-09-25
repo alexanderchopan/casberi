@@ -266,7 +266,7 @@ final class AddressBook {
         /// uma", "Farcaster · uma" (2026-08-27, prd §498).
         ///
         /// It exists because merging a person's accounts into one row
-        /// (`AddressBookPeople.merged`) left the card with one `address` field
+        /// (`AddressBookPeople.merged`, deleted by prd §916) left the card with one `address` field
         /// standing for several things: it held the FIRST source's namespaced
         /// key, which is our own bookkeeping, and the card would have printed
         /// it and offered to copy it. A person has no address; they have

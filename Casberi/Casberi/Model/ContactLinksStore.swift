@@ -24,6 +24,10 @@ final class ContactLinksStore {
         } else {
             ledger = LinkLedger()
         }
+        // The iCloud mirror, one runloop turn later — `attach` reads the
+        // singleton, which does not exist until this initializer returns
+        // (the wallet book's own shape).
+        DispatchQueue.main.async { Self.shared.attach() }
     }
 
     // MARK: - Writes
@@ -78,6 +82,7 @@ final class ContactLinksStore {
         })
 
     func attach() { mirror.attach() }
+    func syncNow() { mirror.syncNow() }
 
     #if DEBUG
     /// `-addressesForget YES` — empty the ledger, so a probe starts clean.

@@ -65,6 +65,9 @@ struct ThingSheetView: View {
     /// being named, and the draft. The label enriches every FUTURE transfer
     /// with that counterparty (CounterpartyLabels).
     @State private var counterpartyTarget: String?
+    /// The non-wallet identity the Name disc is naming (prd §916): a sender,
+    /// a poster, a login — saved into `ContactBook`, never the wallet book.
+    @State private var identityTarget: Identity?
     /// Flipped by "Not now" so the nudge leaves immediately — the decline is
     /// also persisted, so it never returns for this address (prd §169).
     @State private var nudgeDeclined = false
@@ -488,7 +491,7 @@ struct ThingSheetView: View {
                              // wallet — it already has a name (via the Wallet
                              // screen's rename), so the Name disc would just
                              // offer to relabel it through the wrong flow.
-                             onName: MovedStage(thing) == nil ? nameCounterpartyAction : nil,
+                             onName: MovedStage(thing) == nil ? (nameCounterpartyAction ?? nameIdentityAction) : nil,
                              onPin: togglePin)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.12)
@@ -1333,6 +1336,25 @@ struct ThingSheetView: View {
             Button("Cancel", role: .cancel) { counterpartyTarget = nil }
         } message: {
             Text("It rides every future transfer with this address. Blank clears it.")
+        }
+        // Name anyone else a thing is from (prd §916 amendment — user: "any
+        // address or whatever a person should be able to save easily"): the
+        // sender, the poster, the login. Saved into `ContactBook`, and the
+        // Addresses list shows them under that name from then on.
+        .alert("Name this address",
+               isPresented: Binding(get: { identityTarget != nil },
+                                    set: { if !$0 { identityTarget = nil } })) {
+            TextField("Name (e.g. Mom)", text: $counterpartyDraft)
+            Button("Save") {
+                if let identity = identityTarget {
+                    ContactBook.shared.save(identity, name: counterpartyDraft)
+                    ContactIndexSources.rebuild(context: modelContext)
+                }
+                identityTarget = nil
+            }
+            Button("Cancel", role: .cancel) { identityTarget = nil }
+        } message: {
+            Text("It names them everywhere in the app. Blank removes the name.")
         }
         // Walking the thread in-app (2026-07-16) — the parent this post
         // answers, or a reply under it. A read: no consent gate, the standing
@@ -2906,6 +2928,24 @@ struct ThingSheetView: View {
         return {
             counterpartyDraft = AddressBook.shared.name(for: cp) ?? ""
             counterpartyTarget = cp
+        }
+    }
+
+    /// The Name disc for a thing whose "who" is not a wallet: the first
+    /// identity the seam resolves (`ContactIndex.keys`) that is not a contact
+    /// card (a card already names itself) — nil where nothing is nameable, so
+    /// no disc is drawn (§83).
+    private var nameIdentityAction: (() -> Void)? {
+        let keys = ContactIndex.keys(
+            source: thing.source, kind: thing.kind.rawValue, sourceRef: thing.sourceRef,
+            authorHandle: thing.authorHandle, walletAddress: nil, counterpartyAddress: nil,
+            authorEmail: thing.authorEmail,
+            isNotification: thing.sourceRef?.hasPrefix("gh:notif:") ?? false)
+        guard let identity = keys.compactMap(Identity.parse(key:)).first(where: { $0.kind != .contact && $0.kind != .wallet })
+        else { return nil }
+        return {
+            counterpartyDraft = ContactBook.shared.name(for: identity.key) ?? ""
+            identityTarget = identity
         }
     }
 

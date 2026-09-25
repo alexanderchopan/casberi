@@ -164,6 +164,9 @@ enum MailIngest {
             // we honestly have, 2026-07-10). Older rows parse it from the
             // "From …" content at render, so no migration.
             thing.authorHandle = m.from
+            // The address beside the name (prd §916): the Email door and the
+            // Addresses index read this; a display name alone names nobody.
+            thing.authorEmail = m.fromAddress
             // Who else was on it, for RETRIEVAL only (2026-07-15 ruling) —
             // `enrichedText`, so nothing renders it and the sheet is unchanged.
             // A mail used to land knowing only its sender, which made "the mail

@@ -3,6 +3,7 @@ DEFINE SCHEMA
     RECORD TYPE CD_Thing (
         CD_audio                BYTES QUERYABLE SORTABLE,
         CD_authorAvatarURL      STRING QUERYABLE SEARCHABLE SORTABLE,
+        CD_authorEmail          STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_authorHandle         STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_capturedAt           TIMESTAMP QUERYABLE SORTABLE,
         CD_channelName          STRING QUERYABLE SEARCHABLE SORTABLE,

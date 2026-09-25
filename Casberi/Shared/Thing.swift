@@ -836,6 +836,14 @@ final class Thing {
     /// Wallet row names which address it came from (2026-07-10). Optional +
     /// default nil keeps CloudKit mirroring happy; nil for everything else.
     var authorHandle: String? = nil
+    /// The sender's mailbox, `mailbox@host`, for a mail row (prd §916
+    /// amendment, 2026-09-24). `authorHandle` above is the DISPLAY name when
+    /// the sender set one, so a row whose sender is "Jesse Pollak" held no
+    /// address anywhere and its Email door was dead — and the Addresses
+    /// index could not tell that sender from the contact card. Optional +
+    /// default nil (CloudKit: an additive field, deployed per
+    /// docs/cloudkit-deploy.md); nil for everything that is not mail.
+    var authorEmail: String? = nil
     /// That author's avatar URL — loaded into the row's leading slot (as a
     /// circle) only when more than one account is watched. nil keeps the
     /// source glyph.

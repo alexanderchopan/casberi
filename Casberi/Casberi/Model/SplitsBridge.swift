@@ -31,7 +31,7 @@ import SwiftData
 ///   that reads them, drawn on the account page behind the balance mask.
 /// - **Contacts** are the team's names for outside addresses. They carry no
 ///   date, so they are not a feed: they join the address book as a
-///   population (`AddressBookPeople.splits`), the Twitch roster's shape.
+///   population (the §498 rows, deleted by prd §916), the Twitch roster's shape.
 ///
 /// **`walletAddress` is never stamped** (Privy's rule, §803f): it would
 /// enrol an unwatched account in the watched wallets' scope and verbs.

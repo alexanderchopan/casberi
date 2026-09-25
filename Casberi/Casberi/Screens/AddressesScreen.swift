@@ -10,9 +10,9 @@ import SwiftData
 /// read time by `ContactIndexSources.rebuild` from the stores that already
 /// hold the identities; nothing here is stored.
 ///
-/// **The row.** The face, the name on one line, and a line naming every
-/// identity the contact carries (`@jesse · jesse.base.eth`). The trailing
-/// slot is EMPTY: no money (user, 2026-08-21), no counts (§345).
+/// **The row.** The face and the name on one line, nothing under it (user,
+/// 2026-09-25); the sheet names every address the contact carries. The
+/// trailing slot is EMPTY: no money (user, 2026-08-21), no counts (§345).
 ///
 /// **The chips.** A contact stands in every dock category one of its
 /// identities belongs to — a wallet with a Farcaster handle is under Wallet
@@ -28,9 +28,27 @@ struct AddressesSection: View {
     @State private var contacts: [Contact] = []
     @State private var scope = AddressScope(name: nil)
     @State private var opened: Contact?
+    /// The newest transfer whose counterparty nobody has named — the list's
+    /// one nudge (section 1, section 9: "any time", one row at a time).
+    @State private var nudge: (address: String, title: String)?
+    /// The one "Same person?" the list may draw (section 3): the newest live
+    /// suggestion whose two ends are both here, with the model's sentence
+    /// under it when the phone can give one.
+    @State private var suggestion: ContactLink?
+    @State private var verdict: String?
+    @State private var naming = false
+    @State private var draft = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if query.isEmpty, scope.name == nil, let nudge {
+                nudgeRow(nudge)
+            }
+            if query.isEmpty, scope.name == nil, let suggestion,
+               let a = ContactIndexSources.contact(forKey: suggestion.a),
+               let b = ContactIndexSources.contact(forKey: suggestion.b) {
+                suggestionRow(suggestion, a: a, b: b)
+            }
             if query.isEmpty, scopes.count > 2 {
                 DSScopeTiles(sections: scopes, active: scope, strip: true) { picked in
                     withAnimation(DS.Motion.standard) { scope = picked }
@@ -52,21 +70,139 @@ struct AddressesSection: View {
         }
         // The index is rebuilt on appear, never in a body (§628). It reads
         // the stores and the ledger only — no network.
-        .task { contacts = ContactIndexSources.rebuild(context: modelContext) }
+        .task { await refresh() }
+        .alert("Name this address",
+               isPresented: $naming) {
+            TextField("Name (e.g. Mom)", text: $draft)
+            Button("Save") {
+                guard let nudge else { return }
+                AddressBook.shared.setName(draft, for: nudge.address)
+                Task { @MainActor in await AddressKind.detect(nudge.address) }
+                CounterpartyRetitle.applyCurrentName(for: nudge.address, in: modelContext)
+                Task { await refresh() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("It rides every future transfer with this address. Blank clears it.")
+        }
         .sheet(item: $opened) { contact in
             ContactSheet(contact: contact)
                 .dsReadSheet()
         }
     }
 
+    private func refresh() async {
+        contacts = ContactIndexSources.rebuild(context: modelContext)
+        nudge = Self.newestUnnamed(context: modelContext)
+        let next = ContactSuggest.next(in: ContactLinksStore.shared.ledger,
+                                       known: { ContactIndexSources.contact(forKey: $0) != nil })
+        if next?.pairKey != suggestion?.pairKey { verdict = nil }
+        suggestion = next
+        guard let next, verdict == nil,
+              let a = ContactIndexSources.contact(forKey: next.a),
+              let b = ContactIndexSources.contact(forKey: next.b) else { return }
+        // The model's sentence, on the phone, from public words only (§916
+        // section 3): the names and the handles, never a number or a mailbox.
+        // Names and human handles only — a Nostr key or a hex address is
+        // noise to a language model (measured: it called one "a random
+        // string"), and a mailbox is not public. Only a YES is drawn: a
+        // model's doubt is not a fact the row can stand on (§632).
+        let describe = { (c: Contact) in
+            ([c.name] + c.identities
+                .filter { [.farcaster, .bluesky, .github, .ens, .basename, .linea, .lens, .worldApp].contains($0.kind) }
+                .map { ContactSheet.service($0.kind) + " " + $0.label })
+                .joined(separator: ", ")
+        }
+        if let answer = await ContactVerdictModel.judge(describe(a), describe(b)), answer.samePerson {
+            verdict = answer.because
+        }
+    }
+
+    // MARK: - The suggestion
+
+    /// "Same person?" — the two names, the model's line when it has one, and
+    /// the two answers as rows (§746). Yes is a verified edge you made; No is
+    /// remembered forever for the pair.
+    private func suggestionRow(_ link: ContactLink, a: Contact, b: Contact) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            // Each side says WHERE it is ("Nils on Bluesky and Nils on
+            // Nostr"): two bare names were the same word twice.
+            Text("Same person? \(Self.where(a, link)) and \(Self.where(b, link))")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, DS.Space.s4)
+            if let verdict {
+                Text(verdict).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, DS.Space.s4)
+            }
+            DSDoorRow(icon: "checkmark.circle", label: "Yes, same person") {
+                ContactLinksStore.shared.confirm(link.a, link.b)
+                Task { await refresh() }
+            }
+            DSDoorRow(icon: "xmark.circle", label: "No") {
+                ContactLinksStore.shared.decline(link.a, link.b)
+                Task { await refresh() }
+            }
+        }
+    }
+
+    /// "Nils on Bluesky" — the name and the service of the end the link names.
+    private static func `where`(_ c: Contact, _ link: ContactLink) -> String {
+        let end = c.identities.first { $0.key == link.a || $0.key == link.b } ?? c.lead
+        return String(localized: "\(c.name) on \(ContactSheet.service(end.kind))")
+    }
+
+    // MARK: - The nudge
+
+    /// "0xab…12 sent you 0.2 ETH. Name them?" — a door to the naming alert,
+    /// and a No that moves on to the next (`AddressNudge.decline`). Never a
+    /// counterparty the app can already name, never a flagged address
+    /// (`AddressNudge.prompt`'s own guards, reused).
+    private func nudgeRow(_ nudge: (address: String, title: String)) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            DSDoorRow(icon: "character.cursor.ibeam",
+                      title: Text("Name \(WalletStore.shortAddress(nudge.address))?")) {
+                draft = ""
+                naming = true
+            }
+            Text(nudge.title)
+                .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                .padding(.leading, DS.Space.s4)
+            DSDoorRow(icon: "xmark.circle", label: "Not now") {
+                AddressNudge.decline(nudge.address)
+                Task { await refresh() }
+            }
+        }
+    }
+
+    /// The newest landed transfer whose counterparty has no name and was not
+    /// declined — the same guards the sheet's nudge keeps, walked newest-first
+    /// over a bounded window.
+    static func newestUnnamed(context: ModelContext) -> (address: String, title: String)? {
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Wallet" },
+            sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 60
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            guard let hit = AddressNudge.prompt(for: thing, context: context) else { continue }
+            return (hit.address, thing.title)
+        }
+        return nil
+    }
+
     // MARK: - Scopes
 
-    /// The dock's categories, in catalog order, that hold at least one
-    /// contact — plus All. Fewer than three draws no strip.
+    /// The dock's categories that hold at least one contact — plus All —
+    /// A–Z, as the Accounts screen's strip orders them (user, 2026-09-25:
+    /// "alphabetized like they are in the rest of the pages"). Fewer than
+    /// three draws no strip.
     private var scopes: [AddressScope] {
         let held = Set(contacts.flatMap(\.categories))
         return [AddressScope(name: nil)]
-            + BridgeCatalog.categories.map(\.name).filter { held.contains($0) }.map { AddressScope(name: $0) }
+            + BridgeCatalog.categories.map(\.name).filter { held.contains($0) }
+                .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+                .map { AddressScope(name: $0) }
     }
 
     /// The rows on screen: the chip's category, then the query, folded over
@@ -126,16 +262,13 @@ struct AddressesSection: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 ContactFace(contact: contact, size: DS.Mark.tile)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(contact.name)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Text(contact.line)
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
+                // The face and the name, nothing under it (user, 2026-09-25:
+                // "why is a second line necessary under each name") — the
+                // sheet says every address the contact carries.
+                Text(contact.name)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
                 DSPushRowTrail()
             }
@@ -174,36 +307,6 @@ extension Contact {
         }
         return out
     }
-
-    /// The row's line: every identity but the one the name already says,
-    /// in precedence order. A contact card's identifier is never drawn (it
-    /// is a device-local id, not a fact about the person), and a contact
-    /// with nothing else to say names its service — "Contacts", "Wallet".
-    var line: String {
-        let labels = identities
-            .filter { $0.kind != .contact }
-            .map(\.label)
-            .filter { $0 != name }
-        if labels.isEmpty { return ContactSheet.service(lead.kind) }
-        return labels.joined(separator: " · ")
-    }
-
-    /// An auto-named wallet (`…44b1`) sorts after every real name.
-    var isUnnamed: Bool { name.hasPrefix("…") }
-
-    /// The kind's word, drawn under the name on the sheet. A person is the
-    /// ordinary case and says nothing.
-    var kindWord: String? {
-        switch kind {
-        case .person:       return nil
-        case .organization: return String(localized: "Organization")
-        case .contract:     return String(localized: "Contract")
-        case .safe:         return String(localized: "Safe")
-        case .smartAccount: return String(localized: "Smart account")
-        case .key:          return String(localized: "Key")
-        case .publication:  return String(localized: "Publication")
-        }
-    }
 }
 
 /// The contact's face: the avatar a seat holds, the wallet's identicon, or
@@ -240,15 +343,21 @@ struct ContactFace: View {
 
 // MARK: - The sheet (section 1: identities as doors)
 
-/// One contact: face, name, the kind's word, then every identity as a row —
-/// each a door where the app has one (the address card, the person's room,
-/// a profile page, a feed), each line saying HOW the app knows it: verified,
-/// you confirmed, from their contact card. "With you" (the things across the
-/// corpus) is the next pass.
+/// One contact: face, name, then every address as a row
+/// with no section word above them (user, 2026-09-25) — each a door where the
+/// app has one (the address card, the person's room, a profile page, a feed),
+/// each line saying HOW the app knows it: verified, you confirmed, from their
+/// contact card. "With you" (the things across the corpus) is the next pass.
 struct ContactSheet: View {
     let contact: Contact
     @Environment(\.openURL) private var openURL
+    @Environment(\.dismiss) private var dismiss
     @State private var pushed: Door?
+
+    /// The key this contact was saved under, when the person saved it.
+    private var savedKey: String? {
+        contact.identities.map(\.key).first { ContactBook.shared.has($0) }
+    }
 
     private enum Door: Identifiable, Hashable {
         case address(AddressBook.Entry)
@@ -274,19 +383,28 @@ struct ContactSheet: View {
                             .dsText(.heading24)
                             .foregroundStyle(DS.textPrimary)
                             .multilineTextAlignment(.center)
-                        if let word = contact.kindWord {
-                            Text(word).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                        }
+                        // No kind word under the name (user, 2026-09-25: "what
+                        // does that even mean … his smart account presumably is
+                        // in the list as wallet"): the kind shapes the face and
+                        // the wallet row's own card says what the address is.
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, DS.Space.s6)
 
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text("Identities").dsText(.heading24).foregroundStyle(DS.textPrimary)
-                        VStack(spacing: DS.Space.s1) {
-                            ForEach(contact.identities, id: \.key) { identity in
-                                identityRow(identity)
-                            }
+                    // No section word (user, 2026-09-25: "you can't say
+                    // 'identities' … doesn't even need a section descriptor"):
+                    // the rows are the addresses, under the name.
+                    VStack(spacing: DS.Space.s1) {
+                        ForEach(contact.identities, id: \.key) { identity in
+                            identityRow(identity)
+                        }
+                    }
+                    // A contact YOU saved can be un-saved here; a seat-fed one
+                    // is removed on its seat's page (§690), so no row is drawn.
+                    if let saved = savedKey {
+                        DSDoorRow(icon: "minus.circle", label: "Remove from Addresses", role: .destructive) {
+                            ContactBook.shared.remove(saved)
+                            dismiss()
                         }
                     }
                 }
@@ -304,26 +422,64 @@ struct ContactSheet: View {
         }
     }
 
-    /// The row states the identity and how it is known; it is a button only
-    /// where a door exists (§83), else a fact.
+    /// The row states the address and the service it is on; it is a button
+    /// only where a door exists (§83), else a fact. It LEADS with the seat's
+    /// mark, the dock's own chip (user, 2026-09-25: "icon tiles … like the
+    /// source chips we have in our dock"), and carries no line at all: not
+    /// "verified" (user: "that just becomes questionable what it really
+    /// means" — the tier stays in the model, where it decides merging) and
+    /// not the service's name ("redundant if we are using the icon").
     @ViewBuilder
     private func identityRow(_ identity: Identity) -> some View {
-        let label = DSPushRowLabel(title: Text(identity.kind == .contact ? contact.name : identity.label),
-                                   subtitle: Text(Self.how(identity)),
-                                   opens: door(for: identity) != nil) {
-            Image(systemName: Self.glyph(identity.kind))
-                .dsGlyph(.subhead)
-                .foregroundStyle(DS.textSecondary)
-                .frame(width: 38, height: 38)
-                .background(DS.fillFaint, in: Circle())
-        }
-        if let act = door(for: identity) {
-            Button(action: act) { label.contentShape(Rectangle()) }
+        // Every row COPIES its full value from a trailing glyph (user,
+        // 2026-09-25: "we need to have a way for user to see full address or
+        // copy it"), the address card's own shape — the copy is felt (§867)
+        // and marks its glyph for a beat. A row with a door opens on tap; one
+        // without copies on tap too, so nothing on it is dead (§83). No
+        // subtitle (user: "even the name of the service is redundant if we
+        // are using the icon"); the mark, at the DOCK's size
+        // (`DockFolderRow.markSize`, `DS.Face.list`), says the service.
+        let value = identity.kind == .contact ? contact.name : identity.body
+        let title = Text(identity.kind == .contact ? contact.name : identity.label)
+        let mark = BridgeIcon(name: Self.mark(identity), size: DS.Face.list, circular: true)
+        HStack(spacing: DS.Space.s2) {
+            if let act = door(for: identity) {
+                Button(action: act) {
+                    DSPushRowLabel(title: title, opens: true) { mark }.contentShape(Rectangle())
+                }
                 .buttonStyle(.plain)
                 .dsHover()
-                .dsListRow()
-        } else {
-            label.dsListRow()
+            } else {
+                Button { copy(value, key: identity.key) } label: {
+                    DSPushRowLabel(title: title, opens: false) { mark }.contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+            }
+            Button {
+                copy(value, key: identity.key)
+            } label: {
+                Image(systemName: copied == identity.key ? "checkmark" : "doc.on.doc")
+                    .dsGlyph(.subhead)
+                    .foregroundStyle(copied == identity.key ? DS.confirm : DS.textTertiary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Copy"))
+        }
+        .dsListRow()
+    }
+
+    @State private var copied: String?
+
+    private func copy(_ value: String, key: String) {
+        DSPasteboard.copy(value)
+        DSHaptic.success()
+        withAnimation(DS.Motion.standard) { copied = key }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.2))
+            if copied == key { withAnimation(DS.Motion.standard) { copied = nil } }
         }
     }
 
@@ -376,25 +532,24 @@ struct ContactSheet: View {
         }
     }
 
-    /// The line under an identity: the service, then how it joined.
-    static func how(_ identity: Identity) -> String {
-        let service = Self.service(identity.kind)
-        switch (identity.tier, identity.source) {
-        case (.verified?, "you"): return service + " · " + String(localized: "you confirmed")
-        case (.verified?, _):     return service + " · " + String(localized: "verified")
-        case (.stated?, _):       return service + " · " + String(localized: "from their contact card")
-        default:                  return service
-        }
-    }
-
-    static func glyph(_ kind: Identity.Kind) -> String {
-        switch kind {
-        case .contact:  return "person.crop.circle"
-        case .email:    return "envelope"
-        case .github:   return "chevron.left.forwardslash.chevron.right"
-        case .wallet:   return "cube"
-        case .feed:     return "dot.radiowaves.up.forward"
-        case .ens, .basename, .linea, .lens, .farcaster, .bluesky, .nostr, .worldApp: return "at"
+    /// The seat whose mark the row wears — the name `BridgeIcon` resolves,
+    /// exactly as a dock chip does. A kind with no seat of its own borrows the
+    /// nearest mark: a Basename wears Base's, an email its provider's.
+    static func mark(_ identity: Identity) -> String {
+        switch identity.kind {
+        case .contact:   return "Contacts"
+        case .email:     return identity.body.hasSuffix("@gmail.com") ? "Gmail" : "iCloud Mail"
+        case .github:    return "GitHub"
+        case .wallet:    return "Wallet"
+        case .ens:       return "ENS"
+        case .basename:  return "Base Vibenet"
+        case .linea:     return "Linea"
+        case .farcaster: return "Farcaster"
+        case .lens:      return "Lens"
+        case .bluesky:   return "Bluesky"
+        case .nostr:     return "Nostr"
+        case .worldApp:  return "World App"
+        case .feed:      return "RSS"
         }
     }
 }

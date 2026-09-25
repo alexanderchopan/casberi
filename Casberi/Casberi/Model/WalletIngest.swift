@@ -1127,6 +1127,7 @@ enum WalletIngest {
     static func knownLabel(for address: String) -> String? {
         let a = address.lowercased()
         return AddressBook.shared.name(for: a)
+            ?? ContactIndexSources.contact(forKey: Identity.key(.wallet, a)).flatMap { $0.isUnnamed ? nil : $0.name }
             ?? FarcasterStore.shared.handle(forAddress: a)
             ?? knownContracts[a]
     }
@@ -1160,6 +1161,12 @@ enum WalletIngest {
             // their own record ("Mom", "my Ledger"), truer than any resolver.
             if let mine = AddressBook.shared.name(for: a) {
                 names[a] = mine
+            } else if let contact = ContactIndexSources.contact(forKey: Identity.key(.wallet, a)),
+                      !contact.isUnnamed {
+                // A contact the index LINKED to this address — a Farcaster
+                // account's display name, a card — beats every resolver below
+                // (prd §916): "from Jesse", not "from 0x2211…7da9".
+                names[a] = contact.name
             } else if let handle = FarcasterStore.shared.handle(forAddress: a) {
                 // A watched Farcaster account's verified wallet — "from @dwr".
                 names[a] = handle

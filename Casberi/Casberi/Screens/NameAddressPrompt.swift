@@ -12,7 +12,11 @@ import SwiftData
 /// and never again once declined for that address.
 enum AddressNudge {
     /// How many encounters before we say anything.
-    static let threshold = 2
+    /// ONE (prd §916 amendment, user 2026-09-24: "naming prompt for
+    /// counterparty should be anytime, not just three times"). It was 2: a
+    /// nudge waited for a second dealing. Every unnamed counterparty is
+    /// nameable the moment it appears; the safety guards below still stand.
+    static let threshold = 1
     private static func key(_ address: String) -> String {
         "wallet.nameNudge.declined.\(AddressBook.key(for: address))"
     }
@@ -124,6 +128,9 @@ struct NameAddressPrompt: View {
         // needs the vowel-sound article ("A address" — caught 2026-07-23).
         let article = what.first.map { "aeiou".contains($0) } == true
             ? String(localized: "an") : String(localized: "a")
+        if count == 1 {
+            return String(localized: "You've dealt with this \(what) once — \(article) name retitles all its transactions.")
+        }
         return String(localized: "You've dealt with this \(what) \(count) times — \(article) name retitles all its transactions.")
     }
 }

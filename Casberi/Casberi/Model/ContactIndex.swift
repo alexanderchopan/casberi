@@ -142,6 +142,10 @@ struct Contact: Identifiable, Equatable {
 
     var lead: Identity { identities[0] }
     func has(_ key: String) -> Bool { identities.contains { $0.key == key } }
+
+    /// Nobody named this contact and no seat did: its name is a wallet's
+    /// tail. It sorts last in the list and never names a transfer row.
+    var isUnnamed: Bool { name.hasPrefix("…") }
 }
 
 enum ContactIndex {

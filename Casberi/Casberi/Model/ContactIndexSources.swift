@@ -19,8 +19,12 @@ enum ContactIndexSources {
     /// The contacts as of the last `rebuild()`. Empty until one has run —
     /// and it runs on the probe and on a foreground sweep (step 3), never
     /// from a body (§628).
-    private(set) static var contacts: [Contact] = []
-    private static var byKey: [String: Int] = [:]
+    /// One snapshot, assigned whole on the main actor and READ from anywhere:
+    /// `WalletIngest.knownLabel` is a synchronous, nonisolated lookup the
+    /// sheet makes, so the reader takes the pair together and never indexes
+    /// one half against the other's stale copy.
+    nonisolated(unsafe) private static var snapshot: (contacts: [Contact], byKey: [String: Int]) = ([], [:])
+    static var contacts: [Contact] { snapshot.contacts }
 
     // MARK: - Seeds
 
@@ -81,6 +85,16 @@ enum ContactIndexSources {
                              avatar: thing.authorAvatarURL, since: thing.capturedAt))
         }
 
+        // What the person saved by hand (`ContactBook`, section 2.6): a
+        // sender, a login, a poster, a feed — each a TYPED name, so it names
+        // the contact over any seat's display name.
+        for saved in ContactBook.shared.all {
+            guard let identity = Identity.parse(key: saved.id) else { continue }
+            out.append(.init(identity, name: saved.name, typed: true,
+                             kind: identity.kind == .feed ? .publication : .person,
+                             since: saved.addedAt))
+        }
+
         // Publications: a row is an address that is not a person (user,
         // 2026-09-24). Every feed follow, keyed on its feed URL.
         for feed in RSSStore.shared.feeds {
@@ -123,16 +137,34 @@ enum ContactIndexSources {
 
     // MARK: - Rebuild
 
+    /// The contact cards as `ContactSuggest` reads them: the name, the
+    /// "Service: handle" lines, the emails — never drawn, never stored here.
+    static func cards(context: ModelContext) -> [ContactSuggest.Card] {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Contacts" })
+        return ((try? context.fetch(descriptor)) ?? []).compactMap { thing in
+            guard thing.kind == .contact, let ref = thing.sourceRef else { return nil }
+            let facts = thing.facts.compactMap(ThingFact.init(encoded:))
+            return ContactSuggest.Card(
+                key: Identity.key(.contact, ref), name: thing.title,
+                lines: (thing.enrichedText ?? "").split(separator: "\n").map(String.init),
+                emails: facts.filter { $0.action == .mail }.map(\.value))
+        }
+    }
+
     @discardableResult
     static func rebuild(context: ModelContext) -> [Contact] {
         let store = ContactLinksStore.shared
+        let seeds = seeds(context: context)
+        let cards = cards(context: context)
         for link in discoverVerified() { store.record(link) }
-        let built = ContactIndex.build(seeds: seeds(context: context), links: store.ledger.all)
-        contacts = built
-        byKey = [:]
+        for link in ContactSuggest.stated(cards: cards, seeds: seeds) { store.record(link) }
+        for link in ContactSuggest.suggested(cards: cards, seeds: seeds) { store.record(link) }
+        let built = ContactIndex.build(seeds: seeds, links: store.ledger.all)
+        var byKey: [String: Int] = [:]
         for (i, contact) in built.enumerated() {
             for identity in contact.identities { byKey[identity.key] = i }
         }
+        snapshot = (built, byKey)
         return built
     }
 
@@ -140,21 +172,21 @@ enum ContactIndexSources {
 
     /// The contact a thing is from or about, or nil when the app holds none.
     /// Reads the LAST rebuild; it never fetches.
-    static func contact(for thing: Thing) -> Contact? {
+    nonisolated static func contact(for thing: Thing) -> Contact? {
         let keys = ContactIndex.keys(
             source: thing.source, kind: thing.kind.rawValue, sourceRef: thing.sourceRef,
             authorHandle: thing.authorHandle, walletAddress: thing.walletAddress,
-            counterpartyAddress: thing.counterpartyAddress, authorEmail: nil,
+            counterpartyAddress: thing.counterpartyAddress, authorEmail: thing.authorEmail,
             isNotification: thing.sourceRef?.hasPrefix("gh:notif:") ?? false)
-        for key in keys {
-            if let i = byKey[key], contacts.indices.contains(i) { return contacts[i] }
-        }
+        for key in keys { if let hit = contact(forKey: key) { return hit } }
         return nil
     }
 
-    static func contact(forKey key: String) -> Contact? {
-        guard let i = byKey[key], contacts.indices.contains(i) else { return nil }
-        return contacts[i]
+    nonisolated static func contact(forKey key: String) -> Contact? {
+        let snap = snapshot
+        guard let i = snap.byKey[key], snap.contacts.indices.contains(i),
+              snap.contacts[i].has(key) else { return nil }
+        return snap.contacts[i]
     }
 
     #if DEBUG

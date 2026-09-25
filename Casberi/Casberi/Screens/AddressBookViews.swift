@@ -394,7 +394,7 @@ struct AddressMark: View {
         // inch apart (§366's read-it-twice). The coloured version failed on
         // its own terms besides — two sources shipped the same purple, so the
         // dot that existed to separate them could not — and merging a person's
-        // accounts into one entry (`AddressBookPeople.merged`) removed the
+        // accounts into one entry (`AddressBookPeople.merged`, deleted by prd §916) removed the
         // disambiguation job that was its last argument.
         //
         // What a face carries here is identity and nothing else: their

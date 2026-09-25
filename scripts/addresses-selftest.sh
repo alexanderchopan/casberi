@@ -26,7 +26,8 @@ cd "$(dirname "$0")/.."
 
 INDEX="Casberi/Casberi/Model/ContactIndex.swift"
 LINKS="Casberi/Casberi/Model/ContactLinks.swift"
-for f in "$INDEX" "$LINKS"; do
+SUGGEST="Casberi/Casberi/Model/ContactSuggest.swift"
+for f in "$INDEX" "$LINKS" "$SUGGEST"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -209,12 +210,46 @@ check(keys(source: "Gmail", handle: "Jesse Pollak", email: "jesse@example.com") 
 check(keys(source: "Contacts", kind: "contact", ref: "contact:ABC") == ["contact:abc"], "a contact thing resolves itself")
 check(keys(source: "Wallet", wallet: A, counterparty: B) == [B, A], "the counterparty is tried before your own wallet")
 
+// ── Suggestions: a look-alike is a question, never a merge ──────────────
+let cardJ = ContactSuggest.Card(key: "contact:j1", name: "Jesse Pollak",
+                                lines: ["Farcaster: jesse", "Twitter: jessepollak"], emails: ["jesse@example.com"])
+let fcJ = ContactIndex.Seed(Identity.make(.farcaster, "jesse"), name: "Jesse Pollak")
+let bskyJ = ContactIndex.Seed(Identity.make(.bluesky, "jesse.bsky.social"), name: "Jesse Pollak")
+let ghJ = ContactIndex.Seed(Identity.make(.github, "jesse"), name: "jesse")
+let statedLinks = ContactSuggest.stated(cards: [cardJ], seeds: [fcJ, bskyJ, ghJ])
+check(statedLinks.count == 1 && statedLinks[0].tier == .stated && statedLinks[0].b == "fc:jesse",
+      "a card line naming a handle you follow is a STATED edge to that handle")
+check(ContactSuggest.identity(fromCardLine: "Twitter: x") == nil, "a service with no roster yields nothing")
+check(ContactSuggest.identity(fromCardLine: "GitHub: Torvalds")?.key == "gh:torvalds", "a GitHub line folds case")
+let sugg2 = ContactSuggest.suggested(cards: [cardJ], seeds: [fcJ, bskyJ, ghJ])
+check(sugg2.allSatisfy { $0.tier == .suggested }, "every look-alike is SUGGESTED, never verified")
+check(sugg2.contains { $0.pairKey == ContactLink.pairKey("contact:j1", "fc:jesse") }
+      && sugg2.contains { $0.pairKey == ContactLink.pairKey("contact:j1", "bsky:jesse.bsky.social") },
+      "a card's full name matching a seat's display name is suggested")
+check(sugg2.contains { $0.pairKey == ContactLink.pairKey("fc:jesse", "bsky:jesse.bsky.social") },
+      "two seats sharing a display name are suggested to each other")
+check(sugg2.contains { $0.pairKey == ContactLink.pairKey("contact:j1", "gh:jesse") && $0.source == "corpus.email" },
+      "a card email's mailbox matching a watched login is suggested")
+let builtS = ContactIndex.build(seeds: [fcJ, bskyJ, ghJ, ContactIndex.Seed(Identity.make(.contact, "contact:j1"), name: "Jesse Pollak", typed: true)],
+                                links: statedLinks + sugg2)
+check(builtS.count == 3, "stated merges the handle into the card; suggestions merge nothing")
+var sl = LinkLedger()
+for l in sugg2 { sl = sl.recording(l) }
+let firstPick = ContactSuggest.next(in: sl, known: { _ in true })
+check(firstPick != nil && firstPick!.suggests, "the list is offered one live suggestion")
+sl = sl.declining(firstPick!.a, firstPick!.b)
+check(ContactSuggest.next(in: sl, known: { _ in true })?.pairKey != firstPick!.pairKey, "a declined one is never offered again")
+check(ContactSuggest.next(in: sl, known: { _ in false }) == nil, "a suggestion whose ends are not in the index is not offered")
+check(ContactSuggest.suggested(cards: [], seeds: [ContactIndex.Seed(Identity.make(.farcaster, "a"), name: "Al"),
+                                                  ContactIndex.Seed(Identity.make(.bluesky, "b"), name: "Al")]).isEmpty,
+      "a two-letter name is too short to suggest on")
+
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("✓ addresses self-test: every assertion held")
 SWIFT
 
 echo "addresses self-test — compiling $INDEX and $LINKS whole"
-if ! swiftc -Onone -o "$TMP/run" "$INDEX" "$LINKS" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/run" "$INDEX" "$LINKS" "$SUGGEST" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ compile failed:"; sed 's/^/  /' "$TMP/build.log" | head -30; exit 1
 fi
 "$TMP/run" || exit 1
@@ -222,8 +257,8 @@ fi
 # --- the mutation pass ------------------------------------------------------
 mutate() {
   local name="$1" file="$2" from="$3" to="$4"
-  local other
-  if [[ "$file" == "$INDEX" ]]; then other="$LINKS"; else other="$INDEX"; fi
+  local -a others=()
+  for f in "$INDEX" "$LINKS" "$SUGGEST"; do [[ "$f" == "$file" ]] || others+=("$f"); done
   local target="$TMP/mut.swift"
   cp "$file" "$target"
   MUT_FROM="$from" MUT_TO="$to" python3 - "$target" <<'PY'
@@ -241,7 +276,7 @@ PY
   if cmp -s "$file" "$target"; then
     echo "  ✗ $name — the mutant is byte-identical to the source"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$target" "$other" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$target" "${others[@]}" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -301,6 +336,15 @@ mutate "a GitHub notification resolves to the repo owner" "$INDEX" \
 mutate "a mail display name resolves as an email" "$INDEX" \
   '                if h.contains("@") { out.append(Identity.key(.email, h)) }' \
   '                out.append(Identity.key(.email, h))'
+mutate "a name match becomes a verified edge" "$SUGGEST" \
+  '            out.append(ContactLink(a, b, tier: .suggested, source: source, at: at))' \
+  '            out.append(ContactLink(a, b, tier: .verified, source: source, at: at))'
+mutate "a card line for a service with no roster becomes an edge" "$SUGGEST" \
+  '        default:                      return nil' \
+  '        default:                      return Identity.make(.farcaster, handle)'
+mutate "a declined suggestion is offered again" "$SUGGEST" \
+  '            .filter { $0.suggests && known($0.a) && known($0.b) }' \
+  '            .filter { $0.tier == .suggested && known($0.a) && known($0.b) }'
 mutate "the joined identity forgets how it joined" "$INDEX" \
   '                    if let t = tiers[id.key] { id.tier = t.0; id.source = t.1 }' \
   ''

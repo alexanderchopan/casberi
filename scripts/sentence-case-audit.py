@@ -220,6 +220,10 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # In-app surfaces a verb names as a place (prd §916): "Remove from
+    # Addresses" walks to the Accounts screen's Addresses segment, the way
+    # "Show in Receipts" names that screen — a destination, not a header.
+    "Addresses",
     # Protocols, chains and companies with no catalog seat of their own.
     "Morpho", "Uniswap", "Aave", "Spark", "Hyperliquid", "Aerodrome",
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",

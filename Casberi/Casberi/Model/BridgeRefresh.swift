@@ -552,6 +552,11 @@ enum BridgeRefresh {
                 // so a foreground almost always buys nothing.
                 await AddressNames.shared.fill(
                     WalletStore.shared.addresses.map(\.address))
+                // The Addresses index, after the names landed (prd §916,
+                // section 2.4): stores and ledger only, no network, behind a
+                // still hand so a sweep never lands inside a gesture (§666).
+                await GestureGate.idle()
+                ContactIndexSources.rebuild(context: context)
             }
         }
         // Not an ingest — the watchlist's 24h pulse for the feed-row

@@ -16,6 +16,9 @@ enum IMAPClient {
         let uid: String
         let subject: String
         let from: String
+        /// The sender's `mailbox@host`, whatever `from` chose to show — nil
+        /// when the envelope carried no mailbox (prd §916).
+        var fromAddress: String? = nil
         let date: Date?
         /// The plain-text body, best-effort (2026-07-23) — nil when the
         /// second FETCH pass fails, or MIME decoding finds nothing readable.
@@ -117,7 +120,8 @@ enum IMAPClient {
             uids: parsed.map(\.uid), maxBytes: bodyByteCap)) ?? [:]
         let withBodies = parsed.map { m in
             let raw = rawBodies[m.uid]
-            return Message(uid: m.uid, subject: m.subject, from: m.from, date: m.date,
+            return Message(uid: m.uid, subject: m.subject, from: m.from,
+                           fromAddress: m.fromAddress, date: m.date,
                            body: raw.flatMap(MailMIME.plainText),
                            to: m.to, cc: m.cc, messageID: m.messageID, inReplyTo: m.inReplyTo,
                            // Same bytes the body was decoded from — no second
@@ -453,6 +457,7 @@ private enum EnvelopeParser {
         let date = MailDate.parse(unquote(items[0]))
         let subject = decodeWord(unquote(items[1]))
         let from = firstFrom(items[2])
+        let fromAddress = firstFromAddress(items[2])
         // Bcc (field 7) is deliberately not read: the copy WE received names
         // us in it and nobody else, so landing it would add a recipient list
         // that is either us or empty.
@@ -462,7 +467,7 @@ private enum EnvelopeParser {
         let messageID = items.count > 9 ? header(items[9]) : nil
         return IMAPClient.Message(uid: uid,
                                   subject: subject.isEmpty ? "(no subject)" : subject,
-                                  from: from, date: date, body: nil,
+                                  from: from, fromAddress: fromAddress, date: date, body: nil,
                                   to: to, cc: cc,
                                   messageID: messageID, inReplyTo: inReplyTo)
     }
@@ -535,6 +540,18 @@ private enum EnvelopeParser {
         }
         if started && !cur.isEmpty { items.append(cur) }
         return items
+    }
+
+    /// From `(("Name" NIL "mailbox" "host"))` → "mailbox@host", or nil — the
+    /// address itself, whatever `firstFrom` shows (prd §916).
+    private static func firstFromAddress(_ group: String) -> String? {
+        let inner = topLevelItems(String(group.dropFirst().dropLast()))
+        guard let first = inner.first else { return nil }
+        let addr = topLevelItems(String(first.dropFirst().dropLast()))
+        guard addr.count >= 4 else { return nil }
+        let mailbox = unquote(addr[2]), hostPart = unquote(addr[3])
+        guard !mailbox.isEmpty, !hostPart.isEmpty else { return nil }
+        return "\(mailbox)@\(hostPart)".lowercased()
     }
 
     /// From `(("Name" NIL "mailbox" "host"))` → "Name" or "mailbox@host".
