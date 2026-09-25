@@ -820,6 +820,18 @@ step "Day-divider audit"
 "$ROOT/scripts/day-divider-audit.py" || fail "a day divider lost the brand ink, or a named group lost its opt-out — see the output above"
 print -P "%F{green}✓ day-divider audit%f"
 
+# A title carries no separators (prd §915): a bridge that composes a title
+# with ` · ` puts two facts in one slot, and every failure renders as a
+# perfectly ordinary row. The audit fails a `title:` / `title =` / demo
+# `row(.kind, "…"` literal carrying the dot outside the money allowances
+# (`BandRow.titleMoney`'s own seam, §900), a stale allowance, and any hand
+# split of `" — "` that bypasses `TitleSeam.split`.
+step "Title-seam audit"
+"$ROOT/scripts/title-seam-audit.py" --self-test >/dev/null \
+  || fail "the title-seam audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/title-seam-audit.py" || fail "a title carries a separator, or a seam is split by hand — see the output above"
+print -P "%F{green}✓ title-seam audit%f"
+
 # Every source room's head composes the shared chassis (prd §745). Twenty-two of
 # twenty-six heads were drawn by hand the day their source landed — one anatomy
 # at four gap rungs, two footnote rungs and ten copies of one row — and §495
