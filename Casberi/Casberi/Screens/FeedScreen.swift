@@ -11123,8 +11123,7 @@ struct FeedScreen: View {
         // this section's own header). `rows` is a DERIVED array (the day
         // grouping) holding models by reference, and everything below touches
         // persisted properties on them: `standsAlone`/`.id` for the run
-        // positions, the row bodies, and the header's `countLabel(rows)`,
-        // which maps `\.kind` over every one. A refresh runs the bridge heals,
+        // positions and the row bodies. A refresh runs the bridge heals,
         // each of which deletes upstream-gone rows on the MAIN context — so a
         // delete lands inside the same graph update that re-evaluates this
         // section, and the first read of a tombstoned model traps in SwiftData.
@@ -11136,9 +11135,8 @@ struct FeedScreen: View {
         // rows, and the header at once — a row that just died drops out of the
         // day it was in, which is what the next `@Query` emission says anyway.
         let rows = rows.filter(\.isLive)
-        // The day's tiles and the rest (prd §910). The header counts both.
+        // The day's tiles and the rest (prd §910).
         let (dayTiles, dayRows) = isTile.map { Self.splitTiles(rows, by: $0) } ?? ([], rows)
-        // The header still counts the cover; only the run gives it up.
         let coverThing = cover.flatMap { id in rows.first { $0.id == id } }
         let tiles = coverThing == nil ? dayTiles : dayTiles.filter { $0.id != cover }
         let run = coverThing == nil ? dayRows : dayRows.filter { $0.id != cover }
@@ -11154,6 +11152,8 @@ struct FeedScreen: View {
                 // header with neither pins ON TOP of the rows scrolling under it.
                 // The day's own gap and column are spelled here, so nothing depends
                 // on what the system hands a header slot.
+                // The day alone — its count is deleted (prd §914, user:
+                // "people don't want to know").
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(label)
                         .dsText(.heading24)
@@ -11164,13 +11164,6 @@ struct FeedScreen: View {
                         // named by something other than time keeps the
                         // primary ramp.
                         .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
-                    // In a source's own room the count speaks the source's unit —
-                    // "3 events", "5 screenshots" (2026-07-13). All keeps the
-                    // bare number: mixed kinds have no one unit worth naming.
-                    Text(countLabel(rows)).dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        // Tabular, because it rolls — see `LiveTimeText` (prd §586).
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4 + DS.Space.s3)
@@ -11206,41 +11199,8 @@ struct FeedScreen: View {
         }
     }
 
-    /// The day header's count: a bare number in All, the source's own unit in
-    /// a shaped feed — "3 events", "1 screenshot", "4 things" when mixed.
-    /// The social room says "posts": its things are kind .chat (the ingest's
-    /// container), but nobody calls a Bluesky post a chat.
-    private func countLabel(_ rows: [Thing]) -> String {
-        // Guarded independently of `daySection`'s own filter: the footer
-        // (`caughtUpFooter`) calls this with the whole render's `visible`
-        // array, which is derived the same way and carries the same hazard.
-        // `\.kind` below is a persisted read — the one that trapped in 150.
-        let rows = rows.filter(\.isLive)
-        guard source != "All" else { return "\(rows.count)" }
-        // A DAY OF POSTS SAYS POSTS, in every room that draws one, and only
-        // when EVERY row in the group is one (2026-08-26, prd §489).
-        //
-        // X's rule (§396a) generalised, and a deliberate change to the three
-        // live rooms, which said "posts" unconditionally: a day holding twelve
-        // casts and one shared article was calling the article a thirteenth
-        // post. It now falls through to the generic noun, which is vaguer and
-        // true. The test is the same `rowKind` the rows themselves drew from,
-        // so the header can never disagree with what is under it.
-        if SocialRoom.drawsPosts(source), SocialRoomSource.groupIsPosts(rows) {
-            return rows.count == 1 ? "1 post" : "\(rows.count) posts"
-        }
-        let kinds = Set(rows.map(\.kind))
-        guard kinds.count == 1, let kind = kinds.first else {
-            return rows.count == 1 ? "1 thing" : "\(rows.count) things"
-        }
-        let unit = rows.count == 1 ? kind.typeTag : kind.typeTagPlural
-        return "\(rows.count) \(unit.lowercased())"
-    }
-
     /// The feed closes instead of trailing off (2026-07-13): one quiet line
-    /// naming what you just read to the end of. Doubles as an honest corpus
-    /// count — facts only, no streaks (§10). Speaks the same unit as the day
-    /// headers ("6 events", not "6 things") via the one countLabel rule.
+    /// naming what you just read to the end of. No count since prd §914.
     /// Takes the render's `visible` (the Feed-freeze rule) instead of
     /// re-deriving it.
     @ViewBuilder
@@ -11266,7 +11226,7 @@ struct FeedScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     // "New things from X land here." is gone (prd §748): the
                     // line above already says this is everything SO FAR.
-                    DSProse.text("That's everything from \(source) so far · \(countLabel(rows))")
+                    DSProse.text("That's everything from \(source) so far")
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                 }
@@ -11306,14 +11266,14 @@ struct FeedScreen: View {
         // predicated query and (2026-08-14) still no row bound, so opening one
         // genuinely does reach further back than the All room can.
         Text(reachedFetchCeiling
-             ? "Showing your most recent \(rows.count) — open a source to go further back"
+             ? "Showing your most recent things — open a source to go further back"
              : source == "All"
-             ? "That's everything · \(rows.count == 1 ? "1 thing" : "\(rows.count) things")"
+             ? "That's everything"
              // "from Pinned" would name a source that doesn't exist. This room
              // is the one place the sentence is about something you did.
              : Pinboard.isPinnedRoom(source)
-             ? "That's everything you've pinned · \(countLabel(rows))"
-             : "That's everything from \(source) · \(countLabel(rows))")
+             ? "That's everything you've pinned"
+             : "That's everything from \(source)")
             .dsText(.subhead12)
             .foregroundStyle(DS.textTertiary)
             .frame(maxWidth: .infinity)

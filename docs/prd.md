@@ -61323,3 +61323,5 @@ The first screenshot of §898 on a device — a Calendar card mid-flight over th
 **The cast face grows with the ladder (§905).** `castBlock` set its sentence at a fixed `body17` × 3, so all twelve spellings of that face were one spelling and a short notice stood over half a well of air. It takes `fit.statementRung`/`fit.statementLines` like the words face.
 
 **The eyebrow disc is the seat's mark on the cast face.** The cast is the picture and its first face is the person the eyebrow names, so the avatar in the disc drew that face twice, one row apart.
+
+**§914a — the day headers' counts go too (user: "yes", 2026-09-24).** "This week · 6 things" drew the same fact §914 deleted from the lead, so `countLabel` is deleted with it; the feed's closing line keeps "That's everything" and loses its count, and the fetch-ceiling line says "Showing your most recent things" without the number.
