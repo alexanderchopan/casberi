@@ -80,16 +80,35 @@ otherwise).
 
 ## 1. What you see
 
-**The room.** The Contacts room in Life becomes the **Addresses** room. The seat in the catalogue
-stays "Contacts" (Apple's book); the room is the population it feeds, joined with everyone you
-follow or watch anywhere. `Corpus.roomOnlySources` keeps every people row out of All, Home, the
-widgets and notifications, exactly as §818 ruled — a person is not a capture.
+**RULED 2026-09-24 (user, after section 1 was first written as a room): Addresses lives UNDER THE
+FACE, not on the dock.** The Accounts screen's switcher becomes `Connect · Manage · Settings ·
+Addresses` (§796's one switcher, one word wider). Addresses is a DIRECTORY, not a feed: it has no
+time, so the room chassis (a cover, day dividers, a lead) fights it, and §818 already fenced
+contacts out of All for that reason. Beside Accounts it takes the same anatomy that screen
+already has — the search field, the dock's category chips as filters, rows — so the filter the
+user asked for ("the categories that are on the dock to filter by") is reuse, not a second
+strip. **No Contacts room in the dock** (user: "i don't think contacts should live in the dock;
+if a user adds their contacts it goes in the contact or address book"): §818's room is retired,
+`Corpus.roomOnlySources` keeps Apple's cards out of All, Home, the widgets and notifications, and
+a Contacts connect lands in Addresses with the toast saying so ("Your contacts land under
+Addresses") — which is the answer to the beta tester who could not find a tab. The seat in the
+catalogue stays "Contacts" (Apple's book); the name of the list is **Addresses** (user: a
+contract, a Safe, a newsletter and an email are not contacts, and "Contacts" is Apple's word for
+the seat).
 
-- **Lead (the box, §904):** the person who most recently *acted toward you* — a transfer, a
+The paragraphs below were written for the room and are kept where they still hold; where they
+say "the room", read "the Addresses list". The lead box and the kind tiles are DELETED by this
+ruling — a directory opens on its search field and its category chips, like Accounts. The
+category chips filter by "has an identity in that category": Wallet (wallet, contract, Safe, key,
+name services), Social (Farcaster, Bluesky, Nostr, X), Work (GitHub, email at a work seat), Life
+(Apple contacts, email), Reading (publications). A contact can stand in several.
+
+- ~~**Lead (the box, §904)**~~ DELETED by the ruling above (a directory has no lead). Was: the person who most recently *acted toward you* — a transfer, a
   reply, a mention, a mail — with their face, name, and the sentence: "Sent you 0.2 ETH · Tuesday".
   `FeedLedeFace.kind` for the room is a face (the cast face, §907), never a picture grid. A room
   with nobody who acted leads with the newest person added.
-- **Kind tiles (§815):** `All · Contacts · Wallets · Social · Work · Feeds`. All is first and where
+- ~~**Kind tiles (§815)**~~ DELETED by the ruling above — the dock's category chips filter instead
+  (Accounts' own strip). Was: `All · Contacts · Wallets · Social · Work · Feeds`. All is first and where
   the room opens; fewer than two kinds draws no tiles. Work is GitHub people (and any later work
   seat that watches a person); Feeds is every `publication` row. A wallet row that is a contract
   or a Safe stays under Wallets with its own mark. Each tile needs its `ScopeTileGlyph` constant named for its own case.
@@ -410,8 +429,9 @@ text, and it is the one place a model belongs here:
 
 ## 9. Open questions (assumptions taken, say if wrong)
 
-- **Name of the room.** RULED: *Addresses* (user, 2026-09-24), with the seat still *Contacts*. The
-  dock's Life folder shows the seat's mark; the room's `heading34` says Addresses.
+- **Name and place.** RULED: *Addresses* (user, 2026-09-24, twice — the second time against
+  "Contacts", because "someone may have addresses that aren't people"), under the face as the
+  Accounts screen's fourth segment, with the seat still *Contacts*. Not on the dock.
 - **Order.** RULED (user, 2026-09-24): Recent, then Everyone alphabetical. No index bar (§752:
   nothing pinned at the top; the deleted book's `AddressIndexBar` stays deleted).
 - **Who counts.** RULED by the name: everything you hold an address for. Apple contacts, wallet
@@ -420,10 +440,12 @@ text, and it is the one place a model belongs here:
   boards, Telegram channels — as `publication` rows keyed on the feed. A board is not a person,
   and it no longer has to be.
 - **The "starts building" half.** RULED yes (user, 2026-09-24: *"yes, and any address or
-  whatever a person should be able to save easily"*). An unnamed counterparty you dealt with
-  three or more times gets the existing naming prompt (`NameAddressPrompt`, §169) as a
-  suggestion row in the same slot — "You've dealt with 0xab…12 five times. Name them?" —
-  sharing the one-row rule. The same rule covers any identity kind, not only wallets: a sender
-  who mailed three times, a login that acted on your repos three times. And saving is never
-  more than one tap away wherever an identity is drawn — `Add to Addresses` on the dial (section 1),
-  and the address card's own name field (§169) — so the row is the nudge, not the only door.
+  whatever a person should be able to save easily"*), and **RULED AGAIN: the naming prompt is
+  offered ANY time, never gated on three dealings** (user: *"naming prompt for counterparty
+  should be anytime, not just three times"*). Every unnamed counterparty — a wallet you
+  received from, a sender who mailed once, a login that acted on your repo once — can be named
+  the moment it appears: `Add to Addresses` on its row's dial and on the sheet (section 1), and
+  the address card's own name field (§169). The nudge ROW in the Addresses list names the NEWEST
+  unnamed counterparty ("0xab…12 sent you 0.2 ETH. Name them?"), one row at a time (section 1's
+  one-row rule), and a dismissed nudge moves on to the next; no count is kept and no threshold
+  exists. The three-times rule is DELETED.

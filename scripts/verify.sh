@@ -2242,6 +2242,14 @@ harness "Wei/Gwei name pure-logic self-test" "wei-names self-test" "scripts/wei-
 # query into a path. Compiles the file whole over a canned network; 13
 # mutations.
 harness "web3.bio pure-logic self-test" "web3bio self-test" "scripts/web3bio-selftest.sh" "the web3.bio self-test failed — run scripts/web3bio-selftest.sh"
+# The Addresses index (prd §916, step 2) — the contact index over the link
+# ledger. What it catches: a display name used as a merge key (§632), a
+# suggestion that merges, a "No" that does not stick or that blocks a later
+# verified fact, a mixed-case address missing its own key, a contact edge in
+# the mirror payload (§169), a lead that moves when a later identity joins,
+# a typed name losing to a seat's display name, and a GitHub notification
+# filed under the repo owner. Two files compiled whole; 14 mutations.
+harness "Addresses index pure-logic self-test" "addresses self-test" "scripts/addresses-selftest.sh" "the Addresses self-test failed — run scripts/addresses-selftest.sh"
 
 # World ID (prd §785). The read is one `eth_call` whose every failure arrives as
 # the same silence, and the silence is also the CORRECT answer for almost every

@@ -3314,6 +3314,26 @@ enum ProbeHooks {
                 for line in lines { NSLog("weiName| %@", line) }
             }
         },
+        // `-addressesProbe YES` — the contact index, rebuilt over the stores
+        // and the link ledger, one line per contact (prd §916, step 2 of
+        // docs/addresses-spec.md). The first line's `linked:` count is the
+        // measurement the spec's step 3 waits on: how many of the person's
+        // own entries actually join. Never prints a phone or an email.
+        Hook(key: "addressesProbe") { _, context in
+            Task { @MainActor in
+                for line in ContactIndexSources.probe(context: context) {
+                    NSLog("addresses| %@", line)
+                }
+            }
+        },
+        // `-addressesForget YES` — empty the link ledger, so a probe starts
+        // from the stores alone.
+        Hook(key: "addressesForget") { _, _ in
+            Task { @MainActor in
+                ContactLinksStore.shared.forget()
+                NSLog("addresses| ledger emptied")
+            }
+        },
         // `-web3bioProbe <name|0x…>` — every record web3.bio holds for one
         // query (prd §916): platform, identity, the record's OWN address, and
         // for an address the two verdicts §599 needs — whether the record
