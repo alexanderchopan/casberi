@@ -18592,6 +18592,34 @@
         }
       }
     },
+    "%lld in a conversation" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld en una conversación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "会話内の%lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대화 속 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一段对话中的 %lld 条"
+          }
+        }
+      }
+    },
     "%lld in other currencies" : {
       "localizations" : {
         "es" : {
@@ -49068,6 +49096,62 @@
         }
       }
     },
+    "Can post as you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puede publicar como tú"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたとして投稿できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 이름으로 게시할 수 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以以你的名义发帖"
+          }
+        }
+      }
+    },
+    "Can post as you and read your messages" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puede publicar como tú y leer tus mensajes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたとして投稿し、メッセージを読めます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 이름으로 게시하고 메시지를 읽을 수 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以以你的名义发帖并读取你的私信"
+          }
+        }
+      }
+    },
     "Can post as you and read your messages · %@" : {
       "localizations" : {
         "es" : {
@@ -49120,6 +49204,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "可以以你的身份发帖 · %@"
+          }
+        }
+      }
+    },
+    "Can read your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puede leer tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントを読めます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정을 읽을 수 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以读取你的账户"
           }
         }
       }
@@ -52255,6 +52367,34 @@
         }
       }
     },
+    "Cleared" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Resuelta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "解消"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "해제됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已恢复"
+          }
+        }
+      }
+    },
     "Cleared screening — this is yours to withdraw." : {
       "localizations" : {
         "es" : {
@@ -53384,6 +53524,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已连接到新的 Bankr 账户。在“代理”中找到 Bankr。"
+          }
+        }
+      }
+    },
+    "Connected to your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectada a tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントに接続済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정에 연결됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已连接到你的账户"
           }
         }
       }
@@ -62976,6 +63144,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "下跌 −%@"
+          }
+        }
+      }
+    },
+    "Draft" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Borrador"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下書き"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "초안"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "草稿"
           }
         }
       }
@@ -121359,6 +121555,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "显示最近的 %lld 项 — 打开某个来源可查看更早内容"
+          }
+        }
+      }
+    },
+    "Showing your most recent things — open a source to go further back" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mostrando tus cosas más recientes — abre una fuente para ir más atrás"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近のものを表示中 — さらに遡るにはソースを開いてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 항목을 표시 중 — 더 과거로 가려면 소스를 여세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在显示你最近的内容 — 打开某个来源可以看更早的"
           }
         }
       }

@@ -101,7 +101,7 @@ present "socialRow has no rules of its own — it switches on the table's answer
   'switch SocialRoomSource\.rowKind\(thing, hasReplies:' "$TMP/feed.nc"
 present "standsAlone reads the same table the anatomy came from" \
   'return SocialRoomSource\.standsAlone\(thing\)' "$TMP/feed.nc"
-# The day header's noun ("6 posts") went with the counts in prd §914a, so
+# The day header's noun ("6 posts") went with the counts in prd §914, so
 # nothing on the feed reads `groupIsPosts` any more; the rule stays in the
 # table for the sheet's own use and is guarded below by its own checks.
 present "the thread fold is table-driven, not shape-driven" \
