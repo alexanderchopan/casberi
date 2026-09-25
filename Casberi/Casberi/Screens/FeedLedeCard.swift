@@ -330,12 +330,15 @@ struct FeedLedeCard: View {
     /// same thing takes the same rung in every room. Under a picture the words
     /// are a caption (§734) and stay at `heading24` whatever the fit says.
     private func titleBlock(underArt: Bool, fit: Fit) -> some View {
-        Text(words)
-            .dsText(underArt ? .heading24 : fit.statementRung)
-            .foregroundStyle(DS.textPrimary)
-            .multilineTextAlignment(.leading)
-            .lineLimit(underArt ? 2 : fit.statementLines)
-            .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(words)
+                .dsText(underArt ? .heading24 : fit.statementRung)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(underArt ? 2 : fit.statementLines)
+                .fixedSize(horizontal: false, vertical: true)
+            qualifierLine(fit)
+        }
     }
 
     /// The figure leads, the sentence follows — `MoneyReceipt`'s own anatomy at
@@ -478,7 +481,25 @@ struct FeedLedeCard: View {
     /// itself (`SocialRoomSource.words(of:)`, the copy `PostCard` reads). Every
     /// other kind keeps its title, which for them IS the thing's name.
     private var words: String {
-        isPost ? SocialRoomSource.words(of: thing) : thing.title
+        // A title's seam (prd §915): the object is the statement, and the
+        // qualifier after ` — ` is `qualifier`, drawn under it.
+        isPost ? SocialRoomSource.words(of: thing) : TitleSeam.name(thing.title)
+    }
+
+    /// What the title said after its seam — the game, the board, the verb —
+    /// one quiet line under the statement (prd §915). Never on a post: a
+    /// post's words are the person's own.
+    private var qualifier: String? {
+        isPost ? nil : TitleSeam.split(thing.title).line
+    }
+
+    @ViewBuilder private func qualifierLine(_ fit: Fit) -> some View {
+        if let qualifier {
+            Text(verbatim: qualifier)
+                .dsText(fit.ledeRung)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        }
     }
 
     // MARK: - Shared pieces
@@ -501,7 +522,14 @@ struct FeedLedeCard: View {
             // the network follows in the quiet one — the order the row itself
             // uses, and the order that makes "who" the first thing read.
             // `verbatim:` because a handle is data, never a string to localize.
-            if isPost {
+            // **SAY EVERY FACT ONCE (prd §915).** A notice's statement names
+            // the person — "sam liked your post" — so the name in this line
+            // above it said sam twice, one row apart. The disc is the face,
+            // the statement is the name; the eyebrow keeps the network and
+            // the age. `SocialRoom.sentenceNamesAuthor` is the rule, shared
+            // with the row.
+            if isPost, !SocialRoom.sentenceNamesAuthor(
+                words: words, author: SocialRoomSource.author(of: thing)) {
                 Text(verbatim: SocialRoomSource.author(of: thing))
                     .dsText(.label12)
                     .foregroundStyle(DS.textPrimary)
@@ -653,6 +681,12 @@ struct FeedLedeCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+                    if let qualifier {
+                        Text(verbatim: qualifier)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
                     Text(verbatim: "\(momentClock(when)) · \(FeedLedeFace.dueLine(when))")
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
@@ -691,6 +725,7 @@ struct FeedLedeCard: View {
                 .multilineTextAlignment(.leading)
                 .lineLimit(fit.statementLines)
                 .fixedSize(horizontal: false, vertical: true)
+            qualifierLine(fit)
         }
     }
 
@@ -718,77 +753,82 @@ struct FeedLedeCard: View {
     /// is 25 — seven lines, none clipped.
     private static let proseLines = 7
 
-    /// MEDIA A: the art is the well. `LiveStreamHero`'s anatomy — the box at
-    /// `leadHeight`, the picture filling it at the widget radius, a scrim
-    /// over its foot, the words on the scrim — for a song, a video, a game:
-    /// the title, then the artist and the album (or the summary the bridge
-    /// landed), then the source and the age.
+    /// MEDIA A, AMENDED (prd §915): **words never sit on art.** The picture
+    /// fills the TOP of the well edge to edge and the words stand under it on
+    /// the well's own ground — for a song, a video, a game: the title, then
+    /// the artist and the album (or the summary the bridge landed), then the
+    /// source and the age. §907 drew the words on a scrim over the picture's
+    /// foot, and on a Twitch frame full of code the title fought the picture
+    /// for the same pixels; a stacked cover reads twice as fast and the art
+    /// is uncut where it matters.
     private var mediaWell: some View {
-        Color.clear
-            .frame(height: DSRoomChassis.leadHeight)
-            .overlay {
-                GeometryReader { geo in
-                    if thing.previewImageData != nil {
-                        PhotoWell(thing: thing)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .clipped()
-                    } else if let url = artURL {
-                        RemoteArt(urlString: url,
-                                  width: geo.size.width, height: geo.size.height,
-                                  fallback: thing.source,
-                                  cornerRadius: DS.Radius.widget)
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear
+                .frame(height: Self.mediaArtHeight)
+                .overlay {
+                    GeometryReader { geo in
+                        if thing.previewImageData != nil {
+                            PhotoWell(thing: thing)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                        } else if let url = artURL {
+                            RemoteArt(urlString: url,
+                                      width: geo.size.width, height: geo.size.height,
+                                      fallback: thing.source,
+                                      cornerRadius: 0)
+                        }
                     }
                 }
-            }
-            .overlay(alignment: .bottom) {
-                LinearGradient(colors: [.clear, .black.opacity(0.78)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 132)
-                    .allowsHitTesting(false)
-            }
-            .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    Text(mediaTitle)
-                        .dsText(.heading24)
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    if let line = mediaLine {
-                        Text(verbatim: line)
-                            .dsText(.body17)
-                            .foregroundStyle(.white.opacity(0.9))
-                            .lineLimit(1)
-                    }
-                    HStack(spacing: DS.Space.s1) {
-                        Text(thing.source)
-                        Text(verbatim: "·")
-                        LiveTimeText(date: thing.capturedAt)
-                    }
-                    .dsText(.subhead12)
-                    .foregroundStyle(.white.opacity(0.7))
+                .clipped()
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(mediaTitle)
+                    .dsText(.heading24)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                if let line = mediaLine {
+                    Text(verbatim: line)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
                 }
-                .padding(DS.Space.s3)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .background {
-                if selected {
-                    RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                        .fill(DS.tintDim)
+                HStack(spacing: DS.Space.s1) {
+                    Text(thing.source)
+                    Text(verbatim: "·")
+                    LiveTimeText(date: thing.capturedAt)
                 }
+                .dsText(.subhead12)
+                .foregroundStyle(DS.textTertiary)
             }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
+            Spacer(minLength: 0)
+        }
+        .frame(height: DSRoomChassis.leadHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // The well is the lead's own (§766); art at its top corners, words on
+        // its ground. One `dsWell` — `plate-audit.py` carries its allowance.
+        .dsWell(cornerRadius: DS.Radius.widget)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .background {
+            if selected {
+                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                    .fill(DS.tintDim)
+            }
+        }
     }
 
-    /// A media title is "Nightcall — Kavinsky" (`MusicRow`'s own split); the
-    /// scrim shows the name at size and the artist on the line under it,
-    /// beside the album the bridge landed as `summary`.
-    private var mediaTitle: String {
-        let comps = thing.title.components(separatedBy: " — ")
-        return comps.count > 1 ? comps.dropLast().joined(separator: " — ") : thing.title
-    }
+    /// The picture's share of the box: what is left above three lines of
+    /// words (28 + 25 + 17), their two gaps, and the block's top and bottom
+    /// air — ~100pt on the reading ramp.
+    static let mediaArtHeight: CGFloat = DSRoomChassis.leadHeight - 100
+
+    /// A media title is "Nightcall — Kavinsky" — the app's one seam
+    /// (`TitleSeam`, prd §915): the name at size, the artist on the line under
+    /// it beside the album the bridge landed as `summary`.
+    private var mediaTitle: String { TitleSeam.split(thing.title).name }
 
     private var mediaLine: String? {
-        let comps = thing.title.components(separatedBy: " — ")
-        let artist = comps.count > 1 ? comps.last : nil
+        let artist = TitleSeam.split(thing.title).line
         let album = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines)
         let parts = [artist, album].compactMap { $0 }.filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")

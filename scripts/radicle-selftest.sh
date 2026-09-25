@@ -39,6 +39,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 WIRE="Casberi/Casberi/Model/RadicleWire.swift"
+# The one title seam (prd §915): a row's title is `object — qualifier`.
+SEAM="Casberi/Casberi/Model/TitleSeam.swift"
 ROOM="Casberi/Casberi/Model/RadicleRoom.swift"
 BRIDGE="Casberi/Casberi/Model/RadicleBridge.swift"
 SCREEN="Casberi/Casberi/Screens/RadicleScreen.swift"
@@ -469,17 +471,17 @@ do {
     check("a patch path is appended", patch.hasSuffix("/patches/abc"))
     check("no path leaves the repo URL", url.hasSuffix("Gazv5"))
 }
-print("title — the repo leads")
+print("title — the patch leads, the verb and the repo are on the line (§915)")
 do {
     let t = RadicleWire.title(repo: "heartwood", verb: "merged", subject: "Fix seed discovery")
-    check("the repo is first", t.hasPrefix("heartwood · "))
-    check("the verb is second", t.contains("· merged ·"))
-    // §303's clamp ruling: `titleLine` cuts at 80, so a trailing verb is what
-    // the clamp eats and a merge reads as an ordinary patch.
-    check("the verb survives an 80-character clamp",
-          String(RadicleWire.title(repo: "heartwood", verb: "merged",
-                                   subject: String(repeating: "x", count: 200)).prefix(80))
-            .contains("merged"))
+    check("the subject is first", t.hasPrefix("Fix seed discovery — "))
+    check("the verb and the repo follow the seam", t.hasSuffix(" — merged · heartwood"))
+    // §303's clamp ruling, kept by `TitleSeam.join`: the SUBJECT is clamped,
+    // so the verb survives the 80-character title line and a merge never
+    // reads as an ordinary patch.
+    let long = RadicleWire.title(repo: "heartwood", verb: "merged",
+                                 subject: String(repeating: "x", count: 200))
+    check("the verb survives an 80-character clamp", long.count <= 80 && long.hasSuffix("merged · heartwood"))
 }
 
 // ── open items ─────────────────────────────────────────────────────────────
@@ -605,7 +607,7 @@ SWIFT
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.8x faster).
 # Re-probe before trusting it again after adding mutations.
-if ! swiftc -Onone -o "$TMP/run" "$WIRE" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/run" "$WIRE" "$SEAM" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the harness did not compile against the shipped RadicleWire/RadicleRoom:"
   sed -n '1,40p' "$TMP/build.log"
   exit 1
@@ -634,7 +636,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/RadicleWire.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/RadicleWire.swift" "$WORK/RadicleRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$WORK/RadicleWire.swift" "$SEAM" "$WORK/RadicleRoom.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -663,7 +665,7 @@ PY2
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/RadicleRoom.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/RadicleWire.swift" "$WORK/RadicleRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$WORK/RadicleWire.swift" "$SEAM" "$WORK/RadicleRoom.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

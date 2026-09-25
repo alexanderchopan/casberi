@@ -516,7 +516,7 @@ enum HuggingFaceIngest {
                     kind: .link,
                     // Repo ids are author-controlled and can carry anything;
                     // the one-line-title invariant is enforced at the door.
-                    title: IngestSupport.titleLine("\(release.id) · \(repo.noun)"),
+                    title: TitleSeam.join(release.id, repo.noun),
                     content: "https://huggingface.co/\(pathPrefix(repo))\(release.id)",
                     source: "Hugging Face",
                     // The REAL publish time, not `.now` — a backfilled release

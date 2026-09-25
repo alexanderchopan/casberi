@@ -2205,13 +2205,13 @@ enum DemoSeedAll {
         // `refPrefixes` is what `teardown` sweeps, and a row outside it
         // outlives the demo, indistinguishable from a real grant.
         out.append(
-            row(.link, "Can post as you · Tweetbot", source: "X", ref: "demo:x:app:0",
+            row(.link, "Tweetbot — Can post as you", source: "X", ref: "demo:x:app:0",
                 days: 3100, hour: 9, content: "https://x.com/settings/connected_apps",
                 tags: ["Access"]) { t in
                 t.summary = "Tapbots · A Twitter client."
             })
         out.append(
-            row(.link, "Can read your account · Timeline Cleaner", source: "X",
+            row(.link, "Timeline Cleaner — Can read your account", source: "X",
                 ref: "demo:x:app:1", days: 1400, hour: 11,
                 content: "https://x.com/settings/connected_apps", tags: ["Access"]))
         out.append(
@@ -3217,7 +3217,7 @@ enum DemoSeedAll {
         ]
         // The WATCHED TICKERS (2026-08-12). Stocktwits' primary rows are the
         // watches themselves — `StockWatch.watch` lands one `.link`
-        // thing per symbol, titled `"\(company) · $\(TICKER)"`, and
+        // thing per symbol, titled `"\(company) — $\(TICKER)"` (the seam, §915), and
         // `StocktwitsScreen` builds its whole watchlist by filtering on that
         // ref prefix. The demo seeded only the POSTS, so the room was a wall
         // of chat with nothing being watched, and the setup screen's
@@ -3233,7 +3233,7 @@ enum DemoSeedAll {
             ("Tesla Inc", "TSLA", 246.90, 11),
         ]
         out += tickers.map { t in
-            row(.link, "\(t.company) · $\(t.symbol)", source: "Stocktwits",
+            row(.link, "\(t.company) — $\(t.symbol)", source: "Stocktwits",
                 ref: StockWatch.symbolRef(t.symbol), days: t.days, hour: 10,
                 tags: [t.symbol]) { thing in
                 thing.watchPriceUsd = t.watchedAt
@@ -3268,7 +3268,7 @@ enum DemoSeedAll {
         // these rows a sparkline/price/chart instead — a synthetic in-memory
         // pulse, never a URL, so it can never trigger a fetch either.
         // Title format is LOAD-BEARING, not cosmetic (2026-08-12).
-        // `TokenWatch` lands `"\(name) · $\(symbol)"` and `TokensAsk`
+        // `TokenWatch` lands `"\(name) — $\(symbol)"` (the seam, §915) and `TokensAsk`
         // .name/.symbol is the format's one parser — it splits on the literal
         // " · $". The demo's old "Ethereum (ETH)" matched nothing, so
         // `symbol(of:)` returned the WHOLE title, `TokenRow.vitals` read that
@@ -3277,7 +3277,7 @@ enum DemoSeedAll {
         // the real bridge stamps `previewImageURL`, and without it the row
         // and the watchlist roster both fall back to the Tokens source glyph.
         out += tokenSeeds.enumerated().map { i, t in
-            row(.link, "\(t.name) · $\(t.symbol)", source: "Tokens", ref: "demo:token:\(i)",
+            row(.link, "\(t.name) — $\(t.symbol)", source: "Tokens", ref: "demo:token:\(i)",
                 days: t.dayOffset, hour: 12) { thing in
                 thing.watchPriceUsd = t.price
                 thing.previewImageURL = "sample:token-\(t.symbol.lowercased())"
@@ -4400,11 +4400,11 @@ enum DemoSeedAll {
                       ask: String?, ref: String, url: String)] = [
             ("Merged: panel draws only figures (#412)", "you", 1, nil,
              "gh:demo412", "https://github.com/casberi/app/pull/412"),
-            ("Mentioned you · casberi/app · seed every source on the sim (#414)", "you", 1.5,
+            ("seed every source on the sim (#414) — Mentioned you · casberi/app", "you", 1.5,
              "Mentioned", "gh:notif:demo414", "https://github.com/casberi/app/issues/414"),
-            ("Assigned to you · casberi/app · serialize NLEmbedding inference (#409)", "you", 6,
+            ("serialize NLEmbedding inference (#409) — Assigned to you · casberi/app", "you", 6,
              "Assigned", "gh:notif:demo409", "https://github.com/casberi/app/issues/409"),
-            ("Review requested · casberi/app · receipts reach map (#402)", "mia", 14,
+            ("receipts reach map (#402) — Review requested · casberi/app", "mia", 14,
              "Review", "gh:notif:demo402", "https://github.com/casberi/app/pull/402"),
         ]
         out += github.map { g in
@@ -4749,14 +4749,14 @@ enum DemoSeedAll {
         // right renders as nothing, because the head's tap target matches on
         // `sourceRef` and `authorHandle` literally.
         let awsEpoch = Int(at(0.4, 9).timeIntervalSince1970)
-        out.append(row(.link, "Alarm · prod-api-5xx", source: "AWS",
+        out.append(row(.link, "prod-api-5xx — Alarm", source: "AWS",
                        ref: "aws:alarm:prod-api-5xx:ALARM:\(awsEpoch)",
                        days: 0.4, hour: 9,
                        content: "https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#alarmsV2:alarm/prod-api-5xx",
                        tags: ["Alarm"]))
         // A failed deploy stamps the pipeline on `authorHandle` — that is
         // what the head's tap target matches, not the title.
-        out.append(row(.link, "Failed · casberi-deploy", source: "AWS",
+        out.append(row(.link, "casberi-deploy — Failed", source: "AWS",
                        ref: "aws:pipeline:9f2c1e40-7b3a-4c19-9f0d-2a5e6c8b1d33",
                        days: 1.2, hour: 16,
                        content: "https://console.aws.amazon.com/codesuite/codepipeline/pipelines/casberi-deploy/executions/9f2c1e40-7b3a-4c19-9f0d-2a5e6c8b1d33/timeline?region=us-east-1",
@@ -4835,7 +4835,7 @@ enum DemoSeedAll {
             t.priceValue = 12
             t.priceCurrency = "USD"
         })
-        out.append(row(.reminder, "Subscription payment failed · Grace Hopper",
+        out.append(row(.reminder, "Grace Hopper — Subscription payment failed",
                        source: "Dodo Payments",
                        ref: "dodopayments:subscription:sub_5c1f7a3b9e2d:failed",
                        days: 1, hour: 9,

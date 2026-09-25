@@ -442,7 +442,9 @@ enum DodoPaymentsShape {
         }
         let customer = row["customer"] as? [String: Any]
         let name = (customer?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        var title = name.map { "\(verb) · \($0)" } ?? verb
+        // The customer is the object and the verb its qualifier (`TitleSeam`,
+        // §915); with no name the verb stands alone.
+        var title = name.map { TitleSeam.join($0, verb) } ?? verb
         // WHAT it was worth (prd §912): `recurring_pre_tax_amount` is minor
         // units in `currency` by Dodo's own wording (the same sentence
         // `total_amount` carries), so it goes through the one money reader.

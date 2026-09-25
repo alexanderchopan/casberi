@@ -8157,12 +8157,10 @@ struct FeedScreen: View {
                             .opacity(isQuiet(row) ? Self.quietRow : 1)
                     }
                 }
-                // The moment closes (prd §389). `newSinceDivider` said the
-                // same thing from ABOVE the boundary, where it had to name the
-                // date to be understood; from below, under a section already
-                // named "Since you left", the only fact left to state is that
-                // this is where you can stop.
-                if split.moment && momentWhole && label == Self.momentLabel { caughtUpSeam }
+                // The moment closed with a sentence here until prd §915
+                // ("You're caught up — everything below, you've seen"). The
+                // list just ends: the next day header already says the away
+                // window is over, and Mail never narrates its own end.
             }
         }
         if window.more { olderRow(hidden: window.hidden) }
@@ -8269,22 +8267,6 @@ struct FeedScreen: View {
     /// rows and needs a fill to read as a seam, while this one closes a
     /// section and reads as the quiet line it is (`caughtUpFooter`'s
     /// treatment, which does the same job for the whole feed).
-    private var caughtUpSeam: some View {
-        Text("You're caught up — everything below, you've seen")
-            .dsText(.subhead12)
-            .foregroundStyle(DS.textTertiary)
-            // Arrives like the rows above it (2026-09-05): the two seams were
-            // the only things in the feed that appeared cold, and the moment
-            // they mark — things landed while you were away — is exactly the
-            // kind §79 lets us animate. `settleIn` honours Reduce Motion.
-            .settleIn()
-            .frame(maxWidth: .infinity)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-    }
-
     /// A day's name INSIDE the away section (prd §879), when it spans more
     /// than one. The day divider's own view, one weight cooler — the section's
     /// name above it is the louder claim — so it is felt as it passes like
@@ -8304,7 +8286,7 @@ struct FeedScreen: View {
         // tint-coloured prose, which reads as a tappable link; the air around
         // a centred word is the boundary.
         DSStamp(word: newSinceText)
-            .settleIn()   // see `caughtUpSeam`
+            .settleIn()   // honours Reduce Motion; the seam it arrived beside is gone (§915)
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s1)
             .listRowBackground(Color.clear)
@@ -11199,87 +11181,33 @@ struct FeedScreen: View {
         }
     }
 
-    /// The feed closes instead of trailing off (2026-07-13): one quiet line
-    /// naming what you just read to the end of. No count since prd §914.
-    /// Takes the render's `visible` (the Feed-freeze rule) instead of
-    /// re-deriving it.
+    /// **THE LIST JUST ENDS (prd §915).** The feed closed on a sentence from
+    /// 2026-07-13 to §914 — "That's everything from npm so far", "That's
+    /// everything you've pinned", a thin room's mark-and-line — and none of
+    /// it said anything the empty air under the last row did not. Mail never
+    /// narrates its own end. One line survives, because it is a DOOR and an
+    /// honesty fact rather than a closing: at the fetch bound this is NOT the
+    /// end of the corpus, and saying nothing there would be the §83 fake
+    /// status in the one place a person is deciding whether anything older
+    /// exists. The room stops fetching at `allRoomFetchLimit`; the copy says
+    /// which stop this is, and the door it offers is real — a source room
+    /// carries its own predicated query and still no row bound, so opening
+    /// one genuinely reaches further back than the All room can.
+    ///
+    /// The caller's gates stand (§264, §482, §486): the line is still a claim
+    /// about the list on screen, so a scope with no rows draws nothing.
+    /// Takes the render's `visible` (the Feed-freeze rule) for that reason.
     @ViewBuilder
     private func caughtUpFooter(_ rows: [Thing]) -> some View {
-        // A THIN room closes with a shape, not a line (2026-09-06, the
-        // world-class pass): a source that has landed one or two things
-        // used to draw its rows and then the same one-line footer the All
-        // room ends on, and at that count the footer was most of the
-        // screen. The mark and the count say what this room is and how far
-        // along it is; the second line is the one true thing about how it
-        // grows — no "syncing", no "check back", nothing §83 forbids.
-        if !reachedFetchCeiling, source != "All", !Pinboard.isPinnedRoom(source),
-           rows.count <= Self.thinRoomRows {
-            // A ROW's shape, not a centred stack (measured 2026-09-06 on the
-            // demo's Cursor room): a stacked mark-over-two-lines footer sat
-            // ~60pt tall under three rows and its words ended beneath the
-            // dock's melt, so the room closed on an orphan mark. One row of
-            // the list's own anatomy — mark left, two lines right — closes
-            // above the dock without a scroll.
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                BridgeIcon(name: source, size: DS.Mark.row)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    // "New things from X land here." is gone (prd §748): the
-                    // line above already says this is everything SO FAR.
-                    DSProse.text("That's everything from \(source) so far")
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                }
-                .multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
-            }
-            .padding(.top, DS.Space.s3)
-            .listRowBackground(Color.clear)
-            // THE ROWS' OWN INSET (2026-09-14, user: "the icons should share
-            // same indentation"). A row's shape at the List's DEFAULT inset
-            // is not a row: `shapedListRow` sets `s4 + s3` leading, and this
-            // footer set nothing, so its mark sat ~7pt left of every mark
-            // above it and the room closed on a step. Same numbers as the
-            // row plumbing so the two can't drift apart again.
-            .listRowInsets(.init(top: DS.Space.s2,
-                                 leading: DS.Space.s4 + DS.Space.s3,
-                                 bottom: DS.Space.s2,
-                                 trailing: DS.Space.s4 + DS.Space.s3))
-            .listRowSeparator(.hidden)
-            .accessibilityElement(children: .combine)
-        } else {
-            caughtUpLine(rows)
+        if reachedFetchCeiling {
+            Text("Showing your most recent things — open a source to go further back")
+                .dsText(.subhead12)
+                .foregroundStyle(DS.textTertiary)
+                .frame(maxWidth: .infinity)
+                .padding(.top, DS.Space.s6)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
         }
-    }
-
-    /// Three rows or fewer is a room still arriving. Four is where the rows
-    /// carry the screen on their own.
-    static let thinRoomRows = 3
-
-    private func caughtUpLine(_ rows: [Thing]) -> some View {
-        // At the fetch bound this is NOT the end of the corpus, and saying
-        // "that's everything" there would be the §83 fake status in the one
-        // place a person is deciding whether anything older exists. The room
-        // stops fetching at `allRoomFetchLimit`; the copy says which stop this is.
-        //
-        // The door this offers stays real: a source room carries its own
-        // predicated query and (2026-08-14) still no row bound, so opening one
-        // genuinely does reach further back than the All room can.
-        Text(reachedFetchCeiling
-             ? "Showing your most recent things — open a source to go further back"
-             : source == "All"
-             ? "That's everything"
-             // "from Pinned" would name a source that doesn't exist. This room
-             // is the one place the sentence is about something you did.
-             : Pinboard.isPinnedRoom(source)
-             ? "That's everything you've pinned"
-             : "That's everything from \(source)")
-            .dsText(.subhead12)
-            .foregroundStyle(DS.textTertiary)
-            .frame(maxWidth: .infinity)
-            .padding(.top, DS.Space.s6)
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
     }
 
     // MARK: - Windowed rows (prd §264)

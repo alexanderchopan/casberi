@@ -162,7 +162,12 @@ enum DS {
 
     // MARK: - Fills
 
-    static let fillFaint  = Color.adaptive(dark: "#ffffff0a", light: "#00000008")
+    /// ONE NOTCH LIGHTER IN DARK since prd §915 (was `#ffffff0a`, 4%): at 4%
+    /// over black the lead's well measured ~1.1:1 against the page and read
+    /// as a smudge rather than a container. 10% is Apple's grouped-dark
+    /// ground (`#1c1c1e`) to within a shade, and it reaches every well at
+    /// once because there is one token. Light is untouched.
+    static let fillFaint  = Color.adaptive(dark: "#ffffff1a", light: "#00000008")
     static let fillLine   = Color.adaptive(dark: "#ffffff1a", light: "#00000014")
     static let fillStrong = Color.adaptive(dark: "#ffffff29", light: "#00000024")
 

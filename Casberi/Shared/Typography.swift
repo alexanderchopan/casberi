@@ -230,6 +230,14 @@ extension DSTextStyle {
     /// groups stay even, and head-sized because it IS the screen.
     static let monoCode40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, monospaced: true)
 
+    // ============================================================ 34 · SCREEN
+    /// A SCREEN'S NAME (prd §915), and nothing else. Apple's large title at
+    /// Apple's size: the one rung above a section (`heading24`) and below the
+    /// head's statement (`heading40`), so a screen, its sections and its
+    /// switcher stand on three rungs instead of one. `DSScreenHead` is its
+    /// only caller; a room has no title and takes nothing from here.
+    static let heading34 = DSTextStyle(size: 34, weight: .bold, tracking: 0, lineHeight: 41, relative: .largeTitle)
+
     // ============================================================= 24 · TITLE
     /// A card's name.
     static let heading24 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)

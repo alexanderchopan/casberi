@@ -806,9 +806,9 @@ enum AWSIngest {
 
     private static func alarmThing(name: String, state: String, region: String,
                                    reason: String?, when: Date?) -> Thing {
-        let title = state == "ALARM"
-            ? String(localized: "Alarm · \(name)")
-            : String(localized: "Cleared · \(name)")
+        // The alarm is the object, its state the qualifier (`TitleSeam`, §915).
+        let title = TitleSeam.join(name, state == "ALARM"
+            ? String(localized: "Alarm") : String(localized: "Cleared"))
         // An alarm name may carry spaces and slashes; the console reads the
         // fragment percent-encoded, and a raw slash there opens the alarm
         // list instead of the alarm (prd §912).
@@ -875,12 +875,13 @@ enum AWSIngest {
         let revision = sourceRevisionSummary(row)
         let subject = revision?.split(separator: "\n").first
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-        let lead = status == "Failed"
-            ? String(localized: "Failed · \(pipeline)")
-            : (status == "Superseded"
-               ? String(localized: "Superseded · \(pipeline)")
-               : pipeline)
-        let title = subject.map { $0.isEmpty ? lead : "\(lead) · \($0)" } ?? lead
+        // The pipeline is the object; a failure or a supersession is its
+        // qualifier, on the line (`TitleSeam`, §915). The commit subject stays
+        // beside the pipeline's name, as it did.
+        let lead = subject.map { $0.isEmpty ? pipeline : "\(pipeline) · \($0)" } ?? pipeline
+        let title = TitleSeam.join(lead, status == "Failed"
+            ? String(localized: "Failed")
+            : (status == "Superseded" ? String(localized: "Superseded") : nil))
         let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(title),

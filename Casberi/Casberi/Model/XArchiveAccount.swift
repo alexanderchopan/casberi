@@ -195,21 +195,24 @@ enum XArchiveAccount {
         return .unknown
     }
 
-    /// The row's own line. The REACH LEADS, on §303's clamp ruling: a title is
-    /// cut at 80 characters, so an app whose name is long would otherwise lose
-    /// the only word that says what it can do — and "can post as you" arriving
-    /// after the cut reads exactly like "can read your posts".
+    /// The row's title: the app is the object and its REACH the qualifier
+    /// after the seam (`TitleSeam`, prd §915), drawn on the row's line. §303's
+    /// reason for leading with the reach — the 80-character clamp eats the
+    /// end of a title — is kept by `join`, which clamps the app's name so
+    /// "can post as you" is never what gets cut.
     ///
     /// Every grade gets its own sentence, `unknown` included, because a row
     /// that says nothing about reach is indistinguishable from one that says
     /// "read" and is the reason to open the settings page rather than not to.
     static func appTitle(_ app: App) -> String {
+        let reach: String
         switch app.reach {
-        case .messages: return String(localized: "Can post as you and read your messages · \(app.name)")
-        case .write:    return String(localized: "Can post as you · \(app.name)")
-        case .read:     return String(localized: "Can read your account · \(app.name)")
-        case .unknown:  return String(localized: "Connected to your account · \(app.name)")
+        case .messages: reach = String(localized: "Can post as you and read your messages")
+        case .write:    reach = String(localized: "Can post as you")
+        case .read:     reach = String(localized: "Can read your account")
+        case .unknown:  reach = String(localized: "Connected to your account")
         }
+        return TitleSeam.join(app.name, reach)
     }
 
     /// The second line, or nothing. The organisation first when it differs from

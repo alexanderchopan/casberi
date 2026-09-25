@@ -96,6 +96,8 @@ WELL_ALLOWED = {
     "SafeScreen.swift": (2, "two entry fields: a pairing link, a pasted signing request (prd §913)"),
     "SafeAskSheet.swift": (1, "the pasted statement, an entry field (prd §913)"),
     "ThingContent.swift": (1, "a monospaced text block"),
+    "FeedLedeCard.swift": (1, "the media cover's well — art at its top, words on its ground (prd §915)"),
+    "GenRenderer.swift": (1, "the live stream's cover, the same stacked well (prd §915)"),
     "NoteSheetViews.swift": (1, "a monospaced code block"),
 }
 

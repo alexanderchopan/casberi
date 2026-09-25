@@ -1211,16 +1211,17 @@ check("a permission field naming nothing we know stays unknown, never a guess",
       app(["id": "1", "name": "Mystery", "permissions": ["frobnicate"]])?.reach == .unknown)
 check("an absent permission field is unknown too",
       app(["id": "1", "name": "Mystery"])?.reach == .unknown)
-// Every grade gets its own sentence, and the REACH LEADS — §303's clamp
-// ruling: `titleLine` cuts at 80 characters, so a trailing "can post as you"
-// on a long app name is exactly what the cut eats.
+// Every grade gets its own sentence, after the seam (prd §915): the app is
+// the object and its reach the qualifier on the line. §303's clamp ruling
+// is kept by `TitleSeam.join`, which clamps the NAME so "can post as you"
+// is never what the 80-character cut eats.
 for probe in [(XArchiveAccount.Reach.messages, "messages"), (.write, "write"),
               (.read, "read"), (.unknown, "unknown")] {
     let a = XArchiveAccount.App(id: "1", name: "Zed", organization: nil, detail: nil,
                                 reach: probe.0, approvedAt: nil)
-    check("the \(probe.1) grade leads with its reach and names the app",
-          XArchiveAccount.appTitle(a).hasSuffix("Zed")
-          && XArchiveAccount.appTitle(a).count > 4)
+    check("the \(probe.1) grade names the app, then its reach after the seam",
+          XArchiveAccount.appTitle(a).hasPrefix("Zed — ")
+          && XArchiveAccount.appTitle(a).count > 6)
 }
 check("an unknown grant does not claim it can post as you",
       !XArchiveAccount.appTitle(
@@ -1373,7 +1374,7 @@ SWIFT
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 3.6x faster).
 # Re-probe before trusting it again after adding mutations.
-if ! swiftc -Onone -o "$TMP/x-selftest" "$TMP/extracted.swift" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/x-selftest" "$TMP/extracted.swift" "Casberi/Casberi/Model/TitleSeam.swift" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ harness failed to compile against the shipped source"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1

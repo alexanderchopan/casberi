@@ -1446,22 +1446,35 @@ struct ThingSheetView: View {
     /// iPad and Catalyst the sheet is far wider, and a paragraph run full
     /// width makes the eye lose its place returning to each next line.
     @ViewBuilder private var titleBlock: some View {
-        let words = isSocialPost ? postWords : thing.title
+        // The title's seam (prd §915): the object is the head, and what the
+        // bridge said after ` — ` — the game, the board, the verb — is one
+        // quiet line under it, never inside the head with a dash.
+        let seam = TitleSeam.split(thing.title)
+        let words = isSocialPost ? postWords : seam.name
         let rung = Self.titleRung(for: words)
-        Group {
-            if isSocialPost {
-                Text(linkedWords(words))
-            } else {
-                Text(thing.title)
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Group {
+                if isSocialPost {
+                    Text(linkedWords(words))
+                } else {
+                    Text(seam.name)
+                }
+            }
+            .dsText(rung.style)
+            .foregroundStyle(DS.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: rung == .reading ? Self.readingMeasure : .infinity,
+                   alignment: .leading)
+            // The words are what people copy a phrase out of — every rung.
+            .textSelection(.enabled)
+            if !isSocialPost, let line = seam.line {
+                Text(verbatim: line)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
             }
         }
-        .dsText(rung.style)
-        .foregroundStyle(DS.textPrimary)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: rung == .reading ? Self.readingMeasure : .infinity,
-               alignment: .leading)
-        // The words are what people copy a phrase out of — every rung.
-        .textSelection(.enabled)
     }
 
     /// THE HEAD RUNG IS FOR A NAME (2026-09-06, prd §630 amendment — the
@@ -1900,8 +1913,8 @@ struct ThingSheetView: View {
                                onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
                     BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
                 }
-                Text(thing.title)
-                    .dsText(Self.titleRung(for: thing.title).style)
+                Text(TitleSeam.name(thing.title))
+                    .dsText(Self.titleRung(for: TitleSeam.name(thing.title)).style)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
@@ -1988,8 +2001,11 @@ struct ThingSheetView: View {
         return split.rest
     }
 
-    /// "Ethereum · $ETH" as the name and the symbol (prd §897).
+    /// "Ethereum — $ETH" as the name and the symbol (prd §897; the seam since
+    /// §915). A row landed before §915 ("Ethereum · $ETH") still reads.
     static func chartParts(_ title: String) -> (name: String, symbol: String?) {
+        let seam = TitleSeam.split(title)
+        if let symbol = seam.line { return (seam.name, symbol) }
         let split = title.components(separatedBy: " · ")
         guard split.count >= 2 else { return (title, nil) }
         return (split[0], split.dropFirst().joined(separator: " · "))
@@ -2047,11 +2063,12 @@ struct ThingSheetView: View {
         return "\(thing.source) · " + String(localized: "\(n) messages")
     }
 
-    /// "Piranesi — Susanna Clarke" as its two parts.
+    /// "Piranesi — Susanna Clarke" as its two parts — the app's one seam
+    /// (`TitleSeam`, prd §915), so a work whose own title carries a dash keeps
+    /// it and the author is the tail.
     static func citationParts(_ citation: String) -> (work: String, author: String?) {
-        let parts = citation.components(separatedBy: " \u{2014} ")
-        guard parts.count >= 2 else { return (citation, nil) }
-        return (parts[0], parts.dropFirst().joined(separator: " \u{2014} "))
+        let seam = TitleSeam.split(citation)
+        return (seam.name, seam.line)
     }
 
     /// The body, with the two per-source facts the renderer needs (prd §399):

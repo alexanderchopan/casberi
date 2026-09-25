@@ -133,11 +133,11 @@ enum AppleMusicIngest {
             // clean search term (and the only handle a stored row that aged
             // out of the recent window still has).
             termForRef[ref] = thing.title.replacingOccurrences(of: " — ", with: " ")
-            titleForRef[ref] = thing.title.components(separatedBy: " — ").first ?? thing.title
+            titleForRef[ref] = TitleSeam.name(thing.title)
         }
         for (ref, thing) in contentlessStored where termForRef[ref] == nil {
             termForRef[ref] = thing.title.replacingOccurrences(of: " — ", with: " ")
-            titleForRef[ref] = thing.title.components(separatedBy: " — ").first ?? thing.title
+            titleForRef[ref] = TitleSeam.name(thing.title)
         }
 
         // Pass 1 — catalog id lookup: resolves plays that came from the

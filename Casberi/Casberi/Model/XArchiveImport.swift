@@ -1474,7 +1474,8 @@ enum XArchiveImport {
             let newest = lines.last?.date ?? Date(timeIntervalSince1970: 0)
             let thing = Thing(
                 kind: .chat,
-                title: String(localized: "Messages · \(lines.count) in a conversation"),
+                title: TitleSeam.join(String(localized: "Messages"),
+                                      String(localized: "\(lines.count) in a conversation")),
                 content: transcript,
                 source: "X",
                 capturedAt: newest,

@@ -84,12 +84,12 @@ struct MediaSheetHead: View {
 
     private var isMusic: Bool { thing.source == "Spotify" || thing.source == "Apple Music" }
 
-    /// "Dayvan Cowboy — Boards of Canada" as the song and the artist.
+    /// "Dayvan Cowboy — Boards of Canada" as the song and the artist, and
+    /// "nova live — Software and Game Development" as the stream and the game:
+    /// the app's one seam (`TitleSeam`, prd §915), for every media thing.
     private var parts: (title: String, artist: String?) {
-        guard isMusic else { return (thing.title, nil) }
-        let split = thing.title.components(separatedBy: " \u{2014} ")
-        guard split.count >= 2 else { return (thing.title, nil) }
-        return (split[0], split.dropFirst().joined(separator: " \u{2014} "))
+        let seam = TitleSeam.split(thing.title)
+        return (seam.name, seam.line)
     }
 
     /// The channel or the show, where the row stamps one; else the service.

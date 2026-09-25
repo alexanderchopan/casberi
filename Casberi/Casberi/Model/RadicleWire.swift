@@ -396,11 +396,12 @@ enum RadicleWire {
 
     // MARK: - Titles
 
-    /// What a landed row says happened, in the shape every event bridge here
-    /// uses: the repo leads, because a patch title is a fragment written
-    /// against a context you had at the time (the Trello board rule, §303's
-    /// clamp reasoning). The verb is a word, never a count.
+    /// What a landed row says happened: the patch is the object, and the verb
+    /// and the repo are its qualifier on the line under it (`TitleSeam`, prd
+    /// §915 — the context that makes a fragment legible, one slot down). The
+    /// verb is a word, never a count, and `join` clamps the subject rather
+    /// than the qualifier, so the verb survives the 80-character line.
     static func title(repo: String, verb: String, subject: String) -> String {
-        "\(repo) · \(verb) · \(subject)"
+        TitleSeam.join(subject, "\(verb) · \(repo)")
     }
 }

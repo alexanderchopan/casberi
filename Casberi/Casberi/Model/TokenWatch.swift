@@ -126,7 +126,7 @@ enum TokenWatch {
         guard !IngestSupport.hasSourceRef(context, source: "Tokens", ref: ref) else { return nil }
         let thing = Thing(
             kind: .link,
-            title: "\(token.name) · $\(token.symbol)",
+            title: TitleSeam.join(token.name, "$\(token.symbol)"),
             content: "https://dexscreener.com/\(token.chain)/\(token.address)",
             source: "Tokens",
             capturedAt: .now,

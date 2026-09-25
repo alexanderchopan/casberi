@@ -75,7 +75,7 @@ enum StockWatch {
         guard existing == 0 else { return nil }
         let thing = Thing(
             kind: .link,
-            title: IngestSupport.titleLine("\(stock.title) · $\(stock.symbol)"),
+            title: TitleSeam.join(stock.title, "$\(stock.symbol)"),
             // The Stocktwits symbol page — what StockChart.route reads, and
             // a real page when opened.
             content: "https://stocktwits.com/symbol/\(stock.symbol)",

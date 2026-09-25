@@ -307,4 +307,42 @@ enum SocialRoom {
         guard !rows.isEmpty else { return false }
         return rows.allSatisfy { rowKind($0).isPost }
     }
+
+    // MARK: - Say every fact once (prd §915)
+
+    /// Whether a post's words already name their author — a notice ("sam liked
+    /// your post", "mia and 2 others liked your repost") does, a post does not.
+    /// The eyebrow above such a statement drops the name, because the sentence
+    /// is the name.
+    ///
+    /// The author is matched as a WHOLE WORD at the front, case-insensitively:
+    /// "sam liked" names sam, "samantha liked" does not, and an empty author
+    /// names nobody.
+    static func sentenceNamesAuthor(words: String, author: String) -> Bool {
+        let author = author.trimmingCharacters(in: .whitespaces)
+        guard !author.isEmpty else { return false }
+        let words = words.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard words.count > author.count,
+              words.prefix(author.count).caseInsensitiveCompare(author) == .orderedSame
+        else { return false }
+        let next = words[words.index(words.startIndex, offsetBy: author.count)]
+        return next == " "
+    }
+
+    /// The sentence a row draws IN ITS NAME SLOT instead of the author's name,
+    /// or nil when the row keeps the name line and the words below it.
+    ///
+    /// A row's name is one line (§902), so the sentence takes the slot only
+    /// when it names the author (above) and is short enough to be a line —
+    /// `rowSentenceCap` characters, no newline. A long notice keeps the two-line
+    /// shape rather than cutting its own sentence at the tail.
+    static func rowSentence(words: String, author: String) -> String? {
+        guard sentenceNamesAuthor(words: words, author: author) else { return nil }
+        let words = words.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !words.contains("\n"), words.count <= rowSentenceCap else { return nil }
+        return words
+    }
+
+    /// What fits a row's one name line at `body17` on a phone, with the lead.
+    static let rowSentenceCap = 72
 }

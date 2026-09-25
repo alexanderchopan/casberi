@@ -712,7 +712,9 @@ enum PolarShape {
         }
         let product = row["product"] as? [String: Any]
         let name = (product?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        var title = name.map { "\(verb) · \($0)" } ?? verb
+        // The product is the object and the verb its qualifier (`TitleSeam`,
+        // §915); the price tail after it is `titleMoney`'s own seam (§900).
+        var title = name.map { TitleSeam.join($0, verb) } ?? verb
         // The price it was, where the row carries one (prd §912): `amount` in
         // minor units, `currency`, and `recurring_interval` ("month"/"year")
         // — "Subscription canceled · Pro · $49.00/month" says what left.
@@ -741,7 +743,7 @@ enum PolarShape {
     /// query, which can only mean it moved to a healthy status (active/
     /// trialing) — see `PolarIngest.diffSubscriptions`.
     static func subscriptionRecovered(productName: String?) -> Shaped {
-        let title = productName.map { "Subscription recovered · \($0)" } ?? "Subscription recovered"
+        let title = productName.map { TitleSeam.join($0, "Subscription recovered") } ?? "Subscription recovered"
         return Shaped(title: title, url: PolarAccount.dashboardURL("/subscriptions"),
                       tag: "Subscription", facets: ["Recovered"], when: .now)
     }

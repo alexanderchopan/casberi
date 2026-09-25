@@ -40,6 +40,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SHAPE="Casberi/Casberi/Model/GitHubEventShape.swift"
+# The one title seam (prd §915): a row's title is `object — qualifier`.
+SEAM="Casberi/Casberi/Model/TitleSeam.swift"
 FEEDS="Casberi/Casberi/Model/GitHubFeeds.swift"
 for f in "$SHAPE" "$FEEDS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
@@ -114,22 +116,24 @@ func pr(_ action: String, merged: Bool? = nil, mergedAt: String? = nil,
 // ── pull requests — the title, the door, the words ─────────────────────────
 print("PullRequestEvent — the pull request itself, not the repo")
 let opened = row("PullRequestEvent", pr("opened"))
-check("the verb leads, then the title, then the repo",
-      opened?.title == "Opened · Fix the flaky test · o/r")
+// The pull request is the OBJECT (prd §915): its title leads, and the verb
+// and the repo are the qualifier after the seam, drawn on the row's line.
+check("the title leads, then the verb and the repo after the seam",
+      opened?.title == "Fix the flaky test — Opened · o/r")
 check("the door is the pull request", opened?.url == "https://github.com/o/r/pull/9")
 check("the body is the description", opened?.body == "Why this change.")
 check("closed and merged reads Merged",
-      row("PullRequestEvent", pr("closed", merged: true))?.title.hasPrefix("Merged · ") == true)
+      row("PullRequestEvent", pr("closed", merged: true))?.title.hasSuffix(" — Merged · o/r") == true)
 check("merged_at alone is enough for Merged",
-      row("PullRequestEvent", pr("closed", mergedAt: "2026-09-24T10:00:00Z"))?.title.hasPrefix("Merged · ") == true)
+      row("PullRequestEvent", pr("closed", mergedAt: "2026-09-24T10:00:00Z"))?.title.hasSuffix(" — Merged · o/r") == true)
 check("closed without a merge reads Closed",
-      row("PullRequestEvent", pr("closed", merged: false))?.title.hasPrefix("Closed · ") == true)
+      row("PullRequestEvent", pr("closed", merged: false))?.title.hasSuffix(" — Closed · o/r") == true)
 check("reopened reads Reopened",
-      row("PullRequestEvent", pr("reopened"))?.title.hasPrefix("Reopened · ") == true)
+      row("PullRequestEvent", pr("reopened"))?.title.hasSuffix(" — Reopened · o/r") == true)
 check("housekeeping reads Updated, never a snake_case word",
-      row("PullRequestEvent", pr("review_requested"))?.title.hasPrefix("Updated · ") == true)
+      row("PullRequestEvent", pr("review_requested"))?.title.hasSuffix(" — Updated · o/r") == true)
 check("labeled reads Updated",
-      row("PullRequestEvent", pr("labeled"))?.title.hasPrefix("Updated · ") == true)
+      row("PullRequestEvent", pr("labeled"))?.title.hasSuffix(" — Updated · o/r") == true)
 check("no html_url falls back to the repo",
       row("PullRequestEvent", pr("opened", url: nil))?.url == home)
 check("an empty body is nil, never a blank block",
@@ -155,12 +159,12 @@ let issue: J = ["action": "opened", "issue": ["title": "Crash on launch",
                                               "body": "Steps…",
                                               "html_url": "https://github.com/o/r/issues/4"]]
 let opened4 = row("IssuesEvent", issue)
-check("titled with the issue", opened4?.title == "Opened · Crash on launch · o/r")
+check("titled with the issue", opened4?.title == "Crash on launch — Opened · o/r")
 check("the door is the issue", opened4?.url == "https://github.com/o/r/issues/4")
 check("the body is the issue's", opened4?.body == "Steps…")
 check("an issue is never Merged",
       row("IssuesEvent", ["action": "closed", "issue": ["title": "t", "merged": true]])?.title
-        .hasPrefix("Closed · ") == true)
+        .hasSuffix(" — Closed · o/r") == true)
 check("a payload with no issue keeps the old line",
       row("IssuesEvent", ["action": "closed"])?.title == "Closed an issue in o/r")
 
@@ -232,7 +236,7 @@ exit(failures == 0 ? 0 : 1)
 SWIFT
 
 # `-Onone`, the pure-logic harnesses' rule (see github-person-selftest.sh).
-if ! swiftc -Onone -o "$TMP/run" "$SHAPE" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/run" "$SHAPE" "$SEAM" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the shipped GitHubEventShape.swift did not compile against the harness"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -262,7 +266,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/GitHubEventShape.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/GitHubEventShape.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$WORK/GitHubEventShape.swift" "$SEAM" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

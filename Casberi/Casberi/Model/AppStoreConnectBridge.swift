@@ -513,22 +513,25 @@ enum ASCShape {
 
     static let source = "App Store Connect"
 
-    /// `"Rejected · Casberi 1.4"`.
+    /// `"Casberi 1.4 — Rejected"`: the version is the object, the verdict its
+    /// qualifier on the line (`TitleSeam`, prd §915). §303's reason for
+    /// leading with the verdict — the 80-character clamp ate a trailing one —
+    /// is kept by `join`, which clamps the NAME so the verdict is whole.
     static func versionTitle(app: String, version: String, state: ASCVersionState) -> String {
         let name = [app, version].filter { !$0.isEmpty }.joined(separator: " ")
         guard let verdict = state.verdict else { return name }
-        return name.isEmpty ? verdict : "\(verdict) · \(name)"
+        return TitleSeam.join(name, verdict)
     }
 
-    /// `"★★☆☆☆ · Casberi · Crashes on launch"`.
-    ///
-    /// The rating leads for the version rule's reason, one step stronger: the
-    /// whole point of a review row is which ones are bad, and a one-star buried
-    /// behind a long app name and a long review title is a one-star you scroll
-    /// past. Five glyphs cost five characters.
+    /// `"Crashes on launch — ★★☆☆☆ · Casberi"` (`TitleSeam`, prd §915): the
+    /// review's own words are the object, the rating and the app its
+    /// qualifier on the line. The whole point of a review row is which ones
+    /// are bad, and `join` clamps the words rather than the stars, so a
+    /// one-star behind a long title is still a one-star on its line.
     static func reviewTitle(rating: Int?, title: String?, app: String) -> String {
-        let parts = [stars(rating), app.isEmpty ? nil : app, clean(title)]
-        let joined = parts.compactMap { $0 }.joined(separator: " · ")
+        let qualifier = [stars(rating), app.isEmpty ? nil : app].compactMap { $0 }
+            .joined(separator: " · ")
+        let joined = TitleSeam.join(clean(title) ?? "", qualifier)
         // A review with no rating, no title and no resolvable app is not
         // impossible — a nickname-only row from a locale we couldn't read —
         // and an empty title would render as a blank band.
@@ -544,9 +547,9 @@ enum ASCShape {
              + String(repeating: "☆", count: 5 - rating)
     }
 
-    /// `"Ready to test · Casberi build 267"`.
+    /// `"Casberi build 267 — Ready to test"` (`TitleSeam`, §915).
     static func buildTitle(app: String, build: String, state: ASCBuildState) -> String {
-        "\(state.clause) · \(buildLabel(app: app, build: build))"
+        TitleSeam.join(buildLabel(app: app, build: build), state.clause)
     }
 
     /// `"TestFlight build expires · Casberi build 267"`. The `dueAt` carries
@@ -554,8 +557,8 @@ enum ASCShape {
     /// different date on the row is the kind of disagreement nobody notices
     /// and everybody distrusts.
     static func expiryTitle(app: String, build: String) -> String {
-        String(localized: "TestFlight build expires")
-            + " · \(buildLabel(app: app, build: build))"
+        TitleSeam.join(buildLabel(app: app, build: build),
+                       String(localized: "TestFlight build expires"))
     }
 
     /// `"Casberi build 267"`.

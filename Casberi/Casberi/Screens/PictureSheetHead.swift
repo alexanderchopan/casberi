@@ -77,13 +77,23 @@ struct PictureSheetHead: View {
     }
 
     @ViewBuilder private var liveBody: some View {
+        // The title's seam (prd §915): "Saturday's match — our view" is the
+        // name at the head rung and its tail on the line under it.
+        let seam = TitleSeam.split(thing.title)
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             eyebrow
-            Text(thing.title)
+            Text(seam.name)
                 .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
+            if let line = seam.line {
+                Text(verbatim: line)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
         }
         .padding(.horizontal, DSRoomChassis.leadInset)
         .frame(maxWidth: .infinity, alignment: .leading)

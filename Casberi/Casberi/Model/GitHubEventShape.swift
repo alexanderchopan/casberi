@@ -100,7 +100,9 @@ enum GitHubEventShape {
             }
             let merged = (pr["merged"] as? Bool) == true
                 || string(pr["merged_at"]) != nil
-            return Row(title: "\(verb(action, merged: merged)) · \(title) · \(repo)",
+            // The pull request is the object; the verb and the repo are its
+            // qualifier, on the line under it (`TitleSeam`, prd §915).
+            return Row(title: TitleSeam.join(title, "\(verb(action, merged: merged)) · \(repo)"),
                        url: string(pr["html_url"]) ?? home,
                        body: string(pr["body"]).map(clamp))
 
@@ -111,7 +113,7 @@ enum GitHubEventShape {
                 return Row(title: "\(action.capitalized) an issue in \(repo)",
                            url: home, body: nil)
             }
-            return Row(title: "\(verb(action, merged: false)) · \(title) · \(repo)",
+            return Row(title: TitleSeam.join(title, "\(verb(action, merged: false)) · \(repo)"),
                        url: string(issue["html_url"]) ?? home,
                        body: string(issue["body"]).map(clamp))
 

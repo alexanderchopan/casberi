@@ -262,8 +262,7 @@ struct BandRow: View {
         // label rather than a wrong fact.
         case "Kindle", "Readwise":
             let work = thing.source == "Readwise" ? thing.content : (thing.authorHandle ?? "")
-            let book = (work.components(separatedBy: " — ").first ?? work)
-                .trimmingCharacters(in: .whitespaces)
+            let book = TitleSeam.name(work).trimmingCharacters(in: .whitespaces)
             return book.isEmpty ? nil : book
         // WHAT THE ROW IS (user ruling, 2026-09-11) — "Pull request", "Issue",
         // "Release", "Star", "Gist", "Activity", "Watching". The GitHub room is
@@ -621,9 +620,13 @@ struct BandRow: View {
         // used to draw as a 17pt badge over the lead is now the line's first
         // clause, because a badge over a face was the only row in the app that
         // put two marks in the lead.
-        DSFeedRow(name: imageOnly ? thing.source : titleText,
+        // THE TITLE'S SEAM (prd §915): the object is the name, and the
+        // qualifier the bridge appended after ` — ` is the line's first clause.
+        let seam = TitleSeam.split(titleText)
+        DSFeedRow(name: imageOnly ? thing.source : seam.name,
                   emphasized: emphasized, done: done, ripple: rippleIndex,
-                  line: imageOnly ? nil : line(project: project, leader: leader)) {
+                  line: imageOnly ? nil : line(project: project, leader: leader,
+                                               qualifier: seam.line)) {
             leaderView
                 .overlay(alignment: .bottomTrailing) {
                     if thing.isFlagged {
@@ -753,7 +756,7 @@ struct BandRow: View {
     /// lined "Calendar" said one fact twice and dropped the clock into the
     /// title to make room. A face, a publisher's icon or a link's picture does
     /// not name the network, so those rows keep the name.
-    private func line(project: String?, leader: Leader) -> Text? {
+    private func line(project: String?, leader: Leader, qualifier: String? = nil) -> Text? {
         // THE LINE NEVER NAMES THE SOURCE (prd §902 — user: "i don't even
         // want to say the name of the source b/c we have the icon"). §767 let
         // it through where the lead was a face or a picture; the room's
@@ -767,7 +770,10 @@ struct BandRow: View {
         let labelled: Text? = project.map { p in
             Text(p).fontWeight(.medium)
         }
-        let parts = [eventClock.map { Text($0) }, labelled]
+        // The qualifier leads the line (prd §915): what the title said after
+        // its seam — the game, the board, the verb — in the line's own ink,
+        // before the clock and the project.
+        let parts = [qualifier.map { Text(verbatim: $0) }, eventClock.map { Text($0) }, labelled]
             .compactMap { $0 }
         guard let first = parts.first else { return nil }
         return parts.dropFirst().reduce(first) { $0 + Text(verbatim: " · ") + $1 }
@@ -1501,10 +1507,13 @@ struct MediaRow: View {
 
     @ViewBuilder private var liveBody: some View {
         let byline = self.byline
+        // The title's seam (prd §915): "kestrel live — Factorio" is the name
+        // and the game, on the line beside the channel.
+        let seam = TitleSeam.split(thing.title)
         // ONE ANATOMY (prd §744): the mark leads, the art moves under the name
         // at tile height and keeps its shape's aspect — a video frame cropped
         // square would lose the frame.
-        DSFeedRow(name: thing.title, done: done, line: DSFeed.line(byline)) {
+        DSFeedRow(name: seam.name, done: done, line: DSFeed.line(seam.line, byline)) {
             BridgeIcon(name: thing.source, size: DS.Mark.row)
         } trailing: {
             if live { DSFeedLive() }
@@ -1543,9 +1552,9 @@ struct MusicRow: View {
     /// still splits — undetectable without a stored artist field, and
     /// catalog songs always carry an artist.
     private var parts: (title: String, artist: String?) {
-        let comps = thing.title.components(separatedBy: " — ")
-        guard comps.count > 1, let artist = comps.last else { return (thing.title, nil) }
-        return (comps.dropLast().joined(separator: " — "), artist)
+        // One seam for the whole app since prd §915 (`TitleSeam`).
+        let seam = TitleSeam.split(thing.title)
+        return (seam.name, seam.line)
     }
 
     @Environment(\.colorScheme) private var scheme
@@ -2360,7 +2369,14 @@ struct PostCard: View {
         // ONE ANATOMY (prd §744): the person is the name, at the same 17pt and
         // the same 26pt lead as every row, so the words sit on the column's one
         // left edge. The words, the quote and the media are the row's content.
-        DSFeedRow(name: author) {
+        //
+        // **SAY EVERY FACT ONCE (prd §915).** A notice's words name the person
+        // — "mia and 2 others liked your repost" — so a name line above them
+        // said mia twice, one row apart. When the sentence names its author
+        // and fits the name slot, it IS the name; the quote and the media
+        // still ride below. `SocialRoom.rowSentence` is the rule.
+        let sentence = SocialRoom.rowSentence(words: words, author: author)
+        DSFeedRow(name: sentence ?? author) {
             if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
                 RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                             fallback: thing.source, circular: true)
@@ -2384,10 +2400,12 @@ struct PostCard: View {
                 if let parent = thing.parent {
                     ReplyingToRow(parent: parent)
                 }
-                Text(words)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(clamp)
-                    .fixedSize(horizontal: false, vertical: true)
+                if sentence == nil {
+                    Text(words)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(clamp)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let quote = thing.quote {
                     SocialQuoteCard(card: quote, source: thing.source, walkable: false)
                 }

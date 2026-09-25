@@ -101,8 +101,9 @@ present "socialRow has no rules of its own — it switches on the table's answer
   'switch SocialRoomSource\.rowKind\(thing, hasReplies:' "$TMP/feed.nc"
 present "standsAlone reads the same table the anatomy came from" \
   'return SocialRoomSource\.standsAlone\(thing\)' "$TMP/feed.nc"
-present "the day header's noun reads it too" \
-  'SocialRoomSource\.groupIsPosts\(rows\)' "$TMP/feed.nc"
+# The day header's noun ("6 posts") went with the counts in prd §914a, so
+# nothing on the feed reads `groupIsPosts` any more; the rule stays in the
+# table for the sheet's own use and is guarded below by its own checks.
 present "the thread fold is table-driven, not shape-driven" \
   'SocialRoom\.foldsThreads\(source\)' "$TMP/feed.nc"
 present "the person filter is gated on the roster set" \
@@ -269,6 +270,34 @@ check("the other seven draw posts",
 check("an unknown source draws no posts", !SocialRoom.drawsPosts("Kalshi"))
 check("…and its rows fall back to the band rather than trapping",
       kind(Row(source: "Kalshi", kind: "link")) == .band)
+
+// SAY EVERY FACT ONCE (prd §915): a notice names its author in its own
+// sentence, so the row's name slot takes the sentence and the eyebrow
+// drops the name. A post does not name its author; a longer name is not
+// the name; a long notice keeps the two-line shape.
+print("")
+print("Say every fact once (§915)")
+check("a notice names its author",
+      SocialRoom.sentenceNamesAuthor(words: "sam liked your post", author: "sam"))
+check("…case-insensitively",
+      SocialRoom.sentenceNamesAuthor(words: "Sam liked your post", author: "sam"))
+check("a post does not",
+      !SocialRoom.sentenceNamesAuthor(words: "Interfaces that age well say less.", author: "sam"))
+check("a longer name is not the name",
+      !SocialRoom.sentenceNamesAuthor(words: "samantha liked your post", author: "sam"))
+check("the name alone is not a sentence",
+      !SocialRoom.sentenceNamesAuthor(words: "sam", author: "sam"))
+check("an empty author names nobody",
+      !SocialRoom.sentenceNamesAuthor(words: "liked your post", author: ""))
+check("the row draws the sentence as its name",
+      SocialRoom.rowSentence(words: "mia and 2 others liked your repost", author: "mia")
+        == "mia and 2 others liked your repost")
+check("a post keeps the name line",
+      SocialRoom.rowSentence(words: "Most product demos show a screen nobody has ever had.", author: "mia") == nil)
+check("a notice past the line's cap keeps the two-line shape",
+      SocialRoom.rowSentence(words: "mia " + String(repeating: "and mia ", count: 20), author: "mia") == nil)
+check("a notice with a newline keeps the two-line shape",
+      SocialRoom.rowSentence(words: "mia liked\nyour post", author: "mia") == nil)
 
 print("")
 print("The three live networks — and NOSTR IS ONE OF THEM")
@@ -473,6 +502,17 @@ echo "Mutations"
 mutate "Nostr falls out of the social room again" \
   'case "Bluesky", "Farcaster", "Nostr":' \
   'case "Bluesky", "Farcaster":'
+
+# §915: a longer name reads as the name ("samantha" names sam), so the
+# eyebrow drops a name the sentence never said.
+mutate "a longer name is taken for the author" \
+  '        return next == " "' \
+  '        return true'
+
+# §915: a long notice is cut at the tail of the one-line name slot.
+mutate "a long notice is forced into the name slot" \
+  '        guard !words.contains("\n"), words.count <= rowSentenceCap else { return nil }' \
+  '        guard !words.contains("\n") else { return nil }'
 # "Sam started following you" drawn as a reading-list row, with their face on
 # the record and the source glyph on screen.
 mutate "a follower is read as an article" \

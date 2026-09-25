@@ -858,7 +858,7 @@ enum StripeShape {
             let price = items?.first?["price"] as? [String: Any]
             let nickname = (price?["nickname"] as? String)
                 ?? ((payload["plan"] as? [String: Any])?["nickname"] as? String)
-            let title = nickname.map { "Subscription canceled · \($0)" }
+            let title = nickname.map { TitleSeam.join($0, "Subscription canceled") }
                 ?? "Subscription canceled"
             // WHY, in the customer's words when they left any (prd §912):
             // `cancellation_details.comment` is free text typed at the portal,

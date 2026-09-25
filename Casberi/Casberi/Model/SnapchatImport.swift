@@ -397,7 +397,7 @@ enum SnapchatImport {
 
             let thing = Thing(
                 kind: .file,
-                title: "Memory · \(memoryStamp.string(from: memory.date))",
+                title: TitleSeam.join("Memory", memoryStamp.string(from: memory.date)),
                 content: note,
                 source: source,
                 capturedAt: memory.date,

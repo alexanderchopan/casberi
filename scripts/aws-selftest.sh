@@ -167,10 +167,11 @@ grep -q 'AWSState.alarmsSeeded = true' "$AWS_BRIDGE" \
 # function off.
 grep -qE 'status == "Succeeded" \|\| status == "Failed" \|\| status == "Superseded"' "$AWS_BRIDGE" \
   || { echo "✗ the terminal-execution filter is gone or weakened — InProgress would land"; exit 1; }
-# The failure LEADS — `IngestSupport.titleLine`'s 80-char clamp eats the END
-# of a title, so a trailing outcome is exactly what gets cut.
-grep -qE '"Failed · \\\(pipeline\)"' "$AWS_BRIDGE" \
-  || { echo "✗ a failed deploy's title no longer leads with the outcome — the §83 fake status"; exit 1; }
+# The failure SURVIVES the clamp — the pipeline is the object and the outcome
+# its qualifier after the seam (`TitleSeam.join`, prd §915), which clamps the
+# name so the outcome is never what the 80-character title line cuts.
+grep -qE 'TitleSeam\.join\(lead, status == "Failed"' "$AWS_BRIDGE" \
+  || { echo "✗ a failed deploy's outcome no longer rides the title's seam — the §83 fake status once the clamp eats it"; exit 1; }
 
 # Resource inventory NEVER lands a Thing — only counts into AWSStanding.
 grep -qE 'standing\.ec2Count = ec2Rows\?\.count' "$AWS_BRIDGE" \

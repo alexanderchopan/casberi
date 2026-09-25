@@ -416,7 +416,9 @@ enum GitHubFeedFetch {
             else { continue }
             let raw = item["reason"] as? String
             let reason = notificationReason(raw)
-            let t = thing(.link, title: "\(reason) · \(repo) · \(title)", content: link,
+            // The subject is the object; the reason and the repo are its
+            // qualifier on the line (`TitleSeam`, prd §915).
+            let t = thing(.link, title: TitleSeam.join(title, "\(reason) · \(repo)"), content: link,
                           ref: "gh:notif:\(id)", feed: .notifications,
                           at: IngestSupport.isoDate(item["updated_at"]))
             // The ask, as data rather than as words inside the title — what
@@ -718,7 +720,7 @@ enum GitHubFeedFetch {
         _ = await IngestSupport.boundedGather(capped, maxConcurrent: 4) { target -> Void in
             guard let message = await commitMessage(repo: target.repo, sha: target.sha,
                                                     token: token) else { return }
-            target.thing.title = IngestSupport.titleLine("\(message.subject) · \(target.repo)")
+            target.thing.title = TitleSeam.join(message.subject, target.repo)
             // The trailer paragraph — the WHY a commit subject has no room for
             // — kept for RETRIEVAL only (2026-07-15 ruling): it is text we
             // pulled out of a payload for search to read, and no contributions

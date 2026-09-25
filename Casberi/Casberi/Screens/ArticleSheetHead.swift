@@ -56,13 +56,25 @@ struct ArticleSheetHead: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s6)
             }
+            // The title's seam (prd §915): the object is the head, the
+            // qualifier — the game, the board — one quiet line under it.
+            let seam = TitleSeam.split(thing.title)
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 eyebrow
-                Text(thing.title)
-                    .dsText(Self.headStyle(for: thing.title))
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    Text(seam.name)
+                        .dsText(Self.headStyle(for: seam.name))
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                    if let line = seam.line {
+                        Text(verbatim: line)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
+                }
                 byline
             }
             .padding(.horizontal, DSRoomChassis.leadInset)

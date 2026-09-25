@@ -224,6 +224,8 @@ grep -qi 'reconcileASC\|reconcileAppStore' "$BRIDGES" \
 
 # --- the room head (prd §324) -----------------------------------------------
 ROOM="Casberi/Casberi/Model/ASCRoom.swift"
+# The one title seam (prd §915): every ASCShape title is `object — qualifier`.
+SEAM="Casberi/Casberi/Model/TitleSeam.swift"
 ROOMSRC="Casberi/Casberi/Model/ASCRoomSource.swift"
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
 # so a guard can neither fail nor pass because its code moved next door.
@@ -574,13 +576,16 @@ check("FAILED and INVALID read the same",
 check("an unknown processing state → nil", ASCBuildState.parse("QUARANTINED") == nil)
 
 // ── titles, and the ruling behind them ─────────────────────────────────────
-print("ASCShape — the verdict leads")
-check("a rejection leads with its verdict",
+// The version is the OBJECT and the verdict its qualifier after the seam,
+// drawn on the row's line (prd §915) — §303's "the verdict leads" is kept
+// by `TitleSeam.join`, which clamps the name so the verdict is whole.
+print("ASCShape — the version leads, the verdict is on the line")
+check("a rejection carries its verdict after the seam",
       ASCShape.versionTitle(app: "Casberi", version: "1.4", state: .rejected)
-        == "Rejected · Casberi 1.4")
+        == "Casberi 1.4 — Rejected")
 check("a release says it is live",
       ASCShape.versionTitle(app: "Casberi", version: "1.4", state: .readyForSale)
-        == "Live on the App Store · Casberi 1.4")
+        == "Casberi 1.4 — Live on the App Store")
 // The three faces of approved stay apart, because what happens next differs.
 check("approved-waiting-on-you differs from approved-waiting-on-Apple",
       ASCVersionState.pendingDeveloperRelease.verdict != ASCVersionState.pendingAppleRelease.verdict)
@@ -589,7 +594,7 @@ check("a non-news state has no verdict to lead with",
         == "Casberi 1.4")
 check("a missing version leaves no lone separator",
       ASCShape.versionTitle(app: "Casberi", version: "", state: .rejected)
-        == "Rejected · Casberi")
+        == "Casberi — Rejected")
 
 print("ASCShape.stars — a rating we can't read is not a zero-star review")
 check("five stars",  ASCShape.stars(5) == "★★★★★")
@@ -602,14 +607,14 @@ check("0 → nil",     ASCShape.stars(0) == nil)
 check("6 → nil",     ASCShape.stars(6) == nil)
 check("-1 → nil",    ASCShape.stars(-1) == nil)
 
-print("ASCShape.reviewTitle — the rating leads")
+print("ASCShape.reviewTitle — the words lead, the rating is on the line")
 check("the whole shape",
       ASCShape.reviewTitle(rating: 2, title: "Crashes on launch", app: "Casberi")
-        == "★★☆☆☆ · Casberi · Crashes on launch")
+        == "Crashes on launch — ★★☆☆☆ · Casberi")
 check("no title still names the app and the rating",
       ASCShape.reviewTitle(rating: 5, title: "", app: "Casberi") == "★★★★★ · Casberi")
 check("no rating still reads",
-      ASCShape.reviewTitle(rating: nil, title: "Great", app: "Casberi") == "Casberi · Great")
+      ASCShape.reviewTitle(rating: nil, title: "Great", app: "Casberi") == "Great — Casberi")
 // A blank band is worse than a generic one.
 check("nothing at all still has a title",
       ASCShape.reviewTitle(rating: nil, title: nil, app: "") == "App Store review")
@@ -617,13 +622,13 @@ check("nothing at all still has a title",
 print("ASCShape — builds")
 check("a processed build",
       ASCShape.buildTitle(app: "Casberi", build: "267", state: .valid)
-        == "Ready to test · Casberi build 267")
-check("a failed build leads with the failure",
+        == "Casberi build 267 — Ready to test")
+check("a failed build carries the failure after the seam",
       ASCShape.buildTitle(app: "Casberi", build: "267", state: .invalid)
-        == "Failed processing · Casberi build 267")
+        == "Casberi build 267 — Failed processing")
 check("an expiry names no date (the dueAt carries it)",
       ASCShape.expiryTitle(app: "Casberi", build: "267")
-        == "TestFlight build expires · Casberi build 267")
+        == "Casberi build 267 — TestFlight build expires")
 check("a missing build number leaves no dangling word",
       ASCShape.buildLabel(app: "Casberi", build: "") == "Casberi")
 
@@ -632,15 +637,18 @@ print("the 80-char clamp — the ruling as a test")
 let longApp = "Internal Platform Services Companion"
 let longVersion = "2026.8.6-release-candidate-with-a-long-name"
 let composed = ASCShape.versionTitle(app: longApp, version: longVersion, state: .rejected)
-let clamped = IngestSupport.titleLine(composed)
-check("the composed title really does overflow (or this proves nothing)",
-      composed.count > 80)
-check("clamped, the verdict SURVIVES", clamped.hasPrefix("Rejected · "))
-check("clamped, it is truncated (so the clamp really ran)", clamped.hasSuffix("…"))
-// The counterfactual. If this ever stops being true, the leading rule stopped
+check("the joined title really would overflow (or this proves nothing)",
+      "\(longApp) \(longVersion) — Rejected".count > 80)
+// §915: `join` clamps the NAME, so the verdict is whole on the line and the
+// title line has nothing left to cut.
+check("composed, the verdict SURVIVES after the seam", composed.hasSuffix(" — Rejected"))
+check("composed, the name is truncated (so the clamp really ran)", composed.contains("…"))
+check("composed, the whole title fits the title line", composed.count <= 80)
+check("…so titleLine leaves it alone", IngestSupport.titleLine(composed) == composed)
+// The counterfactual. If this ever stops being true, the ruling stopped
 // mattering and the comment in the source should be rewritten, not the code.
-let trailing = IngestSupport.titleLine("\(longApp) \(longVersion) · Rejected")
-check("trailing, the verdict would be EATEN", !trailing.contains("Rejected"))
+let trailing = IngestSupport.titleLine("\(longApp) \(longVersion) — Rejected")
+check("clamped AFTER the join, the verdict would be EATEN", !trailing.contains("Rejected"))
 // The same ruling for a one-star review, which is the row it matters most for.
 let longReview = ASCShape.reviewTitle(
     rating: 1,
@@ -648,7 +656,7 @@ let longReview = ASCShape.reviewTitle(
     app: "Internal Platform Services Companion")
 let clampedReview = IngestSupport.titleLine(longReview)
 check("a one-star review keeps its star through the clamp",
-      clampedReview.hasPrefix("★☆☆☆☆"))
+      clampedReview.contains("— ★☆☆☆☆"))
 
 // ── the room head (prd §324) ───────────────────────────────────────────────
 print("ASCRoom.days — whole CALENDAR days, not seconds/86400")
@@ -774,7 +782,7 @@ SWIFT
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 3.5x faster).
 # Re-probe before trusting it again after adding mutations.
-if ! swiftc -Onone -o "$TMP/run" "$TMP/extracted.swift" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/run" "$TMP/extracted.swift" "$SEAM" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the extracted App Store Connect logic did not compile"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -809,7 +817,7 @@ PY
   if ! extract "$WORK/AppStoreConnectBridge.swift" "$WORK/extracted.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at extraction)"; return
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/extracted.swift" "$ROOM" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$WORK/extracted.swift" "$SEAM" "$ROOM" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -881,13 +889,14 @@ mutate "an in-flight build landed" \
   'var terminal: Bool { self != .processing }' \
   'var terminal: Bool { true }'
 
-# 9. THE §303 CLAMP RULING, inverted: the verdict trails and is eaten, so a
-#    rejection reads in the feed as a version that shipped.
-mutate "the verdict trails the title" \
+# 9. THE §303 CLAMP RULING, inverted (§915's spelling): the title is clamped
+#    AFTER the join, so the verdict is eaten and a rejection reads in the
+#    feed as a version that shipped.
+mutate "the verdict is clamped after the join" \
   '        guard let verdict = state.verdict else { return name }
-        return name.isEmpty ? verdict : "\(verdict) · \(name)"' \
+        return TitleSeam.join(name, verdict)' \
   '        guard let verdict = state.verdict else { return name }
-        return name.isEmpty ? verdict : "\(name) · \(verdict)"'
+        return IngestSupport.titleLine("\(name) — \(verdict)")'
 
 # 10. A rating outside Apple's 1–5 clamped instead of refused — a zero-star
 #     review nobody wrote.
@@ -930,7 +939,7 @@ PY2
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/ASCRoom.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$TMP/extracted.swift" "$WORK/ASCRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$TMP/extracted.swift" "$SEAM" "$WORK/ASCRoom.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

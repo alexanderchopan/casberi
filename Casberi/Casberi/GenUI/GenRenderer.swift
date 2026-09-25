@@ -1652,56 +1652,65 @@ struct LiveStreamHero: View {
     }
 
     @ViewBuilder private var liveBody: some View {
+        // WORDS NEVER SIT ON ART (prd §915). The frame fills the top of the
+        // lead's box edge to edge and the words stand under it on the well's
+        // ground — the media cover's own stack (`FeedLedeCard.mediaWell`).
+        // The scrim went with it: on a frame full of code the title fought
+        // the picture for the same pixels, and the frame IS the point.
+        let seam = TitleSeam.split(thing.title)
         Button(action: onOpen) {
-            // The lead's one height (prd §760), where a 16:9 frame was.
-            Color.clear
-                .frame(height: DSRoomChassis.leadHeight)
-                .overlay {
-                    GeometryReader { geo in
-                        if let url = thing.previewImageURL, !url.isEmpty {
-                            RemoteArt(urlString: url,
-                                      width: geo.size.width, height: geo.size.height,
-                                      fallback: "Twitch", perishable: true,
-                                      cornerRadius: DS.Radius.widget)
-                        } else {
-                            ZStack {
-                                DS.fillFaint
-                                BridgeIcon(name: "Twitch", size: DS.Mark.tile)
+            VStack(alignment: .leading, spacing: 0) {
+                Color.clear
+                    .frame(height: FeedLedeCard.mediaArtHeight)
+                    .overlay {
+                        GeometryReader { geo in
+                            if let url = thing.previewImageURL, !url.isEmpty {
+                                RemoteArt(urlString: url,
+                                          width: geo.size.width, height: geo.size.height,
+                                          fallback: "Twitch", perishable: true,
+                                          cornerRadius: 0)
+                            } else {
+                                ZStack {
+                                    DS.fillFaint
+                                    BridgeIcon(name: "Twitch", size: DS.Mark.tile)
+                                }
                             }
                         }
                     }
-                }
-                // A scrim only where the words are — the frame is the point,
-                // and a full-surface dim would mute the one image on screen
-                // that's actually happening right now.
-                .overlay(alignment: .bottom) {
-                    LinearGradient(colors: [.clear, .black.opacity(0.75)],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: 96)
-                        .allowsHitTesting(false)
-                }
-                .overlay(alignment: .bottomLeading) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 5) {
-                            // The dot breathes (delight, 2026-08-03) — lawful
-                            // looping motion because this card only EXISTS
-                            // while the broadcast is live (`TwitchIngest.
-                            // liveRefs` derives it; an ended stream doesn't
-                            // fade, it stops existing), so the pulse can
-                            // never claim liveness the card doesn't have.
-                            Circle().fill(DS.confirm).frame(width: 7, height: 7)
-                                .breathing()
-                            Text("Live").dsText(.label12).foregroundStyle(.white)
-                        }
-                        Text(thing.title)
-                            .dsText(.body17)
-                            .foregroundStyle(.white)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
+                    .clipped()
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    HStack(spacing: 5) {
+                        // The dot breathes (delight, 2026-08-03) — lawful
+                        // looping motion because this card only EXISTS
+                        // while the broadcast is live (`TwitchIngest.
+                        // liveRefs` derives it; an ended stream doesn't
+                        // fade, it stops existing), so the pulse can
+                        // never claim liveness the card doesn't have.
+                        Circle().fill(DS.confirm).frame(width: 7, height: 7)
+                            .breathing()
+                        Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
                     }
-                    .padding(DS.Space.s3)
+                    // The streamer is the object, the game the qualifier
+                    // (`TitleSeam`): the name at size, the game on the line.
+                    Text(verbatim: seam.name)
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    if let line = seam.line {
+                        Text(verbatim: line)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s3)
+                Spacer(minLength: 0)
+            }
+            .frame(height: DSRoomChassis.leadHeight)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsWell(cornerRadius: DS.Radius.widget)
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
         .buttonStyle(.plain)
         // The frame IS the well (prd §766): its edge stands where every other

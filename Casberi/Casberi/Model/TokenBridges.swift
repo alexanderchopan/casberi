@@ -1865,7 +1865,9 @@ enum TokenIngest {
             let ident = node["identifier"] as? String
             let thing = Thing(
                 kind: .link,
-                title: ident.map { "\($0) · \(title)" } ?? title,
+                // The issue is the object, its identifier the qualifier on the
+                // line (`TitleSeam`, prd §915).
+                title: TitleSeam.join(title, ident),
                 content: url,
                 source: "Linear",
                 capturedAt: IngestSupport.isoDate(node["updatedAt"]) ?? .now,
@@ -2082,15 +2084,17 @@ enum TokenIngest {
         // carries neither, so it is untouched.
         let isDraft = (node["draft"] as? Bool == true)
             || (node["work_in_progress"] as? Bool == true)
-        if isDraft { title = String(localized: "Draft · \(title)") }
         // `references.full` is GitLab's own identifier string — e.g.
         // "group/project#123" for an issue, "group/project!45" for an MR —
         // so the `#`/`!` already says which this is; no separate label is
-        // needed the way Linear's `identifier` needed one.
+        // needed the way Linear's `identifier` needed one. The draft word
+        // rides the qualifier beside it (`TitleSeam`, §915).
         let ref = (node["references"] as? [String: Any])?["full"] as? String
+        let qualifier = [isDraft ? String(localized: "Draft") : nil, ref].compactMap { $0 }
+            .joined(separator: " · ")
         let thing = Thing(
             kind: .link,
-            title: ref.map { "\($0) · \(title)" } ?? title,
+            title: TitleSeam.join(title, qualifier),
             content: url,
             source: "GitLab",
             capturedAt: IngestSupport.isoDate(node["updated_at"]) ?? .now,
@@ -2205,7 +2209,10 @@ enum TokenIngest {
             let board = (card["idBoard"] as? String).flatMap { boards[$0] }
             let thing = Thing(
                 kind: .reminder,
-                title: board.map { "\($0) · \(name)" } ?? name,
+                // The card is the object, the board its qualifier on the line
+                // (`TitleSeam`, prd §915) — still the context that makes the
+                // name legible, one slot down.
+                title: TitleSeam.join(name, board),
                 content: (card["shortUrl"] as? String) ?? (card["url"] as? String) ?? "",
                 source: "Trello",
                 capturedAt: IngestSupport.isoDate(card["dateLastActivity"]) ?? .now,
@@ -2326,7 +2333,7 @@ enum TokenIngest {
             // card name or a bare Linear title isn't.
             let thing = Thing(
                 kind: .reminder,
-                title: "\(key) · \(summary)",
+                title: TitleSeam.join(summary, key),
                 content: "https://\(domain)/browse/\(key)",
                 source: "Jira",
                 capturedAt: jiraDate(fields["updated"]) ?? .now,

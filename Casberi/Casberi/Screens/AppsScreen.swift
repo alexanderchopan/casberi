@@ -598,11 +598,14 @@ struct AppsScreen: View {
     /// may have no rows under the other, and a selected chip over an empty
     /// list reads as a broken screen.
     private var scopeSegment: some View {
-        // Three words at the lead's words rung, the chosen one in primary and
-        // the others tertiary (user, 2026-09-17: "manage and connect big …
-        // settings should be a third word big there too"). A word, not a
-        // pill: §746 allows two pills, and this is neither a choice among
-        // filters nor a fact, it is which page of the screen you are on.
+        // Three words, the chosen one in primary and the others secondary
+        // (user, 2026-09-17: "manage and connect big … settings should be a
+        // third word big there too"). A word, not a pill: §746 allows two
+        // pills, and this is neither a choice among filters nor a fact, it is
+        // which page of the screen you are on. **A step under the screen's
+        // name since prd §915**: at `heading24` the switcher was as loud as
+        // "Accounts" above it, so the screen had a name and three names; the
+        // words take `heading17` now, the rung a headline takes under a title.
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
             ForEach(AccountsHeld.allCases) { picked in
                 let isOn = picked == section
@@ -615,8 +618,8 @@ struct AppsScreen: View {
                     }
                 } label: {
                     Text(picked.label)
-                        .dsText(.heading24)
-                        .foregroundStyle(isOn ? DS.textPrimary : DS.textTertiary)
+                        .dsText(.heading17)
+                        .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                         .lineLimit(1)
                         .fixedSize()
                         .contentShape(Rectangle())

@@ -78,3 +78,32 @@ end of a range, ask what the other end says.**
 - **Kind tiles, the glyph rule read both ways (prd §831).** Privy's Apps wore Frames' glyph for a month because the guard read the table, where one constant had one symbol, and never the conformances, where a second meaning pointed at it. `room-kind-tiles-selftest.sh` now reads the conformances too: a `DSTileScope` case wears the constant of its own name, or the pair is declared an alias with its reason, and a stale alias fails.
 
 - **Every room opens on the box, and twelve more rooms carry kind tiles (prd §911, 2026-09-24).** The inventory found eleven rooms that could open on a bare row and twelve whose rows already carried a kind and drew no tiles. Calendar covers the NEXT event (`nextEventID` first), Reminders its newest open reminder, Gmail its newest mail with "Waiting on you" UNDER it; CardPointers, Bitrefill, Walletbeat, L2BEAT and Pinned cover when their head or lede is absent; Tokens' lede draws over one token and says "N tokens watched" before any pulse is read; `roomBody`'s final `else` draws the empty state where a devnet head is nil. `standaloneLead(cover:tiles:listEmpty:)` is the one drawing for a cover, an empty lead and tiles — a room's tiles never depend on its head existing. Polar and Dodo Payments ride Stripe's slot with FOUR tiles (All · Sales · Subscriptions · Disputes — a fifth wrapped alone onto a second row, measured; refunds are All only); GitLab, Radicle, Sentry, Vercel, PagerDuty, npm, PyPI, AWS, Cursor and Apple Health take tiles under the cover. A merge request and a patch wear the pull-request glyph as declared aliases. No attention dots on any of them. `SourceActions`' expand phrases are deleted (§723). Seen on the simulator, demo, all rooms named.
+
+## The Apple polish pass (prd §915, 2026-09-24)
+
+Nine live screens read as Apple would read them, and six rulings built from the ranked
+canvas (https://claude.ai/artifact/4xhSVhPRyXNqB2KtCkknzt). Where each lives:
+
+- **Say every fact once** — `SocialRoom.sentenceNamesAuthor` / `rowSentence`
+  (Foundation-only, `social-room-selftest.sh`). `PostCard` draws a notice's sentence in
+  the name slot when it opens with the author's handle and fits one line (72 chars, no
+  newline); `FeedLedeCard.eyebrow` drops the name over such a statement. A post keeps
+  the name line and its words below.
+- **One scale of hierarchy** — `heading34` in `Shared/Typography.swift` is a SCREEN's
+  name and nothing else (`DSScreenHead`); the Accounts switcher is `heading17`, primary
+  for the pick and secondary for the rest; a section stays `heading24`.
+- **One title seam** — `Model/TitleSeam.swift`: `join(object, qualifier)` clamps the
+  OBJECT (ellipsis counted) so the qualifier survives the 80-character line, `split`
+  reads the LAST ` — `. Drawing sites: `BandRow` (the qualifier is the line's first
+  clause), `MusicRow`, `FeedLedeCard` (`words`, `qualifierLine`, `mediaWell`),
+  `LiveStreamHero`, `ThingSheetView.titleBlock` and the note head, `chartParts`.
+  `title-seam-audit.py` fails a `title:` / `title =` / demo `row(.kind, "…"` literal
+  carrying ` · ` outside the money allowances, and any hand split of `" — "`.
+  A money title's dot is `BandRow.titleMoney`'s (§900) and stays.
+- **Words under art** — `FeedLedeCard.mediaWell` and `LiveStreamHero` stack the picture
+  (`mediaArtHeight` = `leadHeight` − 100) over the words on a `dsWell`; no scrim.
+- **The list just ends** — `caughtUpSeam` and the closing sentences are gone from
+  `FeedScreen`; `caughtUpFooter` draws only the fetch-ceiling door, behind the same
+  scope gates (§482, §486).
+- **One notch** — `DS.fillFaint` dark `#ffffff1a` (was `0a`). The gear was already glass;
+  the first-run rain keeps every tile by the 2026-09-01 ruling.
