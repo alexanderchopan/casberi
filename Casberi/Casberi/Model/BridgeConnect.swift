@@ -15,6 +15,11 @@ enum BridgeConnect {
     /// Contacts under Life). "Your Contacts things are landing" sent a beta
     /// tester looking for a Contacts tab and a Music tab (2026-09-18).
     static func landingMessage(_ offer: BridgeCatalog.Offer) -> String {
+        // Contacts has no room since prd §916's amendment: the cards land in
+        // the Addresses list under the face, and the toast names that door.
+        if offer.name == "Contacts" {
+            return String(localized: "Connected — your contacts land under Addresses.")
+        }
         let room = BridgeCatalog.category(of: offer)
         return String(localized: "Connected — \(offer.name) lands under \(room).")
     }

@@ -109,7 +109,11 @@ enum Corpus {
     /// bridge pours in. The stamp stays on the record too, where the sheet's
     /// spec table already reads "From — written by you" in plain words. This
     /// removes a ROOM, not a fact.
-    static let chiplessSources: Set<String> = ["You"]
+    /// "Contacts" joined 2026-09-24 (prd §916 amendment; retires §818's room):
+    /// Apple's cards are not captures and have no room of their own — a
+    /// connected book lands in Addresses under the face, and the connect
+    /// toast says so. Still `roomOnlySources`, so they stay out of All.
+    static let chiplessSources: Set<String> = ["You", "Contacts"]
 
     /// Sources whose SEAT left the catalog and whose rows are kept (prd §638,
     /// 2026-09-06 — the Markets category is deleted: "i want to get away from

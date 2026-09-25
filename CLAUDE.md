@@ -184,6 +184,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-forceBackgroundLaunch YES` — stamp this launch as a background launch so `RootShell`'s gate stays closed (NSLogs `backgroundLaunch: yes`, prd §642). The simulator cannot background-launch, so a pass proves the branch renders, never that the watchdog is beaten.
 - `-fresh YES|NO` — sticky new-user mode (persists until flipped or reinstall); re-shows onboarding.
 - `-accountDetail <case>` — open a settings detail sheet (`Screens/AccountScreen.swift`, `SettingsRows`' own onAppear, so pair it with `-openSettings YES`).
+- `-openAddresses YES` — land on the Accounts screen's Addresses segment (`Screens/AppsScreen.swift`, pair with `casberi://account`); the list is `Screens/AddressesScreen.swift` (prd §916 amendment: a directory under the face, never a room; Contacts is `chiplessSources` since the same ruling).
 - `-openAddressCard <0x…>` — raise the address card for a book entry when the Wallet page appears (`Screens/WalletScreen.swift`; pair with `-openSetup "Wallet"` and `casberi://account`; NSLogs `openAddressCard:`).
 - `-openSettings YES` — lands on the Accounts screen's Settings section (`route.openSettings = true` then `present(.apps)` in RootShell's onAppear, prd §796); reliable since the `HomeRoute.path`-array rewrite (2026-07-22). `-deeplink casberi://settings` works equally.
 - `-icloud.sync YES` — AppStorage override for the sync toggle copy.

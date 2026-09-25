@@ -231,7 +231,11 @@ struct AppsScreen: View {
     /// than added to it.
     @ViewBuilder
     private func sections(_ proxy: ScrollViewProxy) -> some View {
-        if !query.isEmpty {
+        // Addresses takes the query as ITS filter (prd §916): the field above
+        // searches the list you are on, not the catalog.
+        if section == .addresses {
+            AddressesSection(query: query)
+        } else if !query.isEmpty {
             searchResults
         } else if section == .settings {
             SettingsRows()
@@ -267,6 +271,11 @@ struct AppsScreen: View {
                 route.openSettings = false
                 section = .settings
             }
+            #if DEBUG
+            // `-openAddresses YES` — land on the Addresses segment (prd §916),
+            // the `-openSettings` shape one word over.
+            if UserDefaults.standard.bool(forKey: "openAddresses") { section = .addresses }
+            #endif
         }
         // The store's shape after any connect/disconnect — drives the promote
         // lift (which row just took its seat), the count milestones, and the
@@ -643,15 +652,19 @@ struct AppsScreen: View {
         // Connect, Manage, Settings (user, 2026-09-20): read left to right
         // it is the journey, and the first word cues the first act. Where the
         // screen OPENS is still the seed's — this is only the reading order.
-        case all, yours, settings
+        // Addresses is the FOURTH word (prd §916 amendment, 2026-09-24): the
+        // parties behind the accounts — a directory like Connect and Manage,
+        // so it lives beside them rather than on the dock.
+        case all, yours, settings, addresses
         var id: String { rawValue }
         var label: String {
             // "Manage" and "Connect" (user, 2026-09-16, prd §793): what you do
             // on each side — look after what you hold, add what you don't.
             switch self {
-            case .yours:    String(localized: "Manage")
-            case .all:      String(localized: "Connect")
-            case .settings: String(localized: "Settings")
+            case .yours:     String(localized: "Manage")
+            case .all:       String(localized: "Connect")
+            case .settings:  String(localized: "Settings")
+            case .addresses: String(localized: "Addresses")
             }
         }
     }
