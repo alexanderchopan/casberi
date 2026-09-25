@@ -1950,6 +1950,9 @@ struct RootShell: View {
         // gate lives in the app, the coalescer in `Shared/`, so the app
         // hands it over here. Idempotent; a static, set on every activation.
         SaveCoalescer.holdForHand = { await GestureGate.idle() }
+        // Every save stamps its inserted things' ARRIVAL (prd §901b), so a
+        // row lead can tell a landing from the corpus. Idempotent.
+        LandingLedger.install()
         let runForegroundWork: @MainActor () -> Void = {
             // **NOTHING BELOW RUNS UNDER A FINGER (prd §666, 2026-09-09).** The
             // sweep, the index backfills and the detectors all land on the main

@@ -25,11 +25,19 @@ WHAT IT CHECKS (each with a mutation in the self-test that must fire):
   D  ONE caller, `BandRow`'s lead in ShapedRows.swift, passing `fact:
      thing.title` and `cyclesOnChange: !moneyColumn` — the ledger keeps §171's
      ripple as its one motion on a retitle. The fold rows never carry it.
-  E  the landing rule reads the page's wave (`captured > waveAt`) AND a fresh
-     window, and FeedScreen sets `feedWaveAt` from `shapeWaveAt` on the List —
-     without the environment write the rule is nil-guarded and no row ever
-     cycles on landing, which renders perfectly.
+  E  the landing rule reads the thing's ARRIVAL (`LandingLedger.landedAt(id)`,
+     §901b) against the page's wave (`landed > waveAt`) AND a fresh window,
+     never `capturedAt` (the thing's OWN date, stamped from upstream by most
+     bridges — a forty-minute-old reply that arrived just now read as old and
+     never turned); and FeedScreen sets `feedWaveAt` from `shapeWaveAt` on the
+     List — without the environment write the rule is nil-guarded and no row
+     ever cycles on landing, which renders perfectly.
   F  the change trigger is `.onChange(of: fact)` behind `cyclesOnChange`.
+  G  the ledger has ONE door and is installed ONCE: `LandingLedger` observes
+     `ModelContext.willSave` and stamps `insertedModelsArray`'s things, and
+     `RootShell` calls `LandingLedger.install()` — without the install every
+     `landedAt` is nil and no row ever cycles on landing, which also renders
+     perfectly. The demo pour suspends it (a poured seed is not a landing).
 
 WHAT IT DOES NOT CHECK: that the animation looks right, or the clock's exact
 values beyond their order — those are the device's to judge.
@@ -43,6 +51,9 @@ from pathlib import Path
 CYCLE = "Casberi/Casberi/Design/LeadCycle.swift"
 ROWS = "Casberi/Casberi/Screens/ShapedRows.swift"
 FEED = "Casberi/Casberi/Screens/FeedScreen.swift"
+LEDGER = "Casberi/Casberi/Model/LandingLedger.swift"
+ROOT = "Casberi/Casberi/Shell/RootShell.swift"
+DEMO = "Casberi/Casberi/Model/DemoMode.swift"
 
 
 def strip_comments(text: str) -> str:
@@ -51,11 +62,15 @@ def strip_comments(text: str) -> str:
     return "\n".join(re.sub(r"//.*$", "", line) for line in text.split("\n"))
 
 
-def audit(cycle: str, rows: str, feed: str) -> list:
+def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
+          demo: str = "") -> list:
     out = []
     c = strip_comments(cycle)
     r = strip_comments(rows)
     f = strip_comments(feed)
+    l = strip_comments(ledger)
+    s = strip_comments(root)
+    d = strip_comments(demo)
 
     # A — the glyph is the dock category's, from the dock's table, and nothing else.
     assigns = re.findall(r"\bglyph\s*=\s*([^\n]+)", c)
@@ -97,16 +112,22 @@ def audit(cycle: str, rows: str, feed: str) -> list:
         flat = " ".join(call.split())
         if "fact: thing.title" not in flat:
             out.append("D: the cycle's fact is not the row's title")
+        if "id: thing.id" not in flat or "capturedAt" in flat:
+            out.append("D: the caller does not hand the cycle the thing's id for its arrival (§901b) — `capturedAt` is the thing's own date")
         if "cyclesOnChange: !moneyColumn" not in flat:
             out.append("D: the ledger's rows are not opted out of the change cycle (§171's ripple is their motion)")
     for fold in re.findall(r"struct (?:BundleRow|StripRow): View \{[\s\S]*?\n\}", r):
         if ".leadCycle(" in fold:
             out.append("D: a fold's lead carries the cycle")
 
-    # E — the landing rule and the wave it reads.
-    if not re.search(r"captured\s*>\s*waveAt", c):
-        out.append("E: the landing rule does not compare the capture against the page's wave")
-    if "freshWindow" not in c or not re.search(r"now\s*-\s*captured\s*<\s*Self\.freshWindow", c):
+    # E — the landing rule: the ARRIVAL against the wave, and a fresh window.
+    if not re.search(r"landed\s*=\s*LandingLedger\.landedAt\(id\)", c):
+        out.append("E: the landing is not read from LandingLedger.landedAt(id) — the thing's arrival (§901b)")
+    if "capturedAt" in c:
+        out.append("E: LeadCycle reads capturedAt — the thing's OWN date, not its arrival; a forty-minute-old reply landing now never turns")
+    if not re.search(r"landed\s*>\s*waveAt", c):
+        out.append("E: the landing rule does not compare the arrival against the page's wave")
+    if "freshWindow" not in c or not re.search(r"now\s*-\s*landed\s*<\s*Self\.freshWindow", c):
         out.append("E: the landing rule has no fresh window — a row met by scrolling would cycle")
     if not re.search(r"\.environment\(\\\.feedWaveAt,\s*shapeWaveAt\)", f):
         out.append("E: FeedScreen never sets feedWaveAt from shapeWaveAt — no row can cycle on landing")
@@ -114,6 +135,19 @@ def audit(cycle: str, rows: str, feed: str) -> list:
     # F — the change trigger.
     if not re.search(r"\.onChange\(of:\s*fact\)\s*\{\s*if\s+cyclesOnChange", c):
         out.append("F: the change trigger is not `.onChange(of: fact) { if cyclesOnChange …`")
+
+    # G — the ledger's one door, installed once, suspended by the pour.
+    if "ModelContext.willSave" not in l:
+        out.append("G: LandingLedger does not observe ModelContext.willSave — nothing stamps an arrival")
+    if "insertedModelsArray" not in l:
+        out.append("G: LandingLedger does not read the saving context's insertedModelsArray")
+    if not re.search(r"guard\s+!suspended", l):
+        out.append("G: LandingLedger records while suspended — the demo pour would turn every lead")
+    installs = re.findall(r"LandingLedger\.install\(\)", s)
+    if len(installs) != 1:
+        out.append(f"G: expected ONE LandingLedger.install() in RootShell.swift, found {len(installs)} — with none every landedAt is nil and no row cycles on landing")
+    if not re.search(r"LandingLedger\.suspended\s*=\s*true", d):
+        out.append("G: the demo pour does not suspend LandingLedger — a poured seed is not a landing")
     return out
 
 
@@ -135,8 +169,8 @@ struct LeadCycle: ViewModifier {
         .onChange(of: fact) { if cyclesOnChange { fire() } }
     }
     private var landedWhileLooking: Bool {
-        guard let waveAt else { return false }
-        return captured > waveAt && now - captured < Self.freshWindow
+        guard let waveAt, let landed = LandingLedger.landedAt(id) else { return false }
+        return landed > waveAt && now - landed < Self.freshWindow
     }
     private func fire() {
         guard !reduceMotion, !cycling else { return }
@@ -160,7 +194,7 @@ struct BandRow: View {
         DSFeedRow(name: titleText) {
             leaderView
                 .overlay(alignment: .bottomTrailing) { flag }
-                .leadCycle(source: thing.source, capturedAt: thing.capturedAt,
+                .leadCycle(source: thing.source, id: thing.id,
                            fact: thing.title, index: rippleIndex,
                            cyclesOnChange: !moneyColumn)
         }
@@ -174,9 +208,34 @@ GOOD_FEED = """
         .listStyle(.plain)
         .environment(\\.feedWaveAt, shapeWaveAt)
 """
+GOOD_LEDGER = """
+enum LandingLedger {
+    static func install() {
+        observer = NotificationCenter.default.addObserver(forName: ModelContext.willSave, object: nil, queue: nil) { note in
+            guard let context = note.object as? ModelContext else { return }
+            record(context.insertedModelsArray.compactMap { ($0 as? Thing)?.id })
+        }
+    }
+    static func record(_ ids: [UUID]) {
+        guard !suspended else { return }
+        for id in ids { landings[id] = now }
+    }
+}
+"""
+GOOD_ROOT = """
+        SaveCoalescer.holdForHand = { await GestureGate.idle() }
+        LandingLedger.install()
+"""
+GOOD_DEMO = """
+        pouring = true
+        LandingLedger.suspended = true
+        defer { LandingLedger.suspended = false }
+"""
 
 
 def self_test() -> bool:
+    GOOD = dict(cycle=GOOD_CYCLE, rows=GOOD_ROWS, feed=GOOD_FEED,
+                ledger=GOOD_LEDGER, root=GOOD_ROOT, demo=GOOD_DEMO)
     cases = [
         ("healthy tree is clean", GOOD_CYCLE, GOOD_ROWS, GOOD_FEED, 0),
         ("A: a state glyph — the tick for delivered",
@@ -204,7 +263,11 @@ def self_test() -> bool:
         ("D: the fact is not the title",
          GOOD_CYCLE, GOOD_ROWS.replace('fact: thing.title', 'fact: thing.source'), GOOD_FEED, 1),
         ("E: the fresh window dropped — a scrolled-to row cycles",
-         GOOD_CYCLE.replace('return captured > waveAt && now - captured < Self.freshWindow', 'return captured > waveAt'), GOOD_ROWS, GOOD_FEED, 1),
+         GOOD_CYCLE.replace('return landed > waveAt && now - landed < Self.freshWindow', 'return landed > waveAt'), GOOD_ROWS, GOOD_FEED, 1),
+        ("E: the landing read off the thing's own date again (§901b)",
+         GOOD_CYCLE.replace('guard let waveAt, let landed = LandingLedger.landedAt(id) else { return false }', 'guard let waveAt else { return false }\n        let landed = capturedAt.timeIntervalSinceReferenceDate'), GOOD_ROWS, GOOD_FEED, 1),
+        ("D: the caller hands the cycle capturedAt instead of the id",
+         GOOD_CYCLE, GOOD_ROWS.replace('id: thing.id', 'capturedAt: thing.capturedAt'), GOOD_FEED, 1),
         ("E: the wave never set on the List",
          GOOD_CYCLE, GOOD_ROWS, GOOD_FEED.replace('.environment(\\.feedWaveAt, shapeWaveAt)', ''), 1),
         ("F: the change trigger lost its opt-out",
@@ -212,15 +275,32 @@ def self_test() -> bool:
         ("a comment quoting the rule does not satisfy it",
          GOOD_CYCLE.replace('glyph = CategoryFold.glyph(for: category)', '// glyph = CategoryFold.glyph(for: category)\n        glyph = "checkmark"'), GOOD_ROWS, GOOD_FEED, 1),
     ]
+    cases = [dict(GOOD, cycle=cy, rows=ro, feed=fe) | {"name": n, "want": w} for n, cy, ro, fe, w in cases]
+    cases += [
+        dict(GOOD, name="G: the ledger never installed — every arrival nil, nothing turns", want=1,
+             root=GOOD_ROOT.replace('LandingLedger.install()', '')),
+        dict(GOOD, name="G: the ledger installed twice", want=1,
+             root=GOOD_ROOT + '        LandingLedger.install()\n'),
+        dict(GOOD, name="G: the ledger observes nothing", want=1,
+             ledger=GOOD_LEDGER.replace('ModelContext.willSave', 'ModelContext.didSave')),
+        dict(GOOD, name="G: the ledger stamps something other than the inserted models", want=1,
+             ledger=GOOD_LEDGER.replace('context.insertedModelsArray', 'context.changedModelsArray')),
+        dict(GOOD, name="G: the pour no longer suspends the ledger", want=1,
+             demo=GOOD_DEMO.replace('LandingLedger.suspended = true', '')),
+        dict(GOOD, name="G: the ledger ignores its suspension", want=1,
+             ledger=GOOD_LEDGER.replace('guard !suspended else { return }', '')),
+        dict(GOOD, name="a comment naming the install does not satisfy it", want=1,
+             root=GOOD_ROOT.replace('LandingLedger.install()', '// LandingLedger.install()')),
+    ]
     ok = True
-    for name, cycle, rows, feed, want in cases:
-        for label, good, mutant in (("cycle", GOOD_CYCLE, cycle), ("rows", GOOD_ROWS, rows), ("feed", GOOD_FEED, feed)):
-            pass
-        if want and (cycle, rows, feed) == (GOOD_CYCLE, GOOD_ROWS, GOOD_FEED):
+    for case in cases:
+        name, want = case["name"], case["want"]
+        inputs = {k: case[k] for k in GOOD}
+        if want and inputs == GOOD:
             print(f"  FAIL {name}: the mutation changed nothing")
             ok = False
             continue
-        got = len(audit(cycle, rows, feed))
+        got = len(audit(**inputs))
         verdict = "ok  " if (got >= want if want else got == 0) else "FAIL"
         if verdict == "FAIL":
             ok = False
@@ -238,7 +318,7 @@ def main() -> int:
         print("  self-test passed")
         return 0
     read = lambda p: (root / p).read_text(encoding="utf-8", errors="replace")
-    findings = audit(read(CYCLE), read(ROWS), read(FEED))
+    findings = audit(read(CYCLE), read(ROWS), read(FEED), read(LEDGER), read(ROOT), read(DEMO))
     if findings:
         print(f"lead-cycle-audit: {len(findings)} finding(s)")
         for f in findings:

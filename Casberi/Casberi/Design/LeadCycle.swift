@@ -17,12 +17,16 @@ import SwiftUI
 ///
 /// Two moments, ONE rule, one clock: out at `out`, back at `back`, once.
 ///
-/// - **Landing while looking** — `capturedAt` is later than the wave the page
-///   is standing on (`FeedWaveAt`: stamped at the page's landing and every
-///   pull, `FeedScreen.shapeWaveAt`) AND within `freshWindow` of now. The
-///   first bound keeps the corpus you open the app to at rest (the cascade
-///   carries it, §661); the second keeps a row you SCROLL to at rest even if
-///   it landed after the wave — never on a row met by scrolling.
+/// - **Landing while looking** — the thing's ARRIVAL (`LandingLedger`, the
+///   moment its context saved it in this process, §901b) is later than the
+///   wave the page is standing on (`FeedWaveAt`: stamped at the page's
+///   landing and every pull, `FeedScreen.shapeWaveAt`) AND within
+///   `freshWindow` of now. The first bound keeps the corpus you open the app
+///   to at rest (the cascade carries it, §661); the second keeps a row you
+///   SCROLL to at rest even if it landed after the wave — never on a row met
+///   by scrolling. Never `capturedAt`: that is the thing's OWN date, stamped
+///   from upstream by most bridges, so a reply from forty minutes ago that
+///   arrived just now read as old and never turned (§901b).
 /// - **A fact moved** — `fact` (the title) changed while the row was mounted.
 ///   Mounted is the bound: a `List` only holds the visible window, so a heal
 ///   that rewrites 200 rows cycles the few on screen. The wallet ledger's rows
@@ -41,8 +45,8 @@ import SwiftUI
 struct LeadCycle: ViewModifier {
     /// The thing's source; the category glyph is resolved from it on fire.
     let source: String
-    /// When the thing landed, against the page's wave.
-    let capturedAt: Date
+    /// The thing, for its arrival in `LandingLedger` against the page's wave.
+    let id: UUID
     /// The fact whose in-place change is the row's "moved" — the title.
     let fact: String
     /// The row's cascade index, for the stagger that follows `RowEntrance`'s.
@@ -89,12 +93,13 @@ struct LeadCycle: ViewModifier {
         .onChange(of: fact) { if cyclesOnChange { fire() } }
     }
 
-    /// Captured after the wave the page stands on, and just now.
+    /// Landed after the wave the page stands on, and just now. Read in
+    /// `onAppear` only — one dictionary lookup per mount, never per body
+    /// pass (§626).
     private var landedWhileLooking: Bool {
-        guard let waveAt else { return false }
-        let captured = capturedAt.timeIntervalSinceReferenceDate
+        guard let waveAt, let landed = LandingLedger.landedAt(id) else { return false }
         let now = Date.timeIntervalSinceReferenceDate
-        return captured > waveAt && now - captured < Self.freshWindow
+        return landed > waveAt && now - landed < Self.freshWindow
     }
 
     private func fire() {
@@ -161,9 +166,9 @@ extension EnvironmentValues {
 
 extension View {
     /// The one cycle on a row lead — see `LeadCycle`.
-    func leadCycle(source: String, capturedAt: Date, fact: String,
+    func leadCycle(source: String, id: UUID, fact: String,
                    index: Int = 0, cyclesOnChange: Bool = true) -> some View {
-        modifier(LeadCycle(source: source, capturedAt: capturedAt, fact: fact,
+        modifier(LeadCycle(source: source, id: id, fact: fact,
                            index: index, cyclesOnChange: cyclesOnChange))
     }
 }

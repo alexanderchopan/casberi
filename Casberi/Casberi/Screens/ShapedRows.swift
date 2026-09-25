@@ -640,8 +640,9 @@ struct BandRow: View {
                 // ONE CYCLE (prd §901): a row that lands while you look, or
                 // whose title moves in place, turns its mark over to its dock
                 // category's glyph and back. The ledger's rows keep §171's
-                // ripple as their one motion on a retitle.
-                .leadCycle(source: thing.source, capturedAt: thing.capturedAt,
+                // ripple as their one motion on a retitle. The landing is the
+                // thing's ARRIVAL (`LandingLedger`, §901b), never its date.
+                .leadCycle(source: thing.source, id: thing.id,
                            fact: thing.title, index: rippleIndex,
                            cyclesOnChange: !moneyColumn)
         } trailing: {

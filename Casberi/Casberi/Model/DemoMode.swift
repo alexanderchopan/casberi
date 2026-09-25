@@ -323,6 +323,10 @@ enum DemoMode {
         guard !pouring else { return }
         pouring = true
         defer { pouring = false }
+        // A poured seed is furniture, not a landing (prd §901b): the All
+        // feed's leads stay at rest under it.
+        LandingLedger.suspended = true
+        defer { LandingLedger.suspended = false }
 
         // State before rows: the crown, the balance curve and the seller
         // tables are what the room HEADS read, and a head that arrives after
