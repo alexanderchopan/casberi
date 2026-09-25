@@ -329,6 +329,20 @@ enum ExchangeBridge {
     /// verify-before-store shape; `binanceBalances` calls it again to read.
     private static let binanceHostKey = "exchange.binance.host"
 
+    /// Whether this person's Binance is the US deployment, for the setup
+    /// door. binance.com is closed to the US, so a US person sent to its key
+    /// page gets a page that never loads (beta feedback, 2026-09-24: "Binance
+    /// page still won't load") — the API side already fell back to `.us`,
+    /// the door never did. The host a key check detected wins; before any
+    /// check, the phone's region stands in, because asking the network on a
+    /// page view is a request nobody made.
+    static var binanceUS: Bool {
+        if let cached = UserDefaults.standard.string(forKey: binanceHostKey) {
+            return cached.hasSuffix(".us")
+        }
+        return Locale.current.region?.identifier == "US"
+    }
+
     private static func binanceHost() async -> String {
         if let cached = UserDefaults.standard.string(forKey: binanceHostKey) { return cached }
         // Only an ANSWER picks the host, and only 451 means the US deployment

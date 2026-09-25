@@ -11328,10 +11328,12 @@ struct FeedScreen: View {
     ///
     /// Whole days wherever possible, because a half-drawn day would otherwise
     /// need its header to lie about what sits under it. The exception is a day
-    /// that busts the budget ON ITS OWN — the import case above — which is
-    /// truncated rather than allowed to unbound the room. Its header keeps
-    /// stating the day's REAL total (`daySection` is handed the full day for
-    /// counting), so the count stays true and "Show older" explains the gap.
+    /// bigger than one step (`windowRowTarget`) — the import case above —
+    /// which is truncated to what the budget holds rather than allowed to
+    /// unbound the room, or to hold back every tap until the budget covers
+    /// it. Its header keeps stating the day's REAL total (`daySection` is
+    /// handed the full day for counting), so the count stays true and "Show
+    /// older" explains the gap.
     ///
     /// `hidden` is how many THINGS the door holds back (prd §900), so it can
     /// say so: `weight` counts a fold as its members, and everything else as
@@ -11350,13 +11352,20 @@ struct FeedScreen: View {
         }
         for group in groups {
             let remaining = windowRowBudget - rows
-            if shown.isEmpty && group.1.count > windowRowBudget {
-                // One day bigger than the whole budget: take a screenful of it
-                // rather than the day, or this bounds nothing.
-                shown.append((group.0, Array(group.1.prefix(windowRowBudget))))
+            if group.1.count > remaining {
+                // A day bigger than one step: take what the budget holds of it.
+                // Held back whole, a tap that grows the budget by one step
+                // could not reach it, so "Show older" did nothing on tap after
+                // tap until the budget covered the whole day (beta feedback,
+                // 2026-09-24: "the older button doesn't do nun" — a small day
+                // over an import's day). One day bigger than the whole budget
+                // is the same case with nothing above it. A day that fits in
+                // one step waits whole for the next tap.
+                if group.1.count > Self.windowRowTarget, remaining > 0 {
+                    shown.append((group.0, Array(group.1.prefix(remaining))))
+                }
                 return result(true)
             }
-            if rows > 0 && group.1.count > remaining { return result(true) }
             shown.append(group)
             rows += group.1.count
             if rows >= windowRowBudget { break }

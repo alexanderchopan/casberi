@@ -127,7 +127,12 @@ struct ExchangeSetupScreen: View {
         switch venue {
         case .kraken:   URL(string: "https://www.kraken.com/u/security/api")
         case .coinbase: URL(string: "https://portal.cdp.coinbase.com/access/api")
-        case .binance:  URL(string: "https://www.binance.com/en/my/settings/api-management")
+        // Binance.US is its own exchange and its own account, so its own
+        // key page (`ExchangeBridge.binanceUS`). `doorHost` names which.
+        case .binance:
+            ExchangeBridge.binanceUS
+                ? URL(string: "https://www.binance.us/settings/api-management")
+                : URL(string: "https://www.binance.com/en/my/settings/api-management")
         case .geminiExchange: URL(string: "https://exchange.gemini.com/settings/api")
         }
     }

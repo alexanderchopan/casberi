@@ -71910,6 +71910,34 @@
         }
       }
     },
+    "Google wants you to sign in at gmail.com once, then try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Google pide que inicies sesión una vez en gmail.com; después, vuelve a intentarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "gmail.comで一度サインインしてから、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "gmail.com에서 한 번 로그인한 다음 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Google 需要你先在 gmail.com 登录一次，然后再试。"
+          }
+        }
+      }
+    },
     "Granted" : {
       "localizations" : {
         "es" : {
@@ -129692,6 +129720,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这既不是 64 字节的公钥，也不是 20 字节的地址。"
+          }
+        }
+      }
+    },
+    "That's your Google password. Gmail takes an app password here — tap Get an app password." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa es tu contraseña de Google. Gmail aquí usa una contraseña de app — toca Consigue una contraseña de app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それはGoogleのパスワードです。ここではGmailにAppパスワードが必要です — 「Appパスワードを取得」をタップしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Google 암호입니다. 여기서는 Gmail에 앱 암호가 필요합니다 — 앱 암호 받기를 탭하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是你的 Google 密码。Gmail 在这里需要应用专用密码——轻点“获取应用专用密码”。"
           }
         }
       }
