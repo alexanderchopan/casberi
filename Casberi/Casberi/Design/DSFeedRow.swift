@@ -122,12 +122,15 @@ struct DSGlyphLead: View {
     var tint: Color = DS.textPrimary
     /// Bump for one bounce (a milestone the row just crossed).
     var bounce = 0
+    /// The disc's size — the feed lead's by default; a contact's face when
+    /// `LeadCycle` turns one (the Addresses list).
+    var size: CGFloat = DS.Mark.row
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             Circle().fill(DS.fillFaint)
-                .frame(width: DS.Mark.row, height: DS.Mark.row)
+                .frame(width: size, height: size)
             Image(systemName: glyph)
                 .accessibilityHidden(true)
                 .dsGlyph(.caption, weight: .semibold)

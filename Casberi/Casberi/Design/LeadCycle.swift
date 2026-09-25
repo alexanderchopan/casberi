@@ -54,6 +54,18 @@ struct LeadCycle: ViewModifier {
     /// Whether a changed fact cycles. False on the wallet ledger's rows, whose
     /// retitle already ripples (§171).
     var cyclesOnChange: Bool = true
+    /// A landing stamped by something other than the ledger — the Addresses
+    /// list hands a SAVED contact's `addedAt` (a contact is not a `Thing`, so
+    /// `LandingLedger` never sees it). Read in place of `landedAt(id)`; the
+    /// wave and the fresh window still apply, so the book you open to is at
+    /// rest and only a contact saved while you look turns.
+    var arrival: TimeInterval? = nil
+    /// The dock category, where the caller knows it without a source — a
+    /// contact stands in the category of its lead identity, not of a seat.
+    /// Still `CategoryFold.glyph(for:)`'s word, and nothing else.
+    var category: String? = nil
+    /// The turning disc's size: the feed lead's 26pt, or a contact's 36pt face.
+    var faceSize: CGFloat = DS.Mark.row
 
     /// The clock, shared by both moments. `out` sits after the row's own
     /// entrance spring (`DS.Motion.duration`), so the cycle FOLLOWS the
@@ -84,7 +96,7 @@ struct LeadCycle: ViewModifier {
             content
                 .modifier(Face(angle: angle, back: false))
             if let glyph {
-                DSGlyphLead(glyph: glyph)
+                DSGlyphLead(glyph: glyph, size: faceSize)
                     .accessibilityHidden(true)
                     .modifier(Face(angle: angle, back: true))
             }
@@ -97,7 +109,7 @@ struct LeadCycle: ViewModifier {
     /// `onAppear` only — one dictionary lookup per mount, never per body
     /// pass (§626).
     private var landedWhileLooking: Bool {
-        guard let waveAt, let landed = LandingLedger.landedAt(id) else { return false }
+        guard let waveAt, let landed = arrival ?? LandingLedger.landedAt(id) else { return false }
         let now = Date.timeIntervalSinceReferenceDate
         return landed > waveAt && now - landed < Self.freshWindow
     }
@@ -107,7 +119,7 @@ struct LeadCycle: ViewModifier {
         // The dock's own table, and nothing else: a category added there is a
         // glyph here the same day, and no glyph exists here that a chip does
         // not wear (`lead-cycle-audit.py`).
-        guard let category = BridgeCatalog.category(forSource: source) else { return }
+        guard let category = category ?? BridgeCatalog.category(forSource: source) else { return }
         glyph = CategoryFold.glyph(for: category)
         cycling = true
         let delay = Double(min(index, 12)) * Self.stagger
@@ -171,4 +183,20 @@ extension View {
         modifier(LeadCycle(source: source, id: id, fact: fact,
                            index: index, cyclesOnChange: cyclesOnChange))
     }
+
+    /// The same cycle on a contact's FACE (the Addresses list, 2026-09-25):
+    /// fires when the contact was saved after the list's wave and within the
+    /// fresh window — `arrival` is the saved date, `category` the contact's
+    /// own dock category. No ledger id: `LeadCycle.noThing` is never stamped.
+    func faceCycle(category: String?, arrival: TimeInterval?, fact: String,
+                   size: CGFloat) -> some View {
+        modifier(LeadCycle(source: "", id: LeadCycle.noThing, fact: fact,
+                           cyclesOnChange: false, arrival: arrival,
+                           category: category, faceSize: size))
+    }
+}
+
+extension LeadCycle {
+    /// An id no `Thing` carries, for a face that is not a thing.
+    static let noThing = UUID()
 }

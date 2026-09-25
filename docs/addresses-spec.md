@@ -128,6 +128,29 @@ name services), Social (Farcaster, Bluesky, Nostr, X), Work (GitHub, email at a 
   a pasted full address matches its row exactly. Empty query draws the room as it was. It is a
   filter, not a resolver: an unknown name typed here lands nothing and offers nothing — the
   follow field on the seat pages is where a new address is asked for (§690).
+- **The second design pass (2026-09-25, user: "do all" on the /design brief).** Eight moves, seven
+  built, one refused by a ruling:
+  1. The nudge ("Name 0xab…12?") and the suggestion ("Same person?") are each ONE row in the list's
+     own anatomy — the address's identicon or the two faces overlapped as the lead, the question as
+     the title, the transfer or the two services as the line. The nudge's tap opens the naming
+     alert, which carries `Not now`; the suggestion's opens `SamePersonSheet` with the model's line
+     and Yes / No. They were seven rows of doors before anybody appeared.
+  2. A row TRAILS the seats the contact is on — up to three of the dock's own circle marks
+     (`SeatMarks`, `DS.Face.badge`, overlapped, cut out by the page's ground, never a line) in place
+     of the chevron. A fact the sheet already draws as tiles; not a count, not money.
+  3. The group nobody named is headed **Unnamed**, not `#`; `#` stays for a digit or a symbol, and
+     both file after the letters.
+  4. Group heads PIN while their rows scroll (`pinnedViews`, no control), on the page's ground.
+  5. A search draws a FLAT list, and a row found by an address rather than its name says which
+     address under the name (`matchedLine`) — the one time a second line is drawn.
+  6. A letter passing under the finger is FELT through `FeedSeam` (`LetterHead`): §866's two
+     disciplines unchanged; the alphabet is this screen's one axis as time is the feed's. The
+     Accounts screen writes the hand flag itself (it never ran `minimizesChrome`).
+  7. A contact you SAVE while the list is open turns its face to its dock category's glyph and back
+     once (`faceCycle`, §901's cycle with the saved date standing in for the ledger).
+  8. **Not built: the row's face zooming into the sheet.** §232 rules `.navigationTransition(.zoom)`
+     out for sheets after a device-only crash; the sheet's face instead ENTERS at the row's size and
+     grows (`addressHeroArrival`, the address card's own honest half of a flight).
 - **Suggestions:** at most ONE row in Recent, above the rest, reading "Same person? jesse.eth
   and @jesse" — a `DSDoorRow` that opens the pair on a sheet with `Yes, same person` / `No`. It
   is drawn only when the app holds a tier-2 edge (section 3) and never more than one at a time.

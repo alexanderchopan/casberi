@@ -19,7 +19,9 @@ import SwiftUI
 /// general, which scopes it to the All feed by construction: `bundledSections`
 /// is the only caller, and `daySection`'s own header (a raw HStack, and often
 /// a named group rather than a day) is untouched. A seam you can feel should
-/// be a seam in TIME, and this is the divider that only ever names one.
+/// be a seam on the screen's ONE AXIS: time here, and this is the divider
+/// that only ever names one; the alphabet in the Addresses list, whose
+/// `LetterHead` reads the same machine (2026-09-25).
 struct FeedDayDivider<Clause: View>: View {
     let label: String
     var weight: Font.Weight = .bold

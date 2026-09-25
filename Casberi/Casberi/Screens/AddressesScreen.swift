@@ -38,6 +38,13 @@ struct AddressesSection: View {
     @State private var verdict: String?
     @State private var naming = false
     @State private var draft = ""
+    /// The "Same person?" sheet is up (the one row's door).
+    @State private var asking = false
+    /// The wave this list stands on (`LeadCycle`'s rule): a contact whose
+    /// saved `addedAt` is later than this AND fresh turns its face once. Set
+    /// at the first refresh, so the book you open to is at rest and only a
+    /// contact saved while you look cycles.
+    @State private var waveAt: TimeInterval?
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
@@ -81,6 +88,13 @@ struct AddressesSection: View {
                 CounterpartyRetitle.applyCurrentName(for: nudge.address, in: modelContext)
                 Task { await refresh() }
             }
+            // "Not now" lives in the alert since the design pass (2026-09-25):
+            // the nudge is ONE row, so its decline rides the door it opens.
+            Button("Not now") {
+                guard let nudge else { return }
+                AddressNudge.decline(nudge.address)
+                Task { await refresh() }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("It rides every future transfer with this address. Blank clears it.")
@@ -89,9 +103,27 @@ struct AddressesSection: View {
             ContactSheet(contact: contact)
                 .dsReadSheet()
         }
+        .sheet(isPresented: $asking) {
+            if let suggestion,
+               let a = ContactIndexSources.contact(forKey: suggestion.a),
+               let b = ContactIndexSources.contact(forKey: suggestion.b) {
+                SamePersonSheet(a: a, b: b, whereA: Self.where(a, suggestion),
+                                whereB: Self.where(b, suggestion), verdict: verdict) {
+                    ContactLinksStore.shared.confirm(suggestion.a, suggestion.b)
+                    asking = false
+                    Task { await refresh() }
+                } no: {
+                    ContactLinksStore.shared.decline(suggestion.a, suggestion.b)
+                    asking = false
+                    Task { await refresh() }
+                }
+                .dsReadSheet()
+            }
+        }
     }
 
     private func refresh() async {
+        if waveAt == nil { waveAt = Date.timeIntervalSinceReferenceDate }
         contacts = ContactIndexSources.rebuild(context: modelContext)
         nudge = Self.newestUnnamed(context: modelContext)
         let next = ContactSuggest.next(in: ContactLinksStore.shared.ledger,
@@ -120,31 +152,32 @@ struct AddressesSection: View {
 
     // MARK: - The suggestion
 
-    /// "Same person?" — the two names, the model's line when it has one, and
-    /// the two answers as rows (§746). Yes is a verified edge you made; No is
-    /// remembered forever for the pair.
+    /// "Same person?" — ONE row in the list's own anatomy (the design pass,
+    /// 2026-09-25): the two faces overlapped as the lead, the question as the
+    /// title, where each end lives as the line. The tap opens
+    /// `SamePersonSheet`, which holds the model's line and the two answers.
+    /// It was four rows of doors before anybody appeared; now it is a row.
     private func suggestionRow(_ link: ContactLink, a: Contact, b: Contact) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            // Each side says WHERE it is ("Nils on Bluesky and Nils on
-            // Nostr"): two bare names were the same word twice.
-            Text("Same person? \(Self.where(a, link)) and \(Self.where(b, link))")
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, DS.Space.s4)
-            if let verdict {
-                Text(verdict).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, DS.Space.s4)
+        Button {
+            asking = true
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                PairFace(a: a, b: b)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Same person?")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                    Text("\(Self.where(a, link)) · \(Self.where(b, link))")
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                DSPushRowTrail()
             }
-            DSDoorRow(icon: "checkmark.circle", label: "Yes, same person") {
-                ContactLinksStore.shared.confirm(link.a, link.b)
-                Task { await refresh() }
-            }
-            DSDoorRow(icon: "xmark.circle", label: "No") {
-                ContactLinksStore.shared.decline(link.a, link.b)
-                Task { await refresh() }
-            }
+            .frame(minHeight: Self.rowPitch)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .dsHover()
+        .dsListRow()
     }
 
     /// "Nils on Bluesky" — the name and the service of the end the link names.
@@ -155,25 +188,34 @@ struct AddressesSection: View {
 
     // MARK: - The nudge
 
-    /// "0xab…12 sent you 0.2 ETH. Name them?" — a door to the naming alert,
-    /// and a No that moves on to the next (`AddressNudge.decline`). Never a
-    /// counterparty the app can already name, never a flagged address
-    /// (`AddressNudge.prompt`'s own guards, reused).
+    /// "Name 0xab…12?" — ONE row (the design pass, 2026-09-25): the
+    /// counterparty's identicon leads, the question is the title, the transfer
+    /// that earned it is the line, and the tap opens the naming alert, which
+    /// carries `Not now`. Never a counterparty the app can already name, never
+    /// a flagged address (`AddressNudge.prompt`'s own guards, reused).
     private func nudgeRow(_ nudge: (address: String, title: String)) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            DSDoorRow(icon: "character.cursor.ibeam",
-                      title: Text("Name \(WalletStore.shortAddress(nudge.address))?")) {
-                draft = ""
-                naming = true
+        Button {
+            draft = ""
+            naming = true
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                AddressMark(entry: AddressBook.Entry(address: nudge.address, name: "", addedAt: .now),
+                            size: DS.Face.list)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Name \(WalletStore.shortAddress(nudge.address))?")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                    Text(nudge.title)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                DSPushRowTrail()
             }
-            Text(nudge.title)
-                .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
-                .padding(.leading, DS.Space.s4)
-            DSDoorRow(icon: "xmark.circle", label: "Not now") {
-                AddressNudge.decline(nudge.address)
-                Task { await refresh() }
-            }
+            .frame(minHeight: Self.rowPitch)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .dsHover()
+        .dsListRow()
     }
 
     /// The newest landed transfer whose counterparty has no name and was not
@@ -235,62 +277,147 @@ struct AddressesSection: View {
     /// letter says where you are the way Apple's own book does. Recent wears
     /// the day divider's hue because it names a time (§740); a letter does
     /// not, so it stays grey. No index bar (§752).
+    ///
+    /// The second pass (same day, user: "do all"): the heads PIN while their
+    /// group scrolls (`pinnedViews`, no control), and each is a seam you feel
+    /// (`LetterHead`). A search draws a FLAT list — no Recent, no letters —
+    /// and a row that matched on an address rather than its name says which
+    /// one under the name (`matchedLine`), the only time a second line is
+    /// drawn at all.
     private var list: some View {
+        let needle = Self.fold(query)
         let recent = shown.filter { ($0.lastActedAt ?? .distantPast) > Date.now.addingTimeInterval(-30 * 86400) }
             .sorted { ($0.lastActedAt ?? .distantPast) > ($1.lastActedAt ?? .distantPast) }
         let everyone = shown.sorted { l, r in
             if l.isUnnamed != r.isUnnamed { return !l.isUnnamed }
             return l.name.localizedStandardCompare(r.name) == .orderedAscending
         }
-        return LazyVStack(alignment: .leading, spacing: 0) {
-            if !recent.isEmpty {
-                heading(Text("Recent"), tone: DS.brandInk)
-                ForEach(recent) { contact in row(contact) }
+        return LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+            if !needle.isEmpty {
+                ForEach(everyone) { contact in
+                    row(contact, matched: Self.matchedLine(contact, needle: needle))
+                }
+            } else {
+                if !recent.isEmpty {
+                    Section {
+                        ForEach(recent) { contact in row(contact) }
+                    } header: {
+                        LetterHead(text: Text("Recent"), tone: DS.brandInk)
+                    }
+                }
+                ForEach(Self.lettered(everyone), id: \.letter) { section in
+                    Section {
+                        ForEach(section.rows) { contact in row(contact) }
+                    } header: {
+                        LetterHead(text: Self.title(for: section.letter), tone: DS.textTertiary)
+                    }
+                }
             }
-            ForEach(Self.lettered(everyone), id: \.letter) { section in
-                heading(Text(verbatim: section.letter), tone: DS.textTertiary)
-                ForEach(section.rows) { contact in row(contact) }
-            }
+        }
+        // The wave the list stands on, for `faceCycle` (§901's rule, a
+        // contact's saved date in place of a thing's arrival).
+        .environment(\.feedWaveAt, waveAt)
+        // The hand, for the letter seam (prd §866's discipline 1). The
+        // Accounts screen's ScrollView does not run `minimizesChrome`, so
+        // nothing else writes this flag here; cleared on the way out for the
+        // reason `minimizesChrome` gives — a flag left true lets the next
+        // screen's first seam tick with nothing on the glass.
+        .onScrollPhaseChange { _, phase in
+            FeedSeam.set(dragging: phase == .tracking || phase == .interacting)
+        }
+        .onDisappear { FeedSeam.set(dragging: false) }
+    }
+
+    /// The word a group wears: its letter, `#` for a digit or a symbol, and
+    /// "Unnamed" for the wallets nobody has named (the design pass: a wall of
+    /// identicons under a symbol read as junk; under a word it reads as what
+    /// it is, a to-do).
+    static func title(for letter: String) -> Text {
+        switch letter {
+        case "…": Text("Unnamed")
+        default:  Text(verbatim: letter)
         }
     }
 
-    private func heading(_ text: Text, tone: Color) -> some View {
-        text
-            .dsText(.label12)
-            .foregroundStyle(tone)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s1)
-    }
-
     /// The letter a name files under: its first letter, folded; `#` for a
-    /// digit, a symbol or an auto-name (`…44b1` files last, under `#`).
+    /// digit or a symbol; `…` for an auto-name (`…44b1`), the group drawn as
+    /// "Unnamed". Letters first, then `#`, then Unnamed — Apple's own order.
     static func lettered(_ rows: [Contact]) -> [(letter: String, rows: [Contact])] {
         var out: [(letter: String, rows: [Contact])] = []
         for contact in rows {
             let first = fold(contact.name).first
-            let letter = (contact.isUnnamed || first?.isLetter != true) ? "#" : String(first!).uppercased()
+            let letter = contact.isUnnamed ? "…" : (first?.isLetter == true ? String(first!).uppercased() : "#")
             if let i = out.firstIndex(where: { $0.letter == letter }) { out[i].rows.append(contact) }
             else { out.append((letter, [contact])) }
         }
-        return out
+        let rank: (String) -> Int = { $0 == "…" ? 2 : ($0 == "#" ? 1 : 0) }
+        return out.enumerated().sorted { l, r in
+            let (rl, rr) = (rank(l.element.letter), rank(r.element.letter))
+            return rl != rr ? rl < rr : l.offset < r.offset
+        }.map(\.element)
     }
 
-    private func row(_ contact: Contact) -> some View {
+    /// While searching: the identity the query hit when the NAME did not —
+    /// "why is this row here". Nil when the name itself matches, so a row
+    /// found by name stays one line.
+    static func matchedLine(_ contact: Contact, needle: String) -> String? {
+        guard !needle.isEmpty, !fold(contact.name).contains(needle) else { return nil }
+        let hit = contact.identities.first {
+            fold($0.label).contains(needle) || fold($0.body).contains(needle)
+        }
+        guard let hit else { return nil }
+        return hit.kind == .contact ? nil : hit.label
+    }
+
+    /// When this contact was SAVED by hand (`ContactBook`, or the wallet
+    /// book's own stamp), in `LeadCycle`'s clock — nil for a seat-fed row,
+    /// which never cycles: a seat's sweep is not you adding somebody.
+    private func arrival(of contact: Contact) -> TimeInterval? {
+        var latest: Date?
+        for identity in contact.identities {
+            if let saved = ContactBook.shared.entries[identity.key]?.addedAt {
+                latest = max(latest ?? .distantPast, saved)
+            } else if identity.kind == .wallet,
+                      let entry = AddressBook.shared.entry(for: identity.body) {
+                latest = max(latest ?? .distantPast, entry.addedAt)
+            }
+        }
+        return latest?.timeIntervalSinceReferenceDate
+    }
+
+    private func row(_ contact: Contact, matched: String? = nil) -> some View {
         Button {
             opened = contact
         } label: {
             HStack(spacing: DS.Space.s3) {
                 ContactFace(contact: contact, size: DS.Face.list)
+                    // A contact you just saved turns its face to its dock
+                    // category's glyph and back, once (§901's cycle, the
+                    // Addresses caller — see `LeadCycle`).
+                    .faceCycle(category: contact.categories.first,
+                               arrival: arrival(of: contact),
+                               fact: contact.name, size: DS.Face.list)
                 // The face and the name, nothing under it (user, 2026-09-25:
                 // "why is a second line necessary under each name") — the
-                // sheet says every address the contact carries.
-                Text(contact.name)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
+                // sheet says every address the contact carries. The one
+                // exception is a search hit on an address (`matchedLine`).
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(contact.name)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    if let matched {
+                        Text(matched)
+                            .dsText(.subhead12)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
                 Spacer(minLength: DS.Space.s2)
-                DSPushRowTrail()
+                // The seats this contact is on, as the dock's own marks — the
+                // sheet's icon tiles at a glance (the design pass). A fact,
+                // never a count or money (§345, user 2026-08-21).
+                SeatMarks(names: Self.marks(of: contact))
             }
             .frame(minHeight: Self.rowPitch)
             .contentShape(Rectangle())
@@ -298,6 +425,137 @@ struct AddressesSection: View {
         .buttonStyle(.plain)
         .dsHover()
         .dsListRow()
+    }
+
+    /// The distinct seat marks a contact's identities wear, in identity
+    /// precedence, at most three — `SeatMarks` draws them.
+    static func marks(of contact: Contact) -> [String] {
+        var out: [String] = []
+        for identity in contact.identities {
+            let mark = ContactSheet.mark(identity)
+            if !out.contains(mark) { out.append(mark) }
+            if out.count == SeatMarks.cap { break }
+        }
+        return out
+    }
+}
+
+/// A group's head in the Addresses list: a word in `label12`, PINNED while
+/// its rows scroll under it (Apple's own book), on the page's own ground so
+/// the rows slide beneath it — the page, not a plate (§782).
+///
+/// **It is also felt.** Passing under the finger, a letter ticks once
+/// through `FeedSeam` — the feed's day seam, with both of its disciplines
+/// (finger down, never inside 300ms). §866 scoped the feel to a seam in
+/// TIME because the feed's only axis is time; a directory's only axis is the
+/// alphabet, so its letters are the same kind of fact about where you are.
+private struct LetterHead: View {
+    let text: Text
+    let tone: Color
+    @State private var tracker = FeedSeam.Tracker()
+
+    var body: some View {
+        text
+            .dsText(.label12)
+            .foregroundStyle(tone)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s1)
+            .background(DS.page)
+            .onGeometryChange(for: Int.self) { proxy in
+                FeedSeam.side(ofTop: proxy.frame(in: .scrollView).minY)
+            } action: { _, now in
+                FeedSeam.observe(side: now, in: tracker)
+            }
+    }
+}
+
+/// Up to three seat marks, overlapped, each cut out of the next by the page's
+/// own ground — a ring of ground, never a drawn line (no hairlines).
+struct SeatMarks: View {
+    let names: [String]
+    static let cap = 3
+
+    var body: some View {
+        // `badge`: a mark beside inline text, not a portrait (the ramp's own tier).
+        HStack(spacing: -6) {
+            ForEach(names, id: \.self) { name in
+                BridgeIcon(name: name, size: DS.Face.badge, circular: true)
+                    .padding(2)
+                    .background(Circle().fill(DS.page))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(names.joined(separator: ", ")))
+    }
+}
+
+/// Two faces overlapped in one 36pt lead — the "Same person?" row's lead.
+private struct PairFace: View {
+    let a: Contact
+    let b: Contact
+
+    var body: some View {
+        // `badge` (20pt) on the 36pt seat: the two faces sit corner to corner
+        // with a 4pt overlap, so both read as faces — at `row` the second
+        // covered most of the first (measured on the sim, 2026-09-25).
+        ZStack(alignment: .topLeading) {
+            ContactFace(contact: a, size: DS.Face.badge)
+            ContactFace(contact: b, size: DS.Face.badge)
+                .padding(2)
+                .background(Circle().fill(DS.page))
+                .offset(x: DS.Face.list - DS.Face.badge - 2, y: DS.Face.list - DS.Face.badge - 2)
+        }
+        .frame(width: DS.Face.list, height: DS.Face.list, alignment: .topLeading)
+    }
+}
+
+/// The "Same person?" sheet: the two faces, where each lives, the model's
+/// line when the phone gave one, and the two answers as rows (§746). Yes is
+/// a verified edge you made; No is remembered forever for the pair.
+private struct SamePersonSheet: View {
+    let a: Contact
+    let b: Contact
+    let whereA: String
+    let whereB: String
+    let verdict: String?
+    let yes: () -> Void
+    let no: () -> Void
+
+    var body: some View {
+        // A ScrollView wearing the page ground, `ContactSheet`'s own shape: a
+        // bare stack covered only itself, and the sheet's grey material showed
+        // through beneath it (measured on the sim, 2026-09-25).
+        ScrollView {
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            HStack(spacing: DS.Space.s4) {
+                ContactFace(contact: a, size: DS.Face.profile)
+                ContactFace(contact: b, size: DS.Face.profile)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, DS.Space.s6)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("Same person?").dsText(.heading24).foregroundStyle(DS.textPrimary)
+                // Each side says WHERE it is ("Nils on Bluesky and Nils on
+                // Nostr"): two bare names were the same word twice.
+                Text("\(whereA) and \(whereB)")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let verdict {
+                    Text(verdict).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            VStack(spacing: DS.Space.s1) {
+                DSDoorRow(icon: "checkmark.circle", label: "Yes, same person", act: yes)
+                DSDoorRow(icon: "xmark.circle", label: "No", act: no)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .dsPageBackground()
     }
 }
 
@@ -462,7 +720,13 @@ struct ContactSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
                     VStack(spacing: DS.Space.s3) {
+                        // Enters at the row's size and grows to its own —
+                        // `AddressReveal`'s hero, for its stated reason: the
+                        // zoom transition is out for sheets (§232), and a
+                        // scale is the part of the flight that can be claimed
+                        // honestly from here.
                         ContactFace(contact: contact, size: DS.Face.profile)
+                            .addressHeroArrival(size: DS.Face.profile)
                         Text(contact.name)
                             .dsText(.heading24)
                             .foregroundStyle(DS.textPrimary)

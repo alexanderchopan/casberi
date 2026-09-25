@@ -25,6 +25,11 @@ WHAT IT CHECKS (each with a mutation in the self-test that must fire):
   D  ONE caller, `BandRow`'s lead in ShapedRows.swift, passing `fact:
      thing.title` and `cyclesOnChange: !moneyColumn` — the ledger keeps §171's
      ripple as its one motion on a retitle. The fold rows never carry it.
+     (The Addresses list is the one OTHER door, `faceCycle`, 2026-09-25: a
+     contact's face turns when the contact was SAVED after the list's wave —
+     `arrival` stands in for the ledger, which never sees a contact. It is
+     checked here only through A, B, C and E: same file, same glyph table,
+     same clock, same window.)
   E  the landing rule reads the thing's ARRIVAL (`LandingLedger.landedAt(id)`,
      §901b) against the page's wave (`landed > waveAt`) AND a fresh window,
      never `capturedAt` (the thing's OWN date, stamped from upstream by most
@@ -121,7 +126,7 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
             out.append("D: a fold's lead carries the cycle")
 
     # E — the landing rule: the ARRIVAL against the wave, and a fresh window.
-    if not re.search(r"landed\s*=\s*LandingLedger\.landedAt\(id\)", c):
+    if not re.search(r"landed\s*=\s*(?:arrival\s*\?\?\s*)?LandingLedger\.landedAt\(id\)", c):
         out.append("E: the landing is not read from LandingLedger.landedAt(id) — the thing's arrival (§901b)")
     if "capturedAt" in c:
         out.append("E: LeadCycle reads capturedAt — the thing's OWN date, not its arrival; a forty-minute-old reply landing now never turns")
