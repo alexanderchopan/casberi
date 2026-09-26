@@ -8182,7 +8182,7 @@ struct FeedScreen: View {
                     EmptyView()
                 }
                 .textCase(nil)
-                .padding(.leading, DS.Space.s4 + DS.Space.s3)
+                .padding(.leading, DSRoomChassis.rowInset)
                 .padding(.vertical, DS.Space.s1)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -8346,7 +8346,7 @@ struct FeedScreen: View {
     /// every other seam in time (`FeedDayDivider`, §866).
     private func momentDayDivider(_ day: String) -> some View {
         FeedDayDivider(label: day, weight: .semibold) { EmptyView() }
-            .padding(.leading, DS.Space.s4 + DS.Space.s3)
+            .padding(.leading, DSRoomChassis.rowInset)
             .padding(.top, DS.Space.s3)
             .padding(.bottom, DS.Space.s1)
             .listRowInsets(EdgeInsets())
@@ -8584,9 +8584,9 @@ struct FeedScreen: View {
             .listRowBackground(runBackground(position, bare: true, skin: skin))
             // Feed rhythm: `rowAir` (prd §900, see its doc).
             .listRowInsets(.init(top: Self.rowAir,
-                                 leading: DS.Space.s4 + DS.Space.s3,
+                                 leading: DSRoomChassis.rowInset,
                                  bottom: Self.rowAir,
-                                 trailing: DS.Space.s4 + DS.Space.s3))
+                                 trailing: DSRoomChassis.rowInset))
             .listRowSeparator(.hidden)
     }
 
@@ -8617,9 +8617,9 @@ struct FeedScreen: View {
             .dsTapCard()
             .listRowBackground(runBackground(position, bare: true, skin: skin))
             .listRowInsets(.init(top: Self.rowAir,
-                                 leading: DS.Space.s4 + DS.Space.s3,
+                                 leading: DSRoomChassis.rowInset,
                                  bottom: Self.rowAir,
-                                 trailing: DS.Space.s4 + DS.Space.s3))
+                                 trailing: DSRoomChassis.rowInset))
             .listRowSeparator(.hidden)
     }
 
@@ -10134,8 +10134,8 @@ struct FeedScreen: View {
                 // in this file wears.
                 Text("To do").dsText(.heading17).foregroundStyle(DS.textPrimary).textCase(nil)
                     .padding(.vertical, DS.Space.s1)
-                    .listRowInsets(.init(top: 0, leading: DS.Space.s4 + DS.Space.s3,
-                                         bottom: 0, trailing: DS.Space.s4 + DS.Space.s3))
+                    .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset,
+                                         bottom: 0, trailing: DSRoomChassis.rowInset))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 ForEach(Array(keyed(fresh).enumerated()), id: \.element.id) { i, item in
@@ -10170,9 +10170,9 @@ struct FeedScreen: View {
                         .dsTapCard()
                         .listRowBackground(Color.clear)   // bare, like every row (prd §749)
                         .listRowInsets(.init(top: Self.rowAir,
-                                             leading: DS.Space.s4 + DS.Space.s3,
+                                             leading: DSRoomChassis.rowInset,
                                              bottom: Self.rowAir,
-                                             trailing: DS.Space.s4 + DS.Space.s3))
+                                             trailing: DSRoomChassis.rowInset))
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -10463,9 +10463,9 @@ struct FeedScreen: View {
             // Feed rhythm: `rowAir` (prd §900, see its doc). A card that
             // stands alone keeps s2 — it has no padding of its own inside.
             .listRowInsets(.init(top: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
-                                 leading: DS.Space.s4 + DS.Space.s3,
+                                 leading: DSRoomChassis.rowInset,
                                  bottom: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
-                                 trailing: DS.Space.s4 + DS.Space.s3))
+                                 trailing: DSRoomChassis.rowInset))
             .listRowSeparator(.hidden)
             // A row is draggable OUT of the window on Mac (prd §631) — its
             // link where it has one, its words otherwise. `macRowDrag` is
@@ -11231,7 +11231,7 @@ struct FeedScreen: View {
                         .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
                 }
                 .textCase(nil)
-                .padding(.leading, DS.Space.s4 + DS.Space.s3)
+                .padding(.leading, DSRoomChassis.rowInset)
                 // Days read as clusters: the gap ABOVE a day header is the
                 // feed's biggest (2026-07-13), and since 2026-07-21 the day's
                 // rows also share one card — the header's s6 plus the card's own
@@ -11493,9 +11493,9 @@ struct FeedScreen: View {
         .buttonStyle(.plain)
         .listRowBackground(Color.clear)
         .listRowInsets(.init(top: Self.rowAir,
-                             leading: DS.Space.s4 + DS.Space.s3,
+                             leading: DSRoomChassis.rowInset,
                              bottom: Self.rowAir,
-                             trailing: DS.Space.s4 + DS.Space.s3))
+                             trailing: DSRoomChassis.rowInset))
         .listRowSeparator(.hidden)
     }
 

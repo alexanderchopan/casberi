@@ -163,6 +163,15 @@ enum DSRoomChassis {
     /// spelling, so the left edge is the same from the top of a room to the
     /// bottom.
     static let leadInset: CGFloat = DS.Space.s4 + DS.Space.s3
+    /// **A ROOM'S ROWS START ON THE PAGE'S OUTER LINE (user, 2026-09-26:
+    /// "ideally tray and screen and fab share same justification … so it is
+    /// seamless").** Two left lines stood in a room: containers (the lead
+    /// card, the tiles, the tray, the face) on `inset`, and the feed rows and
+    /// their day headers 12pt further in on `leadInset`. Rows sit in no
+    /// container, so — like the wallet's account rows and Apple's plain lists —
+    /// they take the outer line; what is INSIDE a container (the card's words,
+    /// a sheet's body) keeps `leadInset`.
+    static let rowInset: CGFloat = inset
 
     /// The air under every lead, before the first day (prd §763). The cover
     /// carried `s4` and a head carried nothing, so the first divider landed

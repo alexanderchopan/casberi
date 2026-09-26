@@ -1507,9 +1507,9 @@ extension FeedScreen {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(.init(top: DS.Space.s2,
-                                             leading: DS.Space.s4 + DS.Space.s3,
+                                             leading: DSRoomChassis.rowInset,
                                              bottom: DS.Space.s2,
-                                             trailing: DS.Space.s4 + DS.Space.s3))
+                                             trailing: DSRoomChassis.rowInset))
                     case .strip(_, _, let count, let newest, _):
                         // Drawn like `.bundle` above, and for that case's own
                         // reason rather than by copying it: the generic
@@ -1534,9 +1534,9 @@ extension FeedScreen {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(.init(top: DS.Space.s2,
-                                             leading: DS.Space.s4 + DS.Space.s3,
+                                             leading: DSRoomChassis.rowInset,
                                              bottom: DS.Space.s2,
-                                             trailing: DS.Space.s4 + DS.Space.s3))
+                                             trailing: DSRoomChassis.rowInset))
                     }
                 }
             }
