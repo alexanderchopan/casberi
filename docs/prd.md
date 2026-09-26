@@ -61735,7 +61735,7 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 **Seen on a second simulator, dark:** All in the demo draws the pill and no lead, and the room's lead and first day are unmoved. **Found, not fixed:** in every demo room the pill covers the room's own title (`DSScreenHead`, §930). §919 sized the clearance for the well at the top of the screen, and §930 later put the title above the well. All joins the other rooms here; it did not show before only because the pill hid in All.
 
 
-## §946 — The Wallet's Risk is Leveraged then Worth a look, and Safe signatures lead Permissions; the face shrinks about its centre (user, 2026-09-26)
+## §947 — The Wallet's Risk is Leveraged then Worth a look, and Safe signatures lead Permissions; the face shrinks about its centre (user, 2026-09-26)
 
 **User:** the Risk board, then *"is there overlap in permissions and worth a look and should worth a look be in the list instead of a chevron to a new place?"*, *"why would we put approvals and delegations in needs you if they are in permissions"*, *"i think we would put the flagged transfers and spam coins transactions?"*, and *"wouldn't those come in permissions? and Risk would have Leveraged and Worth a look … permissions could have approvals, delegations, signatures … maybe opposite order: signatures, delegations, approvals"*.
 

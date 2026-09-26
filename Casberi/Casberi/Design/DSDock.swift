@@ -197,7 +197,7 @@ enum DSDock {
         chipBottomInset(fold: fold) + (chipFrame(fold: fold) - agentSize(fold: fold)) / 2
     }
 
-    /// **THE FACE SHRINKS ABOUT ITS CENTRE (prd §946).** The seat is pinned
+    /// **THE FACE SHRINKS ABOUT ITS CENTRE (prd §947).** The seat is pinned
     /// at its leading edge, so as the fold took it 46 → 40 its centre drifted
     /// 3pt left of the column every row icon and tray disc is centred on
     /// (user: "are these all aligned correctly?"). Half the shrink goes back

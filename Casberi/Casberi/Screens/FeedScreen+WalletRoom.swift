@@ -468,7 +468,7 @@ extension FeedScreen {
     /// The Worth-a-look strip, lifted out of the crown card into the `Risk`
     /// scope for the same reason (prd §483) — and it is what that scope is
     /// FOR, so it heads it rather than trailing the leverage axis.
-    /// **WORTH A LOOK, IN THE LIST (prd §946).** The door whose line ran out
+    /// **WORTH A LOOK, IN THE LIST (prd §947).** The door whose line ran out
     /// ("3 signatu…") onto a tray is rows now, and only the warnings with no
     /// other home: flagged, fake-symbol and spam transfers. A liquidation risk
     /// is the red health in Leveraged above; Safe signatures, delegations and
@@ -502,7 +502,7 @@ extension FeedScreen {
         }
     }
 
-    /// **SIGNATURES WAITING ON YOU, FIRST IN PERMISSIONS (prd §946).** A Safe
+    /// **SIGNATURES WAITING ON YOU, FIRST IN PERMISSIONS (prd §947).** A Safe
     /// transaction someone proposed and you have not signed is a power over
     /// your wallet waiting on you — Permissions' first group, before
     /// Delegations and Approvals (user: "signatures, delegations,
@@ -571,7 +571,7 @@ extension FeedScreen {
         .buttonStyle(.plain)
     }
 
-    /// **THE LEVERAGED POSITIONS, THE BARS' OWN LEGEND (prd §946).** One row
+    /// **THE LEVERAGED POSITIONS, THE BARS' OWN LEGEND (prd §947).** One row
     /// per position that can be liquidated, closest first — the entries the
     /// crown draws, so the two can never disagree. Nothing that borrows
     /// nothing is here (Spark with no debt was Positions' card, repeated).
@@ -1054,7 +1054,7 @@ extension FeedScreen {
     var walletRiskSection: some View {
         if let entries = walletRiskEntries {
                             // The walk to a card is gone with the cards
-                            // (prd §946): Risk lists its leveraged positions
+                            // (prd §947): Risk lists its leveraged positions
                             // itself, directly under this.
                             WalletRiskStrip(entries: entries)
                     .modifier(rowEntrance(2))

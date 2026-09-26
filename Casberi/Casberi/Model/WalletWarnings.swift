@@ -136,7 +136,7 @@ struct WalletWarning: Identifiable, Equatable {
     /// — "vitalik.eth", not the resolved hex), so a door can route to that
     /// wallet's screen. nil when the warning spans wallets (poisoning).
     let address: String?
-    /// **A LIST ROW'S NAME AND LINE (prd §946)**, where the title is a
+    /// **A LIST ROW'S NAME AND LINE (prd §947)**, where the title is a
     /// sentence too long for one row: "Everyday's Safe" over "3 signatures
     /// needed". nil keeps the title as the row's name.
     var rowName: String? = nil

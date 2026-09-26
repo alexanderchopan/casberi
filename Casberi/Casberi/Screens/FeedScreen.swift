@@ -4694,7 +4694,7 @@ struct FeedScreen: View {
                 flagged: walletLive.flagged,
                 activeApprovals: walletLive.activeApprovals,
                 exposure: walletLive.exposure,
-                // No walk doors (prd §946): the tray opens from Risk, and the
+                // No walk doors (prd §947): the tray opens from Risk, and the
                 // approvals and lending cards it walked to are Permissions'
                 // and Positions' now, so it enumerates those groups itself.
                 onWalkToApprovals: nil,
@@ -7133,7 +7133,7 @@ struct FeedScreen: View {
                 }
                 walletNFTListSection
             case .risk:
-                // **WHAT COULD CLOSE, THEN WHAT LOOKS WRONG (prd §946).** The
+                // **WHAT COULD CLOSE, THEN WHAT LOOKS WRONG (prd §947).** The
                 // Worth-a-look door and Positions' Lending and Perps cards,
                 // repeated here, are gone: the leveraged positions are the
                 // bars' legend, and the flagged transfers are rows.
@@ -7156,7 +7156,7 @@ struct FeedScreen: View {
                    !walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
                     walletSkeletonRowsSection
                 }
-                // Signatures first (prd §946): what is waiting on you, then
+                // Signatures first (prd §947): what is waiting on you, then
                 // what acts as you, then what can spend for you.
                 walletSignaturesSection
                 walletActingSection

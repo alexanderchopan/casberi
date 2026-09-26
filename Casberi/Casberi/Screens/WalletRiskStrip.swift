@@ -66,7 +66,7 @@ struct WalletRiskStrip: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // A mark and a short name under each bar, one size, centred —
-            // the Positions crown's legend (prd §945, §946). The floating
+            // the Positions crown's legend (prd §945, §947). The floating
             // "liquidation" word is gone: the list under the tiles says each
             // position's distance in words.
             HStack(alignment: .top, spacing: DS.Space.s3) {
@@ -105,7 +105,7 @@ struct WalletRiskStrip: View {
                                        caption: String(localized: "\(pressed.label) · room before liquidation"),
                                        numberInk: pressed.atRisk ? DS.destructive : DS.textPrimary)
             }
-            // **THE NUMBER IS WHAT NEEDS YOU (prd §946)**: how many are at
+            // **THE NUMBER IS WHAT NEEDS YOU (prd §947)**: how many are at
             // risk, or how many are leveraged when none is.
             let atRiskCount = entries.filter(\.atRisk).count
             if atRiskCount > 0 {
