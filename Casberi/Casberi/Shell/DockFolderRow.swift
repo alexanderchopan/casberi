@@ -34,6 +34,14 @@ struct DockSpringRow<Content: View>: View {
     /// aimed at a chip nobody tapped would be the §649 lie told the other way
     /// round.
     let anchorX: CGFloat?
+    /// The least the row may sit in from the band's leading edge — the face's
+    /// column on the phone (prd §935): with the strip gone from the band, the
+    /// capsule landed on the seat's own line and under the face. Zero where
+    /// the rail stands, since no seat shares that edge.
+    var seatClearance: CGFloat = 0
+    /// The row's air off the band's bottom — the seat's own inset on the
+    /// phone, so the capsule and the face share one centre line (§935).
+    var bottomInset: CGFloat = DS.Space.s2
     /// Built with the anchor's x IN THE ROW'S OWN SPACE, so the content can
     /// flow out of that point (see `DockFolderRow`).
     @ViewBuilder let content: (CGFloat) -> Content
@@ -48,11 +56,13 @@ struct DockSpringRow<Content: View>: View {
     private var seatHalf: CGFloat { DS.Hit.min / 2 }
     private var tail: CGFloat { 10 }
 
+    private var floorLeading: CGFloat { max(DS.Space.s4, seatClearance) }
+
     private var leading: CGFloat {
-        guard let anchorX else { return DS.Space.s4 }
+        guard let anchorX else { return floorLeading }
         let wanted = anchorX - bandMinX - seatHalf
-        let maxLeading = max(DS.Space.s4, bandWidth - rowWidth - DS.Space.s4)
-        return min(max(DS.Space.s4, wanted), maxLeading)
+        let maxLeading = max(floorLeading, bandWidth - rowWidth - DS.Space.s4)
+        return min(max(floorLeading, wanted), maxLeading)
     }
 
     /// Where along the row the anchor falls, 0…1 — measured along the
@@ -113,7 +123,7 @@ struct DockSpringRow<Content: View>: View {
                 }
                 .padding(.leading, leading)
                 .padding(.trailing, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
+                .padding(.bottom, bottomInset)
         }
         .scrollBounceBehavior(.basedOnSize)
         .scrollClipDisabled()

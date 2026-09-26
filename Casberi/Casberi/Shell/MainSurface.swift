@@ -511,7 +511,15 @@ struct MainSurface: View {
         let facesShow = roomFacesShow
         let venues = openVenues.isEmpty && facesShow ? restingVenues : openVenues
         if !venues.isEmpty || facesShow {
-            DockSpringRow(anchorX: openVenues.isEmpty ? nil : chrome.folderAnchorX) { anchorLocalX in
+            // BESIDE THE FACE, never under it (prd §935). The capsule stood
+            // above the strip; with the strip in the tray (§930) it fell onto
+            // the seat's own line at the leading edge, where the face already
+            // stands, and covered it in every room with faces or venues. On
+            // the phone it starts where the seat ends and shares its centre
+            // line; where the rail stands no seat shares the edge.
+            DockSpringRow(anchorX: openVenues.isEmpty ? nil : chrome.folderAnchorX,
+                          seatClearance: showsRail ? 0 : DSDock.agentSeat(minimized: false) - DS.Space.s4,
+                          bottomInset: showsRail ? DS.Space.s2 : DSDock.agentBottomInset(minimized: false)) { anchorLocalX in
                 DockFolderRow(
                     venues: venues,
                     springs: !openVenues.isEmpty,
