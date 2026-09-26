@@ -335,6 +335,7 @@ marks chronological position within the pair.
 | §493 (the list under the NFT quad is every piece) | one row per piece: art, name, collection, chain, OpenSea | amended by §943 — one row per collection you picked, name only; the pieces are one tap in, three across |
 | §514 (2x2 up to four, 3x3 past it, a short last row padded) | the grid could end on empty cells | amended by §943 — only full rows, one to three across, whichever shows the most |
 | §546 (the Permissions slot is counts, never names) | rung counts with no holder named | superseded by §944 in the Wallet — the holders' marks and names, the Accounts pattern; the devnets keep the counts until their pass |
+| §936 (bars for "how many of each", in the Wallet's Permissions crown) | one bar per power rung under the number | superseded by §944 in the Wallet — the holders' marks; §936's grammar (one number over one caption, one accent, red only for what needs you) stands, and the devnets keep the bars until their pass |
 
 ## 1. Thesis
 
