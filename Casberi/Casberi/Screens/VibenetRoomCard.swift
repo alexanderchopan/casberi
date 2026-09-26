@@ -406,8 +406,7 @@ struct VibenetRoomCard: View {
         // The one-account detail carries its own doors and history — its
         // remaining verbs (rename, stop watching) live on a long-press,
         // matching the roster row's own contextMenu below rather than
-        // adding a second visible control competing with `RoomGear` for
-        // the same corner.
+        // adding a second visible control to the card.
         .modifier(VibenetDetailContextMenu(
             address: room.items.count == 1 ? room.lead?.address : nil,
             onRename: onRename, onRemove: onRemove))
@@ -866,9 +865,7 @@ struct VibenetRoomCard: View {
                                               exactFormat: { "\(VibenetBalanceFormat.line($0)) ETH" },
                                               changeFormat: { "\(VibenetBalanceFormat.line($0, places: 2)) ETH" })
                             } else {
-                                // The crown clears the gear for its own reading
-                                // (prd §920); a hero with no line clears it whole.
-                                balanceHero.padding(.trailing, DSRoomChassis.gearColumn)
+                                balanceHero
                             }
                         }
                     }
@@ -1703,7 +1700,7 @@ struct VibenetRoomCard: View {
         DSRoomSlot(headline: nil, reservesHeadline: false) {
             DSEmptyState(headline: Text(holdingsEmptyHeadline(aggregate)),
                          words: Text(holdingsEmptyLine(aggregate)),
-                         scale: .room(.treemap), clearance: DSRoomChassis.gearColumn)
+                         scale: .room(.treemap))
         }
     }
 
@@ -1772,12 +1769,7 @@ struct VibenetRoomCard: View {
         // stays as a name the room's own call sites already read, and adds
         // nothing of its own; a room that re-adds a rule here is a room
         // building its sixth template.
-        // The gear column, cleared HERE for every vibenet scope (prd §665):
-        // Frames, Hegotá and the Privacy devnet pad their slot content by
-        // `DSRoomChassis.gearColumn` and this card never did, so the gear sat
-        // on the Permissions grid's third cell (user's phone, 2026-09-09).
-        // One place rather than per figure, or the next scope forgets again.
-        DSRoomSlot(headline: headline) { figure().padding(.trailing, DSRoomChassis.gearColumn) }
+        DSRoomSlot(headline: headline) { figure() }
     }
 
     /// WHERE THE CHANGES LANDED — the Activity scope's drawing (prd §491,
@@ -1865,7 +1857,7 @@ struct VibenetRoomCard: View {
         DSRoomSlot(headline: nil, reservesHeadline: false) {
             DSEmptyState(headline: Text(activityEmptyHeadline),
                          words: Text(activityEmptyLine),
-                         scale: .room(.bars), clearance: DSRoomChassis.gearColumn)
+                         scale: .room(.bars))
         }
     }
 
@@ -2031,7 +2023,7 @@ struct VibenetRoomCard: View {
         DSRoomSlot(headline: nil, reservesHeadline: false) {
             DSEmptyState(headline: DSProse.text("Nothing is shared"),
                          words: Text(emptyAccountsLine),
-                         scale: .room(.graph), clearance: DSRoomChassis.gearColumn)
+                         scale: .room(.graph))
         }
     }
 
@@ -2339,8 +2331,7 @@ struct VibenetRoomCard: View {
         DSRoomSlot(headline: nil, reservesHeadline: false) {
             if let words = section.emptyBody {
                 DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
-                             words: Text(words), scale: .room(section.skeleton),
-                             clearance: DSRoomChassis.gearColumn)
+                             words: Text(words), scale: .room(section.skeleton))
             }
         }
     }

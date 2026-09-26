@@ -1592,8 +1592,11 @@ grep -qF 'section.summary' "$work/card.bare" \
 # like an ordinary tidy-up.
 grep -qF 'figureHeight' "$work/card.bare" \
   && fail "a shared figure height constant is back — the figures must fill DSRoomChassis.figureSlot, not centre an 84pt band in it (prd §596)"
-grep -qF '.padding(.trailing, DSRoomChassis.gearColumn)' "$work/card.bare" \
-  || fail "the drawings no longer end at the gear's x — Frames' rule, or every chart runs under the settings cog (prd §596)"
+# §596's "every drawing ends at the gear's x" is RETIRED with the gear (prd
+# §937): the figures take the full width, and a clearance coming back is the
+# defect now.
+grep -qF 'gearColumn' "$work/card.bare" \
+  && fail "a drawing pads for the room gear again — that control is deleted, the figure takes the whole width (prd §937)"
 
 # **THE WALK READS THE FRAME'S OWN FIELDS OFF THE PAYLOAD IT ALREADY HAS.**
 # Mode/target/value cost zero requests; dropping the reads makes every step in

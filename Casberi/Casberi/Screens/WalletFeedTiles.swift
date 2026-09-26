@@ -158,12 +158,6 @@ struct WalletBalanceHeadline: View {
     /// place the crown says how long a history the line draws. nil draws no
     /// window.
     var window: String? = nil
-    /// **THE PLOT RUNS UNDER THE GEAR (prd §920).** The room gear floats over
-    /// the slot's top-right corner, so only the READING — caption, number,
-    /// change — has to clear it; the line and the range row begin below the
-    /// gear and take the whole width. Rooms used to pad the entire slot by
-    /// this, which left the right third of every crown empty.
-    var gearClearance: CGFloat = 0
     var drawsChart: Bool = true
     /// Whether the FIGURE and its move line draw.
     ///
@@ -491,7 +485,6 @@ struct WalletBalanceHeadline: View {
                     }
                 }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.trailing, gearClearance)
             // THE RAIN, WHERE THE MONEY LANDED (prd §501). Nothing new is
             // drawn: this is the shower a pull-to-refresh already deals.
             //

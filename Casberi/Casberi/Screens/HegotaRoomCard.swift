@@ -90,8 +90,7 @@ struct HegotaRoomFigure: View {
     @ViewBuilder private var emptyState: some View {
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
-                         words: Text(words), scale: .room(section.skeleton),
-                         clearance: DSRoomChassis.gearColumn)
+                         words: Text(words), scale: .room(section.skeleton))
         }
     }
 

@@ -2553,9 +2553,7 @@ struct RootShell: View {
                     .padding(.top, DSDemoMark.pillTop)
                     .padding(.leading, padShell.railInset)
                     .padding(.leading, DS.Space.s4)
-                    // The room gear owns the trailing corner (§752); the pill
-                    // ends before its column and wraps rather than crossing it.
-                    .padding(.trailing, DSRoomChassis.gearColumn + DS.Space.s4 + DS.Space.s2)
+                    .padding(.trailing, DS.Space.s4)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     // The demo's drain, with the surface (`ShellChrome.demoLeaving`).
                     .opacity(chrome.demoLeaving ? 0 : 1)

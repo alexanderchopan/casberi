@@ -31,17 +31,12 @@ struct DSEmptyState: View {
     /// A fact the skeleton cannot say, drawn under the headline. Nil for
     /// almost every caller.
     var note: Text? = nil
-    /// How far a room skeleton stops short of the trailing edge — the rooms
-    /// that keep their drawings clear of the settings gear pass
-    /// `DSRoomChassis.gearColumn`. The words stay centred in the whole box.
-    var clearance: CGFloat = 0
 
     var body: some View {
         switch scale {
         case .room(let figure):
             ZStack {
                 DSSkeletonFigure(figure: figure)
-                    .padding(.trailing, clearance)
                 statement
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -407,7 +407,8 @@ grep -q 'AddressBookShape.lastPhrase(activity.lastAt)' "$TMP/views-bare.swift" \
 # ruling to follow with the address book's own dissolution): "wallets do not
 # need an address book icon b/c the addresses live in the catalogue entries",
 # and a room's one trailing door leads to that room's catalog entry, wearing
-# the catalog's own mark (`RoomGear` draws `square.grid.2x2`, not a gear).
+# the catalog's own mark (`RoomGear` drew `square.grid.2x2`, not a gear; the
+# door itself is deleted in §937).
 # The people list itself still exists for now, reached from the Wallet
 # entry (`WalletScreen.footSection`'s "Address book" slab door) — the one
 # place a wallet address is managed from, which is the whole point. When the
@@ -437,10 +438,12 @@ for f in Casberi/Casberi/Shell/FaceScopeRail.swift Casberi/Casberi/Shell/MainSur
 done
 grep -q 'onAddressBook' "Casberi/Casberi/Shell/DoorsStrip.swift" \
   && { echo "✗ the doors strip grew its address-book door back — two doors to the same set is the tray/catalog confusion (2026-09-06)"; exit 1; }
-grep -q 'Image(systemName: "gearshape")' "Casberi/Casberi/Shell/RoomGear.swift" \
-  && { echo "✗ the room door is a gear again — it opens the room's catalog entry and wears the catalog's mark (2026-09-06)"; exit 1; }
-grep -q 'Image(systemName: "square.grid.2x2")' "Casberi/Casberi/Shell/RoomGear.swift" \
-  || { echo "✗ the room door no longer wears the Accounts glyph (2026-09-06)"; exit 1; }
+# The room's trailing door itself is GONE (prd §937): the rooms tray's Manage
+# is the one door to a room's account page, so no room draws a corner control.
+[ -e "Casberi/Casberi/Shell/RoomGear.swift" ] \
+  && { echo "✗ the room's corner door is back — the tray's Manage is the one door to a room's account page (§937)"; exit 1; }
+grep -q 'gearColumn' "Casberi/Casberi/Design/DSRoomChassis.swift" \
+  && { echo "✗ the chassis reserves a column for a control that no longer exists (§937)"; exit 1; }
 grep -q 'case addressBook' "$ROUTE" \
   && { echo "✗ the address book has a route node again (§690)"; exit 1; }
 grep -q 'AddressBookScreen()' "$SHELL_MAIN" \

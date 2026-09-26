@@ -105,8 +105,8 @@ final class BridgeStore {
     }
 
     /// Renames a seat's record in place (2026-09-06, prd §629). A bridge is
-    /// found by NAME on every catalog read (`registerConnected`, the Apps rows,
-    /// `RoomGear`), so a catalog rename without this leaves the seat looking
+    /// found by NAME on every catalog read (`registerConnected`, the Apps
+    /// rows), so a catalog rename without this leaves the seat looking
     /// disconnected while its credentials and rows are all still here. Also
     /// moves the health ledger, which is keyed by the same name. A no-op when
     /// the seat is absent or already carries the new name.

@@ -29,7 +29,8 @@ enum DSDemoMark {
     /// A control gets a control's hit size — not the 34pt recording-indicator
     /// height the glass capsule had, which is what made it read as status.
     static let pillHeight: CGFloat = DS.Hit.min
-    /// Level with the room gear, the top edge's one exception (§752).
+    /// One step of air off the top edge (§752; the room gear it stood level
+    /// with is gone, §937).
     static let pillTop: CGFloat = DS.Space.s2
     /// The air between the pill's foot and the first line under it.
     static let gap: CGFloat = DS.Space.s2

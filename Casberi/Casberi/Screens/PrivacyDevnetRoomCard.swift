@@ -186,12 +186,7 @@ struct PrivacyDevnetRoomCard: View {
                            alignment: .topLeading)
             }
         }
-        // The empty state clears the gear itself (`clearance`), so its
-        // headline centres in the whole box.
-        // Home clears the gear itself (prd §920): the crown pads only its
-        // reading, so its plot and range row run the full width.
-        .padding(.trailing, section == .home || isEmpty(section) ? 0 : DSRoomChassis.gearColumn)
-    }
+            }
 
     /// Every shown move with the address whose read produced it — Hegotá's
     /// signature, and for its reason: in an unscoped room nothing else can say
@@ -423,8 +418,7 @@ extension PrivacyDevnetRoomCard {
     @ViewBuilder var emptyState: some View {
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
-                         words: Text(words), scale: .room(section.skeleton),
-                         clearance: DSRoomChassis.gearColumn)
+                         words: Text(words), scale: .room(section.skeleton))
         }
     }
 
@@ -805,7 +799,6 @@ extension PrivacyDevnetRoomCard {
                 .foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.trailing, DSRoomChassis.gearColumn)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 

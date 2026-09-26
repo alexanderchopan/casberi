@@ -5828,10 +5828,9 @@ struct FeedScreen: View {
             // THE ROOM NAMES ITSELF (prd §930). Until the strip folded into
             // the rooms tray the dock's lit tile said which room this was;
             // now the room says so, first in its list, on the screen-head
-            // rung a pushed screen already uses (§767, §915). It ends before
-            // the gear's column, which owns the trailing corner (§752).
+            // rung a pushed screen already uses (§767, §915). Nothing shares
+            // the line: the room's own door is the tray's Manage (§937).
             DSScreenHead(title: Text(roomName))
-                .padding(.trailing, DSRoomChassis.gearColumn)
                 // Where the name stands, for the tray's pick flight to land
                 // (§932). Written from the leaf that draws it, never read here.
                 .background {
@@ -9399,10 +9398,9 @@ struct FeedScreen: View {
                             // did not answer, and one that answered and could
                             // not be priced. Both are out of the number.
                             note: walletTotalNote,
-                            // The window as words and the gear clearance
-                            // (prd §920) — the same two `RoomHomeCrown` passes.
+                            // The window as words (prd §920) — the same pass
+                            // `RoomHomeCrown` makes.
                             window: drawsChart ? active.windowWord(since: windowed.first?.at) : nil,
-                            gearClearance: DSRoomChassis.gearColumn,
                             drawsChart: drawsChart,
                             drawsReading: drawsChart,
                             // **DERIVED, not 96 (prd §588).** §483 set this

@@ -257,15 +257,6 @@ struct MainSurface: View {
         // measured above — the band still wears the feed's own geometry, it
         // just no longer has to reach outside itself to get it.
         bandContent
-            // Publishes the band's real height so `RoomGear` can float just
-            // below it — see `BandHeightKey` for why this is measured rather
-            // than a constant, and which two placements failed on device first.
-            .background {
-                GeometryReader { proxy in
-                    Color.clear.preference(key: BandHeightKey.self,
-                                           value: proxy.size.height)
-                }
-            }
             // THE SCRIM (2026-08-23, inverted by §591). This band had NO
             // background of its own: each chip carries its own glass, and the
             // gaps BETWEEN the strips were fully transparent — so scrolling
@@ -2187,10 +2178,6 @@ struct MainSurface: View {
     /// Which edge the incoming room slides from — set by `go(to:)` BEFORE the
     /// source changes, so both halves of the transition read the same answer.
     @State private var slideEdge: Edge = .trailing
-    /// The top band's measured height, so `RoomGear` floats just below it
-    /// rather than on top of it. See `BandHeightKey`.
-    @State private var bandHeight: CGFloat = 0
-
     /// The one door every source switch walks through (prd §265): chip taps and
     /// swipes both come here, so direction, the tag reset, and tap-learning
     /// cannot drift between them.
@@ -2852,34 +2839,6 @@ struct MainSurface: View {
                 for: UIResponder.keyboardWillHideNotification)) { _ in
                 if chrome.keyboardUp { chrome.keyboardUp = false }
             }
-            // THE ROOM'S OWN SETTINGS DOOR (2026-08-21) — see `RoomGear` for
-            // why a bare gear is legible here and why the room needed one.
-            //
-            // **It no longer chases the band (§591).** The offset below was
-            // the band's MEASURED height, because the band owned the top of
-            // the screen and an overlay does not inherit the safe area a
-            // `.safeAreaInset` reserves — so without it the gear sat level
-            // with the demo banner. The band is at the BOTTOM now, so that
-            // measurement would push the gear a whole band's height down into
-            // the feed to clear chrome that is no longer above it. A plain
-            // step of air off the top edge is what is left; `bandHeight` is
-            // still measured and still published, because `RoomGear` is not
-            // its only reader.
-            //
-            // INSIDE the NavigationStack, like `topInset` and for the same
-            // reason: a pushed room must cover it. A settings door floating over
-            // a screen it does not configure is the dead control the honesty law
-            // bans, wearing a live control's clothes.
-            //
-            // On the SHELL rather than on `FeedScreen`, so it survives a room
-            // change instead of dying with the `.id()` subtree (§357). It reads
-            // `filter.source`, which `go(to:)` has already resolved out of any
-            // category label — never a fold label (§351).
-            .overlay(alignment: .topTrailing) {
-                RoomGear(source: filter.source)
-                    .padding(.top, DS.Space.s2)
-            }
-            .onPreferenceChange(BandHeightKey.self) { bandHeight = $0 }
             // The detail pane (2026-07-25) — the iPad half of "a row tap
             // opens a thing". A trailing inset rather than an HStack sibling
             // so every modifier already hanging off the pager (the crown

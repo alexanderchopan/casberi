@@ -100,10 +100,8 @@ struct RoomHomeCrown: View {
             exactFormat: exactFormat,
             changeFormat: changeFormat,
             // The window as words, dated from the first sample the line draws
-            // (prd §920); the gear clearance is the crown's own since the same
-            // ruling, so the plot below runs the full width.
+            // (prd §920).
             window: active.windowWord(since: windowed.first?.at),
-            gearClearance: DSRoomChassis.gearColumn,
             chartHeight: chartHeight(chips: offered.count > 1),
             ranges: offered,
             range: active,

@@ -367,20 +367,6 @@ enum DSRoomChassis {
         max(0, box - chrome)
     }
 
-    /// **THE COLUMN THE SETTINGS GEAR OWNS.**
-    ///
-    /// Reserving the headline row clears the gear for a figure that begins
-    /// BELOW a line of text — see `DSRoomSlot`'s own note. It does not clear
-    /// it for a figure whose first row is a full-width DRAWING: the gear is a
-    /// circle floating over the slot's top-right, so its lower-left arc still
-    /// crosses the top few points of anything that reaches the trailing edge.
-    ///
-    /// Measured on the Frames room, where a full-width split bar and the top
-    /// run of a sequence strip both ran under the cog's corner with the
-    /// headline row correctly reserved. Hegotá states the same fact per
-    /// caption (`figureCaption`); this is it as a number, so a drawing can ask
-    /// for it too.
-    static let gearColumn: CGFloat = 44
 }
 
 /// THE SLOT ITSELF — one definition of the box every room scope draws into
@@ -403,10 +389,8 @@ enum DSRoomChassis {
 /// and a headline row that is RESERVED whether or not a headline is drawn.
 ///
 /// **Reserving the row unconditionally is the load-bearing part.** It makes
-/// every scope's drawing begin at the same y, and it earns the settings
-/// gear's clearance for free — that control overlays this corner, and a
-/// headline-height gap is exactly what it needs, which is why the 44pt hack
-/// that used to buy it could be deleted rather than moved.
+/// every scope's drawing begin at the same y. (It also cleared the room's
+/// settings gear, until §937 deleted that control.)
 struct DSRoomSlot<Figure: View>: View {
     /// The scope's own headline, or nil where the drawing names itself. The
     /// ROW is reserved either way — see the type's own note.

@@ -474,14 +474,14 @@ def check_l_seat_names_resolve_at_runtime(files_text):
     so D passing says nothing about whether the shipped function answers. The
     two agree today and nothing was making them.
 
-    It matters because `RoomGear` — the room's settings door — is gated on
-    exactly this call: a demo seat the shipped rule can't resolve draws no
-    gear, silently, in the one mode built to show every room working. That is
-    also the honest behaviour for a source with no seat, which is why the
-    failure is invisible rather than broken.
+    It mattered first for `RoomGear` — the room's settings door, deleted in
+    §937 — which was gated on exactly this call: a demo seat the shipped rule
+    can't resolve drew no door, silently, in the one mode built to show every
+    room working. The resolution still decides a room's seat (its account
+    page, its health), so the check stands.
 
     `KNOWN_NO_CATALOG_SEAT` is the escape hatch and carries its reason — a
-    voice note connects nothing, so it correctly has no gear."""
+    voice note connects nothing, so it correctly has no seat."""
     names, _ = extract_seat_table(files_text["DemoSeedAll"])
     if names is None:
         check("L · seatTable found", False, True)

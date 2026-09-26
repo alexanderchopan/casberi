@@ -20,7 +20,6 @@ struct DSFigureReading: View {
     /// The number's ink — the change on a money line is the one place a
     /// number wears gain or loss (§936: red and green mean up and down).
     var numberInk: Color = DS.textPrimary
-    var clearsGear = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -41,7 +40,6 @@ struct DSFigureReading: View {
                 .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.trailing, clearsGear ? DSRoomChassis.gearColumn : 0)
         .accessibilityElement(children: .combine)
     }
 

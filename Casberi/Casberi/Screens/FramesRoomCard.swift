@@ -126,9 +126,6 @@ struct FramesRoomFigure: View {
             // clearance is three chances to forget it, and a chart that ends
             // 44pt short beside one that reaches the edge reads as a bug in
             // the shorter one.
-            // **HOME CLEARS THE GEAR ITSELF (prd §920):** the crown pads only
-            // its reading, so its plot and range row run the full width.
-            .padding(.trailing, section == .home ? 0 : DSRoomChassis.gearColumn)
             }
         }
     }
@@ -173,8 +170,7 @@ struct FramesRoomFigure: View {
     @ViewBuilder private var emptyState: some View {
         if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
-                         words: Text(words), scale: .room(section.skeleton),
-                         clearance: DSRoomChassis.gearColumn)
+                         words: Text(words), scale: .room(section.skeleton))
         }
     }
 
