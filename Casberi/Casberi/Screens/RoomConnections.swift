@@ -109,17 +109,24 @@ extension RoomAccountsRows {
     /// follow as their own group — one row per bar in the crown, each carrying
     /// that bar's own figure. Same key rule as the map (lowercased hex), so a
     /// tied account that is also followed is never listed twice.
-    static func list(_ followed: [Row], map: AddressConnections.Map?) -> [Row] {
-        guard let map else { return followed }
+    ///
+    /// `scope` is one of yours (the face or the menu picked it, prd §941):
+    /// the list narrows to that account and the accounts tied to IT. It is a
+    /// row KEY, never lowercased here: a Solana address is case-sensitive.
+    static func list(_ followed: [Row], map: AddressConnections.Map?, scope: String? = nil) -> [Row] {
+        let shown = scope.map { key in followed.filter { $0.key == key } } ?? followed
+        guard let map else { return shown }
         let yours = Set(followed.map(\.key))
         let figures = Dictionary(uniqueKeysWithValues: RoomConnectionsFigure.bars(map).map { ($0.id, $0.value) })
         let named = Dictionary(uniqueKeysWithValues: map.columns.map { ($0.id, $0.name) })
-        let own = followed.map { row in
+        let own = shown.map { row in
             var row = row
             row.with = map.nodes.filter { $0.walletKeys.contains(row.key) }.map(\.name)
             return row
         }
-        let tied = map.nodes.filter { !yours.contains($0.id) }.map { node in
+        let tied = map.nodes.filter { node in
+            !yours.contains(node.id) && scope.map { node.walletKeys.contains($0) } ?? true
+        }.map { node in
             Row(key: node.id, address: node.address, name: node.name, kind: nil,
                 with: node.walletKeys.compactMap { named[$0] }, amount: figures[node.id],
                 watched: false, unreached: false)

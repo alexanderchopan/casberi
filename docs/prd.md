@@ -61664,3 +61664,15 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 **A row names who it is tied to, and never counts.** One of yours reads `with Sam`; a tied one reads `with Savings and Hardware` (`ListFormatter`). A row tied to nothing has no line at all — "no connections yet" three times said nothing. The bare `1`/`2` at the right edge repeated the line and is deleted, with `Row.connections` and the four `reach` counts that fed it. **Only a tied account carries a figure**: its bar's own value (`RoomConnectionsFigure.bars`), so the list and the crown say the same number; yours carry none, because Holdings owns what they hold. `RoomAccountsRows.list(_:map:)` replaces `tied(_:watchedKeys:)` and fills both.
 
 **The devnets inherit it**, because Frames, Hegotá, the Privacy devnet and Vibenet draw the same two components; their pass is the extrapolation after the Wallet's screens.
+
+## §941 — The Wallet's Accounts crown is your accounts, face by face, and a face picks the account (user, 2026-09-26)
+
+**User:** *"in your proposal and as it is today it's just a line w/a number repeating stuff that is elsewhere. i mean maybe we should just show avatars for each account a user is following"*; a cluster view (linked accounts touching, sub-accounts nested) was mocked beside it and declined — *"it's like it is trying too hard"*; *"maybe the total number of accounts is important too"*; then *"ok i like this"* and, on the switcher, keep it (*"ok do it"*).
+
+**The crown is `RoomAccountsFaces`: the count of your accounts over one face per account** (`WalletFace`, circular, the list's own face), five across at 56pt with the name under, stepping down to 40pt and no names past ten. It supersedes §940's bars in the Wallet. The relationships stay where they read — the list's `with Sam` lines — so the crown draws none.
+
+**A face picks the account.** A tap writes `chrome.walletScope`, the SAME scope the account menu under the tiles writes, so the two cannot disagree: pick from the menu and the face lights, tap a face and the menu reads its name; a second tap is All. The lit face keeps full ink and the rest go to 35%, the treemap's press (§939). **The menu stays** — it is on every page, and the faces are only on this one.
+
+**The list follows the pick.** `RoomAccountsRows.list(_:map:scope:)` narrows to the picked account and the accounts tied to IT; the scope is a row KEY through `AddressBook.key(for:)`, never lowercased in the list, because a Solana address is case-sensitive.
+
+**The devnets still draw §940's bars** (`RoomConnectionsFigure`) until their pass, where sub-accounts become a line in the list rather than a nested picture.

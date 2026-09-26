@@ -63,8 +63,16 @@ extension FeedScreen {
 
     @ViewBuilder var walletConnectionsSection: some View {
         Section {
-            RoomConnectionsFigure(map: AddressConnections.map(context: modelContext),
-                                  box: DSRoomChassis.visualSlot)
+            // Your accounts, face by face; a face is the account picker too,
+            // writing the same scope the menu under the tiles does (prd §941).
+            RoomAccountsFaces(
+                faces: WalletStore.shared.addresses.map {
+                    .init(id: $0.address, name: $0.label.isEmpty ? $0.short : $0.label)
+                },
+                selected: chrome.walletScope,
+                onPick: { picked in
+                    withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
+                })
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.contentGap,
                                           trailing: DSRoomChassis.inset))
@@ -90,7 +98,8 @@ extension FeedScreen {
         }
         if !rows.isEmpty {
             Section {
-                RoomAccountsRows(rows: RoomAccountsRows.list(rows, map: map))
+                RoomAccountsRows(rows: RoomAccountsRows.list(rows, map: map,
+                                                              scope: selectedWallet.map(AddressBook.key(for:))))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
@@ -1308,7 +1317,7 @@ extension FeedScreen {
                 // the one that changes every sync.
                 trailingTitle: hasMore ? String(localized: "See activity") : nil,
                 onTapTrailing: hasMore
-                    ? { route.pushBridge(.walletHistory(scope: selectedWallet)) }
+                    ? { route.pushBridge(.walletHistory(scope: selectedWallet.map(AddressBook.key(for:)))) }
                     : nil)
             ForEach(Array(rows.keyed.enumerated()), id: \.element.id) { i, item in
                 // `live` INSIDE the closure, before any read (corollary 3):
@@ -1492,7 +1501,7 @@ extension FeedScreen {
                         // dead-control clause).
                         Button {
                             DSHaptic.selection()
-                            route.pushBridge(.walletHistory(scope: selectedWallet))
+                            route.pushBridge(.walletHistory(scope: selectedWallet.map(AddressBook.key(for:))))
                         } label: {
                             WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
                                       title: String(localized: "\(count) \(word)"),
@@ -1519,7 +1528,7 @@ extension FeedScreen {
                         // own ("transfers"), as `walletStreamRows` does.
                         Button {
                             DSHaptic.selection()
-                            route.pushBridge(.walletHistory(scope: selectedWallet))
+                            route.pushBridge(.walletHistory(scope: selectedWallet.map(AddressBook.key(for:))))
                         } label: {
                             WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
                                       title: String(localized: "\(count) \(String(localized: "transfers"))"),
@@ -1568,7 +1577,7 @@ extension FeedScreen {
         if total > Self.walletPreviewRows {
             Section {
                 WalletSeeAllRow(count: total) {
-                    route.pushBridge(.walletHistory(scope: selectedWallet))
+                    route.pushBridge(.walletHistory(scope: selectedWallet.map(AddressBook.key(for:))))
                 }
                 .listRowSeparator(.hidden)
                 // On the page itself, not in a card — a quiet continuation
