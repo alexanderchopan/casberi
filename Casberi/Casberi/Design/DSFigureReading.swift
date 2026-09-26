@@ -73,7 +73,9 @@ struct DSBarList: View {
 
     let bars: [Bar]
     var lit: String? = nil
-    var shown = 5
+    /// Four rows and the "+N more" line fit under a reading in the fixed box
+    /// (`visualSlot` 300 − a ~72pt reading − 8 = 220; 4 × 44 + 16 = 192).
+    var shown = 4
     var onPress: ((String) -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -146,7 +148,13 @@ struct DSBarFigure<Reading: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             reading()
+            // **CENTRED IN WHAT IS LEFT (user: "can't we center them so they
+            // look good if they have limited info?").** The box is fixed
+            // (prd §936), so one or two bars sit in the middle of the space
+            // under the number rather than hugging it with air below; a full
+            // list fills the space either way.
             bars
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
