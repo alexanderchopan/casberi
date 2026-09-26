@@ -61652,3 +61652,15 @@ Amends §756 and §906. The cover is lifted OUT of its day's run so the covered 
 - **The list:** the amount pinned to the right edge, the share before it only where it rounds to 1% or more (user: *"the dollar values should be aligned"*), and every row wears a mark (`AssetMark`'s monogram where no picture exists).
 
 The source maps keep the pack (§917 stands for them); only `iconMode == "token"` in a room slot draws this. The devnets' Holdings (`RoomHoldingsFigure`) still pack; porting them is the next step once the Wallet's screens are settled (user: *"go through each wallet screen and then … extrapolate templates for the other devnets"*).
+
+## §940 — The Wallet's Accounts: the crown counts what it draws, the list is yours then the accounts tied to them, a row names who it is tied to (user, 2026-09-26)
+
+**User:** *"yes 100% i like what you proposed"*, over the Accounts board (today beside proposed).
+
+**The crown's number counts what it draws.** It counted EDGES: "2 connections" over one bar, because one address was tied to two of yours. One bar is one address, so the number is `map.nodes.count` and the caption is `tied to yours`. The scope caption ("5 wallets", an account's name) and the dead `yours:` parameter are deleted from `RoomConnectionsFigure` and its five callers. The map is not scoped by the account menu, so the caption may not name one account.
+
+**The list is two groups, named only when there are two.** Yours first, then the accounts tied to them, each under a `heading24` group header in primary ink (a group named by something other than time, §740), standing on the tiles' edge (`DSRoomChassis.inset`) — text is a box, so it takes the line the tiles and the account menu share. Sam had stood among your wallets as if Sam were one of them.
+
+**A row names who it is tied to, and never counts.** One of yours reads `with Sam`; a tied one reads `with Savings and Hardware` (`ListFormatter`). A row tied to nothing has no line at all — "no connections yet" three times said nothing. The bare `1`/`2` at the right edge repeated the line and is deleted, with `Row.connections` and the four `reach` counts that fed it. **Only a tied account carries a figure**: its bar's own value (`RoomConnectionsFigure.bars`), so the list and the crown say the same number; yours carry none, because Holdings owns what they hold. `RoomAccountsRows.list(_:map:)` replaces `tied(_:watchedKeys:)` and fills both.
+
+**The devnets inherit it**, because Frames, Hegotá, the Privacy devnet and Vibenet draw the same two components; their pass is the extrapolation after the Wallet's screens.

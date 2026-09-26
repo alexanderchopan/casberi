@@ -363,9 +363,7 @@ struct FramesRoomFigure: View {
     /// said to revisit if watching several ever became ordinary. It has, and
     /// this is not the roster anyway.
     @ViewBuilder private var accountsFigure: some View {
-        RoomConnectionsFigure(map: FramesConnections.map(accounts),
-                              yours: String(localized: "the accounts you follow"),
-                              caption: crownCaption)
+        RoomConnectionsFigure(map: FramesConnections.map(accounts))
     }
 
     @ViewBuilder private var holdingsFigure: some View {
@@ -1331,20 +1329,15 @@ enum FramesConnections {
                      onOpen: ((FramesAccount) -> Void)?) -> [RoomAccountsRows.Row] {
         let drawn = map(accounts)
         let followed = accounts.map { account -> RoomAccountsRows.Row in
-            let reach = drawn?.nodes.filter {
-                $0.walletKeys.contains(account.address.lowercased())
-            }.count ?? 0
             return RoomAccountsRows.Row(
                 key: account.address.lowercased(),
                 address: account.address,
                 name: FramesWatch.shared.name(for: account.address)
                     ?? WalletStore.shortAddress(account.address),
                 kind: nil,
-                connections: reach,
                 unreached: !account.reached,
                 onOpen: onOpen.map { open in { open(account) } })
         }
-        return followed + RoomAccountsRows.tied(
-            drawn, watchedKeys: Set(accounts.map { $0.address.lowercased() }))
+        return RoomAccountsRows.list(followed, map: drawn)
     }
 }

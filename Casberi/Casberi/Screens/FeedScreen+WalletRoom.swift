@@ -64,13 +64,7 @@ extension FeedScreen {
     @ViewBuilder var walletConnectionsSection: some View {
         Section {
             RoomConnectionsFigure(map: AddressConnections.map(context: modelContext),
-                                  box: DSRoomChassis.visualSlot,
-                                  yours: String(localized: "the accounts you follow"),
-                                  caption: selectedWallet.map {
-                                      WalletScopeRail.caption(for: $0, in: wallet.addresses).name
-                                  } ?? (wallet.addresses.count == 1
-                                        ? String(localized: "1 wallet")
-                                        : String(localized: "\(String(wallet.addresses.count)) wallets")))
+                                  box: DSRoomChassis.visualSlot)
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.contentGap,
                                           trailing: DSRoomChassis.inset))
@@ -92,16 +86,11 @@ extension FeedScreen {
                 address: wallet.address,
                 name: wallet.label.isEmpty ? wallet.short : wallet.label,
                 kind: nil,
-                connections: map?.nodes.filter {
-                    $0.walletKeys.contains(AddressBook.key(for: wallet.address))
-                }.count ?? 0,
                 unreached: false)
         }
-        let tied = RoomAccountsRows.tied(
-            map, watchedKeys: Set(WalletStore.shared.addresses.map { AddressBook.key(for: $0.address) }))
         if !rows.isEmpty {
             Section {
-                RoomAccountsRows(rows: rows + tied)
+                RoomAccountsRows(rows: RoomAccountsRows.list(rows, map: map))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }

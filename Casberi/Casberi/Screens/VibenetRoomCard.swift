@@ -1952,15 +1952,11 @@ struct VibenetRoomCard: View {
         // `VibenetLinkSpine` still draw inside the account detail sheet.
         if let web {
             scopeFigure(headline: nil) {
-                RoomConnectionsFigure(map: Self.connectionsMap(web: web),
-                                      yours: String(localized: "\(Self.displayName(web.owner)) and its accounts"),
-                                      caption: crownCaption)
+                RoomConnectionsFigure(map: Self.connectionsMap(web: web))
             }
         } else if !links.isEmpty {
             scopeFigure(headline: nil) {
-                RoomConnectionsFigure(map: Self.connectionsMap(links: links),
-                                      yours: String(localized: "the accounts you follow"),
-                                      caption: crownCaption)
+                RoomConnectionsFigure(map: Self.connectionsMap(links: links))
             }
         } else {
             // **AN EMPTY SCOPE STILL DRAWS** (prd §495, user: *"even if there

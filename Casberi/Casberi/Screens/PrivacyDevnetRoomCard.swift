@@ -759,9 +759,7 @@ extension PrivacyDevnetRoomCard {
     /// slot restated its own list. What it draws now is the one thing those
     /// rows cannot: how they relate.
     @ViewBuilder var accountsFigure: some View {
-        RoomConnectionsFigure(map: PrivacyConnections.map(accounts),
-                              yours: String(localized: "the accounts you follow"),
-                              caption: scopeCaption)
+        RoomConnectionsFigure(map: PrivacyConnections.map(accounts))
     }
 
     private func accountDoing(_ account: PrivacyDevnetAccount) -> String {
@@ -1485,20 +1483,15 @@ enum PrivacyConnections {
                      onOpen: ((PrivacyDevnetAccount) -> Void)?) -> [RoomAccountsRows.Row] {
         let drawn = map(accounts)
         let followed = accounts.map { account -> RoomAccountsRows.Row in
-            let reach = drawn?.nodes.filter {
-                $0.walletKeys.contains(account.address.lowercased())
-            }.count ?? 0
             return RoomAccountsRows.Row(
                 key: account.address.lowercased(),
                 address: account.address,
                 name: PrivacyDevnetName.of(account.address),
                 kind: nil,
-                connections: reach,
                 unreached: !account.reached,
                 onOpen: onOpen.map { open in { open(account) } })
         }
-        return followed + RoomAccountsRows.tied(
-            drawn, watchedKeys: Set(accounts.map { $0.address.lowercased() }))
+        return RoomAccountsRows.list(followed, map: drawn)
     }
 }
 

@@ -35,10 +35,6 @@ import SwiftUI
 struct RoomConnectionsFigure: View {
     let map: AddressConnections.Map?
     var box: CGFloat = DSRoomChassis.figureSlot
-    var yours: String = String(localized: "yours")
-    /// The scope: one account's name, or how many you follow — said in the
-    /// caption beside the noun (prd §936).
-    var caption: String? = nil
     /// **THE PRESSED BAR.** A connected address's id; while set, the reading
     /// names it and says what moved, and the other bars go quiet.
     @State private var lit: String?
@@ -86,10 +82,12 @@ struct RoomConnectionsFigure: View {
             return DSFigureReading(number: node.name,
                                    caption: String(localized: "\(Self.moves(node.count)) with \(names.joined(separator: ", "))"))
         }
-        let edges = map.nodes.reduce(0) { $0 + $1.walletKeys.count }
-        let noun = edges == 1 ? String(localized: "connection") : String(localized: "connections")
-        return DSFigureReading(number: String(edges),
-                               caption: [noun, caption].compactMap { $0 }.joined(separator: " · "))
+        // **THE NUMBER COUNTS WHAT IS DRAWN (prd §940).** It was the count of
+        // EDGES — "2 connections" over one bar, because one address was tied
+        // to two of yours. One bar is one address, so the number is the
+        // addresses, and the caption says what they are to you.
+        return DSFigureReading(number: String(map.nodes.count),
+                               caption: String(localized: "tied to yours"))
     }
 }
 
@@ -106,18 +104,27 @@ struct RoomConnectionsFigure: View {
 /// address IS and how it relates to the others you watch** — which also makes
 /// the list the crown's own legend rather than a second copy of it.
 extension RoomAccountsRows {
-    /// The accounts TIED to the ones you follow — one row per node of the
-    /// spine, after the followed rows. Same key rule as the map (lowercased
-    /// hex), so a tied account that is also followed is never listed twice.
-    static func tied(_ map: AddressConnections.Map?, watchedKeys: Set<String>,
-                     onOpen: ((String) -> Void)? = nil) -> [Row] {
-        (map?.nodes ?? [])
-            .filter { !watchedKeys.contains($0.id) }
-            .map { node in
-                Row(key: node.id, address: node.address, name: node.name, kind: nil,
-                    connections: node.walletKeys.count, watched: false, unreached: false,
-                    onOpen: onOpen.map { open in { open(node.address) } })
-            }
+    /// **YOURS, THEN THE ACCOUNTS TIED TO THEM (prd §940).** The followed
+    /// rows learn WHO they are tied to, by name, and the accounts tied to them
+    /// follow as their own group — one row per bar in the crown, each carrying
+    /// that bar's own figure. Same key rule as the map (lowercased hex), so a
+    /// tied account that is also followed is never listed twice.
+    static func list(_ followed: [Row], map: AddressConnections.Map?) -> [Row] {
+        guard let map else { return followed }
+        let yours = Set(followed.map(\.key))
+        let figures = Dictionary(uniqueKeysWithValues: RoomConnectionsFigure.bars(map).map { ($0.id, $0.value) })
+        let named = Dictionary(uniqueKeysWithValues: map.columns.map { ($0.id, $0.name) })
+        let own = followed.map { row in
+            var row = row
+            row.with = map.nodes.filter { $0.walletKeys.contains(row.key) }.map(\.name)
+            return row
+        }
+        let tied = map.nodes.filter { !yours.contains($0.id) }.map { node in
+            Row(key: node.id, address: node.address, name: node.name, kind: nil,
+                with: node.walletKeys.compactMap { named[$0] }, amount: figures[node.id],
+                watched: false, unreached: false)
+        }
+        return own + tied
     }
 }
 
@@ -129,15 +136,14 @@ struct RoomAccountsRows: View {
         let name: String
         /// What it is — `AddressBook.Kind`'s word, or a room's own.
         let kind: String?
-        /// How many of the accounts you watch it connects to.
-        let connections: Int
-        /// **Whether YOU follow it (prd §689c, user: "addresses are accounts …
-        /// and or tied to them").** The scope's subject is the accounts you
-        /// follow AND the accounts tied to them — the left-hand nodes of the
-        /// spine are accounts too, and a picture whose nodes have no row is a
-        /// figure the list beneath it does not explain. A tied account reads
-        /// "tied to 2 of yours"; a followed one reads "connected to 2 of
-        /// yours"; the count on the right is the same unit for both.
+        /// Who it is tied to, by name: the tied accounts for one of yours,
+        /// yours for a tied one (prd §940). Empty says nothing at all.
+        var with: [String] = []
+        /// What moved with a tied account — its bar's own figure. Yours carry
+        /// none: Holdings owns what they hold.
+        var amount: String? = nil
+        /// **Whether YOU follow it (prd §689c, §940).** Yours come first, the
+        /// accounts tied to them after, each group under its own name.
         var watched: Bool = true
         /// True when the chain did not answer for it; the row says so instead
         /// of reading as an address with nothing going on (§515a).
@@ -148,7 +154,16 @@ struct RoomAccountsRows: View {
     let rows: [Row]
 
     var body: some View {
+        // The groups are named only when there are two (prd §940): a list
+        // of yours alone needs no word over it.
+        let split = rows.contains { !$0.watched }
         ForEach(rows) { row in
+            if split, row.id == rows.first(where: { $0.watched })?.id {
+                header(String(localized: "Yours"))
+            }
+            if split, row.id == rows.first(where: { !$0.watched })?.id {
+                header(String(localized: "Tied to yours"))
+            }
             if let onOpen = row.onOpen {
                 Button {
                     DSHaptic.selection()
@@ -161,14 +176,28 @@ struct RoomAccountsRows: View {
         }
     }
 
+    /// The feed's group header, a group named by something other than time
+    /// (primary ink, never the day's brand hue — prd §740). Text is a box, so
+    /// it stands on the tiles' edge, the line the account menu shares.
+    private func header(_ word: String) -> some View {
+        Text(word)
+            .dsText(.heading24)
+            .foregroundStyle(DS.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, DSRoomChassis.inset)
+            .padding(.top, DS.Space.s6)
+            .padding(.bottom, DS.Space.s1)
+            .listRowInsets(EdgeInsets())
+            .accessibilityAddTraits(.isHeader)
+    }
+
     @ViewBuilder private func body(_ row: Row) -> some View {
         WalletRow(mark: .face(row.address), title: row.name, subtitleText: subtitle(row)) {
-            // **THE CONNECTION COUNT, which is the crown's own unit.** The
-            // family rule is that the right edge carries the amount where a
-            // row has one and the number that differs row to row where it does
-            // not — and here there is no amount, because Holdings owns it.
-            if row.connections > 0 {
-                Text(String(row.connections))
+            // Only a tied account carries a figure — what moved with it, the
+            // bar's own number. The bare count that stood here repeated the
+            // line under the name (prd §940).
+            if let amount = row.amount {
+                Text(amount)
                     .dsText(.price17)
                     .foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
@@ -180,20 +209,11 @@ struct RoomAccountsRows: View {
         var parts: [String] = []
         if let kind = row.kind { parts.append(kind) }
         if row.unreached {
-            // An unread address is not an unconnected one, and saying
-            // "no connections yet" over a chain that never answered would be
-            // the false fact §83 exists to stop.
+            // An unread address is not an unconnected one (§83, §515a).
             parts.append(String(localized: "couldn't be reached"))
-        } else if !row.watched {
-            parts.append(row.connections == 1
-                         ? String(localized: "tied to 1 of yours")
-                         : String(localized: "tied to \(String(row.connections)) of yours"))
-        } else if row.connections == 0 {
-            parts.append(String(localized: "no connections yet"))
-        } else {
-            parts.append(row.connections == 1
-                         ? String(localized: "connected to 1 of yours")
-                         : String(localized: "connected to \(String(row.connections)) of yours"))
+        } else if !row.with.isEmpty {
+            let names = ListFormatter.localizedString(byJoining: row.with)
+            parts.append(String(localized: "with \(names)"))
         }
         return parts.isEmpty ? nil : Text(parts.joined(separator: " · "))
     }
