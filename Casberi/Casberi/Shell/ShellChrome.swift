@@ -223,6 +223,20 @@ final class ShellChrome {
     /// same tap that opened it closes it (§705's toggle, one size up).
     var roomsTray = false
 
+    /// A source picked in the rooms tray, on its way to the room's head
+    /// (§932, `RoomPickFlight`): which mark, and where it stood in window
+    /// space when the finger left it. Cleared by the flight when it lands.
+    struct RoomPick: Equatable {
+        let source: String
+        let from: CGRect
+    }
+    var roomPick: RoomPick?
+
+    /// Where the room's own name stands, in window space — the head every
+    /// room draws first since §930, written by `FeedScreen` so the pick
+    /// flight has somewhere to land.
+    var roomHeadFrame: CGRect = .zero
+
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);
     /// the shell renders it, so feedback looks the same everywhere.

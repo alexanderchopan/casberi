@@ -5832,6 +5832,15 @@ struct FeedScreen: View {
             // the gear's column, which owns the trailing corner (§752).
             DSScreenHead(title: Text(roomName))
                 .padding(.trailing, DSRoomChassis.gearColumn)
+                // Where the name stands, for the tray's pick flight to land
+                // (§932). Written from the leaf that draws it, never read here.
+                .background {
+                    GeometryReader { g in
+                        Color.clear
+                            .onAppear { chrome.roomHeadFrame = g.frame(in: .global) }
+                            .onChange(of: g.frame(in: .global)) { _, f in chrome.roomHeadFrame = f }
+                    }
+                }
                 .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                      bottom: 0, trailing: DSRoomChassis.inset))
                 .listRowBackground(Color.clear)

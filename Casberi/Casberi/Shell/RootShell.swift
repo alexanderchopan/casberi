@@ -2333,6 +2333,15 @@ struct RootShell: View {
                 }
                 .zIndex(2)
             }
+            // A source picked in the rooms tray, flying to the room's head
+            // (§932) — the same seat in the stack as the capture flight, for
+            // the same reason: over everything, hit by nothing.
+            if let pick = chrome.roomPick {
+                RoomPickFlight(pick: pick, target: chrome.roomHeadFrame) {
+                    chrome.roomPick = nil
+                }
+                .zIndex(2)
+            }
 
             // The agent's bar (docs/agent-brief.md ruling 6) — hosted HERE,
             // not on MainSurface, so it rides every screen this app can push
