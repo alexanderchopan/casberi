@@ -774,8 +774,6 @@ extension View {
     /// over the well's top; the words step down by `DSDemoMark.leadClearance`
     /// — which `DSRoomChassis.leadBox` has already taken out of the content's
     /// height — so the well keeps `leadHeight` and nothing under it moves.
-    /// Under the All lead the pill stands down (§864), so the clearance moves
-    /// to the foot: same height, words at the top.
     func dsRoomHeadBlock() -> some View {
         modifier(DSRoomHeadWell())
     }
@@ -797,14 +795,11 @@ extension View {
 
 /// `dsRoomHeadBlock`'s body, as a modifier so it can read where it stands.
 struct DSRoomHeadWell: ViewModifier {
-    @Environment(\.dsDemoMarkUnderLead) private var underLead
-
     func body(content: Content) -> some View {
-        let clearance = DSDemoMark.leadClearance
         content
             .padding(.horizontal, DS.Space.s3)
-            .padding(.top, DS.Space.s4 + (underLead ? 0 : clearance))
-            .padding(.bottom, DS.Space.s4 + (underLead ? clearance : 0))
+            .padding(.top, DS.Space.s4 + DSDemoMark.leadClearance)
+            .padding(.bottom, DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .dsWell(cornerRadius: DS.Radius.widget)
     }

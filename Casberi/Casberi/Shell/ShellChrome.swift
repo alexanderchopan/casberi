@@ -826,10 +826,6 @@ final class ShellChrome {
     /// eye and touches no model at all: the delete still happens once, in one
     /// transaction, after the content is already invisible.
     var demoLeaving = false
-    /// True while the All feed's `DemoLead` is on screen — the capsule stands
-    /// down for exactly that long (see `DemoBanner`). Written only by the
-    /// lead row's appear/disappear, so nothing reads the scroll.
-    var demoLeadVisible = false
     /// LIVE overscroll (points past the top) while a pull is in progress —
     /// written by FeedScreen's own scroll observer, read by the avatar door,
     /// which WINDS UP proportionally before the release spin fires

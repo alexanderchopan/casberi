@@ -5824,13 +5824,6 @@ struct FeedScreen: View {
         // `things` (its heads are computed in `.task(id: headKey)` and memoised,
         // PERF 2026-08-21), which is what makes one binding enough.
         let rows = visible
-        // The demo says so at the head of the All feed (see `DemoLead`); it
-        // takes the top anchor with it, so "back to top" lands on the words.
-        // `DemoCapture` for the same reason the capsule reads it: a marketing
-        // still is not a real user's screen, and a door that removes one of
-        // the two markings removes neither (prd §864).
-        let demoLead = DemoMode.isActive && !DemoCapture.hidesMarking
-            && source == "All" && filter.tag == "All"
         return List {
             // THE ROOM NAMES ITSELF (prd §930). Until the strip folded into
             // the rooms tray the dock's lit tile said which room this was;
@@ -5856,19 +5849,8 @@ struct FeedScreen: View {
                                      bottom: 0, trailing: DSRoomChassis.inset))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-            if demoLead {
-                DemoLead()
-                    .id(Self.roomTopAnchor)
-                    .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.leadInset,
-                                         bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.leadInset))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
             roomHead
-                .id(demoLead ? "roomHead.underDemoLead" : Self.roomTopAnchor)
-                // Under the lead the pill stands down, so the well's
-                // clearance for it moves to the foot (prd §919).
-                .environment(\.dsDemoMarkUnderLead, demoLead)
+                .id(Self.roomTopAnchor)
             roomBody(rows)
 
             // Room for the floating bar.

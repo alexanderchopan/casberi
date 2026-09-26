@@ -2519,6 +2519,7 @@ struct RootShell: View {
                 // and `agentSeat` read so the bar cannot drift onto the glass
                 // bar's own edge again.
                 .padding(.leading, DSDock.clusterInset)
+                .modifier(DSDock.SeatCentre())
                 .padding(.trailing, DS.Space.s4)
                 // Aligned to the chip row's CENTRE, not to the bottom edge
                 // (§591 amendment) — see `DSDock.agentBottomInset` for why a
@@ -2544,7 +2545,7 @@ struct RootShell: View {
             // page moves for it; the lead's well absorbs it (`DSDemoMark`) and
             // a pushed screen reserves it (`dsDemoMarkClearance`).
             // `rootPresented` for the cover's reason, plus the route and the
-            // filter the pill reads to stand down under the All lead.
+            // filter the exit resets.
             // `DemoCapture` is the one capture door (§864).
             if demoActive && !DemoCapture.hidesMarking {
                 rootPresented(DemoBanner())

@@ -644,19 +644,17 @@ step "Dead-closure audit"
 "$ROOT/scripts/dead-closure-audit.py" || fail "a control calls a closure nothing supplies — see the output above"
 print -P "%F{green}✓ dead-closure audit%f"
 
-# THE DEMO SAYS SO WHERE PEOPLE READ, AND THE TWO MARKINGS NEVER COLLIDE
-# (prd §864). A real person landed in the demo without realising, after the
-# capsule had been restyled four times — it was in the wrong place, not the
-# wrong colour. So the cover spells the word in falling letter tiles and the
-# All feed leads with `DemoLead`, while the capsule marks every other screen.
-# Four ways that quietly stops being true, none of which breaks a build, moves
-# a pixel on a screen the sweep opens, or shows in a demo census: a second
-# copy of the exit that drops a step of the leave; the two markings shown at
-# once, or NEITHER shown — the flag must come from `onScrollVisibilityChange`,
-# because a `List`'s `onAppear` tracks cell recycling and lags the viewport by
-# most of a screen; a hardcoded `"demo"` spelling Latin letters across a
-# translated cover; and `-hideDemoBanner` reaching only one of the two, which
-# puts the lead into every App Store still of the All feed.
+# THE DEMO IS MARKED ONCE, CONTINUOUSLY (prd §864, §919, §946). A real person
+# landed in the demo without realising; the cover now spells the word in
+# falling letter tiles and a blue pill carrying the fact and the Exit floats
+# over every demo screen, All included (the All feed's own `DemoLead` was the
+# demo said twice, and is deleted). Four ways that quietly stops being true,
+# none of which breaks a build, moves a pixel on a screen the sweep opens, or
+# shows in a demo census: a second copy of the exit that drops a step of the
+# leave; a pill that stands down for anything (a screen with NO marking), or
+# the deleted lead coming back; a hardcoded `"demo"` spelling Latin letters
+# across a translated cover; and a second spelling of the `-hideDemoBanner`
+# capture door.
 step "Demo-marking audit"
 python3 "$ROOT/scripts/demo-marking-audit.py" --self-test >/dev/null \
   || fail "the demo-marking audit's own self-test failed — the check is broken, not the code"

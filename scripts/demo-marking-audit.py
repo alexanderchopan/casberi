@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
-"""Demo marking audit (prd §864, 2026-09-20).
+"""Demo marking audit (prd §864, §919, §946).
 
 WHY THIS EXISTS. Reported by the user: *"i had a user land on demo and not
 realize"* — after the capsule had been restyled four times (§662f blue with a
-pulse, §679 amber glass, §783 a flat dot, §813 new words). The marking was
-never the wrong colour; it was in the wrong place. A 34pt capsule of 12pt type
-on the top edge is read as status, like a recording indicator, and people look
-at content.
-
-So §864 says the demo TWICE, in two registers: the first-launch cover spells
-the word in four falling letter tiles, and the All feed leads with
-`DemoLead` — a statement, a line, and the way out as a row. The capsule stays
-for every other screen.
+pulse, §679 amber glass, §783 a flat dot, §813 new words). §864 answered with
+a second marking at the head of the All feed (`DemoLead`) and a capsule that
+stood down under it; §919 made the capsule a big blue pill carrying the same
+fact and the same Exit, and §946 deleted the lead as the demo said twice
+(user: "we also have this, so why not just use this"). The first-launch cover
+still spells the word in four falling letter tiles.
 
 That shape has four ways to quietly stop being true, and none of them breaks
 a build, moves a pixel on the screen a screenshot sweep opens, or shows up in
@@ -20,28 +17,17 @@ a demo census. This file is those four.
 ONE · **THE WAY OUT IS ONE IMPLEMENTATION.** `DemoMode.exit` is reached from
 exactly one place outside `DemoMode` itself, `DemoLeave.run`. The leave is not
 one call: it waits for the fade, deletes in one transaction, resets the source
-and tag, lands on Accounts (§863) and clears `demoLeadVisible`. A second copy
-written at a new door would look right and drop one of those — and the one it
-would drop is the one with no visible symptom until later (a `demoLeadVisible`
-left true hides the capsule for the whole of the NEXT demo).
+and tag and lands on Accounts (§863). A second copy written at a new door
+would look right and drop one of those.
 
-TWO · **THE TWO MARKINGS ARE MUTUALLY EXCLUSIVE, AND BOTH DIRECTIONS HOLD.**
-The user's words on seeing them together: *"why would we need to say demo
-twice here"*. The capsule gates its opacity on the lead's flag, the flag is
-raised from the VIEWPORT, and it is cleared in two places (the lead leaving,
-and the leave itself).
-
-**The viewport, not the cell.** The flag must be driven by
-`onScrollVisibilityChange`, never by `onAppear`: in a `List` those lifecycle
-callbacks track cell recycling, which lags the viewport by most of a screen.
-The first cut used `onAppear`, so scrolling the lead just out of sight left
-the flag true and the capsule still standing down — a fake crown and somebody
-else's rooms with NO marking anywhere, failing exactly where §864 was meant to
-fix it. Found by review, not by running it.
-
-Dropping a CLEAR is the other dangerous half — the capsule is then gone from
-every room, and §83's price for the demo existing is a marking that is
-CONTINUOUS.
+TWO · **ONE MARKING, AND IT NEVER STANDS DOWN.** §83's price for the demo is a
+marking that is CONTINUOUS. While the lead existed the pill hid under it, and
+the flag that hid it had to come from the viewport — `onAppear` in a `List`
+tracks cell recycling, so the first cut left the demo with NO marking for most
+of a screen. With the lead deleted there is nothing for the pill to yield to,
+so its `.opacity(` may read only its own entrance (`settled`), and neither
+`DemoLead` nor its flag (`demoLeadVisible`) may come back into the model
+(§723: a feature deleted from the surface is deleted from the model).
 
 THREE · **THE COVER'S WORD COMES FROM THE CATALOG.** `IntroCover.demoLetters`
 derives its letters from `String(localized: "Demo")`, so the Japanese cover
@@ -49,22 +35,20 @@ drops デ and モ. A hardcoded `"demo"` compiles, passes every other check, and
 spells Latin letters across a cover whose every other word is translated — on
 the one screen where the word is the whole message.
 
-FOUR · **BOTH MARKINGS ANSWER THE CAPTURE DOOR.** `-hideDemoBanner YES`
-(2026-09-08) takes the demo's marking out of an App Store still or preview,
-because §83's price is owed to a real user and not to a capture. §864 put a
-SECOND marking on screen, and a door that removes one of two removes neither:
-the first cut gated only the capsule, so every marketing shot of the All feed
-— the primary one — carried the lead with no flag that could remove it, and a
-preview video cannot be painted frame by frame. `DemoCapture.hidesMarking` is
-the one definition and both sites read it. Found by review, not by running it.
+FOUR · **THE MARKING ANSWERS THE CAPTURE DOOR, THROUGH ONE DEFINITION.**
+`-hideDemoBanner YES` (2026-09-08) takes the demo's marking out of an App Store
+still or preview, because §83's price is owed to a real user and not to a
+capture. `DemoCapture.hidesMarking` is the one definition; the shell reads it
+to mount the pill, and nothing else reads the raw key — two spellings of one
+DEBUG door drift apart, and the half that drifts is the half nobody
+screenshots.
 
 WHAT THIS DELIBERATELY DOES NOT CHECK, so it stays honest about its reach:
 
-  · That the lead is DRAWN, or drawn only in All (check four reads only that
-    the capture door reaches it). `FeedScreen` mounts it
-    behind a `DemoMode.isActive` gate the demo census walks; a text check
-    asserting the call site would be asserting the diff, which is what
-    `guards-assert-what-you-built` says not to spend a harness on.
+  · That the pill is DRAWN. `RootShell` mounts it behind a `DemoMode`
+    gate the demo census walks; a text check asserting the call site would
+    be asserting the diff, which is what `guards-assert-what-you-built` says
+    not to spend a harness on.
   · The letters' timing against `autoLift`. Both are constants in one file
     and the fall is CoreAnimation — nothing here can measure a frame, and
     `measure-motion-by-recording-frames` is the rule for that question.
@@ -87,7 +71,8 @@ SURFACE = "Casberi/Casberi/Shell/RootShell.swift"
 FEED = "Casberi/Casberi/Screens/FeedScreen.swift"
 SOURCE_DIRS = ["Casberi/Casberi", "Casberi/Shared", "Casberi/CasberiWidgets"]
 
-FLAG = "demoLeadVisible"
+# The deleted lead and its flag (§946) — neither may come back.
+GONE = ("demoLeadVisible", "struct DemoLead")
 
 
 def strip_comments(text: str) -> str:
@@ -180,42 +165,38 @@ def audit(root: Path):
             "the demo's exit is not one implementation — `DemoMode.exit(` is "
             f"called from {where}, and it belongs to `DemoLeave.run` in "
             f"{BANNER} alone. A second copy drops a step of the leave "
-            "(the fade, the filter reset, landing on Accounts, clearing "
-            f"`{FLAG}`), and the last of those has no symptom until the "
-            "NEXT demo runs with no capsule."
+            "(the fade, the one-transaction delete, the filter reset, landing "
+            "on Accounts)."
         )
 
     banner = read(BANNER)
 
-    # TWO — the two markings are mutually exclusive, both directions.
-    if not re.search(r"\.opacity\([^\n]*\b\w*[Yy]ields\b|\.opacity\([^\n]*" + FLAG, banner):
+    # TWO — one marking, and it never stands down.
+    for m in re.finditer(r"\.opacity\(([^\n]*)\)", banner):
+        if m.group(1).strip() != "settled ? 1 : 0":
+            findings.append(
+                f"the pill's opacity reads more than its entrance "
+                f"(`.opacity({m.group(1).strip()})` in {BANNER}). There is no "
+                "second marking for it to yield to since §946, so anything it "
+                "stands down for is a screen of the demo with NO marking — "
+                "the continuous marking §83 charges the demo for."
+            )
+    if re.search(r"\.allowsHitTesting\(|\.accessibilityHidden\(\s*(?!true)", banner):
         findings.append(
-            f"the capsule does not stand down for the lead — nothing in "
-            f"{BANNER} gates its `.opacity(` on `{FLAG}`. The two say the "
-            'same thing in one frame (user: "why would we need to say demo '
-            'twice here").'
+            f"the pill can stop answering a tap or VoiceOver ({BANNER}) — "
+            "the marking carries the only way out (§946)."
         )
-    raised = re.search(
-        r"onScrollVisibilityChange\s*\([^)]*\)\s*\{[^}]*" + FLAG + r"\s*=", banner)
-    if raised is None:
-        findings.append(
-            f"`{FLAG}` is not driven by `onScrollVisibilityChange`. In a "
-            "`List`, `onAppear`/`onDisappear` track cell RECYCLING, which "
-            "lags the viewport by most of a screen: the lead scrolls out of "
-            "sight, the flag stays true, and the capsule stays down — the "
-            "demo then shows a fake crown with no marking anywhere, which is "
-            "the failure §864 exists to fix."
-        )
-    clears = len(re.findall(FLAG + r"\s*=\s*false", banner))
-    if clears < 2:
-        findings.append(
-            f"`{FLAG}` is cleared in fewer than two places ({clears}). It is "
-            "cleared on the lead's disappear AND in `DemoLeave.run`; drop "
-            "either and the capsule is missing from every room, which is "
-            "exactly the continuous marking §83 charges the demo for."
-        )
+    for path in swift_files(root):
+        body = strip_comments(path.read_text())
+        for gone in GONE:
+            if gone in body:
+                findings.append(
+                    f"`{gone}` is back in {path.relative_to(root).as_posix()}. "
+                    "The All feed's lead was deleted as the demo said twice "
+                    "(§946); a second marking needs a ruling, not a revert."
+                )
 
-    # FOUR — both markings answer the capture door.
+    # FOUR — the marking answers the capture door, through one definition.
     capture = "DemoCapture.hidesMarking"
     declared = re.search(r"enum\s+DemoCapture\b[^\n]*\{", banner) and "hidesMarking" in banner
     if not declared:
@@ -227,18 +208,18 @@ def audit(root: Path):
     # The raw key may be read ONLY through that one door.
     for rel in (SURFACE, FEED):
         body = read(rel)
-        if capture not in body:
+        if rel == SURFACE and capture not in body:
             findings.append(
                 f"{rel} does not read `{capture}`, so `-hideDemoBanner YES` "
-                "leaves one of the demo's two markings in an App Store still "
-                "or preview — and a preview video cannot be painted out by "
-                "hand (prd §864)."
+                "leaves the demo's pill in an App Store still or preview — "
+                "and a preview video cannot be painted out by hand (§864)."
             )
         if '"hideDemoBanner"' in body:
             findings.append(
                 f"{rel} reads the `hideDemoBanner` key directly instead of "
                 f"through `{capture}`. One door, one definition — a second "
-                "copy is what put the lead into every marketing still."
+                "copy drifts, and the half that drifts is the half nobody "
+                "screenshots."
             )
 
     # THREE — the cover's word comes from the catalog.
@@ -267,12 +248,9 @@ FIXTURE_BANNER = '''
 import SwiftUI
 
 struct DemoBanner: View {
-    private var yields: Bool {
-        chrome.demoLeadVisible && filter.source == "All"
-    }
     var body: some View {
-        Button { explaining = true } label: { Text("Demo") }
-        .opacity(settled && !yields ? 1 : 0)
+        Button { leave() } label: { Text("Demo") }
+        .opacity(settled ? 1 : 0)
     }
     private func leave() {
         DemoLeave.run(context: modelContext, store: store, route: route,
@@ -291,18 +269,7 @@ enum DemoLeave {
                     filter: FeedFilter, chrome: ShellChrome) {
         Task { @MainActor in
             DemoMode.exit(context: context, store: store)
-            chrome.demoLeadVisible = false
         }
-    }
-}
-
-struct DemoLead: View {
-    var body: some View {
-        Text("This is a demo.")
-            .onScrollVisibilityChange(threshold: 0.01) { visible in
-                chrome.demoLeadVisible = visible
-            }
-            .onDisappear { chrome.demoLeadVisible = false }
     }
 }
 '''
@@ -329,8 +296,7 @@ struct RootShell: View {
 FIXTURE_FEED = '''
 struct FeedScreen: View {
     var body: some View {
-        let demoLead = DemoMode.isActive && !DemoCapture.hidesMarking
-        return List { if demoLead { DemoLead() } }
+        List { roomHead }
     }
 }
 '''
@@ -386,38 +352,33 @@ def self_test() -> int:
             "Text(DemoMode.exit(context: c, store: s))",
             "a second caller of DemoMode.exit was not reported",
         )
-        # 2 · the capsule stops reading the lead's flag.
+        # 2 · the pill learns to stand down again.
         mutate(
             BANNER,
-            ".opacity(settled && !yields ? 1 : 0)",
             ".opacity(settled ? 1 : 0)",
-            "a capsule that never stands down was not reported",
+            ".opacity(settled && !yields ? 1 : 0)",
+            "a pill that stands down was not reported",
         )
-        # 3 · the flag goes back to the lifecycle callback, which in a List
-        #     lags the viewport by most of a screen.
-        mutate(
-            BANNER,
-            """.onScrollVisibilityChange(threshold: 0.01) { visible in
-                chrome.demoLeadVisible = visible
-            }""",
-            ".onAppear { chrome.demoLeadVisible = true }",
-            "a flag driven by cell recycling rather than the viewport was not reported",
-        )
-        # 4 · the leave stops clearing it — the capsule is then missing from
-        #     every room of the NEXT demo, with nothing on screen to say so.
-        mutate(
-            BANNER,
-            "            chrome.demoLeadVisible = false\n        }\n    }\n}",
-            "        }\n    }\n}",
-            "a leave that never clears the flag was not reported",
-        )
-        # 5 · the feed's lead stops answering the capture door — every
-        #     marketing still of the All feed then carries it.
+        # 3 · the lead comes back.
         mutate(
             FEED,
-            "DemoMode.isActive && !DemoCapture.hidesMarking",
-            "DemoMode.isActive",
-            "a lead that ignores -hideDemoBanner was not reported",
+            "List { roomHead }",
+            "List { DemoLead(); roomHead }\n}\nstruct DemoLead: View {",
+            "a revived DemoLead was not reported",
+        )
+        # 4 · its flag comes back into the model.
+        mutate(
+            "Casberi/Casberi/Screens/SomeScreen.swift",
+            'Text("hi")',
+            'Text("hi").onDisappear { chrome.demoLeadVisible = false }',
+            "a revived demoLeadVisible was not reported",
+        )
+        # 5 · the pill stops answering a tap.
+        mutate(
+            BANNER,
+            ".opacity(settled ? 1 : 0)",
+            ".opacity(settled ? 1 : 0)\n        .allowsHitTesting(ready)",
+            "a pill that can refuse its tap was not reported",
         )
         # 6 · the shell grows its own copy of the door instead of sharing one.
         mutate(
@@ -449,7 +410,7 @@ def main() -> int:
     if not findings:
         print("demo marking audit: ok (4 checks)")
         return 0
-    print("The demo's marking has drifted (prd §864):\n")
+    print("The demo's marking has drifted (prd §864, §946):\n")
     for f in findings:
         print(f"  · {f}\n")
     return 1

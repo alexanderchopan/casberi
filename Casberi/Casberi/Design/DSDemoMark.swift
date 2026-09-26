@@ -20,8 +20,7 @@ import SwiftUI
 ///
 /// **Blue, not glass (user, with four fills mocked on the real rooms).** Glass
 /// read as status and a real person walked past it (§864's own diagnosis).
-/// Blue is the app's word for "tap me" — the All lead's Exit row already
-/// wears it — and it holds on both themes, where a white pill vanishes on
+/// Blue is the app's word for "tap me", and it holds on both themes, where a white pill vanishes on
 /// light. §746's two pills (`Chip`, `DSStamp`) gain a third, and it belongs
 /// to the floating layer: a marking that carries its own way out.
 @MainActor
@@ -74,20 +73,6 @@ struct DSDemoPill<Label: View>: View {
         }
         .buttonStyle(PressSpring())
         .dsHover()
-    }
-}
-
-private struct DSDemoMarkUnderLeadKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-extension EnvironmentValues {
-    /// True for the room head drawn UNDER `DemoLead` in All: the pill stands
-    /// down there (§864), so the well's clearance moves to its foot — the
-    /// well keeps `leadHeight` and the words keep the top.
-    var dsDemoMarkUnderLead: Bool {
-        get { self[DSDemoMarkUnderLeadKey.self] }
-        set { self[DSDemoMarkUnderLeadKey.self] = newValue }
     }
 }
 
