@@ -1163,7 +1163,7 @@ private struct InsightCard<Content: View>: View {
     var fillsLead: Bool = true
     @ViewBuilder var content: Content
     /// The box inside the card's vertical padding (prd §760).
-    static var inner: CGFloat { DSRoomChassis.leadHeight - 2 * DS.Space.s4 }
+    static var inner: CGFloat { DSRoomChassis.leadBox }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: DS.Space.s2) { content }
@@ -1346,8 +1346,8 @@ struct OnThisDayHero: View {
             }
             // The lead's one height (prd §760), inside the card's padding.
             .frame(maxWidth: .infinity,
-                   minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
-                   maxHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
+                   minHeight: DSRoomChassis.leadBox,
+                   maxHeight: DSRoomChassis.leadBox,
                    alignment: .topLeading)
             .clipped()
             .dsRoomHeadBlock()
@@ -2954,7 +2954,17 @@ private struct GenTagMap: View {
     /// different height, and the `else` is what shipped.
     @ViewBuilder
     private var board: some View {
-        if fillsRoomSlot {
+        if packs {
+            // A MARK PACKS, A WORD TILES (prd §917). Token and source cells
+            // have a mark of their own on one scale, so they are circles
+            // whose area is the share and whose mark is the label — the
+            // rank table below stays for the word maps.
+            if fillsRoomSlot {
+                pack.frame(maxHeight: .infinity)
+            } else {
+                pack.frame(height: boardHeight)
+            }
+        } else if fillsRoomSlot {
             GeometryReader { geo in
                 cells(width: geo.size.width, height: geo.size.height, animated: true)
             }
@@ -2964,6 +2974,77 @@ private struct GenTagMap: View {
                 cells(width: geo.size.width, height: boardHeight, animated: true)
             }
             .frame(height: boardHeight)
+        }
+    }
+
+    /// True where the cells carry a mark of their own on one scale: the
+    /// wallet's holdings (bundled token marks, USD) and a source map (app
+    /// icons, counts). The preview and error shapes keep the breathing
+    /// cells — a pack of nothing is nothing to breathe.
+    private var packs: Bool {
+        !preview && (iconMode == "token" || iconMode == "source")
+    }
+
+    /// The circles. A token cell's `n` is `treemapWeight`, sqrt-scaled, so
+    /// its share is n² (∝ USD, exactly as `usdShare` reads it); a source
+    /// cell's `n` is a count and is its own share.
+    private var pack: some View {
+        let items = items
+        let shares = items.map { item -> Double in
+            iconMode == "token" ? Double(item.n) * Double(item.n) : Double(item.n)
+        }
+        let total = shares.reduce(0, +)
+        let packed = zip(items, shares).map { item, share in
+            let pct = total > 0 ? Int((share / total * 100).rounded()) : 0
+            return DSCirclePackItem(id: item.tag, share: share, label: "\(item.tag), \(pct)%")
+        }
+        return DSCirclePack(items: packed, mark: { circle, diameter in
+            if iconMode == "token" {
+                // The bundled brand mark, or the monogram — never a hue
+                // invented for a token nobody drew (`AssetMark`'s own rule).
+                AssetMark(name: circle.id, size: diameter)
+                    .zoomSource(id: circle.id, in: zoomNS)
+            } else {
+                BridgeIcon(name: circle.id, size: diameter, circular: true)
+            }
+        }, action: { circle in
+            if let item = items.first(where: { $0.tag == circle.id }) { open(item) }
+        }, readout: { circle in
+            circle.label.replacingOccurrences(of: ", ", with: " · ")
+        })
+    }
+
+    /// What a tapped cell or circle does — one copy for both figures.
+    private func open(_ item: KindCountRow.Item) {
+        // A holdings cell with a route opens that token's
+        // own chart (2026-07-14); routeless (a native
+        // coin) — the whole map routes to the Wallet
+        // screen instead of a dead-end empty tag view
+        // (2026-07-10).
+        if iconMode == "token" {
+            // Carry the cell's own symbol (item.tag) into the
+            // sentinel so the quick sheet names the token from
+            // the first frame — Dexscreener only ever refines
+            // it (adds the full name), never supplies the
+            // ticker we already hold here. A symbol with a
+            // colon would break the parse, so guard it.
+            let sym = item.tag.contains(":") ? "" : item.tag
+            projectTap?(item.route.map { r in
+                sym.isEmpty ? "@token:\(r)" : "@token:\(r):\(sym)"
+            } ?? "@wallet")
+        } else if inAgentAnswer, let askRequest {
+            // Stay in the agent (ruling 8/9) rather than a
+            // no-op (§225): `genProjectTap` is nil inside
+            // the agent's answer column (a Home-board-only
+            // route), so the brief's themes map cell did
+            // nothing at all when tapped. Bare name, the
+            // same convention `readingCard`'s own "See the
+            // rest" residual link already uses for a
+            // computed topic word — whatever answers a
+            // real tag also answers a theme cluster.
+            askRequest(item.tag)
+        } else {
+            projectTap?(item.tag)
         }
     }
 
@@ -3106,36 +3187,7 @@ private struct GenTagMap: View {
                     } else {
                         Button {
                             DSHaptic.selection()
-                            // A holdings cell with a route opens that token's
-                            // own chart (2026-07-14); routeless (a native
-                            // coin) — the whole map routes to the Wallet
-                            // screen instead of a dead-end empty tag view
-                            // (2026-07-10).
-                            if iconMode == "token" {
-                                // Carry the cell's own symbol (item.tag) into the
-                                // sentinel so the quick sheet names the token from
-                                // the first frame — Dexscreener only ever refines
-                                // it (adds the full name), never supplies the
-                                // ticker we already hold here. A symbol with a
-                                // colon would break the parse, so guard it.
-                                let sym = item.tag.contains(":") ? "" : item.tag
-                                projectTap?(item.route.map { r in
-                                    sym.isEmpty ? "@token:\(r)" : "@token:\(r):\(sym)"
-                                } ?? "@wallet")
-                            } else if inAgentAnswer, let askRequest {
-                                // Stay in the agent (ruling 8/9) rather than a
-                                // no-op (§225): `genProjectTap` is nil inside
-                                // the agent's answer column (a Home-board-only
-                                // route), so the brief's themes map cell did
-                                // nothing at all when tapped. Bare name, the
-                                // same convention `readingCard`'s own "See the
-                                // rest" residual link already uses for a
-                                // computed topic word — whatever answers a
-                                // real tag also answers a theme cluster.
-                                askRequest(item.tag)
-                            } else {
-                                projectTap?(item.tag)
-                            }
+                            open(item)
                         } label: { label }
                         // The Settings tiles' own press (settle + dim) — the
                         // cells ARE tiles now, so they press like tiles
@@ -5969,34 +6021,33 @@ private struct GenNextTile: View {
 /// answer-column card doesn't need).
 private struct GenSourceMix: View {
     let el: GenEl
-    @State private var cellsShown = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// THREE cells — one big, two stacked (§194). Four (one big + three
-    /// stacked) is what the money hero's map carries, but its cells are two
-    /// bare text lines; a source cell also wears a `BridgeIcon`, and three of
-    /// those stacked need ~190pt of intrinsic height. Forced into the map's
-    /// frame they didn't compress — SwiftUI spills an over-tall child rather
-    /// than clipping it, so the cells rendered straight out through the card's
-    /// rounded edge (reported on-device 2026-07-23: "larger than the card and
-    /// doesn't look good"). Three cells is also what the approved mockup drew,
-    /// and the residual line names whatever they leave out.
     private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(2), cap: 3) }
 
-    /// A source cell's magnitude is a raw thing-count (unlike the money
-    /// hero's holdings cells, which `WalletIngest.treemapWeight` pre
-    /// sqrt-scales) — so its share of the map is linear, not squared.
-    private func share(_ item: KindCountRow.Item) -> Double {
-        let total = items.reduce(0) { $0 + $1.n }
-        guard total > 0 else { return 0 }
-        return Double(item.n) / Double(total)
-    }
-
-    /// Taller than the money hero's 84 because every cell carries an icon on
-    /// top of its two text lines. Sized so two stacked cells fit with real
-    /// headroom rather than to-the-pixel — a to-the-pixel fit is one Dynamic
-    /// Type step away from the overflow this replaced.
+    /// 96, kept from the cell map it replaced: three marks pack into it with
+    /// the biggest at 49pt and the floor holding the other two at 44.
     private var mapHeight: CGFloat { 96 }
+
+    /// A MARK PACKS (prd §917): three app icons sized by how much each
+    /// landed. The "N things" line the cell carried is gone with the cell —
+    /// the area says it, and the subline beneath keeps the sentence.
+    private var pack: some View {
+        let items = items
+        let total = items.reduce(0) { $0 + $1.n }
+        let packed = items.map { item in
+            let pct = total > 0 ? Int((Double(item.n) / Double(total) * 100).rounded()) : 0
+            return DSCirclePackItem(id: item.tag, share: Double(item.n),
+                                    label: "\(item.tag), \(pct)%")
+        }
+        return DSCirclePack(items: packed, mark: { circle, diameter in
+            BridgeIcon(name: circle.id, size: diameter, circular: true)
+        }, readout: { circle in
+            items.first(where: { $0.tag == circle.id }).map { item in
+                item.n == 1 ? String(localized: "\(item.tag) · 1 thing")
+                            : String(localized: "\(item.tag) · \(item.n) things")
+            }
+        })
+    }
 
     var body: some View {
         let items = items
@@ -6008,15 +6059,8 @@ private struct GenSourceMix: View {
                             .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                     }
-                    MiniTreemap(items: items) { item, index in cell(item, index: index) }
+                    pack
                         .frame(height: mapHeight)
-                        // The backstop, not the fix (§194): the cell count and
-                        // density above are what make this fit. But a map that
-                        // somehow outgrows its frame again — an accessibility
-                        // type size, a longer localized "N things" — must fail
-                        // by cropping inside the card, never by drawing through
-                        // its edge.
-                        .clipped()
                     if !el.str(1).isEmpty {
                         Text(el.str(1))
                             .dsText(.label12)
@@ -6027,38 +6071,10 @@ private struct GenSourceMix: View {
                 .padding(DS.Space.s4)
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
-                // A one-shot @State set — SwiftUI never replays a stale
-                // value, so there's nothing here for a guard to protect
-                // (unlike `GenMoneyHero.fireEntrance`'s multi-stage Task).
-                .onAppear { cellsShown = true }
             }
         }
     }
 
-    /// The icon rides INLINE with the name (§194) — stacked on its own line it
-    /// made every cell a three-row block, which is what overflowed the map. The
-    /// same move `GenTagMap.cellLabel` already makes for its short token cells,
-    /// for the same reason: at this height a cell affords two rows, not three.
-    private func cell(_ item: KindCountRow.Item, index: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: DS.Space.s1) {
-                BridgeIcon(name: item.tag, size: DS.Mark.inline)
-                Text(item.tag)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            Text(item.n == 1 ? String(localized: "1 thing") : String(localized: "\(item.n) things"))
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .miniTreemapCellChrome(index: index, cellsShown: cellsShown, reduceMotion: reduceMotion) {
-            DS.ink(magnitude: share(item))
-        }
-    }
 }
 
 // MARK: - Kind-count refs

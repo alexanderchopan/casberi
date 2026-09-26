@@ -2553,6 +2553,12 @@ harness "Receipts-insight pure-logic self-test" "receipts-insight self-test" "sc
 # `Casberi/`, which the skip cache cannot key — see the script's stated ceiling.
 harness "Unit-treemap table self-test" "unit-treemap self-test" "scripts/unit-treemap-selftest.sh" "the unit-treemap table self-test failed — run scripts/unit-treemap-selftest.sh"
 
+# The circle pack under the wallet's holdings map and the brief's source mix
+# (prd §917): area is the share, a 44pt floor instead of a fold, no overlap,
+# input order kept for §501's travel. Compiles the shipped Foundation-only
+# geometry with swiftc, so it reads the real code.
+harness "Circle-pack self-test" "circle-pack self-test" "scripts/circle-pack-selftest.sh" "the circle-pack self-test failed — run scripts/circle-pack-selftest.sh"
+
 # The 2026-08-21 perf pass's two invariants (see the script's own header). Both
 # removed a real cost from a path a person feels, and both are correct only
 # while a condition holds that nothing else here can see: the room-head cache
