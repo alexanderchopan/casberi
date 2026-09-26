@@ -48,17 +48,6 @@ enum WalletFlowSource {
         return (nil, WalletFlow.decline(legs: split.legs, predating: split.predating))
     }
 
-    /// Home's rows, or the reason there are none — exactly one is non-nil
-    /// (prd §727). `verdict` stays for the brief's diagram and keeps its floor.
-    static func home(from things: [Thing],
-                     since: Date?) -> (home: WalletFlow.Home?, decline: WalletFlow.Decline?) {
-        let split = partition(from: things, since: since)
-        if let home = WalletFlow.home(legs: split.legs, predating: split.predating) {
-            return (home, nil)
-        }
-        return (nil, WalletFlow.decline(legs: split.legs, predating: split.predating))
-    }
-
     /// The window's legs, split from the ones that can never carry a price.
     ///
     /// The split is what makes `minPricedShare` mean "how well is pricing

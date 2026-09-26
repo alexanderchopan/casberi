@@ -614,7 +614,6 @@ extension PrivacyDevnetRoomCard {
     /// wallet-family room's Activity carries works here too.
     @ViewBuilder var activityChart: some View {
         RoomActivityChart(dates: moves.compactMap(\.date),
-                          caption: scopeCaption,
                           box: DSRoomChassis.figureSlot)
     }
 

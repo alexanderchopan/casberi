@@ -27,10 +27,6 @@ struct RoomActivityChart: View {
     /// Every transaction's own timestamp, in any order. A move whose date could
     /// not be read is simply not passed — it is not a transaction at time zero.
     var dates: [Date]
-    /// The scope: one address's name, or how many you follow. Same line as the
-    /// crown's, so the two tabs identify themselves identically.
-    let caption: String
-    var captionAddress: String? = nil
     /// How much room the room has. The chrome above and below the bars is this
     /// view's business — §684's own ruling, which is why no caller passes a
     /// height.
@@ -59,16 +55,6 @@ struct RoomActivityChart: View {
         dates.sorted().map { WalletStore.ValueSample(at: $0, usd: 0) }
     }
 
-    /// **THE CHIPS ARE PART OF THE CHROME WHEN THEY DRAW (prd §688, applied
-    /// here 2026-09-14).** This control draws `DSRangeChips` under its bars and
-    /// budgeted `crownChrome` alone, which is the chrome measured before those
-    /// chips existed — so on any record offering more than one window the bars
-    /// took the whole box and the track went out through `DSRoomSlot`'s clip,
-    /// exactly as the Wallet crown did one tab over.
-    private func chartHeight(chips: Bool) -> CGFloat {
-        DSRoomChassis.crownChart(box: box, chips: chips)
-    }
-
     /// **A PRESSED BAR (prd §921).** The bucket under the finger, while it is
     /// held — Health's gesture: the headline becomes that bucket's count and
     /// the line its days. The crown's own `ChartScrubSurface` carries the
@@ -87,12 +73,13 @@ struct RoomActivityChart: View {
         let active = offered.contains(range) ? range : WalletRange.remembered(offered: offered)
         let inWindow = active.clip(all).map(\.at)
         let buckets = Self.buckets(dates: inWindow, range: active)
-        let height = chartHeight(chips: offered.count > 1) - Self.axisRow - DS.Space.s1
         let held = pressed.flatMap { buckets.indices.contains($0) ? $0 : nil }
         VStack(alignment: .leading, spacing: DS.Space.s1) {
+            // **ONE NUMBER, ONE NOUN (prd §942).** At rest the caption is what
+            // is counted; the window is said once, on the last line, and the
+            // scope by the account menu. A held bar still says its days.
             reading(count: held.map { buckets[$0] } ?? inWindow.count,
-                    when: held.map { Self.bucketDays(index: $0, dates: inWindow, range: active) }
-                        ?? active.windowWord(since: inWindow.min()))
+                    when: held.map { Self.bucketDays(index: $0, dates: inWindow, range: active) } ?? "")
             if buckets.contains(where: { $0 > 0 }) {
                 // At rest the lit bar is the NEWEST BUCKET THAT HOLDS
                 // ANYTHING — the last time something happened — because an
@@ -100,7 +87,10 @@ struct RoomActivityChart: View {
                 // every bar quiet: seen on the Wallet room's first build, a
                 // whole chart one notch dim with no reason on screen.
                 ActivityBars(counts: buckets, lit: held ?? buckets.lastIndex { $0 > 0 })
-                    .frame(height: height)
+                    // **TO THE FLOOR (prd §942).** The bars take whatever the
+                    // box leaves after the reading, the axis and the window
+                    // line — no budgeted constant, so no band of air under them.
+                    .frame(maxHeight: .infinity)
                     .overlay {
                         GeometryReader { geo in
                             ChartScrubSurface(plot: CGRect(origin: .zero, size: geo.size),
@@ -114,7 +104,7 @@ struct RoomActivityChart: View {
                 Text("Nothing in this window.")
                     .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
-                    .frame(height: height, alignment: .top)
+                    .frame(maxHeight: .infinity, alignment: .top)
             }
             HStack {
                 Text(Self.firstDay(dates: inWindow, range: active))
@@ -124,12 +114,14 @@ struct RoomActivityChart: View {
             .dsText(.label12)
             .foregroundStyle(DS.textTertiary)
             .frame(height: Self.axisRow)
-            DSRangeChips(ranges: offered, range: active) { picked in
+            DSRangeChips(ranges: offered, range: active, slim: true) { picked in
                 range = picked
                 picked.remember()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // The box is the caller's, exactly: the bars flex inside it.
+        .frame(maxWidth: .infinity, alignment: .top)
+        .frame(height: box, alignment: .top)
     }
 
     /// The reading — caption, count, and one line under it — bare or inside a
@@ -150,7 +142,7 @@ struct RoomActivityChart: View {
         let label = countLabel(count)
         let noun = label.hasPrefix(String(count) + " ") ? String(label.dropFirst(String(count).count + 1)) : label
         let block = DSFigureReading(number: String(count),
-                                    caption: [noun, when, caption].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    caption: [noun, when].filter { !$0.isEmpty }.joined(separator: " · "))
         if let onOpen {
             Button(action: { DSHaptic.selection(); onOpen() }) { block }
                 .buttonStyle(.plain)

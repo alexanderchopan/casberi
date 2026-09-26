@@ -235,7 +235,6 @@ struct FramesRoomFigure: View {
     /// see the note above `newestHash` for why nothing else wanted them.
     @ViewBuilder private var activityChart: some View {
         RoomActivityChart(dates: moves.compactMap(\.timestamp),
-                          caption: crownCaption,
                           box: DSRoomChassis.figureSlot)
     }
 

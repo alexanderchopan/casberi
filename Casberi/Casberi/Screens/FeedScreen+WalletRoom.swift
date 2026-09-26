@@ -44,14 +44,8 @@ extension FeedScreen {
     }
 
     @ViewBuilder var walletActivitySection: some View {
-        let caption = selectedWallet.map {
-            WalletScopeRail.caption(for: $0, in: wallet.addresses).name
-        } ?? (wallet.addresses.count == 1
-              ? String(localized: "1 wallet")
-              : String(localized: "\(String(wallet.addresses.count)) wallets"))
         Section {
             RoomActivityChart(dates: visible.map(\.capturedAt),
-                              caption: caption,
                               box: DSRoomChassis.visualSlot)
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.contentGap,
@@ -199,8 +193,7 @@ extension FeedScreen {
         // this slot is already filled there rather than empty.
         case .home:        EmptyView()
         // **THE EMPTY STATE IS IN THE SLOT (prd §611, §610's ruling carried
-        // here).** Activity keeps `WalletFlowEmptyFigure`, which says which
-        // of three things is true of the window; the five standing scopes
+        // here).** The five standing scopes
         // had nothing at all, so a chip onto Positions on a wallet with no
         // positions opened 258 blank points.
         case _ where walletScopeIsEmpty(section):
@@ -857,41 +850,6 @@ extension FeedScreen {
     /// gain. It follows the balance card's own window, so the two can never
     /// describe different periods on one screen.
     ///
-    /// Nothing renders without something to list — `WalletFlow.home` declines
-    /// only when no move in the window carried a price AND none came in as a
-    /// token (prd §727). The brief keeps `WalletFlow.band` and its floor.
-    ///
-    /// **A DECLINE IS DRAWN, NOT LEFT AS AIR (2026-09-03, prd §589).** The
-    /// slot is fixed (§483), so a nil band was a fixed box of nothing over a
-    /// stream full of moves — reported as "the activity chart isn't showing",
-    /// with no way from the screen to tell a quiet window from a broken price
-    /// read. `WalletFlowEmptyFigure` names the cause off the same ladder the
-    /// probe reads, the vibenet room's `activityEmptyFigure` rule one venue
-    /// over.
-    @ViewBuilder
-    var walletFlowSection: some View {
-        let verdict = WalletFlowSource.home(from: visible, since: flowWindowStart)
-        if let home = verdict.home {
-            // **ROWS, NOT THE BAND (prd §692, user: "i don't like the sankey on
-            // the home list area it looks weird to have a chart there now that
-            // i see it").** Same `Band`, same window, same numbers — the list
-            // half of a room draws a list. `WalletFlowBand` itself stays: the
-            // brief renders it through `GenRenderer`, where a diagram is the
-            // right shape for a card somebody reads once.
-            WalletFlowRows(home: home, windowLabel: balanceRange.flowLabel)
-                    .modifier(rowEntrance(1))
-        } else if let decline = verdict.decline {
-            WalletFlowEmptyFigure(decline: decline)
-                .modifier(rowEntrance(1))
-        }
-    }
-
-    /// The cutoff the flow band reads back to — nil for `.watched`, which
-    /// means the whole record.
-    var flowWindowStart: Date? {
-        balanceRange.span.map { Date.now.addingTimeInterval(-$0) }
-    }
-
     /// Whose NFT shelf this room draws (2026-08-15, prd §387) — the scoped
     /// wallet, or the sole watched one.
     ///
@@ -1261,26 +1219,6 @@ extension FeedScreen {
         return FeedLedeFace.dueLine(due)
     }
 
-    /// The wallet stream's preview rows, with routine transfers folded
-    /// (2026-07-31).
-    ///
-    /// The preview is five rows over a room whose stream mixes two very
-    /// different kinds of event: transfers, which a busy wallet produces by
-    /// the dozen and which ask nothing of anyone, and the rare rows that carry
-    /// a decision — a fresh approval, a liquidation crossing, a Privacy Pools
-    /// clear. Straight chronology lets the first kind evict the second, so on
-    /// an active wallet the one row worth acting on is behind "See all" and
-    /// the preview is five variations of "Sent 0.1 ETH".
-    ///
-    /// So a RUN of consecutive routine transfers collapses into a single
-    /// counted row, and the slots that frees go to whatever the run was
-    /// burying. Nothing is dropped or hidden: the fold states its own count,
-    /// the stream door below still totals the room unfolded, and the history
-    /// screen behind it lists every row as it always did.
-    ///
-    /// Only a run of `walletFoldMin`+ folds — collapsing two rows into a row
-    /// that says "2 transfers" saves nothing and costs the two titles.
-    static let walletFoldMin = 3
 
     /// The newest few transactions, drawn INSIDE the balance card
     /// (2026-08-18, user ruling: "the real answer is the user will want to see
@@ -1372,68 +1310,14 @@ extension FeedScreen {
         return String(localized: "Recent")
     }
 
+    /// One row per move, newest first (prd §942). The runs of routine
+    /// transfers this folded into "9 transfers" are unfolded: a fold hid the
+    /// counterparty and the amount — the two things Activity is read for.
     func walletStreamRows(_ things: [Thing]) -> [FeedRow] {
-        var rows: [FeedRow] = []
-        var run: [Thing] = []
-        func flush() {
-            guard !run.isEmpty else { return }
-            if run.count >= Self.walletFoldMin, let newest = run.first {
-                // Never ambient: these are transactions, which `tier` files as
-                // concerning you by definition. Stated rather than derived
-                // because this fold is the Wallet ROOM's, where §378's weight
-                // axis does not run at all — the flag exists so the payload is
-                // honest if it ever does.
-                rows.append(.bundle(source: "Wallet",
-                                    word: String(localized: "transfers"),
-                                    count: run.count, newest: newest.capturedAt, art: [],
-                                    ambient: false))
-            } else {
-                rows += run.map(FeedRow.single)
-            }
-            run = []
-        }
-        for thing in things {
-            if Self.isRoutineTransfer(thing) {
-                // A run never crosses midnight. The fold takes its date from
-                // its newest member, so a run spanning three days would file
-                // all of them under "Today" — a day header that lies about
-                // what's under it, to save two rows. Same-day only.
-                if let open = run.first,
-                   !Self.groupingCalendar.isDate(open.capturedAt, inSameDayAs: thing.capturedAt) {
-                    flush()
-                }
-                run.append(thing)
-            } else {
-                flush()
-                rows.append(.single(thing))
-            }
-            // Stop once the folded list can fill the preview — a run still
-            // open may yet grow, so the loop runs one flush past the cap and
-            // the prefix below does the real trimming.
-            if rows.count > Self.walletPreviewRows { break }
-        }
-        flush()
-        return Array(rows.prefix(Self.walletPreviewRows))
+        things.prefix(Self.walletPreviewRows).map(FeedRow.single)
     }
 
-    /// A plain value transfer — the only thing this room folds.
-    ///
-    /// Deliberately an ALLOW-list, not "anything that isn't interesting":
-    /// every other row in this room is recognized by its own `sourceRef`
-    /// namespace (`wallet:approval:`, `wallet:permit2:`, `hyperliquid:*`,
-    /// `aerodrome:*`) and stands alone, so a bridge added tomorrow is
-    /// unfoldable by default rather than silently swept into a count. A
-    /// flagged transfer (poisoning, a spoofed symbol) is never routine, and
-    /// neither is anything carrying a deadline.
-    static func isRoutineTransfer(_ thing: Thing) -> Bool {
-        guard thing.isLive, thing.kind == .transaction, !thing.isFlagged,
-              thing.dueAt == nil, let ref = thing.sourceRef,
-              ref.hasPrefix("wallet:")
-        else { return false }
-        return !ref.hasPrefix("wallet:approval:") && !ref.hasPrefix("wallet:permit2:")
-    }
-
-    /// The stream preview's day sections, over folded rows.
+    /// The stream preview's day sections.
     ///
     /// A near-twin of `groupedSections`/`daySection`, and separate on purpose:
     /// those speak `[Thing]`, and a fold is not a thing. Same guards
@@ -1468,7 +1352,9 @@ extension FeedScreen {
                 // and every pad is spelled out, so the row lands where the header
                 // did.
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(label).dsText(.heading24).foregroundStyle(DS.textPrimary)
+                    // The day wears the brand hue, as every day header in
+                    // the feed does (prd §740); this was the one in primary.
+                    Text(label).dsText(.heading24).foregroundStyle(DS.brandInk)
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4)
@@ -1490,72 +1376,91 @@ extension FeedScreen {
                         // (corollary 3): this re-evaluates against the array
                         // it already holds when a heal's delete lands.
                         if let thing = item.live {
-                            shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                          position: positions[i])
+                            if thing.transferDirection == "received" || thing.transferDirection == "sent" {
+                                walletMoveRow(thing, index: i)
+                            } else {
+                                shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                              position: positions[i])
+                            }
                         }
-                    case .bundle(_, let word, _, let count, let newest, _):
-                        // The fold's door is the history screen, NOT
-                        // `bundleListRow`'s source-filter tap: this room IS
-                        // the Wallet source, so filtering to it would be a
-                        // control that does nothing (the honesty rule's
-                        // dead-control clause).
-                        Button {
-                            DSHaptic.selection()
-                            route.pushBridge(.walletHistory(scope: selectedWallet.map(AddressBook.key(for:))))
-                        } label: {
-                            WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
-                                      title: String(localized: "\(count) \(word)"),
-                                      subtitle: Self.foldSubline(newest))
-                        }
-                        .buttonStyle(.plain)
-                        .modifier(rowEntrance(i))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(.init(top: DS.Space.s2,
-                                             leading: DSRoomChassis.rowInset,
-                                             bottom: DS.Space.s2,
-                                             trailing: DSRoomChassis.rowInset))
-                    case .strip(_, _, let count, let newest, _):
-                        // Drawn like `.bundle` above, and for that case's own
-                        // reason rather than by copying it: the generic
-                        // `stripListRow` opens the source filter, and this room
-                        // IS the Wallet source, so that tap would be a control
-                        // that does nothing. The door is the history screen.
-                        // The tiles are dropped with it — a strip earns its
-                        // picture row by having pictures, and a run of
-                        // transactions has none to show. A strip carries no
-                        // unit word since prd §896, so this names the room's
-                        // own ("transfers"), as `walletStreamRows` does.
-                        Button {
-                            DSHaptic.selection()
-                            route.pushBridge(.walletHistory(scope: selectedWallet.map(AddressBook.key(for:))))
-                        } label: {
-                            WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
-                                      title: String(localized: "\(count) \(String(localized: "transfers"))"),
-                                      subtitle: Self.foldSubline(newest))
-                        }
-                        .buttonStyle(.plain)
-                        .modifier(rowEntrance(i))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(.init(top: DS.Space.s2,
-                                             leading: DSRoomChassis.rowInset,
-                                             bottom: DS.Space.s2,
-                                             trailing: DSRoomChassis.rowInset))
+                    default:
+                        // The stream holds singles only since prd §942.
+                        EmptyView()
                     }
                 }
             }
         }
     }
 
-    /// "Most recent 2:14 PM" — a fold has no one title, so its subline says
-    /// where in the day the run starts, which is the only thing the rows it
-    /// replaced all agreed on.
-    static func foldSubline(_ newest: Date) -> String {
-        String(localized: "Most recent \(newest.formatted(date: .omitted, time: .shortened))")
+    /// **ONE MOVE, IN THE WALLET LIST'S ANATOMY (prd §942).** Who it was
+    /// with — their face and name, a short address when they have none —
+    /// which of your accounts when the room shows all of them, and the amount
+    /// signed by direction in plain ink, dollars where the move was priced.
+    /// The All feed's transfer row led with a verb ("Received") and, for a
+    /// nameless counterparty, said nothing else; Holdings and Accounts one
+    /// tile over are mark, name, amount.
+    @ViewBuilder
+    func walletMoveRow(_ thing: Thing, index: Int) -> some View {
+        let received = thing.transferDirection == "received"
+        let sign = received ? "+" : "−"
+        let who = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
+            ?? thing.counterpartyAddress.map(WalletStore.shortAddress)
+            ?? thing.title
+        let account = selectedWallet == nil && wallet.addresses.count > 1
+            ? WalletStore.shared.label(forAddress: thing.walletAddress) : nil
+        // **AN AMOUNT THAT READS AS NOTHING WEARS NO SIGN (§83).** Dollars
+        // where they round to something; else the token's own quantity; and a
+        // stamp that says no quantity ("ETH") or only zeros ("0.0000 ETH") is
+        // drawn quiet and unsigned, never "+$0".
+        let amount: (text: String, known: Bool) = {
+            if let usd = thing.transferUSD, usd.isFinite {
+                let money = WalletValue.money(usd)
+                if money.contains(where: { ("1"..."9").contains($0) }) { return (sign + money, true) }
+            }
+            let raw = thing.transferAmount ?? ""
+            return raw.contains(where: { ("1"..."9").contains($0) }) ? (sign + raw, true) : (raw, false)
+        }()
+        Button {
+            openThing(thing)
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                if let address = thing.counterpartyAddress, !address.isEmpty {
+                    WalletFace(address: address, size: DS.Face.list, circular: true)
+                } else {
+                    AssetMark(name: WalletFlow.parseAmount(thing.transferAmount ?? "").symbol,
+                              size: DS.Face.list)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(who)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    if let account {
+                        Text(account)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: DS.Space.s2)
+                Text(amount.text)
+                    .dsText(.price17)
+                    .foregroundStyle(amount.known ? DS.textPrimary : DS.textTertiary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .modifier(rowEntrance(index))
+        .accessibilityLabel(Text("\(received ? String(localized: "Received from") : String(localized: "Sent to")) \(who), \(amount.text)"))
+        .listRowInsets(EdgeInsets(top: DS.Space.s2,
+                                  leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
-    /// Day groups over folded rows, newest first — `dayGroups`' rule
+    /// Day groups over the stream's rows, newest first — `dayGroups`' rule
     /// (including its "drop what's still ahead" clause, which is now genuinely
     /// true here: anything future-dated was promoted to Coming up above).
     func walletStreamDays(_ rows: [FeedRow]) -> [(String, [FeedRow])] {

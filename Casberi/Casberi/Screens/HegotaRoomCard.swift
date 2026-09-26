@@ -265,7 +265,6 @@ struct HegotaRoomFigure: View {
     /// question two other scopes already answer better.
     @ViewBuilder private var activityChart: some View {
         RoomActivityChart(dates: moves.compactMap(\.timestamp),
-                          caption: crownCaption,
                           box: DSRoomChassis.figureSlot)
     }
 

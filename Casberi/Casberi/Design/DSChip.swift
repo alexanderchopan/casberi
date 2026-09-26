@@ -88,12 +88,18 @@ struct DSRangeChips<Option: Hashable>: View {
     /// strip picks a different type.
     let label: (Option) -> String
     let onPick: (Option) -> Void
+    /// **THE WINDOW AS SLIM TEXT (prd §942).** Words on the figure's last
+    /// line — the picked one in primary ink, the rest quiet — where a figure
+    /// wants its bars to reach the floor and a row of pills would take the
+    /// box's bottom fifth.
+    var slim = false
 
     init(ranges: [Option], range: Option, label: @escaping (Option) -> String,
-         onPick: @escaping (Option) -> Void) {
+         slim: Bool = false, onPick: @escaping (Option) -> Void) {
         self.ranges = ranges
         self.range = range
         self.label = label
+        self.slim = slim
         self.onPick = onPick
     }
 
@@ -104,7 +110,27 @@ struct DSRangeChips<Option: Hashable>: View {
     private static var hit: CGFloat { 32 }
 
     var body: some View {
-        if ranges.count > 1 {
+        if ranges.count > 1, slim {
+            HStack(spacing: DS.Space.s4) {
+                ForEach(ranges, id: \.self) { r in
+                    Button {
+                        guard r != range else { return }
+                        DSHaptic.tap()
+                        onPick(r)
+                    } label: {
+                        Text(label(r))
+                            .dsText(.subhead12)
+                            .fontWeight(r == range ? .semibold : .regular)
+                            .foregroundStyle(r == range ? DS.textPrimary : DS.textTertiary)
+                            .frame(minHeight: Self.hit)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(r == range ? .isSelected : [])
+                }
+                Spacer(minLength: 0)
+            }
+        } else if ranges.count > 1 {
             // **ONE EVEN ROW (prd §920).** Every window takes the same share
             // of the width and the row spans the figure above it — Stocks'
             // and Health's period pickers — where three loose pills of three
@@ -128,7 +154,12 @@ struct DSRangeChips<Option: Hashable>: View {
 }
 
 extension DSRangeChips where Option == WalletRange {
-    init(ranges: [WalletRange], range: WalletRange, onPick: @escaping (WalletRange) -> Void) {
-        self.init(ranges: ranges, range: range, label: { $0.chipLabel }, onPick: onPick)
+    init(ranges: [WalletRange], range: WalletRange, slim: Bool = false,
+         onPick: @escaping (WalletRange) -> Void) {
+        // Slim text says "All" for the whole record: beside "7d" and "30d"
+        // with no pill around it, "Watched" reads as a state, not a window.
+        self.init(ranges: ranges, range: range,
+                  label: { slim && $0 == .watched ? String(localized: "All") : $0.chipLabel },
+                  slim: slim, onPick: onPick)
     }
 }

@@ -329,6 +329,9 @@ marks chronological position within the pair.
 | §756 (the covered row is lifted out of its run) | the cover draws once; the day it came from is drawn as before | amended by §938 — a day left with no run draws no header |
 | §906 (one box at one position, the cover above the first day) | the cover stands above the first day in every room | amended by §938 — the first day is skipped when the cover was its only row |
 | §940 (the Accounts crown is a bar per address tied to yours) | "1 · tied to yours" over `RoomConnectionsFigure`'s bars | superseded by §941 in the Wallet — the crown is your accounts face by face (`RoomAccountsFaces`), and a face picks the account; §940's list (Yours, Tied to yours, `with` lines) stands, and the devnets keep the bars until their pass |
+| §692 (the flow as rows on Home, later Activity) | "Came in" and "Went out" blocks of counterparties above the stream | superseded by §942 — Activity is one row per move in time; the blocks and their model are deleted |
+| §695 (the net, put back) | "in $7K · out $3K · Kept +$4K" over the blocks | superseded by §942 — deleted with the blocks |
+| §727 (a token with no price is a row) | one plain row per unpriced token that came in | superseded by §942 — deleted with the blocks; an unpriced move is its own row in the stream, quiet and unsigned when it reads as nothing |
 
 ## 1. Thesis
 
@@ -61677,3 +61680,15 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 **The list follows the pick.** `RoomAccountsRows.list(_:map:scope:)` narrows to the picked account and the accounts tied to IT; the scope is a row KEY through `AddressBook.key(for:)`, never lowercased in the list, because a Solana address is case-sensitive.
 
 **The devnets still draw §940's bars** (`RoomConnectionsFigure`) until their pass, where sub-accounts become a line in the list rather than a nested picture.
+
+## §942 — The Wallet's Activity is the moves in time: one number over one noun, bars to the floor, the window as slim text, and one row per move under the day headers (user, 2026-09-26)
+
+**User:** *"i also don't think in vs out is good b/c you want to see them chronologically"*, then the Activity board (today beside proposed) accepted, and *"ok"* to build it.
+
+**The crown.** `RoomActivityChart` reads the count over its noun alone (`202` / `transactions`); the window and the scope captions are deleted (the window is said once, on the last line, and the scope by the account menu), and a held bar still says its days. The bars take whatever the box leaves (`maxHeight: .infinity` inside a frame of exactly `box`), so the `crownChart` budget and its band of air under the chips are gone. The window is `DSRangeChips(slim: true)`: words on the last line, the picked one in primary ink, and the whole record says `All` there, because beside `7d` and `30d` with no pill `Watched` reads as a state. Home's crown keeps its pills. The five callers lose `caption:`.
+
+**The list.** The in/out blocks, their net and the unpriced-token rows are deleted from the surface and the model (§723): `WalletFlowRows`, `walletFlowSection`, `flowWindowStart`, `WalletFlowSource.home`, `WalletFlow.Home`/`home`/`UnpricedToken`/`unpricedTokens`/`isPriced`, and `WalletFlowEmptyFigure`. This supersedes §692, §695 and §727. The brief's band (`WalletFlow.band`, `verdict`, `Decline`) is untouched. The stream no longer folds runs of routine transfers into "9 transfers" (`walletFoldMin`, `isRoutineTransfer`, `foldSubline` deleted): a fold hid the counterparty and the amount, the two things Activity is read for. The preview shows 12 moves, then See all.
+
+**A move is a wallet-list row** (`walletMoveRow`): the counterparty's face and name, a short address when it has none; which of your accounts, only when the room shows all of them; and the amount signed by direction in plain ink, dollars where they round to something, else the token's own quantity. **An amount that reads as nothing wears no sign (§83)**: a stamp with no quantity (`ETH`) or only zeros (`0.0000 ETH`) is quiet and unsigned, never `+$0`. Rows that are not a sent or received transfer (a mint, an approval) keep the feed's row. The stream's day headers wear `DS.brandInk`, as every day header in the feed does (§740).
+
+**Open:** a watched public wallet's stream is mostly unsolicited airdrops and zero-value receipts, which the fold used to hide; whether Activity should quiet them is a ruling not yet made.

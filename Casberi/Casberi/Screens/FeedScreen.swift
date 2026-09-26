@@ -7098,14 +7098,6 @@ struct FeedScreen: View {
                 // they ARE Home's list — so a band under them would be a
                 // second thing to read before the doors, which is the shape
                 // this direction exists to delete.
-                //
-                // The band is REHOMED rather than dropped, because §723 is
-                // blunt about the alternative: a feature deleted from the
-                // surface is deleted from the model, and an unmounted
-                // `walletFlowSection` is exactly the dead control one layer
-                // down that no screen sweep sees. It draws at the head of
-                // Activity now — it decomposes the moves, and Activity is
-                // where the moves are.
                 EmptyView()
             case .activity:
                 // **WHAT ALREADY HAPPENED, AND ONLY THAT** (user ruling, prd
@@ -7125,17 +7117,11 @@ struct FeedScreen: View {
                 // and nothing is lost; they simply draw nowhere until a scope
                 // earns them. Risk is the likely home (a deadline is a hazard
                 // with a clock) but that is a ruling, not a default.
-                // **THE FLOW BAND, REHOMED FROM HOME (prd §747).** It led
-                // Home until the scopes became rows; the total decomposed
-                // belongs with the moves it decomposes, which is here.
-                Section {
-                    walletFlowSection
-                        .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                                  bottom: DSRoomChassis.contentGap,
-                                                  trailing: DS.Space.s4))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
+                // **THE MOVES IN TIME, AND NOTHING ABOVE THEM (prd §942,
+                // user: "i also don't think in vs out is good b/c you want to
+                // see them chronologically").** The in/out blocks and their
+                // net are deleted, model included (§723); the brief keeps its
+                // band. One row per move under the feed's day headers.
                 walletStreamSections(walletStreamRows(all), nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
                 // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Each
@@ -9189,7 +9175,7 @@ struct FeedScreen: View {
     /// history page (2026-07-20). Five is the count that still reads as "here's
     /// what's new" rather than a log — the reads above it are the point of this
     /// screen, and an unbounded stream buried all four of them.
-    static let walletPreviewRows = 5
+    static let walletPreviewRows = 12
 
     /// How many transactions lead the room from inside the balance card
     /// (2026-08-18, user ruling — the answer to "the transactions are at the

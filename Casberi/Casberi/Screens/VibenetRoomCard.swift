@@ -1816,7 +1816,6 @@ struct VibenetRoomCard: View {
     /// place under the chart in the room's list.
     @ViewBuilder private var activityChart: some View {
         RoomActivityChart(dates: room.items.flatMap(\.history).compactMap(\.date),
-                          caption: crownCaption,
                           box: DSRoomChassis.figureSlot,
                           countLabel: { $0 == 1 ? String(localized: "1 key change")
                                                 : String(localized: "\(String($0)) key changes") })
