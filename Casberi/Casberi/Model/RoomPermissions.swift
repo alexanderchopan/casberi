@@ -44,8 +44,18 @@ enum RoomPermissions {
         var aside: String? = nil
         /// Whether this class is unrestricted. The one thing colour says.
         var unbounded: Bool = false
+        /// **WHO HOLDS EACH KEY (prd §924)**, where the room knows — the
+        /// Wallet's holders, one per permission, so a press can name one.
+        /// Empty on a room that counts permissions without naming them; the
+        /// figure then draws `count` keys nobody can press.
+        var holders: [Holder] = []
 
         var id: String { label }
+    }
+    struct Holder: Equatable, Sendable {
+        let name: String
+        var usd: Double? = nil
+        var note: String? = nil
     }
 
     /// The line above the grid, where a room has one to state. Wallet's

@@ -21,20 +21,29 @@ import SwiftUI
 /// instead of a "0" that reads as a measurement.
 struct WalletPermissionsCard: View {
     let holders: [WalletPermissions.Holder]
+    /// The scope's caption, the crown's own (prd §924).
+    var caption: String? = nil
 
     private var rungs: [WalletPermissions.Rung] { WalletPermissions.rungs(holders) }
 
     var body: some View {
-        RoomPermissionsFigure(kinds: WalletPermissionsCard.kinds(rungs), lead: lead)
+        RoomPermissionsFigure(kinds: WalletPermissionsCard.kinds(rungs, holders: holders),
+                              lead: lead, caption: caption)
     }
 
     /// One kind per rung, in the rungs' own order (most reach first).
-    static func kinds(_ rungs: [WalletPermissions.Rung]) -> [RoomPermissions.Kind] {
+    /// One kind per rung, carrying its holders so a key can be pressed and
+    /// named (prd §924) — the same holders the rows below list.
+    static func kinds(_ rungs: [WalletPermissions.Rung],
+                      holders: [WalletPermissions.Holder] = []) -> [RoomPermissions.Kind] {
         rungs.map { rung in
             RoomPermissions.Kind(label: rung.power.phrase,
                                  count: rung.count,
                                  aside: aside(rung),
-                                 unbounded: rung.power.isUnbounded)
+                                 unbounded: rung.power.isUnbounded,
+                                 holders: holders.filter { $0.power == rung.power }.map {
+                                     RoomPermissions.Holder(name: $0.name, usd: $0.usd, note: $0.note)
+                                 })
         }
     }
 

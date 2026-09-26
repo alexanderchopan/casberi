@@ -160,7 +160,8 @@ struct HegotaRoomFigure: View {
         // allowed to send and who paid. The count is the scope's unit, and the
         // same unit in all five rooms.
         case .permissions:
-            return RoomPermissions.headline(HegotaPermissions.kinds(shown)) ?? section.emptyHeadline
+            // The figure owns its reading since prd §924; only the empty word stays.
+            return RoomPermissions.headline(HegotaPermissions.kinds(shown)) == nil ? section.emptyHeadline : nil
         case .activity:
             // **THE CHART OWNS THE COUNT (prd §686)** — the same rule the crown
             // has on Home. Drawn here as well it appears twice, once as this
@@ -214,7 +215,7 @@ struct HegotaRoomFigure: View {
         case .accounts:        accountsFigure
         case .frames:          framesFigure
         case .coins:           coinsFigure
-        case .permissions:     RoomPermissionsFigure(kinds: HegotaPermissions.kinds(shown))
+        case .permissions:     RoomPermissionsFigure(kinds: HegotaPermissions.kinds(shown), caption: crownCaption)
         }
     }
 

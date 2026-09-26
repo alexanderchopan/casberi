@@ -1009,7 +1009,12 @@ extension FeedScreen {
         let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
                                                       acting: walletLive.acting)
         if !holders.isEmpty {
-                            WalletPermissionsCard(holders: holders)
+                            WalletPermissionsCard(holders: holders,
+                                                  caption: selectedWallet.map {
+                                                      WalletScopeRail.caption(for: $0, in: wallet.addresses).name
+                                                  } ?? (wallet.addresses.count == 1
+                                                        ? String(localized: "1 wallet")
+                                                        : String(localized: "\(String(wallet.addresses.count)) wallets")))
                     .modifier(rowEntrance(1))
                     .padding(.bottom, DS.Space.s3)
         }

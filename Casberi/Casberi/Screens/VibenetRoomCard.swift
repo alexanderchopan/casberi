@@ -2263,12 +2263,12 @@ struct VibenetRoomCard: View {
             // Send and Receive is in two cells, so the cells added up are not
             // the number of permissions this account has granted.
             let census = VibenetPolicyAggregation.census(counts)
-            scopeFigure(headline: RoomPermissions.headline(count: keys?.total ?? 0)
-                        ?? String(localized: "No keys")) {
+            // The figure owns its reading since prd §924; only the empty word stays.
+            scopeFigure(headline: (keys?.total ?? 0) == 0 ? String(localized: "No keys") : nil) {
                 RoomPermissionsFigure(kinds: census.map {
                     RoomPermissions.Kind(label: $0.label, count: $0.count,
                                          unbounded: $0.label == Self.adminLabel)
-                })
+                }, caption: crownCaption)
             }
         }
     }

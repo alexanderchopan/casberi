@@ -448,8 +448,13 @@ strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 3 'first(where: { $0.isLive &&
 # (`WalletPermissionsCard.body` is now a thin `kinds:`/`lead:` translation),
 # so the modifier lives there now — check both, since a future de-sharing
 # could legitimately move it back.
+# Since prd §924 the figure CONTAINS its keys (each a button VoiceOver can
+# reach, labelled with its holder) and still speaks the ordered sentence as
+# the container's own label — `.contain` beside `spoken`, never one alone.
 { grep -q 'accessibilityElement(children: .combine)' "$CARD" ||
-  grep -q 'accessibilityElement(children: .combine)' "$FIGURE"; } \
+  grep -q 'accessibilityElement(children: .combine)' "$FIGURE" ||
+  { grep -q 'accessibilityElement(children: .contain)' "$FIGURE" &&
+    grep -q 'RoomPermissions.spoken(kinds, lead: lead)' "$FIGURE"; }; } \
   || fail "the card stopped speaking as one ordered sentence"
 
 # THE SLOT IS COUNTS, NEVER NAMES (prd §546, user: "we can't just repeat the
@@ -467,8 +472,13 @@ strip "$CARD" | grep -qE '\.names|rung\.names' \
 # §692 both moved this onto `RoomPermissionsFigure` AND shrank the token to
 # `.price17` (a well, not a bare numeral — the card's own doc comment says
 # so); check both files and both tokens, since either move could reverse.
+# Since prd §924 a count is drawn as MARKS — one key per permission, six
+# before "+N" — rather than as a numeral; either spelling of "the count is
+# drawn, not merely said" passes, and a figure that draws neither fails.
 { grep -qE 'dsText\(\.price(40|17)\)' "$CARD" ||
-  grep -qE 'dsText\(\.price(40|17)\)' "$FIGURE"; } \
-  || fail "the slot's counts are no longer drawn as figures (§546)"
+  grep -qE 'dsText\(\.price(40|17)\)' "$FIGURE" ||
+  { grep -q 'systemName: "key.fill"' "$FIGURE" &&
+    grep -q 'ForEach(0..<shown' "$FIGURE"; }; } \
+  || fail "the slot's counts are no longer drawn as figures (§546, keys since §924)"
 
 print "  ok   18 mutations, 25 drift guards"

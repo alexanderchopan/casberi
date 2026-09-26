@@ -147,7 +147,8 @@ struct PrivacyDevnetRoomCard: View {
         // Sponsors chip beside it counted sponsored transactions; one scope
         // cannot have two units.
         case .permissions:
-            return RoomPermissions.headline(permissionKinds) ?? section.emptyHeadline
+            // The figure owns its reading since prd §924; only the empty word stays.
+            return RoomPermissions.headline(permissionKinds) == nil ? section.emptyHeadline : nil
         case .roots:
             let n = accounts.reduce(0) { $0 + $1.roots.count }
             guard n > 0 else { return section.emptyHeadline }
@@ -1154,7 +1155,7 @@ extension PrivacyDevnetRoomCard {
         // it drew the gas BUDGET bar — a reading about what steps were allowed
         // to cost, which is not what the scope asks. Both go for the figure
         // five rooms share.
-        case .permissions: RoomPermissionsFigure(kinds: permissionKinds)
+        case .permissions: RoomPermissionsFigure(kinds: permissionKinds, caption: scopeCaption)
         case .roots:      windows
         case .home:       EmptyView()
         }

@@ -64,7 +64,8 @@ struct FramesRoomFigure: View {
             // who was allowed to pay, and the same number Home already leads
             // with. The count is the scope's own unit and it is the same unit
             // in all five rooms.
-            return RoomPermissions.headline(kinds) ?? section.emptyHeadline
+            // The figure owns its reading since prd §924; only the empty word stays.
+            return RoomPermissions.headline(kinds) == nil ? section.emptyHeadline : nil
         case .activity:
             // **THE CHART OWNS THE COUNT (prd §686)**, exactly as the crown
             // owns the balance on Home — this line and the chart's own number
@@ -454,7 +455,8 @@ struct FramesRoomFigure: View {
             lead: theirs > 0
                 ? RoomPermissions.Lead(figure: Self.percent(share),
                                        caption: String(localized: "of gas paid by somebody else"))
-                : nil)
+                : nil,
+            caption: crownCaption)
     }
 
     /// The one kind of permission this chain grants: somebody else paid.
