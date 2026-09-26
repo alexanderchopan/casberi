@@ -267,8 +267,17 @@ struct RoomsTray: View {
     private var youRow: some View {
         let home = filter.source == "All" && route.path.isEmpty
         return HStack(alignment: .top, spacing: DS.Space.s3) {
-            rowName(glyph: "person.crop.circle", word: String(localized: "You"),
-                    lit: false, broken: false)
+            // The face the button wears — your photo or the octopus — never
+            // the empty contact glyph.
+            HStack(spacing: DS.Space.s3) {
+                YouFace(size: Self.mark)
+                Text(String(localized: "You"))
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+            }
+            .frame(width: Self.nameColumn, alignment: .leading)
+            .frame(minHeight: DS.Hit.min)
             FlowLayout(spacing: Self.markGap) {
                 door(String(localized: "Home"), glyph: home ? "house.fill" : "house",
                      lit: home, index: 0) { pick("All") }

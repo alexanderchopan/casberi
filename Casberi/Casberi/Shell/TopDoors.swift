@@ -170,16 +170,27 @@ private struct DoorBounce: ViewModifier {
 /// (2026-07-09): the doors earned presence in the bar, not a whisper, and
 /// this one keeps that size now that it stands alone (§798).
 struct AvatarDoor: View {
+    var body: some View { YouFace(size: 32) }
+}
+
+/// **YOU: YOUR PHOTO, OR THE OCTOPUS (user, 2026-09-26: "should we make the
+/// fab default to be the octopus logo until someone changes the avatar so
+/// it's not the empty contacts glyph?").** The face opens the rooms tray
+/// (§930), not a profile, so the empty contact glyph said the wrong thing and
+/// read as unfinished. Until a photo is set it is the app's own mark; the
+/// tray's You row wears the same face, so the button and the row agree.
+struct YouFace: View {
+    let size: CGFloat
+
     var body: some View {
         if let avatar = ProfileStore.shared.avatar {
             Image(uiImage: avatar)
                 .resizable().scaledToFill()
-                .frame(width: 32, height: 32)
+                .frame(width: size, height: size)
                 .clipShape(Circle())
         } else {
-            Image(systemName: "person.crop.circle")
-                .dsGlyph(.feature, weight: .regular)
-                .foregroundStyle(DS.textSecondary)
+            CasberiMark(size: size)
+                .frame(width: size, height: size)
         }
     }
 }
