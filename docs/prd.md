@@ -61780,4 +61780,4 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 
 **The Wallet's row column.** The three devnet lists were mounted at the tiles' inset, so their row icons centred 9pt left of every Wallet list's; they mount at `DSRoomChassis.rowInset(forMark: DS.Face.list)`, and `DSDayHeader` steps back to the tiles' edge (text is a box). Headers drawn inside those lists that are not their own `List` row (Frames' `Sponsors`, `What they paid for`) moved with the rows and are the unique-screens pass's.
 
-Base Vibenet's Activity is already the feed's own day-grouped stream and is unchanged; its day headers stand at the All feed's inset, a feed-wide question left open.
+Base Vibenet's Activity is already the feed's own day-grouped stream; in that room the feed's day header stands on the tiles' edge (`shape == .vibenet`), the All feed keeping its own column, and its activity chart goes through `scopeFigure` like every other scope's figure — bare, its number stood 15pt left of every other crown's.

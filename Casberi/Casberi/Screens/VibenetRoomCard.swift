@@ -1819,10 +1819,15 @@ struct VibenetRoomCard: View {
     /// and when did it change hands", which this chart cannot, and it keeps its
     /// place under the chart in the room's list.
     @ViewBuilder private var activityChart: some View {
-        RoomActivityChart(dates: room.items.flatMap(\.history).compactMap(\.date),
-                          box: DSRoomChassis.figureSlot,
-                          countLabel: { $0 == 1 ? String(localized: "1 key change")
-                                                : String(localized: "\(String($0)) key changes") })
+        // Through `scopeFigure`, as every other scope's figure is (prd §950):
+        // bare, it skipped the slot's inset and its number stood 15pt left of
+        // every other crown's.
+        scopeFigure(headline: nil) {
+            RoomActivityChart(dates: room.items.flatMap(\.history).compactMap(\.date),
+                              box: DSRoomChassis.figureSlot,
+                              countLabel: { $0 == 1 ? String(localized: "1 key change")
+                                                    : String(localized: "\(String($0)) key changes") })
+        }
     }
 
     /// WHAT AN EMPTY ACTIVITY MEANS — and why the toggle bar was walking

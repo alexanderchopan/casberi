@@ -11215,7 +11215,10 @@ struct FeedScreen: View {
                         .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
                 }
                 .textCase(nil)
-                .padding(.leading, DSRoomChassis.rowInset)
+                // In a wallet-family room the day stands on the tiles' edge,
+                // as the Wallet's and every devnet's do (prd §950); the feed
+                // keeps its own column.
+                .padding(.leading, shape == .vibenet ? DSRoomChassis.inset : DSRoomChassis.rowInset)
                 // Days read as clusters: the gap ABOVE a day header is the
                 // feed's biggest (2026-07-13), and since 2026-07-21 the day's
                 // rows also share one card — the header's s6 plus the card's own
