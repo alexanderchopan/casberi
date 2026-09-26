@@ -4807,8 +4807,8 @@ mutate "VibenetKeyGrouping.sections must omit an EMPTY group, never draw its hea
 # than the 2 places a currency figure would use, which this format is
 # explicitly NOT.
 mutate "VibenetBalanceFormat.line must round to 4 decimal places, not fewer" \
-  'let rounded = (amount * 10_000).rounded() / 10_000' \
-  'let rounded = (amount * 1).rounded() / 1'
+  'static func line(_ amount: Double, places: Int = 4) -> String {' \
+  'static func line(_ amount: Double, places: Int = 2) -> String {'
 
 # Without the finite guard, a non-finite amount reaches `String(format:)`
 # directly and prints whatever Foundation happens to render for infinity/

@@ -101,6 +101,33 @@ enum DefiLlamaPrices {
     /// The `price` field, tolerant of the JSON number arriving as Double, Int,
     /// or String, and rejecting a non-finite value (`Double("1e400")` is
     /// `.infinity`, not nil — the same guard `WalletIngest.firstPrice` keeps).
+    /// **MAINNET PRICES BY COINGECKO ID (prd §922)** — the same endpoint,
+    /// addressed as `coingecko:<id>`, for `MainnetPrices`: a devnet's assets
+    /// valued at what their mainnet namesakes trade for. USD per unit, keyed
+    /// by the id given; an id DeFiLlama does not price, or prices under the
+    /// confidence floor, is absent.
+    static func prices(coingeckoIDs ids: [String]) async -> [String: Double] {
+        let unique = Array(Set(ids)).sorted()
+        guard !unique.isEmpty else { return [:] }
+        var out: [String: Double] = [:]
+        for chunk in stride(from: 0, to: unique.count, by: 50).map({
+            Array(unique[$0..<min($0 + 50, unique.count)])
+        }) {
+            let path = chunk.map { "coingecko:\($0)" }.joined(separator: ",")
+            let url = "https://coins.llama.fi/prices/current/\(path)"
+            guard let root = await IngestSupport.getJSON(url) as? [String: Any],
+                  let coins = root["coins"] as? [String: Any] else { continue }
+            for (key, raw) in coins {
+                guard key.hasPrefix("coingecko:"),
+                      let entry = raw as? [String: Any],
+                      let price = priceValue(entry["price"]), price > 0,
+                      confidenceValue(entry["confidence"]) >= confidenceFloor else { continue }
+                out[String(key.dropFirst("coingecko:".count))] = price
+            }
+        }
+        return out
+    }
+
     private static func priceValue(_ raw: Any?) -> Double? {
         if let d = raw as? Double, d.isFinite { return d }
         if let i = raw as? Int { return Double(i) }

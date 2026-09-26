@@ -728,7 +728,7 @@ struct HegotaRoomFigure: View {
     /// the same way whether the subject is one address's coins or every
     /// address's balance.
     @ViewBuilder private var holdingsFigure: some View {
-        RoomHoldingsFigure(cells: HegotaHoldings.cells(shown))
+        RoomHoldingsFigure(cells: HegotaHoldings.cells(shown), caption: crownCaption)
     }
 
     @ViewBuilder
@@ -3623,7 +3623,9 @@ enum HegotaHoldings {
         if !answered.isEmpty {
             let total = answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) }
             coin = RoomHoldings.Cell(name: String(localized: "test ETH"),
-                                     amount: HegotaFormat.crownFigure(total))
+                                     amount: HegotaFormat.crownFigure(total),
+                                     symbol: "ETH",
+                                     quantity: NSDecimalNumber(decimal: HegotaCoins.eth(total)).doubleValue)
         }
         return RoomHoldings.cells(coin: coin, tokens: tokens(accounts))
     }

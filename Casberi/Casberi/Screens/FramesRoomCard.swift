@@ -370,7 +370,8 @@ struct FramesRoomFigure: View {
     }
 
     @ViewBuilder private var holdingsFigure: some View {
-        RoomHoldingsFigure(cells: FramesHoldings.cells(head: head, accounts: accounts))
+        RoomHoldingsFigure(cells: FramesHoldings.cells(head: head, accounts: accounts),
+                           caption: crownCaption)
     }
 
     /// The MODE MIX — what the steps actually were. Counted rather than
@@ -1286,7 +1287,8 @@ enum FramesHoldings {
            let wei = FramesMoney.decimal(fromHex: weiHex) {
             let eth = NSDecimalNumber(decimal: wei / FramesMoney.weiPerETH).doubleValue
             coin = RoomHoldings.Cell(name: String(localized: "test ETH"),
-                                     amount: FramesMoney.eth(eth))
+                                     amount: FramesMoney.eth(eth),
+                                     symbol: "ETH", quantity: eth)
         }
         return RoomHoldings.cells(coin: coin, tokens: tokens(accounts))
     }

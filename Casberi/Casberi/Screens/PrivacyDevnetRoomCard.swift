@@ -858,7 +858,8 @@ extension PrivacyDevnetRoomCard {
     /// can spend from. An address the chain could not read is left OUT rather
     /// than drawn at zero (§83).
     private var holdingsFigure: some View {
-        RoomHoldingsFigure(cells: PrivacyHoldings.cells(accounts: accounts, shielded: shielded))
+        RoomHoldingsFigure(cells: PrivacyHoldings.cells(accounts: accounts, shielded: shielded),
+                           caption: scopeCaption)
     }
 
     @ViewBuilder
@@ -1445,7 +1446,8 @@ enum PrivacyHoldings {
         if !answered.isEmpty {
             let open = answered.reduce(Decimal(0)) { $0 + ($1.balanceWei ?? 0) }
             coin = RoomHoldings.Cell(name: String(localized: "In the open"),
-                                     amount: PrivacyDevnetMoney.line(wei: open))
+                                     amount: PrivacyDevnetMoney.line(wei: open),
+                                     symbol: "ETH", quantity: Self.eth(open))
         }
         var out = RoomHoldings.cells(
             coin: coin,
@@ -1456,9 +1458,15 @@ enum PrivacyHoldings {
         // zero one.
         if let shielded, let notes = shielded.unspentWei, notes > 0 {
             out.append(RoomHoldings.Cell(name: String(localized: "Shielded"),
-                                         amount: PrivacyDevnetMoney.line(wei: notes)))
+                                         amount: PrivacyDevnetMoney.line(wei: notes),
+                                         symbol: "ETH", quantity: Self.eth(notes)))
         }
         return out
+    }
+
+    /// Wei as a plain ETH `Double`, the unit `MainnetPrices` values (prd §922).
+    static func eth(_ wei: Decimal) -> Double {
+        NSDecimalNumber(decimal: wei / Decimal(sign: .plus, exponent: 18, significand: 1)).doubleValue
     }
 }
 

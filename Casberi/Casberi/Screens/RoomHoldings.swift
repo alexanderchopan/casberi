@@ -35,6 +35,12 @@ enum RoomHoldings {
         var id: String { name }
         let name: String
         let amount: String
+        /// The asset's symbol as the chain spells it ("vUSDC", "test ETH") —
+        /// what `MainnetPrices.mainnetSymbol` reads to value it (prd §922).
+        var symbol: String = ""
+        /// The quantity as a number, in the asset's own unit; nil where the
+        /// chain could not say (an unread decimals), which prices nothing.
+        var quantity: Double? = nil
     }
 
     /// Every token held across the reached accounts, deduplicated by contract
@@ -77,7 +83,9 @@ enum RoomHoldings {
         for token in tokens {
             out.append(Cell(name: token.symbol ?? WalletStore.shortAddress(token.contract),
                             amount: token.amount.map(DevnetTokens.quantity)
-                                ?? String(localized: "amount couldn't be read")))
+                                ?? String(localized: "amount couldn't be read"),
+                            symbol: token.symbol ?? "",
+                            quantity: token.amount))
         }
         return out
     }
@@ -86,44 +94,115 @@ enum RoomHoldings {
 /// The figure: even cells, names only.
 struct RoomHoldingsFigure: View {
     let cells: [RoomHoldings.Cell]
+    /// The scope: one account's name, or how many you follow — the crown's
+    /// own caption, so the two tiles identify themselves identically.
+    var caption: String? = nil
     var box: CGFloat = DSRoomChassis.figureSlot
 
-    var body: some View {
-        let drawn = Array(cells.prefix(UnitTreemap<EmptyView>.maxCells))
-        if !drawn.isEmpty {
-            UnitTreemap(count: drawn.count,
-                        height: DSRoomChassis.crownLine(box: box, chrome: 24),
-                        even: true,
-                        cell: { i in tile(drawn[i], rank: i) },
-                        readout: { i in "\(drawn[i].name) · \(drawn[i].amount)" })
+    /// USD per unit by MAINNET symbol, read once per mount (prd §922) — a
+    /// fetch belongs in `.task`, never in a body (build 525).
+    @State private var prices: [String: Double] = [:]
+    @State private var read = false
+
+    private struct Valued {
+        let cell: RoomHoldings.Cell
+        let mainnet: String
+        let usd: Double
+    }
+
+    private var valued: [Valued] {
+        cells.compactMap { cell in
+            guard let mainnet = MainnetPrices.mainnetSymbol(cell.symbol),
+                  let price = prices[mainnet],
+                  let quantity = cell.quantity, quantity > 0 else { return nil }
+            return Valued(cell: cell, mainnet: mainnet, usd: price * quantity)
         }
     }
 
-    /// Hegotá's tile recipe, to the token — the name over the sheet under an
-    /// ink wash, `s3` padding. Copied deliberately rather than re-invented:
-    /// a treemap cell that differs between two rooms is the drift §683 spent
-    /// itself removing.
-    ///
-    /// **The wash is by RANK, not by share.** With no price, "share of the
-    /// total" is a comparison across units that does not exist; rank is what
-    /// the order already claims and all it claims.
-    @ViewBuilder private func tile(_ cell: RoomHoldings.Cell, rank: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(cell.name)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.7)
-            Spacer(minLength: 0)
-        }
-        .padding(DS.Space.s3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background {
-            ZStack {
-                DS.surfaceSheet
-                DS.ink(magnitude: max(0, 1 - Double(rank) * 0.22))
+    var body: some View {
+        let valued = valued
+        let total = valued.reduce(0) { $0 + $1.usd }
+        let pricedIDs = Set(valued.map(\.cell.id))
+        let unpriced = cells.filter { !pricedIDs.contains($0.id) }
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            reading(total: total, priced: valued.count)
+            if !valued.isEmpty {
+                // **THE WALLET'S OWN PACK (§917), AT MAINNET PRICES.** Each
+                // circle's area is its share of the valued total; the mark is
+                // the mainnet namesake's, so vUSDC wears USDC's coin, and the
+                // readout keeps the chain's own spelling.
+                DSCirclePack(items: valued.map { v in
+                    let pct = total > 0 ? Int((v.usd / total * 100).rounded()) : 0
+                    return DSCirclePackItem(id: v.cell.id, share: v.usd,
+                                            label: "\(v.cell.name), \(WalletValue.money(v.usd)), \(pct)%")
+                }, mark: { item, diameter in
+                    AssetMark(name: valued.first { $0.cell.id == item.id }?.mainnet.uppercased() ?? item.id,
+                              size: diameter)
+                }, readout: { item in
+                    item.label.replacingOccurrences(of: ", ", with: " · ")
+                })
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if !cells.isEmpty {
+                // **NOTHING PRICED: EQUAL CIRCLES, THE SYMBOL IN EACH.** No
+                // invented size — the monogram circle `AssetMark` already
+                // draws for a symbol with no mark, one per asset, all alike.
+                DSCirclePack(items: cells.map {
+                    DSCirclePackItem(id: $0.id, share: 1, label: "\($0.name), \($0.amount)")
+                }, mark: { item, diameter in
+                    AssetMark(name: item.id, size: diameter)
+                }, readout: { item in
+                    item.label.replacingOccurrences(of: ", ", with: " · ")
+                })
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            if read, !unpriced.isEmpty, !valued.isEmpty {
+                // The ones the pack leaves out, named — never guessed (§83).
+                Text(unpricedLine(unpriced))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .task(id: cells.map(\.symbol).joined(separator: "|")) {
+            prices = await MainnetPrices.prices(for: cells.map(\.symbol))
+            read = true
+        }
+    }
+
+    /// The reading — the same three lines as the crown's: caption, figure,
+    /// and the one honest word about the figure.
+    @ViewBuilder
+    private func reading(total: Double, priced: Int) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let caption {
+                Text(caption)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            Text(priced > 0 ? WalletValue.money(total)
+                 : (cells.count == 1 ? String(localized: "1 asset")
+                                     : String(localized: "\(String(cells.count)) assets")))
+                .dsText(.stat24)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .contentTransition(.numericText(value: total))
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(priced > 0 ? String(localized: "at mainnet prices")
+                 : read ? String(localized: "none on mainnet")
+                        : String(localized: "Reading mainnet prices…"))
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        }
+    }
+
+    private func unpricedLine(_ unpriced: [RoomHoldings.Cell]) -> String {
+        if unpriced.count == 1, let one = unpriced.first {
+            return String(localized: "\(one.name) isn't on mainnet, so it isn't priced")
+        }
+        return String(localized: "\(String(unpriced.count)) aren't on mainnet, so they aren't priced")
     }
 }
 

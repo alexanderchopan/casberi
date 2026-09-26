@@ -137,6 +137,7 @@ DEMO_FILES = {
     "ThingContent": CASBERI / "Screens/ThingContent.swift",
     "ZerionAPI": CASBERI / "Model/ZerionAPI.swift",
     "WalletIngest": CASBERI / "Model/WalletIngest.swift",
+    "MainnetPrices": CASBERI / "Model/MainnetPrices.swift",
     # Read-only reference for check K — the eight LEGACY demo seats live in
     # `BridgeApp.demo` here rather than in `DemoSeedAll.seatTable`, which is
     # exactly why check G could only ever test them by name (2026-08-20).
@@ -200,6 +201,11 @@ DEMO_GATED_READS = [
     # sibling wide open; this is that sibling.
     ("WalletIngest", "private static func walletGroupOutcome("),
     ("ZerionAPI", "static func transactions("),
+    # The devnet Holdings figure's price read (prd §922): a per-view read
+    # on every devnet room mount, valuing test assets at mainnet prices from
+    # `coins.llama.fi`. The demo values its invented holdings at invented
+    # prices instead, and never asks the host.
+    ("MainnetPrices", "static func prices(for symbols:"),
 ]
 
 # `DemoSeedAll.seatTable` names that legitimately have no ENTRY in
