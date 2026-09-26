@@ -1640,8 +1640,14 @@ struct VibenetRoomCard: View {
                     // under the treemap rather than as a bigger treemap. The
                     // height is handed IN now; the alignment is kept for the
                     // case it really governs, a block that declines to fill.
-                    VibenetHoldingsBlock(cells: cells, reduceMotion: reduceMotion,
-                                         drawnHeight: DSRoomChassis.figureSlot)
+                    // **THE SHARED HOLDINGS FIGURE (prd §922)** — the
+                    // Wallet's pack at mainnet prices, in place of a treemap
+                    // that ranked tokens by an ink ramp and sized nothing by
+                    // anything. `VibenetHoldingsBlock` still draws inside an
+                    // account's detail sheet; `cells` above keeps the empty
+                    // gate it always had.
+                    RoomHoldingsFigure(cells: Self.holdingsCells(aggregate),
+                                       caption: crownCaption)
                         // **CLEARS THE GEAR, and fills what is left.** The room's
                         // settings button is an overlay on the trailing top of
                         // this whole block, and a figure with no headline starts
@@ -1676,6 +1682,21 @@ struct VibenetRoomCard: View {
     ///
     /// Scoped it speaks about ONE account; unscoped about the set.
     @ViewBuilder
+    /// The room's holdings as the shared figure's cells (prd §922): the coin
+    /// first, then the tokens, each with its quantity in its own unit.
+    static func holdingsCells(_ aggregate: VibenetBalanceAggregate) -> [RoomHoldings.Cell] {
+        var out: [RoomHoldings.Cell] = []
+        if let native = aggregate.nativeTotal {
+            out.append(RoomHoldings.Cell(name: "ETH", amount: VibenetBalanceFormat.line(native),
+                                         symbol: "ETH", quantity: native))
+        }
+        for total in aggregate.tokenTotals {
+            out.append(RoomHoldings.Cell(name: total.symbol, amount: VibenetBalanceFormat.line(total.amount),
+                                         symbol: total.symbol, quantity: total.amount))
+        }
+        return out
+    }
+
     private func holdingsEmptyFigure(_ aggregate: VibenetBalanceAggregate) -> some View {
         // The treemap that is not there, as its skeleton (prd §771); the
         // cause stays the headline and its sentence is spoken.
