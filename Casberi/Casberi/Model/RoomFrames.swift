@@ -285,3 +285,129 @@ enum RoomFrames {
         return share
     }
 }
+
+// MARK: - The flow (prd §925)
+
+extension RoomFrames {
+    /// **THE SHAPE OF THE TRANSACTIONS (prd §925)** — steps by POSITION: what
+    /// ran first, what ran second, how many went on from one to the next, and
+    /// where runs ended. It is what the rows below cannot say: a row is one
+    /// transaction's strip, and the figure used to stack five of those, which
+    /// was the list restated.
+    ///
+    /// Pure — built from `Run`s alone, so `frames-flow-selftest.sh` can drive
+    /// it: every step of every run is in exactly one node, every run
+    /// contributes exactly `steps.count - 1` links and one end, and the node
+    /// totals per position sum to the runs that reached it.
+    struct Flow: Equatable, Sendable {
+        enum Kind: Equatable, Sendable { case ran, failed, rolledBack, skipped, unread }
+        struct Node: Identifiable, Equatable, Sendable {
+            let position: Int
+            /// The mode's name, or the outcome's where the step did not run
+            /// ("Failed", "Rolled back", "Skipped") — a step that failed is
+            /// not a Send that happened.
+            let label: String
+            let modeName: String
+            let kind: Kind
+            let count: Int
+            var id: String { Flow.key(position, label) }
+        }
+        struct Link: Equatable, Sendable {
+            let from: String
+            let to: String
+            let count: Int
+        }
+        struct End: Equatable, Sendable {
+            let node: String
+            let count: Int
+        }
+        let nodes: [Node]
+        let links: [Link]
+        let ends: [End]
+        /// Positions drawn; a run longer than `positionsShown` flows off the
+        /// right edge and `beyond` counts the steps not drawn.
+        let positions: Int
+        let beyond: Int
+
+        static let positionsShown = 4
+        static func key(_ position: Int, _ label: String) -> String { "\(position)|\(label)" }
+
+        func nodes(at position: Int) -> [Node] { nodes.filter { $0.position == position } }
+        func outgoing(_ id: String) -> [Link] { links.filter { $0.from == id } }
+        func incoming(_ id: String) -> [Link] { links.filter { $0.to == id } }
+        func ended(_ id: String) -> Int { ends.first { $0.node == id }?.count ?? 0 }
+    }
+
+    static func flowLabel(_ step: Step) -> (label: String, kind: Flow.Kind) {
+        switch step.outcome {
+        case .ran:        return (step.modeName, .ran)
+        case .failed:     return (String(localized: "Failed"), .failed)
+        case .rolledBack: return (String(localized: "Rolled back"), .rolledBack)
+        case .skipped:    return (String(localized: "Skipped"), .skipped)
+        case .unread:     return (step.modeName, .unread)
+        }
+    }
+
+    static func flow(_ all: [Run]) -> Flow? {
+        let framed = runs(all)
+        guard !framed.isEmpty else { return nil }
+        let shown = Flow.positionsShown
+        var order: [String] = []
+        var nodes: [String: Flow.Node] = [:]
+        var links: [String: Int] = [:]
+        var linkOrder: [String] = []
+        var ends: [String: Int] = [:]
+        var beyond = 0
+        for run in framed {
+            var previous: String?
+            for (position, step) in run.steps.enumerated() {
+                guard position < shown else { beyond += run.steps.count - shown; break }
+                let (label, kind) = flowLabel(step)
+                let id = Flow.key(position, label)
+                if let seen = nodes[id] {
+                    nodes[id] = Flow.Node(position: position, label: label, modeName: seen.modeName,
+                                          kind: seen.kind, count: seen.count + 1)
+                } else {
+                    order.append(id)
+                    nodes[id] = Flow.Node(position: position, label: label, modeName: step.modeName,
+                                          kind: kind, count: 1)
+                }
+                if let previous {
+                    let linkKey = "\(previous)→\(id)"
+                    if links[linkKey] == nil { linkOrder.append(linkKey) }
+                    links[linkKey, default: 0] += 1
+                }
+                previous = id
+            }
+            if let previous, run.steps.count <= shown {
+                ends[previous, default: 0] += 1
+            }
+        }
+        // Biggest first within a position, ties in first-appearance order —
+        // the same rule the pack and the spine settle by.
+        let sorted = order.compactMap { nodes[$0] }.sorted { a, b in
+            a.position != b.position ? a.position < b.position
+                : a.count != b.count ? a.count > b.count
+                : (order.firstIndex(of: a.id) ?? 0) < (order.firstIndex(of: b.id) ?? 0)
+        }
+        let positions = (sorted.map(\.position).max() ?? 0) + 1
+        return Flow(nodes: sorted,
+                    links: linkOrder.map { key in
+                        let parts = key.components(separatedBy: "→")
+                        return Flow.Link(from: parts[0], to: parts[1], count: links[key] ?? 0)
+                    },
+                    ends: order.compactMap { id in ends[id].map { Flow.End(node: id, count: $0) } },
+                    positions: positions,
+                    beyond: beyond)
+    }
+
+    /// The column's word: "1st", "2nd", "3rd", "4th".
+    static func positionWord(_ position: Int) -> String {
+        switch position {
+        case 0: return String(localized: "1st")
+        case 1: return String(localized: "2nd")
+        case 2: return String(localized: "3rd")
+        default: return String(localized: "\(String(position + 1))th")
+        }
+    }
+}

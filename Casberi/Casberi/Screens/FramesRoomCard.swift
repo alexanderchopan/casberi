@@ -80,7 +80,8 @@ struct FramesRoomFigure: View {
         // the list filtered on `rows.count > 1`, so the headline could say "14
         // steps" over four rows. Both read the shared census now.
         case .frames:
-            return RoomFrames.headline(RoomFrames.mix(frameRuns)) ?? section.emptyHeadline
+            // The figure owns its reading since prd §925; only the empty word stays.
+            return RoomFrames.headline(RoomFrames.mix(frameRuns)) == nil ? section.emptyHeadline : nil
         }
     }
 
@@ -408,7 +409,7 @@ struct FramesRoomFigure: View {
         // a settle that changes what the figure draws must redraw it rather
         // than mutate it in place, or the strips change under the reader with
         // no beat.
-        RoomFramesFigure(runs: frameRuns, hue: RoomFrameStyle.hue)
+        RoomFramesFigure(runs: frameRuns, hue: RoomFrameStyle.hue, caption: crownCaption)
             .id(newestHash)
     }
 

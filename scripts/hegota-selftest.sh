@@ -1649,8 +1649,13 @@ need RoomFrames.swift.bare "step counts cover all" \
 # legend and the note from `figureSlot` and divides what is left, so the sum
 # cannot go stale against a slot that changed. The guard follows the rule
 # instead of the number — a constant back in that file is the reversion.
-need RoomFramesFigure.swift.bare "DSRoomChassis.figureSlot" \
-  "the frames figure stopped deriving its own height — a written-down row cap is what clipped the note at 185pt"
+# Since prd §925 the figure is a FLOW that fills whatever the slot hands it
+# through a GeometryReader — derived from the container by layout, never a
+# written-down height — so either spelling of "derived" passes.
+{ grep -q "DSRoomChassis.figureSlot" "$work/RoomFramesFigure.swift.bare" ||
+  { grep -q "GeometryReader" "$work/RoomFramesFigure.swift.bare" &&
+    grep -q "maxHeight: .infinity" "$work/RoomFramesFigure.swift.bare"; }; } \
+  || fail "the frames figure stopped deriving its own height — a written-down row cap is what clipped the note at 185pt (§698; a flow over GeometryReader since §925)"
 deny RoomFramesFigure.swift.bare "let rowsShown = " \
   "the row cap is a constant again — derive it from figureSlot or the sum goes stale the next time the slot moves"
 

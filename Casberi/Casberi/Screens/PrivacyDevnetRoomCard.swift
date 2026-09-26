@@ -141,7 +141,8 @@ struct PrivacyDevnetRoomCard: View {
         // over exactly the population the list shows, through the family's
         // shared census.
         case .frames:
-            return RoomFrames.headline(RoomFrames.mix(frameRuns)) ?? section.emptyHeadline
+            // The figure owns its reading since prd §925; only the empty word stays.
+            return RoomFrames.headline(RoomFrames.mix(frameRuns)) == nil ? section.emptyHeadline : nil
         // **"N permissions" (prd §692)** — the scope's unit, and the same
         // unit in all five rooms. It counted spend keys alone while the
         // Sponsors chip beside it counted sponsored transactions; one scope
@@ -1142,7 +1143,7 @@ extension PrivacyDevnetRoomCard {
         // the steps were ALLOWED TO COST, which is not what the scope asks, and
         // the same bar that sat over Sponsors until §692. The budgets are a
         // per-step fact and the frame sheet states them.
-        case .frames:     RoomFramesFigure(runs: frameRuns, hue: RoomFrameStyle.hue)
+        case .frames:     RoomFramesFigure(runs: frameRuns, hue: RoomFrameStyle.hue, caption: scopeCaption)
         // **NO FIGURE (prd §606).** These two drew a count as N identical
         // shapes — eight rings for eight keys, a row of pips per address —
         // over data with nothing to compare. "We can count; what does that

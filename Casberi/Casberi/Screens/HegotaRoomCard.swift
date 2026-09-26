@@ -201,9 +201,8 @@ struct HegotaRoomFigure: View {
         // make the two scopes look like the same reading twice. What this scope
         // adds is that those transactions are made of parts.
         case .frames:
-            guard let mix = HegotaFrameMix.of(framedMoves) else { return nil }
-            return mix.total == 1 ? String(localized: "1 step")
-                                  : String(localized: "\(String(mix.total)) steps")
+            // The figure owns its reading since prd §925.
+            return nil
         }
     }
 
@@ -920,7 +919,8 @@ struct HegotaRoomFigure: View {
     /// Hegotá Frames tinted its strips by OUTCOME while this room tinted by
     /// MODE — one drawing, two meanings, in adjacent rooms.
     @ViewBuilder private var framesFigure: some View {
-        RoomFramesFigure(runs: HegotaFrames.runs(framedMoves), hue: RoomFrameStyle.hue)
+        RoomFramesFigure(runs: HegotaFrames.runs(framedMoves), hue: RoomFrameStyle.hue,
+                         caption: crownCaption)
     }
 
     /// What the mix says in one line. The commonest step LEADS, because on this

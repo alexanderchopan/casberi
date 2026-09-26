@@ -2683,6 +2683,13 @@ harness "Hegota lanes" "keyed nonces: the lane, its counter, and the rotation" "
 # signer (empty is Hegotá's convention and is refused here, measured 5/5
 # against 0/5), and the signature entry seeded BEFORE the digest is taken.
 harness "Frames devnet transaction self-test" "21 mutations, real on-chain vectors, and the send path's conduct" "scripts/frames-tx-selftest.sh" "the frames transaction self-test failed — run scripts/frames-tx-selftest.sh"
+# The Frames tile's FLOW (prd §925): steps by position, links between
+# consecutive positions, ends where runs stop. Catches a step landing in two
+# nodes or none, a link dropped when the previous step is forgotten, an end
+# counted for a run that flowed off the edge, a failed step folded into its
+# mode, and the biggest-first order breaking — four mutations, each proven to
+# have changed the source before it is trusted to fail.
+harness "Frames flow self-test" "the flow's counts, links, ends, outcomes and order, 4 mutations" "scripts/frames-flow-selftest.sh" "the frames flow self-test failed — run scripts/frames-flow-selftest.sh"
 # The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
 # change flow, compiled whole. Separate from the harness above because that one
 # is four minutes over the whole room and these run in one, so a change to
