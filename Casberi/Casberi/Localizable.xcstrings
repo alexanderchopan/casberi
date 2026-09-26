@@ -93016,6 +93016,34 @@
         }
       }
     },
+    "Not your things" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No son tus cosas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたのものではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 항목이 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是你的内容"
+          }
+        }
+      }
+    },
     "Not your things. Tap to exit." : {
       "localizations" : {
         "es" : {

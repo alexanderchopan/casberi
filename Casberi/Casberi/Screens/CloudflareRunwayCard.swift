@@ -67,7 +67,7 @@ struct CloudflareRunwayCard: View {
     var body: some View {
         let words = words
         // The lead's one height (prd §760), on the template's own card.
-        DSRoomChassis.LeadFit(height: DSRoomChassis.leadHeight - 2 * DS.Space.s4) {
+        DSRoomChassis.LeadFit(height: DSRoomChassis.leadBox) {
             VStack(alignment: .leading, spacing: 0) {
                 // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
                 // head renders only inside its own source's room, under a chip strip

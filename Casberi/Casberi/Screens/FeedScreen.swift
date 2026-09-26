@@ -5825,6 +5825,9 @@ struct FeedScreen: View {
             }
             roomHead
                 .id(demoLead ? "roomHead.underDemoLead" : Self.roomTopAnchor)
+                // Under the lead the pill stands down, so the well's
+                // clearance for it moves to the foot (prd §919).
+                .environment(\.dsDemoMarkUnderLead, demoLead)
             roomBody(rows)
 
             // Room for the floating bar.
@@ -6207,6 +6210,7 @@ struct FeedScreen: View {
             ProjectDetailScreen(projectName: route.name)
                 .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
                 .dsSeatClearance()
+                .dsDemoMarkClearance()
         }
         // The social roster's own door (item 2, 2026-07-27) — a face pushes
         // the person room, not the quick-glance tray `SocialProfileCard`
@@ -6214,6 +6218,7 @@ struct FeedScreen: View {
         .navigationDestination(item: $openPerson) { profile in
             PersonRoomScreen(profile: profile)
                 .dsSeatClearance()
+                .dsDemoMarkClearance()
         }
         // …asked for by the shell's face rail now (prd §362), which is where the
         // faces live since they became a filter. It hands the request down
@@ -7406,8 +7411,8 @@ struct FeedScreen: View {
     private func emptyLeadRow(headline: Text, words: Text) -> some View {
         DSEmptyState(headline: headline, words: words, scale: .list(rows: 3))
             .frame(maxWidth: .infinity,
-                   minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
-                   maxHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4)
+                   minHeight: DSRoomChassis.leadBox,
+                   maxHeight: DSRoomChassis.leadBox)
             .dsRoomHeadBlock()
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -7785,7 +7790,7 @@ struct FeedScreen: View {
     /// above and `leadGap` below — so Tokens and Bitrefill open at the same
     /// height as every other room.
     private func ledeSection(_ content: some View) -> some View {
-        let box = DSRoomChassis.leadHeight - 2 * DS.Space.s4
+        let box = DSRoomChassis.leadBox
         return Section {
             VStack(alignment: .leading, spacing: 0) {
                 content

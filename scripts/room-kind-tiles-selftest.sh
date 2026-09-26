@@ -183,7 +183,7 @@ LEAD
 # `2 × s4` of its own, so a well framed at a bare `leadHeight` stands 30pt
 # taller than the cover it stands in for and the tiles move anyway — which is
 # how §861's agent-room arm shipped, and why this is pinned rather than trusted.
-grep -qF 'minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4' "$FEED" \
+grep -qF 'minHeight: DSRoomChassis.leadBox' "$FEED" \
   || { echo "✗ the empty lead no longer holds FeedLedeCard's own box — the tiles would sit at two heights (§862)"; exit 1; }
 grep -qE '\.frame\(height: DSRoomChassis\.leadHeight\)[[:space:]]*$' "$FEED" \
   && { echo "✗ a lead well is framed at a bare leadHeight inside dsRoomHeadBlock — that is 2 × s4 too tall (§862)"; exit 1; }

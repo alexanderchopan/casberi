@@ -1,7 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// The standing "this is the demo" bar (see `DemoMode`).
+/// The standing "this is the demo" mark (see `DemoMode`) — a blue pill that
+/// floats over every demo screen (prd §919; the shape's reasons are on
+/// `DSDemoMark`).
 ///
 /// **Not decoration — it is the honesty rule's price for the demo existing.**
 /// A furnished demo puts a fake Stripe dispute, a fake $12,480 crown and 68
@@ -17,9 +19,10 @@ import SwiftData
 ///   • **Always carries the way out.** The exit is ON the marking, not filed
 ///     in Settings — the moment someone wants their own app back is the
 ///     moment they are reading this.
-///   • **Rides the shell, not the feed.** It is hosted in `RootShell`'s own
-///     stack for the agent bar's reason: the demo is just as fake inside a
-///     pushed room, the Apps catalog or a bridge setup screen.
+///   • **Rides the shell, not the feed.** It is a layer of `RootShell`'s own
+///     stack, beside the dock's seat, for the seat's reason: the demo is just
+///     as fake inside a pushed room, the Apps catalog or a bridge setup
+///     screen — and as `MainSurface`'s inset (until §919) a push covered it.
 ///
 /// The verb is EXIT, never "delete" — nobody chose to keep any of this, so
 /// asking them to delete it would be asking them to take responsibility for
@@ -32,29 +35,20 @@ struct DemoBanner: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// One slow breath on arrival — the ENTRANCE. The standing pulse that
-    /// follows it is the glyph's own (see `body`).
+    /// One slow breath on arrival — the ENTRANCE.
     @State private var settled = false
-    @State private var explaining = false
-    /// Set by the sheet's Exit, consumed by its `onDismiss` — the landing
-    /// must wait until the tray is fully DOWN. `present(.apps)` is a
-    /// `navigationDestination` PUSH, and SwiftUI intermittently drops one
-    /// made under a presented cover (the drop class `RootShell` documents at
-    /// length: "Browse the catalog sometimes doesn't work"). The old landing
-    /// was immune by accident — `path = []` is a clear, not a push — so §863
-    /// inherited the trap the moment it gave the exit somewhere to go.
-    @State private var leavingOnDismiss = false
 
-    /// **A STATUS, NOT A BAR (2026-09-05, user: "we could improve the banner
-    /// … user can tap it and figure it out").** The full-width glass pill —
-    /// sparkle, a nine-word sentence, Exit — was the heaviest chrome on the
-    /// screen, sitting above the room's own hero on every demo screen. What
-    /// the honesty rule (§83) needs is that the marking is CONTINUOUS and
-    /// carries its way out; it does not need the whole sentence in every
-    /// frame. So: one tinted capsule with the mark and the word, leading, at
-    /// the size of a recording indicator. A tap opens the sentence and the
-    /// two verbs, and since 2026-09-18 the capsule NAMES that tap. Still
-    /// never dismissible, still on the shell.
+    /// **A BLUE PILL THAT FLOATS, WITH THE VERB ON IT (prd §919, 2026-09-25;
+    /// `DSDemoMark` holds the geometry and the reasons).** Four restyles of a
+    /// glass capsule and a real person still walked past it (§864); the user
+    /// looked at glass, blue and white mocked on the real rooms and chose
+    /// blue — the app's own word for "tap me", the colour the All lead's
+    /// Exit row already wears. One clause and one verb: the sentence the lead
+    /// says, then `Exit` with the lead row's glyph, so the door is the same
+    /// at both places. The exit is DIRECT, as the lead's is — a control that
+    /// says Exit and then asks is a confirmation nobody asked for, and the
+    /// sheet that used to sit behind the tap (`DemoExplainSheet`) is deleted
+    /// with it. Still never dismissible, still on the shell.
     /// The lead is on screen AND this is the screen it is on. The second half
     /// is not belt-and-braces: rooms are paged and a built page stays mounted,
     /// so the lead's `onDisappear` is not promised on a room change or a push.
@@ -64,71 +58,41 @@ struct DemoBanner: View {
     }
 
     var body: some View {
-        Button {
-            DSHaptic.tap()
-            explaining = true
-        } label: {
+        DSDemoPill {
             HStack(spacing: DS.Space.s2) {
-                // **THE SIGNAL, and the only colour the capsule carries (prd
-                // §679, 2026-09-10).** Blue (2026-09-09) was `DS.tint` — the
-                // one hue every live control in the app wears, the dock's
-                // lozenge included — so a marker meaning "none of this is
-                // real" wore the colour that everywhere else means "this is
-                // yours and live". Amber is the platform's word for
-                // non-production, and it is used here as a WORD,
-                // never as the capsule's fill: `DS.attention` already means
-                // "a seat is broken" (the dashed ring, the catalogue door's
-                // mark), and every one of those is amber INK on a dark
-                // ground, so a filled amber pill would have read as that.
-                //
-                // No dot (user, 2026-09-24): the amber word already says it.
                 Text("Demo")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.attention)
+                    .dsText(.body17)
                 Text(verbatim: "·")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
+                    .dsText(.body17)
                     .accessibilityHidden(true)
-                // The sentence the accessibility label below has always
-                // spoken, on screen at last: "Demo" alone can be read as a
-                // mode somebody turned on; naming the things removes that
-                // reading. **And the way out is on the capsule (user,
-                // 2026-09-18: "not everyone realizes it's a demo, and even
-                // if they do, they may not know how to exit it").** The
-                // capsule has carried the exit since §620, but only as a
-                // destination behind a tap nothing named — so the tap was
-                // discoverable by accident. Naming it costs three words and
-                // is the honesty rule's own second half: the marking carries
-                // the way out, and now it says so.
-                Text("Not your things. Tap to exit.")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
+                // The lead's sentence (`None of it is yours.`) is the long
+                // form; beside the gear column the pill has ~318pt, and at
+                // the row's rung the long form wrapped (measured). Three
+                // words say the same fact (§813's reason: "Demo" alone reads
+                // as a mode somebody turned on; naming the things removes
+                // that).
+                Text("Not your things")
+                    .dsText(.body17)
                     .fixedSize(horizontal: false, vertical: true)
+                // Weight carries the verb (§764): the fact is regular, the
+                // door is the heavier rung, and the glyph is the lead row's.
+                Text("Exit")
+                    .dsText(.heading17)
+                    .padding(.leading, DS.Space.s2)
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .dsGlyph(.caption, weight: .semibold)
+                    .accessibilityHidden(true)
             }
-            .padding(.horizontal, DS.Space.s3)
-            .frame(minHeight: 34)
-            // **GLASS, a step brighter than the dock's (prd §679).** The
-            // banner is floating chrome, which is the one layer §8 gives
-            // Liquid Glass to — but the dock is glass too, so plain glass
-            // here reads as a control. The light tint lifts it off the
-            // slab; the amber above is what says what it is. On the pre-26
-            // fallback the tint is faint and the amber does all the work,
-            // which is why the amber is not optional.
-            .dsGlass(cornerRadius: DS.Radius.pill, tint: .white.opacity(0.35))
-            .contentShape(Capsule(style: .continuous))
-            .frame(minHeight: DS.Hit.min)
+            .foregroundStyle(.white)
+        } action: {
+            DSHaptic.tap()
+            leave()
         }
-        .buttonStyle(PressSpring())
-        .dsHover()
-        .accessibilityLabel(Text("Demo — not your things"))
-        .accessibilityHint(Text("Opens the way out"))
-        .padding(.horizontal, DS.Space.s4)
         .scaleEffect(settled ? 1 : 0.92)
         // NEVER BOTH IN ONE FRAME (user, 2026-09-20: "why would we need to
         // say demo twice here"). While the All feed's `DemoLead` is on screen
-        // it IS the marking, so the capsule stands down — by opacity, never
-        // by unmounting: this rides a safe-area inset, and an inset that came
-        // and went with the scroll would move the list under the finger.
+        // it IS the marking, so the pill stands down — by opacity, so the
+        // layer's geometry never changes under a finger.
         .opacity(settled && !yields ? 1 : 0)
         .allowsHitTesting(!yields)
         .accessibilityHidden(yields)
@@ -137,13 +101,6 @@ struct DemoBanner: View {
             guard !settled else { return }
             if reduceMotion { settled = true }
             else { withAnimation(DS.Motion.standard.delay(0.35)) { settled = true } }
-        }
-        .sheet(isPresented: $explaining, onDismiss: {
-            guard leavingOnDismiss else { return }
-            leavingOnDismiss = false
-            leave()
-        }) {
-            DemoExplainSheet(leave: { leavingOnDismiss = true; explaining = false })
         }
     }
 
@@ -163,7 +120,7 @@ struct DemoBanner: View {
     }
 }
 
-/// The way out, shared by the capsule's sheet and the All feed's `DemoLead`.
+/// The way out, shared by the pill and the All feed's `DemoLead`.
 /// The DEBUG door that takes the demo's marking out of a marketing capture
 /// (`-hideDemoBanner YES`, 2026-09-08). ONE definition, read by the capsule's
 /// host and by `DemoLead`: §864 put a second marking on screen, and a door
@@ -273,60 +230,5 @@ struct DemoLead: View {
             chrome.demoLeadVisible = visible
         }
         .onDisappear { chrome.demoLeadVisible = false }
-    }
-}
-
-/// The sentence the capsule stands for, and the two verbs — the way out, and
-/// the way back to looking. The verb is EXIT, never "delete" — nobody chose
-/// to keep any of this, so asking them to delete it would be asking them to
-/// take responsibility for rows the app poured in.
-private struct DemoExplainSheet: View {
-    let leave: () -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    /// What the content below the title measures — `trayHeight`'s whole
-    /// input. 0 until the first layout pass.
-    @State private var contentHeight: CGFloat = 0
-
-    var body: some View {
-        DSTray(title: "This is a demo.", height: trayHeight) {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                // ONE LINE (user, 2026-09-05: "this wording is long"). What
-                // happens on exit is said by the verb below it.
-                // "Exit whenever you're ready" restated the verb under it
-                // (prd §748).
-                Text("None of it is yours.")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, DS.Space.s3)
-                DSActVerb(title: "Exit the demo") { leave() }
-                Button {
-                    DSHaptic.tap()
-                    dismiss()
-                } label: {
-                    Text("Keep looking")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: DS.Hit.min)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                contentHeight = $0
-            }
-        }
-    }
-
-    /// Sized to its content (user, 2026-09-05: "this tray needs to be
-    /// shortened, there is a gap that doesn't need to be there") — MEASURED
-    /// rather than a tuned constant, so a wrapped sentence or a larger text
-    /// size cannot reopen the gap or clip "Keep looking". `DSTray`'s chrome is
-    /// "pad, title, gap, … pad"; the fallback lasts one layout pass.
-    private var trayHeight: CGFloat {
-        let chrome = DS.Space.s6 + 40 + DS.Space.s4 + DS.Space.s6
-        return (contentHeight > 0 ? contentHeight : 224) + chrome
     }
 }

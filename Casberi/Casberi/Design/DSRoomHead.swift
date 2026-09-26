@@ -183,7 +183,7 @@ extension DSRoomChassis {
         private var well: some View {
             // `dsRoomHeadBlock` pads `s4` on every side, so the box inside is
             // `leadHeight` less that twice (prd §760).
-            faceDoor(LeadFit(height: DSRoomChassis.leadHeight - 2 * DS.Space.s4) {
+            faceDoor(LeadFit(height: DSRoomChassis.leadBox) {
                 VStack(alignment: .leading, spacing: 0) {
                     leadView
                     ForEach(notes.indices, id: \.self) { index in
@@ -769,11 +769,15 @@ extension View {
     /// room at once because every lead's layout is this one definition: its
     /// edge is `DSRoomChassis.inset` from the screen, the words stand `s3`
     /// inside it at `leadInset`, the rows' column.
+    ///
+    /// **And the demo's pill is absorbed here (prd §919).** The mark floats
+    /// over the well's top; the words step down by `DSDemoMark.leadClearance`
+    /// — which `DSRoomChassis.leadBox` has already taken out of the content's
+    /// height — so the well keeps `leadHeight` and nothing under it moves.
+    /// Under the All lead the pill stands down (§864), so the clearance moves
+    /// to the foot: same height, words at the top.
     func dsRoomHeadBlock() -> some View {
-        padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWell(cornerRadius: DS.Radius.widget)
+        modifier(DSRoomHeadWell())
     }
 
     /// Where a head stands in the feed. `FeedScreen.insightSection` presents
@@ -788,5 +792,20 @@ extension View {
         padding(.horizontal, DS.Space.s4)
             .padding(.top, top)
             .padding(.bottom, DSRoomChassis.leadGap)
+    }
+}
+
+/// `dsRoomHeadBlock`'s body, as a modifier so it can read where it stands.
+struct DSRoomHeadWell: ViewModifier {
+    @Environment(\.dsDemoMarkUnderLead) private var underLead
+
+    func body(content: Content) -> some View {
+        let clearance = DSDemoMark.leadClearance
+        content
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.top, DS.Space.s4 + (underLead ? 0 : clearance))
+            .padding(.bottom, DS.Space.s4 + (underLead ? clearance : 0))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsWell(cornerRadius: DS.Radius.widget)
     }
 }

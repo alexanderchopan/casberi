@@ -126,7 +126,7 @@ struct FeedLedeCard: View {
     @ViewBuilder private func wellBody(face: FeedLedeFace.Kind, receipt: MoneyReceipt?,
                                        rungs: [BodyRung], stateWord: String?,
                                        prose: String) -> some View {
-        let box = DSRoomChassis.leadHeight - 2 * DS.Space.s4
+        let box = DSRoomChassis.leadBox
         // THE LONGEST COMPOSITION THAT FITS THE LEAD'S BOX (prd §760, widened
         // by §772). It used to vary one number — the excerpt's line count, six
         // then four then two — because the excerpt was the only thing the body

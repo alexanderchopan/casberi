@@ -51,9 +51,13 @@ struct RootShell: View {
     /// because the relay can ring on any screen.
     @State private var safeAsk: SafePeer.PendingAsk?
     @AppStorage("onboarded") private var onboarded = false
-    /// Mirrors `DemoMode.isActive` so the standing demo banner appears and
-    /// disappears with the mode — see the banner's own gate in `shellBase`.
-    @AppStorage("demo.mode.active") private var demoActive = false
+    /// Mirrors `DemoMode.isActive` so the standing demo mark appears and
+    /// disappears with the mode — its layer is in `body`, beside the seat
+    /// (prd §919). Reads the SAME store `DemoMode` writes: under
+    /// `-storeScratch` that is a per-process suite, so a harness run still
+    /// shows its own mark while writing nothing into the person's defaults.
+    @AppStorage("demo.mode.active", store: ScratchDefaults.standard)
+    private var demoActive = false
     /// Set by the onboarding CTA, consumed by the cover's onDismiss: the
     /// catalog push must wait until the cover is fully DOWN. Pushing while
     /// the cover still stood raced its dismissal, and SwiftUI intermittently
@@ -2287,10 +2291,9 @@ struct RootShell: View {
             // Anything dropped on the shell lands as a thing (capture: drop).
             MainSurface()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // The demo's marking lives in `MainSurface.topInset`, NOT here
-                // — an inset applied at this level is ignored by the source
-                // strip, which owns the top of the screen from inside the
-                // NavigationStack. See that property for the measurements.
+                // The demo's marking is a LAYER of this stack now (prd §919,
+                // below the seat), not an inset on this surface: an inset
+                // moved every room's lead and a push covered it.
                 // The demo's drain — see `ShellChrome.demoLeaving`.
                 .opacity(chrome.demoLeaving ? 0 : 1)
                 .animation(DS.Motion.standard, value: chrome.demoLeaving)
@@ -2490,6 +2493,33 @@ struct RootShell: View {
                 // says why the opt-out alone was not enough.
                 .dsStaysUnderKeyboard()
                 .transition(.opacity)
+            }
+
+            // THE DEMO'S STANDING MARK, over everything but the cover (prd
+            // §919). Hosted HERE, beside the seat and outside the
+            // `NavigationStack`, so it survives a push — as `MainSurface`'s
+            // top inset (§591 to §864) every pushed screen in the demo carried
+            // no marking at all. An OVERLAY, never an inset, so nothing on the
+            // page moves for it; the lead's well absorbs it (`DSDemoMark`) and
+            // a pushed screen reserves it (`dsDemoMarkClearance`).
+            // `rootPresented` for the cover's reason, plus the route and the
+            // filter the pill reads to stand down under the All lead.
+            // `DemoCapture` is the one capture door (§864).
+            if demoActive && !DemoCapture.hidesMarking {
+                rootPresented(DemoBanner())
+                    .environment(sceneState.route)
+                    .environment(sceneState.filter)
+                    .padding(.top, DSDemoMark.pillTop)
+                    .padding(.leading, padShell.railInset)
+                    .padding(.leading, DS.Space.s4)
+                    // The room gear owns the trailing corner (§752); the pill
+                    // ends before its column and wraps rather than crossing it.
+                    .padding(.trailing, DSRoomChassis.gearColumn + DS.Space.s4 + DS.Space.s2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    // The demo's drain, with the surface (`ShellChrome.demoLeaving`).
+                    .opacity(chrome.demoLeaving ? 0 : 1)
+                    .animation(DS.Motion.standard, value: chrome.demoLeaving)
+                    .transition(.opacity)
             }
 
             // THE FIRST SCREEN, over the feed (2026-09-05). A layer here rather

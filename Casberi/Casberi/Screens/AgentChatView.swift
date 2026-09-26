@@ -126,7 +126,7 @@ struct AgentChatThread: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: DSRoomChassis.leadHeight - 2 * DS.Space.s4)
+        .frame(height: DSRoomChassis.leadBox)
         .dsRoomHeadBlock()
         .onAppear(perform: reparse)
         .onChange(of: key) { _, _ in reparse() }

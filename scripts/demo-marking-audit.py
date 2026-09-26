@@ -81,7 +81,9 @@ ROOT = Path(__file__).resolve().parent.parent
 BANNER = "Casberi/Casberi/Screens/DemoBanner.swift"
 COVER = "Casberi/Casberi/Screens/IntroCover.swift"
 MODE = "Casberi/Casberi/Model/DemoMode.swift"
-SURFACE = "Casberi/Casberi/Shell/MainSurface.swift"
+# The mark is a layer of `RootShell` since prd §919 (an overlay beside the
+# seat, so a pushed screen carries it); it was `MainSurface`'s top inset.
+SURFACE = "Casberi/Casberi/Shell/RootShell.swift"
 FEED = "Casberi/Casberi/Screens/FeedScreen.swift"
 SOURCE_DIRS = ["Casberi/Casberi", "Casberi/Shared", "Casberi/CasberiWidgets"]
 
@@ -317,8 +319,10 @@ struct IntroCover: View {
 '''
 
 FIXTURE_SURFACE = '''
-struct MainSurface: View {
-    private var hideDemoBanner: Bool { DemoCapture.hidesMarking }
+struct RootShell: View {
+    var body: some View {
+        if demoActive && !DemoCapture.hidesMarking { DemoBanner() }
+    }
 }
 '''
 

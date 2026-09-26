@@ -87,25 +87,6 @@ struct MainSurface: View {
     /// feed. Process-wide by nature: which wallets you watch is not a property
     /// of a window.
     @Bindable private var wallet = WalletStore.shared
-    /// Mirrors `DemoMode.isActive` — the standing demo banner rides this
-    /// surface's top inset (see the `.safeAreaInset` below). `@AppStorage`
-    /// rather than a plain read so Exit removes it on the spot.
-    // Reads the SAME store `DemoMode` writes. Under `-storeScratch` that is a
-    // per-process suite, so a harness run still shows its own banner while
-    // writing nothing into the person's real defaults; outside scratch this is
-    // `.standard` exactly as before.
-    @AppStorage("demo.mode.active", store: ScratchDefaults.standard)
-    private var demoActive = false
-    /// DEBUG `-hideDemoBanner YES` leaves the demo's standing mark unmounted,
-    /// for App Store captures over the furnished demo (2026-09-08). The mark
-    /// is §83's price for the demo existing — a real user is never shown fake
-    /// numbers unmarked — and a marketing still or preview is not a real
-    /// user's screen: the pill was painted out of every shot by hand until
-    /// this door, and a video cannot be painted frame by frame past the rain.
-    /// DEBUG only, so no shipped build can ever read it.
-    /// ONE definition, in `DemoCapture` — §864 put a second marking on screen
-    /// and both have to answer the same door.
-    private var hideDemoBanner: Bool { DemoCapture.hidesMarking }
 
     /// iPad (2026-07-25). `regular` alone decides the RAIL; the detail pane
     /// additionally needs real width (see `PadLayout.minWidthForPane`), so
@@ -379,7 +360,8 @@ struct MainSurface: View {
             // and the reason to move is plain: this is a marking about the
             // whole app state, not a control, and at the bottom it was pushing
             // the dock up by its own height while sitting in the thumb zone
-            // reserved for things you press. See `demoBannerInset`.
+            // reserved for things you press. Since prd §919 it is a layer of
+            // `RootShell`'s stack, an overlay that moves nothing.
             // The room's own two controls, ABOVE the strip and BELOW the feed
             // (prd §357, moved to this edge by §591). Both were
             // `safeAreaInset`s on `FeedScreen` until §357 — see `roomControls`
@@ -495,31 +477,6 @@ struct MainSurface: View {
                     // tile with its word on it now, so the caption repeated
                     // what the lifted tile already showed, one line higher.
             }
-        }
-    }
-
-    /// The demo's marking, on the top edge (§591 amendment).
-    ///
-    /// Its own `.safeAreaInset(edge: .top)`, applied beside the band's bottom
-    /// one, rather than a `RootShell` overlay — the 2026-08-07 finding that an
-    /// inset applied further out is drawn over by this stack's own chrome is
-    /// unchanged, and this is that stack's inset. What changed is only which
-    /// edge it takes, which is now free.
-    ///
-    /// No scrim of its own: a wash under a capsule that carries its own fill
-    /// would read as a header band the page stops at. (This used to lean on
-    /// `crownPour` darkening the same region; that is gone, prd §635, and the
-    /// banner's own capsule was always what made it legible.)
-    @ViewBuilder
-    private var demoBannerInset: some View {
-        if demoActive && !hideDemoBanner {
-            DemoBanner()
-                .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
-                         ? DS.Space.s2 : DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
-                .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
-                       alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -651,7 +608,7 @@ struct MainSurface: View {
                     faces: { roomFaces })
             }
             .padding(.horizontal, DS.Space.s4)
-            .padding(.top, facesShow && showsRail && !demoActive ? DS.Space.s2 : 0)
+            .padding(.top, facesShow && showsRail ? DS.Space.s2 : 0)
         }
         // THE OCTOPUS'S FOLDER IS GONE (prd §697, 2026-09-11) — with the
         // ask deprecated it held two doors, and two doors are cheaper drawn
@@ -2952,7 +2909,6 @@ struct MainSurface: View {
                 for: UIResponder.keyboardWillHideNotification)) { _ in
                 if chrome.keyboardUp { chrome.keyboardUp = false }
             }
-            .safeAreaInset(edge: .top, spacing: 0) { demoBannerInset }
             // THE ROOM'S OWN SETTINGS DOOR (2026-08-21) — see `RoomGear` for
             // why a bare gear is legible here and why the room needed one.
             //
@@ -3214,6 +3170,10 @@ struct MainSurface: View {
                     // pushed screen has to remember, for the same reason
                     // `dsRailColumn` is on this line and not in sixty files.
                     .dsSeatClearance()
+                    // …and its top edge for the demo's pill (prd §919): the
+                    // mark floats on the shell, and a pushed screen has no
+                    // lead well to absorb it, so it reserves the band.
+                    .dsDemoMarkClearance()
             }
         }
         // The connect form, raised over wherever the person is (prd §218) —

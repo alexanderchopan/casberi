@@ -85,6 +85,14 @@ enum DSRoomChassis {
     /// gives up whole rows through `LeadFit` and counts them.
     static let leadHeight: CGFloat = visualSlot + 2 * DS.Space.s2
 
+    /// **THE BOX INSIDE THE WELL — what every lead's content is sized to
+    /// (prd §919).** `leadHeight` less the well's own `s4` above and below,
+    /// less what the demo's pill takes at the top (`DSDemoMark.leadClearance`:
+    /// the well absorbs the mark so the page does not move). It was spelled
+    /// `leadHeight - 2 * DS.Space.s4` at ten sites; one spelling, so the
+    /// demo cannot clip one of them.
+    @MainActor static var leadBox: CGFloat { leadHeight - 2 * DS.Space.s4 - DSDemoMark.leadClearance }
+
     // **THE THREE GAPS WERE TIGHTENED ONE RUNG (prd §495, user: "should we
     // move the silouhette rail and the toggle rail higher on both vibenet and
     // wallet to let more of the lists show" → "just a tiny bit higher… so
