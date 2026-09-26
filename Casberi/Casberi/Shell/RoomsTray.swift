@@ -144,7 +144,12 @@ struct RoomsTray: View {
                         pinnedRow
                     }
                 }
-                .padding(.horizontal, DSRoomChassis.inset)
+                // The row discs centre on the column the face and every
+                // room's row icons share (user, 2026-09-26: "should we move
+                // the categories or their icons inset more so it is also
+                // aligned w/ the fab and row icons on main pages").
+                .padding(.leading, DSRoomChassis.rowLeadCentre - Self.mark / 2)
+                .padding(.trailing, DSRoomChassis.inset)
                 .padding(.top, DS.Space.s3)
                 // The face rides ABOVE this tray (it is the way out), so the
                 // last row ends before its column — the same clearance every
