@@ -55,8 +55,15 @@ struct RoomsTray: View {
     static let nameColumn: CGFloat = 118
     /// A mark's size — the row circle, on the face ramp.
     static let mark: CGFloat = DS.Face.rowCircle
-    /// The air between marks and between wrapped lines.
-    static let markGap: CGFloat = DS.Space.s3
+    /// The air between marks' TAP AREAS and between wrapped lines: none.
+    /// Five across on a 402pt phone (user: "is there anyway we can get five
+    /// tiles on a line so the you section is all on one line?"): 402 − 2 × 16
+    /// inset − 118 name − 12 = 240 for the marks, five 44pt targets take 220,
+    /// and a 4pt gap (236) wrapped the fifth on rounding. The circles draw at
+    /// 28pt inside their targets, so the eye sees 16pt of air between them,
+    /// the same across and down. The name column stays 118 — "Shopping" needs
+    /// it.
+    static let markGap: CGFloat = 0
     /// A grabber drag past this, down, collapses or closes; up, grows.
     static let detentDrag: CGFloat = 56
     /// The two detents, as shares of the screen: rest shows You and the first
