@@ -69,6 +69,9 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
             HStack(alignment: .center, spacing: DS.Space.s3) {
                 lead
                     .frame(width: Self.leadSize, height: Self.leadSize)
+                    // Round, like every other mark in the app (see
+                    // `BridgeIcon.roundInContext`).
+                    .environment(\.dsRoundBrandMarks, true)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                         // ONE LINE, always (prd §902 — user: "don't wrap

@@ -47,6 +47,14 @@ struct BridgeIcon: View {
     /// contexts, where a square asset inside a round chip read as a square
     /// floating in a circle (report 2026-07-10).
     var circular: Bool = false
+    /// **A ROW'S LEAD IS ROUND (user, 2026-09-26: "should all the tiles be
+    /// circles instead of square so its cohesive with rest of app?").** The
+    /// tray, the face, the avatars and the account silhouettes are circles,
+    /// and the same app wore a circle in the tray and a squircle in its feed
+    /// row. `DSFeedRow` sets this for its lead slot, so every brand mark in a
+    /// row is round without 64 call sites changing — and a badge riding the
+    /// lead is untouched, because it is not a brand icon.
+    @Environment(\.dsRoundBrandMarks) private var roundInContext
 
     var assetName: String {
         // DIACRITICS ARE FOLDED (2026-08-27, "Ethrex Hegotá"). An asset
@@ -66,7 +74,7 @@ struct BridgeIcon: View {
     }
 
     private var shape: AnyShape {
-        circular ? AnyShape(Circle())
+        circular || roundInContext ? AnyShape(Circle())
                  : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous))
     }
 
@@ -135,5 +143,17 @@ struct TokenIcon: View {
             RemoteAssetMark(urlString: url, size: size,
                             monogram: String(symbol.prefix(2)).uppercased(), tint: nil)
         }
+    }
+}
+
+private struct DSRoundBrandMarksKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// Brand icons draw as circles in this subtree (`DSFeedRow`'s lead).
+    var dsRoundBrandMarks: Bool {
+        get { self[DSRoundBrandMarksKey.self] }
+        set { self[DSRoundBrandMarksKey.self] = newValue }
     }
 }
