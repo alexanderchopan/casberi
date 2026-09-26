@@ -463,12 +463,7 @@ extension FeedScreen {
                     onOpenDeposits: { feedSheet = .deposits(composition) },
                     // Owed gets no door on purpose — the Lending card below
                     // already states health per protocol.
-                    onOpenLocks: { feedSheet = .locks(composition) },
-                    caption: selectedWallet.map {
-                        WalletScopeRail.caption(for: $0, in: wallet.addresses).name
-                    } ?? (wallet.addresses.count == 1
-                          ? String(localized: "1 wallet")
-                          : String(localized: "\(String(wallet.addresses.count)) wallets")))
+                    onOpenLocks: { feedSheet = .locks(composition) })
                     // BARE ON THE PAGE (user ruling, prd §483: *"we don't do
                     // cards"*). A scope's lead drawing sits in the visual slot
                     // exactly as the sparkline, the treemap and the flow band
@@ -1067,6 +1062,7 @@ extension FeedScreen {
     var walletDeFiSection: some View {
         if hasLendingCard {
             Section {
+                DSGroupHeader(word: String(localized: "Lending"))
                 WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho)
                     // The risk strip's Aave and Morpho dots land here (§417).
                     .id(Self.lendingAnchor)
@@ -1090,6 +1086,7 @@ extension FeedScreen {
     var walletLiquiditySection: some View {
         if !walletLive.uniswap.isEmpty {
             Section {
+                DSGroupHeader(word: String(localized: "Liquidity"))
                 WalletLiquidityCard(book: walletLive.uniswap)
                     .modifier(rowEntrance(3))
                     .listRowBackground(Color.clear)
@@ -1108,6 +1105,7 @@ extension FeedScreen {
     var walletPerpsSection: some View {
         if !walletLive.hyperliquid.positions.isEmpty {
             Section {
+                DSGroupHeader(word: String(localized: "Perps"))
                 WalletPerpsCard(book: walletLive.hyperliquid)
                     // The risk strip's perp dots land here (§417).
                     .id(Self.perpsAnchor)

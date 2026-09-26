@@ -31,70 +31,15 @@ struct WalletPerpsCard: View {
 
     var body: some View {
         if !shown.isEmpty {
+            // The group's name is the room's `DSGroupHeader` (prd §945); the
+            // second headline restated the first row's own line.
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                WalletSectionLabel(title: String(localized: "Perps"))
-                // THE READING (2026-08-20, prd §417) — see
-                // `WalletLiquidityCard.reading` for the ruling. This card went
-                // from an 11pt label straight to rows, so the fact it is
-                // already SORTED by (its own doc's words) "nearest to
-                // liquidation" was information only a reader who knew the sort
-                // order could use. Now it says so.
-                Text(reading.text)
-                    .dsText(.heading24)
-                    .foregroundStyle(reading.risk ? DS.attention : DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 2)
-                // `Position` is a plain value type (never a `Thing`), keyed on
-                // its own identity. The key spans the ACCOUNT as well as the
-                // coin: a sub-account can hold its own BTC position alongside
-                // the main one, and keying on the coin alone would collide
-                // them (the reused-id `ForEach` trap this app has paid for).
                 ForEach(shown, id: \.key) { position in
                     positionRow(position)
                 }
             }
-            // **HEADERS, NO CARD (user ruling, prd §493: "Lets do headers no
-            // cards").** Applied to EVERY scope list in both rooms, not to this
-            // one section — the ask was consistency, and a single de-carded
-            // list beside two carded ones is the drift it was meant to end.
-            //
-            // The reasoning, since "what would Apple do" was the question:
-            // Apple uses cards where each is a DIFFERENT KIND of reading you
-            // might act on separately (Health, Fitness). Its MONEY screens —
-            // Wallet transactions, Stocks — are plain rows under section
-            // headers. A scope's list is groups of ONE kind of thing, so it
-            // takes the money-screen treatment.
-            //
-            // It is also what the room already did everywhere else: every
-            // scope's drawing is bare (§483), Holdings' list is bare,
-            // Permissions' list is bare. These were the last three surfaces
-            // disagreeing with their own room.
-            .padding(.horizontal, DSRoomChassis.inset)
             .padding(.bottom, DS.Space.s4)
         }
-    }
-
-    /// The card's spoken verdict (prd §417), naming the position `shown`
-    /// already ranks first.
-    ///
-    /// **Says nothing about profit**, deliberately: this card has never shown
-    /// PnL and the reading is not the place to start, since an unrealized
-    /// number stated in the largest type on the card reads as money you have.
-    /// It says the same thing the sort does — what is closest to being taken
-    /// from you — and falls back to a plain count when no position carries a
-    /// liquidation price, which is a real state (`liquidationProximity` is nil
-    /// for an unlevered position) and not a failure.
-    private var reading: (text: String, risk: Bool) {
-        guard let worst = shown.first else { return ("", false) }
-        let side = worst.isLong ? String(localized: "long") : String(localized: "short")
-        guard let proximity = worst.liquidationProximity else {
-            return (shown.count == 1
-                    ? String(localized: "One position open")
-                    : String(localized: "\(shown.count) positions open"), false)
-        }
-        let pct = Int((proximity * 100).rounded())
-        return (String(localized: "\(worst.coin) \(side) is \(pct)% from liquidation"),
-                worst.isNearLiquidation)
     }
 
     /// Real positions only, riskiest first.
@@ -129,15 +74,14 @@ struct WalletPerpsCard: View {
                                tint: position.isNearLiquidation ? DS.attention : DS.tint,
                                atRisk: position.isNearLiquidation),
                   title: Self.title(position),
-                  subtitle: Self.line(position)) {
+                  subtitleText: Self.line(position)) {
             // Notional leads on the trailing edge, the Lending card's own
             // ranking ("how much" beats every other stat). Unrealized PnL is
             // deliberately absent: it re-prices every second, so a card that
             // showed it would be wrong between reads far more often than it
             // was right, and the subject of this card is whether the position
             // survives — not what it is worth this instant.
-            WalletRowValue(value: WalletValue.money(position.positionValue),
-                           caption: String(localized: "notional"))
+            WalletRowValue(value: WalletValue.money(position.positionValue))
         }
     }
 
@@ -158,19 +102,21 @@ struct WalletPerpsCard: View {
     /// number that appeared only in danger would make its absence the alarm.
     /// A position whose liquidation price the API withholds says nothing
     /// rather than guessing — there is no honest number to print there.
-    private static func line(_ position: HyperliquidDeFi.Position) -> String {
-        var parts: [String] = []
-        parts.append(String(localized: "\(position.leverageX)× \(position.leverageType)"))
+    /// "3× cross · 34% from liquidation" — the distance red only when it is
+    /// near (the one word on the row that needs you, prd §945).
+    private static func line(_ position: HyperliquidDeFi.Position) -> Text {
+        func quiet(_ s: String) -> Text { Text(s).foregroundStyle(DS.textTertiary) }
+        var out = quiet(String(localized: "\(position.leverageX)× \(position.leverageType)"))
         if let proximity = position.liquidationProximity {
             let pct = Int((proximity * 100).rounded())
-            parts.append(String(localized: "\(pct)% from liquidation"))
+            out = out + quiet(" · ")
+                + Text(String(localized: "\(pct)% from liquidation"))
+                    .foregroundStyle(position.isNearLiquidation ? DS.destructive : DS.textTertiary)
         }
-        // Only a sub-account earns a name — the main account is the default
-        // and saying so on every row would be noise.
         if let label = position.accountLabel, !label.isEmpty {
-            parts.append(label)
+            out = out + quiet(" · \(label)")
         }
-        return parts.joined(separator: " · ")
+        return out
     }
 }
 

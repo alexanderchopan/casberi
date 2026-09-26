@@ -740,8 +740,6 @@ struct WalletCompositionStrip: View {
     let composition: WalletComposition
     var onOpenDeposits: (() -> Void)? = nil
     var onOpenLocks: (() -> Void)? = nil
-    /// The scope's caption, the crown's own (prd §926).
-    var caption: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// **THE PRESSED COLUMN (prd §926)** — a protocol's name, or `lockedKey`.
     /// While set, the reading reads that column and the rest go quiet; a tap
@@ -775,7 +773,9 @@ struct WalletCompositionStrip: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 marks
             }
-            .padding(.horizontal, DSRoomChassis.inset)
+            // No inset of its own (prd §945): the crown's box already stands
+            // it in the column, and the extra 18pt put this number off the
+            // line every other crown's number starts on.
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .animation(reduceMotion ? nil : DS.Motion.standard, value: lit)
             .accessibilityElement(children: .contain)
@@ -825,14 +825,10 @@ struct WalletCompositionStrip: View {
         if lit == Self.lockedKey || !composition.hasDeposited {
             parts.append(lockedLine)
         } else {
-            let n = composition.deposits.count
-            parts.append(n == 1 ? String(localized: "at work in 1 protocol")
-                                : String(localized: "at work in \(String(n)) protocols"))
-            if composition.hasOwed {
-                parts.append(String(localized: "\(WalletValue.money(composition.owed)) borrowed"))
-            }
+            // One number over one noun (prd §945): the protocols are the
+            // bars, the borrowing is the rows'.
+            parts.append(String(localized: "at work"))
         }
-        if let caption { parts.append(caption) }
         return parts.joined(separator: " · ")
     }
 
@@ -863,38 +859,29 @@ struct WalletCompositionStrip: View {
     @ViewBuilder
     private func columns(height: CGFloat) -> some View {
         let peak = max(1, places.map(\.usd).max() ?? 1)
-        let owedBy = owedBy
-        // The debt block borrows from the same scale as the bar above it, so
-        // "$6K borrowed against $28K" is two heights on one rule.
-        let debtSpan = height * 0.2
-        let barSpan = height - debtSpan - 2
-        HStack(alignment: .bottom, spacing: DS.Space.s3) {
+        // The bars take the whole height (prd §945); what is borrowed against
+        // each protocol is its row's line below, not a stub under its bar.
+        HStack(alignment: .bottom, spacing: DS.Space.s2) {
             ForEach(Array(places.enumerated()), id: \.element.id) { index, deposit in
-                let up = max(4, CGFloat(deposit.usd / peak) * barSpan)
-                let owed = owedBy[deposit.place] ?? 0
+                let up = max(4, CGFloat(deposit.usd / peak) * height)
                 let quiet = lit != nil && lit != deposit.place
                 column(key: deposit.place, label: deposit.place, quiet: quiet) {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 0) {
                         Spacer(minLength: 0)
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .fill(DS.tint)
                             .frame(height: up)
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(DS.textTertiary)
-                            .frame(height: owed > 0 ? max(3, CGFloat(owed / peak) * debtSpan) : 0)
-                            .opacity(owed > 0 ? 1 : 0)
                     }
                 }
             }
             if composition.hasLocked {
                 let quiet = lit != nil && lit != Self.lockedKey
                 column(key: Self.lockedKey, label: String(localized: "Locked"), quiet: quiet) {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 0) {
                         Spacer(minLength: 0)
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .fill(lit == Self.lockedKey ? DS.textTertiary : DS.fillStrong)
                             .frame(height: 18)
-                        Color.clear.frame(height: 0)
                     }
                 }
             }
@@ -926,26 +913,25 @@ struct WalletCompositionStrip: View {
     /// fit a bar's width and "Hyperliq…" stops truncating.
     @ViewBuilder
     private var marks: some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
+        HStack(alignment: .top, spacing: DS.Space.s2) {
             ForEach(places) { deposit in
                 let quiet = lit != nil && lit != deposit.place
-                VStack(alignment: .leading, spacing: 4) {
+                // Centred under its bar, every name ONE size (prd §945): the
+                // tiles' own 10pt word holds "Hyperliquid" whole in a column,
+                // so no label scales down alone as it did at 12pt.
+                VStack(spacing: 4) {
                     AssetMark(name: deposit.place, size: Self.markSize)
-                    // One line, scaled to its column — never broken mid-word
-                    // ("Hyperliqu / id"), never sizing the column (a fixed-size
-                    // name squeezed "Locked" to "Loc…"), never running into
-                    // the neighbour (an overlay did). Three builds, one word.
                     Text(deposit.place)
-                        .dsText(.label12)
+                        .dsText(.dockCaption10)
                         .foregroundStyle(lit == deposit.place ? DS.textPrimary : DS.textSecondary)
-                        .lineLimit(1).minimumScaleFactor(0.55)
+                        .lineLimit(1)
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .top)
                 .opacity(quiet ? 0.3 : 1)
             }
             if composition.hasLocked {
                 let quiet = lit != nil && lit != Self.lockedKey
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(spacing: 4) {
                     Circle().fill(DS.fillFaint)
                         .frame(width: Self.markSize, height: Self.markSize)
                         .overlay {
@@ -955,11 +941,11 @@ struct WalletCompositionStrip: View {
                                 .accessibilityHidden(true)
                         }
                     Text(String(localized: "Locked"))
-                        .dsText(.label12)
+                        .dsText(.dockCaption10)
                         .foregroundStyle(lit == Self.lockedKey ? DS.textPrimary : DS.textTertiary)
-                        .lineLimit(1).minimumScaleFactor(0.55)
+                        .lineLimit(1)
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .top)
                 .opacity(quiet ? 0.3 : 1)
             }
         }
@@ -1313,50 +1299,16 @@ struct WalletLendingCard: View {
     /// 2026-07-21 ruling, kept).
     private static let riskMargin: Double = 1.5
 
-    /// The section's ONE READING (2026-08-15, the wallet cohesion pass —
-    /// every wallet section leads with its figure in the display voice, the
-    /// brief's "3 late" grammar; the approvals card has had this shape since
-    /// §292 and was the model). Ranked by what a lender actually needs first:
-    /// a position near its floor beats a health figure beats a supplied
-    /// total. The health shown is the WORST across every protocol on the
-    /// card — the same `min` each row already takes, one level up — because a
-    /// reading that averaged would hide exactly the position the margin rule
-    /// exists to surface. Attention ink only on the at-risk form: orange on a
-    /// healthy 2.1 would spend the room's alarm colour on good news.
-    private var reading: (text: String, risk: Bool) {
-        let healths = aave.compactMap(\.healthFactor)
-            + morpho.positions.compactMap(\.healthFactor)
-        let atRisk = healths.filter { $0 < Self.riskMargin }.count
-        if atRisk > 0 {
-            return (atRisk == 1
-                    ? String(localized: "1 position near its floor")
-                    : String(localized: "\(atRisk) positions near their floor"), true)
-        }
-        if let worst = healths.min() {
-            return (String(localized: "Health \(String(format: "%.1f", worst))"), false)
-        }
-        let supplied = aave.reduce(0) { $0 + $1.totalCollateralUSD } + morphoDeposits
-        return (String(localized: "\(WalletValue.money(supplied)) supplied"), false)
-    }
-
     var body: some View {
         if !aave.isEmpty || !morpho.isEmpty {
+            // The group's name is the room's `DSGroupHeader` (prd §945); the
+            // second headline ("1 position near its floor") is gone — the one
+            // row that needs you says so in red.
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                WalletSectionLabel(title: String(localized: "Lending"))
-                let r = reading
-                Text(r.text)
-                    .dsText(.heading24)
-                    .foregroundStyle(r.risk ? DS.attention : DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 2)
                 if !aavePositions.isEmpty { aaveRow }
                 if !sparkPositions.isEmpty { sparkRow }
                 if !morpho.isEmpty { morphoRow }
             }
-            // Headers, no card — the Lending block, taking the same ruling as
-            // its three siblings (prd §493; see `WalletPerpsCard` for the
-            // reasoning in full).
-            .padding(.horizontal, DSRoomChassis.inset)
             .padding(.bottom, DS.Space.s4)
         }
     }
@@ -1380,11 +1332,9 @@ struct WalletLendingCard: View {
         return WalletRow(mark: .asset(title, tint: atRisk ? DS.attention : DS.tint,
                                       atRisk: atRisk),
                          title: title,
-                         subtitle: Self.line(health: health, atRisk: atRisk,
-                                             chains: positions.map(\.network))) {
-            WalletRowValue(value: WalletValue.money(borrowing ? debt : collateral),
-                           caption: borrowing ? String(localized: "borrowed")
-                                              : String(localized: "supplied"))
+                         subtitleText: Self.line(borrowing: borrowing, health: health, atRisk: atRisk,
+                                                 chains: positions.map(\.network))) {
+            WalletRowValue(value: WalletValue.money(borrowing ? debt : collateral))
         }
     }
 
@@ -1426,15 +1376,14 @@ struct WalletLendingCard: View {
             MorphoDeFi.hfTrend(network: $0.network, address: $0.address, marketLabel: $0.marketLabel)
         }
         let subtitle = borrowing
-            ? Self.line(health: morphoHealth, atRisk: atRisk,
+            ? Self.line(borrowing: true, health: morphoHealth, atRisk: atRisk,
                         chains: morpho.positions.map(\.network), trend: trend)
-            : Self.earning(vaults: morpho.vaults.count, markets: morpho.positions.count)
+            : Text(Self.earning(vaults: morpho.vaults.count, markets: morpho.positions.count))
+                .foregroundStyle(DS.textTertiary)
         return WalletRow(mark: .asset("Morpho", tint: atRisk ? DS.attention : DS.tint,
                                       atRisk: atRisk),
-                         title: "Morpho", subtitle: subtitle) {
-            WalletRowValue(value: WalletValue.money(borrowing ? morphoDebt : morphoDeposits),
-                           caption: borrowing ? String(localized: "borrowed")
-                                              : String(localized: "deposits"))
+                         title: "Morpho", subtitleText: subtitle) {
+            WalletRowValue(value: WalletValue.money(borrowing ? morphoDebt : morphoDeposits))
         }
     }
 
@@ -1447,23 +1396,28 @@ struct WalletLendingCard: View {
     /// only — Aave/Spark are one account-wide number, not per-market, so
     /// there's no single position to trend) is silent until there's a real
     /// day of history to read a direction from.
-    private static func line(health: Double?, atRisk: Bool, chains: [String],
-                             trend: String? = nil) -> String {
-        var parts: [String] = []
+    /// "Borrowed · Health 1.32 · Ethereum" — what the figure is first (it
+    /// was a second line under the figure), then the health, red only when
+    /// it is at risk (the one word on the row that needs you, prd §945),
+    /// then the chain.
+    private static func line(borrowing: Bool, health: Double?, atRisk: Bool, chains: [String],
+                             trend: String? = nil) -> Text {
+        func quiet(_ s: String) -> Text { Text(s).foregroundStyle(DS.textTertiary) }
+        var out = quiet(borrowing ? String(localized: "Borrowed") : String(localized: "Supplied"))
+            + quiet(" · ")
         if let health {
-            parts.append(atRisk
-                ? String(localized: "Health \(WalletIngest.format(health)) · at risk")
-                : String(localized: "Health \(WalletIngest.format(health))"))
+            out = out + Text(String(localized: "Health \(WalletIngest.format(health))"))
+                .foregroundStyle(atRisk ? DS.destructive : DS.textTertiary)
         } else {
-            parts.append(String(localized: "No debt"))
+            out = out + quiet(String(localized: "No debt"))
         }
         let unique = Set(chains)
         if unique.count == 1, let network = unique.first,
            let chain = WalletIngest.displayName(forNetwork: network) {
-            parts.append(chain)
+            out = out + quiet(" · \(chain)")
         }
-        if let trend { parts.append(trend) }
-        return parts.joined(separator: " · ")
+        if let trend { out = out + quiet(" · \(trend)") }
+        return out
     }
 
     private static func earning(vaults: Int, markets: Int) -> String {
