@@ -42,7 +42,11 @@ enum ContactSuggest {
         }
     }
 
-    /// Stated edges: a card line naming a handle among the seeds.
+    /// Stated edges: a card line naming a handle among the seeds — and the
+    /// card's own EMAILS (2026-09-25), so a mail from that address resolves
+    /// to the card and stands under its "With you". A mailbox needs no
+    /// roster to be an identity: the card said it, which is the whole of
+    /// what "stated" means.
     static func stated(cards: [Card], seeds: [ContactIndex.Seed], at: Date = .now) -> [ContactLink] {
         let held = Set(seeds.map(\.identity.key))
         var out: [ContactLink] = []
@@ -50,6 +54,9 @@ enum ContactSuggest {
             for line in card.lines {
                 guard let identity = identity(fromCardLine: line), held.contains(identity.key) else { continue }
                 out.append(ContactLink(card.key, identity.key, tier: .stated, source: "contact.card", at: at))
+            }
+            for email in card.emails where email.contains("@") {
+                out.append(ContactLink(card.key, Identity.key(.email, email), tier: .stated, source: "contact.card", at: at))
             }
         }
         return out

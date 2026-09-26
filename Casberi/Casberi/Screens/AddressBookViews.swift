@@ -366,7 +366,26 @@ struct AddressMark: View {
                 // shelf, the book row, the group deck, the address card, the
                 // preview under the field. §362's ruling, one screen down —
                 // "the best way to make it simple is things being the same."
+                // THEIR PICTURE OVER THE IDENTICON (2026-09-25): a wallet
+                // whose person has a face — an ENS avatar, a Farcaster or
+                // Bluesky picture the join verified onto it — wears it, and
+                // the identicon shows through until it loads or if it never
+                // does. The branch above already did this for a social row;
+                // a wallet-led contact ignored `avatarURL` entirely, so every
+                // merged person in Addresses drew a pattern.
                 WalletFace(address: entry.address, size: size, circular: true)
+                    .overlay {
+                        if let raw = entry.avatarURL, let url = URL(string: raw) {
+                            AsyncImage(url: url) { phase in
+                                if let image = phase.image {
+                                    image.resizable().scaledToFill()
+                                        .transition(.opacity)
+                                }
+                            }
+                            .animation(DS.Motion.standard, value: raw)
+                        }
+                    }
+                    .clipShape(Circle())
             }
         }
         // WHERE IT WAS MET, on the face itself (prd §498, user ruling —

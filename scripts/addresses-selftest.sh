@@ -217,8 +217,39 @@ let fcJ = ContactIndex.Seed(Identity.make(.farcaster, "jesse"), name: "Jesse Pol
 let bskyJ = ContactIndex.Seed(Identity.make(.bluesky, "jesse.bsky.social"), name: "Jesse Pollak")
 let ghJ = ContactIndex.Seed(Identity.make(.github, "jesse"), name: "jesse")
 let statedLinks = ContactSuggest.stated(cards: [cardJ], seeds: [fcJ, bskyJ, ghJ])
-check(statedLinks.count == 1 && statedLinks[0].tier == .stated && statedLinks[0].b == "fc:jesse",
+let handleStated = statedLinks.filter { !$0.a.hasPrefix("mail:") && !$0.b.hasPrefix("mail:") }
+check(handleStated.count == 1 && handleStated[0].tier == .stated && handleStated.contains { $0.b == "fc:jesse" || $0.a == "fc:jesse" },
       "a card line naming a handle you follow is a STATED edge to that handle")
+// The card's own emails (2026-09-25): stated, so a mail from that address is
+// from this person — and it needs no roster, the card said it.
+let mailStated = statedLinks.filter { $0.a.hasPrefix("mail:") || $0.b.hasPrefix("mail:") }
+check(mailStated.count == 1 && mailStated[0].tier == .stated && mailStated[0].pairKey.contains("mail:jesse@example.com"),
+      "a card's email is a STATED edge from the card")
+let withMail = ContactIndex.build(seeds: [ContactIndex.Seed(Identity.make(.contact, "contact:j1"), name: "Jesse Pollak", typed: true)],
+                                  links: mailStated)
+check(withMail.count == 1 && withMail[0].identities.contains { $0.kind == .email && $0.tier == .stated },
+      "the card's email joins the card as an identity")
+
+// ── Activity (2026-09-25): the row's line and Recent ───────────────────
+let actRows: [ContactIndex.ActivityRow] = [
+    .init(keys: [A], title: "old transfer", at: t0, acted: true),
+    .init(keys: [A], title: "newest post", at: t2, acted: false),
+    .init(keys: [A], title: "middle transfer", at: t1, acted: true),
+    .init(keys: ["fc:alexx"], title: "a cast", at: t1, acted: false),
+]
+let act = ContactIndex.activity(rows: actRows)
+check(act[A]?.lastThing == "newest post" && act[A]?.lastAt == t2, "the newest thing wins the line regardless of order")
+check(act[A]?.actedAt == t1, "only a thing WITH you moves the acted stamp, and the newest of those wins")
+check(act["fc:alexx"]?.actedAt == nil, "a thing merely from them never counts as dealt with")
+let acted = ContactIndex.build(seeds: [alexWallet, alexFC],
+                               links: [ContactLink(A, "fc:alexx", tier: .verified, source: "farcaster.verifications")],
+                               activity: act)
+check(acted.count == 1 && acted[0].lastThing == "newest post" && acted[0].lastActedAt == t1,
+      "a contact folds every identity's activity: the line from the newest, Recent from the newest dealing")
+let quiet = ContactIndex.build(seeds: [alexWallet, alexFC], links: [])
+check(quiet.allSatisfy { $0.lastThing == nil && $0.lastActedAt == nil }, "no activity, no line, no Recent")
+let kw = ContactIndex.build(seeds: [ContactIndex.Seed(Identity.make(.contact, "contact:k1"), name: "Ana", typed: true, keywords: ["Stripe", "", "Designer"])], links: [])
+check(kw[0].keywords == ["Stripe", "Designer"], "keywords ride the contact, blanks dropped")
 check(ContactSuggest.identity(fromCardLine: "Twitter: x") == nil, "a service with no roster yields nothing")
 check(ContactSuggest.identity(fromCardLine: "GitHub: Torvalds")?.key == "gh:torvalds", "a GitHub line folds case")
 let sugg2 = ContactSuggest.suggested(cards: [cardJ], seeds: [fcJ, bskyJ, ghJ])
@@ -345,6 +376,15 @@ mutate "a card line for a service with no roster becomes an edge" "$SUGGEST" \
 mutate "a declined suggestion is offered again" "$SUGGEST" \
   '            .filter { $0.suggests && known($0.a) && known($0.b) }' \
   '            .filter { $0.tier == .suggested && known($0.a) && known($0.b) }'
+mutate "an older thing overwrites the line" "$INDEX" \
+  '                if (a.lastAt ?? .distantPast) < row.at {' \
+  '                if true {'
+mutate "a thing merely from them counts as dealt with" "$INDEX" \
+  '                if row.acted, (a.actedAt ?? .distantPast) < row.at { a.actedAt = row.at }' \
+  '                if (a.actedAt ?? .distantPast) < row.at { a.actedAt = row.at }'
+mutate "a card's email stops joining the card" "$SUGGEST" \
+  '            for email in card.emails where email.contains("@") {' \
+  '            for email in card.emails where false {'
 mutate "the joined identity forgets how it joined" "$INDEX" \
   '                    if let t = tiers[id.key] { id.tier = t.0; id.source = t.1 }' \
   ''

@@ -138,7 +138,16 @@ struct Contact: Identifiable, Equatable {
     /// Ordered by `Identity.Kind.precedence`, then key.
     let identities: [Identity]
     let avatar: String?
+    /// The newest moment this contact DEALT with you (`Activity.actedAt`, or
+    /// a seed's own stamp) — what files a row under Recent.
     let lastActedAt: Date?
+    /// The newest thing from or about this contact, as its title — the row's
+    /// one line (2026-09-25). Nil draws the identities instead.
+    let lastThing: String?
+    /// Words a search may hit that no row draws: a card's company and role,
+    /// a wallet entry's note. Never drawn (user, 2026-09-25: a company line
+    /// is meaningless); only matched.
+    let keywords: [String]
 
     var lead: Identity { identities[0] }
     func has(_ key: String) -> Bool { identities.contains { $0.key == key } }
@@ -162,14 +171,52 @@ enum ContactIndex {
         var avatar: String?
         var since: Date?
         var lastActedAt: Date?
+        var keywords: [String] = []
 
         init(_ identity: Identity, name: String? = nil, typed: Bool = false,
              kind: Contact.Kind = .person, avatar: String? = nil,
-             since: Date? = nil, lastActedAt: Date? = nil) {
+             since: Date? = nil, lastActedAt: Date? = nil, keywords: [String] = []) {
             self.identity = identity; self.name = name; self.typed = typed
             self.kind = kind; self.avatar = avatar; self.since = since
-            self.lastActedAt = lastActedAt
+            self.lastActedAt = lastActedAt; self.keywords = keywords
         }
+    }
+
+    /// What the corpus holds for ONE identity key: the newest thing from or
+    /// about it, and the newest moment it dealt with you. The two differ on
+    /// purpose — a followed account's own post is a thing FROM them (the
+    /// row's line), a reply, a transfer or a mail is a thing WITH you
+    /// (Recent). `activity(rows:)` folds a corpus walk into this.
+    struct Activity: Equatable {
+        var lastThing: String?
+        var lastAt: Date?
+        var actedAt: Date?
+    }
+
+    /// One corpus row as the activity pass reads it: the identity keys it
+    /// names (`keys(...)`), its title, when, and whether it was WITH you.
+    struct ActivityRow: Equatable {
+        let keys: [String]
+        let title: String
+        let at: Date
+        let acted: Bool
+    }
+
+    /// Folds rows into one `Activity` per key, newest winning — pure, so the
+    /// harness can hand it rows out of order and watch the older one lose.
+    static func activity(rows: [ActivityRow]) -> [String: Activity] {
+        var out: [String: Activity] = [:]
+        for row in rows {
+            for key in row.keys {
+                var a = out[key] ?? Activity()
+                if (a.lastAt ?? .distantPast) < row.at {
+                    a.lastAt = row.at; a.lastThing = row.title
+                }
+                if row.acted, (a.actedAt ?? .distantPast) < row.at { a.actedAt = row.at }
+                out[key] = a
+            }
+        }
+        return out
     }
 
     // MARK: - Build
@@ -177,7 +224,8 @@ enum ContactIndex {
     /// Every contact, from the seeds and the ledger. Deterministic: the same
     /// inputs give the same list in the same order (by lead precedence, then
     /// name, then key), so a row does not move between two rebuilds.
-    static func build(seeds: [Seed], links: [ContactLink]) -> [Contact] {
+    static func build(seeds: [Seed], links: [ContactLink],
+                      activity: [String: Activity] = [:]) -> [Contact] {
         // Every seed's key is a node; a merging link's endpoints join. A
         // link end that is no seed still becomes an identity on the contact.
         var parent: [String: String] = [:]
@@ -258,12 +306,24 @@ enum ContactIndex {
                     return l.key < r.key
                 }
             let componentSeeds = ordered.flatMap { seedsByKey[$0.key] ?? [] }
+            // The corpus's newest word on ANY identity in the component —
+            // a link-only identity (a card's email) counts too, because a
+            // mail from that address is from this person.
+            let acts = ordered.compactMap { activity[$0.key] }
+            let newest = acts.filter { $0.lastAt != nil }.max { ($0.lastAt ?? .distantPast) < ($1.lastAt ?? .distantPast) }
+            let acted = (componentSeeds.compactMap(\.lastActedAt) + acts.compactMap(\.actedAt)).max()
+            var keywords: [String] = []
+            for word in componentSeeds.flatMap(\.keywords) where !word.isEmpty && !keywords.contains(word) {
+                keywords.append(word)
+            }
             out.append(Contact(id: lead.key,
                                name: name(lead: lead, identities: ordered, seeds: componentSeeds),
                                kind: kind(of: componentSeeds),
                                identities: ordered,
                                avatar: componentSeeds.compactMap(\.avatar).first,
-                               lastActedAt: componentSeeds.compactMap(\.lastActedAt).max()))
+                               lastActedAt: acted,
+                               lastThing: newest?.lastThing,
+                               keywords: keywords))
         }
         return out.sorted { l, r in
             if l.lead.kind.precedence != r.lead.kind.precedence {

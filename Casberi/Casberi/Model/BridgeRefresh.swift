@@ -552,6 +552,15 @@ enum BridgeRefresh {
                 // so a foreground almost always buys nothing.
                 await AddressNames.shared.fill(
                     WalletStore.shared.addresses.map(\.address))
+                // Then the BOOK and the month's counterparties (2026-09-25,
+                // the spec's open step): a wallet entry nobody named takes
+                // its ENS or Base name and leaves `Not named yet` by itself;
+                // a counterparty you dealt with this month is named before
+                // its row asks. `perPassBudget` bounds the pass, the
+                // freshness window makes a settled book cost nothing.
+                await AddressNames.shared.fill(
+                    AddressBook.shared.all.map(\.address)
+                    + ContactIndexSources.recentCounterparties(context: context))
                 // The Addresses index, after the names landed (prd §916,
                 // section 2.4): stores and ledger only, no network, behind a
                 // still hand so a sweep never lands inside a gesture (§666).

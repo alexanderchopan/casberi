@@ -7,7 +7,7 @@
 > whichever half you are building. Neither session edits the other's file; disagreements go in
 > the seam sections, not in a third copy.
 
-Status: BUILT 2026-09-24/25 (steps 1–6 shipped in iOS build 673, App Store 1.0.38; the tier-2 model verdict is on-device only until §833's entitlement). Written 2026-09-24 from the user's ask: *"i think we need to have
+Status: BUILT 2026-09-24/25 (steps 1–6 shipped in iOS build 673, App Store 1.0.38; the tier-2 model verdict is on-device only until §833's entitlement). Written 2026-09-24 from the user's ask: *"i think we need to have **Amended by prd §918 (2026-09-25):** the row carries one line (the newest thing, else the addresses; never a company or role), Recent is fed by a corpus walk, a card's emails are stated identities, faces come from the seat or the card photo, `Unnamed` is `Not named yet` with a per-row `Name` verb and the nudge row is deleted, search resolves a pasted address/name/handle through web3.bio with Follow and Add to Addresses doors, and the sheet has a reach dial, Rename, Show older and a World ID fact. The sweep names the book and the month's counterparties (the step below marked open).
 unified contacts list again … we have a contacts app, and it's already in life, and i think we
 can create a contacts list that starts building and gets smarter. especially if apple gives us
 access to private compute."* Record the ruling as **§916** before the code (confirm with
