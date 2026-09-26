@@ -159,7 +159,11 @@ struct ConnectionSpine: View {
             let lefts = map.nodes
             let rights = rights
             let rows = max(lefts.count, rights.count, 1)
-            let face = min(DS.Face.row, max(20, (geo.size.height - 4) / CGFloat(rows) - 4))
+            // The face is a RUNG, never a number (`face-ramp-audit.py`): the
+            // row tier while the column has room for it, the badge tier once
+            // five or more faces share the height.
+            let compact = rows >= 5
+            let face: CGFloat = compact ? DS.Face.badge : DS.Face.row
             let leftX = face / 2
             let rightX = geo.size.width - face / 2
             let leftY = Self.ys(lefts.count, height: geo.size.height, face: face)
@@ -193,7 +197,7 @@ struct ConnectionSpine: View {
                     }
                 }
                 ForEach(Array(lefts.enumerated()), id: \.element.id) { i, node in
-                    faceButton(id: node.id, address: node.address, name: node.name, size: face,
+                    faceButton(id: node.id, address: node.address, name: node.name, compact: compact,
                                quiet: lit != nil && lit != node.id
                                    && !node.walletKeys.contains { $0 == lit })
                         .position(x: leftX, y: leftY[i])
@@ -201,7 +205,7 @@ struct ConnectionSpine: View {
                 ForEach(Array(rights.enumerated()), id: \.element.id) { j, column in
                     let reached = map.columns.contains { $0.id == column.id }
                     let touchedByLit = lit.map { l in lefts.contains { $0.id == l && $0.walletKeys.contains(column.id) } } ?? false
-                    faceButton(id: column.id, address: column.id, name: column.name, size: face,
+                    faceButton(id: column.id, address: column.id, name: column.name, compact: compact,
                                quiet: !reached || (lit != nil && lit != column.id && !touchedByLit))
                         .position(x: rightX, y: rightY[j])
                 }
@@ -215,16 +219,24 @@ struct ConnectionSpine: View {
     }
 
     @ViewBuilder
-    private func faceButton(id: String, address: String, name: String, size: CGFloat, quiet: Bool) -> some View {
+    private func faceButton(id: String, address: String, name: String, compact: Bool, quiet: Bool) -> some View {
         Button {
             onPress?(id)
         } label: {
-            WalletFace(address: address, size: size, circular: true)
-                .opacity(quiet ? 0.35 : 1)
-                .contentShape(Circle())
-                // Drawn at the face's size, targeted at the 44pt floor
-                // (`accessibility-audit.py`), the chips' own arrangement.
-                .dsTapTarget(Circle(), size: DS.Hit.min)
+            Group {
+                // Two literal rungs rather than one expression, so the ramp
+                // audit reads each as the tier it is.
+                if compact {
+                    WalletFace(address: address, size: DS.Face.badge, circular: true)
+                } else {
+                    WalletFace(address: address, size: DS.Face.row, circular: true)
+                }
+            }
+            .opacity(quiet ? 0.35 : 1)
+            .contentShape(Circle())
+            // Drawn at the face's size, targeted at the 44pt floor
+            // (`accessibility-audit.py`), the chips' own arrangement.
+            .dsTapTarget(Circle(), size: DS.Hit.min)
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text(name))
