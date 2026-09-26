@@ -856,8 +856,7 @@ extension PrivacyDevnetRoomCard {
     /// can spend from. An address the chain could not read is left OUT rather
     /// than drawn at zero (§83).
     private var holdingsFigure: some View {
-        RoomHoldingsFigure(cells: PrivacyHoldings.cells(accounts: accounts, shielded: shielded),
-                           caption: scopeCaption)
+        RoomHoldingsFigure(cells: PrivacyHoldings.cells(accounts: accounts, shielded: shielded))
     }
 
     @ViewBuilder

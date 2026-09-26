@@ -1538,9 +1538,10 @@ struct VibenetRoomCard: View {
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                             Spacer(minLength: DS.Space.s2)
+                            // The Wallet's figure face (prd §949).
                             Text(cell.amount)
-                                .dsText(.body17)
-                                .foregroundStyle(DS.textSecondary)
+                                .dsText(.price17)
+                                .foregroundStyle(DS.textPrimary)
                                 .monospacedDigit()
                                 .lineLimit(1)
                         }
@@ -1644,8 +1645,7 @@ struct VibenetRoomCard: View {
                     // anything. `VibenetHoldingsBlock` still draws inside an
                     // account's detail sheet; `cells` above keeps the empty
                     // gate it always had.
-                    RoomHoldingsFigure(cells: Self.holdingsCells(aggregate),
-                                       caption: crownCaption)
+                    RoomHoldingsFigure(cells: Self.holdingsCells(aggregate))
                         // **CLEARS THE GEAR, and fills what is left.** The room's
                         // settings button is an overlay on the trailing top of
                         // this whole block, and a figure with no headline starts

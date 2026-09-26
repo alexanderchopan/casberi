@@ -94,69 +94,35 @@ enum RoomHoldings {
 /// The figure: even cells, names only.
 struct RoomHoldingsFigure: View {
     let cells: [RoomHoldings.Cell]
-    /// The scope: one account's name, or how many you follow — the crown's
-    /// own caption, so the two tiles identify themselves identically.
-    var caption: String? = nil
     var box: CGFloat = DSRoomChassis.figureSlot
 
-    /// USD per unit by MAINNET symbol, read once per mount (prd §922) — a
-    /// fetch belongs in `.task`, never in a body (build 525).
     @State private var prices: [String: Double] = [:]
     @State private var read = false
 
-    private struct Valued {
-        let cell: RoomHoldings.Cell
-        let mainnet: String
-        let usd: Double
-    }
-
-    private var valued: [Valued] {
-        cells.compactMap { cell in
+    /// **THE WALLET'S TREEMAP, OVER TEST MONEY (prd §949).** The number is how
+    /// many assets, never a dollar total: mainnet prices over a devnet's test
+    /// supply read "$2.6B" for 993 million test ETH. The prices still SIZE the
+    /// tiles — a share of a devnet balance at mainnet weights — and a pressed
+    /// tile reads the token's own quantity. A token with no mainnet price is
+    /// in the list and the count, and not sized; with none priced at all,
+    /// every tile is the same size, which says "how many", not "how much".
+    var body: some View {
+        let priced: [(cell: RoomHoldings.Cell, mainnet: String, usd: Double)] = cells.compactMap { cell in
             guard let mainnet = MainnetPrices.mainnetSymbol(cell.symbol),
                   let price = prices[mainnet],
                   let quantity = cell.quantity, quantity > 0 else { return nil }
-            return Valued(cell: cell, mainnet: mainnet, usd: price * quantity)
+            return (cell, mainnet, price * quantity)
         }
-    }
-
-    var body: some View {
-        let valued = valued
-        let total = valued.reduce(0) { $0 + $1.usd }
-        let pricedIDs = Set(valued.map(\.cell.id))
-        let unpriced = cells.filter { !pricedIDs.contains($0.id) }
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            reading(total: total, priced: valued.count)
-            if !valued.isEmpty {
-                // **THE WALLET'S OWN PACK (§917), AT MAINNET PRICES.** Each
-                // circle's area is its share of the valued total; the mark is
-                // the mainnet namesake's, so vUSDC wears USDC's coin, and the
-                // readout keeps the chain's own spelling.
-                DSCirclePack(items: valued.map { v in
-                    let pct = total > 0 ? Int((v.usd / total * 100).rounded()) : 0
-                    return DSCirclePackItem(id: v.cell.id, share: v.usd,
-                                            label: "\(v.cell.name), \(WalletValue.money(v.usd)), \(pct)%")
-                }, mark: { item, diameter in
-                    AssetMark(name: valued.first { $0.cell.id == item.id }?.mainnet.uppercased() ?? item.id,
-                              size: diameter)
-                }, readout: { item in
-                    item.label.replacingOccurrences(of: ", ", with: " · ")
-                })
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if !cells.isEmpty {
-                // **NOTHING PRICED: EQUAL CIRCLES, THE SYMBOL IN EACH.** No
-                // invented size — the monogram circle `AssetMark` already
-                // draws for a symbol with no mark, one per asset, all alike.
-                DSCirclePack(items: cells.map {
-                    DSCirclePackItem(id: $0.id, share: 1, label: "\($0.name), \($0.amount)")
-                }, mark: { item, diameter in
-                    AssetMark(name: item.id, size: diameter)
-                }, readout: { item in
-                    item.label.replacingOccurrences(of: ", ", with: " · ")
-                })
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            if read, !unpriced.isEmpty, !valued.isEmpty {
-                // The ones the pack leaves out, named — never guessed (§83).
+        let holdings: [HoldingsTreemap.Holding] = priced.isEmpty
+            ? cells.map { .init(id: $0.symbol.isEmpty ? $0.name : $0.symbol, usd: 1, route: nil, display: $0.amount) }
+            : priced.map { .init(id: $0.mainnet.uppercased(), usd: $0.usd, route: nil, display: $0.cell.amount) }
+        let unpriced = priced.isEmpty ? [] : cells.filter { c in !priced.contains { $0.cell.id == c.id } }
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HoldingsTreemap(total: String(cells.count),
+                            caption: cells.count == 1 ? String(localized: "asset")
+                                                      : String(localized: "assets"),
+                            holdings: holdings)
+            if read, !unpriced.isEmpty {
                 Text(unpricedLine(unpriced))
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
@@ -170,41 +136,23 @@ struct RoomHoldingsFigure: View {
         }
     }
 
-    /// The reading — the same three lines as the crown's: caption, figure,
-    /// and the one honest word about the figure.
-    @ViewBuilder
-    /// One number, one caption (prd §936): the mainnet value, then how
-    /// many assets and whose.
-    private func reading(total: Double, priced: Int) -> some View {
-        let assets = cells.count == 1 ? String(localized: "1 asset")
-                                      : String(localized: "\(String(cells.count)) assets")
-        return DSFigureReading(
-            number: priced > 0 ? WalletValue.money(total) : String(cells.count),
-            caption: [priced > 0 ? String(localized: "\(assets) at mainnet prices")
-                      : read ? (cells.count == 1 ? String(localized: "asset, none on mainnet")
-                                                 : String(localized: "assets, none on mainnet"))
-                             : String(localized: "reading mainnet prices"),
-                      caption].compactMap { $0 }.joined(separator: " · "))
-    }
-
     private func unpricedLine(_ unpriced: [RoomHoldings.Cell]) -> String {
         if unpriced.count == 1, let one = unpriced.first {
-            return String(localized: "\(one.name) isn't on mainnet, so it isn't priced")
+            return String(localized: "\(one.name) isn't on mainnet, so it isn't sized")
         }
-        return String(localized: "\(String(unpriced.count)) aren't on mainnet, so they aren't priced")
+        return String(localized: "\(String(unpriced.count)) aren't on mainnet, so they aren't sized")
     }
 }
 
-/// The list: one row per asset, in the family's own grammar — the mark, the
-/// name, the amount on the right. The same anatomy vibenet's Holdings list has
-/// had since it shipped, which is what makes two rooms' Holdings read as one
-/// screen rather than two.
 struct RoomHoldingsRows: View {
     let cells: [RoomHoldings.Cell]
 
     var body: some View {
+        // The token's own mark, as the Wallet's Holdings rows wear (prd §949);
+        // the amount pinned to the trailing edge.
         ForEach(cells) { cell in
-            WalletRow(mark: .symbol("circle.grid.2x2.fill", tint: DS.tint),
+            WalletRow(mark: .asset(cell.symbol.isEmpty ? cell.name : cell.symbol,
+                                   tint: DS.tint, atRisk: false),
                       title: cell.name,
                       subtitleText: nil) {
                 Text(cell.amount)

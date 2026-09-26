@@ -61758,3 +61758,13 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 **What says "accounts".** Every room's Home reading for Accounts is `N accounts` (it said `N connected`, Wallet included, and Vibenet `N watched`); the Accounts empty gate is "you follow no accounts" (it was "nothing is tied", which drew Privacy's `No connections yet` over three accounts); the empty headline is `No accounts yet`.
 
 **The crown's line.** Frames, Hegotá and Vibenet reserved the slot's headline row even with no headline (`DSRoomSlot(headline:)` defaults `reservesHeadline: true`), so every devnet scope crown — Activity's count, Accounts' — sat one row below the Wallet's. They reserve it only when there is a headline, Privacy's §683 rule.
+
+## §949 — The devnets' Holdings are the Wallet's treemap over test money: the count, never a dollar total, and a pressed tile reads the token's own quantity (user, 2026-09-26)
+
+**User:** *"and holdings"*, *"you need to make sure you update them all"*, and *"ok continue"* over the plan that named the $2.6B.
+
+**The crown.** `RoomHoldingsFigure` — shared by Hegotá Frames, UTXO, Privacy and Base Vibenet — draws `HoldingsTreemap` (§939) where it drew `DSCirclePack` (§922). Its number is how many assets (`3` / `assets`), **never a dollar total**: mainnet prices over a devnet's test supply read `$2.6B` for 993 million test ETH, a figure about money nobody has. The mainnet prices still SIZE the tiles (a devnet balance's shares at mainnet weights), and a pressed tile reads the token's own quantity (`HoldingsTreemap.Holding.display`), the folded tail its share. A token with no mainnet price is in the count and the list, not sized, and the line under the map says so (`… isn't on mainnet, so it isn't sized`); with none priced, every tile is one size, which says how many, not how much. The scope caption (`caption:`) is gone from all four callers.
+
+**The list.** `RoomHoldingsRows` wears each token's own mark (`AssetMark`, a monogram where none is bundled) where it drew one grid glyph for every row, the amount pinned right; Vibenet's hand-drawn list takes the Wallet's figure face (`price17`, primary ink).
+
+`HoldingsTreemap` gains `caption:` (empty on the Wallet) and `Holding.display`; the Wallet is unchanged.

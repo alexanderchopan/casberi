@@ -128,9 +128,15 @@ struct HoldingsTreemap: View {
         let id: String
         let usd: Double
         let route: String?
+        /// What a pressed tile reads instead of dollars — a devnet token's own
+        /// quantity (prd §949), because test money has no dollar value to state.
+        var display: String? = nil
     }
 
     let total: String
+    /// Under the resting number — empty on the Wallet (§939), "assets" on a
+    /// devnet, whose number is a count.
+    var caption: String = ""
     let holdings: [Holding]
     var onOpen: ((Holding) -> Void)? = nil
     @State private var lit: String?
@@ -166,12 +172,15 @@ struct HoldingsTreemap: View {
     @ViewBuilder
     private var reading: some View {
         if let lit, let holding = holdings.first(where: { $0.id == lit }) {
-            DSFigureReading(number: WalletValue.money(holding.usd), caption: holding.id)
+            DSFigureReading(number: holding.display ?? WalletValue.money(holding.usd), caption: holding.id)
         } else if lit == HoldingsTreemapLayout.otherID {
-            DSFigureReading(number: WalletValue.money(litShare * sum),
+            // Test money states no dollars (§949): the folded tail reads its share.
+            DSFigureReading(number: holdings.contains { $0.display != nil }
+                                ? HoldingsTreemapLayout.percent(litShare)
+                                : WalletValue.money(litShare * sum),
                             caption: String(localized: "Other"))
         } else {
-            DSFigureReading(number: total, caption: "")
+            DSFigureReading(number: total, caption: caption)
         }
     }
 

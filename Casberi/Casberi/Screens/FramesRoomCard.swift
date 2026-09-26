@@ -381,8 +381,7 @@ struct FramesRoomFigure: View {
     }
 
     @ViewBuilder private var holdingsFigure: some View {
-        RoomHoldingsFigure(cells: FramesHoldings.cells(head: head, accounts: accounts),
-                           caption: crownCaption)
+        RoomHoldingsFigure(cells: FramesHoldings.cells(head: head, accounts: accounts))
     }
 
     /// The MODE MIX — what the steps actually were. Counted rather than

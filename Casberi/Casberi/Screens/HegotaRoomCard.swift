@@ -731,7 +731,7 @@ struct HegotaRoomFigure: View {
     /// the same way whether the subject is one address's coins or every
     /// address's balance.
     @ViewBuilder private var holdingsFigure: some View {
-        RoomHoldingsFigure(cells: HegotaHoldings.cells(shown), caption: crownCaption)
+        RoomHoldingsFigure(cells: HegotaHoldings.cells(shown))
     }
 
     @ViewBuilder
