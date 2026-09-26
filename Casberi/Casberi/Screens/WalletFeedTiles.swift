@@ -793,35 +793,14 @@ struct WalletCompositionStrip: View {
         return places.first { $0.place == lit }
     }
 
-    /// **THE CROWN'S READING (prd §926)** — caption, "$61K at work" at
-    /// `stat24`, "in 4 protocols · $11K borrowed" with the debt in amber.
-    /// Under a press it is that column: the protocol, its money at work, its
-    /// debt and its share; Locked reads the locks. The reading is the door
-    /// the tile always had — to the deposits sheet, or the locks' when Locked
-    /// is lit.
+    /// **ONE NUMBER, ONE CAPTION (prd §936).** The money at work (or the
+    /// locked total, or the pressed column's), and under it where and what is
+    /// borrowed — in words, no second colour. The reading is the door the
+    /// tile always had: the deposits sheet, or the locks' when Locked is lit.
     @ViewBuilder
     private var reading: some View {
         let door: (() -> Void)? = lit == Self.lockedKey ? onOpenLocks : onOpenDeposits
-        let block = VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Text(readingCaption)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                if door != nil { DSChevron() }
-            }
-            .opacity(readingCaption.isEmpty ? 0 : 1)
-            Text(headline)
-                .dsText(.stat24)
-                .foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-                .lineLimit(1).minimumScaleFactor(0.6)
-            line
-                .dsText(.body17)
-                .lineLimit(1).minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.trailing, DSRoomChassis.gearColumn)
+        let block = DSFigureReading(number: readingNumber, caption: readingCaptionLine)
         if let door {
             Button(action: door) { block.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
@@ -830,45 +809,34 @@ struct WalletCompositionStrip: View {
         }
     }
 
-    private var readingCaption: String {
-        if let deposit = pressedDeposit { return deposit.place }
-        if lit == Self.lockedKey { return String(localized: "Locked") }
-        return caption ?? ""
-    }
-
-    private var headline: String {
-        if let deposit = pressedDeposit {
-            return String(localized: "\(WalletValue.money(deposit.usd)) at work")
-        }
+    private var readingNumber: String {
+        if let deposit = pressedDeposit { return WalletValue.money(deposit.usd) }
         if lit == Self.lockedKey { return lockedValue }
-        if composition.hasDeposited {
-            return String(localized: "\(WalletValue.money(composition.deposited)) at work")
-        }
+        if composition.hasDeposited { return WalletValue.money(composition.deposited) }
         return lockedValue
     }
 
-    private var line: Text {
+    private var readingCaptionLine: String {
+        var parts: [String] = []
         if let deposit = pressedDeposit {
-            let share = composition.deposited > 0 ? Int((deposit.usd / composition.deposited * 100).rounded()) : 0
-            let shareText = Text(String(localized: "\(String(share))% of what's at work")).foregroundStyle(DS.textSecondary)
+            parts.append(String(localized: "at work in \(deposit.place)"))
             if let owed = owedBy[deposit.place], owed > 0 {
-                return Text(String(localized: "\(WalletValue.money(owed)) borrowed")).foregroundStyle(DS.attention)
-                    + Text(verbatim: " · ").foregroundStyle(DS.textTertiary) + shareText
+                parts.append(String(localized: "\(WalletValue.money(owed)) borrowed"))
             }
-            return shareText
+            return parts.joined(separator: " · ")
         }
-        if lit == Self.lockedKey {
-            return Text(lockedLine).foregroundStyle(DS.textSecondary)
+        if lit == Self.lockedKey || !composition.hasDeposited {
+            parts.append(lockedLine)
+        } else {
+            let n = composition.deposits.count
+            parts.append(n == 1 ? String(localized: "at work in 1 protocol")
+                                : String(localized: "at work in \(String(n)) protocols"))
+            if composition.hasOwed {
+                parts.append(String(localized: "\(WalletValue.money(composition.owed)) borrowed"))
+            }
         }
-        let n = composition.deposits.count
-        let places = n == 1 ? String(localized: "in 1 protocol") : String(localized: "in \(String(n)) protocols")
-        if composition.hasOwed {
-            return Text(places).foregroundStyle(DS.textSecondary)
-                + Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
-                + Text(String(localized: "\(WalletValue.money(composition.owed)) borrowed")).foregroundStyle(DS.attention)
-        }
-        if composition.hasDeposited { return Text(places).foregroundStyle(DS.textSecondary) }
-        return Text(lockedLine).foregroundStyle(DS.textSecondary)
+        if let caption { parts.append(caption) }
+        return parts.joined(separator: " · ")
     }
 
     private var lockedValue: String {
@@ -912,10 +880,10 @@ struct WalletCompositionStrip: View {
                     VStack(spacing: 2) {
                         Spacer(minLength: 0)
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(DS.tint.opacity(1 - Double(index) * 0.18))
+                            .fill(DS.tint)
                             .frame(height: up)
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(DS.attention.opacity(0.85))
+                            .fill(DS.textTertiary)
                             .frame(height: owed > 0 ? max(3, CGFloat(owed / peak) * debtSpan) : 0)
                             .opacity(owed > 0 ? 1 : 0)
                     }

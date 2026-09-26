@@ -1652,10 +1652,13 @@ need RoomFrames.swift.bare "step counts cover all" \
 # Since prd §925 the figure is a FLOW that fills whatever the slot hands it
 # through a GeometryReader — derived from the container by layout, never a
 # written-down height — so either spelling of "derived" passes.
+# Since prd §936 it is a bar list inside `DSBarFigure`, which measures its
+# own natural height and the scope box follows it — a third spelling.
 { grep -q "DSRoomChassis.figureSlot" "$work/RoomFramesFigure.swift.bare" ||
   { grep -q "GeometryReader" "$work/RoomFramesFigure.swift.bare" &&
-    grep -q "maxHeight: .infinity" "$work/RoomFramesFigure.swift.bare"; }; } \
-  || fail "the frames figure stopped deriving its own height — a written-down row cap is what clipped the note at 185pt (§698; a flow over GeometryReader since §925)"
+    grep -q "maxHeight: .infinity" "$work/RoomFramesFigure.swift.bare"; } ||
+  grep -q "DSBarFigure(" "$work/RoomFramesFigure.swift.bare"; } \
+  || fail "the frames figure stopped deriving its own height — a written-down row cap is what clipped the note at 185pt (§698; a flow over GeometryReader since §925; a fitted bar figure since §936)"
 deny RoomFramesFigure.swift.bare "let rowsShown = " \
   "the row cap is a constant again — derive it from figureSlot or the sum goes stale the next time the slot moves"
 

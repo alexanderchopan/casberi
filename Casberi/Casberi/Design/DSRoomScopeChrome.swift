@@ -53,6 +53,11 @@ import SwiftUI
 /// UNDER the section's figure and it draws the tiles alone. Home is a tile.
 struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: View>: View {
     @Environment(ShellChrome.self) private var chrome
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The natural height the active figure reported (`DSBarFigure`), or nil.
+    @State private var fitted: CGFloat?
+    /// The shortest a fitted box stands: a reading and one bar.
+    static var fittedFloor: CGFloat { 132 }
 
     /// The room this chrome stands in — the key the published rail carries.
     let source: String
@@ -126,9 +131,12 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
         VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
             lead
             if active == home {
-                DSScopeTiles(sections: sections, active: active,
-                             attention: attention, onPick: onPick)
-                    .padding(.horizontal, DSRoomChassis.inset)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    DSScopeTiles(sections: sections, active: active,
+                                 attention: attention, onPick: onPick)
+                    accountLine
+                }
+                .padding(.horizontal, DSRoomChassis.inset)
                 if let actsSlot {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         WalletSectionLabel(title: String(localized: "Actions"))
@@ -179,7 +187,12 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
     private var lead: some View {
         Color.clear
             .frame(maxWidth: .infinity)
-            .frame(height: DSRoomChassis.visualSlot)
+            // **THE BOX FITS A BAR FIGURE (prd §936).** A figure that reports
+            // its natural height (`DSBarFigure`) gets a box that height, with
+            // a floor; everything else keeps `visualSlot`. The report is of
+            // intrinsic content, so following it cannot loop.
+            .frame(height: fitted.map { min(DSRoomChassis.visualSlot, max(Self.fittedFloor, $0)) }
+                   ?? DSRoomChassis.visualSlot)
             .overlay(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     if active == home {
@@ -189,6 +202,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .onPreferenceChange(DSFigureHeight.self) { height in
+                    withAnimation(reduceMotion ? nil : DS.Motion.standard) { fitted = height }
+                }
             }
         // THE WELL (prd §766), the head template's own. The box is still
         // `leadHeight` — the slot and its `s2` — so no figure loses a point of
@@ -202,21 +218,52 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
     }
 
     @ViewBuilder
+    /// **THE ACCOUNT PICKER IS A MENU UNDER THE TILES (prd §936).** The line
+    /// named the account on screen and changed nothing; the faces capsule in
+    /// the band did the picking, and with the dock gone that capsule was the
+    /// last piece of it on the phone (user: "it's still here on wallet").
+    /// Apple's answer to "which one of several" is a pull-down: the faces and
+    /// the name, a chevron, and every account in the menu, "All" first. It
+    /// stands on Home and every section alike.
     private var accountLine: some View {
         if accounts.count > 1 {
             let showing = accounts.first { $0.isShowing(scope) } ?? accounts.first
             if let showing {
-                HStack(spacing: DS.Space.s2) {
-                    HStack(spacing: -(DS.Face.row / 3.5)) {
-                        ForEach(Array(showing.faces.prefix(2).enumerated()), id: \.offset) { pair in
-                            RailFace(face: pair.element, size: DS.Face.row)
+                Menu {
+                    ForEach(accounts) { slot in
+                        Button {
+                            DSHaptic.selection()
+                            withAnimation(DS.Motion.standard) {
+                                onPickAccount(slot.id.isEmpty ? nil : slot.id)
+                            }
+                        } label: {
+                            if slot.isShowing(scope) {
+                                Label(slot.name, systemImage: "checkmark")
+                            } else {
+                                Text(slot.name)
+                            }
                         }
                     }
-                    Text(showing.sub.map { "\(showing.name) · \($0)" } ?? showing.name)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        HStack(spacing: -(DS.Face.row / 3.5)) {
+                            ForEach(Array(showing.faces.prefix(2).enumerated()), id: \.offset) { pair in
+                                RailFace(face: pair.element, size: DS.Face.row)
+                            }
+                        }
+                        Text(showing.name)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .dsGlyph(.caption)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    .frame(minHeight: DS.Hit.min)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(String(localized: "Account: \(showing.name)")))
             }
         }
     }

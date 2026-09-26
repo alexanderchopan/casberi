@@ -77,7 +77,7 @@ struct WalletActingPartiesRows: View {
                 // never describe the same holder differently.
                 Text(holder.power.phrase)
                     .dsText(.subhead12)
-                    .foregroundStyle(holder.power.isUnbounded ? DS.attention : DS.textSecondary)
+                    .foregroundStyle(holder.power.isUnbounded ? DS.destructive : DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(detail(holder))
                     .dsText(.label12)

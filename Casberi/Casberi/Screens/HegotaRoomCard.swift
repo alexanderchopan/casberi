@@ -1006,24 +1006,20 @@ struct HegotaRoomFigure: View {
         NSDecimalNumber(decimal: HegotaCoins.eth(wei)).doubleValue
     }
 
-    @ViewBuilder
+    /// One number, one caption (prd §936): how many unspent (or the pressed
+    /// coin's value), then what they are and whose.
     private func coinsReading(_ drawn: [CoinTile]) -> some View {
         let pressed = litCoin.flatMap { key in drawn.first { Self.tileKey($0) == key } }
-        VStack(alignment: .leading, spacing: 2) {
-            Text(crownCaption)
-                .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
-            Text(pressedHeadline(pressed)
-                 ?? HegotaCoins.scopeHeadline(unspent: coins.count, spent: spentCoins.count)
-                 ?? String(localized: "No UTXOs"))
-                .dsText(.stat24).foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-                .lineLimit(1).minimumScaleFactor(0.6)
-            Text(pressedLine(pressed) ?? coinsLine)
-                .dsText(.body17).foregroundStyle(DS.textSecondary)
-                .lineLimit(1).minimumScaleFactor(0.7)
+        if let pressed, let number = pressedHeadline(pressed) {
+            return DSFigureReading(number: number, caption: pressedLine(pressed) ?? crownCaption)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.trailing, DSRoomChassis.gearColumn)
+        let change = coins.filter(\.isChange).count
+        var parts = [coins.count == 1 ? String(localized: "unspent coin") : String(localized: "unspent coins")]
+        if change > 0 { parts.append(String(localized: "\(String(change)) change")) }
+        if !spentCoins.isEmpty { parts.append(String(localized: "\(String(spentCoins.count)) spent")) }
+        parts.append(crownCaption)
+        return DSFigureReading(number: String(coins.count),
+                               caption: parts.filter { !$0.isEmpty }.joined(separator: " · "))
     }
 
     private func pressedHeadline(_ tile: CoinTile?) -> String? {
@@ -1269,13 +1265,6 @@ struct HegotaRoomFigure: View {
     /// is the same rule the crown has on Home (§683) and the chart has on
     /// Activity (§686). What survives is the fact no count carries: how much of
     /// what you hold came back from your own spends.
-    private var coinsLine: String {
-        let change = coins.filter(\.isChange).count
-        guard change > 0 else { return String(localized: "Unspent") }
-        return change == coins.count
-            ? String(localized: "Unspent · all of it change from your own spends")
-            : String(localized: "Unspent · \(String(change)) of them change")
-    }
 
     // **`noncesFigure` IS DELETED (prd §692).** It drew three stats —
     // counters in all, sends on the ordinary nonce, sends on named keys —

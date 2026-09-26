@@ -614,7 +614,10 @@ struct MainSurface: View {
                                      watched: GitHubWatchStore.shared.watches.count)
             || PinterestScopeRail.shows(source: filter.source,
                                         follows: PinterestStore.shared.follows.count)
-            || accountRailItems.count > 1
+            // The wallet family picks its account from the menu under its
+            // tiles on the phone (prd §936); the rail keeps the faces. With
+            // no faces, the wallet rooms draw no capsule on the phone at all.
+            || (showsRail && accountRailItems.count > 1)
     }
 
     /// The faces the folder row carries after its venues (prd §753). At most
@@ -625,7 +628,7 @@ struct MainSurface: View {
         socialScopeRail
         githubScopeRail
         pinterestScopeRail
-        accountRail
+        if showsRail { accountRail }
     }
 
     /// The category the room you are STANDING IN belongs to, if any.

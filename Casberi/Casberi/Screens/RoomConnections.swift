@@ -27,270 +27,70 @@ import SwiftUI
 /// whole reading — the node cap, the §439 direct-pair links, the untouched
 /// wallets — without a line of new analysis.
 ///
-/// **§295's "factual, no analysis" (user, 2026-08-03) still governs**, and
-/// §923 read it more carefully: a ribbon's WIDTH is what moved between the
-/// two — a measured fact, not a ranking — and nothing here says "who you
-/// deal with most". **Its colour says only which of your accounts it reaches,
-/// and only when there are two or more to tell apart (prd §931)**: with one
-/// wallet every ribbon wore that wallet's identicon hue — an arbitrary purple
-/// nobody could read (user, 2026-09-26: *"we use purple for the lines but
-/// why?"*) — so a lone wallet's ribbons take the one ink, and a face wears a
-/// name under it while the column has room (four rows or fewer).
+/// **§295's "factual, no analysis" (user, 2026-08-03) still governs**: a
+/// bar's length is what moved between that address and your accounts — a
+/// measured fact — in the map's own order, never re-ranked. The spine (§923)
+/// and its identicon-hued ribbons are gone since prd §936; the tile draws
+/// the bar list every other tile draws.
 struct RoomConnectionsFigure: View {
     let map: AddressConnections.Map?
     var box: CGFloat = DSRoomChassis.figureSlot
     var yours: String = String(localized: "yours")
-    /// The scope: one account's name, or how many you follow — the crown's
-    /// own caption, so the tile identifies itself as Home does (prd §923).
+    /// The scope: one account's name, or how many you follow — said in the
+    /// caption beside the noun (prd §936).
     var caption: String? = nil
-    /// **THE PRESSED FACE (prd §923).** A node's id or a column's key; while
-    /// set, its ribbons draw full and everything else goes quiet, and the
-    /// reading names it. A tap toggles, so the graph is never stuck lit.
+    /// **THE PRESSED BAR.** A connected address's id; while set, the reading
+    /// names it and says what moved, and the other bars go quiet.
     @State private var lit: String?
 
     var body: some View {
         if let map, !map.nodes.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                reading(map)
-                ConnectionSpine(map: map, lit: lit) { picked in
-                    DSHaptic.selection()
-                    lit = lit == picked ? nil : picked
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                HStack {
-                    Text(String(localized: "Connected"))
-                    Spacer(minLength: 0)
-                    Text(map.untouched.isEmpty ? String(localized: "Yours")
-                                               : String(localized: "Yours · quiet ones nothing reaches"))
-                }
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-                if !map.hiddenNames.isEmpty {
-                    Text(String(localized: "\(String(map.hiddenNames.count)) more aren't drawn"))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.trailing, 0)
+            // **BARS, NOT RIBBONS (prd §936).** One bar per connected
+            // address, as long as what moved with your accounts (the count of
+            // moves where nothing was priced), in the one accent. The spine's
+            // ribbons, faces and identicon hues are deleted: four inventions
+            // for "how much with whom" became the bar every other tile draws.
+            DSBarFigure(reading: { reading(map) },
+                        bars: DSBarList(bars: Self.bars(map), lit: lit) { picked in
+                            lit = lit == picked ? nil : picked
+                        })
         }
     }
 
-    /// **THE CROWN'S READING (prd §923)** — caption, a figure at `stat24`,
-    /// one line — in place of a two-line sentence that ran under the gear.
-    /// Under a press it is the pressed address and what it moved with which
-    /// of yours.
-    @ViewBuilder
+    /// The bars, in the map's own order (§295: factual, and never re-ranked
+    /// into "who you deal with most").
+    static func bars(_ map: AddressConnections.Map) -> [DSBarList.Bar] {
+        let moved: [(node: AddressConnections.Node, usd: Double)] = map.nodes.map { node in
+            (node, node.walletKeys.compactMap { map.weights[AddressConnections.Weight.key(node.id, $0)]?.usd }
+                .reduce(0, +))
+        }
+        let priced = moved.contains { $0.usd > 0 }
+        let peak = moved.map { priced ? $0.usd : Double($0.node.count) }.max() ?? 1
+        return moved.map { entry in
+            let value = priced ? entry.usd : Double(entry.node.count)
+            return DSBarList.Bar(id: entry.node.id,
+                                 label: entry.node.name,
+                                 value: priced && entry.usd > 0 ? WalletValue.money(entry.usd)
+                                     : Self.moves(entry.node.count),
+                                 share: peak > 0 ? value / peak : 0)
+        }
+    }
+
+    private static func moves(_ n: Int) -> String {
+        n == 1 ? String(localized: "1 move") : String(localized: "\(String(n)) moves")
+    }
+
     private func reading(_ map: AddressConnections.Map) -> some View {
-        let edges = map.nodes.reduce(0) { $0 + $1.walletKeys.count }
-        let total = map.columns.count + map.untouched.count
-        VStack(alignment: .leading, spacing: 2) {
-            if let caption {
-                Text(caption)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
-            Text(headline(map, edges: edges))
-                .dsText(.stat24)
-                .foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-                .lineLimit(1).minimumScaleFactor(0.6)
-            Text(line(map, total: total))
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1).minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // Only the reading clears the gear (§920's rule); the spine below
-        // takes the whole width.
-        .padding(.trailing, DSRoomChassis.gearColumn)
-    }
-
-    private func headline(_ map: AddressConnections.Map, edges: Int) -> String {
-        if let lit {
-            if let node = map.nodes.first(where: { $0.id == lit }) { return node.name }
-            if let column = (map.columns + map.untouched).first(where: { $0.id == lit }) { return column.name }
-        }
-        return edges == 1 ? String(localized: "1 connection")
-                          : String(localized: "\(String(edges)) connections")
-    }
-
-    private func line(_ map: AddressConnections.Map, total: Int) -> String {
         if let lit, let node = map.nodes.first(where: { $0.id == lit }) {
             let names = node.walletKeys.compactMap { key in map.columns.first { $0.id == key }?.name }
-            let usd = node.walletKeys.compactMap { map.weights[AddressConnections.Weight.key(node.id, $0)]?.usd }
-                .reduce(0, +)
-            let with = names.joined(separator: ", ")
-            let moves = node.count == 1 ? String(localized: "1 move")
-                                        : String(localized: "\(String(node.count)) moves")
-            return usd > 0 ? String(localized: "\(WalletValue.money(usd)) with \(with) · \(moves)")
-                           : String(localized: "with \(with) · \(moves)")
+            return DSFigureReading(number: node.name,
+                                   caption: String(localized: "\(Self.moves(node.count)) with \(names.joined(separator: ", "))"))
         }
-        if let lit, let column = map.columns.first(where: { $0.id == lit }) {
-            let n = map.nodes.filter { $0.walletKeys.contains(column.id) }.count
-            let who = n == 1 ? String(localized: "1 address") : String(localized: "\(String(n)) addresses")
-            if let usd = column.usd, usd > 0 { return String(localized: "\(who) · \(WalletValue.money(usd))") }
-            return who
-        }
-        if let lit, map.untouched.contains(where: { $0.id == lit }) {
-            return String(localized: "Nothing reaches it")
-        }
-        return map.untouched.isEmpty
-            ? String(localized: "between \(yours)")
-            : String(localized: "reach \(String(map.columns.count)) of your \(String(total))")
+        let edges = map.nodes.reduce(0) { $0 + $1.walletKeys.count }
+        let noun = edges == 1 ? String(localized: "connection") : String(localized: "connections")
+        return DSFigureReading(number: String(edges),
+                               caption: [noun, caption].compactMap { $0 }.joined(separator: " · "))
     }
-}
-
-/// The spine itself (prd §923): faces at the nodes, ribbons weighted by what
-/// moved and coloured by which of your accounts they reach, the accounts
-/// nothing reaches drawn quiet, and a press that lights one face.
-///
-/// The ribbons are a `Canvas` (the house idiom for a drawing sized from
-/// data); the faces are views over it, because a face is a `WalletFace` —
-/// the identicon or the resolved avatar — and a door.
-struct ConnectionSpine: View {
-    let map: AddressConnections.Map
-    var lit: String? = nil
-    var onPress: ((String) -> Void)? = nil
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var rights: [AddressConnections.Column] { map.columns + map.untouched }
-
-    var body: some View {
-        GeometryReader { geo in
-            let lefts = map.nodes
-            let rights = rights
-            let rows = max(lefts.count, rights.count, 1)
-            // The face is a RUNG, never a number (`face-ramp-audit.py`): the
-            // row tier while the column has room for it, the badge tier once
-            // five or more faces share the height.
-            let compact = rows >= 5
-            let face: CGFloat = compact ? DS.Face.badge : DS.Face.row
-            let leftX = face / 2
-            let rightX = geo.size.width - face / 2
-            let leftY = Self.ys(lefts.count, height: geo.size.height, face: face)
-            let rightY = Self.ys(rights.count, height: geo.size.height, face: face)
-            let weights = lefts.flatMap { node in
-                node.walletKeys.map { map.weights[AddressConnections.Weight.key(node.id, $0)] }
-            }
-            let priced = weights.contains { ($0?.usd ?? 0) > 0 }
-            let peak = weights.map { w -> Double in priced ? (w?.usd ?? 0) : Double(w?.count ?? 1) }.max() ?? 1
-            ZStack(alignment: .topLeading) {
-                Canvas { ctx, _ in
-                    var index: [String: Int] = [:]
-                    for (i, c) in rights.enumerated() { index[c.id] = i }
-                    for (i, node) in lefts.enumerated() {
-                        for key in node.walletKeys {
-                            guard let j = index[key] else { continue }
-                            let w = map.weights[AddressConnections.Weight.key(node.id, key)]
-                            let value = priced ? (w?.usd ?? 0) : Double(w?.count ?? 1)
-                            let width = 1.5 + 6.5 * CGFloat(peak > 0 ? value / peak : 0)
-                            let quiet = lit != nil && lit != node.id && lit != key
-                            var path = Path()
-                            path.move(to: CGPoint(x: leftX + face / 2, y: leftY[i]))
-                            let midX = geo.size.width / 2
-                            path.addCurve(to: CGPoint(x: rightX - face / 2, y: rightY[j]),
-                                          control1: CGPoint(x: midX, y: leftY[i]),
-                                          control2: CGPoint(x: midX, y: rightY[j]))
-                            ctx.stroke(path,
-                                       with: .color(Self.ink(for: key, columns: rights.count)
-                                                        .opacity(quiet ? 0.18 : 0.7)),
-                                       style: StrokeStyle(lineWidth: width, lineCap: .round))
-                        }
-                    }
-                }
-                ForEach(Array(lefts.enumerated()), id: \.element.id) { i, node in
-                    faceButton(id: node.id, address: node.address, name: node.name, compact: compact,
-                               quiet: lit != nil && lit != node.id
-                                   && !node.walletKeys.contains { $0 == lit })
-                        .position(x: leftX, y: leftY[i])
-                }
-                ForEach(Array(rights.enumerated()), id: \.element.id) { j, column in
-                    let reached = map.columns.contains { $0.id == column.id }
-                    let touchedByLit = lit.map { l in lefts.contains { $0.id == l && $0.walletKeys.contains(column.id) } } ?? false
-                    faceButton(id: column.id, address: column.id, name: column.name, compact: compact,
-                               quiet: !reached || (lit != nil && lit != column.id && !touchedByLit),
-                               trailing: true)
-                        .position(x: rightX, y: rightY[j])
-                }
-            }
-            .animation(reduceMotion ? nil : DS.Motion.standard, value: lit)
-        }
-        .chartWipe(reduceMotion: reduceMotion)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(String(localized:
-            "\(String(map.connectedCount)) connected addresses across \(String(map.columns.count)) of yours")))
-    }
-
-    @ViewBuilder
-    /// The ribbon's ink (prd §931): the wallet's own hue only where there are
-    /// two or more of yours to tell apart; one wallet, one ink.
-    static func ink(for walletKey: String, columns: Int) -> Color {
-        columns >= 2 ? WalletFace.tint(for: walletKey) : DS.textTertiary
-    }
-
-    /// A name's width under a face — enough for a short name or an address's
-    /// two ends, never half the spine.
-    static let nameWidth: CGFloat = 96
-
-    private func faceButton(id: String, address: String, name: String, compact: Bool, quiet: Bool,
-                            trailing: Bool = false) -> some View {
-        Button {
-            onPress?(id)
-        } label: {
-            Group {
-                // Two literal rungs rather than one expression, so the ramp
-                // audit reads each as the tier it is.
-                if compact {
-                    WalletFace(address: address, size: DS.Face.badge, circular: true)
-                } else {
-                    WalletFace(address: address, size: DS.Face.row, circular: true)
-                }
-            }
-            .opacity(quiet ? 0.35 : 1)
-            .contentShape(Circle())
-            // Drawn at the face's size, targeted at the 44pt floor
-            // (`accessibility-audit.py`), the chips' own arrangement.
-            .dsTapTarget(Circle(), size: DS.Hit.min)
-            // The name under the face while the column has room (prd §931):
-            // a face is a door, and a door says where it goes. Hung from the
-            // face's bottom edge, out of the ribbons' way, flush with the
-            // spine's own edge so the left column reads leading and the
-            // right column trailing.
-            .overlay(alignment: trailing ? .topTrailing : .topLeading) {
-                if !compact {
-                    Text(name)
-                        .dsText(.label12)
-                        .foregroundStyle(lit == id ? DS.textPrimary : DS.textTertiary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .frame(width: Self.nameWidth, alignment: trailing ? .trailing : .leading)
-                        .opacity(quiet ? 0.35 : 1)
-                        .offset(y: DS.Face.row + 2)
-                        .allowsHitTesting(false)
-                }
-            }
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityLabel(Text(name))
-        .accessibilityAddTraits(lit == id ? .isSelected : [])
-    }
-
-    /// Faces spaced down the column, the first and last flush with the box.
-    static func ys(_ n: Int, height: CGFloat, face: CGFloat) -> [CGFloat] {
-        // The name under a face (prd §931) needs its line below the last row
-        // — the row tier carries one, the badge tier does not.
-        let tail: CGFloat = face >= DS.Face.row ? nameLine : 0
-        guard n > 1 else { return [(height - tail) / 2] }
-        let usable = height - face - tail
-        return (0..<n).map { face / 2 + usable * CGFloat($0) / CGFloat(n - 1) }
-    }
-
-    /// The name's line under a face: the 2pt gap plus a `label12` line.
-    static let nameLine: CGFloat = 16
 }
 
 /// **THE LIST SAYS WHAT EACH ADDRESS IS AND HOW IT RELATES (prd §689, user:

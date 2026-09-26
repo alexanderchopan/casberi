@@ -279,11 +279,9 @@ struct PrivacyDevnetRoomCard: View {
                               changeFormat: { PrivacyDevnetMoney.line(wei: Self.wei($0), places: 2) })
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else if !ringMarks.isEmpty {
-                PrivacyDevnetRing(marks: ringMarks, sets: setCount,
-                                  remaining: freshestRemaining,
-                                  readAt: readAt, diameter: Self.homeRingDiameter,
-                                  reduceMotion: reduceMotion)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                PrivacyDevnetProofBars(marks: ringMarks, remaining: freshestRemaining,
+                                       readAt: readAt, caption: scopeCaption,
+                                       reduceMotion: reduceMotion)
             } else if !pairs.isEmpty {
                 // **NO PROOFS YET, BUT TRANSACTIONS: THE SLOT DRAWS THE MOVES
                 // (prd §664, 2026-09-09, user's phone: "60 transactions, and
@@ -327,9 +325,6 @@ struct PrivacyDevnetRoomCard: View {
     /// .rowCap`'s reason). Home reserves a headline row now, so what is left
     /// is `figureSlot` and the ring should own it — measured on a device at
     /// 156, where it still sat in noticeable air.
-    static var homeRingDiameter: CGFloat {
-        min(max(DSRoomChassis.figureSlot - 56, 120), 200)
-    }
 
     /// Every snapshot this address has proved against, placed on the ring.
     ///
@@ -1208,48 +1203,14 @@ extension PrivacyDevnetRoomCard {
         if refs.isEmpty {
             EmptyView()
         } else {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(scopeCaption)
-                        .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
-                    Text(freshestRemaining.map { PrivacyDevnetRoots.approximate(slots: $0) }
-                         ?? (refs.count == 1 ? String(localized: "1 proof")
-                                             : String(localized: "\(String(refs.count)) proofs")))
-                        .dsText(.stat24).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1).minimumScaleFactor(0.6)
-                    Text(rootsLine(refs.count))
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.trailing, DSRoomChassis.gearColumn)
-                GeometryReader { geo in
-                    HStack {
-                        Spacer(minLength: 0)
-                        PrivacyDevnetRing(marks: marks, sets: setCount,
-                                          remaining: freshestRemaining,
-                                          readAt: readAt,
-                                          diameter: max(72, min(geo.size.width, geo.size.height)),
-                                          showsReading: false,
-                                          reduceMotion: reduceMotion)
-                        Spacer(minLength: 0)
-                    }
-                    .frame(width: geo.size.width, height: geo.size.height)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // The proofs as bars under one number (prd §936); the ring is
+            // deleted from the room.
+            PrivacyDevnetProofBars(marks: marks, remaining: freshestRemaining,
+                                   readAt: readAt, caption: scopeCaption,
+                                   reduceMotion: reduceMotion)
         }
     }
 
-    private func rootsLine(_ proofs: Int) -> String {
-        let count = proofs == 1 ? String(localized: "1 proof") : String(localized: "\(String(proofs)) proofs")
-        guard let remaining = freshestRemaining else { return count }
-        return String(localized: "\(count) · \(String(remaining)) of \(String(PrivacyDevnetRoots.windowSlots)) slots left")
-    }
-    static var ringDiameter: CGFloat {
-        min(max(DSRoomChassis.figureSlot - 24, 96), 240)
-    }
 }
 
 // MARK: - The quiet state's door (prd §593d)

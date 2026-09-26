@@ -173,29 +173,18 @@ struct RoomHoldingsFigure: View {
     /// The reading — the same three lines as the crown's: caption, figure,
     /// and the one honest word about the figure.
     @ViewBuilder
+    /// One number, one caption (prd §936): the mainnet value, then how
+    /// many assets and whose.
     private func reading(total: Double, priced: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if let caption {
-                Text(caption)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
-            Text(priced > 0 ? WalletValue.money(total)
-                 : (cells.count == 1 ? String(localized: "1 asset")
-                                     : String(localized: "\(String(cells.count)) assets")))
-                .dsText(.stat24)
-                .foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-                .contentTransition(.numericText(value: total))
-                .lineLimit(1).minimumScaleFactor(0.6)
-            Text(priced > 0 ? String(localized: "at mainnet prices")
-                 : read ? String(localized: "none on mainnet")
-                        : String(localized: "Reading mainnet prices…"))
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-        }
+        let assets = cells.count == 1 ? String(localized: "1 asset")
+                                      : String(localized: "\(String(cells.count)) assets")
+        return DSFigureReading(
+            number: priced > 0 ? WalletValue.money(total) : String(cells.count),
+            caption: [priced > 0 ? String(localized: "\(assets) at mainnet prices")
+                      : read ? (cells.count == 1 ? String(localized: "asset, none on mainnet")
+                                                 : String(localized: "assets, none on mainnet"))
+                             : String(localized: "reading mainnet prices"),
+                      caption].compactMap { $0 }.joined(separator: " · "))
     }
 
     private func unpricedLine(_ unpriced: [RoomHoldings.Cell]) -> String {

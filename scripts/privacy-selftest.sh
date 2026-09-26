@@ -1642,8 +1642,8 @@ grep -qF 'struct PrivacyDevnetTrack' "$work/figv.bare" \
   && fail "the straight track view is back — one drawing of the window, and it is a ring"
 grep -qF 'leaves the chain'"'"'s memory' "$work/card.bare" \
   && fail "the axis caption is back — the exit gap is what carries it now, and it was printed twice"
-grep -qF 'PrivacyDevnetRing' "$work/card.bare" \
-  || fail "the room stopped drawing the ring at all"
+grep -qF 'PrivacyDevnetProofBars' "$work/card.bare" \
+  || fail "the room stopped drawing the proofs at all (the ring became bars, prd §936)"
 
 # **THE RING IS ALIVE, AND ITS DRIFT IS THE MODEL'S.** A view that recomputed
 # a position itself would put the clamp — the whole safety argument — outside

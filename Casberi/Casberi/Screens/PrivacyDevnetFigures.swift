@@ -13,288 +13,6 @@ import SwiftUI
 // is `HegotaModeStyle`'s reasoning carried onto shape instead of hue — and it
 // has to be shape here, because this room spends no colour on state.
 
-// MARK: - The chain's memory, as a ring (prd §598)
-
-/// The 8,192-slot window, drawn as the ring it is.
-///
-/// **THE PREDEPLOY MASKS A SLOT WITH `0x1fff`** — the window is a ring buffer
-/// in the chain's own bytecode (`PrivacyDevnetRoots.ringIndex`), and the room
-/// drew it as a straight bar with a caption at each end saying which way time
-/// ran. Two captions, in fact: one under Home's track and one under every lane
-/// in the Roots scope, saying the same eight words. **An arc needs neither.
-/// The gap at the bottom IS the exit**, so a snapshot that leaves the window
-/// falls into it, and the shape carries what the caption was carrying.
-///
-/// **NOW at the top, age clockwise** — the direction a clock face already
-/// teaches, so nothing has to be learned to read it.
-///
-/// **The ring is ALIVE.** Marks drift between sweeps
-/// (`PrivacyDevnetFigure.drifted`), because the head slot is read once every
-/// two minutes and the window drains continuously — a ring that only moves
-/// when a sweep lands is a clock that ticks twice an hour. The drift is an
-/// ESTIMATE and is clamped so it can never carry a mark to the rim: only a
-/// real read may say a snapshot has aged out, which is the one state on this
-/// ring that changes what a row says.
-///
-/// **No colour carries state**, inherited whole. A hollow mark in the gap is a
-/// snapshot the chain has forgotten; it is not red, because the proof was
-/// valid when it landed and its transaction is settled.
-struct PrivacyDevnetRing: View {
-    let marks: [PrivacyDevnetFigure.Mark]
-    /// How many distinct sets are on this ring. One set wears no ordinals —
-    /// a number implies a second (`PrivacyDevnetRoots.setLabel`'s rule).
-    var sets: Int = 1
-    /// The freshest live reference's remaining slots, for the ring's own
-    /// reading. Nil draws no reading rather than a zero.
-    var remaining: UInt64?
-    /// When the chain was last actually read. The drift runs from here and
-    /// freezes at `PrivacyDevnetFigure.driftCap`; nil means no drift at all,
-    /// which is what a fixture and a preview get.
-    var readAt: Date?
-    var diameter: CGFloat = 132
-    /// Whether the ring draws its own reading in the middle (prd §929: the
-    /// Snapshots tile draws the crown\'s reading above the ring instead).
-    var showsReading = true
-    let reduceMotion: Bool
-
-    /// The rim's own weight — the same 4pt bed every track in this room used,
-    /// bent into a circle, so the ring is recognisably the same object.
-    // **5, not 4 — measured on a device.** The straight track this replaced
-    // was 4pt across the full card width and read clearly; bent into a circle
-    // the same weight all but disappeared on a dark ground, so the ring's own
-    // shape was the thing hardest to see on the card it leads.
-    private static let rim: CGFloat = 5
-    private static let markSize: CGFloat = 11
-
-    var body: some View {
-        // **A CLOCK, so it is drawn on one.** The schedule is the ring's
-        // drain rate rather than a second: at 12s a slot a mark crosses a
-        // pixel every few seconds, so a faster tick spends battery to redraw
-        // an identical frame.
-        TimelineView(.periodic(from: .now, by: reduceMotion ? 600 : 6)) { context in
-            ring(now: context.date)
-        }
-        .frame(width: diameter, height: diameter)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(String(localized: "The chain's memory")))
-        .accessibilityValue(Text(Self.spoken(marks)))
-    }
-
-    @ViewBuilder private func ring(now: Date) -> some View {
-        let placed = PrivacyDevnetFigure.ringPlacements(drifted(now: now))
-        ZStack {
-            // **THE TRACK IS THICK AND THE WINDOW IS FILLED (prd §606).**
-            //
-            // Reported, on the first device look: the ring "just looks like a
-            // toy". It was a 5pt outline with saturated rotated squares
-            // scattered on it, each stamped with a numeral — badge vocabulary
-            // on an empty circle. Nothing was FILLED, so it held no quantity:
-            // a gauge shows an amount by how much of it is covered, and this
-            // showed position alone.
-            //
-            // Now the arc carries the freshest proof's remaining life as a
-            // fill, so the ring reads as the depleting resource it describes,
-            // and the marks are TICKS THAT CUT THE TRACK rather than objects
-            // floating near it — a measurement on the instrument.
-            RingArc(sweep: PrivacyDevnetFigure.ringSweep)
-                .stroke(DS.fillFaint, style: StrokeStyle(lineWidth: Self.rim, lineCap: .round))
-
-            if let filled = fillSweep {
-                RingArc(sweep: filled)
-                    .stroke(DS.tint, style: StrokeStyle(lineWidth: Self.rim, lineCap: .round))
-            }
-
-            // NOW. In ink rather than tint: it is the axis, not a reading, and
-            // tinting it would make the present look like another snapshot.
-            tick(at: 0, length: Self.rim + 8, colour: DS.textPrimary.opacity(0.75), width: 2.5)
-
-            if showsReading { reading }
-
-            ForEach(Array(placed.enumerated()), id: \.element.id) { index, p in
-                proofTick(p, index: index)
-            }
-        }
-        // The ring fills the way it drains.
-        .chartWipe(reduceMotion: reduceMotion)
-    }
-
-    /// Every mark moved to where the estimate says it is now.
-    ///
-    /// The arithmetic is `PrivacyDevnetFigure.drifted`'s, including the clamp
-    /// that keeps an estimate off the rim — nothing here decides anything, so
-    /// the harness can prove the one rule that matters.
-    private func drifted(now: Date) -> [PrivacyDevnetFigure.Mark] {
-        guard let readAt else { return marks }
-        let elapsed = now.timeIntervalSince(readAt)
-        guard elapsed > 0 else { return marks }
-        return marks.map { mark in
-            guard let position = mark.position else { return mark }
-            var moved = mark
-            moved.position = PrivacyDevnetFigure.drifted(position: position,
-                                                         secondsSinceRead: elapsed)
-            return moved
-        }
-    }
-
-    /// What the ring says in its middle — the freshest snapshot's remaining
-    /// life, in words somebody can feel, with the measured slot count under it.
-    ///
-    /// **The hedge and the measurement travel together** (§598): "about"
-    /// carries the assumption, the slot count carries what was observed, so
-    /// nothing measured is replaced by anything assumed.
-    @ViewBuilder private var reading: some View {
-        if let remaining {
-            // **ONE LINE, AND IT MUST NOT COMPETE WITH THE HEADLINE.** Seen
-            // on a device, "about 14 hours" wrapped to two lines inside a 128pt
-            // ring and read as a second headline under the first. It is the
-            // ring's caption, not its lede: one line, scaled down before it
-            // wraps, over a slot the sentence above already owns.
-            VStack(spacing: 2) {
-                Text(PrivacyDevnetRoots.approximate(slots: remaining))
-                    .dsText(.stat24)
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                Text(String(localized: "\(String(remaining)) of \(String(PrivacyDevnetRoots.windowSlots)) slots"))
-                    .dsText(.label12)
-                    .monospacedDigit()
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            .frame(width: diameter - 40)
-            .accessibilityHidden(true)
-        }
-    }
-
-    @ViewBuilder private func tick(at angle: Double, length: CGFloat,
-                                   colour: Color, width: CGFloat) -> some View {
-        Capsule()
-            .fill(colour)
-            .frame(width: width, height: length)
-            .offset(y: -(diameter - Self.rim) / 2)
-            .rotationEffect(.degrees(angle))
-    }
-
-    /// How much of the arc is filled — the freshest live proof's remaining
-    /// share of the window.
-    ///
-    /// **The freshest, because it is the one with time left to care about**
-    /// (`PrivacyDevnetRoom.head`'s own ranking, so the fill and the sentence
-    /// above can never describe two different snapshots). Nil when nothing is
-    /// live: an empty track and a track with nothing to measure are different
-    /// claims, and only the second is true then.
-    private var fillSweep: Double? {
-        guard let remaining else { return nil }
-        let share = min(1, Double(remaining) / Double(PrivacyDevnetRoots.windowSlots))
-        guard share > 0 else { return nil }
-        return PrivacyDevnetFigure.ringSweep * share
-    }
-
-    /// One snapshot, as a tick across the track.
-    ///
-    /// **A tick that CUTS the track is a measurement on it; a gem sitting
-    /// beside it is an ornament** (prd §606). It runs the rim's full width
-    /// plus a little either side so it reads over both the filled and the
-    /// empty part, in ink rather than tint — the fill is the quantity, the
-    /// ticks are the readings on it, and tinting both would merge them.
-    ///
-    /// An aged proof is a DASHED tick in the exit gap: out of the window,
-    /// visibly a thing rather than an absence, and dashed rather than red
-    /// because a proof whose snapshot has left was valid when it landed.
-    ///
-    /// **The offset-then-rotate idiom**: `.offset` is a render-time transform
-    /// that leaves the layout frame at the ring's centre, so the following
-    /// `.rotationEffect` swings the tick around that centre. The inner
-    /// counter-rotation exists only to keep a set ordinal upright.
-    @ViewBuilder private func proofTick(_ p: PrivacyDevnetFigure.Placement,
-                                        index: Int) -> some View {
-        let aged = p.mark.position == nil
-        ZStack {
-            Capsule()
-                .fill(aged ? Color.clear : DS.textPrimary.opacity(0.92))
-                .overlay {
-                    if aged {
-                        Capsule().strokeBorder(DS.tint.opacity(0.55), lineWidth: 1.5)
-                    }
-                }
-                .frame(width: 2.5, height: Self.rim + 6)
-                .offset(y: -(diameter - Self.rim) / 2)
-                .rotationEffect(.degrees(p.angle))
-
-            // **THE ORDINAL SITS INSIDE THE RIM, in the quietest ink.** It was
-            // stamped INSIDE the mark in `DS.page`, which is what made the
-            // marks read as numbered badges; then it sat OUTSIDE, and at the
-            // bottom of the ring it was clipped by the figure's own frame —
-            // seen on a device. Inward cannot clip, because the ring's own
-            // radius bounds it. Absent entirely when there is one set, since
-            // an ordinal implies a second.
-            if sets > 1 {
-                // **PLACED WITH TRIG, NOT WITH A COUNTER-ROTATION.** Rotating
-                // the label into place and then rotating it back needs a pivot
-                // expressed in the label's own unit space, which is a ratio of
-                // two things neither of which the view knows — and on a device
-                // every numeral landed at the wrong angle from its tick. The
-                // position is one sine and one cosine; it is upright by
-                // construction because nothing rotates it at all.
-                let point = Self.labelOffset(p.angle, diameter: diameter)
-                Text(String(p.mark.set + 1))
-                    .dsText(.label12)
-                    .monospacedDigit()
-                    .foregroundStyle(DS.textTertiary)
-                    .offset(x: point.x, y: point.y)
-            }
-        }
-        .chartArrival(index: index, reduceMotion: reduceMotion)
-        // **THE MOVE IS ANIMATED, so a snapshot visibly leaves.** A mark that
-        // ages out between reads travels to the gap and hollows rather than
-        // teleporting there.
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.9), value: p.angle)
-    }
-
-    /// Where a set's numeral sits: inside the rim, on the same radius as its
-    /// tick, at the same angle. **Clockwise from the top**, which is the
-    /// ring's own sense — so `x` is a sine and `y` is a NEGATIVE cosine,
-    /// because the screen's y grows downward and the top of the ring is where
-    /// the angle starts.
-    static func labelOffset(_ angle: Double, diameter: CGFloat) -> CGPoint {
-        let r = (diameter - rim) / 2 - 15
-        let radians = angle * .pi / 180
-        return CGPoint(x: CGFloat(sin(radians)) * r,
-                       y: -CGFloat(cos(radians)) * r)
-    }
-
-    static func spoken(_ marks: [PrivacyDevnetFigure.Mark]) -> String {
-        let live = marks.filter { $0.position != nil }.reduce(0) { $0 + $1.count }
-        let gone = marks.filter { $0.position == nil }.reduce(0) { $0 + $1.count }
-        if gone == 0 {
-            return String(localized: "\(String(live)) snapshots still in the chain's memory")
-        }
-        return String(localized: "\(String(live)) snapshots still in the chain's memory, \(String(gone)) gone")
-    }
-}
-
-/// The rim: an open arc with its gap at the bottom.
-///
-/// A `Shape` rather than a rotated `Circle().trim`, so the gap's position is
-/// stated once and the ticks and marks can be placed against the same zero.
-struct RingArc: Shape {
-    /// Degrees of arc drawn, clockwise from the top.
-    let sweep: Double
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let radius = (min(rect.width, rect.height)) / 2
-        path.addArc(center: CGPoint(x: rect.midX, y: rect.midY),
-                    radius: radius,
-                    startAngle: .degrees(-90),
-                    endAngle: .degrees(-90 + sweep),
-                    clockwise: false)
-        return path
-    }
-}
-
 // MARK: - What a transaction is made of
 
 /// One transaction's anatomy: its frames, then what it proved, then who paid.
@@ -654,3 +372,79 @@ struct PrivacyDevnetKindMix: View {
 // `DSCount.grouped` — left standing only because a sibling session held this
 // file mid-work. That landed; every sheet in this room reads `DSCount` now, and
 // this had no callers at all while still building a `NumberFormatter` per call.
+
+/// **THE PROOFS AS BARS (prd §936).** The ring (§596, §929) drew each proof's
+/// snapshot as a mark on an arc that drains; the tile draws the same fact in
+/// the grammar every other tile uses — one bar per snapshot, as long as the
+/// share of the chain's 8192-slot memory it still has, ticking as the chain
+/// advances. A snapshot inside its last tenth, or already out, is the one red
+/// bar: that is the proof that needs a fresh snapshot. The drift is the
+/// model's (`PrivacyDevnetFigure.drifted`), never recomputed here.
+struct PrivacyDevnetProofBars: View {
+    let marks: [PrivacyDevnetFigure.Mark]
+    var remaining: UInt64?
+    var readAt: Date?
+    var caption: String?
+    let reduceMotion: Bool
+    @State private var lit: String?
+
+    /// The share of the window under which a snapshot is about to leave it.
+    static let leavingShare: Double = 0.1
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: reduceMotion ? 600 : 6)) { context in
+            let drifted = drifted(now: context.date)
+            DSBarFigure(reading: { reading(drifted) },
+                        bars: DSBarList(bars: Self.bars(drifted), lit: lit) { picked in
+                            lit = lit == picked ? nil : picked
+                        })
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(String(localized: "The chain's memory")))
+    }
+
+    private func drifted(now: Date) -> [PrivacyDevnetFigure.Mark] {
+        guard let readAt else { return marks }
+        let elapsed = now.timeIntervalSince(readAt)
+        guard elapsed > 0 else { return marks }
+        return marks.map { mark in
+            guard let position = mark.position else { return mark }
+            var moved = mark
+            moved.position = PrivacyDevnetFigure.drifted(position: position, secondsSinceRead: elapsed)
+            return moved
+        }
+    }
+
+    static func id(_ mark: PrivacyDevnetFigure.Mark) -> String { "\(mark.set):\(mark.slot)" }
+
+    static func bars(_ marks: [PrivacyDevnetFigure.Mark]) -> [DSBarList.Bar] {
+        marks.sorted { ($0.position ?? -1) > ($1.position ?? -1) }.map { mark in
+            let share = max(0, min(1, mark.position ?? 0))
+            let proofs = mark.count == 1 ? String(localized: "1 proof")
+                                         : String(localized: "\(String(mark.count)) proofs")
+            let left = mark.position.map {
+                PrivacyDevnetRoots.approximate(slots: UInt64(max(0, $0) * Double(PrivacyDevnetRoots.windowSlots)))
+            } ?? String(localized: "gone")
+            return DSBarList.Bar(id: id(mark), label: proofs, value: left, share: share,
+                                 alarm: (mark.position ?? 0) < leavingShare)
+        }
+    }
+
+    @ViewBuilder
+    private func reading(_ drifted: [PrivacyDevnetFigure.Mark]) -> some View {
+        let proofs = drifted.reduce(0) { $0 + $1.count }
+        let leaving = drifted.filter { ($0.position ?? 0) < Self.leavingShare }.reduce(0) { $0 + $1.count }
+        if let lit, let mark = drifted.first(where: { Self.id($0) == lit }) {
+            DSFigureReading(number: mark.position.map {
+                                PrivacyDevnetRoots.approximate(slots: UInt64(max(0, $0) * Double(PrivacyDevnetRoots.windowSlots)))
+                            } ?? String(localized: "Gone"),
+                            caption: String(localized: "left in the chain's memory"))
+        } else {
+            DSFigureReading(number: remaining.map { PrivacyDevnetRoots.approximate(slots: $0) } ?? String(proofs),
+                            caption: [remaining == nil ? (proofs == 1 ? String(localized: "proof") : String(localized: "proofs"))
+                                                       : String(localized: "left on the freshest proof"),
+                                      caption].compactMap { $0 }.joined(separator: " · "),
+                            alarm: leaving > 0 ? String(localized: "\(String(leaving)) leaving") : nil)
+        }
+    }
+}

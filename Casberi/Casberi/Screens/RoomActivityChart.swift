@@ -91,9 +91,8 @@ struct RoomActivityChart: View {
         let held = pressed.flatMap { buckets.indices.contains($0) ? $0 : nil }
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             reading(count: held.map { buckets[$0] } ?? inWindow.count,
-                    line: held.map { Self.bucketDays(index: $0, dates: inWindow, range: active) }
-                        ?? Self.changeWords(delta: Self.change(all: all.map(\.at), range: active),
-                                            window: active.windowWord(since: inWindow.min())))
+                    when: held.map { Self.bucketDays(index: $0, dates: inWindow, range: active) }
+                        ?? active.windowWord(since: inWindow.min()))
             if buckets.contains(where: { $0 > 0 }) {
                 // At rest the lit bar is the NEWEST BUCKET THAT HOLDS
                 // ANYTHING — the last time something happened — because an
@@ -143,34 +142,15 @@ struct RoomActivityChart: View {
     /// the change against the window before, the whole record says its span
     /// ("since Aug 17", the crown's own window word), so this stack stands
     /// exactly as tall as Home's and leaves no air under the chips.
+    /// **ONE NUMBER, ONE CAPTION (prd §936).** The count, and under it what
+    /// is counted, when, and whose — the change-against-before sentence is
+    /// deleted; the bars already show which way it went.
     @ViewBuilder
-    private func reading(count: Int, line: String) -> some View {
-        let block = VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: DS.Space.s1) {
-                if let captionAddress {
-                    WalletFace(address: captionAddress, size: DS.Face.badge, circular: true)
-                }
-                Text(caption)
-                    .dsText(.label12)
-                    .foregroundStyle(captionAddress == nil ? DS.textTertiary : DS.textSecondary)
-                if onOpen != nil { DSChevron() }
-            }
-            Text(countLabel(count))
-                .dsText(.stat24)
-                .foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-                .contentTransition(.numericText(value: Double(count)))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            // **A SENTENCE, NOT A DASHBOARD (prd §782).** The direction is in
-            // the words, so the line carries no triangle and no gain/loss ink.
-            Text(line)
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .monospacedDigit()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .lineLimit(1).minimumScaleFactor(0.7)
-        }
+    private func reading(count: Int, when: String) -> some View {
+        let label = countLabel(count)
+        let noun = label.hasPrefix(String(count) + " ") ? String(label.dropFirst(String(count).count + 1)) : label
+        let block = DSFigureReading(number: String(count),
+                                    caption: [noun, when, caption].filter { !$0.isEmpty }.joined(separator: " · "))
         if let onOpen {
             Button(action: { DSHaptic.selection(); onOpen() }) { block }
                 .buttonStyle(.plain)

@@ -475,10 +475,14 @@ strip "$CARD" | grep -qE '\.names|rung\.names' \
 # Since prd §924 a count is drawn as MARKS — one key per permission, six
 # before "+N" — rather than as a numeral; either spelling of "the count is
 # drawn, not merely said" passes, and a figure that draws neither fails.
+# Since prd §936 a class is a BAR (`DSBarList`) as long as its count, under
+# the number (`DSFigureReading`) — a third spelling of "drawn, not said".
 { grep -qE 'dsText\(\.price(40|17)\)' "$CARD" ||
   grep -qE 'dsText\(\.price(40|17)\)' "$FIGURE" ||
   { grep -q 'systemName: "key.fill"' "$FIGURE" &&
-    grep -q 'ForEach(0..<shown' "$FIGURE"; }; } \
-  || fail "the slot's counts are no longer drawn as figures (§546, keys since §924)"
+    grep -q 'ForEach(0..<shown' "$FIGURE"; } ||
+  { grep -q 'DSBarList(bars:' "$FIGURE" &&
+    grep -q 'share: Double(kind.count)' "$FIGURE"; }; } \
+  || fail "the slot's counts are no longer drawn as figures (§546, keys since §924, bars since §936)"
 
 print "  ok   18 mutations, 25 drift guards"

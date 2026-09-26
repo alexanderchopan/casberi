@@ -53,12 +53,14 @@ struct WalletPermissionsCard: View {
     /// here has a figure at all — a wallet whose only holder is a Safe module
     /// has real exposure and no dollars to state, and "$0" there would be the
     /// most misleading thing on the card.
-    private var lead: RoomPermissions.Lead {
+    private var lead: RoomPermissions.Lead? {
         if let total = WalletPermissions.totalUSD(holders) {
             return RoomPermissions.Lead(figure: WalletApprovalExposure.money(total),
                                         caption: String(localized: "in reach"))
         }
-        return RoomPermissions.Lead(figure: String(localized: "Who can act for you"))
+        // No sentence in the number's place (prd §936): with nothing priced,
+        // the count of permissions is the number.
+        return nil
     }
 
     /// The rung's total, beside its numeral — only when the rung is FULLY

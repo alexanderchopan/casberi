@@ -62,7 +62,9 @@ struct RoomsTray: View {
     /// The two detents, as shares of the screen: rest shows You and the first
     /// rooms; grown shows the whole roster. Neither exceeds the roster's
     /// natural height — a short roster is a short tray.
-    static let restShare: CGFloat = 0.58
+    // Three quarters at rest (user, 2026-09-26: "shouldn't the tray be higher?
+    // like a 3/4 tray") — it opened at 0.58 and read as a half sheet.
+    static let restShare: CGFloat = 0.75
     static let grownShare: CGFloat = 0.88
     /// The stagger between one mark's arrival and the next.
     static let dealStep: Double = 0.02

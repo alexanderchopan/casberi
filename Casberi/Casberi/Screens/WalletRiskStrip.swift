@@ -86,53 +86,31 @@ struct WalletRiskStrip: View {
         .accessibilityLabel(Text(spokenAxis))
     }
 
-    /// **THE CROWN'S READING (prd §927)** — caption, "N leveraged" at
-    /// `stat24`, and the closest position's room in its own alarm ink; under
-    /// a press, that position and its detail, and a door to it.
+    /// **ONE NUMBER, ONE CAPTION (prd §936).** At rest, how many positions
+    /// are leveraged, with the at-risk count in the alarm ink; under a press,
+    /// that position's room before liquidation, and a door to it.
     @ViewBuilder
     private var reading: some View {
         let door: (() -> Void)? = pressed.flatMap { entry in onPick.map { pick in { pick(entry) } } }
-        let block = VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Text(pressed?.label ?? caption ?? "")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                if door != nil { DSChevron() }
+        let atRisk = entries.filter(\.atRisk).count
+        let block: DSFigureReading = {
+            if let pressed {
+                let room = Int((min(max(pressed.headroom, 0), 1) * 100).rounded())
+                return DSFigureReading(number: "\(room)%",
+                                       caption: String(localized: "\(pressed.label) · room before liquidation"),
+                                       numberInk: pressed.atRisk ? DS.destructive : DS.textPrimary)
             }
-            .opacity((pressed != nil || caption != nil) ? 1 : 0)
-            Text(pressed.map(\.detail)
-                 ?? (entries.count == 1 ? String(localized: "1 leveraged")
-                                        : String(localized: "\(String(entries.count)) leveraged")))
-                .dsText(.stat24)
-                .foregroundStyle(pressed.map { $0.atRisk ? DS.attention : DS.textPrimary } ?? DS.textPrimary)
-                .monospacedDigit()
-                .lineLimit(1).minimumScaleFactor(0.6)
-            line
-                .dsText(.body17)
-                .lineLimit(1).minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.trailing, DSRoomChassis.gearColumn)
+            return DSFigureReading(number: String(entries.count),
+                                   caption: [String(localized: "leveraged"), caption].compactMap { $0 }
+                                       .joined(separator: " · "),
+                                   alarm: atRisk > 0 ? String(localized: "\(String(atRisk)) at risk") : nil)
+        }()
         if let door {
             Button(action: door) { block.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
         } else {
             block
         }
-    }
-
-    private var line: Text {
-        if let pressed {
-            let room = Int((min(max(pressed.headroom, 0), 1) * 100).rounded())
-            return Text(String(localized: "\(String(room))% room before liquidation"))
-                .foregroundStyle(pressed.atRisk ? DS.attention : DS.textSecondary)
-        }
-        guard let closest else { return Text(String(localized: "Nothing leveraged")).foregroundStyle(DS.textSecondary) }
-        return Text(String(localized: "closest: "))
-            .foregroundStyle(DS.textSecondary)
-            + Text("\(closest.label) · \(closest.detail)")
-            .foregroundStyle(closest.atRisk ? DS.attention : DS.confirm)
     }
 
     @ViewBuilder
@@ -148,7 +126,7 @@ struct WalletRiskStrip: View {
                     VStack(spacing: 0) {
                         Spacer(minLength: 0)
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(entry.atRisk ? DS.attention : DS.confirm.opacity(0.8))
+                            .fill(entry.atRisk ? DS.destructive : DS.tint)
                             .frame(height: h)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
