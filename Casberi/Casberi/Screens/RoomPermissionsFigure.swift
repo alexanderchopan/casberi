@@ -169,11 +169,12 @@ struct RoomPermissionsFigure: View {
                 .dsText(.label12)
                 .foregroundStyle(held ? (lit?.kind == kind.id ? DS.textPrimary : DS.textTertiary)
                                       : DS.textQuaternary)
-                // Three lines, because a class is a clause ("Can spend
-                // without a signature") and two clipped it at the third
-                // word in a three-column grid — seen on the first build —
-                // while the rows below the grid had the room to spare.
-                .lineLimit(3)
+                // One word per class since prd §931 (the Wallet's
+                // `Power.word`; the devnets' labels were nouns already), so
+                // one line holds it. Two lines are allowed for a long noun
+                // in a narrow column, never a clause: the sentence is the
+                // rows' and VoiceOver's (`Kind.phrase`).
+                .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .opacity(held && quietClass ? 0.35 : 1)
         }

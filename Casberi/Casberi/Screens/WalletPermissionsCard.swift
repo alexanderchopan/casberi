@@ -37,8 +37,9 @@ struct WalletPermissionsCard: View {
     static func kinds(_ rungs: [WalletPermissions.Rung],
                       holders: [WalletPermissions.Holder] = []) -> [RoomPermissions.Kind] {
         rungs.map { rung in
-            RoomPermissions.Kind(label: rung.power.phrase,
+            RoomPermissions.Kind(label: rung.power.word,
                                  count: rung.count,
+                                 phrase: rung.power.phrase,
                                  aside: aside(rung),
                                  unbounded: rung.power.isUnbounded,
                                  holders: holders.filter { $0.power == rung.power }.map {

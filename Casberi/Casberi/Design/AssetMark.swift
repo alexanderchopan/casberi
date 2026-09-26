@@ -13,11 +13,16 @@ import SwiftUI
 /// unnamed thing in this app wears, and half a row of real logos beside half a
 /// row of neutral discs is the honest picture of what we actually know.
 ///
-/// Nothing here fetches. Every surface that uses it is a scrolling list, and
-/// per-row image requests would mean a new host in `NetworkReach` plus network
-/// traffic on a scroll — refused for the same reason the website inlines its
-/// icons. When a symbol has no bundled mark the answer is to BUNDLE one, not
-/// to reach for it at render time.
+/// **Three rungs since prd §931** (user, 2026-09-26: *"we aren't fetching all
+/// the icons and we have access to them"*, reversing the 2026-08-01 "nothing
+/// here fetches"): the bundled mark first — offline, shipped, never wrong —
+/// then the picture the holdings read itself named (`TokenIconBook`, Zerion's
+/// `icon.url`, one declared host, no request made to LEARN it), then the
+/// monogram. The 08-01 refusal was about per-row requests to a new host on a
+/// scroll; what changed is that the URL now rides a read the wallet already
+/// pays for, and the picture goes through `RemoteImageLoader`'s cache like
+/// every avatar in the feed. The demo reaches nothing, so the demo draws
+/// the first and last rungs only.
 struct AssetMark: View {
     /// A token symbol ("ETH", "USDC") or a counterparty/protocol name
     /// ("Coinbase", "Aave").
@@ -57,6 +62,13 @@ struct AssetMark: View {
         return String(cleaned.prefix(2)).uppercased()
     }
 
+    /// The book's picture for this name — nil in the demo (it reaches
+    /// nothing) and for every name the holdings read never named.
+    private var remoteURL: String? {
+        if DemoMode.isActive { return nil }
+        return TokenIconBook.url(for: name)
+    }
+
     var body: some View {
         Group {
             if let ui = BrandMark.image(for: name) {
@@ -65,6 +77,9 @@ struct AssetMark: View {
                     .scaledToFill()
                     .frame(width: size, height: size)
                     .clipShape(Circle())
+            } else if let remoteURL {
+                RemoteAssetMark(urlString: remoteURL, size: size, monogram: monogram,
+                                tint: tint)
             } else {
                 Circle()
                     .fill(tint.map { $0.opacity(0.16) } ?? DS.fillStrong)
@@ -89,6 +104,46 @@ struct AssetMark: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// The book's picture, arriving over the monogram (prd §931): the monogram
+/// draws at once, the picture crossfades in when the loader answers, and a
+/// dead or failed URL leaves the monogram standing — never a blank disc.
+struct RemoteAssetMark: View {
+    let urlString: String
+    let size: CGFloat
+    let monogram: String
+    var tint: Color?
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(tint.map { $0.opacity(0.16) } ?? DS.fillStrong)
+                .overlay(
+                    Text(monogram)
+                        .font(.custom(DSFont.semibold, fixedSize: size * 0.40))
+                        .foregroundStyle(tint ?? DS.textSecondary)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
+                )
+                .opacity(image == nil ? 1 : 0)
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(Circle())
+            }
+        }
+        .frame(width: size, height: size)
+        .task(id: urlString) {
+            guard !RemoteImageLoader.isDead(urlString) else { return }
+            if case .image(let ui, let fresh) = await RemoteImageLoader.load(urlString: urlString,
+                                                                              targetSide: size * 3) {
+                if fresh { withAnimation(DS.Motion.standard) { image = ui } } else { image = ui }
+            }
+        }
     }
 }
 

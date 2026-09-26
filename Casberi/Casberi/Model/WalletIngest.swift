@@ -2582,11 +2582,15 @@ enum WalletIngest {
         }
         var candidates: [Candidate] = []
         var reached = false
+        var icons: [(symbol: String, url: String)] = []
         for (i, result) in holdings.enumerated() {
             guard let result else { continue }   // this wallet unreached — skip it, don't fail the set
             reached = true
             let allowed = routed[i].networks
             for h in result where allowed.contains(h.network) {
+                // The mark this read named, into the book (prd §931) — the
+                // same cleaned symbol the cell will be keyed by.
+                if let icon = h.iconURL { icons.append((symbol: clean(h.symbol), url: icon)) }
                 // `clean`, not the raw symbol (fixed 2026-07-21, prd §160):
                 // this arm is the PRIMARY holdings read now, and it was the
                 // one path that skipped the shared label rule — so a spoofed
@@ -2598,6 +2602,7 @@ enum WalletIngest {
                                             trashFiltered: true))
             }
         }
+        TokenIconBook.note(icons)
         return (candidates, reached)
     }
 

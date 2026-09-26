@@ -38,6 +38,10 @@ enum RoomPermissions {
         /// delegate.
         let label: String
         let count: Int
+        /// The class as a sentence, where the label is a noun (the Wallet's
+        /// `Power.word` under the keys, `Power.phrase` here, prd §931).
+        /// VoiceOver reads this; the figure draws `label`.
+        var phrase: String? = nil
         /// A figure this class can state completely — a dollar total where
         /// every holder is priced, an expiry where there is one. Nil is the
         /// normal case and draws nothing.
@@ -127,7 +131,7 @@ enum RoomPermissions {
             parts.append([lead.figure, lead.caption].compactMap { $0 }.joined(separator: " "))
         }
         for kind in kinds.prefix(cellsShown(kinds)) where kind.count > 0 {
-            parts.append("\(kind.count) \(kind.label)")
+            parts.append("\(kind.count) \(kind.phrase ?? kind.label)")
         }
         if let folded = folded(kinds) {
             parts.append(String(localized: "and \(folded) more"))

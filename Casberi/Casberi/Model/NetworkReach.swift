@@ -199,7 +199,11 @@ enum NetworkReach {
                          // NFT sync, and the Portfolio fallback.
                          "arc-mainnet.g.alchemy.com",
                          "solana-mainnet.g.alchemy.com", "robinhood-mainnet.g.alchemy.com",
-                         "api.zerion.io", "coins.llama.fi",
+                         "api.zerion.io",
+                         // Token pictures the positions read names (prd §931):
+                         // fetched only from Zerion's own CDN, never learned
+                         // by a request of their own.
+                         "cdn.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
                          "arb1.arbitrum.io", "eth.api.onfinality.io", "polygon.api.onfinality.io"]),
         // World ID (2026-09-16, prd §785). ITS OWN HOST, and that is a fix

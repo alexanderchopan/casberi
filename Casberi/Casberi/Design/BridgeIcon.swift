@@ -128,6 +128,12 @@ struct TokenIcon: View {
                 .scaledToFit()
                 .frame(width: size, height: size)
                 .clipShape(Circle())
+        } else if !DemoMode.isActive, let url = TokenIconBook.url(for: symbol) {
+            // The picture the holdings read named (prd §931) — the same
+            // middle rung `AssetMark` draws, so a list row and the pack above
+            // it wear the same mark for the same coin.
+            RemoteAssetMark(urlString: url, size: size,
+                            monogram: String(symbol.prefix(2)).uppercased(), tint: nil)
         }
     }
 }

@@ -27,10 +27,15 @@ import SwiftUI
 /// whole reading — the node cap, the §439 direct-pair links, the untouched
 /// wallets — without a line of new analysis.
 ///
-/// **§295's own ruling governs the drawing and is not to be "improved"**
-/// (user, 2026-08-03: *"limit the 'analysis' b/c it should be factual"*).
-/// Every ribbon is the same weight: a connection exists or it does not. No
-/// ranking by count, no weighting by value, no "who you deal with most".
+/// **§295's "factual, no analysis" (user, 2026-08-03) still governs**, and
+/// §923 read it more carefully: a ribbon's WIDTH is what moved between the
+/// two — a measured fact, not a ranking — and nothing here says "who you
+/// deal with most". **Its colour says only which of your accounts it reaches,
+/// and only when there are two or more to tell apart (prd §931)**: with one
+/// wallet every ribbon wore that wallet's identicon hue — an arbitrary purple
+/// nobody could read (user, 2026-09-26: *"we use purple for the lines but
+/// why?"*) — so a lone wallet's ribbons take the one ink, and a face wears a
+/// name under it while the column has room (four rows or fewer).
 struct RoomConnectionsFigure: View {
     let map: AddressConnections.Map?
     var box: CGFloat = DSRoomChassis.figureSlot
@@ -191,7 +196,8 @@ struct ConnectionSpine: View {
                                           control1: CGPoint(x: midX, y: leftY[i]),
                                           control2: CGPoint(x: midX, y: rightY[j]))
                             ctx.stroke(path,
-                                       with: .color(WalletFace.tint(for: key).opacity(quiet ? 0.18 : 0.7)),
+                                       with: .color(Self.ink(for: key, columns: rights.count)
+                                                        .opacity(quiet ? 0.18 : 0.7)),
                                        style: StrokeStyle(lineWidth: width, lineCap: .round))
                         }
                     }
@@ -206,7 +212,8 @@ struct ConnectionSpine: View {
                     let reached = map.columns.contains { $0.id == column.id }
                     let touchedByLit = lit.map { l in lefts.contains { $0.id == l && $0.walletKeys.contains(column.id) } } ?? false
                     faceButton(id: column.id, address: column.id, name: column.name, compact: compact,
-                               quiet: !reached || (lit != nil && lit != column.id && !touchedByLit))
+                               quiet: !reached || (lit != nil && lit != column.id && !touchedByLit),
+                               trailing: true)
                         .position(x: rightX, y: rightY[j])
                 }
             }
@@ -219,7 +226,18 @@ struct ConnectionSpine: View {
     }
 
     @ViewBuilder
-    private func faceButton(id: String, address: String, name: String, compact: Bool, quiet: Bool) -> some View {
+    /// The ribbon's ink (prd §931): the wallet's own hue only where there are
+    /// two or more of yours to tell apart; one wallet, one ink.
+    static func ink(for walletKey: String, columns: Int) -> Color {
+        columns >= 2 ? WalletFace.tint(for: walletKey) : DS.textTertiary
+    }
+
+    /// A name's width under a face — enough for a short name or an address's
+    /// two ends, never half the spine.
+    static let nameWidth: CGFloat = 96
+
+    private func faceButton(id: String, address: String, name: String, compact: Bool, quiet: Bool,
+                            trailing: Bool = false) -> some View {
         Button {
             onPress?(id)
         } label: {
@@ -237,6 +255,24 @@ struct ConnectionSpine: View {
             // Drawn at the face's size, targeted at the 44pt floor
             // (`accessibility-audit.py`), the chips' own arrangement.
             .dsTapTarget(Circle(), size: DS.Hit.min)
+            // The name under the face while the column has room (prd §931):
+            // a face is a door, and a door says where it goes. Hung from the
+            // face's bottom edge, out of the ribbons' way, flush with the
+            // spine's own edge so the left column reads leading and the
+            // right column trailing.
+            .overlay(alignment: trailing ? .topTrailing : .topLeading) {
+                if !compact {
+                    Text(name)
+                        .dsText(.label12)
+                        .foregroundStyle(lit == id ? DS.textPrimary : DS.textTertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(width: Self.nameWidth, alignment: trailing ? .trailing : .leading)
+                        .opacity(quiet ? 0.35 : 1)
+                        .offset(y: DS.Face.row + 2)
+                        .allowsHitTesting(false)
+                }
+            }
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text(name))
@@ -245,10 +281,16 @@ struct ConnectionSpine: View {
 
     /// Faces spaced down the column, the first and last flush with the box.
     static func ys(_ n: Int, height: CGFloat, face: CGFloat) -> [CGFloat] {
-        guard n > 1 else { return [height / 2] }
-        let usable = height - face
+        // The name under a face (prd §931) needs its line below the last row
+        // — the row tier carries one, the badge tier does not.
+        let tail: CGFloat = face >= DS.Face.row ? nameLine : 0
+        guard n > 1 else { return [(height - tail) / 2] }
+        let usable = height - face - tail
         return (0..<n).map { face / 2 + usable * CGFloat($0) / CGFloat(n - 1) }
     }
+
+    /// The name's line under a face: the 2pt gap plus a `label12` line.
+    static let nameLine: CGFloat = 16
 }
 
 /// **THE LIST SAYS WHAT EACH ADDRESS IS AND HOW IT RELATES (prd §689, user:

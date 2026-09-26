@@ -97,6 +97,10 @@ enum ZerionAPI {
         /// DeFiLlama fills cover the gap exactly as they cover an Alchemy miss.
         let price: Double?
         let owner: String
+        /// The token's picture on Zerion's own CDN (`fungible_info.icon.url`),
+        /// nil when Zerion lists none — junk mostly. Read into `TokenIconBook`
+        /// by the ingest (prd §931); the parser keeps only `cdn.zerion.io`.
+        var iconURL: String? = nil
     }
 
     /// One response's `data` array, or nil when the call did not answer with
@@ -104,7 +108,13 @@ enum ZerionAPI {
     /// chain-filtered read and its unfiltered retry are the same request made
     /// twice, never two spellings that can drift apart.
     private static func dataRows(_ url: String, auth: String) async -> [[String: Any]]? {
-        guard let root = await IngestSupport.getJSON(url, auth: "Basic \(auth)") as? [String: Any],
+        let (json, status) = await IngestSupport.getJSONStatus(url, auth: "Basic \(auth)")
+        #if DEBUG
+        // A refused read is invisible otherwise (nil is also "unreachable"),
+        // and the shared key's daily pool is small (prd §826): say the status.
+        if status != 200 { NSLog("[Casberi] zerion: HTTP %d for %@", status, url.prefix(90).description) }
+        #endif
+        guard let root = json as? [String: Any],
               let data = root["data"] as? [[String: Any]] else { return nil }
         return data
     }
@@ -232,8 +242,10 @@ enum ZerionAPI {
                     let derived = value / amount   // `amount > 0`, guarded above
                     return derived.isFinite && derived > 0 ? derived : nil
                 }
+            let icon = ((info?["icon"] as? [String: Any])?["url"] as? String)
+                .flatMap { TokenIconBook.accepts($0) ? $0 : nil }
             out.append(Holding(symbol: clean(symbol), contract: contract, network: network,
-                               amount: amount, price: price, owner: owner))
+                               amount: amount, price: price, owner: owner, iconURL: icon))
         }
         return out
     }
@@ -556,13 +568,16 @@ enum ZerionAPI {
             return ["Zerion probe: reached, 0 holdings (a real 'holds nothing', not a miss)"]
         }
         let priced = holdings.filter { $0.price != nil }.count
-        var out = [String(format: "Zerion probe: %d holding(s), %d priced, %d unpriced",
-                          holdings.count, priced, holdings.count - priced)]
+        let pictured = holdings.filter { $0.iconURL != nil }.count
+        var out = [String(format: "Zerion probe: %d holding(s), %d priced, %d unpriced, %d with a picture (prd §931); book holds %d",
+                          holdings.count, priced, holdings.count - priced, pictured,
+                          TokenIconBook.all().count)]
         for h in holdings.prefix(15) {
-            out.append(String(format: "  %@ [%@] amt=%@ price=%@",
+            out.append(String(format: "  %@ [%@] amt=%@ price=%@ icon=%@",
                               h.symbol, h.network,
                               String(format: "%g", h.amount),
-                              h.price.map { String(format: "$%.4f", $0) } ?? "—"))
+                              h.price.map { String(format: "$%.4f", $0) } ?? "—",
+                              h.iconURL == nil ? "—" : "yes"))
         }
         if holdings.count > 15 { out.append("  … +\(holdings.count - 15) more") }
         return out

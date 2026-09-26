@@ -138,6 +138,9 @@ DEMO_FILES = {
     "ZerionAPI": CASBERI / "Model/ZerionAPI.swift",
     "WalletIngest": CASBERI / "Model/WalletIngest.swift",
     "MainnetPrices": CASBERI / "Model/MainnetPrices.swift",
+    # Read-only reference for check J — the token picture a holdings read
+    # named (prd §931), a per-view fetch the sweep gate cannot see.
+    "AssetMark": CASBERI / "Design/AssetMark.swift",
     # Read-only reference for check K — the eight LEGACY demo seats live in
     # `BridgeApp.demo` here rather than in `DemoSeedAll.seatTable`, which is
     # exactly why check G could only ever test them by name (2026-08-20).
@@ -194,6 +197,9 @@ DEMO_GATED_READS = [
     # The FUNNEL both holdings providers pass through. Gating Zerion alone
     # moved the request to the Alchemy fallback — measured, not reasoned.
     ("WalletIngest", "private static func holdings(addresses:"),
+    # The token picture behind a mark (prd §931): `TokenIconBook` holds live
+    # URLs from before the demo was entered, so the gate is in the READER.
+    ("AssetMark", "private var remoteURL: String?"),
     # The BITCOIN branch, which reaches the price host BEFORE that funnel and
     # is therefore invisible to it — found the same way the Zerion entry above
     # was, by the RUNTIME reach walk naming `coins.llama.fi` and nothing else

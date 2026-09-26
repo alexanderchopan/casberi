@@ -89,6 +89,24 @@ enum WalletPermissions {
             }
         }
 
+        /// **THE WORD UNDER THE KEYS (prd §931).** The crown's figure draws
+        /// this class as a column of key marks with its name beneath, three
+        /// columns across a 316pt well — and `phrase` there wrapped to three
+        /// lines under six keys (user, 2026-09-26: *"looks too wordy when the
+        /// text is on a single line underneath the keys"*). A noun for the
+        /// figure, the sentence for the rows: the rows below still say what
+        /// each holder CAN do, so the figure's word only has to name the
+        /// class it is looking at.
+        var word: String {
+            switch self {
+            case .actsAsWallet:          String(localized: "Delegates")
+            case .movesWithoutSignature: String(localized: "Modules")
+            case .unlimitedToken:        String(localized: "Unlimited")
+            case .wholeCollection:       String(localized: "Collections")
+            case .scopedSigner:          String(localized: "Session keys")
+            case .cappedAmount:          String(localized: "Capped")
+            }
+        }
         /// Whether this rung is one the room should draw in its alarm colour.
         ///
         /// The line is UNBOUNDEDNESS, never severity-as-opinion: the four
