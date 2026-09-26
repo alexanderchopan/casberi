@@ -34,15 +34,6 @@ extension FeedScreen {
     /// hands back a value, which is what keeps this immune to the liveness
     /// crash class rather than merely guarded against it (CLAUDE.md
     /// corollaries 1–6).
-    /// The scope, as the crowns caption it (prd §926, §927): the scoped
-    /// wallet's name, else how many you follow.
-    var walletCaptionWord: String {
-        selectedWallet.map { WalletScopeRail.caption(for: $0, in: wallet.addresses).name }
-            ?? (wallet.addresses.count == 1
-                ? String(localized: "1 wallet")
-                : String(localized: "\(String(wallet.addresses.count)) wallets"))
-    }
-
     @ViewBuilder var walletActivitySection: some View {
         Section {
             RoomActivityChart(dates: visible.map(\.capturedAt),
@@ -477,17 +468,152 @@ extension FeedScreen {
     /// The Worth-a-look strip, lifted out of the crown card into the `Risk`
     /// scope for the same reason (prd §483) — and it is what that scope is
     /// FOR, so it heads it rather than trailing the leverage axis.
+    /// **WORTH A LOOK, IN THE LIST (prd §946).** The door whose line ran out
+    /// ("3 signatu…") onto a tray is rows now, and only the warnings with no
+    /// other home: flagged, fake-symbol and spam transfers. A liquidation risk
+    /// is the red health in Leveraged above; Safe signatures, delegations and
+    /// approvals are Permissions' (user: "permissions could have approvals,
+    /// delegations, signatures"). A row opens the tray at its group.
     @ViewBuilder
-    var walletWarningsSection: some View {
-        let warnings = walletLive.warnings
-        if !warnings.isEmpty {
+    var walletWorthALookSection: some View {
+        let flagged = walletLive.warnings.filter {
+            switch $0.kind {
+            case .poisoning, .spoofedSymbol, .fakeTransfer: true
+            case .liquidation, .approval, .delegation, .safe: false
+            }
+        }
+        if !flagged.isEmpty {
             Section {
-                WalletWarningsStrip(warnings: warnings) { feedSheet = .worthALook }
-                    // Bare, for `walletCompositionSection`'s reason.
-                    .padding(.bottom, DS.Space.s3)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                DSGroupHeader(word: String(localized: "Worth a look"))
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(flagged) { warning in
+                        needsYouRow(glyph: warning.kind.glyph,
+                                    critical: warning.severity == .critical,
+                                    title: warning.rowName ?? warning.title,
+                                    line: warning.rowLine ?? warning.subtitle) {
+                            feedSheet = .worthALook
+                        }
+                    }
+                }
+                .listRowInsets(WalletCardStyle.rowInsets)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    /// **SIGNATURES WAITING ON YOU, FIRST IN PERMISSIONS (prd §946).** A Safe
+    /// transaction someone proposed and you have not signed is a power over
+    /// your wallet waiting on you — Permissions' first group, before
+    /// Delegations and Approvals (user: "signatures, delegations,
+    /// approvals"). The row opens that Safe's own queue.
+    var walletSignatureWarnings: [WalletWarning] {
+        walletLive.warnings.filter { $0.kind == .safe }
+    }
+
+    @ViewBuilder
+    var walletSignaturesSection: some View {
+        let waiting = walletSignatureWarnings
+        if !waiting.isEmpty {
+            Section {
+                DSGroupHeader(word: String(localized: "Signatures"))
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(waiting) { warning in
+                        needsYouRow(glyph: warning.kind.glyph, critical: false,
+                                    title: warning.rowName ?? warning.title,
+                                    line: warning.rowLine ?? warning.subtitle) {
+                            if let action = warning.action, let url = URL(string: action.url) {
+                                openExternal(url)
+                            } else {
+                                feedSheet = .worthALook
+                            }
+                        }
+                    }
+                }
+                .listRowInsets(WalletCardStyle.rowInsets)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    private func needsYouRow(glyph: String, critical: Bool, title: String, line: String?,
+                             action: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.selection()
+            action()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                ZStack {
+                    Circle().fill(DS.fillFaint)
+                    Image(systemName: glyph)
+                        .dsGlyph(.subhead, weight: .semibold)
+                        .foregroundStyle(critical ? DS.destructive : DS.textPrimary)
+                        .accessibilityHidden(true)
+                }
+                .frame(width: DS.Face.list, height: DS.Face.list)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    if let line {
+                        Text(line)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+                DSChevron()
+            }
+            .padding(.vertical, DS.Space.s2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// **THE LEVERAGED POSITIONS, THE BARS' OWN LEGEND (prd §946).** One row
+    /// per position that can be liquidated, closest first — the entries the
+    /// crown draws, so the two can never disagree. Nothing that borrows
+    /// nothing is here (Spark with no debt was Positions' card, repeated).
+    /// Red only on the health or distance of one at risk.
+    @ViewBuilder
+    var walletLeveragedSection: some View {
+        let entries = WalletRiskScaleSource.entries(aave: walletLive.positions,
+                                                    morpho: walletLive.morpho,
+                                                    hyperliquid: walletLive.hyperliquid)
+            .sorted { $0.axis == $1.axis ? $0.id < $1.id : $0.axis > $1.axis }
+        if !entries.isEmpty {
+            Section {
+                DSGroupHeader(word: String(localized: "Leveraged"))
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(entries) { entry in
+                        let parts = entry.label.components(separatedBy: " · ")
+                        let name = parts.first ?? entry.label
+                        let market = parts.dropFirst().joined(separator: " · ")
+                        HStack(spacing: DS.Space.s3) {
+                            AssetMark(name: entry.id.hasPrefix("hl:")
+                                          ? (name.components(separatedBy: " ").first ?? name) : name,
+                                      size: DS.Face.list)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(name)
+                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
+                                (Text(entry.detail)
+                                    .foregroundStyle(entry.atRisk ? DS.destructive : DS.textTertiary)
+                                 + Text(market.isEmpty ? "" : " · \(market)")
+                                    .foregroundStyle(DS.textTertiary))
+                                    .dsText(.subhead12)
+                                    .lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, DS.Space.s2)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .listRowInsets(WalletCardStyle.rowInsets)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         }
     }
@@ -750,20 +876,6 @@ extension FeedScreen {
     /// `.id(…)` sites stay in one place.
     static let approvalsAnchor = "wallet.card.approvals"
 
-    /// Which card states the position behind a dot, from the entry id
-    /// `WalletRiskScaleSource` stamped.
-    ///
-    /// **Matched on the id's namespace, never on the label** — a label is
-    /// localized display text ("Morpho · wstETH/USDC"), so keying on it would
-    /// send a Spanish device nowhere. nil is a deliberate, safe outcome: a
-    /// protocol that joins the axis without a card here scrolls nowhere rather
-    /// than scrolling to the wrong card.
-    static func riskCardAnchor(for id: String) -> String? {
-        if id.hasPrefix("aave:") || id.hasPrefix("morpho:") { return lendingAnchor }
-        if id.hasPrefix("hl:") { return perpsAnchor }
-        return nil
-    }
-
     /// The holdings card's tail — the book's shape on the left, the door to
     /// the whole allocation on the right, in ONE tertiary row (2026-08-22,
     /// prd §447).
@@ -941,17 +1053,10 @@ extension FeedScreen {
     @ViewBuilder
     var walletRiskSection: some View {
         if let entries = walletRiskEntries {
-                            WalletRiskStrip(entries: entries,
-                                            caption: walletCaptionWord, onPick: { entry in
-                    // Overview → detail (prd §417). The strip ranks every
-                    // leveraged position on one axis; the card below states the
-                    // one you picked in its own protocol's units. The target is
-                    // derived from the entry's OWN id prefix, which
-                    // `WalletRiskScaleSource` already builds — so a new
-                    // protocol joining the axis lands on `nil` and simply
-                    // doesn't scroll, rather than scrolling somewhere wrong.
-                    cardScrollTarget = Self.riskCardAnchor(for: entry.id)
-                })
+                            // The walk to a card is gone with the cards
+                            // (prd §946): Risk lists its leveraged positions
+                            // itself, directly under this.
+                            WalletRiskStrip(entries: entries)
                     .modifier(rowEntrance(2))
         }
     }

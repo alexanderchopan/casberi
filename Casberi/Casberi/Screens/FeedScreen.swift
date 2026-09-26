@@ -1968,7 +1968,7 @@ struct FeedScreen: View {
     /// It is NOT the whole rebuild story and should not be read as the fix:
     /// the dominant trigger is `@self` — MainSurface re-creating this view —
     /// which this does nothing about. A/B measured rebuilds ~49 → ~43.
-    private func openExternal(_ url: URL) {
+    func openExternal(_ url: URL) {
         UIApplication.shared.open(url)
     }
 
@@ -4694,14 +4694,11 @@ struct FeedScreen: View {
                 flagged: walletLive.flagged,
                 activeApprovals: walletLive.activeApprovals,
                 exposure: walletLive.exposure,
-                onWalkToApprovals: walletLive.exposure.isEmpty ? nil : {
-                    feedSheet = nil
-                    cardScrollTarget = Self.approvalsAnchor
-                },
-                onWalkToLending: hasLendingCard ? {
-                    feedSheet = nil
-                    cardScrollTarget = Self.lendingAnchor
-                } : nil)
+                // No walk doors (prd §946): the tray opens from Risk, and the
+                // approvals and lending cards it walked to are Permissions'
+                // and Positions' now, so it enumerates those groups itself.
+                onWalkToApprovals: nil,
+                onWalkToLending: nil)
         case .deposits(let composition):
             WalletDepositsTray(composition: composition)
         case .locks(let composition):
@@ -7136,31 +7133,18 @@ struct FeedScreen: View {
                 }
                 walletNFTListSection
             case .risk:
-                // The bars moved up into the slot, so the list is the door
-                // they were covering — see `walletScopeVisualSection`.
-                if walletLive.warnings.isEmpty, !hasLendingCard,
-                   walletLive.hyperliquid.positions.isEmpty {
+                // **WHAT COULD CLOSE, THEN WHAT LOOKS WRONG (prd §946).** The
+                // Worth-a-look door and Positions' Lending and Perps cards,
+                // repeated here, are gone: the leveraged positions are the
+                // bars' legend, and the flagged transfers are rows.
+                if walletLive.warnings.isEmpty, walletRiskEntries == nil,
+                   WalletRiskScaleSource.entries(aave: walletLive.positions,
+                                                 morpho: walletLive.morpho,
+                                                 hyperliquid: walletLive.hyperliquid).isEmpty {
                     walletSkeletonRowsSection
                 }
-                walletWarningsSection
-                // **§417's OVERVIEW→DETAIL PAIR, restored.** `WalletRiskStrip`
-                // is documented as the overview of exactly these cards ("the
-                // cards below state each position in its own protocol's
-                // units, and this is the one view that puts them in an
-                // order"), and its dot walk sets `cardScrollTarget` to one of
-                // their anchors. Heading the scope with the strip split the
-                // pair across two scopes, which broke that walk silently — it
-                // scrolled to an anchor that was not on screen — and left
-                // this list empty on any wallet with nothing to warn about,
-                // which is most of them.
-                //
-                // They draw in BOTH scopes, and that is not "saying one thing
-                // twice": the two are never on screen together, and they
-                // answer different questions — in Positions they are the
-                // detail behind where the money is, here they are the detail
-                // behind what is close to closing.
-                walletDeFiSection
-                walletPerpsSection
+                walletLeveragedSection
+                walletWorthALookSection
             case .permissions:
                 // THE ACTING HALF FIRST, THEN THE GRANTS (prd §514). The
                 // drawing above ranks by reach, unbounded first, and these
@@ -7168,9 +7152,13 @@ struct FeedScreen: View {
                 // token grants would contradict the card a centimetre above
                 // it. It is also the half that had no list at all.
                 if walletScopeIsEmpty(.permissions), walletLive.exposure.isEmpty,
+                   walletSignatureWarnings.isEmpty,
                    !walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
                     walletSkeletonRowsSection
                 }
+                // Signatures first (prd §946): what is waiting on you, then
+                // what acts as you, then what can spend for you.
+                walletSignaturesSection
                 walletActingSection
                 walletApprovalsSection
             }

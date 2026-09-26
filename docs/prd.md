@@ -61734,3 +61734,17 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 
 **Seen on a second simulator, dark:** All in the demo draws the pill and no lead, and the room's lead and first day are unmoved. **Found, not fixed:** in every demo room the pill covers the room's own title (`DSScreenHead`, §930). §919 sized the clearance for the well at the top of the screen, and §930 later put the title above the well. All joins the other rooms here; it did not show before only because the pill hid in All.
 
+
+## §946 — The Wallet's Risk is Leveraged then Worth a look, and Safe signatures lead Permissions; the face shrinks about its centre (user, 2026-09-26)
+
+**User:** the Risk board, then *"is there overlap in permissions and worth a look and should worth a look be in the list instead of a chevron to a new place?"*, *"why would we put approvals and delegations in needs you if they are in permissions"*, *"i think we would put the flagged transfers and spam coins transactions?"*, and *"wouldn't those come in permissions? and Risk would have Leveraged and Worth a look … permissions could have approvals, delegations, signatures … maybe opposite order: signatures, delegations, approvals"*.
+
+**The Risk crown.** `WalletRiskStrip` reads what needs you — how many are at risk, or how many are leveraged when none is — over one bar per leveraged position (its room before liquidation, red only when at risk), each with a mark and a short name in the tiles' `dockCaption10`, centred, the Positions legend (§945). The floating red `liquidation` word, the three-fact caption, the `caption:` parameter and the walk from a bar to a card (`riskCardAnchor`, `walletCaptionWord`) are deleted: the cards are not in Risk any more.
+
+**The Risk list.** `Leveraged` (`walletLeveragedSection`): one row per position that can be liquidated, closest first, from the same `WalletRiskScaleSource.entries` the crown draws — name, then its health or distance (red only at risk) and its market. Spark with no debt and the rest of Positions' Lending and Perps cards, which Risk had repeated, are gone. Then **`Worth a look` is in the list, not a door** (`walletWorthALookSection`): one row per warning with no other home — flagged, fake-symbol and spam transfers — each opening the tray at its group; absent when there are none. A liquidation risk is Leveraged's red health; approvals and delegations stay Permissions' own lists and are not repeated.
+
+**Permissions leads with Signatures** (`walletSignaturesSection`): a Safe transaction waiting on your signature is a power over the wallet waiting on you, so the groups are Signatures, Delegations, Approvals. A row reads the Safe's name over the count (`WalletWarning.rowName`/`rowLine`: `Everyday's Safe` / `3 signatures needed`, where the title was a sentence that truncated) and opens that Safe's queue (`openExternal`, now visible to the feed's extensions). The tray's walk doors are nil: the cards it walked to are Permissions' and Positions'.
+
+**The face shrinks about its centre** (`DSDock.SeatCentre`): pinned at its leading edge, the 46 → 40 fold moved its centre 3pt left of the icon column (user: *"are these all aligned correctly?"*); half the shrink goes back on the leading side.
+
+`wallet-section-selftest`'s activity-chart budget guards follow §942: the chart is framed to exactly its box, so the guard asserts that frame, and the predicate guard retires with the budget it checked.

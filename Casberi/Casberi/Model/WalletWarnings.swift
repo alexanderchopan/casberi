@@ -136,6 +136,11 @@ struct WalletWarning: Identifiable, Equatable {
     /// — "vitalik.eth", not the resolved hex), so a door can route to that
     /// wallet's screen. nil when the warning spans wallets (poisoning).
     let address: String?
+    /// **A LIST ROW'S NAME AND LINE (prd §946)**, where the title is a
+    /// sentence too long for one row: "Everyday's Safe" over "3 signatures
+    /// needed". nil keeps the title as the row's name.
+    var rowName: String? = nil
+    var rowLine: String? = nil
 }
 
 /// The live, never-landed wallet state the feed's tiles draw: Aave positions
@@ -519,7 +524,10 @@ enum WalletWatch {
                                      action: pending.queueURL.map {
                                          WalletWarning.Action(label: String(localized: "Open Safe"), url: $0)
                                      },
-                                     address: owner[address.lowercased()] ?? address))
+                                     address: owner[address.lowercased()] ?? address,
+                                     rowName: String(localized: "\(label)'s Safe"),
+                                     rowLine: count == 1 ? String(localized: "1 signature needed")
+                                                         : String(localized: "\(count) signatures needed")))
         }
         for d in delegations {
             let chain = WalletIngest.displayName(forNetwork: d.network) ?? d.network

@@ -40,7 +40,6 @@ import SwiftUI
 struct WalletRiskStrip: View {
     let entries: [WalletRiskScale.Entry]
     /// The scope's caption, the crown's own (prd §927).
-    var caption: String? = nil
     var onPick: ((WalletRiskScale.Entry) -> Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// **THE PRESSED POSITION (prd §927)** — while set, the reading reads it
@@ -66,19 +65,26 @@ struct WalletRiskStrip: View {
                 columns(height: geo.size.height)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // A mark and a short name under each bar, one size, centred —
+            // the Positions crown's legend (prd §945, §946). The floating
+            // "liquidation" word is gone: the list under the tiles says each
+            // position's distance in words.
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 ForEach(shown) { entry in
-                    Text(entry.label)
-                        .dsText(.label12)
-                        .foregroundStyle(lit == entry.id ? DS.textPrimary : DS.textSecondary)
-                        .lineLimit(1).minimumScaleFactor(0.55)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .opacity(lit != nil && lit != entry.id ? 0.3 : 1)
+                    let name = entry.label.components(separatedBy: " · ").first ?? entry.label
+                    VStack(spacing: 4) {
+                        AssetMark(name: entry.id.hasPrefix("hl:")
+                                      ? (name.components(separatedBy: " ").first ?? name) : name,
+                                  size: 22)
+                        Text(name)
+                            .dsText(.dockCaption10)
+                            .foregroundStyle(lit == entry.id ? DS.textPrimary : DS.textSecondary)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .opacity(lit != nil && lit != entry.id ? 0.3 : 1)
                 }
             }
-            Text(String(localized: "liquidation"))
-                .dsText(.label12)
-                .foregroundStyle(DS.destructive)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(reduceMotion ? nil : DS.Motion.standard, value: lit)
@@ -92,7 +98,6 @@ struct WalletRiskStrip: View {
     @ViewBuilder
     private var reading: some View {
         let door: (() -> Void)? = pressed.flatMap { entry in onPick.map { pick in { pick(entry) } } }
-        let atRisk = entries.filter(\.atRisk).count
         let block: DSFigureReading = {
             if let pressed {
                 let room = Int((min(max(pressed.headroom, 0), 1) * 100).rounded())
@@ -100,10 +105,15 @@ struct WalletRiskStrip: View {
                                        caption: String(localized: "\(pressed.label) · room before liquidation"),
                                        numberInk: pressed.atRisk ? DS.destructive : DS.textPrimary)
             }
+            // **THE NUMBER IS WHAT NEEDS YOU (prd §946)**: how many are at
+            // risk, or how many are leveraged when none is.
+            let atRiskCount = entries.filter(\.atRisk).count
+            if atRiskCount > 0 {
+                return DSFigureReading(number: String(atRiskCount),
+                                       caption: String(localized: "at risk"))
+            }
             return DSFigureReading(number: String(entries.count),
-                                   caption: [String(localized: "leveraged"), caption].compactMap { $0 }
-                                       .joined(separator: " · "),
-                                   alarm: atRisk > 0 ? String(localized: "\(String(atRisk)) at risk") : nil)
+                                   caption: String(localized: "leveraged"))
         }()
         if let door {
             Button(action: door) { block.contentShape(Rectangle()) }

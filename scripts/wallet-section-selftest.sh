@@ -470,12 +470,14 @@ guard DSRoomChassis.swift "crownChrome + (chips ? crownRangeChips : 0)" \
   "the chips left the crown's budget — every crown drawing a range track clips it again"
 guard FeedScreen.swift "DSRoomChassis.crownChart(chips: ranges.count > 1)" \
   "the wallet crown stopped paying for its range chips — the 7d/Watched track clips at the slot's edge"
-guard RoomActivityChart.swift "DSRoomChassis.crownChart(box: box, chips: chips)" \
-  "the activity chart stopped paying for its range chips — its track clips exactly as the crown's did"
-# The predicate must stay the chips' OWN gate. A budget that asks a different
-# question than the drawing does is the same clip wearing a second answer.
-guard RoomActivityChart.swift "chartHeight(chips: offered.count > 1)" \
-  "the activity chart's budget no longer reads the offered windows — it can reserve the track on a record that draws none, or none on one that does"
+# Since prd §942 the activity chart pays by construction instead: the whole
+# drawing is framed to exactly the caller's box and the bars flex inside it, so
+# the window line under them can never be pushed through the slot's edge.
+guard RoomActivityChart.swift ".frame(height: box, alignment: .top)" \
+  "the activity chart is no longer framed to its box — its window line can clip at the slot's edge"
+# (The chart's `chartHeight(chips:)` budget, and the guard that its predicate
+# stayed the chips' own gate, went with prd §942: a flexing drawing reserves
+# nothing, so there is no second answer for the chips to disagree with.)
 guard DSChip.swift "if ranges.count > 1" \
   "the chips' own draw gate moved — every budget above spells this predicate and would now be asking the wrong question"
 
