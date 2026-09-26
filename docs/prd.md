@@ -328,6 +328,7 @@ marks chronological position within the pair.
 | §930 (the room gear wears Manage's sliders) | the top-right door keeps Manage's glyph because it opens what Manage holds | amended by §937 — the door is deleted; two doors to one page was one too many once the tray had Manage |
 | §756 (the covered row is lifted out of its run) | the cover draws once; the day it came from is drawn as before | amended by §938 — a day left with no run draws no header |
 | §906 (one box at one position, the cover above the first day) | the cover stands above the first day in every room | amended by §938 — the first day is skipped when the cover was its only row |
+| §940 (the Accounts crown is a bar per address tied to yours) | "1 · tied to yours" over `RoomConnectionsFigure`'s bars | superseded by §941 in the Wallet — the crown is your accounts face by face (`RoomAccountsFaces`), and a face picks the account; §940's list (Yours, Tied to yours, `with` lines) stands, and the devnets keep the bars until their pass |
 
 ## 1. Thesis
 
