@@ -215,7 +215,7 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
         case .home:       return nil
         case .activity:   return String(localized: "None yet")
         case .holdings:   return String(localized: "Holds nothing")
-        case .accounts:   return String(localized: "No connections yet")
+        case .accounts:   return String(localized: "No accounts yet")
         case .frames:     return String(localized: "No steps")
         case .permissions: return String(localized: "No permissions")
         case .roots:       return String(localized: "No proofs")

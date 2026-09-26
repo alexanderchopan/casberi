@@ -407,9 +407,9 @@ extension FeedScreen {
             case .holdings:
                 out[section] = String(localized: "\(blockStream.els.count) tokens")
             case .accounts:
-                if let map = AddressConnections.map(context: modelContext) {
-                    out[section] = String(localized: "\(map.nodes.count) connected")
-                }
+                // The accounts you follow (prd §948) — the crown's own number.
+                let n = WalletStore.shared.addresses.count
+                out[section] = n == 1 ? String(localized: "1 account") : String(localized: "\(n) accounts")
             case .positions, .nfts:
                 // Both are counted by the figure they open onto and by nothing
                 // cheap here: the positions card is assembled from four live
@@ -688,10 +688,9 @@ extension FeedScreen {
         case .home:        return false
         case .activity:    return false
         case .holdings:    return blockStream.els.isEmpty
-        // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)** — the rows list what
-        // you watch either way; the slot's job is the relationship.
-        case .accounts:    return AddressConnections.map(context: modelContext)?
-                                    .nodes.isEmpty ?? true
+        // **EMPTY IS "NO ACCOUNTS" (prd §948)** — the crown is your accounts
+        // face by face, so it has something to draw whenever you follow one.
+        case .accounts:    return WalletStore.shared.addresses.isEmpty
         case .positions:   return !(hasLendingCard
                                     || !walletLive.uniswap.isEmpty
                                     || !walletLive.hyperliquid.positions.isEmpty)

@@ -1,93 +1,24 @@
 import SwiftUI
 
-/// **THE ACCOUNTS SLOT, ONE TEMPLATE FOR EVERY WALLET-FAMILY ROOM (prd §689).**
-///
-/// §683 did Home, §686/§687 Activity, §688 Holdings. Accounts was the worst of
-/// the four: Hegotá and the Privacy devnet drew their own ROSTER in the slot
-/// and then drew the same roster again as the list beneath it — 258pt spent
-/// restating the rows a finger's width below, which is §610's defect one scope
-/// over. Only vibenet had a real figure, and it is a web of who authorised
-/// whom (§491, the user's pick of three drawings).
-///
-/// **THE CROWN IS THE CONNECTIONS BETWEEN THE ACCOUNTS YOU WATCH** (user,
-/// 2026-09-11: *"i was thinking it could be the connections between the
-/// followed accounts"*, then *"wallet has connected addresses we used to show
-/// this somewhere in a previous version"*). Both right, and the second one is
-/// the find: **this is §295 restored.** *"N of your addresses are connected"*
-/// — a count and a spine, the connected address on the left, your wallets on
-/// the right, one ribbon per landed relationship — lived at the foot of the
-/// Wallet manager until the Accounts-door redesign deleted that screen. The
-/// MODEL survived: `AddressConnections` is still computed, still probed by
-/// `-connectionsProbe`, still reported in the demo census every verify run.
-/// Only the drawing died, so the app has been working this reading out and
-/// showing it to nobody.
-///
-/// **`AddressConnections.map(edges:watched:)` is a PURE function**, which is
-/// why every room can have it: a room that can name its transfers gets the
-/// whole reading — the node cap, the §439 direct-pair links, the untouched
-/// wallets — without a line of new analysis.
-///
-/// **§295's "factual, no analysis" (user, 2026-08-03) still governs**: a
-/// bar's length is what moved between that address and your accounts — a
-/// measured fact — in the map's own order, never re-ranked. The spine (§923)
-/// and its identicon-hued ribbons are gone since prd §936; the tile draws
-/// the bar list every other tile draws.
-struct RoomConnectionsFigure: View {
-    let map: AddressConnections.Map?
-    var box: CGFloat = DSRoomChassis.figureSlot
-    /// **THE PRESSED BAR.** A connected address's id; while set, the reading
-    /// names it and says what moved, and the other bars go quiet.
-    @State private var lit: String?
-
-    var body: some View {
-        if let map, !map.nodes.isEmpty {
-            // **BARS, NOT RIBBONS (prd §936).** One bar per connected
-            // address, as long as what moved with your accounts (the count of
-            // moves where nothing was priced), in the one accent. The spine's
-            // ribbons, faces and identicon hues are deleted: four inventions
-            // for "how much with whom" became the bar every other tile draws.
-            DSBarFigure(reading: { reading(map) },
-                        bars: DSBarList(bars: Self.bars(map), lit: lit) { picked in
-                            lit = lit == picked ? nil : picked
-                        })
-        }
-    }
-
-    /// The bars, in the map's own order (§295: factual, and never re-ranked
-    /// into "who you deal with most").
-    static func bars(_ map: AddressConnections.Map) -> [DSBarList.Bar] {
+/// **WHAT MOVED WITH A TIED ACCOUNT (prd §940, §948).** The bars crown that
+/// drew this (`RoomConnectionsFigure`) is deleted — every room's Accounts crown
+/// is its accounts face by face now — and this is the one number of it the
+/// list still states: dollars when any tie carries a price, else how many
+/// moves, in the map's own order (§295: factual, never re-ranked).
+enum RoomConnectionsFigures {
+    static func values(_ map: AddressConnections.Map) -> [String: String] {
         let moved: [(node: AddressConnections.Node, usd: Double)] = map.nodes.map { node in
             (node, node.walletKeys.compactMap { map.weights[AddressConnections.Weight.key(node.id, $0)]?.usd }
                 .reduce(0, +))
         }
         let priced = moved.contains { $0.usd > 0 }
-        let peak = moved.map { priced ? $0.usd : Double($0.node.count) }.max() ?? 1
-        return moved.map { entry in
-            let value = priced ? entry.usd : Double(entry.node.count)
-            return DSBarList.Bar(id: entry.node.id,
-                                 label: entry.node.name,
-                                 value: priced && entry.usd > 0 ? WalletValue.money(entry.usd)
-                                     : Self.moves(entry.node.count),
-                                 share: peak > 0 ? value / peak : 0)
+        var out: [String: String] = [:]
+        for entry in moved {
+            out[entry.node.id] = priced && entry.usd > 0 ? WalletValue.money(entry.usd)
+                : (entry.node.count == 1 ? String(localized: "1 move")
+                                         : String(localized: "\(String(entry.node.count)) moves"))
         }
-    }
-
-    private static func moves(_ n: Int) -> String {
-        n == 1 ? String(localized: "1 move") : String(localized: "\(String(n)) moves")
-    }
-
-    private func reading(_ map: AddressConnections.Map) -> some View {
-        if let lit, let node = map.nodes.first(where: { $0.id == lit }) {
-            let names = node.walletKeys.compactMap { key in map.columns.first { $0.id == key }?.name }
-            return DSFigureReading(number: node.name,
-                                   caption: String(localized: "\(Self.moves(node.count)) with \(names.joined(separator: ", "))"))
-        }
-        // **THE NUMBER COUNTS WHAT IS DRAWN (prd §940).** It was the count of
-        // EDGES — "2 connections" over one bar, because one address was tied
-        // to two of yours. One bar is one address, so the number is the
-        // addresses, and the caption says what they are to you.
-        return DSFigureReading(number: String(map.nodes.count),
-                               caption: String(localized: "tied to yours"))
+        return out
     }
 }
 
@@ -117,7 +48,7 @@ extension RoomAccountsRows {
         let shown = scope.map { key in followed.filter { $0.key == key } } ?? followed
         guard let map else { return shown }
         let yours = Set(followed.map(\.key))
-        let figures = Dictionary(uniqueKeysWithValues: RoomConnectionsFigure.bars(map).map { ($0.id, $0.value) })
+        let figures = RoomConnectionsFigures.values(map)
         let named = Dictionary(uniqueKeysWithValues: map.columns.map { ($0.id, $0.name) })
         let own = shown.map { row in
             var row = row

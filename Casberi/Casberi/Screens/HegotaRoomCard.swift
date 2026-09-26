@@ -29,6 +29,8 @@ struct HegotaRoomFigure: View {
     /// Handed DOWN from the shell, never held here.
     let scoped: String?
     let section: HegotaSection
+    /// The Accounts crown's faces pick through this (prd §948).
+    var onPickAccount: ((String?) -> Void)? = nil
 
     /// The pressed lane, and the task that lets it go. `@State`, so it dies
     /// with the room — a press is a question about
@@ -41,8 +43,10 @@ struct HegotaRoomFigure: View {
     // of that arithmetic at this slot height rather than being written down.
 
     var body: some View {
+        // The row is reserved only when there is something in it (prd §948,
+        // Privacy's §683 rule).
         DSRoomSlot(headline: isEmpty(section) ? nil : slotHeadline,
-                   reservesHeadline: !isEmpty(section)) {
+                   reservesHeadline: !isEmpty(section) && slotHeadline != nil) {
             // **THE EMPTY STATE IS IN THE SLOT (prd §611)** — every scope is a
             // chip on every address now, so a scope with nothing in it says
             // what it would hold here rather than drawing a figure of zeros
@@ -69,7 +73,7 @@ struct HegotaRoomFigure: View {
         // watched" — the rows below list what you watch either way, and the
         // slot's job is the relationship. Two unrelated addresses are a real
         // answer and the scope says it rather than leaving 258pt blank.
-        case .accounts: return HegotaConnections.map(shown)?.nodes.isEmpty ?? true
+        case .accounts: return accounts.isEmpty
         case .frames:   return framedMoves.isEmpty
         // **SPENT COUNTS AS CONTENT (prd §694).** An address that has spent
         // every coin it ever held has a history to draw, and this arm hid it
@@ -757,12 +761,19 @@ struct HegotaRoomFigure: View {
         }
     }
 
-    /// **THE CONNECTIONS BETWEEN WHAT YOU WATCH (prd §689).** This drew the
-    /// roster — the same rows the list beneath it draws — so the slot spent
-    /// 258pt restating what was a finger's width below. What it draws now is
-    /// the one thing those rows cannot: how they relate.
+    /// **YOUR ACCOUNTS, FACE BY FACE (prd §948, the Wallet's §941).** The
+    /// crown is the count of the accounts you follow over one face each; a
+    /// face is the account picker too, through the same function the menu
+    /// under the tiles calls, so the two cannot disagree. How the accounts
+    /// relate is the list's `with` lines (§940), not a drawing.
     @ViewBuilder private var accountsFigure: some View {
-        RoomConnectionsFigure(map: HegotaConnections.map(shown))
+        RoomAccountsFaces(
+            faces: accounts.map {
+                .init(id: $0.address,
+                      name: HegotaWatch.shared.name(for: $0.address) ?? WalletStore.shortAddress($0.address))
+            },
+            selected: scoped,
+            onPick: { onPickAccount?($0) })
     }
 
     /// One watched address: its name, and the scopes it has something to say in.
@@ -3747,10 +3758,10 @@ enum HegotaRoomReadings {
                     ? section.emptyHeadline
                     : String(localized: "\(tokens.count) tokens")
             case .accounts:
-                let nodes = HegotaConnections.map(shown)?.nodes.count ?? 0
-                out[section] = nodes == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(nodes) connected")
+                // The accounts you follow (prd §948) — the crown's own number.
+                let n = accounts.count
+                out[section] = n == 0 ? section.emptyHeadline
+                    : (n == 1 ? String(localized: "1 account") : String(localized: "\(n) accounts"))
             case .frames:
                 // Folded by hash across accounts, exactly as the figure folds
                 // them: watching both sides of a transfer puts one transaction

@@ -61748,3 +61748,13 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 **The face shrinks about its centre** (`DSDock.SeatCentre`): pinned at its leading edge, the 46 → 40 fold moved its centre 3pt left of the icon column (user: *"are these all aligned correctly?"*); half the shrink goes back on the leading side.
 
 `wallet-section-selftest`'s activity-chart budget guards follow §942: the chart is framed to exactly its box, so the guard asserts that frame, and the predicate guard retires with the budget it checked.
+
+## §948 — The devnets' Accounts are your accounts face by face, like the Wallet's, and a devnet crown sits on the Wallet's line (user, 2026-09-26)
+
+**User:** *"lets do that, carry them over but then we have unique screens on some of the devnets we should look at too"*, *"look again b/c we changed how we did accounts right?"*, *"you need to make sure you update them all b/c we updated them ourselves, especially in the lists"*, and the Wallet-beside-the-devnets canvas.
+
+**Accounts, on every devnet.** Hegotá Frames, Hegotá UTXO, Hegotá Privacy and Base Vibenet draw `RoomAccountsFaces` (§941) in their Accounts crown: the count of the accounts you follow over one face each. A face picks the account through the SAME function the account menu under the tiles calls — `framesPickAccount`, `privacyPickAccount`, `hegotaPickAccount` (extracted from the menus' closures in `FeedScreen`), Vibenet's `onScope` — so the two doors cannot disagree. Frames and Privacy take the full roster (`roster:`, `everyAccount:`), never the scoped list. The bars crown (`RoomConnectionsFigure`) is deleted; the one number it lent the lists — what moved with a tied account — is `RoomConnectionsFigures.values`. Vibenet's sub-account web (`VibenetAccountWeb`, `VibenetAccountWebCard`, the latter already unreached) and `connectionsMap(web:)`/`(links:)` are deleted with it, and `vibenet-scopes-selftest` compiles the change flow alone.
+
+**What says "accounts".** Every room's Home reading for Accounts is `N accounts` (it said `N connected`, Wallet included, and Vibenet `N watched`); the Accounts empty gate is "you follow no accounts" (it was "nothing is tied", which drew Privacy's `No connections yet` over three accounts); the empty headline is `No accounts yet`.
+
+**The crown's line.** Frames, Hegotá and Vibenet reserved the slot's headline row even with no headline (`DSRoomSlot(headline:)` defaults `reservesHeadline: true`), so every devnet scope crown — Activity's count, Accounts' — sat one row below the Wallet's. They reserve it only when there is a headline, Privacy's §683 rule.

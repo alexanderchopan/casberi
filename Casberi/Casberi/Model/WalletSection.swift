@@ -150,7 +150,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:    return String(localized: "Nothing held")
         case .positions:   return String(localized: "Nothing deployed")
         case .nfts:        return String(localized: "No collectibles")
-        case .accounts:    return String(localized: "No connections yet")
+        case .accounts:    return String(localized: "No accounts yet")
         case .risk:        return String(localized: "Nothing at risk")
         case .permissions: return String(localized: "No grants")
         }

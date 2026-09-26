@@ -935,7 +935,8 @@ struct VibenetRoomCard: View {
             case .accounts:
                 out[scope] = items.isEmpty
                     ? scope.emptyHeadline
-                    : String(localized: "\(items.count) watched")
+                    : (items.count == 1 ? String(localized: "1 account")
+                                        : String(localized: "\(items.count) accounts"))
             case .permissions:
                 // The figure's own count, spelled the same way: a key holding
                 // Send AND Receive is in two census cells, so the cells added
@@ -1769,7 +1770,10 @@ struct VibenetRoomCard: View {
         // stays as a name the room's own call sites already read, and adds
         // nothing of its own; a room that re-adds a rule here is a room
         // building its sixth template.
-        DSRoomSlot(headline: headline) { figure() }
+        // Reserve the headline row only when there is a headline (prd §948,
+        // Privacy's §683 rule) — a figure that owns its number sat one row
+        // lower than the Wallet's crowns.
+        DSRoomSlot(headline: headline, reservesHeadline: headline != nil) { figure() }
     }
 
     /// WHERE THE CHANGES LANDED — the Activity scope's drawing (prd §491,
@@ -1894,123 +1898,28 @@ struct VibenetRoomCard: View {
         return String(localized: "The chain answered: no keys have been granted or revoked on these accounts.")
     }
 
-    /// WHO CAN ACT FOR WHOM — the delegate spine, lifted out of its
-    /// disclosure.
-    ///
-    /// **It was folded behind a chevron** (`linkedDisclosure`, §477) because it
-    /// was one figure among many in a long card and had to earn its height.
-    /// As the scope's lead it IS the height — a spine you must open to see is
-    /// a drawing that loses to the list under it, and this scope exists to put
-    /// the picture first.
+    /// The Accounts scope's crown — your accounts, face by face (prd §948).
+    /// The delegate spine it drew (§477, then bars since §936) is deleted:
+    /// who acts for whom is the list's to say.
     @ViewBuilder
     private var accountsFigure: some View {
-        // **THE SUB-ACCOUNT WEB LEADS, the delegate spine is the fallback**
-        // (prd §491, user pick of three drawings).
-        //
-        // The spine draws watched↔watched links, so it says NOTHING for
-        // somebody watching one account — the ordinary case — and its subject
-        // is the same relationship the web covers more completely: a
-        // sub-account is an account that authorized you. The web also carries
-        // the half the spine structurally cannot, an account you can act for
-        // and do NOT watch, which is the only row here that can offer to do
-        // anything.
-        //
-        // The spine survives where the web declines and links exist — two
-        // watched accounts that delegate to each other but expose no
-        // sub-account read.
-        // **PER ACCOUNT, and unscoped that means the first account that HAS
-        // any** — not the lead unconditionally. A sub-account is an account
-        // that authorized ONE address, so the drawing has exactly one owner
-        // and aggregating several owners' nodes into one web would attribute
-        // a relationship to an account that does not hold it (§83, on the
-        // screen where the whole reading is who can act for whom).
-        //
-        // Scoped, it is the scoped account's own web or nothing — never
-        // another account's, which is what makes picking a face narrow the
-        // reading rather than change the subject.
-        let owner = scopedAddress.flatMap { scoped in
-            room.items.first { $0.address.caseInsensitiveCompare(scoped) == .orderedSame }
-        } ?? room.items.first { !$0.subAccounts.isEmpty }
-        let web = owner.flatMap {
-            VibenetAccountWeb.web(owner: $0.address, subAccounts: $0.subAccounts)
-        }
-        // **THE LINKS COME FROM THE FULL ROOM, never `room.items`** (prd
-        // §495). A link relates TWO accounts, so a scoped room — one item —
-        // can never produce one, and reading the scoped list made this figure
-        // answer "nothing is shared" directly above a list saying "…9a0b ·
-        // you can act for them". Two answers to one question, one scroll
-        // apart, on the screen whose whole subject is who can act for whom
-        // (§83). `VibenetAccountDetail` is handed `links(fullItems)` at both
-        // of its call sites for exactly this reason; the figure had been
-        // reading the narrower list since it was written.
-        let links = VibenetAccountMapping.links(Self.fullItems(fallback: room))
-        // **THE SHARED SPINE (prd §923)** — an account's sub-accounts, or the
-        // delegates who can act for the accounts you follow, are the same
-        // drawing as a wallet's counterparties: faces on the left, yours on
-        // the right, a ribbon per relationship. `VibenetAccountWebCard` and
-        // `VibenetLinkSpine` still draw inside the account detail sheet.
-        if let web {
-            scopeFigure(headline: nil) {
-                RoomConnectionsFigure(map: Self.connectionsMap(web: web))
-            }
-        } else if !links.isEmpty {
-            scopeFigure(headline: nil) {
-                RoomConnectionsFigure(map: Self.connectionsMap(links: links))
-            }
-        } else {
-            // **AN EMPTY SCOPE STILL DRAWS** (prd §495, user: *"even if there
-            // are no accounts we need an empty state image"*).
-            //
-            // This was the one scope that could render NOTHING: no web and no
-            // links left a 210pt reserved box empty, which reads as a drawing
-            // that failed to load rather than as an answer. And it is the
-            // ORDINARY case — a sub-account is Base's own "Spending Account"
-            // shape and most accounts have never made one.
+        // **YOUR ACCOUNTS, FACE BY FACE (prd §948, the Wallet's §941).** The
+        // count of the accounts you follow over one face each; a face scopes
+        // the room through `onScope`, the same door the account menu under
+        // the tiles uses. Who owns which sub-account is the list's `with`
+        // lines (§940), not a web drawn in the crown.
+        if room.items.isEmpty {
             accountsEmptyFigure
+        } else {
+            scopeFigure(headline: nil) {
+                RoomAccountsFaces(
+                    faces: room.items.map { .init(id: $0.address, name: Self.displayName($0.address)) },
+                    selected: scopedAddress,
+                    onPick: { onScope?($0 ?? "") })
+            }
         }
     }
 
-    /// NOTHING IS SHARED — the Accounts scope with no relationship to draw.
-    ///
-    /// **It is a real reading, not an apology.** "No other account can act for
-    /// this one" is the answer somebody opens a permissions room hoping for,
-    /// so it is stated in the room's own headline tier rather than as grey
-    /// fine print under a blank box.
-    ///
-    /// The drawing is the web's own vocabulary with one end missing: the
-    /// account's face, and beside it the dashed empty ring
-    /// `VibenetAccountWebCard` uses for an account that exists and is not
-    /// being followed. Here the ring stands for an account that does not
-    /// exist — which is why the connector between them is absent rather than
-    /// dashed. A line to nothing would be a relationship drawn where there is
-    /// none (§83, on the screen whose whole subject is who can act for whom).
-    ///
-    /// **THE SENTENCE IS GONE AND THE PAIR TOOK THE BOX (prd §551, user:
-    /// *"this screen looks like shit and we shouldn't need subtext"*).** It
-    /// was a headline, then two small faces pinned to the top of a 210pt box,
-    /// then two grey lines — three tiers of text and a drawing, arranged so
-    /// that the drawing was the smallest thing in it. The subtext said in
-    /// prose exactly what the headline says in four words and what the pair
-    /// says in two shapes, so it was the third telling of one fact.
-    ///
-    /// What replaced it is not a smaller version of the same thing: the pair
-    /// steps up a rung to `DS.Face.profile` — the size a face takes when it
-    /// is alone on a screen rather than one of several — and takes the MIDDLE
-    /// of the slot, which is `permissionsFigure`'s own ruling for a figure
-    /// with one thing to say ("air distributed is a margin, air pooled at the
-    /// bottom is a gap").
-    ///
-    /// **The headline KEEPS its reserved row** rather than moving down beside
-    /// the faces, which was the other option weighed. On the icons' own line
-    /// it would read as one object — but it would start 40pt lower than every
-    /// other scope's headline, breaking the one guarantee the reserved row
-    /// exists to give (§495: every scope's first pixel at the same y), and it
-    /// would have to shrink below its own rung to fit beside two 76pt faces,
-    /// one day after §551 spent a pass making every scope headline one size.
-    ///
-    /// **It never says the chain is empty**, only that nothing was read: the
-    /// sub-account read answers for the accounts this app watches, so "no
-    /// sub-accounts" is a fact about the roster and not about Base.
     @ViewBuilder
     private var accountsEmptyFigure: some View {
         // The connections map, empty (prd §771). No connector is drawn between
@@ -3287,56 +3196,7 @@ struct VibenetRoomCard: View {
     }
 
 
-    /// A watched account's own name, or its short address — the same
-    /// fallback every row on this card already makes, so the spine can never
-    /// name an account differently from the roster above it.
-    /// An owner and its sub-accounts as a connections map (prd §923): the
-    /// owner is the one column, each sub-account a node reaching it.
-    static func connectionsMap(web: VibenetAccountWeb.Web) -> AddressConnections.Map {
-        let owner = web.owner.lowercased()
-        let nodes = web.nodes.map { node in
-            AddressConnections.Node(id: node.address.lowercased(), address: node.address,
-                                    name: displayName(node.address), count: 1,
-                                    named: VibenetWatch.shared.name(for: node.address) != nil,
-                                    walletKeys: [owner])
-        }
-        return AddressConnections.Map(
-            nodes: Array(nodes.prefix(AddressConnections.nodeLimit)),
-            columns: [.init(id: owner, name: displayName(web.owner), usd: nil)],
-            connectedCount: nodes.count, untouchedWalletNames: [],
-            hiddenNames: nodes.dropFirst(AddressConnections.nodeLimit).map(\.name),
-            firstUnnamed: nil, walletLinks: [],
-            weights: Dictionary(uniqueKeysWithValues: nodes.map {
-                (AddressConnections.Weight.key($0.id, owner), AddressConnections.Weight(count: 1, usd: nil))
-            }))
-    }
 
-    /// Delegate links as a connections map (prd §923): the actor (`to`) is
-    /// a node, the account it can act for (`from`) a column — the direction
-    /// §482 fixed, kept.
-    static func connectionsMap(links: [VibenetDelegateLink]) -> AddressConnections.Map {
-        let accounts = VibenetLinkSpine.distinct(links.map(\.from))
-        let actors = VibenetLinkSpine.distinct(links.map(\.to))
-        var weights: [String: AddressConnections.Weight] = [:]
-        let nodes = actors.map { actor -> AddressConnections.Node in
-            let froms = accounts.filter { account in
-                links.contains { $0.to.lowercased() == actor.lowercased() && $0.from.lowercased() == account.lowercased() }
-            }
-            for from in froms {
-                weights[AddressConnections.Weight.key(actor.lowercased(), from.lowercased())] = .init(count: 1, usd: nil)
-            }
-            return AddressConnections.Node(id: actor.lowercased(), address: actor,
-                                           name: displayName(actor), count: froms.count,
-                                           named: VibenetWatch.shared.name(for: actor) != nil,
-                                           walletKeys: froms.map { $0.lowercased() })
-        }
-        return AddressConnections.Map(
-            nodes: Array(nodes.prefix(AddressConnections.nodeLimit)),
-            columns: accounts.map { .init(id: $0.lowercased(), name: displayName($0), usd: nil) },
-            connectedCount: nodes.count, untouchedWalletNames: [],
-            hiddenNames: nodes.dropFirst(AddressConnections.nodeLimit).map(\.name),
-            firstUnnamed: nil, walletLinks: [], weights: weights)
-    }
 
     private static func displayName(_ address: String) -> String {
         VibenetWatch.shared.name(for: address) ?? VibenetRoom.shortAddress(address)

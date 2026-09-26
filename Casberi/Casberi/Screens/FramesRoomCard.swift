@@ -28,6 +28,11 @@ struct FramesRoomFigure: View {
     /// second account row to the list below, which would be one fact drawn
     /// twice six points apart.
     var onOpenAccount: ((FramesAccount) -> Void)? = nil
+    /// Every account you follow, never the scoped list, and the pick — the
+    /// Accounts crown's faces (prd §948). Empty draws the scoped accounts.
+    var roster: [FramesAccount] = []
+    var scope: String? = nil
+    var onPickAccount: ((String?) -> Void)? = nil
 
     private var moves: [FramesMove] {
         accounts.filter(\.reached).flatMap(\.moves).sorted { $0.blockNumber > $1.blockNumber }
@@ -101,8 +106,11 @@ struct FramesRoomFigure: View {
     var body: some View {
         // **AN EMPTY SCOPE TAKES THE WHOLE BOX (prd §769)** — its headline is
         // centred on the skeleton, so the chassis reserves no row for it.
+        // The row is reserved only when there is something in it (prd §948,
+        // Privacy's §683 rule): a crown whose figure owns its number sat a
+        // headline row lower than the Wallet's own.
         DSRoomSlot(headline: drawsEmptyState ? nil : slotHeadline,
-                   reservesHeadline: !drawsEmptyState) {
+                   reservesHeadline: !drawsEmptyState && slotHeadline != nil) {
             if drawsEmptyState { emptyState } else {
             // **NO TRAILING `Spacer` (prd §588).** There was one here, and
             // while the box was 166pt it was harmless — nothing inside
@@ -154,7 +162,7 @@ struct FramesRoomFigure: View {
         case .holdings: return FramesHoldings.tokens(accounts).isEmpty
         // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)**, not "nothing is
         // watched" — the rows list what you watch either way.
-        case .accounts: return FramesConnections.map(accounts)?.nodes.isEmpty ?? true
+        case .accounts: return (roster.isEmpty ? accounts : roster).isEmpty
         case .frames:   return frameRuns.isEmpty
         case .permissions: return !moves.contains(where: \.sponsored)
         }
@@ -357,12 +365,19 @@ struct FramesRoomFigure: View {
     /// comparable and the map does not pretend they are. What it shows is
     /// WHICH assets and HOW MUCH of each — the same bargain `FramesMoney`
     /// takes for the coin.
-    /// **THE CONNECTIONS BETWEEN WHAT YOU WATCH (prd §689).** New here: §548
-    /// left this scope out because the roster was "short by construction", and
-    /// said to revisit if watching several ever became ordinary. It has, and
-    /// this is not the roster anyway.
+    /// **YOUR ACCOUNTS, FACE BY FACE (prd §948, the Wallet's §941).** The
+    /// crown is the count of the accounts you follow over one face each; a
+    /// face is the account picker too, through the same function the menu
+    /// under the tiles calls, so the two cannot disagree. How the accounts
+    /// relate is the list's `with` lines (§940), not a drawing.
     @ViewBuilder private var accountsFigure: some View {
-        RoomConnectionsFigure(map: FramesConnections.map(accounts))
+        RoomAccountsFaces(
+            faces: (roster.isEmpty ? accounts : roster).map {
+                .init(id: $0.address,
+                      name: FramesWatch.shared.name(for: $0.address) ?? WalletStore.shortAddress($0.address))
+            },
+            selected: scope,
+            onPick: { onPickAccount?($0) })
     }
 
     @ViewBuilder private var holdingsFigure: some View {

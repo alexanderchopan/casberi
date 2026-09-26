@@ -53,6 +53,11 @@ struct PrivacyDevnetRoomCard: View {
     var onOpenMove: ((PrivacyDevnetLiveState.Move, String) -> Void)? = nil
     /// Opens one watched address's sheet (prd §596).
     var onOpenAccount: ((PrivacyDevnetAccount) -> Void)? = nil
+    /// Every account you follow, never the scoped list, and the pick — the
+    /// Accounts crown's faces (prd §948). Empty draws `accounts`.
+    var everyAccount: [PrivacyDevnetAccount] = []
+    var scope: String? = nil
+    var onPickAccount: ((String?) -> Void)? = nil
 
     /// §299: a drawing sized from data gets an entrance, and the entrance
     /// honours Reduce Motion.
@@ -394,7 +399,7 @@ extension PrivacyDevnetRoomCard {
                                                        shielded: shielded).isEmpty
         // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)** — the rows list
         // what you watch either way; the slot's job is the relationship.
-        case .accounts:   return PrivacyConnections.map(accounts)?.nodes.isEmpty ?? true
+        case .accounts:   return (everyAccount.isEmpty ? accounts : everyAccount).isEmpty
         case .frames:     return frameRuns.isEmpty
         // **EMPTY ONLY WHEN NEITHER KIND IS GRANTED (prd §692).**
         case .permissions: return permissionKinds.isEmpty
@@ -753,12 +758,18 @@ extension PrivacyDevnetRoomCard {
         Decimal(eth) * Decimal(sign: .plus, exponent: 18, significand: 1)
     }
 
-    /// **THE CONNECTIONS BETWEEN WHAT YOU WATCH (prd §689).** This drew the
-    /// first four accounts — the same rows the list beneath it draws — so the
-    /// slot restated its own list. What it draws now is the one thing those
-    /// rows cannot: how they relate.
+    /// **YOUR ACCOUNTS, FACE BY FACE (prd §948, the Wallet's §941).** The
+    /// crown is the count of the accounts you follow over one face each; a
+    /// face is the account picker too, through the same function the menu
+    /// under the tiles calls, so the two cannot disagree. How the accounts
+    /// relate is the list's `with` lines (§940), not a drawing.
     @ViewBuilder var accountsFigure: some View {
-        RoomConnectionsFigure(map: PrivacyConnections.map(accounts))
+        RoomAccountsFaces(
+            faces: (everyAccount.isEmpty ? accounts : everyAccount).map {
+                .init(id: $0.address, name: PrivacyDevnetName.of($0.address))
+            },
+            selected: scope,
+            onPick: { onPickAccount?($0) })
     }
 
     private func accountDoing(_ account: PrivacyDevnetAccount) -> String {
@@ -1524,8 +1535,9 @@ extension PrivacyDevnetRoomCard {
                 let cells = PrivacyHoldings.cells(accounts: accounts, shielded: shielded)
                 out[scope] = String(localized: "\(cells.count) split")
             case .accounts:
-                let nodes = PrivacyConnections.map(accounts)?.nodes.count ?? 0
-                out[scope] = String(localized: "\(nodes) connected")
+                // The accounts you follow (prd §948) — the crown's own number.
+                let n = accounts.count
+                out[scope] = n == 1 ? String(localized: "1 account") : String(localized: "\(n) accounts")
             case .frames:
                 out[scope] = String(localized: "\(frameRuns.count) steps")
             case .permissions:

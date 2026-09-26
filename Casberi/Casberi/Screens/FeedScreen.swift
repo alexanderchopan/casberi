@@ -4206,16 +4206,7 @@ struct FeedScreen: View {
                 onPick: { chrome.framesSection = $0 },
                 accounts: framesAccountSlots(roster),
                 scope: chrome.framesScope,
-                onPickAccount: { picked in
-                    // One of this phone's own faces makes that account the
-                    // one Send and Top up act for (prd §774); a stranger's
-                    // face picks nothing — `select` answers false and
-                    // changes nothing.
-                    FramesKey.select(picked)
-                    withAnimation(DS.Motion.standard) {
-                        chrome.framesScope = (picked?.isEmpty ?? true) ? nil : picked
-                    }
-                },
+                onPickAccount: framesPickAccount,
                 reading: { readings[$0] },
                 crown: { slot in
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
@@ -4223,7 +4214,10 @@ struct FeedScreen: View {
                             FramesRoomFigure(head: head,
                                              accounts: framesAccounts,
                                              section: .home,
-                                             onOpenAccount: { feedSheet = .framesAccount($0) })
+                                             onOpenAccount: { feedSheet = .framesAccount($0) },
+                                             roster: roster,
+                                             scope: chrome.framesScope,
+                                             onPickAccount: framesPickAccount)
                         }
                     }
                 },
@@ -4231,7 +4225,10 @@ struct FeedScreen: View {
                     FramesRoomFigure(head: head,
                                      accounts: framesAccounts,
                                      section: scope,
-                                     onOpenAccount: { feedSheet = .framesAccount($0) })
+                                     onOpenAccount: { feedSheet = .framesAccount($0) },
+                                     roster: roster,
+                                     scope: chrome.framesScope,
+                                     onPickAccount: framesPickAccount)
                 },
                 acts: { slot in
                     // **EVERY PAGE (prd §774).** All acts for this phone's
@@ -4303,10 +4300,10 @@ struct FeedScreen: View {
                     ? section.emptyHeadline
                     : String(localized: "\(tokens.count) tokens")
             case .accounts:
-                let nodes = FramesConnections.map(framesAccounts)?.nodes.count ?? 0
-                out[section] = nodes == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(nodes) connected")
+                // The accounts you follow (prd §948) — the crown's own number.
+                let n = FramesRoomSource.accounts().count
+                out[section] = n == 0 ? section.emptyHeadline
+                    : (n == 1 ? String(localized: "1 account") : String(localized: "\(n) accounts"))
             case .frames:
                 out[section] = head.frameCount == 0
                     ? section.emptyHeadline
@@ -4358,18 +4355,7 @@ struct FeedScreen: View {
                 onPick: { chrome.privacyDevnetSection = $0 },
                 accounts: PrivacyDevnetRoomCard.slots(roster),
                 scope: chrome.privacyDevnetScope,
-                onPickAccount: { picked in
-                    // One of this phone's own faces makes that account the
-                    // one Send, Shield and Top up act for (prd §774), and the
-                    // live state's `mine` follows so the first-transaction
-                    // moment watches the right address.
-                    if PrivacyDevnetKey.select(picked) {
-                        PrivacyDevnetLiveState.shared.setMine(picked)
-                    }
-                    withAnimation(DS.Motion.standard) {
-                        chrome.privacyDevnetScope = (picked?.isEmpty ?? true) ? nil : picked
-                    }
-                },
+                onPickAccount: privacyPickAccount,
                 reading: { readings[$0] },
                 crown: { slot in
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
@@ -4399,7 +4385,10 @@ struct FeedScreen: View {
                         mine: PrivacyDevnetLiveState.shared.mine,
                         onOpenMove: { move, owner in
                             feedSheet = .privacyDevnetMove(move, owner)
-                        })
+                        },
+                        everyAccount: roster,
+                        scope: chrome.privacyDevnetScope,
+                        onPickAccount: privacyPickAccount)
                 },
                 acts: { slot in
                     // **EVERY PAGE (prd §774)** — Frames' rule: All acts for
@@ -4419,6 +4408,42 @@ struct FeedScreen: View {
             .listRowSeparator(.hidden)
         }
         .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
+    }
+
+    // MARK: - Picking a devnet account (prd §948)
+    //
+    // One function per room, read by BOTH doors to the pick — the account
+    // menu under the tiles and the faces in the Accounts crown — so the two
+    // can never disagree about what picking an account does.
+
+    /// One of this phone's own faces makes that account the one Send and Top
+    /// up act for (prd §774); a stranger's face picks nothing — `select`
+    /// answers false and changes nothing.
+    func framesPickAccount(_ picked: String?) {
+        FramesKey.select(picked)
+        withAnimation(DS.Motion.standard) {
+            chrome.framesScope = (picked?.isEmpty ?? true) ? nil : picked
+        }
+    }
+
+    /// The account Send, Shield and Top up act for (prd §774), and the live
+    /// state's `mine` follows so the first-transaction moment watches the
+    /// right address.
+    func privacyPickAccount(_ picked: String?) {
+        if PrivacyDevnetKey.select(picked) {
+            PrivacyDevnetLiveState.shared.setMine(picked)
+        }
+        withAnimation(DS.Motion.standard) {
+            chrome.privacyDevnetScope = (picked?.isEmpty ?? true) ? nil : picked
+        }
+    }
+
+    /// The account Send and Top up act for (prd §774).
+    func hegotaPickAccount(_ picked: String?) {
+        HegotaKey.select(picked)
+        withAnimation(DS.Motion.standard) {
+            chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
+        }
     }
 
     @ViewBuilder private var hegotaScopeChromeSection: some View {
@@ -4442,14 +4467,7 @@ struct FeedScreen: View {
                     onPick: { picked in chrome.hegotaSection = picked },
                     accounts: HegotaRoomReadings.slots(roster),
                     scope: chrome.hegotaScope,
-                    onPickAccount: { picked in
-                        // One of this phone's own faces makes that account
-                        // the one Send and Top up act for (prd §774).
-                        HegotaKey.select(picked)
-                        withAnimation(DS.Motion.standard) {
-                            chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
-                        }
-                    },
+                    onPickAccount: hegotaPickAccount,
                     reading: { readings[$0] },
                     crown: { slot in
                         DSRoomSlot(headline: nil, reservesHeadline: false) {
@@ -4465,7 +4483,8 @@ struct FeedScreen: View {
                         HegotaRoomFigure(head: head,
                                          accounts: roster,
                                          scoped: chrome.hegotaScope,
-                                         section: scope)
+                                         section: scope,
+                                         onPickAccount: hegotaPickAccount)
                     },
                     acts: { slot in
                         // **EVERY PAGE (prd §774)** — Frames' rule. The demo's
