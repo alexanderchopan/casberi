@@ -151,10 +151,9 @@ struct PrivacyDevnetRoomCard: View {
             // The figure owns its reading since prd §924; only the empty word stays.
             return RoomPermissions.headline(permissionKinds) == nil ? section.emptyHeadline : nil
         case .roots:
+            // The figure owns its reading since prd §929; only the empty word stays.
             let n = accounts.reduce(0) { $0 + $1.roots.count }
-            guard n > 0 else { return section.emptyHeadline }
-            return n == 1 ? String(localized: "1 proof")
-                          : String(localized: "\(String(n)) proofs")
+            return n > 0 ? nil : section.emptyHeadline
         }
     }
 
@@ -1199,28 +1198,55 @@ extension PrivacyDevnetRoomCard {
     /// them wear. **No colour separates the sets**, unchanged: they are the
     /// same reading over different sources, and a hue per source would say the
     /// sources differ in kind, which they do not.
+    /// **THE RING UNDER THE CROWN'S READING (prd §929).** The ring stays —
+    /// it is the chain's own shape (§596) — and takes whatever height the
+    /// slot leaves under the reading: caption, how long the freshest proof
+    /// has left at `stat24`, and "N proofs · M of 8192 slots left" beneath.
+    /// Its own middle reading is off, since the crown now says it once.
     @ViewBuilder private var windows: some View {
         let refs = accounts.flatMap(\.roots)
         if refs.isEmpty {
             EmptyView()
         } else {
-            HStack(alignment: .center, spacing: DS.Space.s4) {
-                Spacer(minLength: 0)
-                PrivacyDevnetRing(marks: marks, sets: setCount,
-                                  remaining: freshestRemaining,
-                                  readAt: readAt,
-                                  diameter: Self.ringDiameter,
-                                  reduceMotion: reduceMotion)
-                Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(scopeCaption)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                    Text(freshestRemaining.map { PrivacyDevnetRoots.approximate(slots: $0) }
+                         ?? (refs.count == 1 ? String(localized: "1 proof")
+                                             : String(localized: "\(String(refs.count)) proofs")))
+                        .dsText(.stat24).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    Text(rootsLine(refs.count))
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, DSRoomChassis.gearColumn)
+                GeometryReader { geo in
+                    HStack {
+                        Spacer(minLength: 0)
+                        PrivacyDevnetRing(marks: marks, sets: setCount,
+                                          remaining: freshestRemaining,
+                                          readAt: readAt,
+                                          diameter: max(72, min(geo.size.width, geo.size.height)),
+                                          showsReading: false,
+                                          reduceMotion: reduceMotion)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }
 
-    /// How big the ring may be. **Derived from the figure's own box, never a
-    /// constant** (`PrivacyDevnetFigure.rowCap`'s reason): the slot was 166
-    /// before §588 and is 256 today, and a hand-tuned diameter is one release
-    /// from being clipped or lost in air.
+    private func rootsLine(_ proofs: Int) -> String {
+        let count = proofs == 1 ? String(localized: "1 proof") : String(localized: "\(String(proofs)) proofs")
+        guard let remaining = freshestRemaining else { return count }
+        return String(localized: "\(count) · \(String(remaining)) of \(String(PrivacyDevnetRoots.windowSlots)) slots left")
+    }
     static var ringDiameter: CGFloat {
         min(max(DSRoomChassis.figureSlot - 24, 96), 240)
     }

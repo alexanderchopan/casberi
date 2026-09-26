@@ -222,6 +222,9 @@ struct ConnectionSpine: View {
             WalletFace(address: address, size: size, circular: true)
                 .opacity(quiet ? 0.35 : 1)
                 .contentShape(Circle())
+                // Drawn at the face's size, targeted at the 44pt floor
+                // (`accessibility-audit.py`), the chips' own arrangement.
+                .dsTapTarget(Circle(), size: DS.Hit.min)
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text(name))

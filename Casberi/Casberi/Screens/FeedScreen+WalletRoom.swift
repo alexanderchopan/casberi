@@ -34,6 +34,15 @@ extension FeedScreen {
     /// hands back a value, which is what keeps this immune to the liveness
     /// crash class rather than merely guarded against it (CLAUDE.md
     /// corollaries 1–6).
+    /// The scope, as the crowns caption it (prd §926, §927): the scoped
+    /// wallet's name, else how many you follow.
+    var walletCaptionWord: String {
+        selectedWallet.map { WalletScopeRail.caption(for: $0, in: wallet.addresses).name }
+            ?? (wallet.addresses.count == 1
+                ? String(localized: "1 wallet")
+                : String(localized: "\(String(wallet.addresses.count)) wallets"))
+    }
+
     @ViewBuilder var walletActivitySection: some View {
         let caption = selectedWallet.map {
             WalletScopeRail.caption(for: $0, in: wallet.addresses).name
@@ -971,7 +980,8 @@ extension FeedScreen {
     @ViewBuilder
     var walletRiskSection: some View {
         if let entries = walletRiskEntries {
-                            WalletRiskStrip(entries: entries, onPick: { entry in
+                            WalletRiskStrip(entries: entries,
+                                            caption: walletCaptionWord, onPick: { entry in
                     // Overview → detail (prd §417). The strip ranks every
                     // leveraged position on one axis; the card below states the
                     // one you picked in its own protocol's units. The target is

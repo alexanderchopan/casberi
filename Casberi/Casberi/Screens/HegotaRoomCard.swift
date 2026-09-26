@@ -194,8 +194,9 @@ struct HegotaRoomFigure: View {
         // the same address, stated a third time. The two tenses are what this
         // scope owns.
         case .coins:
-            return HegotaCoins.scopeHeadline(unspent: coins.count, spent: spentCoins.count)
-                ?? section.emptyHeadline
+            // The figure owns its reading since prd §928; only the empty word stays.
+            return HegotaCoins.scopeHeadline(unspent: coins.count, spent: spentCoins.count) == nil
+                ? section.emptyHeadline : nil
         // **STEPS, not transactions.** The transaction count is already the
         // Activity scope's headline one chip away, so repeating it here would
         // make the two scopes look like the same reading twice. What this scope
@@ -952,74 +953,122 @@ struct HegotaRoomFigure: View {
     /// 1 wei), so every piece but the largest two sat on the minimum radius.
     /// `UnitTreemap` is rank-ordered rather than area-proportional for exactly
     /// this reason, so each UTXO gets a readable, labelled cell.
+    /// **THE PRESSED COIN (prd §928)** — a UTXO's index, or `restKey`.
+    @State private var litCoin: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private static let restKey = "·rest"
+
+    /// **THE COINS ARE A PACK (prd §928).** A UTXO is an amount in one unit,
+    /// so its circle's area is its share of what is unspent — §917's rule,
+    /// the Holdings pack one scope over — where the tiles drew the same four
+    /// coins on plates with a capsule bar in each (§782's plates, and a
+    /// line). Change wears the quiet tint, a received coin the full one, and
+    /// the fold past four is one grey circle. The reading is the crown's;
+    /// a tap on a circle reads that coin.
     @ViewBuilder private var coinsFigure: some View {
         let drawn = tiledCoins
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            // **THROUGH `figureCaption`, like every other scope.** This was a
-            // bare `Text`, so it took neither of that helper's two guarantees:
-            // the 56pt settings-gear clearance, and a line clamp — and an
-            // unclamped caption is what turns the 4pt overflow below into a
-            // 20pt one on a set whose sentence happens to wrap.
-            figureCaption(coinsLine, lines: 1)
+            coinsReading(drawn)
             if !drawn.isEmpty {
-                // **SIZED TO WHAT IS LEFT OF THE SLOT, AND THE SUM IS WRITTEN
-                // DOWN** (prd §555 follow-up, user: *"hegota utxo treemap is
-                // clipping on the rail below it"*).
-                //
-                // `DSRoomSlot` is a hard 210pt with `.clipped()`, less its
-                // 30pt reserved headline row AND that row's own `DS.Space.s3`
-                // bottom pad — 14 on iOS, and the part that is easy to miss
-                // because it lives in the chassis rather than here. So the
-                // figure's budget is **166**, exactly as `frameRows` says.
-                //
-                // 144 did not fit and never had: caption 16 + the stack's gap
-                // 10 + 144 is 170, four points over, so `.clipped()` shaved
-                // the map's bottom row against the rail slab directly beneath
-                // (that section is emitted at `bottom: 0` / `top: 0`, so the
-                // cut edge lands flush on the rail).
-                //
-                // 128 spends 16 + 10 + 128 = 154 and leaves 12 of slack, which
-                // is what absorbs a step of Dynamic Type — `label12` is
-                // `.caption1`-relative and the slot is not, the same reasoning
-                // `frameRows` keeps 16 for.
-                //
-                // It was 116 while the census line sat underneath, and 116 + a
-                // two-line census is 180 in a 168pt box — so the slot clipped,
-                // silently, and the map lost its bottom edge (prd §555, user:
-                // *"we need to get rid of the '1% of everything…' helper text
-                // bc it clips the image of the treemap"*). Raising it to 144
-                // fixed that clip by overrunning the budget by less.
-                //
-                // **Re-do this sum before raising it.**
-                //
-                // **§588 re-did it, and made it stop being a literal.** The
-                // box went 166 → 256, and a 128pt map top-pinned in it was
-                // ~102pt of dead air under the drawing this scope exists for.
-                // The sum is unchanged in shape and is now written as itself:
-                // caption 16 + the stack's gap 10 + the same 12 of slack that
-                // absorbs a step of Dynamic Type = 38 of chrome. The tiles
-                // take it for free — `tall` is decided by RANK, not by height,
-                // and every tile is already `maxHeight: .infinity`.
-                UnitTreemap(count: drawn.count,
-                            height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
-                                                            chrome: 38),
-                            cell: { i in
-                    tile(drawn[i], rank: i)
-                }, readout: { i in
-                    switch drawn[i] {
+                DSCirclePack(items: drawn.enumerated().map { index, tile in
+                    switch tile {
                     case .coin(let coin):
-                        return coin.isChange
-                            ? String(localized: "\(HegotaFormat.eth(coin.wei)) — change")
-                            : String(localized: "\(HegotaFormat.eth(coin.wei)) — received")
+                        return DSCirclePackItem(id: String(coin.index), share: coinShare(coin.wei),
+                                                label: coin.isChange
+                                                    ? String(localized: "\(HegotaFormat.eth(coin.wei)) — change")
+                                                    : String(localized: "\(HegotaFormat.eth(coin.wei)) — received"))
                     case .rest(let count, let wei):
-                        return String(localized: "\(String(count)) smaller UTXOs — \(HegotaFormat.eth(wei)) together")
+                        return DSCirclePackItem(id: Self.restKey, share: coinShare(wei),
+                                                label: String(localized: "\(String(count)) smaller UTXOs — \(HegotaFormat.eth(wei)) together"))
                     }
+                }, mark: { item, diameter in
+                    coinMark(item, tile: drawn.first { Self.tileKey($0) == item.id }, diameter: diameter)
+                }, action: { item in
+                    litCoin = litCoin == item.id ? nil : item.id
+                }, readout: { item in
+                    item.label.replacingOccurrences(of: " — ", with: " · ")
                 })
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .animation(reduceMotion ? nil : DS.Motion.standard, value: litCoin)
+    }
+
+    private static func tileKey(_ tile: CoinTile) -> String {
+        switch tile {
+        case .coin(let coin): return String(coin.index)
+        case .rest:           return restKey
         }
     }
 
-    /// What a tile holds: one UTXO, or the folded tail.
+    private func coinShare(_ wei: Decimal) -> Double {
+        NSDecimalNumber(decimal: HegotaCoins.eth(wei)).doubleValue
+    }
+
+    @ViewBuilder
+    private func coinsReading(_ drawn: [CoinTile]) -> some View {
+        let pressed = litCoin.flatMap { key in drawn.first { Self.tileKey($0) == key } }
+        VStack(alignment: .leading, spacing: 2) {
+            Text(crownCaption)
+                .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
+            Text(pressedHeadline(pressed)
+                 ?? HegotaCoins.scopeHeadline(unspent: coins.count, spent: spentCoins.count)
+                 ?? String(localized: "No UTXOs"))
+                .dsText(.stat24).foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(pressedLine(pressed) ?? coinsLine)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.trailing, DSRoomChassis.gearColumn)
+    }
+
+    private func pressedHeadline(_ tile: CoinTile?) -> String? {
+        switch tile {
+        case .coin(let coin): return HegotaFormat.eth(coin.wei)
+        case .rest(_, let wei): return HegotaFormat.eth(wei)
+        case nil: return nil
+        }
+    }
+
+    private func pressedLine(_ tile: CoinTile?) -> String? {
+        switch tile {
+        case .coin(let coin):
+            return coin.isChange ? String(localized: "change · \(coinTileSub(coin))")
+                                 : String(localized: "received · \(coinTileSub(coin))")
+        case .rest(let count, let wei): return restTileSub(count: count, wei: wei)
+        case nil: return nil
+        }
+    }
+
+    @ViewBuilder
+    private func coinMark(_ item: DSCirclePackItem, tile: CoinTile?, diameter: CGFloat) -> some View {
+        let quiet = litCoin != nil && litCoin != item.id
+        let text: String = {
+            switch tile {
+            case .coin(let coin): return HegotaFormat.crownFigure(coin.wei)
+            case .rest(let count, _): return "+\(count)"
+            case nil: return ""
+            }
+        }()
+        Circle()
+            .fill(tile.map(fill) ?? DS.fillFaint)
+            .frame(width: diameter, height: diameter)
+            .overlay {
+                if diameter >= 40 {
+                    Text(text)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .padding(.horizontal, 4)
+                }
+            }
+            .opacity(quiet ? 0.3 : 1)
+    }
+
     private enum CoinTile {
         case coin(HegotaCoin)
         case rest(count: Int, wei: Decimal)

@@ -52,6 +52,9 @@ struct PrivacyDevnetRing: View {
     /// which is what a fixture and a preview get.
     var readAt: Date?
     var diameter: CGFloat = 132
+    /// Whether the ring draws its own reading in the middle (prd §929: the
+    /// Snapshots tile draws the crown\'s reading above the ring instead).
+    var showsReading = true
     let reduceMotion: Bool
 
     /// The rim's own weight — the same 4pt bed every track in this room used,
@@ -105,7 +108,7 @@ struct PrivacyDevnetRing: View {
             // tinting it would make the present look like another snapshot.
             tick(at: 0, length: Self.rim + 8, colour: DS.textPrimary.opacity(0.75), width: 2.5)
 
-            reading
+            if showsReading { reading }
 
             ForEach(Array(placed.enumerated()), id: \.element.id) { index, p in
                 proofTick(p, index: index)
