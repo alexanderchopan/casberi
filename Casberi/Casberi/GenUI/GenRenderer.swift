@@ -1163,7 +1163,7 @@ private struct InsightCard<Content: View>: View {
     var fillsLead: Bool = true
     @ViewBuilder var content: Content
     /// The box inside the card's vertical padding (prd §760).
-    static var inner: CGFloat { DSRoomChassis.leadBox }
+    static var inner: CGFloat { DSRoomChassis.leadHeight - 2 * DS.Space.s4 }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: DS.Space.s2) { content }
@@ -1346,8 +1346,8 @@ struct OnThisDayHero: View {
             }
             // The lead's one height (prd §760), inside the card's padding.
             .frame(maxWidth: .infinity,
-                   minHeight: DSRoomChassis.leadBox,
-                   maxHeight: DSRoomChassis.leadBox,
+                   minHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
+                   maxHeight: DSRoomChassis.leadHeight - 2 * DS.Space.s4,
                    alignment: .topLeading)
             .clipped()
             .dsRoomHeadBlock()
