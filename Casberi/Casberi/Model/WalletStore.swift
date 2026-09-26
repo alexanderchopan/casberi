@@ -145,12 +145,12 @@ final class WalletStore {
             // zero history, not a resurrected line with a hole in it).
             let kept = Set(addresses.map { $0.address.lowercased() })
             for old in oldValue where !kept.contains(old.address.lowercased()) {
-                UserDefaults.standard.removeObject(forKey: Self.historyKey(old.address))
+                ScratchDefaults.standard.removeObject(forKey: Self.historyKey(old.address))
                 // The high-water mark leaves with the watch too — else a
                 // re-watch would judge its "new high" against a peak from a
                 // prior watch period whose history was already wiped (the same
                 // "re-watching starts honest, at zero" rule the history obeys).
-                UserDefaults.standard.removeObject(forKey: "wallet.high.\(old.address.lowercased())")
+                ScratchDefaults.standard.removeObject(forKey: "wallet.high.\(old.address.lowercased())")
                 // The approval block cursors leave too (prd §84) — a stale
                 // cursor would back-fill the unwatched gap into the feed on
                 // re-watch, instead of the silent fresh-baseline seed.
@@ -529,7 +529,7 @@ final class WalletStore {
     }
 
     func valueSamples(forAddress address: String) -> [ValueSample] {
-        guard let data = UserDefaults.standard.data(forKey: Self.historyKey(address)),
+        guard let data = ScratchDefaults.standard.data(forKey: Self.historyKey(address)),
               let samples = try? JSONDecoder().decode([ValueSample].self, from: data)
         else { return [] }
         return samples
@@ -675,7 +675,7 @@ final class WalletStore {
                                    holdings: holdings.isEmpty ? nil : holdings))
         samples = Self.thinned(samples)
         if let data = try? JSONEncoder().encode(samples) {
-            UserDefaults.standard.set(data, forKey: Self.historyKey(address))
+            ScratchDefaults.standard.set(data, forKey: Self.historyKey(address))
         }
     }
 
@@ -705,12 +705,12 @@ final class WalletStore {
     /// correctly before its first network read.
     @ObservationIgnored
     private var resolutions: [String: String] =
-        UserDefaults.standard.dictionary(forKey: "wallet.resolutions") as? [String: String] ?? [:]
+        ScratchDefaults.standard.dictionary(forKey: "wallet.resolutions") as? [String: String] ?? [:]
 
     func noteResolution(_ watched: String, resolved: String) {
         guard watched != resolved, resolutions[watched] != resolved else { return }
         resolutions[watched] = resolved
-        UserDefaults.standard.set(resolutions, forKey: "wallet.resolutions")
+        ScratchDefaults.standard.set(resolutions, forKey: "wallet.resolutions")
         // The book keys on identity, not spelling (prd §212) — a name and the
         // address it stands for are one entry, and this is the moment the two
         // forms meet. Folds any row already standing under the name.
@@ -736,7 +736,7 @@ final class WalletStore {
     }
 
     private init() {
-        if let data = UserDefaults.standard.data(forKey: Self.key),
+        if let data = ScratchDefaults.standard.data(forKey: Self.key),
            let saved = try? JSONDecoder().decode([WatchedAddress].self, from: data) {
             addresses = saved
         } else if DemoState.seedsDemoData {
@@ -936,7 +936,7 @@ final class WalletStore {
 
     private func persist() {
         if let data = try? JSONEncoder().encode(addresses) {
-            UserDefaults.standard.set(data, forKey: Self.key)
+            ScratchDefaults.standard.set(data, forKey: Self.key)
         }
     }
 }
