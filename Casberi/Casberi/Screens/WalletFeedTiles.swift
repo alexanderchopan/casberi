@@ -40,8 +40,12 @@ import SwiftUI
 enum WalletCardStyle {
     static let fill = 0.82
     static let pad = DS.Space.s4
-    static let rowInsets = EdgeInsets(top: DS.Space.s3, leading: DS.Space.s4,
-                                      bottom: 0, trailing: DS.Space.s4)
+    /// A wallet row's 36pt mark centres on the column the face and every
+    /// feed row's mark share (`DSRoomChassis.rowLeadCentre`).
+    static var rowInsets: EdgeInsets {
+        EdgeInsets(top: DS.Space.s3, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                   bottom: 0, trailing: DS.Space.s4)
+    }
 }
 
 // `WalletTile` (the caption-plus-chevron tile shell) retired here 2026-07-25

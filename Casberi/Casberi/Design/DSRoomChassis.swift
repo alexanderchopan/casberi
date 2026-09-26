@@ -174,6 +174,9 @@ enum DSRoomChassis {
     static let rowInset: CGFloat = leadInset
     /// The centre of a feed row's lead mark, measured from the screen edge.
     static var rowLeadCentre: CGFloat { rowInset + DS.Mark.row / 2 }
+    /// The leading inset that centres a mark of `size` on `rowLeadCentre` —
+    /// the wallet lists' 36pt marks sat 5pt right of the feed's 26pt ones.
+    static func rowInset(forMark size: CGFloat) -> CGFloat { rowLeadCentre - size / 2 }
 
     /// The air under every lead, before the first day (prd §763). The cover
     /// carried `s4` and a head carried nothing, so the first divider landed

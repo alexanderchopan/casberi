@@ -127,7 +127,10 @@ extension FeedScreen {
                         }
                     } label: {
                         HStack(spacing: DS.Space.s3) {
-                            TokenIcon(symbol: position.symbol, size: DS.Face.list)
+                            // Always a mark — `TokenIcon` draws nothing for a
+                            // token with no picture, and the row's name then
+                            // stood in a different column (AWETH, MONK).
+                            AssetMark(name: position.symbol, size: DS.Face.list)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(position.symbol)
                                     .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -166,7 +169,8 @@ extension FeedScreen {
                     }
                     .buttonStyle(RowPress())
                     .dsHover()
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2,
+                                              leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                               bottom: DS.Space.s2, trailing: DS.Space.s4))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -589,7 +593,7 @@ extension FeedScreen {
     var walletSkeletonRowsSection: some View {
         Section {
             DSSkeletonRows()
-                .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                           bottom: 0, trailing: DS.Space.s4))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -641,7 +645,7 @@ extension FeedScreen {
     struct WalletDoorRow: ViewModifier {
         func body(content: Content) -> some View {
             content
-                .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                           bottom: 0, trailing: DS.Space.s4))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
