@@ -63,36 +63,9 @@ struct WalletApprovalExposureCard: View {
     /// Fixed rather than adaptive because it always carries black text on
     /// itself — the chip is a filled block in both themes, and the pair
     /// measures far past the 4.5:1 bar either way.
-    private static let mark = Color.fixed("#ffd60a")
-
     var body: some View {
         if !exposure.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                Text(String(localized: "Approvals"))
-                    .dsText(.label12)
-                    .foregroundStyle(Self.mark)
-
-                // **THE HEADLINE RETIRED HERE (2026-08-29).** It read
-                // "7 spenders can move $8,924" — the same figure the scope's
-                // own lead drawing states as "$8,924 in reach" a centimetre
-                // above it, since `WalletPermissions.totalUSD` sums the very
-                // grants this card ranks and the acting parties beside them
-                // carry no amount to add. One scope, one figure.
-                //
-                // It also removes a §83 case that could render today: the card
-                // draws on `!exposure.isEmpty`, which is true when every grant
-                // is UNPRICED, while `spenderCount` and `total` count priced
-                // rows alone — so an all-unpriced exposure headlined
-                // "0 spenders can move $0" over a list of live grants. The
-                // "Worth a look" tray already guards that case explicitly
-                // (`!exposure.priced.isEmpty`) and this card never did.
-                //
-                // `WalletApprovalExposure.headline` stays: the tray's walk row
-                // still quotes it, and the harness still pins it.
-                // "Start at the top" restated the list's own order (prd §748).
-                DSFootnote(prose: String(localized: "Revoking is free apart from gas."))
-                    .padding(.top, DS.Space.s2)
-
                 // Enumerated for the entrance stagger only (2026-08-03, prd
                 // §297). `exposure.all` is already ranked by what's at stake,
                 // so the grant worth revoking first is also the row that lands
@@ -102,11 +75,14 @@ struct WalletApprovalExposureCard: View {
                     row(grant)
                         .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
-                .padding(.top, DS.Space.s3)
 
                 if let target = exposure.oldestWorthReviewing {
                     reviewButton(target)
                 }
+
+                // The one footnote (prd §748): what a revoke costs.
+                DSFootnote(prose: String(localized: "Revoking is free apart from gas."))
+                    .padding(.top, DS.Space.s3)
 
                 if let note = exposure.unpricedNote {
                     Text(note)
@@ -132,7 +108,6 @@ struct WalletApprovalExposureCard: View {
             // scope's drawing is bare (§483), Holdings' list is bare,
             // Permissions' list is bare. These were the last three surfaces
             // disagreeing with their own room.
-            .padding(.horizontal, DSRoomChassis.inset)
             .padding(.bottom, DS.Space.s4)
         }
     }
@@ -140,55 +115,36 @@ struct WalletApprovalExposureCard: View {
     /// One grant. The whole row is the tap target — a row is a read with ONE
     /// gesture (ruling 2026-07-16), and it carries no presentation of its own
     /// (the half-open-then-close lesson, 2026-07-28).
+    /// **ONE ROW, THE WALLET LIST'S ANATOMY (prd §944).** Mark, name, one
+    /// line — the grant's word, red only when it has no limit, then the token
+    /// — and the amount at stake trailing, before the chevron that says this
+    /// row is a door (the delegations above have none). An unpriced grant
+    /// states no amount at all; the note under the list says why it is not
+    /// in the total.
     private func row(_ grant: WalletApprovalExposure.Grant) -> some View {
         Button {
             DSHaptic.selection()
             onOpen(grant)
         } label: {
-            HStack(alignment: .top, spacing: DS.Space.s2) {
-                // WHO can spend it (2026-08-04). The spender is what this card
-                // ranks and what you go and revoke, and Uniswap, Aave and
-                // Morpho all ship marks the row was drawing as bare text.
-                AssetMark(name: grant.spender, size: 26)
-                    // Optically centred on the title line rather than the
-                    // whole two-line block.
-                    .padding(.top, 1)
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(grant.spender)
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: DS.Space.s2)
-                        // An unpriceable grant states a dash, never "$0" — the
-                        // whole reason it sits outside the total (see the model).
-                        Text(grant.usd.map(WalletValue.exactMoney) ?? "—")
-                            .dsText(.price17)
-                            .foregroundStyle(grant.usd == nil ? DS.textTertiary : DS.textPrimary)
-                            .monospacedDigit()
-                    }
-                    metaLine(grant)
+            HStack(spacing: DS.Space.s3) {
+                AssetMark(name: grant.spender, size: DS.Face.list)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(grant.spender)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    line(grant)
+                        .dsText(.subhead12)
+                        .lineLimit(1)
                 }
-                // **THE ROW IS A DOOR AND HAD NO WAY TO SAY SO (2026-08-31).**
-                // Reported as "the list is just a list and doesn't do
-                // anything": in the Permissions scope this list sits directly
-                // under `WalletActingPartiesRows`, which is inert BY RULING
-                // (§112/§293 — a delegate is undone in the wallet app that set
-                // it, so a control here would be §83's dead one) and drew the
-                // identical anatomy. Two lists, one look, opposite behaviour —
-                // so the tappable half read as the inert one, and the revoke
-                // hand-off a tap away (`ApprovalPrepareCard`'s Revoke.cash
-                // door, and the sheet's own Revoke.cash disc) was never found.
-                //
-                // `WalletRowChevron` rather than a glyph of its own: it is the
-                // room's ONE "there's more" mark, and the six competing
-                // grammars it replaced are exactly how this drifted. The
-                // asymmetry with the list above is now the information — a
-                // chevron means there is somewhere to go.
+                Spacer(minLength: DS.Space.s2)
+                if let usd = grant.usd {
+                    Text(WalletValue.exactMoney(usd))
+                        .dsText(.price17)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                }
                 DSChevron()
-                    // Optically on the title line, like the mark opposite it,
-                    // rather than centred on the two-line block.
-                    .padding(.top, 4)
             }
             .contentShape(Rectangle())
         }
@@ -196,71 +152,48 @@ struct WalletApprovalExposureCard: View {
         .padding(.vertical, DS.Space.s2)
     }
 
-    /// "[Unlimited] USDC · granted Mar 2024". The chip carries the state; the
-    /// rest is plain metadata.
-    @ViewBuilder
-    private func metaLine(_ grant: WalletApprovalExposure.Grant) -> some View {
-        HStack(spacing: DS.Space.s1 + 2) {
-            chip(grant)
-            Text(detail(grant))
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
+    /// "No limit · USDC", "Capped · USDT", "All Field Notes".
+    private func line(_ grant: WalletApprovalExposure.Grant) -> Text {
+        if grant.forAll {
+            return Text(String(localized: "All")).foregroundStyle(DS.destructive)
+                + Text(" \(grant.symbol)").foregroundStyle(DS.textTertiary)
         }
-    }
-
-    /// A fact about the grant, so a `DSStamp` (§746: a fact is a stamp, never a
-    /// hand-drawn pill). An open-ended grant is waiting on you; a capped one is
-    /// true and not news (prd §782).
-    @ViewBuilder
-    private func chip(_ grant: WalletApprovalExposure.Grant) -> some View {
-        if grant.unlimited || grant.forAll {
-            DSStamp(word: grant.forAll ? String(localized: "Manages all")
-                                       : String(localized: "Unlimited"),
-                    weight: .urgent)
-        } else {
-            DSStamp(word: String(localized: "Capped"), weight: .quiet)
+        if grant.unlimited {
+            return Text(String(localized: "No limit")).foregroundStyle(DS.destructive)
+                + Text(" · \(grant.symbol)").foregroundStyle(DS.textTertiary)
         }
+        return Text(String(localized: "Capped · \(grant.symbol)")).foregroundStyle(DS.textTertiary)
     }
 
-    /// The token, and the grant's age when a real block timestamp was read.
-    /// §253's rule: `grantedAt` is set ONLY from a real block time, so a nil
-    /// stays silent rather than dating a years-old grant to today.
-    private func detail(_ grant: WalletApprovalExposure.Grant) -> String {
-        guard let granted = grant.grantedAt else { return grant.symbol }
-        return String(localized: "\(grant.symbol) · granted \(WalletApprovalAge.text(granted))")
-    }
-
-    /// The card's one action. It points at the OLDEST grant worth reviewing,
-    /// never the biggest — the biggest is already the top row, and a button
-    /// pointing at what the eye is on says nothing.
+    /// The oldest grant worth a look, as a row — a verb is a row (prd §746),
+    /// never an inverted slab.
     private func reviewButton(_ target: WalletApprovalExposure.Grant) -> some View {
         Button {
             DSHaptic.selection()
             onOpen(target)
         } label: {
-            Text(String(localized: "Review the oldest grant"))
-                .dsText(.body17)
-                // Inverted against the card, and inverted correctly in BOTH
-                // themes: white-on-black in dark, black-on-white in light.
-                .foregroundStyle(DS.page)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DS.Space.s3)
-                .background(DS.textPrimary,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            HStack(spacing: DS.Space.s3) {
+                ZStack {
+                    Circle().fill(DS.fillFaint)
+                    Image(systemName: "clock")
+                        .dsGlyph(.subhead, weight: .semibold)
+                        .foregroundStyle(DS.tint)
+                        .accessibilityHidden(true)
+                }
+                .frame(width: DS.Face.list, height: DS.Face.list)
+                Text(String(localized: "Review the oldest grant"))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.tint)
+                Spacer(minLength: 0)
+                DSChevron()
+            }
+            .contentShape(Rectangle())
         }
-        .buttonStyle(PressSpring())
-        .padding(.top, DS.Space.s3)
+        .buttonStyle(.plain)
+        .padding(.vertical, DS.Space.s2)
     }
 }
 
-/// How a grant's age reads (2026-08-03) — "6 days ago" while it's recent
-/// enough for that to mean something, then the month it was made.
-///
-/// The switch is at a fortnight on purpose: "granted 47 days ago" is arithmetic
-/// the reader has to do, and "granted Mar 2024" is the fact they wanted. A
-/// years-old blanket approval is the thing this card exists to surface, and a
-/// month-and-year states its age better than any relative phrase.
 enum WalletApprovalAge {
     static func text(_ date: Date, now: Date = .now) -> String {
         let days = Calendar.current.dateComponents([.day], from: date, to: now).day ?? 0

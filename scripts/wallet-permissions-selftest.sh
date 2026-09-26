@@ -405,9 +405,10 @@ print -r -- "$order" | sed -n '3p' | grep -q 'walletApprovalsSection' \
 strip "$ROWS" | grep -qE 'openURL|Button|onTap|sheet' \
   && fail "the acting-parties list grew a control — §112: it is an inventory with no verb"
 
-# The row's sentence is the RUNG's, so a row and the count above it can never
-# describe the same holder differently.
-grep -q 'holder.power.phrase' "$ROWS" \
+# The row's words are the RUNG's, so a row and the crown above it can never
+# describe the same holder differently. Since prd §944 the row says the power's
+# short word (`power.short`), the one the crown's marks speak too.
+grep -qE 'holder\.power\.(phrase|short)' "$ROWS" \
   || fail "the row stopped taking its sentence from the rung it is counted in"
 # ...and it must say which of your wallets, or the merge has hidden a fact
 # rather than tidied one.

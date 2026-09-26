@@ -97,6 +97,20 @@ enum WalletPermissions {
         /// figure, the sentence for the rows: the rows below still say what
         /// each holder CAN do, so the figure's word only has to name the
         /// class it is looking at.
+        /// **THE ROW'S WORD (prd §944)** — the one clause a list row says
+        /// before the account, and the only text on the row that may wear red
+        /// (when `isUnbounded`).
+        var short: String {
+            switch self {
+            case .actsAsWallet:          String(localized: "Acts as your wallet")
+            case .movesWithoutSignature: String(localized: "Spends unsigned")
+            case .unlimitedToken:        String(localized: "No limit")
+            case .wholeCollection:       String(localized: "All")
+            case .scopedSigner:          String(localized: "Signs for you")
+            case .cappedAmount:          String(localized: "Capped")
+            }
+        }
+
         var word: String {
             switch self {
             case .actsAsWallet:          String(localized: "Delegates")

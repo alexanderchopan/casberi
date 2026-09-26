@@ -21,63 +21,67 @@ import SwiftUI
 /// instead of a "0" that reads as a measurement.
 struct WalletPermissionsCard: View {
     let holders: [WalletPermissions.Holder]
-    /// The scope's caption, the crown's own (prd §924).
-    var caption: String? = nil
 
-    private var rungs: [WalletPermissions.Rung] { WalletPermissions.rungs(holders) }
-
+    /// **THE WALLET'S CROWN IS WHO HOLDS A PERMISSION, MARK BY MARK (prd
+    /// §944, the Accounts pattern of §941).** The rung bars were all one
+    /// length and all red on a wallet with one holder per rung — a chart that
+    /// said nothing (user: "i like your proposal"). The number is the dollars
+    /// in reach (the count of permissions where nothing is priced), and under
+    /// it one mark per holder with its name; a holder with no limit wears a
+    /// red ring, the only red in the crown. The marks are a picture, not a
+    /// control: a delegation has no honest destination in this app (§112), so
+    /// the doors are the rows below, where a grant opens its sheet.
+    /// The devnets keep `RoomPermissionsFigure` until their pass.
     var body: some View {
-        RoomPermissionsFigure(kinds: WalletPermissionsCard.kinds(rungs, holders: holders),
-                              lead: lead, caption: caption)
-    }
-
-    /// One kind per rung, in the rungs' own order (most reach first).
-    /// One kind per rung, carrying its holders so a key can be pressed and
-    /// named (prd §924) — the same holders the rows below list.
-    static func kinds(_ rungs: [WalletPermissions.Rung],
-                      holders: [WalletPermissions.Holder] = []) -> [RoomPermissions.Kind] {
-        rungs.map { rung in
-            RoomPermissions.Kind(label: rung.power.word,
-                                 count: rung.count,
-                                 phrase: rung.power.phrase,
-                                 aside: aside(rung),
-                                 unbounded: rung.power.isUnbounded,
-                                 holders: holders.filter { $0.power == rung.power }.map {
-                                     RoomPermissions.Holder(name: $0.name, usd: $0.usd, note: $0.note)
-                                 })
+        let shown = Array(holders.prefix(Self.shown))
+        VStack(alignment: .leading, spacing: 0) {
+            reading
+            Spacer(minLength: DS.Space.s3)
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Array(shown.enumerated()), id: \.offset) { _, holder in
+                    mark(holder)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
     }
 
-    /// The total, which the rungs deliberately cannot carry: they answer
-    /// "what can be done", this answers "to how much". Silent when nothing
-    /// here has a figure at all — a wallet whose only holder is a Safe module
-    /// has real exposure and no dollars to state, and "$0" there would be the
-    /// most misleading thing on the card.
-    private var lead: RoomPermissions.Lead? {
+    /// Five across fits the box with a name under each.
+    static let shown = 5
+
+    @ViewBuilder
+    private var reading: some View {
         if let total = WalletPermissions.totalUSD(holders) {
-            return RoomPermissions.Lead(figure: WalletApprovalExposure.money(total),
-                                        caption: String(localized: "in reach"))
+            DSFigureReading(number: WalletValue.exactMoney(total),
+                            caption: String(localized: "in reach"))
+        } else {
+            DSFigureReading(number: String(holders.count),
+                            caption: holders.count == 1 ? String(localized: "permission")
+                                                        : String(localized: "permissions"))
         }
-        // No sentence in the number's place (prd §936): with nothing priced,
-        // the count of permissions is the number.
-        return nil
     }
 
-    /// The rung's total, beside its numeral — only when the rung is FULLY
-    /// priced (§490's refusal: a partial sum looks complete, which is worse
-    /// than no sum), and "no amount to state" only where a figure was
-    /// EXPECTED (`Power.canCarryAmount`) — on a module or a collection grant
-    /// it is an apology for a fact.
-    ///
-    /// No names, ever: the acting list and the approvals list directly below
-    /// carry every holder, and a name here is the slot restating them (§546).
-    static func aside(_ rung: WalletPermissions.Rung) -> String? {
-        if let usd = rung.usd {
-            return WalletApprovalExposure.money(usd)
+    private func mark(_ holder: WalletPermissions.Holder) -> some View {
+        VStack(spacing: DS.Space.s1) {
+            AssetMark(name: holder.name, size: 48)
+                .overlay {
+                    if holder.power.isUnbounded {
+                        Circle()
+                            .strokeBorder(DS.destructive, lineWidth: 2)
+                            .padding(-4)
+                    }
+                }
+                .padding(4)
+            Text(holder.name)
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
         }
-        if rung.hasUnpriced, rung.power.canCarryAmount {
-            return String(localized: "no amount to state")
-        }
-        return nil
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(holder.name), \(holder.power.short)"))
     }
 }

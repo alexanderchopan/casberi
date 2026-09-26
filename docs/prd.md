@@ -334,6 +334,7 @@ marks chronological position within the pair.
 | §727 (a token with no price is a row) | one plain row per unpriced token that came in | superseded by §942 — deleted with the blocks; an unpriced move is its own row in the stream, quiet and unsigned when it reads as nothing |
 | §493 (the list under the NFT quad is every piece) | one row per piece: art, name, collection, chain, OpenSea | amended by §943 — one row per collection you picked, name only; the pieces are one tap in, three across |
 | §514 (2x2 up to four, 3x3 past it, a short last row padded) | the grid could end on empty cells | amended by §943 — only full rows, one to three across, whichever shows the most |
+| §546 (the Permissions slot is counts, never names) | rung counts with no holder named | superseded by §944 in the Wallet — the holders' marks and names, the Accounts pattern; the devnets keep the counts until their pass |
 
 ## 1. Thesis
 
@@ -61704,3 +61705,11 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 **The list is one row per collection you picked** (`WalletNFTCollectionRows`, which amends §493's row per piece): the collection's first piece as a circle mark, its name, nothing under it, a chevron. A collection is keyed on its contract AND its name (`WalletNFTCollectionRows.key`), because the demo's pieces share one placeholder contract. "Choose collections" stays under the list.
 
 **A collection opens its pieces** (`BridgeNode.nftCollection(wallet:collection:name:)` → `WalletNFTCollectionScreen`): its name as the screen's head, the pieces three across in square cells at the Photos grid's size, and a piece opens its own OpenSea page (a piece on a chain OpenSea does not list draws as a picture, never a dead control). `WalletNFTArt` is the one drawing of a piece the mark and the grid share.
+
+## §944 — The Wallet's Permissions: the dollars in reach over the holders' marks, and two lists, Delegations and Approvals, in the wallet-list anatomy (user, 2026-09-26)
+
+**User:** *"i like your proposal"*, and *"Is 'Acting for you' 'Delegations'? B/c that is the word used in products like delegate calendars, delegate is a verb in crypto too. we should call them delegations and approvals"*.
+
+**The crown.** `WalletPermissionsCard` reads the dollars in reach (`WalletValue.exactMoney`, the rows' own exact figure; the count of permissions when nothing is priced) over one mark per holder, five across, its name under it in up to two lines; a holder with no limit (`Power.isUnbounded`) wears a red ring, the only red in the crown. It supersedes §546 for the Wallet, and the rung bars §936 drew there — all one length and all red on a wallet with one holder per rung, on the Accounts pattern (§941). The marks are a picture, not a control: a delegation has no honest destination here (§112). The devnets keep `RoomPermissionsFigure` until their pass.
+
+**The lists.** Two groups under `DSGroupHeader` (the shared group header, now also Accounts' `Yours` / `Tied to yours`): **Delegations** (`WalletActingPartiesRows`: a Safe module, an EIP-7702 delegate, a session key — anything that acts as the wallet) and **Approvals** (`WalletApprovalExposureCard`). A row is mark (`DS.Face.list`), name, one line — the power's word (`Power.short`: `Acts as your wallet`, `Spends unsigned`, `No limit`, `All`, `Signs for you`, `Capped`), red only when it has no limit, then whose wallet or which token — and, for a grant, the amount at stake and the chevron that says it is a door. The yellow `Approvals` eyebrow, the `Unlimited`/`Manages all` stamps, the grant-age clause and the double horizontal inset that stood the rows in a column of their own are gone. `Review the oldest grant` is a row, not an inverted slab (§746). One footnote, `Revoking is free apart from gas.`, moves under the list, and the unpriced note stays (§83).

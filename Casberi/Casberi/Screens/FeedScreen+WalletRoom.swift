@@ -990,12 +990,7 @@ extension FeedScreen {
         let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
                                                       acting: walletLive.acting)
         if !holders.isEmpty {
-                            WalletPermissionsCard(holders: holders,
-                                                  caption: selectedWallet.map {
-                                                      WalletScopeRail.caption(for: $0, in: wallet.addresses).name
-                                                  } ?? (wallet.addresses.count == 1
-                                                        ? String(localized: "1 wallet")
-                                                        : String(localized: "\(String(wallet.addresses.count)) wallets")))
+                            WalletPermissionsCard(holders: holders)
                     .modifier(rowEntrance(1))
                     .padding(.bottom, DS.Space.s3)
         }
@@ -1016,6 +1011,7 @@ extension FeedScreen {
         if !WalletPermissions.actingHolders(holders).isEmpty
             || walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
             Section {
+                DSGroupHeader(word: String(localized: "Delegations"))
                 WalletActingPartiesRows(holders: holders, acting: walletLive.acting)
                     .modifier(rowEntrance(2))
                     .listRowBackground(Color.clear)
@@ -1029,6 +1025,7 @@ extension FeedScreen {
     var walletApprovalsSection: some View {
         if !walletLive.exposure.isEmpty {
             Section {
+                DSGroupHeader(word: String(localized: "Approvals"))
                 WalletApprovalExposureCard(exposure: walletLive.exposure) { grant in
                     guard let thing = walletLive.activeApprovals
                         .first(where: { $0.isLive && $0.id == grant.thingID })

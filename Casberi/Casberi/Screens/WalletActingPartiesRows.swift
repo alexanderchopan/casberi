@@ -54,35 +54,27 @@ struct WalletActingPartiesRows: View {
                         .padding(.top, DS.Space.s2)
                 }
             }
-            .padding(.horizontal, DSRoomChassis.inset)
             .padding(.bottom, DS.Space.s4)
         }
     }
 
+    /// **ONE ROW, THE WALLET LIST'S ANATOMY (prd §944).** Mark, name, and one
+    /// line: the power's word — red only when it has no limit, the only red on
+    /// the row — then whose wallet. No chevron: a delegation is undone in the
+    /// wallet app that set it (§112), so a door here would be a dead one.
     private func row(_ holder: WalletPermissions.Holder) -> some View {
-        HStack(alignment: .top, spacing: DS.Space.s2) {
-            // The same mark the approvals rows wear, so the two halves of this
-            // scope read as one list. `AssetMark` invents no hue for a name it
-            // does not bundle — a delegate contract usually resolves to a
-            // monogram, which is the honest drawing for a name we cannot
-            // illustrate.
-            AssetMark(name: holder.name, size: 26)
-                .padding(.top, 1)
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: DS.Space.s3) {
+            AssetMark(name: holder.name, size: DS.Face.list)
+            VStack(alignment: .leading, spacing: 1) {
                 Text(holder.name)
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                // The rung's own sentence, so a row and the count above it can
-                // never describe the same holder differently.
-                Text(holder.power.phrase)
+                (Text(holder.power.short)
+                    .foregroundStyle(holder.power.isUnbounded ? DS.destructive : DS.textTertiary)
+                 + Text(" · \(detail(holder))").foregroundStyle(DS.textTertiary))
                     .dsText(.subhead12)
-                    .foregroundStyle(holder.power.isUnbounded ? DS.destructive : DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(detail(holder))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
             Spacer(minLength: 0)
         }
@@ -90,7 +82,7 @@ struct WalletActingPartiesRows: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// "Acts for Main and …4f4f · No expiry".
+    /// "Main and …4f4f · No expiry" — whose wallet, after the power's word.
     ///
     /// **Naming the wallets is the other half of the report.** The same
     /// delegate on two of your addresses used to draw as two identical rows;
@@ -103,8 +95,8 @@ struct WalletActingPartiesRows: View {
         let watched = WalletStore.shared.addresses
         let names = holder.accounts.map { WalletScopeRail.caption(for: $0, in: watched).name }
         let acts = names.isEmpty
-            ? String(localized: "Acts for this wallet")
-            : String(localized: "Acts for \(ListFormatter.localizedString(byJoining: names))")
+            ? String(localized: "this wallet")
+            : ListFormatter.localizedString(byJoining: names)
         guard let note = holder.note else { return acts }
         return "\(acts) · \(note)"
     }

@@ -166,10 +166,10 @@ struct RoomAccountsRows: View {
         let split = rows.contains { !$0.watched }
         ForEach(rows) { row in
             if split, row.id == rows.first(where: { $0.watched })?.id {
-                header(String(localized: "Yours"))
+                DSGroupHeader(word: String(localized: "Yours"))
             }
             if split, row.id == rows.first(where: { !$0.watched })?.id {
-                header(String(localized: "Tied to yours"))
+                DSGroupHeader(word: String(localized: "Tied to yours"))
             }
             if let onOpen = row.onOpen {
                 Button {
@@ -181,21 +181,6 @@ struct RoomAccountsRows: View {
                 body(row)
             }
         }
-    }
-
-    /// The feed's group header, a group named by something other than time
-    /// (primary ink, never the day's brand hue — prd §740). Text is a box, so
-    /// it stands on the tiles' edge, the line the account menu shares.
-    private func header(_ word: String) -> some View {
-        Text(word)
-            .dsText(.heading24)
-            .foregroundStyle(DS.textPrimary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, DSRoomChassis.inset)
-            .padding(.top, DS.Space.s6)
-            .padding(.bottom, DS.Space.s1)
-            .listRowInsets(EdgeInsets())
-            .accessibilityAddTraits(.isHeader)
     }
 
     @ViewBuilder private func body(_ row: Row) -> some View {
