@@ -741,273 +741,274 @@ struct WalletWarningsStrip: View {
 /// different register — not "whose is that number" but "what else is there".
 struct WalletCompositionStrip: View {
     let composition: WalletComposition
-    /// Both nil-able so this view stays usable as a pure read wherever a
-    /// caller has nowhere to route (the honesty rule's own corollary: don't
-    /// render a control that opens nothing).
     var onOpenDeposits: (() -> Void)? = nil
     var onOpenLocks: (() -> Void)? = nil
+    /// The scope's caption, the crown's own (prd §926).
+    var caption: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// **THE PRESSED COLUMN (prd §926)** — a protocol's name, or `lockedKey`.
+    /// While set, the reading reads that column and the rest go quiet; a tap
+    /// toggles.
+    @State private var lit: String?
 
-    /// The section's ONE READING (2026-08-15, wallet cohesion pass): the
-    /// deposited money when any exists, else the locked units in their own
-    /// native voice — never Owed, because a debt in display type is an alarm
-    /// this row already refuses to raise ("a debt you opened on purpose isn't
-    /// an alarm", the minus-sign note below). The promoted row DROPS its
-    /// trailing value so the figure is said once (§213's tally rule): the row
-    /// keeps its places and its door, the reading carries the number.
-    private var reading: (text: String, promotes: String)? {
-        if composition.hasDeposited {
-            return (WalletValue.money(composition.deposited), "Deposited")
-        }
-        if composition.hasLocked { return (lockedValue, "Locked") }
-        return nil
+    private static let lockedKey = "·locked"
+    private static let columnCap = 4
+    private static let markSize: CGFloat = 22
+
+    private var places: [WalletComposition.Deposit] {
+        Array(composition.deposits.prefix(Self.columnCap))
     }
-
-    /// The borrowed share of what is deposited, 0…1, or nil when there is
-    /// nothing to take a share OF.
-    ///
-    /// Clamped at 1 because the two figures come from different protocol
-    /// reads and a debt read that lands while its collateral read didn't
-    /// would otherwise draw a bar past the end of its own track.
-    private var borrowedShare: Double? {
-        guard composition.hasOwed, composition.deposited > 0 else { return nil }
-        return min(1, composition.owed / composition.deposited)
+    private var owedBy: [String: Double] {
+        Dictionary(composition.debts.map { ($0.place, $0.usd) }, uniquingKeysWith: +)
     }
 
     var body: some View {
         if !composition.isEmpty {
-            // **COLUMNS ON A BASELINE — deposits up, debt down** (user pick of
-            // three, prd §493). It replaced a figure and a list of places,
-            // which was *"more words than graphics"* over a list that says the
-            // same places again one scroll below.
-            //
-            // The baseline is what earns it: every other shape states debt as
-            // ONE total, and a total cannot say WHICH place is levered. Here a
-            // column's tail below the line is that protocol's own borrowing,
-            // so "Aave is carrying most of it" is read rather than computed.
-            //
-            // Locked stands apart as an OUTLINE with no height claim — §240
-            // rule 2, locked money is never priced, so drawing it to scale on
-            // a dollar axis would put a made-up number on the chart.
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(WalletValue.money(composition.deposited))
-                        .dsText(.stat24).foregroundStyle(DS.textPrimary)
-                        .monospacedDigit().lineLimit(1).fixedSize()
-                    Text(subtitle)
-                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1).minimumScaleFactor(0.8)
-                    Spacer(minLength: 0)
-                }
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                reading
+                // **THE BARS SIT ON THEIR WORDS (prd §926).** A bar per
+                // protocol for what is at work, amber under it for what is
+                // borrowed against it — today's chart, kept — and the bars
+                // take whatever height the slot hands the figure, so the gap
+                // between them and their marks is gone. Locked is a quiet bar
+                // (no dashed outline: nothing draws a line).
                 GeometryReader { geo in
-                    columns(width: geo.size.width)
+                    columns(height: geo.size.height)
                 }
-                .frame(height: Self.chartHeight)
-                .padding(.top, DS.Space.s2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                marks
             }
             .padding(.horizontal, DSRoomChassis.inset)
-            // One spoken sentence — a row of columns reads as nothing (§299).
-            .accessibilityElement(children: .combine)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .animation(reduceMotion ? nil : DS.Motion.standard, value: lit)
+            .accessibilityElement(children: .contain)
             .accessibilityLabel(Text(spoken))
         }
     }
 
-    /// "at work · $2,100 borrowed" — what the figure beside it does not say.
-    /// The borrowed clause is DROPPED when there is none rather than reading
-    /// "$0 borrowed", which is a card apologising for being fine.
-    private var subtitle: String {
-        guard composition.hasOwed else { return String(localized: "at work") }
-        return String(localized: "at work · \(WalletValue.money(composition.owed)) borrowed")
+    // MARK: - The reading
+
+    private var pressedDeposit: WalletComposition.Deposit? {
+        guard let lit, lit != Self.lockedKey else { return nil }
+        return places.first { $0.place == lit }
     }
 
-    /// The chart's own height inside the fixed slot, leaving the figure its
-    /// line and the labels theirs.
-    ///
-    /// **DERIVED SINCE §588.** Wallet's scopes pass `reservesHeadline: false`,
-    /// so this figure has the whole of `visualSlot`; its chrome is the
-    /// `stat24` reading at 30, the `s2` under it and the `s3` the caller pads
-    /// the bottom with. At the old literal 150 this left ~96pt of dead air
-    /// once the box grew to 300.
-    private static var chartHeight: CGFloat {
-        DSRoomChassis.crownLine(box: DSRoomChassis.visualSlot, chrome: 54)
-    }
-    /// Where the zero line sits within that height — deposits above, debt
-    /// below. Not centred: most wallets borrow far less than they deposit, so
-    /// an even split wastes half the chart on a tail that never reaches it.
-    ///
-    /// **A RATIO OF `chartHeight`, NOT A SECOND CONSTANT (prd §588).** Six
-    /// call sites offset from this and one sizes the columns against it
-    /// (`(baseline - 16)`), so it is this drawing's waistline rather than an
-    /// independent number — and a literal pair can be edited apart, which
-    /// draws a zero line across the middle of columns that grew past it. It
-    /// was 96 of 150; the ratio is what is preserved.
-    private static var baseline: CGFloat { (chartHeight * 96 / 150).rounded() }
-    /// How far below the line a debt tail may reach. Capped rather than sharing
-    /// the deposit scale outright, so the label strip has a fixed home and a
-    /// wallet borrowing nearly all of its deposit cannot push the names off the
-    /// bottom of the slot.
-    private static var debtSpan: CGFloat { (chartHeight * 32 / 150).rounded() }
-    /// How many places the chart draws before folding. Four columns at 402pt
-    /// leave each about 72pt, which is the width a name needs.
-    private static let columnCap = 4
-
-    /// One column per place: deposited above the line, borrowed below it.
-    ///
-    /// **Both halves scale against the DEPOSIT maximum**, never their own — a
-    /// debt sized against the largest debt would draw a wallet's only small
-    /// borrowing as tall as its largest deposit, which is the opposite of the
-    /// reading. One axis, so the two halves are comparable.
+    /// **THE CROWN'S READING (prd §926)** — caption, "$61K at work" at
+    /// `stat24`, "in 4 protocols · $11K borrowed" with the debt in amber.
+    /// Under a press it is that column: the protocol, its money at work, its
+    /// debt and its share; Locked reads the locks. The reading is the door
+    /// the tile always had — to the deposits sheet, or the locks' when Locked
+    /// is lit.
     @ViewBuilder
-    private func columns(width: CGFloat) -> some View {
-        let places = Array(composition.deposits.prefix(Self.columnCap))
-        let owedBy = Dictionary(composition.debts.map { ($0.place, $0.usd) },
-                                uniquingKeysWith: +)
-        let peak = max(1, places.map(\.usd).max() ?? 1)
-        let hasLocks = composition.hasLocked
-        let slots = places.count + (hasLocks ? 1 : 0)
-        let step = width / CGFloat(max(1, slots))
-        let barWidth = max(18, step - DS.Space.s3)
-        // No drawn axis (§715): deposits standing on one baseline and debts
-        // hanging from it already draw the line, and the design law has no
-        // hairline exception.
-        ZStack(alignment: .topLeading) {
-            // **EVERY LABEL ON ONE BASELINE, whether its column has debt or
-            // not.** They hung off the bottom of each column at first, so a
-            // place with a debt tail carried its name ~20pt lower than a place
-            // without one — four names at two heights, which reads as two rows
-            // of labels rather than one axis. The label strip is its own layer
-            // pinned under the deepest possible tail.
-            ForEach(Array(places.enumerated()), id: \.element.id) { index, deposit in
-                let up = max(4, CGFloat(deposit.usd / peak) * (Self.baseline - 16))
-                let owed = owedBy[deposit.place] ?? 0
-                VStack(alignment: .leading, spacing: 0) {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(DS.tint.opacity(1 - Double(index) * 0.18))
-                        .frame(width: barWidth, height: up)
-                    if owed > 0 {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(DS.attention.opacity(0.85))
-                            .frame(width: barWidth,
-                                   height: max(3, CGFloat(owed / peak) * Self.debtSpan))
-                            .padding(.top, 2)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.top, Self.baseline - up)
-                .offset(x: CGFloat(index) * step)
+    private var reading: some View {
+        let door: (() -> Void)? = lit == Self.lockedKey ? onOpenLocks : onOpenDeposits
+        let block = VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Text(readingCaption)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                if door != nil { DSChevron() }
             }
-            // **LOCKED IS A MARK, NOT A COLUMN** (§240 rule 2: locked money is
-            // never priced). Drawn at the baseline as a small dashed square
-            // rather than a full-height outline — at column height it read as a
-            // fifth bar you could compare to the others, which is the one thing
-            // an unpriced holding must not invite.
-            if hasLocks {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .strokeBorder(DS.fillStrong,
-                                  style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
-                    .frame(width: min(barWidth, 26), height: 26)
-                    .padding(.top, Self.baseline - 26)
-                    .offset(x: CGFloat(places.count) * step)
-            }
-            // The names, one strip, one height.
-            HStack(alignment: .top, spacing: 0) {
-                ForEach(Array(places.enumerated()), id: \.element.id) { _, deposit in
-                    Text(deposit.place)
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                        .frame(width: barWidth, alignment: .leading)
-                        .frame(width: step, alignment: .leading)
-                }
-                if hasLocks {
-                    Text(String(localized: "Locked"))
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .frame(width: step, alignment: .leading)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.top, Self.baseline + Self.debtSpan + DS.Space.s2)
+            .opacity(readingCaption.isEmpty ? 0 : 1)
+            Text(headline)
+                .dsText(.stat24)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1).minimumScaleFactor(0.6)
+            line
+                .dsText(.body17)
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.trailing, DSRoomChassis.gearColumn)
+        if let door {
+            Button(action: door) { block.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+        } else {
+            block
         }
     }
 
-    /// The chart as one sentence, in the order it draws.
-    private var spoken: String {
-        let owedBy = Dictionary(composition.debts.map { ($0.place, $0.usd) },
-                                uniquingKeysWith: +)
-        let listed = composition.deposits.prefix(Self.columnCap).map { deposit -> String in
-            let owed = owedBy[deposit.place] ?? 0
-            return owed > 0
-                ? String(localized: "\(deposit.place), \(WalletValue.money(deposit.usd)), \(WalletValue.money(owed)) borrowed")
-                : String(localized: "\(deposit.place), \(WalletValue.money(deposit.usd))")
-        }.joined(separator: "; ")
-        return String(localized: "\(WalletValue.money(composition.deposited)) at work. \(listed).")
+    private var readingCaption: String {
+        if let deposit = pressedDeposit { return deposit.place }
+        if lit == Self.lockedKey { return String(localized: "Locked") }
+        return caption ?? ""
     }
 
+    private var headline: String {
+        if let deposit = pressedDeposit {
+            return String(localized: "\(WalletValue.money(deposit.usd)) at work")
+        }
+        if lit == Self.lockedKey { return lockedValue }
+        if composition.hasDeposited {
+            return String(localized: "\(WalletValue.money(composition.deposited)) at work")
+        }
+        return lockedValue
+    }
 
-    /// "12,977 AERO · 340 HYPE" — the locked total per UNIT. Individual locks
-    /// live in the tray; here they merge, because a sum of AERO is still AERO
-    /// (a sum of end dates would be nothing, which is why the tray exists).
+    private var line: Text {
+        if let deposit = pressedDeposit {
+            let share = composition.deposited > 0 ? Int((deposit.usd / composition.deposited * 100).rounded()) : 0
+            let shareText = Text(String(localized: "\(String(share))% of what's at work")).foregroundStyle(DS.textSecondary)
+            if let owed = owedBy[deposit.place], owed > 0 {
+                return Text(String(localized: "\(WalletValue.money(owed)) borrowed")).foregroundStyle(DS.attention)
+                    + Text(verbatim: " · ").foregroundStyle(DS.textTertiary) + shareText
+            }
+            return shareText
+        }
+        if lit == Self.lockedKey {
+            return Text(lockedLine).foregroundStyle(DS.textSecondary)
+        }
+        let n = composition.deposits.count
+        let places = n == 1 ? String(localized: "in 1 protocol") : String(localized: "in \(String(n)) protocols")
+        if composition.hasOwed {
+            return Text(places).foregroundStyle(DS.textSecondary)
+                + Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+                + Text(String(localized: "\(WalletValue.money(composition.owed)) borrowed")).foregroundStyle(DS.attention)
+        }
+        if composition.hasDeposited { return Text(places).foregroundStyle(DS.textSecondary) }
+        return Text(lockedLine).foregroundStyle(DS.textSecondary)
+    }
+
     private var lockedValue: String {
         composition.lockedTotals
             .map { WalletValue.token($0.amount, $0.symbol) }
             .joined(separator: " · ")
     }
 
-    /// `body17`, not `WalletRow`'s `heading17`: these sit INSIDE the
-    /// balance card under a 48pt number, and a row-weight title here would
-    /// argue with the crown instead of supporting it. Same reasoning that
-    /// stepped the headline's own caption back (prd §157).
+    /// "Aerodrome · until Mar 2027", or "permanent".
+    private var lockedLine: String {
+        let places = composition.lockedPlaces.joined(separator: ", ")
+        let dated = composition.locks.compactMap(\.until).max()
+        if composition.locks.contains(where: \.isPermanent), dated == nil {
+            return String(localized: "\(places) · permanent")
+        }
+        if let dated {
+            let when = dated.formatted(.dateTime.month(.abbreviated).year())
+            return String(localized: "\(places) · until \(when)")
+        }
+        return places
+    }
+
+    // MARK: - The columns
+
+    private var slots: Int { places.count + (composition.hasLocked ? 1 : 0) }
+
     @ViewBuilder
-    private func line(title: String, places: [String], value: String,
-                      onOpen: (() -> Void)?, melt: Double? = nil) -> some View {
-        if let onOpen {
-            Button(action: onOpen) {
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    lineBody(title: title, places: places, value: value, door: true)
-                    if let melt {
-                        ShareBar(fraction: melt, melt: true, reduceMotion: reduceMotion)
+    private func columns(height: CGFloat) -> some View {
+        let peak = max(1, places.map(\.usd).max() ?? 1)
+        let owedBy = owedBy
+        // The debt block borrows from the same scale as the bar above it, so
+        // "$6K borrowed against $28K" is two heights on one rule.
+        let debtSpan = height * 0.2
+        let barSpan = height - debtSpan - 2
+        HStack(alignment: .bottom, spacing: DS.Space.s3) {
+            ForEach(Array(places.enumerated()), id: \.element.id) { index, deposit in
+                let up = max(4, CGFloat(deposit.usd / peak) * barSpan)
+                let owed = owedBy[deposit.place] ?? 0
+                let quiet = lit != nil && lit != deposit.place
+                column(key: deposit.place, label: deposit.place, quiet: quiet) {
+                    VStack(spacing: 2) {
+                        Spacer(minLength: 0)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(DS.tint.opacity(1 - Double(index) * 0.18))
+                            .frame(height: up)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(DS.attention.opacity(0.85))
+                            .frame(height: owed > 0 ? max(3, CGFloat(owed / peak) * debtSpan) : 0)
+                            .opacity(owed > 0 ? 1 : 0)
                     }
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-        } else {
-            lineBody(title: title, places: places, value: value, door: false)
+            if composition.hasLocked {
+                let quiet = lit != nil && lit != Self.lockedKey
+                column(key: Self.lockedKey, label: String(localized: "Locked"), quiet: quiet) {
+                    VStack(spacing: 2) {
+                        Spacer(minLength: 0)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(lit == Self.lockedKey ? DS.textTertiary : DS.fillStrong)
+                            .frame(height: 18)
+                        Color.clear.frame(height: 0)
+                    }
+                }
+            }
+        }
+        .frame(height: height)
+    }
+
+    @ViewBuilder
+    private func column<Bar: View>(key: String, label: String, quiet: Bool,
+                                   @ViewBuilder bar: () -> Bar) -> some View {
+        Button {
+            DSHaptic.selection()
+            lit = lit == key ? nil : key
+        } label: {
+            bar()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .opacity(quiet ? 0.3 : 1)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text(label))
+        .accessibilityAddTraits(lit == key ? .isSelected : [])
+    }
+
+    // MARK: - The marks
+
+    /// **A MARK UNDER EACH BAR, ITS NAME BENEATH (prd §926)** — the protocol's
+    /// own where one is bundled, its monogram otherwise — so no name has to
+    /// fit a bar's width and "Hyperliq…" stops truncating.
+    @ViewBuilder
+    private var marks: some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            ForEach(places) { deposit in
+                let quiet = lit != nil && lit != deposit.place
+                VStack(alignment: .leading, spacing: 4) {
+                    AssetMark(name: deposit.place, size: Self.markSize)
+                    // One line, scaled to its column — never broken mid-word
+                    // ("Hyperliqu / id"), never sizing the column (a fixed-size
+                    // name squeezed "Locked" to "Loc…"), never running into
+                    // the neighbour (an overlay did). Three builds, one word.
+                    Text(deposit.place)
+                        .dsText(.label12)
+                        .foregroundStyle(lit == deposit.place ? DS.textPrimary : DS.textSecondary)
+                        .lineLimit(1).minimumScaleFactor(0.55)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .opacity(quiet ? 0.3 : 1)
+            }
+            if composition.hasLocked {
+                let quiet = lit != nil && lit != Self.lockedKey
+                VStack(alignment: .leading, spacing: 4) {
+                    Circle().fill(DS.fillFaint)
+                        .frame(width: Self.markSize, height: Self.markSize)
+                        .overlay {
+                            Image(systemName: "lock.fill")
+                                .dsGlyph(.tick)
+                                .foregroundStyle(DS.textSecondary)
+                                .accessibilityHidden(true)
+                        }
+                    Text(String(localized: "Locked"))
+                        .dsText(.label12)
+                        .foregroundStyle(lit == Self.lockedKey ? DS.textPrimary : DS.textTertiary)
+                        .lineLimit(1).minimumScaleFactor(0.55)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .opacity(quiet ? 0.3 : 1)
+            }
         }
     }
 
-    private func lineBody(title: String, places: [String], value: String,
-                          door: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 4) {
-                    Text(title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    if door {
-                        DSChevron()
-                    }
-                }
-                if !places.isEmpty {
-                    // WHERE it is, in the quietest ink — the same job the
-                    // headline's mover line does for the number above.
-                    Text(places.joined(separator: " · "))
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: DS.Space.s2)
-            // Empty when the reading above already carries this row's figure
-            // — the row keeps its title, places and door, and says the number
-            // zero more times.
-            if !value.isEmpty {
-                Text(value)
-                    .dsText(.price17).foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-        }
+    private var spoken: String {
+        let owedBy = owedBy
+        let listed = places.map { deposit -> String in
+            let owed = owedBy[deposit.place] ?? 0
+            return owed > 0
+                ? String(localized: "\(deposit.place), \(WalletValue.money(deposit.usd)), \(WalletValue.money(owed)) borrowed")
+                : String(localized: "\(deposit.place), \(WalletValue.money(deposit.usd))")
+        }.joined(separator: "; ")
+        return String(localized: "\(WalletValue.money(composition.deposited)) at work. \(listed).")
     }
 }
 

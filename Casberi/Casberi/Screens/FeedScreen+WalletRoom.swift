@@ -456,7 +456,12 @@ extension FeedScreen {
                     onOpenDeposits: { feedSheet = .deposits(composition) },
                     // Owed gets no door on purpose — the Lending card below
                     // already states health per protocol.
-                    onOpenLocks: { feedSheet = .locks(composition) })
+                    onOpenLocks: { feedSheet = .locks(composition) },
+                    caption: selectedWallet.map {
+                        WalletScopeRail.caption(for: $0, in: wallet.addresses).name
+                    } ?? (wallet.addresses.count == 1
+                          ? String(localized: "1 wallet")
+                          : String(localized: "\(String(wallet.addresses.count)) wallets")))
                     // BARE ON THE PAGE (user ruling, prd §483: *"we don't do
                     // cards"*). A scope's lead drawing sits in the visual slot
                     // exactly as the sparkline, the treemap and the flow band
