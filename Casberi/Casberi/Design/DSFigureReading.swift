@@ -34,10 +34,14 @@ struct DSFigureReading: View {
                 .minimumScaleFactor(0.6)
             // The caption at the move line's rung (`body17`, secondary), so
             // every tile's second line matches the Home crown's.
-            captionText
-                .dsText(.body17)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            // No caption draws no line (user, 2026-09-26: "$26K" alone —
+            // the list under the crown says what it is made of).
+            if !caption.isEmpty || !(alarm ?? "").isEmpty {
+                captionText
+                    .dsText(.body17)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

@@ -68,14 +68,12 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// Frozen, like the dock's `CategoryGlyph`, so a wide symbol and a tall one
     /// seat the word at the same height.
     private static var glyphSize: CGFloat { 20 }
-    /// **A ROOM'S TILES ARE WORDS (user, 2026-09-26: "ok lets remove the
-    /// glyphs then").** The word already says what the tile is; the glyph
-    /// said it again in a second language, and eight of them read as a home
-    /// screen. A word-only tile is 44pt — the tap floor — so the two rows
-    /// bring the list up. The STRIP keeps the dock's glyph-over-word, because
-    /// the user asked for the dock's look there (2026-09-17).
-    private static var tileHeight: CGFloat { 44 }
-    private static var stripTileHeight: CGFloat { 52 }
+    /// **GLYPH OVER WORD, everywhere (user, 2026-09-26, reversing "remove
+    /// the glyphs" within the hour: "we do need those glyphs b/c we have them
+    /// elsewhere in the app, it's a language — the app categories, and in the
+    /// rooms like github").** The glyphs are the app's one vocabulary for a
+    /// section; a room's tiles speak it too.
+    private static var tileHeight: CGFloat { 52 }
 
     private var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
@@ -116,21 +114,20 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             VStack(spacing: 2) {
                 // The dock's glyph, bouncing once when its tile becomes the
                 // pick — in the strip only, the one place these tiles ARE the
-                // dock's (user, 2026-09-17). A room's grid draws the word alone.
-                if strip {
-                    CategoryGlyph(name: section.glyph, size: Self.glyphSize, isActive: isOn)
-                }
+                // dock's (user, 2026-09-17). A room's scope grid stays still.
+                CategoryGlyph(name: section.glyph, size: Self.glyphSize,
+                              isActive: strip && isOn)
                 // A section that wants you says so in its WORD's tone, never
                 // a dot (user, 2026-09-24: "if we want yellow just make the
                 // word Risk yellow"). The picked tile stays white on its tint.
                 Text(section.label)
-                    .dsText(strip ? .dockCaption10 : .label12)
+                    .dsText(.dockCaption10)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .foregroundStyle(isOn ? Color.white : wants ? DS.attention : DS.textPrimary)
             }
             .foregroundStyle(isOn ? Color.white : DS.textPrimary)
-            .frame(maxWidth: .infinity, minHeight: strip ? Self.stripTileHeight : Self.tileHeight)
+            .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
             .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised)) }
             .contentShape(shape)
         }

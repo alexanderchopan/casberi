@@ -2240,7 +2240,14 @@ enum WalletIngest {
     /// slices it as one token).
     static func treemapCells(bySymbol: [String: Double],
                              routes: [String: String]) -> [String] {
-        bySymbol.sorted { $0.value > $1.value }.prefix(5)
+        let sorted = bySymbol.sorted { $0.value > $1.value }
+        // **THE TAIL IS ONE CELL (prd §939).** Everything past the top five
+        // rides one "@other" cell, so the holdings treemap can size every tile
+        // by its true share of the whole — the top five alone would call a
+        // 60% holding 97%.
+        let rest = sorted.dropFirst(5).reduce(0) { $0 + $1.value }
+        let other = rest > 0 ? ["\(HoldingsTreemapLayout.otherID) \(treemapWeight(rest))"] : []
+        return sorted.prefix(5)
             .map { sym, usd in
                 let route = routes[sym].map { " @t:\($0)" } ?? ""
                 // A spoofed symbol (prd §160) is marked HERE, on the display
@@ -2269,7 +2276,7 @@ enum WalletIngest {
                 // symbol stays because a cell nobody can name is not a
                 // proportion of anything.
                 return "\(label) \(treemapWeight(usd))\(route)"
-            }
+            } + other
     }
 
     /// One priced token a wallet holds — the shared read behind both the

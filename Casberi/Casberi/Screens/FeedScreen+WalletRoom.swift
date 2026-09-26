@@ -147,22 +147,25 @@ extension FeedScreen {
                                 }
                             }
                             Spacer(minLength: DS.Space.s2)
-                            VStack(alignment: .trailing, spacing: 1) {
+                            // **THE AMOUNT PINS TO THE EDGE, THE SHARE STANDS
+                            // BEFORE IT (user, 2026-09-26: "the dollar values
+                            // should be aligned").** Under the amount, "0%"
+                            // rode twelve rows in a row and said nothing; the
+                            // share draws only where it rounds to 1% or more,
+                            // to the amount's left, so every amount ends on
+                            // the same line.
+                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                                if portfolio.totalUSD > 0 {
+                                    let pct = Int((position.usd / portfolio.totalUSD * 100).rounded())
+                                    if pct >= 1 {
+                                        Text("\(pct)%")
+                                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                                            .monospacedDigit()
+                                    }
+                                }
                                 Text(WalletValue.money(position.usd))
                                     .dsText(.price17).foregroundStyle(DS.textPrimary)
                                     .monospacedDigit()
-                                // Its share of everything — the one fact the
-                                // board states that a bare amount does not, and
-                                // the reason someone opens this scope at all.
-                                if portfolio.totalUSD > 0 {
-                                    // Whole percents: a holdings share is read
-                                    // to compare, not to reconcile, and "56%"
-                                    // beside "55.7%" is precision nobody asked
-                                    // for on a figure that moves hourly.
-                                    Text("\(Int((position.usd / portfolio.totalUSD * 100).rounded()))%")
-                                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                                        .monospacedDigit()
-                                }
                             }
                         }
                         .contentShape(Rectangle())

@@ -2923,6 +2923,20 @@ private struct GenTagMap: View {
     /// it" in the vocabulary the screen already taught. GenWidget's "@pin"
     /// convention, carried into the TagMap idiom. The marker is
     /// presentation only — every text site reads the stripped title.
+    /// The subline's two halves — "$26K across 14 tokens" or "$26K · as of
+    /// 5m ago" (`WalletIngest.HoldingsGroup.subline`) — as a number and a
+    /// caption; nil for any other shape, which then draws as it always did.
+    static func roomReading(_ subline: String) -> (number: String, caption: String)? {
+        for seam in [" across ", " · "] {
+            if let range = subline.range(of: seam) {
+                let number = String(subline[..<range.lowerBound])
+                let caption = String(subline[range.upperBound...])
+                guard number.hasPrefix("$"), !caption.isEmpty else { return nil }
+                return (number, caption)
+            }
+        }
+        return nil
+    }
     private var pinBorn: Bool { el.str(0).hasPrefix("@pin ") }
     private var eyebrow: String {
         pinBorn ? String(el.str(0).dropFirst("@pin ".count)) : el.str(0)
@@ -2981,8 +2995,15 @@ private struct GenTagMap: View {
     /// wallet's holdings (bundled token marks, USD) and a source map (app
     /// icons, counts). The preview and error shapes keep the breathing
     /// cells — a pack of nothing is nothing to breathe.
+    /// **THE WALLET'S HOLDINGS TILE AGAIN (user, 2026-09-26, reversing §917
+    /// for tokens: "i'm not even keen on this circle pack either it looks
+    /// fucked up not professional … the icons look silly blown up that large
+    /// like the eth one does").** A pack scales the MARK with the share, so a
+    /// 97% holding is a 200pt coin. The treemap keeps every mark at row size
+    /// in its tile's corner with the name beside it and lets the tile's AREA
+    /// carry the share. The source maps keep the pack.
     private var packs: Bool {
-        !preview && (iconMode == "token" || iconMode == "source")
+        !preview && iconMode == "source"
     }
 
     /// The circles. A token cell's `n` is `treemapWeight`, sqrt-scaled, so
@@ -3050,7 +3071,34 @@ private struct GenTagMap: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !el.str(0).isEmpty {
+            // **IN A ROOM SLOT THE HEAD IS THE CROWN'S READING (prd §936):**
+            // the total at the number rung, "14 tokens" under it, and no
+            // account name — the menu under the tiles says it. The feed's
+            // card keeps its eyebrow and sentence.
+            if fillsRoomSlot, iconMode == "token", !preview,
+               let reading = Self.roomReading(el.str(1)) {
+                // The Wallet's holdings (prd §939): true-area tiles, the mark
+                // and the share, the tail as one "Other".
+                HoldingsTreemap(
+                    total: reading.number,
+                    holdings: items.map {
+                        HoldingsTreemap.Holding(id: $0.tag,
+                                                usd: pow(Double($0.n) / 10, 2),
+                                                route: $0.route)
+                    },
+                    onOpen: { holding in
+                        if let item = items.first(where: { $0.tag == holding.id }) { open(item) }
+                    })
+            } else if fillsRoomSlot, let reading = Self.roomReading(el.str(1)) {
+                // No extra leading inset: the reading starts where every
+                // other crown's does.
+                // The total alone (user, 2026-09-26: "i don't think it is
+                // necessary") — the list under the crown says what it holds;
+                // a stale reading keeps its "as of" caption, an honesty fact.
+                DSFigureReading(number: reading.number,
+                                caption: reading.caption.hasPrefix("as of") ? reading.caption : "")
+                    .padding(.bottom, DS.Space.s3)
+            } else if !el.str(0).isEmpty {
                 HStack(spacing: 7) {
                     // Off Home (Wallet/Feed compose the same wallet map) the
                     // pin is a decorative "you pinned it" badge and leads the
@@ -3077,17 +3125,22 @@ private struct GenTagMap: View {
             }
             // The subline ("$19K across 13 tokens") is dropped on a small tile —
             // no room, and the eyebrow already names the wallet.
-            if !el.str(1).isEmpty, span != .small {
+            if !el.str(1).isEmpty, span != .small, !(fillsRoomSlot && Self.roomReading(el.str(1)) != nil) {
                 Text(el.str(1))
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .padding(.leading, DS.Space.s4)
                     .padding(.top, DS.Space.s1)
                     .padding(.bottom, DS.Space.s3)
             }
-            board
+            if !(fillsRoomSlot && iconMode == "token" && !preview && Self.roomReading(el.str(1)) != nil) {
+                board
+            }
         }
-        // Small tiles are inset by the board's packer; wide/big self-pad.
-        .padding(.horizontal, span == .small ? 0 : DS.Space.s4)
+        // Small tiles are inset by the board's packer; wide/big self-pad. The
+        // Wallet's holdings treemap stands on the other crowns' line (§939).
+        .padding(.horizontal, span == .small
+                 || (fillsRoomSlot && iconMode == "token" && !preview && Self.roomReading(el.str(1)) != nil)
+                 ? 0 : DS.Space.s4)
         // The chassis owns the space above a room figure (`DSRoomSlot`'s
         // "every scope's first pixel at the same y"), so the map adds none of
         // its own there; off the slot this is the map's own air, unchanged.
@@ -3232,7 +3285,7 @@ private struct GenTagMap: View {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: DS.Space.s2) {
                         TokenIcon(symbol: item.tag, size: 20)
-                        Text(item.tag)
+                        Text(item.tag == HoldingsTreemapLayout.otherID ? String(localized: "Other") : item.tag)
                             .dsText(.body17)
                             .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
                             .lineLimit(1)
@@ -3254,7 +3307,7 @@ private struct GenTagMap: View {
             } else {
                 HStack(spacing: DS.Space.s2) {
                     TokenIcon(symbol: item.tag, size: 16)
-                    Text(item.tag)
+                    Text(item.tag == HoldingsTreemapLayout.otherID ? String(localized: "Other") : item.tag)
                         .dsText(.body17)
                         .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
                         .lineLimit(1)
