@@ -135,12 +135,10 @@ struct DSBarList: View {
     }
 }
 
-/// **A FIGURE THAT FITS ITS CONTENT (prd §936).** A reading over a bar list,
-/// measured at its natural height and reported up, so the scope's box
-/// (`DSRoomScopeChrome.lead`) shrinks to it instead of standing 300pt tall
-/// around one bar. The measurement is of intrinsic content (`fixedSize`), never
-/// of the box it is proposed, so the box can follow it without a layout loop.
-/// Charts and packs report nothing and keep the full box.
+/// A reading over a bar list, top-aligned in the scope's fixed box. It
+/// measured and reported its own height for one build (prd §936) so the box
+/// could shrink to it; the tiles under the box moved with it, so the box is
+/// fixed again and this only stacks the two.
 struct DSBarFigure<Reading: View>: View {
     @ViewBuilder let reading: () -> Reading
     let bars: DSBarList
@@ -150,18 +148,6 @@ struct DSBarFigure<Reading: View>: View {
             reading()
             bars
         }
-        .fixedSize(horizontal: false, vertical: true)
-        .background(GeometryReader { geo in
-            Color.clear.preference(key: DSFigureHeight.self, value: geo.size.height)
-        })
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-}
-
-/// The natural height a figure asked for; nil means "the whole box".
-struct DSFigureHeight: PreferenceKey {
-    static let defaultValue: CGFloat? = nil
-    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
-        if let next = nextValue() { value = max(value ?? 0, next) }
     }
 }

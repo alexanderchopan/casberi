@@ -53,11 +53,6 @@ import SwiftUI
 /// UNDER the section's figure and it draws the tiles alone. Home is a tile.
 struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: View>: View {
     @Environment(ShellChrome.self) private var chrome
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The natural height the active figure reported (`DSBarFigure`), or nil.
-    @State private var fitted: CGFloat?
-    /// The shortest a fitted box stands: a reading and one bar.
-    static var fittedFloor: CGFloat { 132 }
 
     /// The room this chrome stands in — the key the published rail carries.
     let source: String
@@ -187,12 +182,12 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
     private var lead: some View {
         Color.clear
             .frame(maxWidth: .infinity)
-            // **THE BOX FITS A BAR FIGURE (prd §936).** A figure that reports
-            // its natural height (`DSBarFigure`) gets a box that height, with
-            // a floor; everything else keeps `visualSlot`. The report is of
-            // intrinsic content, so following it cannot loop.
-            .frame(height: fitted.map { min(DSRoomChassis.visualSlot, max(Self.fittedFloor, $0)) }
-                   ?? DSRoomChassis.visualSlot)
+            // **THE BOX NEVER MOVES THE TILES (prd §936, reversed the same day;
+            // user: "your buttons move positions they should not be doing
+            // that").** A bar figure's box followed its content for one build
+            // and the tiles under it jumped on every scope change. The box is
+            // `visualSlot`, always.
+            .frame(height: DSRoomChassis.visualSlot)
             .overlay(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     if active == home {
@@ -202,9 +197,6 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .onPreferenceChange(DSFigureHeight.self) { height in
-                    withAnimation(reduceMotion ? nil : DS.Motion.standard) { fitted = height }
-                }
             }
         // THE WELL (prd §766), the head template's own. The box is still
         // `leadHeight` — the slot and its `s2` — so no figure loses a point of
