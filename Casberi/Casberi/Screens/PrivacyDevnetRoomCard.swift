@@ -187,7 +187,9 @@ struct PrivacyDevnetRoomCard: View {
         }
         // The empty state clears the gear itself (`clearance`), so its
         // headline centres in the whole box.
-        .padding(.trailing, section != .home && isEmpty(section) ? 0 : DSRoomChassis.gearColumn)
+        // Home clears the gear itself (prd §920): the crown pads only its
+        // reading, so its plot and range row run the full width.
+        .padding(.trailing, section == .home || isEmpty(section) ? 0 : DSRoomChassis.gearColumn)
     }
 
     /// Every shown move with the address whose read produced it — Hegotá's
@@ -272,7 +274,8 @@ struct PrivacyDevnetRoomCard: View {
                 RoomHomeCrown(samples: samples,
                               caption: scopeCaption,
                               format: { PrivacyDevnetMoney.line(wei: Self.wei($0)) },
-                              exactFormat: { PrivacyDevnetMoney.line(wei: Self.wei($0)) })
+                              exactFormat: { PrivacyDevnetMoney.line(wei: Self.wei($0)) },
+                              changeFormat: { PrivacyDevnetMoney.line(wei: Self.wei($0), places: 2) })
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else if !ringMarks.isEmpty {
                 PrivacyDevnetRing(marks: ringMarks, sets: setCount,

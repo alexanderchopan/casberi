@@ -863,9 +863,12 @@ struct VibenetRoomCard: View {
                                 RoomHomeCrown(samples: homeSamples,
                                               caption: crownCaption,
                                               format: { "\(VibenetBalanceFormat.line($0)) ETH" },
-                                              exactFormat: { "\(VibenetBalanceFormat.line($0)) ETH" })
+                                              exactFormat: { "\(VibenetBalanceFormat.line($0)) ETH" },
+                                              changeFormat: { "\(VibenetBalanceFormat.line($0, places: 2)) ETH" })
                             } else {
-                                balanceHero
+                                // The crown clears the gear for its own reading
+                                // (prd §920); a hero with no line clears it whole.
+                                balanceHero.padding(.trailing, DSRoomChassis.gearColumn)
                             }
                         }
                     }

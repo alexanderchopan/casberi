@@ -385,6 +385,24 @@ enum WalletRange: String, CaseIterable {
         }
     }
 
+    /// **THE WINDOW AS WORDS, ON THE CHANGE LINE (prd §920).** "30 days" for a
+    /// calendar window; the whole record is dated from its first sample
+    /// ("since Aug 26"), because "watched" names the chip and not a span. The
+    /// year is said only when it is not this one.
+    func windowWord(since first: Date?) -> String {
+        switch self {
+        case .week:  return String(localized: "7 days")
+        case .month: return String(localized: "30 days")
+        case .watched:
+            guard let first else { return String(localized: "since watched") }
+            let thisYear = Calendar.current.isDate(first, equalTo: .now, toGranularity: .year)
+            let day = thisYear
+                ? first.formatted(.dateTime.month(.abbreviated).day())
+                : first.formatted(.dateTime.month(.abbreviated).day().year())
+            return String(localized: "since \(day)")
+        }
+    }
+
     /// The samples inside this window — everything, for `.watched`.
     func clip(_ samples: [WalletStore.ValueSample]) -> [WalletStore.ValueSample] {
         guard let span else { return samples }

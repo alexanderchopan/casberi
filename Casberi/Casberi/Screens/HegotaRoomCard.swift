@@ -252,6 +252,7 @@ struct HegotaRoomFigure: View {
                               caption: crownCaption,
                               format: { HegotaFormat.crown(Self.wei($0)) },
                               exactFormat: { HegotaFormat.eth(Self.wei($0)) },
+                              changeFormat: { HegotaFormat.short(Self.wei($0)) },
                               box: DSRoomChassis.figureSlot)
             }
         }
@@ -2900,6 +2901,16 @@ enum HegotaFormat {
         // chain paid 0.000059 ETH, which four places would round away to zero.
         let f = value < 1 ? places6 : places4
         let text = f.string(from: value as NSDecimalNumber) ?? "0"
+        return String(localized: "\(text) ETH")
+    }
+
+    /// **THE CHANGE LINE'S SPELLING (prd §920)** — two places once the move is
+    /// a hundredth of an ETH or more, else `eth`'s own six-place or wei form,
+    /// so a fee-sized move is never rounded to "+0.00 ETH".
+    static func short(_ wei: Decimal) -> String {
+        let value = HegotaCoins.eth(wei)
+        guard value >= Decimal(string: "0.01")! else { return eth(wei) }
+        let text = places2.string(from: value as NSDecimalNumber) ?? "0"
         return String(localized: "\(text) ETH")
     }
 

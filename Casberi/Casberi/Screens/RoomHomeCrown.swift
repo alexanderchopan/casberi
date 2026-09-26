@@ -41,6 +41,9 @@ struct RoomHomeCrown: View {
     /// How this room spells a number, rounded and exact.
     var format: (Double) -> String = { WalletValue.money($0) }
     var exactFormat: (Double) -> String = { WalletValue.exactMoney($0) }
+    /// The change line's short spelling (prd §920) — two places where the
+    /// crown draws four. nil takes `exactFormat`.
+    var changeFormat: ((Double) -> String)? = nil
     /// Shown when there is no series at all — a room that has read nothing yet
     /// says what it holds rather than drawing a chart of one point.
     var fallbackTotal: Double? = nil
@@ -95,6 +98,12 @@ struct RoomHomeCrown: View {
             captionAddress: captionAddress,
             format: format,
             exactFormat: exactFormat,
+            changeFormat: changeFormat,
+            // The window as words, dated from the first sample the line draws
+            // (prd §920); the gear clearance is the crown's own since the same
+            // ruling, so the plot below runs the full width.
+            window: active.windowWord(since: windowed.first?.at),
+            gearClearance: DSRoomChassis.gearColumn,
             chartHeight: chartHeight(chips: offered.count > 1),
             ranges: offered,
             range: active,

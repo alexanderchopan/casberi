@@ -124,7 +124,9 @@ struct FramesRoomFigure: View {
             // clearance is three chances to forget it, and a chart that ends
             // 44pt short beside one that reaches the edge reads as a bug in
             // the shorter one.
-            .padding(.trailing, DSRoomChassis.gearColumn)
+            // **HOME CLEARS THE GEAR ITSELF (prd §920):** the crown pads only
+            // its reading, so its plot and range row run the full width.
+            .padding(.trailing, section == .home ? 0 : DSRoomChassis.gearColumn)
             }
         }
     }
@@ -275,12 +277,14 @@ struct FramesRoomFigure: View {
                               caption: crownCaption,
                               format: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
                               exactFormat: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
+                              changeFormat: { String(localized: "\(FramesMoney.eth($0, places: 2)) test ETH") },
                               box: DSRoomChassis.figureSlot,
                               onOpen: door)
             } else if let held = Self.heldETH(head) {
                 RoomHomeCrown(caption: crownCaption,
                               format: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
                               exactFormat: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
+                              changeFormat: { String(localized: "\(FramesMoney.eth($0, places: 2)) test ETH") },
                               fallbackTotal: held,
                               box: DSRoomChassis.figureSlot,
                               onOpen: door)

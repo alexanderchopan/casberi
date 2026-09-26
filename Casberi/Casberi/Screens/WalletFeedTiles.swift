@@ -145,6 +145,25 @@ struct WalletBalanceHeadline: View {
     /// which is the bug Privacy's first conversion showed, reading "$0
     /// (+14.7%)" over a chain that has no dollars (prd §683).
     var exactFormat: (Double) -> String = { WalletValue.exactMoney($0) }
+    /// **THE CHANGE IS SHORT (prd §920).** The number above carries the
+    /// precision; the change under it carries the meaning, so a devnet's
+    /// "▲ 1.0113 ETH (+860.3%)" is "+1.01 ETH · 30 days". nil takes
+    /// `exactFormat`, which the Wallet's dollars already spell at two places.
+    var changeFormat: ((Double) -> String)? = nil
+    /// **THE CHANGE IS DATED (prd §920).** The window the move is measured
+    /// over, as words — "30 days", or "since Aug 26" for the whole record —
+    /// in the quiet ink after the figure. §483 took the chip's own word
+    /// ("watched") off this line because it restated the control beneath;
+    /// this is not that word, it is the window's span, and it is the ONE
+    /// place the crown says how long a history the line draws. nil draws no
+    /// window.
+    var window: String? = nil
+    /// **THE PLOT RUNS UNDER THE GEAR (prd §920).** The room gear floats over
+    /// the slot's top-right corner, so only the READING — caption, number,
+    /// change — has to clear it; the line and the range row begin below the
+    /// gear and take the whole width. Rooms used to pad the entire slot by
+    /// this, which left the right third of every crown empty.
+    var gearClearance: CGFloat = 0
     var drawsChart: Bool = true
     /// Whether the FIGURE and its move line draw.
     ///
@@ -472,6 +491,7 @@ struct WalletBalanceHeadline: View {
                     }
                 }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.trailing, gearClearance)
             // THE RAIN, WHERE THE MONEY LANDED (prd §501). Nothing new is
             // drawn: this is the shower a pull-to-refresh already deals.
             //
@@ -544,42 +564,32 @@ struct WalletBalanceHeadline: View {
         // not a threshold, because what must not happen is a sign and a colour
         // beside a figure that reads 0.
         let roundsToZero = exactFormat(abs(delta)) == exactFormat(0)
-        // **A WIPEOUT THE NUMBER ABOVE DENIES (prd §837, §83).** `ratioless`
-        // and `roundsToZero` guard the small end of this scale; nothing
-        // guarded the large one. Shipped on the Privacy devnet: a line from
-        // 983,580 ETH to 1 ETH is -99.9999%, which prints "-100.0%" — "all of
-        // it is gone" — one line under a crown reading 1.0000 ETH. The delta
-        // is a fact and draws; the percentage is the lie and does not, which
-        // is `ratioless`' own shape and why it shares its branch below.
-        //
-        // The test is the formatted END value, not the ratio: a line that
-        // really did end at nothing has earned -100.0%, and only the caller's
-        // spelling can say whether it did.
-        let wipeoutDenied = !ratioless && TokenChartStyle.readsAsWipeout(change)
-            && exactFormat(abs(last)) != exactFormat(0)
+        // §837's wipeout guard (a -99.9999% printed as "-100.0%") lived here
+        // until prd §920 took the percentage off this line; the delta it
+        // protected still draws, so the guard has nothing left to deny.
         let flat = roundsToZero || (!ratioless && TokenChartStyle.isFlat(change))
         let ink = flat ? DS.textSecondary
                        : TokenChartStyle.accent(change: ratioless ? (delta > 0 ? 1 : -1) : change,
                                                 scheme: scheme)
+        // **A SIGN, A SHORT FIGURE, THE WINDOW (prd §920).** The triangle
+        // glyph and the percentage are gone: Stocks and Apple Card state a
+        // move as a signed figure and the period it covers, and that is the
+        // whole sentence. The wipeout guard (§837) is gone with the
+        // percentage it guarded; `ratioless` still decides the sign, the flat
+        // test still decides colour, and a true minus (U+2212) keeps the
+        // digits aligned.
+        let spell = changeFormat ?? exactFormat
+        let signed = ((ratioless ? delta : change) >= 0 ? "+" : "\u{2212}") + spell(abs(delta))
         HStack(spacing: 5) {
-            if !flat {
-                Image(systemName: (ratioless ? delta : change) >= 0 ? "arrowtriangle.up.fill"
-                                                                   : "arrowtriangle.down.fill")
-                    .dsGlyph(.tick)
-                    .foregroundStyle(ink)
-            }
-            Text(flat
-                 ? String(localized: "No change")
-                 : (ratioless || wipeoutDenied
-                    ? exactFormat(abs(delta))
-                    : "\(exactFormat(abs(delta))) (\(TokenChartStyle.changeText(change)))"))
+            Text(flat ? String(localized: "Unchanged") : signed)
                 .dsText(.body17)
                 .foregroundStyle(ink)
                 .monospacedDigit()
-            // THE WINDOW WORD IS GONE (user ruling, prd §483: *"remove
-            // 'watched'"*). It named the range the delta was measured over —
-            // true, and the range chips directly below already say it, so the
-            // line was spending its width restating the control beneath it.
+            if let window {
+                Text(verbatim: "· \(window)")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textTertiary)
+            }
             Spacer(minLength: 0)
         }
         .lineLimit(1).minimumScaleFactor(0.7)

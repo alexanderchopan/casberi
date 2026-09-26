@@ -406,10 +406,10 @@ final class PrivacyDevnetLiveState {
 enum PrivacyDevnetMoney {
     /// Four places, which is what a faucet chain's balances need: the drip is
     /// 0.1 ETH and a send is typically a thousandth of it.
-    static func line(wei: Decimal) -> String {
+    static func line(wei: Decimal, places: Int = 4) -> String {
         let eth = wei / Decimal(sign: .plus, exponent: 18, significand: 1)
         let n = NSDecimalNumber(decimal: eth).doubleValue
-        return "\(n.formatted(.number.precision(.fractionLength(4)))) ETH"
+        return "\(n.formatted(.number.precision(.fractionLength(places)))) ETH"
     }
 }
 

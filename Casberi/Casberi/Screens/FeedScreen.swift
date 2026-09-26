@@ -9369,6 +9369,10 @@ struct FeedScreen: View {
                             // did not answer, and one that answered and could
                             // not be priced. Both are out of the number.
                             note: walletTotalNote,
+                            // The window as words and the gear clearance
+                            // (prd §920) — the same two `RoomHomeCrown` passes.
+                            window: drawsChart ? active.windowWord(since: windowed.first?.at) : nil,
+                            gearClearance: DSRoomChassis.gearColumn,
                             drawsChart: drawsChart,
                             drawsReading: drawsChart,
                             // **DERIVED, not 96 (prd §588).** §483 set this

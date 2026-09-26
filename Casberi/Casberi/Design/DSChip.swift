@@ -31,6 +31,10 @@ struct Chip: View {
     /// by someone else's layout — `DSRangeChips` inside a crown (§688) — which
     /// passes its own, never under the height the control it replaced had.
     var hit: CGFloat = DS.Hit.min
+    /// **A SEGMENT, NOT A PILL (prd §920).** In a range row every chip takes
+    /// an equal share of the width, the way Stocks' and Health's period
+    /// pickers do; a chip on its own still hugs its word.
+    var fills = false
 
     var body: some View {
         HStack(spacing: DS.Space.s1) {
@@ -55,7 +59,8 @@ struct Chip: View {
         .foregroundStyle(selected ? DS.textPrimary : DS.textSecondary)
         .padding(.horizontal, DS.Space.s3)
         .frame(minHeight: 28)
-        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: fills ? .infinity : nil)
+        .fixedSize(horizontal: !fills, vertical: false)
         .background(selected ? DS.fillStrong : DS.fillFaint, in: Capsule(style: .continuous))
         .animation(DS.Motion.standard, value: selected)
         // DRAWN 28, TARGETED `hit`. Every Chip is the label of a Button or a
@@ -100,19 +105,24 @@ struct DSRangeChips<Option: Hashable>: View {
 
     var body: some View {
         if ranges.count > 1 {
-            HStack(spacing: DS.Space.s2) {
+            // **ONE EVEN ROW (prd §920).** Every window takes the same share
+            // of the width and the row spans the figure above it — Stocks'
+            // and Health's period pickers — where three loose pills of three
+            // widths sat left-aligned under a plot that reached the edge.
+            HStack(spacing: DS.Space.s1) {
                 ForEach(ranges, id: \.self) { r in
                     Button {
                         guard r != range else { return }
                         DSHaptic.tap()
                         onPick(r)
                     } label: {
-                        Chip(text: label(r), selected: r == range, hit: Self.hit)
+                        Chip(text: label(r), selected: r == range, hit: Self.hit, fills: true)
                     }
                     .buttonStyle(PressSpring())
                     .accessibilityAddTraits(r == range ? .isSelected : [])
                 }
             }
+            .frame(maxWidth: .infinity)
         }
     }
 }

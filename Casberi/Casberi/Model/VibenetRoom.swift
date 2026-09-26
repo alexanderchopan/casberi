@@ -968,10 +968,11 @@ enum VibenetBalanceFormat {
         return String(Int(amount.rounded()))
     }
 
-    static func line(_ amount: Double) -> String {
+    static func line(_ amount: Double, places: Int = 4) -> String {
         guard amount.isFinite else { return "0" }
-        let rounded = (amount * 10_000).rounded() / 10_000
-        var s = String(format: "%.4f", rounded)
+        let scale = pow(10.0, Double(places))
+        let rounded = (amount * scale).rounded() / scale
+        var s = String(format: "%.\(places)f", rounded)
         while s.hasSuffix("0") { s.removeLast() }
         if s.hasSuffix(".") { s.removeLast() }
         return s

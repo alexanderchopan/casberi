@@ -274,7 +274,33 @@ struct TokenChartPlot: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityDifferentiateWithoutColor) private var noColor
 
+    /// **A FLAT HISTORY IS A FLAT LINE AT MID-HEIGHT (prd §920).** Swift
+    /// Charts' automatic domain collapses on a series with one value, and the
+    /// line landed on the plot's top edge over an empty box — "No change" said
+    /// with a picture of nothing. Padding the domain either side of the one
+    /// value puts the line where Stocks puts it, and the fill stands down
+    /// because there is no fall for it to make. nil for every real series.
+    ///
+    /// Flat by `isFlat`'s own 0.05%, not by equality: a devnet balance sampled
+    /// at 993,308.0018 ETH differs between reads by float noise, and an exact
+    /// test drew the empty box again (seen on the Privacy room's first build).
+    private var flatDomain: ClosedRange<Double>? {
+        guard let hi = chart.closes.max(), let lo = chart.closes.min() else { return nil }
+        let mid = (hi + lo) / 2
+        guard hi - lo <= abs(mid) * 0.0005 else { return nil }
+        let pad = max(abs(mid) * 0.01, 1e-9)
+        return (mid - pad)...(mid + pad)
+    }
+
     var body: some View {
+        if let flatDomain {
+            plot(fill: 0).chartYScale(domain: flatDomain)
+        } else {
+            plot(fill: fillOpacity).chartYScale(domain: .automatic(includesZero: false))
+        }
+    }
+
+    private func plot(fill: Double) -> some View {
         // x is Double, not the enumeration's Int: an event mark lands between
         // samples (see TokenChartMark), and a proxy can only place a value in
         // its scale's own type.
@@ -291,7 +317,7 @@ struct TokenChartPlot: View {
             AreaMark(x: .value("t", Double(i)), y: .value("price", close))
                 .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                 .foregroundStyle(LinearGradient(
-                    colors: [accent.opacity(fillOpacity), accent.opacity(0)],
+                    colors: [accent.opacity(fill), accent.opacity(0)],
                     startPoint: .top, endPoint: .bottom))
             if chart.coarse {
                 PointMark(x: .value("t", Double(i)), y: .value("price", close))
@@ -309,7 +335,6 @@ struct TokenChartPlot: View {
         // where the line is one point per transaction, it is a sixth of the
         // chart and reads as a line that stopped.
         .chartXScale(domain: 0...Double(max(chart.closes.count - 1, 1)))
-        .chartYScale(domain: .automatic(includesZero: false))
         .frame(height: height)
         .chartOverlay { proxy in
             GeometryReader { geo in
