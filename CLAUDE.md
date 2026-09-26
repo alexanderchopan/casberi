@@ -105,6 +105,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Defaults-lock audit (scripts/defaults-lock-audit.py) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721
 - **ShareLink style audit (scripts/sharelink-style-audit.py) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693
 - **Day-divider audit (scripts/day-divider-audit.py) — the day header wears `DS.brandInk` (the mark's hue, one notch softer, prd §742); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
+- **A mark PACKS, a word TILES (prd §917): the wallet's holdings and the source maps are circle packs (`Design/DSCirclePack.swift`, `circle-pack-selftest.sh`); words and unpriced amounts keep `UnitTreemap`** → docs/hooks/design.md · prd §917
 - **Design-template audit (scripts/ds-template-audit.py) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyRow` and `Chip` before drawing one by hand** → prd §715
 - **Secret-scan self-test (scripts/secret-scan-selftest.py)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh)** → docs/verify.md · prd §282
