@@ -5788,6 +5788,8 @@ struct FeedScreen: View {
 
     /// The id the room's head carries, so a scope change can return to it.
     private static let roomTopAnchor = "roomTop"
+    /// The room's title — the true top a scope change returns to.
+    private static let roomTitleAnchor = "roomTitle"
 
     /// What the room's head says (prd §930): the All room is Home — the word
     /// the rooms tray's You row gives its door — Pinned is Pinned, and a
@@ -5804,7 +5806,7 @@ struct FeedScreen: View {
     /// is the thing this exists to remove.
     private func returnToRoomTop(_ proxy: ScrollViewProxy) {
         withAnimation(DS.Motion.standard) {
-            proxy.scrollTo(Self.roomTopAnchor, anchor: .top)
+            proxy.scrollTo(Self.roomTitleAnchor, anchor: .top)
         }
     }
 
@@ -5836,6 +5838,11 @@ struct FeedScreen: View {
             // rung a pushed screen already uses (§767, §915). Nothing shares
             // the line: the room's own door is the tray's Manage (§937).
             DSScreenHead(title: Text(roomName))
+                // THE TOP OF THE ROOM IS ITS TITLE (user: "the wallet buttons
+                // still move"). A scope change scrolled to the head BELOW the
+                // title, so every tile tap slid the title off and the tiles up
+                // by its height; it returns here, so the tiles stand still.
+                .id(Self.roomTitleAnchor)
                 // Where the name stands, for the tray's pick flight to land
                 // (§932). Written from the leaf that draws it, never read here.
                 .background {
