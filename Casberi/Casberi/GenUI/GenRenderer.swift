@@ -1189,15 +1189,43 @@ private struct InsightCard<Content: View>: View {
 private struct InsightHeader: View {
     let title: String
     let subtitle: String
+    /// The standing subtitle when `subtitle` is a transient swap (the
+    /// heatmap's pressed day), so the fit is chosen on the width the slot
+    /// holds at rest and a press does not flip the layout.
+    var reserve: String? = nil
     var body: some View {
         // Words in a lead take `heading24` (prd §766); a hero's title was the
         // row rung, the one lead that stated itself at a row's size.
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(title).dsText(.heading24).foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-            Text(subtitle).dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
+        //
+        // One line when title and subtitle both fit, else the subtitle drops
+        // under the title. The single HStack truncated the title on the
+        // GitHub page ("Your year in co…" beside "1,255 contributions").
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                titleText
+                subtitleText
+            }
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                titleText
+                subtitleText
+            }
         }
+    }
+
+    private var titleText: some View {
+        Text(title).dsText(.heading24).foregroundStyle(DS.textPrimary)
+            .lineLimit(1)
+    }
+
+    private var subtitleText: some View {
+        ZStack(alignment: .leading) {
+            if let reserve, reserve != subtitle {
+                Text(reserve).hidden()
+            }
+            Text(subtitle)
+        }
+        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+        .lineLimit(1)
     }
 }
 
@@ -1408,7 +1436,8 @@ struct CalendarHeatmapHero: View {
     var body: some View {
         InsightCard(fillsLead: fillsLead) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                InsightHeader(title: title, subtitle: pickedLabel ?? subtitle)
+                InsightHeader(title: title, subtitle: pickedLabel ?? subtitle,
+                              reserve: subtitle)
                 Spacer(minLength: DS.Space.s2)
                 // A year worth sharing (delight pass 2026-07-21) — the facts
                 // as a line, the same honest voice the card itself wears; no
