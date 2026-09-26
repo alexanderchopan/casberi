@@ -1481,11 +1481,15 @@ sys.exit(0 if -1 < demo < fence < write else 1)
 PYCHK
 grep -qF 'RoomValueHistory.forget(room: Self.historyRoom)' "$work/bridge.bare"   || fail "clear() leaves the sampled line behind — a disconnect would draw a crown over addresses the seat no longer follows (§837)"
 
-# 3. The delta may not print a wipeout the crown denies. The rule and its
-#    threshold are `price-chart-selftest.sh`'s; this pins the CALLER, which is
-#    the only half that knows how its own number is spelled.
-grep -qF 'TokenChartStyle.readsAsWipeout(change)' "Casberi/Casberi/Screens/WalletFeedTiles.swift"   || fail "the crown's delta no longer guards a wipeout ratio — '-100.0%' returns under a balance that is not zero (§837, §83)"
-grep -qF 'ratioless || wipeoutDenied' "Casberi/Casberi/Screens/WalletFeedTiles.swift"   || fail "a denied wipeout still prints its percentage — the delta is the fact, the ratio is the lie (§837)"
+# 3. The delta may not print a wipeout the crown denies (§837). Since prd §920
+#    the crown's change line prints NO ratio at all — a signed short figure and
+#    its window — so the guard pins that absence: the line must never reach
+#    for `changeText`, and its figure must come through the short spelling.
+#    (§837's own `readsAsWipeout` gate went with the percentage it guarded.)
+awk '/private func moveLine\(/,/^    }$/' "Casberi/Casberi/Screens/WalletFeedTiles.swift" > "$work/moveline.swift"
+[[ -s "$work/moveline.swift" ]]   || fail "the crown's moveLine is gone — the delta guard has nothing to read (§920)"
+! grep -qF 'TokenChartStyle.changeText(' "$work/moveline.swift"   || fail "the crown's change line prints a ratio again — '-100.0%' returns under a balance that is not zero (§837, §920, §83)"
+grep -qF 'changeFormat ?? exactFormat' "$work/moveline.swift"   || fail "the crown's change no longer takes the short spelling — a devnet prints four places under a four-place number (§920)"
 
 # **THE LIST LIVES OUTSIDE THE CLIPPED SLOT.** `DSRoomSlot` is a hard 300pt box
 # that clips, and this card drew the figure AND the scope's rows inside it — so

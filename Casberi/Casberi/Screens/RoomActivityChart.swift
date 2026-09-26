@@ -69,31 +69,62 @@ struct RoomActivityChart: View {
         DSRoomChassis.crownChart(box: box, chips: chips)
     }
 
+    /// **A PRESSED BAR (prd §921).** The bucket under the finger, while it is
+    /// held — Health's gesture: the headline becomes that bucket's count and
+    /// the line its days. The crown's own `ChartScrubSurface` carries the
+    /// press (a long press sequenced before the drag, so scroll content never
+    /// loses a swipe to it — the gotcha `WalletBalanceHeadline` already paid).
+    @State private var pressed: Int?
+
+    /// The words under the bars (prd §921): the window's first day at the
+    /// left, Today at the right — Health's axis, said in words because nothing
+    /// here draws a line.
+    private static let axisRow: CGFloat = 16
+
     var body: some View {
         let all = samples
         let offered = WalletRange.offered(for: all)
         let active = offered.contains(range) ? range : WalletRange.remembered(offered: offered)
         let inWindow = active.clip(all).map(\.at)
         let buckets = Self.buckets(dates: inWindow, range: active)
-        // The chips' own gate, read ONCE and spent on the budget and the
-        // drawing alike — `DSRangeChips` draws nothing under two windows, so a
-        // second reading of the same question is a second thing to get wrong.
-        let height = chartHeight(chips: offered.count > 1)
-
+        let height = chartHeight(chips: offered.count > 1) - Self.axisRow - DS.Space.s1
+        let held = pressed.flatMap { buckets.indices.contains($0) ? $0 : nil }
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            reading(count: inWindow.count, priorChange: Self.change(all: all.map(\.at), range: active))
+            reading(count: held.map { buckets[$0] } ?? inWindow.count,
+                    line: held.map { Self.bucketDays(index: $0, dates: inWindow, range: active) }
+                        ?? Self.changeWords(delta: Self.change(all: all.map(\.at), range: active),
+                                            window: active.windowWord(since: inWindow.min())))
             if buckets.contains(where: { $0 > 0 }) {
-                ActivityBars(counts: buckets)
+                // At rest the lit bar is the NEWEST BUCKET THAT HOLDS
+                // ANYTHING — the last time something happened — because an
+                // empty today draws no bar (below), and lighting nothing left
+                // every bar quiet: seen on the Wallet room's first build, a
+                // whole chart one notch dim with no reason on screen.
+                ActivityBars(counts: buckets, lit: held ?? buckets.lastIndex { $0 > 0 })
                     .frame(height: height)
+                    .overlay {
+                        GeometryReader { geo in
+                            ChartScrubSurface(plot: CGRect(origin: .zero, size: geo.size),
+                                              count: buckets.count,
+                                              cursorIndex: pressed,
+                                              onScrub: { pressed = $0 })
+                        }
+                    }
                     .id(active)
             } else {
-                // An empty window states the fact and draws no bars, rather
-                // than a row of nothing that reads as a rendering fault.
                 Text("Nothing in this window.")
                     .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
                     .frame(height: height, alignment: .top)
             }
+            HStack {
+                Text(Self.firstDay(dates: inWindow, range: active))
+                Spacer(minLength: 0)
+                Text(String(localized: "Today"))
+            }
+            .dsText(.label12)
+            .foregroundStyle(DS.textTertiary)
+            .frame(height: Self.axisRow)
             DSRangeChips(ranges: offered, range: active) { picked in
                 range = picked
                 picked.remember()
@@ -102,10 +133,18 @@ struct RoomActivityChart: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    // MARK: - the reading
-
+    /// The reading — caption, count, and one line under it — bare or inside a
+    /// Button depending on whether there is a door behind it.
+    ///
+    /// **THE COUNT WEARS THE CROWN'S RUNG (prd §921).** It was `price40` while
+    /// the Home crown one tap away draws its number at `stat24` — the
+    /// inconsistency §551 ruled out of the crowns, back in the scope beside
+    /// them. **And the line under it is never absent:** a calendar window says
+    /// the change against the window before, the whole record says its span
+    /// ("since Aug 17", the crown's own window word), so this stack stands
+    /// exactly as tall as Home's and leaves no air under the chips.
     @ViewBuilder
-    private func reading(count: Int, priorChange: Int?) -> some View {
+    private func reading(count: Int, line: String) -> some View {
         let block = VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: DS.Space.s1) {
                 if let captionAddress {
@@ -117,19 +156,20 @@ struct RoomActivityChart: View {
                 if onOpen != nil { DSChevron() }
             }
             Text(countLabel(count))
-                .dsText(.price40)
+                .dsText(.stat24)
                 .foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
+                .contentTransition(.numericText(value: Double(count)))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            // **THE CHANGE IS AGAINST THE WINDOW BEFORE THIS ONE**, which is
-            // the only comparison a count supports. It is nil on `.watched`,
-            // where there IS no window before — and that is stated by drawing
-            // nothing rather than by comparing against a period half of which
-            // predates the record.
-            if let priorChange {
-                changeLine(priorChange)
-            }
+            // **A SENTENCE, NOT A DASHBOARD (prd §782).** The direction is in
+            // the words, so the line carries no triangle and no gain/loss ink.
+            Text(line)
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .monospacedDigit()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(1).minimumScaleFactor(0.7)
         }
         if let onOpen {
             Button(action: { DSHaptic.selection(); onOpen() }) { block }
@@ -139,18 +179,50 @@ struct RoomActivityChart: View {
         }
     }
 
-    /// **A SENTENCE, NOT A DASHBOARD (prd §782).** The direction is in the
-    /// words, so the line carries no triangle and no gain/loss ink.
-    @ViewBuilder
-    private func changeLine(_ delta: Int) -> some View {
-        Text(delta == 0 ? String(localized: "Same as the window before")
+    /// The change against the window before, in words; the window's own span
+    /// where there is no window before (`.watched` — a comparison against a
+    /// period half of which predates the record would be a guess).
+    static func changeWords(delta: Int?, window: String) -> String {
+        guard let delta else { return window }
+        return delta == 0 ? String(localized: "Same as the window before")
              : delta > 0 ? String(localized: "\(String(delta)) more than the window before")
-                         : String(localized: "\(String(-delta)) fewer than the window before"))
-            .dsText(.body17)
-            .foregroundStyle(DS.textSecondary)
-            .monospacedDigit()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .lineLimit(1).minimumScaleFactor(0.7)
+                         : String(localized: "\(String(-delta)) fewer than the window before")
+    }
+
+    /// The window's start and one bucket's width, in seconds — the same
+    /// arithmetic `buckets` slices by, stated once so the axis words and a
+    /// pressed bar's days can never disagree with the bars.
+    static func bucketSpan(dates: [Date], range: WalletRange, now: Date = .now)
+        -> (start: Date, width: TimeInterval) {
+        let oldest = dates.min() ?? now
+        let span = range.span ?? max(now.timeIntervalSince(oldest), 1)
+        let n = bucketCount(range: range, span: span)
+        return (now.addingTimeInterval(-span), span / Double(n))
+    }
+
+    /// The left-hand axis word: the window's first day.
+    static func firstDay(dates: [Date], range: WalletRange, now: Date = .now) -> String {
+        Self.day(bucketSpan(dates: dates, range: range, now: now).start, now: now)
+    }
+
+    /// A pressed bar's days — "Sep 22" for a day-wide bucket, "Sep 20 – 22"
+    /// for a wider one, the month repeated only when it changes.
+    static func bucketDays(index: Int, dates: [Date], range: WalletRange, now: Date = .now) -> String {
+        let (start, width) = bucketSpan(dates: dates, range: range, now: now)
+        let from = start.addingTimeInterval(width * Double(index))
+        let to = min(from.addingTimeInterval(width - 1), now)
+        let cal = Calendar.current
+        if cal.isDate(from, inSameDayAs: to) || width <= 86_400 { return day(from, now: now) }
+        if cal.isDate(from, equalTo: to, toGranularity: .month) {
+            return "\(day(from, now: now)) – \(to.formatted(.dateTime.day()))"
+        }
+        return "\(day(from, now: now)) – \(day(to, now: now))"
+    }
+
+    private static func day(_ date: Date, now: Date) -> String {
+        Calendar.current.isDate(date, equalTo: now, toGranularity: .year)
+            ? date.formatted(.dateTime.month(.abbreviated).day())
+            : date.formatted(.dateTime.month(.abbreviated).day().year())
     }
 
     // MARK: - the arithmetic, kept apart so a harness can drive it
@@ -212,10 +284,16 @@ struct RoomActivityChart: View {
 /// data (`FramesMovementBars` is the other one), so the wipe rides
 /// CoreAnimation rather than a per-frame SwiftUI interpolation on the main
 /// actor.
+///
+/// **ONE BAR IS LIT, THE REST ONE NOTCH QUIETER (prd §921).** At rest it is
+/// the newest bucket — the one you are living in, which the word "Today" under
+/// its edge names — and under a press it is the bucket held. Fitness and
+/// Screen Time draw today this way; the quieter bars are the same tint at
+/// less opacity, so nothing about the scale changes.
 struct ActivityBars: View {
     let counts: [Int]
+    var lit: Int? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var body: some View {
         Canvas { ctx, size in
             guard let busiest = counts.max(), busiest > 0 else { return }
@@ -243,7 +321,7 @@ struct ActivityBars: View {
                 let x = slot * CGFloat(i) + (slot - width) / 2
                 let rect = CGRect(x: x, y: size.height - height, width: width, height: height)
                 ctx.fill(Path(roundedRect: rect, cornerRadius: min(3, width / 2)),
-                         with: .color(DS.tint))
+                         with: .color(DS.tint.opacity(lit == nil || lit == i ? 1 : 0.45)))
             }
         }
         .chartWipe(reduceMotion: reduceMotion)
