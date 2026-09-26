@@ -26,6 +26,13 @@ enum ContactIndexSources {
     nonisolated(unsafe) private static var snapshot: (contacts: [Contact], byKey: [String: Int]) = ([], [:])
     static var contacts: [Contact] { snapshot.contacts }
 
+    /// A card key back to the card's OWN ref (`contact:<CNContact id>`, case
+    /// kept): keys fold case, and the corpus stores the ref as Contacts
+    /// spells it, so a face or a fact that wants the card's thing needs the
+    /// original spelling. Written by `seeds`, read from anywhere.
+    nonisolated(unsafe) private static var cardRefs: [String: String] = [:]
+    nonisolated static func cardRef(forKey key: String) -> String? { cardRefs[key] }
+
     // MARK: - Seeds
 
     static func seeds(context: ModelContext) -> [ContactIndex.Seed] {
@@ -46,7 +53,8 @@ enum ContactIndexSources {
             }
             out.append(.init(Identity.make(.wallet, entry.address),
                              name: typed ? entry.name : nil, typed: typed, kind: kind,
-                             avatar: entry.avatarURL, since: entry.addedAt))
+                             avatar: entry.avatarURL, since: entry.addedAt,
+                             keywords: [entry.note ?? ""]))
         }
 
         for account in FarcasterStore.shared.accounts {
@@ -66,15 +74,22 @@ enum ContactIndexSources {
         // TYPED — it is the person's book — and a card with a company and no
         // person name is an organization.
         let contactsDescriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Contacts" })
+        var refs: [String: String] = [:]
+        defer { cardRefs = refs }
         for thing in (try? context.fetch(contactsDescriptor)) ?? [] {
             guard thing.kind == .contact, let ref = thing.sourceRef else { continue }
+            refs[Identity.key(.contact, ref)] = ref
             let facts = thing.facts.compactMap(ThingFact.init(encoded:))
             let hasCompany = facts.contains { $0.label == "Company" }
             let company = facts.first { $0.label == "Company" }?.value
+            let role = facts.first { $0.label == "Role" }?.value
             let isOrganization = hasCompany && company == thing.title
+            // The company and the role are SEARCHED, never drawn (user,
+            // 2026-09-25): "stripe" finds the designer at Stripe.
             out.append(.init(Identity.make(.contact, ref), name: thing.title, typed: true,
                              kind: isOrganization ? .organization : .person,
-                             since: thing.capturedAt))
+                             since: thing.capturedAt,
+                             keywords: [company ?? "", role ?? ""]))
         }
 
         // GitHub people you watch (§519): `.link` things under the person ref.
@@ -151,6 +166,72 @@ enum ContactIndexSources {
         }
     }
 
+    // MARK: - Activity (the row's line, and Recent)
+
+    /// How many of the newest things one rebuild reads. A bound, not a
+    /// window: the newest thing from a contact you dealt with a year ago is
+    /// still its row's line if it is in here, and Recent is the 30-day slice
+    /// the list cuts itself.
+    static let activityWindow = 800
+
+    /// The corpus's newest word on every identity, in ONE walk of the newest
+    /// things (2026-09-25): the title of the newest thing from or about each
+    /// key, and the newest moment it dealt WITH you. Wallet transfers, mail
+    /// and GitHub rows are with you by nature; a social row only when it is
+    /// a notice about your post (`quote`, prd §704) — a followed account's
+    /// own cast is FROM them and feeds the line, never Recent, or everybody
+    /// you follow would be "recent" whenever they posted. The card itself is
+    /// not a thing from the person.
+    static func activity(context: ModelContext) -> [String: ContactIndex.Activity] {
+        var descriptor = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = activityWindow
+        descriptor.propertiesToFetch = [\.source, \.kind, \.sourceRef, \.authorHandle, \.walletAddress,
+                                        \.counterpartyAddress, \.authorEmail, \.title, \.capturedAt, \.quote]
+        var rows: [ContactIndex.ActivityRow] = []
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            guard thing.kind != .contact else { continue }
+            let notification = thing.sourceRef?.hasPrefix("gh:notif:") ?? false
+            guard !notification else { continue }
+            // The transfer's OWN wallet is the one it is from, never the one
+            // it was with: a followed wallet's transfer is a thing from them
+            // (the line), and a transfer from your own watched wallet is
+            // not you dealing with yourself (Savings sat under Recent).
+            let withKeys = ContactIndex.keys(
+                source: thing.source, kind: thing.kind.rawValue, sourceRef: thing.sourceRef,
+                authorHandle: thing.authorHandle, walletAddress: nil,
+                counterpartyAddress: thing.counterpartyAddress, authorEmail: thing.authorEmail,
+                isNotification: notification)
+            let social = ["Farcaster", "Bluesky", "Nostr"].contains(thing.source)
+            if !withKeys.isEmpty {
+                rows.append(.init(keys: withKeys, title: thing.title, at: thing.capturedAt,
+                                  acted: !social || thing.quote != nil))
+            }
+            if let w = thing.walletAddress, w.hasPrefix("0x"), w.count == 42 {
+                rows.append(.init(keys: [Identity.key(.wallet, w)], title: thing.title,
+                                  at: thing.capturedAt, acted: false))
+            }
+        }
+        return ContactIndex.activity(rows: rows)
+    }
+
+    /// The distinct counterparties of the month's landed transfers, newest
+    /// first, at most 40 — what the sweep asks web3.bio to name.
+    static func recentCounterparties(context: ModelContext) -> [String] {
+        let since = Date.now.addingTimeInterval(-30 * 86400)
+        var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Wallet" && $0.capturedAt > since },
+                                       sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+        d.fetchLimit = 200
+        d.propertiesToFetch = [\.counterpartyAddress, \.capturedAt]
+        var out: [String] = []
+        for thing in (try? context.fetch(d)) ?? [] {
+            guard let c = thing.counterpartyAddress?.lowercased(), c.hasPrefix("0x"), c.count == 42,
+                  !out.contains(c) else { continue }
+            out.append(c)
+            if out.count == 40 { break }
+        }
+        return out
+    }
+
     @discardableResult
     static func rebuild(context: ModelContext) -> [Contact] {
         let store = ContactLinksStore.shared
@@ -159,7 +240,8 @@ enum ContactIndexSources {
         for link in discoverVerified() { store.record(link) }
         for link in ContactSuggest.stated(cards: cards, seeds: seeds) { store.record(link) }
         for link in ContactSuggest.suggested(cards: cards, seeds: seeds) { store.record(link) }
-        let built = ContactIndex.build(seeds: seeds, links: store.ledger.all)
+        let built = ContactIndex.build(seeds: seeds, links: store.ledger.all,
+                                       activity: activity(context: context))
         var byKey: [String: Int] = [:]
         for (i, contact) in built.enumerated() {
             for identity in contact.identities { byKey[identity.key] = i }
@@ -232,6 +314,11 @@ enum ContactIndexSources {
         // Yourself, built and then kept off the list (`isYours`).
         let yours = built.filter(isYours)
         lines.append("yours: \(yours.count) hidden from the list | \(yours.map(\.name).joined(separator: ", "))")
+        // The line and Recent (2026-09-25): how many rows carry a newest
+        // thing, and how many dealt with you in the last 30 days.
+        let lined = built.filter { $0.lastThing != nil }.count
+        let recent = built.filter { ($0.lastActedAt ?? .distantPast) > Date.now.addingTimeInterval(-30 * 86400) }.count
+        lines.append("activity: \(lined) of \(built.count) carry a newest thing | recent: \(recent) dealt with you in 30 days")
         for contact in built {
             let ids = contact.identities.map { id -> String in
                 let how = id.tier.map { " (\($0.rawValue)\(id.source == "you" ? ", you" : ""))" } ?? ""

@@ -10,9 +10,13 @@ import SwiftData
 /// read time by `ContactIndexSources.rebuild` from the stores that already
 /// hold the identities; nothing here is stored.
 ///
-/// **The row.** The face and the name on one line, nothing under it (user,
-/// 2026-09-25); the sheet names every address the contact carries. The
-/// trailing slot is EMPTY: no money (user, 2026-08-21), no counts (§345).
+/// **The row.** The face, the name, and ONE line under it: the newest thing
+/// from or about them (`Contact.lastThing`, the corpus's own title), else
+/// the addresses they carry — never a company or a role (user, 2026-09-25:
+/// "don't add Company line that's meaningless"). The trailing slot is the
+/// seat marks: no money (user, 2026-08-21), no counts (§345). A wallet
+/// nobody has named carries `Name` there instead, so the group is the
+/// nudge and the one nudge row above the list is gone.
 ///
 /// **The chips.** A contact stands in every dock category one of its
 /// identities belongs to — a wallet with a Farcaster handle is under Wallet
@@ -28,9 +32,16 @@ struct AddressesSection: View {
     @State private var contacts: [Contact] = []
     @State private var scope = AddressScope(name: nil)
     @State private var opened: Contact?
-    /// The newest transfer whose counterparty nobody has named — the list's
-    /// one nudge (section 1, section 9: "any time", one row at a time).
-    @State private var nudge: (address: String, title: String)?
+    /// The wallet the naming alert is naming — a `Not named yet` row's own
+    /// `Name`, or the resolver's bare address.
+    @State private var namingAddress: String?
+    /// What the search RESOLVED (2026-09-25): an address, a name or a handle
+    /// typed or pasted that matches nobody here, asked of web3.bio and drawn
+    /// as one row with its doors and the corpus's own history under it.
+    @State private var resolved: Resolved?
+    @State private var resolvedWithYou: [ContactSheet.WithYouRow] = []
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(BridgeStore.self) private var bridges
     /// The one "Same person?" the list may draw (section 3): the newest live
     /// suggestion whose two ends are both here, with the model's sentence
     /// under it when the phone can give one.
@@ -56,6 +67,8 @@ struct AddressesSection: View {
     struct RowExtras {
         let marks: [String]
         let arrival: TimeInterval?
+        /// The row's line — computed once, never per render (§626).
+        let line: String?
     }
     /// The wave this list stands on (`LeadCycle`'s rule): a contact whose
     /// saved `addedAt` is later than this AND fresh turns its face once. Set
@@ -65,8 +78,8 @@ struct AddressesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
-            if query.isEmpty, scope.name == nil, let nudge {
-                nudgeRow(nudge)
+            if !query.isEmpty, let resolved {
+                resolverBlock(resolved)
             }
             if query.isEmpty, scope.name == nil, let suggestion,
                let a = ContactIndexSources.contact(forKey: suggestion.a),
@@ -83,7 +96,9 @@ struct AddressesSection: View {
                              words: Text("Nobody here yet. Follow an address, watch an account, or connect Contacts, and they land here."),
                              scale: .list(rows: 4))
                     .padding(.vertical, DS.Space.s4)
-            } else if shown.isEmpty {
+            } else if shown.isEmpty, resolved == nil {
+                // A resolved row IS the answer to the query; "No match"
+                // under it would say the opposite in the same frame.
                 DSEmptyState(headline: DSProse.text("No match"),
                              words: Text("Nobody matches that."),
                              scale: .list(rows: 2))
@@ -95,21 +110,29 @@ struct AddressesSection: View {
         // The index is rebuilt on appear, never in a body (§628). It reads
         // the stores and the ledger only — no network.
         .task { await refresh() }
+        // The resolver, debounced behind the typing: one web3.bio ask per
+        // settled query, only for a query SHAPED like an address, a name or
+        // a handle, and only when nobody here already carries it.
+        .task(id: query) {
+            resolved = nil; resolvedWithYou = []
+            let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard Self.resolvable(q) else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            guard let hit = await Self.resolve(q), !Task.isCancelled,
+                  !contacts.contains(where: { c in hit.keys.contains { c.has($0) } }) else { return }
+            resolvedWithYou = ContactSheet.things(for: hit.contact, context: modelContext, limit: 3)
+            resolved = hit
+        }
         .alert("Name this address",
                isPresented: $naming) {
             TextField("Name (e.g. Mom)", text: $draft)
             Button("Save") {
-                guard let nudge else { return }
-                AddressBook.shared.setName(draft, for: nudge.address)
-                Task { @MainActor in await AddressKind.detect(nudge.address) }
-                CounterpartyRetitle.applyCurrentName(for: nudge.address, in: modelContext)
-                Task { await refresh() }
-            }
-            // "Not now" lives in the alert since the design pass (2026-09-25):
-            // the nudge is ONE row, so its decline rides the door it opens.
-            Button("Not now") {
-                guard let nudge else { return }
-                AddressNudge.decline(nudge.address)
+                guard let address = namingAddress else { return }
+                AddressBook.shared.setName(draft, for: address)
+                Task { @MainActor in await AddressKind.detect(address) }
+                CounterpartyRetitle.applyCurrentName(for: address, in: modelContext)
+                resolved = nil
                 Task { await refresh() }
             }
             Button("Cancel", role: .cancel) {}
@@ -117,7 +140,7 @@ struct AddressesSection: View {
             Text("It rides every future transfer with this address. Blank clears it.")
         }
         .sheet(item: $opened) { contact in
-            ContactSheet(contact: contact)
+            ContactSheet(contact: contact) { Task { await refresh() } }
                 .dsReadSheet()
         }
         .sheet(item: $asked) { pair in
@@ -143,9 +166,9 @@ struct AddressesSection: View {
         contacts = ContactIndexSources.rebuild(context: modelContext)
             .filter { !ContactIndexSources.isYours($0) }
         extras = Dictionary(uniqueKeysWithValues: contacts.map {
-            ($0.id, RowExtras(marks: Self.marks(of: $0), arrival: Self.arrival(of: $0)))
+            ($0.id, RowExtras(marks: Self.marks(of: $0), arrival: Self.arrival(of: $0),
+                              line: Self.line(of: $0)))
         })
-        nudge = Self.newestUnnamed(context: modelContext)
         let next = ContactSuggest.next(in: ContactLinksStore.shared.ledger,
                                        known: { ContactIndexSources.contact(forKey: $0) != nil })
         if next?.pairKey != suggestion?.pairKey { verdict = nil }
@@ -206,51 +229,174 @@ struct AddressesSection: View {
         return String(localized: "\(c.name) on \(ContactSheet.service(end.kind))")
     }
 
-    // MARK: - The nudge
+    // MARK: - The resolver (2026-09-25)
 
-    /// "Name 0xab…12?" — ONE row (the design pass, 2026-09-25): the
-    /// counterparty's identicon leads, the question is the title, the transfer
-    /// that earned it is the line, and the tap opens the naming alert, which
-    /// carries `Not now`. Never a counterparty the app can already name, never
-    /// a flagged address (`AddressNudge.prompt`'s own guards, reused).
-    private func nudgeRow(_ nudge: (address: String, title: String)) -> some View {
-        Button {
-            draft = ""
-            naming = true
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                AddressMark(entry: AddressBook.Entry(address: nudge.address, name: "", addedAt: .now),
-                            size: DS.Face.list)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Name \(WalletStore.shortAddress(nudge.address))?")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                    Text(nudge.title)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                DSPushRowTrail()
-            }
-            .frame(minHeight: Self.rowPitch)
-            .contentShape(Rectangle())
+    /// What a search resolved to when nobody here matched: the row the
+    /// person would get by following or naming it, drawn BEFORE they do.
+    struct Resolved: Equatable {
+        let query: String
+        /// Lowercased hex when the query is or resolves to an address.
+        let address: String?
+        let name: String
+        let identities: [Identity]
+        let avatar: String?
+
+        /// Every key this answer stands for, so a contact carrying any of
+        /// them suppresses the row.
+        var keys: [String] { identities.map(\.key) }
+
+        /// A value `ContactFace` and `ContactSheet.things` can read.
+        var contact: Contact {
+            Contact(id: identities.first?.key ?? query, name: name, kind: .person,
+                    identities: identities, avatar: avatar, lastActedAt: nil,
+                    lastThing: nil, keywords: [])
         }
-        .buttonStyle(.plain)
-        .dsHover()
-        .dsListRow()
+        /// Whether the name is a real one or the address's own tail.
+        var isNamed: Bool { !name.hasPrefix("…") }
     }
 
-    /// The newest landed transfer whose counterparty has no name and was not
-    /// declined — the same guards the sheet's nudge keeps, walked newest-first
-    /// over a bounded window.
-    static func newestUnnamed(context: ModelContext) -> (address: String, title: String)? {
-        var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Wallet" },
-            sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
-        descriptor.fetchLimit = 60
-        for thing in (try? context.fetch(descriptor)) ?? [] {
-            guard let hit = AddressNudge.prompt(for: thing, context: context) else { continue }
-            return (hit.address, thing.title)
+    /// A query worth asking about: a hex address, a dotted name with no
+    /// spaces, or an `@handle`. A person's name is not — that is the
+    /// filter's job, and web3.bio would 404 on it every keystroke.
+    static func resolvable(_ q: String) -> Bool {
+        if ENS.isHexAddress(q) { return true }
+        guard !q.contains(" "), q.count >= 3 else { return false }
+        if q.hasPrefix("@") { return q.count >= 2 }
+        return q.contains(".") && !q.hasPrefix(".") && !q.hasSuffix(".")
+    }
+
+    /// One web3.bio ask (`Web3Bio.lookup`, cached per launch, demo-gated
+    /// inside). An address answers even when web3.bio holds nothing for it:
+    /// a pasted address is still a row to name or follow. A name or handle
+    /// that web3.bio does not know answers nil — there is nothing honest
+    /// to draw for it (§83).
+    @MainActor
+    static func resolve(_ q: String) async -> Resolved? {
+        if ENS.isHexAddress(q) {
+            let address = q.lowercased()
+            let records = await Web3Bio.names(for: address)
+            var identities = [Identity.make(.wallet, address)]
+            identities += records.compactMap(identity(for:))
+            let named = identities.first { $0.kind.isNameService }?.body
+                ?? records.compactMap(\.displayName).first
+            return Resolved(query: q, address: address, name: named ?? WalletStore.shortAddress(address),
+                            identities: identities, avatar: records.compactMap(\.avatar).first)
         }
-        return nil
+        let handle = q.hasPrefix("@") ? String(q.dropFirst()) : nil
+        let asked = handle.map { "farcaster,\($0)" } ?? q
+        guard case .records(let records) = await Web3Bio.lookup(asked), !records.isEmpty else { return nil }
+        let address: String?
+        if let handle {
+            address = records.first { $0.platform == .farcaster && $0.identity.lowercased() == handle.lowercased() }?.address
+        } else {
+            address = Web3Bio.forwardAddress(records, for: q)
+        }
+        var identities: [Identity] = []
+        if let address, ENS.isHexAddress(address) {
+            identities.append(Identity.make(.wallet, address))
+            identities += Web3Bio.names(records, ownedBy: address).compactMap(identity(for:))
+        }
+        let own = handle.map { Identity.make(.farcaster, $0) }
+            ?? Identity.Kind.classify(primaryName: q).map { Identity.make($0, q) }
+        if let own, !identities.contains(where: { $0.key == own.key }) { identities.append(own) }
+        guard !identities.isEmpty else { return nil }
+        return Resolved(query: q, address: address.flatMap { ENS.isHexAddress($0) ? $0.lowercased() : nil },
+                        name: handle ?? q.lowercased(), identities: identities,
+                        avatar: records.compactMap(\.avatar).first)
+    }
+
+    /// A web3.bio record as an identity, by platform.
+    private static func identity(for record: Web3Bio.Record) -> Identity? {
+        switch record.platform {
+        case .ens:       return Identity.make(.ens, record.identity)
+        case .basenames: return Identity.make(.basename, record.identity)
+        case .linea:     return Identity.make(.linea, record.identity)
+        case .farcaster: return Identity.make(.farcaster, record.identity)
+        case .lens:      return Identity.make(.lens, record.identity)
+        case .sns, .ethereum, .solana: return nil
+        }
+    }
+
+    /// The resolved row: the face and the name in the list's own anatomy,
+    /// with what web3.bio knows as its line; then its doors as rows (§746);
+    /// then the newest things the corpus already holds with it.
+    @ViewBuilder
+    private func resolverBlock(_ hit: Resolved) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            LetterHead(text: Text("Not in your addresses"), tone: DS.textTertiary)
+            HStack(spacing: DS.Space.s3) {
+                ContactFace(contact: hit.contact, size: DS.Face.list)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(hit.name).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                    if let line = Self.line(of: hit.contact) {
+                        Text(line).dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: DS.Space.s2)
+                SeatMarks(names: Self.marks(of: hit.contact))
+            }
+            .frame(minHeight: Self.rowPitch)
+            .dsListRow()
+            VStack(spacing: 0) {
+                if let address = hit.address {
+                    DSDoorRow(icon: "eye", title: Text("Follow \(hit.name)")) { follow(hit, address: address) }
+                }
+                DSDoorRow(icon: "person.crop.circle.badge.plus", label: "Add to Addresses") { add(hit) }
+            }
+            if !resolvedWithYou.isEmpty {
+                Text("With you").dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    .padding(.top, DS.Space.s3)
+                ForEach(resolvedWithYou) { row in
+                    HStack(spacing: DS.Space.s3) {
+                        BridgeIcon(name: row.source, size: DS.Face.row, circular: true)
+                        Text(row.title).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                        Spacer(minLength: DS.Space.s2)
+                        Text(row.when.formatted(date: .abbreviated, time: .omitted))
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    }
+                    .frame(minHeight: DS.Hit.min)
+                    .dsListRow()
+                }
+            }
+        }
+    }
+
+    /// Follow, from the search — the same choke point every door funnels
+    /// through (`WalletStore.outcome(ofAdding:)`), worded as the Farcaster
+    /// profile's door words it: the cap still NAMES the wallet (§170).
+    private func follow(_ hit: Resolved, address: String) {
+        let label = hit.isNamed ? hit.name : ""
+        switch WalletStore.shared.outcome(ofAdding: address, label: label) {
+        case .added:
+            bridges.reconcileWalletSeats()
+            chrome.flash(String(localized: "Following \(hit.name)."), tone: .success)
+        case .limitReached:
+            if hit.isNamed { AddressBook.shared.setName(hit.name, for: address, kind: .wallet) }
+            chrome.flash(String(localized: "Following \(WalletStore.watchLimit) addresses already — saved \(hit.name) to Addresses instead."))
+        case .alreadyWatching, .invalid:
+            chrome.flash(String(localized: "Already following \(hit.name)."))
+        }
+        resolved = nil
+        Task { await refresh() }
+    }
+
+    /// Add to Addresses (spec section 2.6): a named address lands in the
+    /// wallet book under its name; a bare address asks for one; a handle
+    /// with no address is saved by hand (`ContactBook`).
+    private func add(_ hit: Resolved) {
+        if let address = hit.address {
+            guard hit.isNamed else {
+                namingAddress = address; draft = ""; naming = true
+                return
+            }
+            AddressBook.shared.setName(hit.name, for: address, kind: .wallet)
+            Task { @MainActor in await AddressKind.detect(address) }
+        } else if let own = hit.identities.first {
+            ContactBook.shared.save(own, name: hit.name)
+        }
+        chrome.flash(String(localized: "Saved \(hit.name) to Addresses."), tone: .success)
+        resolved = nil
+        Task { await refresh() }
     }
 
     // MARK: - Scopes
@@ -275,9 +421,12 @@ struct AddressesSection: View {
             if let name = scope.name, !contact.categories.contains(name) { return false }
             guard !needle.isEmpty else { return true }
             if Self.fold(contact.name).contains(needle) { return true }
-            return contact.identities.contains {
+            if contact.identities.contains(where: {
                 Self.fold($0.label).contains(needle) || Self.fold($0.body).contains(needle)
-            }
+            }) { return true }
+            // What no row draws but a search may hit: a card's company and
+            // role, a wallet entry's note (2026-09-25).
+            return contact.keywords.contains { Self.fold($0).contains(needle) }
         }
     }
 
@@ -349,12 +498,13 @@ struct AddressesSection: View {
     }
 
     /// The word a group wears: its letter, `#` for a digit or a symbol, and
-    /// "Unnamed" for the wallets nobody has named (the design pass: a wall of
-    /// identicons under a symbol read as junk; under a word it reads as what
-    /// it is, a to-do).
+    /// "Not named yet" for the wallets nobody has named (the design pass: a
+    /// wall of identicons under a symbol read as junk; under a word it reads
+    /// as what it is, a to-do — and "yet" says the row's own `Name` verb is
+    /// the way out).
     static func title(for letter: String) -> Text {
         switch letter {
-        case "…": Text("Unnamed")
+        case "…": Text("Not named yet")
         default:  Text(verbatim: letter)
         }
     }
@@ -377,16 +527,31 @@ struct AddressesSection: View {
         }.map(\.element)
     }
 
-    /// While searching: the identity the query hit when the NAME did not —
-    /// "why is this row here". Nil when the name itself matches, so a row
-    /// found by name stays one line.
+    /// While searching: the identity or keyword the query hit when the NAME
+    /// did not — "why is this row here". Nil when the name itself matches,
+    /// so a row found by name keeps its own line.
     static func matchedLine(_ contact: Contact, needle: String) -> String? {
         guard !needle.isEmpty, !fold(contact.name).contains(needle) else { return nil }
-        let hit = contact.identities.first {
+        if let hit = contact.identities.first(where: {
             fold($0.label).contains(needle) || fold($0.body).contains(needle)
+        }) {
+            return hit.kind == .contact ? nil : hit.label
         }
-        guard let hit else { return nil }
-        return hit.kind == .contact ? nil : hit.label
+        return contact.keywords.first { fold($0).contains(needle) }
+    }
+
+    /// The row's line: the newest thing from or about them, else the
+    /// addresses they carry that the name does not already say (never a
+    /// card ref, never the name itself), at most three. Nil draws one line.
+    static func line(of contact: Contact) -> String? {
+        if let thing = contact.lastThing, !thing.isEmpty { return thing }
+        // A Nostr key is 64 hex characters nobody reads; the mark already
+        // says Nostr, so the line leaves it out.
+        let labels = contact.identities
+            .filter { $0.kind != .contact && $0.kind != .nostr
+                   && fold($0.label) != fold(contact.name) && fold($0.body) != fold(contact.name) }
+            .map(\.label)
+        return labels.isEmpty ? nil : labels.prefix(3).joined(separator: " · ")
     }
 
     /// When this contact was SAVED by hand, in `LeadCycle`'s clock: a
@@ -420,27 +585,46 @@ struct AddressesSection: View {
                     .faceCycle(category: contact.categories.first,
                                arrival: extras[contact.id]?.arrival,
                                fact: contact.name, size: DS.Face.list)
-                // The face and the name, nothing under it (user, 2026-09-25:
-                // "why is a second line necessary under each name") — the
-                // sheet says every address the contact carries. The one
-                // exception is a search hit on an address (`matchedLine`).
+                // The name, then ONE line: while searching, why the row is
+                // here (`matchedLine`); otherwise the newest thing from or
+                // about them, else the addresses they carry (`line(of:)`).
+                // An auto-name (`…44b1`) is not a name, so it wears the
+                // secondary ink — the line under it is the transfer that
+                // brought it, which is the one fact worth naming it for.
                 VStack(alignment: .leading, spacing: 1) {
                     Text(contact.name)
                         .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
+                        .foregroundStyle(contact.isUnnamed ? DS.textSecondary : DS.textPrimary)
                         .lineLimit(1)
-                    if let matched {
-                        Text(matched)
+                    if let line = matched ?? extras[contact.id]?.line {
+                        Text(line)
                             .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
                 }
                 Spacer(minLength: DS.Space.s2)
-                // The seats this contact is on, as the dock's own marks — the
-                // sheet's icon tiles at a glance (the design pass). A fact,
-                // never a count or money (§345, user 2026-08-21).
-                SeatMarks(names: extras[contact.id]?.marks ?? [])
+                if contact.isUnnamed, let address = contact.identities.first(where: { $0.kind == .wallet })?.body {
+                    // The verb IS the row's trailing fact (§746's `init(verb:)`
+                    // shape): every unnamed wallet carries its own `Name`, so
+                    // the group is the nudge and no row above the list is.
+                    Button {
+                        namingAddress = address; draft = ""; naming = true
+                    } label: {
+                        Text("Name")
+                            .dsText(.body17)
+                            .foregroundStyle(DS.tint)
+                            .frame(minHeight: DS.Hit.min)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .dsHover()
+                } else {
+                    // The seats this contact is on, as the dock's own marks —
+                    // the sheet's icon tiles at a glance (the design pass). A
+                    // fact, never a count or money (§345, user 2026-08-21).
+                    SeatMarks(names: extras[contact.id]?.marks ?? [])
+                }
             }
             .frame(minHeight: Self.rowPitch)
             .contentShape(Rectangle())
@@ -455,6 +639,10 @@ struct AddressesSection: View {
     static func marks(of contact: Contact) -> [String] {
         var out: [String] = []
         for identity in contact.identities {
+            // An email the CARD stated is not a mail seat this person is on
+            // — it is a fact on their card, and a Gmail mark on somebody who
+            // never wrote to you would claim a seat they do not hold.
+            if identity.kind == .email, identity.tier == .stated, identity.source == "contact.card" { continue }
             let mark = ContactSheet.mark(identity)
             if !out.contains(mark) { out.append(mark) }
             if out.count == SeatMarks.cap { break }
@@ -627,14 +815,30 @@ extension Contact {
 struct ContactFace: View {
     let contact: Contact
     var size: CGFloat = DS.Face.list
+    @Environment(\.modelContext) private var modelContext
+    /// The card's own photo (`ContactsIngest.healPhotos` lands the Contacts
+    /// thumbnail on the thing) — read for the row on screen, decoded off
+    /// main, cached by card (2026-09-25). The book already held the one
+    /// picture that tells people apart, and the list drew initials over it.
+    @State private var photo: UIImage?
 
     var body: some View {
+        face.background(photoTask)
+    }
+
+    @ViewBuilder private var face: some View {
         // A wallet keeps its identicon and a contract, Safe or key its
         // glyph (`AddressMark`'s rules); everybody else with no picture
         // wears their INITIALS in the ring — forty identical grey
         // silhouettes told nobody apart (the design pass, 2026-09-25;
         // §753's rule for a face with no picture).
-        if contact.avatar == nil, contact.lead.kind != .wallet,
+        if let photo {
+            Image(uiImage: photo)
+                .resizable().scaledToFill()
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+                .transition(.opacity)
+        } else if contact.avatar == nil, contact.lead.kind != .wallet,
            contact.kind == .person || contact.kind == .organization || contact.kind == .publication {
             Circle()
                 .fill(DS.fillFaint)
@@ -648,6 +852,26 @@ struct ContactFace: View {
             AddressMark(entry: entry, size: size)
         }
     }
+
+    /// The photo, for a contact led by a card: cached by card key, else one
+    /// fetch by the card's own ref and a decode off the main thread. A row
+    /// met by scrolling pays this once; a row with no card pays nothing.
+    private var photoTask: some View {
+        EmptyView().task(id: contact.id) {
+            guard contact.lead.kind == .contact else { return }
+            let key = contact.lead.key
+            if let hit = Self.photos.object(forKey: key as NSString) { photo = hit; return }
+            guard let ref = ContactIndexSources.cardRef(forKey: key) else { return }
+            var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref && $0.source == "Contacts" })
+            d.fetchLimit = 1
+            guard let data = (try? modelContext.fetch(d))?.first?.previewImageData, !data.isEmpty else { return }
+            let decoded = await Task.detached(priority: .utility) { UIImage(data: data)?.preparingForDisplay() }.value
+            guard let decoded, !Task.isCancelled else { return }
+            Self.photos.setObject(decoded, forKey: key as NSString)
+            withAnimation(DS.Motion.standard) { photo = decoded }
+        }
+    }
+    private static let photos = NSCache<NSString, UIImage>()
 
     /// Up to two initials: the first letters of the first two words, or
     /// the first letter alone for a handle or a one-word name.
@@ -687,6 +911,9 @@ struct ContactFace: View {
 /// contact card. "With you" (the things across the corpus) is the next pass.
 struct ContactSheet: View {
     let contact: Contact
+    /// Called after a change this sheet made (a rename, an unfollow) so the
+    /// list behind it rebuilds; the sheet dismisses itself on those.
+    var onChanged: (() -> Void)? = nil
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -696,7 +923,25 @@ struct ContactSheet: View {
     /// this contact — VALUE snapshots, never a held `[Thing]` (the liveness
     /// class in CLAUDE.md); a tap refetches by id.
     @State private var withYou: [WithYouRow] = []
+    /// How many "With you" rows are asked for; `Show older` raises it.
+    @State private var withYouLimit = 20
     @State private var openedThing: Thing?
+    /// The card's reachable facts (a phone, a mailbox) for the dial — read
+    /// off the Contacts thing in `.task`, never in the body (§628).
+    @State private var cardPhone: String?
+    @State private var cardEmail: String?
+    @State private var composer: Composer?
+    @State private var renaming = false
+    @State private var draft = ""
+    /// The wallets World ID's address book marks verified (prd §785): read
+    /// on open, at most three, drawn as the wallet row's fact. Lapsed and
+    /// absent draw nothing here — the card says the date.
+    @State private var verifiedHumans: Set<String> = []
+
+    private enum Composer: String, Identifiable {
+        case messages, mail
+        var id: String { rawValue }
+    }
 
     struct WithYouRow: Identifiable, Equatable {
         let id: UUID
@@ -768,9 +1013,42 @@ struct ContactSheet: View {
                         // does that even mean … his smart account presumably is
                         // in the list as wallet"): the kind shapes the face and
                         // the wallet row's own card says what the address is.
+                        // No company or role either (user, same day: "that's
+                        // meaningless") — they are searched, never drawn.
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, DS.Space.s6)
+
+                    // The dial (2026-09-25): how to REACH them, as the thing
+                    // sheet's own discs — Messages and Mail through the
+                    // system composers (the one sanctioned write, the person
+                    // taps Send), Copy where they have exactly one address.
+                    // Drawn only where a disc can act (§83): no phone, no
+                    // Message; the simulator has no Messages at all.
+                    if !dial.isEmpty {
+                        HStack(alignment: .top, spacing: DS.Space.s4 + 2) {
+                            ForEach(dial, id: \.label) { disc in
+                                Button(action: disc.act) {
+                                    VStack(spacing: DS.Space.s2 - 2) {
+                                        Circle()
+                                            .fill(DS.fillLine)
+                                            .frame(width: 52, height: 52)
+                                            .overlay {
+                                                Image(systemName: copied == disc.label ? "checkmark" : disc.icon)
+                                                    .dsGlyph(.body, weight: .regular)
+                                                    .foregroundStyle(DS.textPrimary)
+                                                    .dsSymbolSwap(copied == disc.label ? "checkmark" : disc.icon)
+                                            }
+                                        Text(disc.label)
+                                            .dsText(.label12)
+                                            .foregroundStyle(DS.textTertiary)
+                                    }
+                                }
+                                .buttonStyle(PressSpring())
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
 
                     // No section word (user, 2026-09-25: "you can't say
                     // 'identities' … doesn't even need a section descriptor"):
@@ -785,7 +1063,27 @@ struct ContactSheet: View {
                             Text("With you").dsText(.heading17).foregroundStyle(DS.textPrimary)
                             VStack(spacing: 0) {
                                 ForEach(withYou) { row in withYouRow(row) }
+                                // The door the spec named and the first pass
+                                // left out: a full list stops at its cap and
+                                // says so, never silently (§83).
+                                if withYou.count >= withYouLimit {
+                                    DSDoorRow(icon: "clock.arrow.circlepath", label: "Show older") {
+                                        withYouLimit += 80
+                                        withYou = Self.things(for: contact, context: modelContext, limit: withYouLimit)
+                                    }
+                                }
                             }
+                        }
+                    }
+                    // RENAME (2026-09-25) — the one verb the sheet lacked. A
+                    // wallet's name goes in the wallet book and retitles its
+                    // transfers; anything else the person names is a
+                    // `ContactBook` save. A card's name is Apple's to change,
+                    // so a card-led contact draws no row (§83).
+                    if contact.lead.kind != .contact {
+                        DSDoorRow(icon: "character.cursor.ibeam", label: "Rename") {
+                            draft = contact.isUnnamed ? "" : contact.name
+                            renaming = true
                         }
                     }
                     // UNFOLLOW, from the sheet (user, 2026-09-25: "we need the
@@ -803,6 +1101,7 @@ struct ContactSheet: View {
                                           role: .destructive) {
                                     SocialUnfollow.perform([pair], name: contact.name,
                                                            context: modelContext, chrome: chrome)
+                                    onChanged?()
                                     dismiss()
                                 }
                             }
@@ -813,6 +1112,7 @@ struct ContactSheet: View {
                     if let saved = savedKey {
                         DSDoorRow(icon: "minus.circle", label: "Remove from Addresses", role: .destructive) {
                             ContactBook.shared.remove(saved)
+                            onChanged?()
                             dismiss()
                         }
                     }
@@ -822,8 +1122,43 @@ struct ContactSheet: View {
             }
             .dsPageBackground()
             .toolbar(.hidden, for: .navigationBar)
-            .task { withYou = Self.things(for: contact, context: modelContext) }
+            .task {
+                withYou = Self.things(for: contact, context: modelContext, limit: withYouLimit)
+                if let ref = ContactIndexSources.cardRef(forKey: contact.lead.key) {
+                    let facts = Self.cardFacts(ref: ref, context: modelContext)
+                    cardPhone = facts.phone; cardEmail = facts.email
+                }
+                // World ID, read on open for the wallets here (the card's
+                // own `fill`), bounded so a Safe with many keys costs three.
+                for identity in contact.identities.filter({ $0.kind == .wallet }).prefix(3) {
+                    _ = await WorldIDSource.shared.fill(identity.body)
+                    if case .verified = WorldIDSource.shared.status(for: identity.body) {
+                        verifiedHumans.insert(identity.body)
+                    }
+                }
+            }
             .sheet(item: $openedThing) { thing in ThingSheetView(thing: thing) }
+            .sheet(item: $composer) { which in
+                switch which {
+                case .messages:
+                    TextComposer(body: "", attachment: nil, attachmentName: "",
+                                 recipients: cardPhone.map { [$0] } ?? [])
+                case .mail:
+                    MailComposer(subject: "", body: "", attachment: nil, attachmentName: "",
+                                 recipients: mailAddress.map { [$0] } ?? [])
+                }
+            }
+            .alert(contact.isUnnamed ? "Name this address" : "Rename", isPresented: $renaming) {
+                TextField("Name", text: $draft)
+                Button("Save") { rename(draft) }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                if contact.lead.kind == .wallet {
+                    Text("It rides every future transfer with this address. Blank clears it.")
+                } else {
+                    Text("Blank clears it.")
+                }
+            }
             .navigationDestination(item: $pushed) { door in
                 switch door {
                 case .address(let entry): AddressCard(entry: entry)
@@ -853,10 +1188,15 @@ struct ContactSheet: View {
         let value = identity.kind == .contact ? contact.name : identity.body
         let title = Text(identity.kind == .contact ? contact.name : identity.label)
         let mark = BridgeIcon(name: Self.mark(identity), size: DS.Face.list, circular: true)
+        // The one fact a wallet row may trail: World ID's own book says a
+        // verified human holds it (prd §785 — only `verified` draws here;
+        // a zero is never "not a person").
+        let fact: Text? = identity.kind == .wallet && verifiedHumans.contains(identity.body)
+            ? Text("Verified human") : nil
         HStack(spacing: DS.Space.s2) {
             if let act = door(for: identity) {
                 Button(action: act) {
-                    DSPushRowLabel(title: title, opens: true) { mark }.contentShape(Rectangle())
+                    DSPushRowLabel(title: title, fact: fact, opens: true) { mark }.contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .dsHover()
@@ -896,6 +1236,63 @@ struct ContactSheet: View {
         }
     }
 
+    // MARK: - The dial, and Rename
+
+    private struct Disc {
+        let icon: String
+        let label: String
+        let act: () -> Void
+    }
+
+    /// The mailbox a Mail disc addresses: the card's, else a mail identity.
+    private var mailAddress: String? {
+        cardEmail ?? contact.identities.first { $0.kind == .email }?.body
+    }
+
+    private var dial: [Disc] {
+        var out: [Disc] = []
+        if MessageCompose.canText, cardPhone != nil {
+            out.append(Disc(icon: "message", label: String(localized: "Message")) { composer = .messages })
+        }
+        if MessageCompose.canMail, mailAddress != nil {
+            out.append(Disc(icon: "envelope", label: String(localized: "Mail")) { composer = .mail })
+        }
+        let wallets = contact.identities.filter { $0.kind == .wallet }
+        if wallets.count == 1, let one = wallets.first {
+            out.append(Disc(icon: "doc.on.doc", label: String(localized: "Copy")) {
+                copy(one.body, key: String(localized: "Copy"))
+            })
+        }
+        return out
+    }
+
+    /// The card's first phone and mailbox, off its facts — one fetch by the
+    /// card's own ref, read in `.task`.
+    static func cardFacts(ref: String, context: ModelContext) -> (phone: String?, email: String?) {
+        var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref && $0.source == "Contacts" })
+        d.fetchLimit = 1
+        guard let thing = (try? context.fetch(d))?.first else { return (nil, nil) }
+        let facts = thing.facts.compactMap(ThingFact.init(encoded:))
+        return (facts.first { $0.action == .call }?.value, facts.first { $0.action == .mail }?.value)
+    }
+
+    private func rename(_ raw: String) {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch contact.lead.kind {
+        case .wallet:
+            let address = contact.lead.body
+            AddressBook.shared.setName(name, for: address)
+            Task { @MainActor in await AddressKind.detect(address) }
+            CounterpartyRetitle.applyCurrentName(for: address, in: modelContext)
+        case .contact:
+            return
+        default:
+            ContactBook.shared.save(contact.lead, name: name)
+        }
+        onChanged?()
+        dismiss()
+    }
+
     // MARK: - With you
 
     private func withYouRow(_ row: WithYouRow) -> some View {
@@ -925,12 +1322,12 @@ struct ContactSheet: View {
     /// Every thing whose `contact(for:)` would be this contact — one string
     /// predicate per identity (a `.contains` predicate traps, CLAUDE.md), the
     /// union sorted newest first and capped at 20.
-    static func things(for contact: Contact, context: ModelContext) -> [WithYouRow] {
+    static func things(for contact: Contact, context: ModelContext, limit: Int = 20) -> [WithYouRow] {
         var found: [UUID: WithYouRow] = [:]
         func take(_ descriptor: FetchDescriptor<Thing>) {
             var d = descriptor
             d.sortBy = [SortDescriptor(\Thing.capturedAt, order: .reverse)]
-            d.fetchLimit = 40
+            d.fetchLimit = limit * 2
             for thing in (try? context.fetch(d)) ?? [] {
                 if thing.sourceRef?.hasPrefix("gh:notif:") == true { continue }
                 found[thing.id] = WithYouRow(id: thing.id, title: thing.title,
@@ -956,7 +1353,7 @@ struct ContactSheet: View {
                 continue
             }
         }
-        return found.values.sorted { $0.when > $1.when }.prefix(20).map { $0 }
+        return found.values.sorted { $0.when > $1.when }.prefix(limit).map { $0 }
     }
 
     private func door(for identity: Identity) -> (() -> Void)? {

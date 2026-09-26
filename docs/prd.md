@@ -61385,7 +61385,7 @@ Three rulings on the spec after step 1 shipped, recorded here so the entry above
 
 **Left alone, on purpose.** `UnitTreemap`, its table and `unit-treemap-selftest.sh` are untouched; `GenTagMap`'s preview and error shapes keep the breathing cells (a pack of nothing is nothing to breathe); the money hero's mini map is words with values and stays tiled.
 
-## §917 — Addresses gets smarter: the row's line is the corpus's own word, Recent is alive, search resolves what you paste, every unnamed wallet carries its own Name, and the sheet reaches (user: "how would you make our address book 'smarter', better ux, and better UI" → "ok do all but don't add Company line that's meaningless", 2026-09-25)
+## §918 — Addresses gets smarter: the row's line is the corpus's own word, Recent is alive, search resolves what you paste, every unnamed wallet carries its own Name, and the sheet reaches (user: "how would you make our address book 'smarter', better ux, and better UI" → "ok do all but don't add Company line that's meaningless", 2026-09-25)
 
 **What was measured before proposing.** The index already knew more than the list drew, and three parts were wired but dead: `Contact.lastActedAt` was never set, so the pink Recent section had never once drawn; `AddressMark`'s wallet branch ignored `avatarURL`, so every merged person led by a wallet wore an identicon; Contacts photos were healed onto the card things and never reached a face. The spec's open step (web3.bio asked only about the five watched wallets) meant `Unnamed` could only grow.
 
