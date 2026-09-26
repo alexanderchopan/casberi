@@ -1953,19 +1953,22 @@ struct VibenetRoomCard: View {
         // of its call sites for exactly this reason; the figure had been
         // reading the narrower list since it was written.
         let links = VibenetAccountMapping.links(Self.fullItems(fallback: room))
+        // **THE SHARED SPINE (prd §923)** — an account's sub-accounts, or the
+        // delegates who can act for the accounts you follow, are the same
+        // drawing as a wallet's counterparties: faces on the left, yours on
+        // the right, a ribbon per relationship. `VibenetAccountWebCard` and
+        // `VibenetLinkSpine` still draw inside the account detail sheet.
         if let web {
-            scopeFigure(headline: VibenetAccountWeb.headline(web)) {
-                VibenetAccountWebCard(web: web,
-                                      name: { Self.displayName($0) },
-                                      onWatch: nil,
-                                      reduceMotion: reduceMotion)
+            scopeFigure(headline: nil) {
+                RoomConnectionsFigure(map: Self.connectionsMap(web: web),
+                                      yours: String(localized: "\(Self.displayName(web.owner)) and its accounts"),
+                                      caption: crownCaption)
             }
         } else if !links.isEmpty {
-            scopeFigure(headline: VibenetBalanceAggregation.compose(room.items)?.plainLine) {
-                VibenetLinkSpine(links: links,
-                                 name: { Self.displayName($0) },
-                                 onPick: onScope,
-                                 reduceMotion: reduceMotion)
+            scopeFigure(headline: nil) {
+                RoomConnectionsFigure(map: Self.connectionsMap(links: links),
+                                      yours: String(localized: "the accounts you follow"),
+                                      caption: crownCaption)
             }
         } else {
             // **AN EMPTY SCOPE STILL DRAWS** (prd §495, user: *"even if there
@@ -3301,6 +3304,54 @@ struct VibenetRoomCard: View {
     /// A watched account's own name, or its short address — the same
     /// fallback every row on this card already makes, so the spine can never
     /// name an account differently from the roster above it.
+    /// An owner and its sub-accounts as a connections map (prd §923): the
+    /// owner is the one column, each sub-account a node reaching it.
+    static func connectionsMap(web: VibenetAccountWeb.Web) -> AddressConnections.Map {
+        let owner = web.owner.lowercased()
+        let nodes = web.nodes.map { node in
+            AddressConnections.Node(id: node.address.lowercased(), address: node.address,
+                                    name: displayName(node.address), count: 1,
+                                    named: VibenetWatch.shared.name(for: node.address) != nil,
+                                    walletKeys: [owner])
+        }
+        return AddressConnections.Map(
+            nodes: Array(nodes.prefix(AddressConnections.nodeLimit)),
+            columns: [.init(id: owner, name: displayName(web.owner), usd: nil)],
+            connectedCount: nodes.count, untouchedWalletNames: [],
+            hiddenNames: nodes.dropFirst(AddressConnections.nodeLimit).map(\.name),
+            firstUnnamed: nil, walletLinks: [],
+            weights: Dictionary(uniqueKeysWithValues: nodes.map {
+                (AddressConnections.Weight.key($0.id, owner), AddressConnections.Weight(count: 1, usd: nil))
+            }))
+    }
+
+    /// Delegate links as a connections map (prd §923): the actor (`to`) is
+    /// a node, the account it can act for (`from`) a column — the direction
+    /// §482 fixed, kept.
+    static func connectionsMap(links: [VibenetDelegateLink]) -> AddressConnections.Map {
+        let accounts = VibenetLinkSpine.distinct(links.map(\.from))
+        let actors = VibenetLinkSpine.distinct(links.map(\.to))
+        var weights: [String: AddressConnections.Weight] = [:]
+        let nodes = actors.map { actor -> AddressConnections.Node in
+            let froms = accounts.filter { account in
+                links.contains { $0.to.lowercased() == actor.lowercased() && $0.from.lowercased() == account.lowercased() }
+            }
+            for from in froms {
+                weights[AddressConnections.Weight.key(actor.lowercased(), from.lowercased())] = .init(count: 1, usd: nil)
+            }
+            return AddressConnections.Node(id: actor.lowercased(), address: actor,
+                                           name: displayName(actor), count: froms.count,
+                                           named: VibenetWatch.shared.name(for: actor) != nil,
+                                           walletKeys: froms.map { $0.lowercased() })
+        }
+        return AddressConnections.Map(
+            nodes: Array(nodes.prefix(AddressConnections.nodeLimit)),
+            columns: accounts.map { .init(id: $0.lowercased(), name: displayName($0), usd: nil) },
+            connectedCount: nodes.count, untouchedWalletNames: [],
+            hiddenNames: nodes.dropFirst(AddressConnections.nodeLimit).map(\.name),
+            firstUnnamed: nil, walletLinks: [], weights: weights)
+    }
+
     private static func displayName(_ address: String) -> String {
         VibenetWatch.shared.name(for: address) ?? VibenetRoom.shortAddress(address)
     }

@@ -764,7 +764,8 @@ struct HegotaRoomFigure: View {
     /// the one thing those rows cannot: how they relate.
     @ViewBuilder private var accountsFigure: some View {
         RoomConnectionsFigure(map: HegotaConnections.map(shown),
-                              yours: String(localized: "the accounts you follow"))
+                              yours: String(localized: "the accounts you follow"),
+                              caption: crownCaption)
     }
 
     /// One watched address: its name, and the scopes it has something to say in.

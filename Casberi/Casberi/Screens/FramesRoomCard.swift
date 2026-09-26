@@ -366,7 +366,8 @@ struct FramesRoomFigure: View {
     /// this is not the roster anyway.
     @ViewBuilder private var accountsFigure: some View {
         RoomConnectionsFigure(map: FramesConnections.map(accounts),
-                              yours: String(localized: "the accounts you follow"))
+                              yours: String(localized: "the accounts you follow"),
+                              caption: crownCaption)
     }
 
     @ViewBuilder private var holdingsFigure: some View {

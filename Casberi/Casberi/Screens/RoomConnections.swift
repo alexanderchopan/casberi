@@ -34,114 +34,205 @@ import SwiftUI
 struct RoomConnectionsFigure: View {
     let map: AddressConnections.Map?
     var box: CGFloat = DSRoomChassis.figureSlot
-    /// What this room calls the things on the right. "wallets" reads wrong in
-    /// a room whose subject is accounts on a devnet.
     var yours: String = String(localized: "yours")
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The scope: one account's name, or how many you follow — the crown's
+    /// own caption, so the tile identifies itself as Home does (prd §923).
+    var caption: String? = nil
+    /// **THE PRESSED FACE (prd §923).** A node's id or a column's key; while
+    /// set, its ribbons draw full and everything else goes quiet, and the
+    /// reading names it. A tap toggles, so the graph is never stuck lit.
+    @State private var lit: String?
 
     var body: some View {
         if let map, !map.nodes.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text(headline(map))
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(2)
-                ConnectionSpine(map: map)
-                    .frame(height: DSRoomChassis.crownLine(box: box, chrome: 64))
-                if let tail = tail(map) {
-                    Text(tail)
+                reading(map)
+                ConnectionSpine(map: map, lit: lit) { picked in
+                    DSHaptic.selection()
+                    lit = lit == picked ? nil : picked
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                HStack {
+                    Text(String(localized: "Connected"))
+                    Spacer(minLength: 0)
+                    Text(map.untouched.isEmpty ? String(localized: "Yours")
+                                               : String(localized: "Yours · quiet ones nothing reaches"))
+                }
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+                if !map.hiddenNames.isEmpty {
+                    Text(String(localized: "\(String(map.hiddenNames.count)) more aren't drawn"))
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
-                        .lineLimit(2)
+                        .lineLimit(1)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.trailing, 0)
         }
     }
 
-    /// **THE COUNT IS THE HEADLINE, and it counts EVERY connected address
-    /// rather than the drawn ones** — `Map.connectedCount`'s own rule: a
-    /// display cap must not change what a number means.
-    private func headline(_ map: AddressConnections.Map) -> String {
-        map.connectedCount == 1
-            ? String(localized: "1 address connects \(yours)")
-            : String(localized: "\(String(map.connectedCount)) addresses connect \(yours)")
+    /// **THE CROWN'S READING (prd §923)** — caption, a figure at `stat24`,
+    /// one line — in place of a two-line sentence that ran under the gear.
+    /// Under a press it is the pressed address and what it moved with which
+    /// of yours.
+    @ViewBuilder
+    private func reading(_ map: AddressConnections.Map) -> some View {
+        let edges = map.nodes.reduce(0) { $0 + $1.walletKeys.count }
+        let total = map.columns.count + map.untouched.count
+        VStack(alignment: .leading, spacing: 2) {
+            if let caption {
+                Text(caption)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            Text(headline(map, edges: edges))
+                .dsText(.stat24)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(line(map, total: total))
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // Only the reading clears the gear (§920's rule); the spine below
+        // takes the whole width.
+        .padding(.trailing, DSRoomChassis.gearColumn)
     }
 
-    /// The two things the picture cannot hold, said in words rather than drawn
-    /// as empty nodes — `Map`'s own reasoning for naming them.
-    private func tail(_ map: AddressConnections.Map) -> String? {
-        var parts: [String] = []
-        if !map.hiddenNames.isEmpty {
-            parts.append(String(localized: "\(String(map.hiddenNames.count)) more aren't drawn"))
+    private func headline(_ map: AddressConnections.Map, edges: Int) -> String {
+        if let lit {
+            if let node = map.nodes.first(where: { $0.id == lit }) { return node.name }
+            if let column = (map.columns + map.untouched).first(where: { $0.id == lit }) { return column.name }
         }
-        if !map.untouchedWalletNames.isEmpty {
-            parts.append(String(localized: "nothing reaches \(map.untouchedWalletNames.joined(separator: ", "))"))
+        return edges == 1 ? String(localized: "1 connection")
+                          : String(localized: "\(String(edges)) connections")
+    }
+
+    private func line(_ map: AddressConnections.Map, total: Int) -> String {
+        if let lit, let node = map.nodes.first(where: { $0.id == lit }) {
+            let names = node.walletKeys.compactMap { key in map.columns.first { $0.id == key }?.name }
+            let usd = node.walletKeys.compactMap { map.weights[AddressConnections.Weight.key(node.id, $0)]?.usd }
+                .reduce(0, +)
+            let with = names.joined(separator: ", ")
+            let moves = node.count == 1 ? String(localized: "1 move")
+                                        : String(localized: "\(String(node.count)) moves")
+            return usd > 0 ? String(localized: "\(WalletValue.money(usd)) with \(with) · \(moves)")
+                           : String(localized: "with \(with) · \(moves)")
         }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        if let lit, let column = map.columns.first(where: { $0.id == lit }) {
+            let n = map.nodes.filter { $0.walletKeys.contains(column.id) }.count
+            let who = n == 1 ? String(localized: "1 address") : String(localized: "\(String(n)) addresses")
+            if let usd = column.usd, usd > 0 { return String(localized: "\(who) · \(WalletValue.money(usd))") }
+            return who
+        }
+        if let lit, map.untouched.contains(where: { $0.id == lit }) {
+            return String(localized: "Nothing reaches it")
+        }
+        return map.untouched.isEmpty
+            ? String(localized: "between \(yours)")
+            : String(localized: "reach \(String(map.columns.count)) of your \(String(total))")
     }
 }
 
-/// The spine: connected addresses left, yours right, one ribbon each.
+/// The spine itself (prd §923): faces at the nodes, ribbons weighted by what
+/// moved and coloured by which of your accounts they reach, the accounts
+/// nothing reaches drawn quiet, and a press that lights one face.
 ///
-/// A `Canvas`, the house idiom for a drawing sized from data, so the arrival
-/// rides CoreAnimation rather than a per-frame SwiftUI interpolation on the
-/// main actor — and `chartWipe` because `design-motion-audit` cannot see a
-/// Canvas and nothing else would say so.
+/// The ribbons are a `Canvas` (the house idiom for a drawing sized from
+/// data); the faces are views over it, because a face is a `WalletFace` —
+/// the identicon or the resolved avatar — and a door.
 struct ConnectionSpine: View {
     let map: AddressConnections.Map
+    var lit: String? = nil
+    var onPress: ((String) -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    var body: some View {
-        Canvas { ctx, size in
-            let lefts = map.nodes
-            let rights = map.columns
-            guard !lefts.isEmpty, !rights.isEmpty else { return }
-            let dot: CGFloat = 7
-            let leftX = dot / 2 + 1
-            let rightX = size.width - dot / 2 - 1
-            func ys(_ n: Int) -> [CGFloat] {
-                guard n > 1 else { return [size.height / 2] }
-                let usable = size.height - dot
-                return (0..<n).map { dot / 2 + usable * CGFloat($0) / CGFloat(n - 1) }
-            }
-            let leftY = ys(lefts.count)
-            let rightY = ys(rights.count)
-            var index: [String: Int] = [:]
-            for (i, c) in rights.enumerated() { index[c.id] = i }
+    private var rights: [AddressConnections.Column] { map.columns + map.untouched }
 
-            // **EVERY RIBBON THE SAME WEIGHT (§295).** A connection exists or
-            // it does not; a thicker line would be the ranking the ruling
-            // forbids.
-            for (i, node) in lefts.enumerated() {
-                for key in node.walletKeys {
-                    guard let j = index[key] else { continue }
-                    var path = Path()
-                    path.move(to: CGPoint(x: leftX, y: leftY[i]))
-                    let midX = size.width / 2
-                    path.addCurve(to: CGPoint(x: rightX, y: rightY[j]),
-                                  control1: CGPoint(x: midX, y: leftY[i]),
-                                  control2: CGPoint(x: midX, y: rightY[j]))
-                    ctx.stroke(path, with: .color(DS.tint.opacity(0.45)),
-                               style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+    var body: some View {
+        GeometryReader { geo in
+            let lefts = map.nodes
+            let rights = rights
+            let rows = max(lefts.count, rights.count, 1)
+            let face = min(DS.Face.row, max(20, (geo.size.height - 4) / CGFloat(rows) - 4))
+            let leftX = face / 2
+            let rightX = geo.size.width - face / 2
+            let leftY = Self.ys(lefts.count, height: geo.size.height, face: face)
+            let rightY = Self.ys(rights.count, height: geo.size.height, face: face)
+            let weights = lefts.flatMap { node in
+                node.walletKeys.map { map.weights[AddressConnections.Weight.key(node.id, $0)] }
+            }
+            let priced = weights.contains { ($0?.usd ?? 0) > 0 }
+            let peak = weights.map { w -> Double in priced ? (w?.usd ?? 0) : Double(w?.count ?? 1) }.max() ?? 1
+            ZStack(alignment: .topLeading) {
+                Canvas { ctx, _ in
+                    var index: [String: Int] = [:]
+                    for (i, c) in rights.enumerated() { index[c.id] = i }
+                    for (i, node) in lefts.enumerated() {
+                        for key in node.walletKeys {
+                            guard let j = index[key] else { continue }
+                            let w = map.weights[AddressConnections.Weight.key(node.id, key)]
+                            let value = priced ? (w?.usd ?? 0) : Double(w?.count ?? 1)
+                            let width = 1.5 + 6.5 * CGFloat(peak > 0 ? value / peak : 0)
+                            let quiet = lit != nil && lit != node.id && lit != key
+                            var path = Path()
+                            path.move(to: CGPoint(x: leftX + face / 2, y: leftY[i]))
+                            let midX = geo.size.width / 2
+                            path.addCurve(to: CGPoint(x: rightX - face / 2, y: rightY[j]),
+                                          control1: CGPoint(x: midX, y: leftY[i]),
+                                          control2: CGPoint(x: midX, y: rightY[j]))
+                            ctx.stroke(path,
+                                       with: .color(WalletFace.tint(for: key).opacity(quiet ? 0.18 : 0.7)),
+                                       style: StrokeStyle(lineWidth: width, lineCap: .round))
+                        }
+                    }
+                }
+                ForEach(Array(lefts.enumerated()), id: \.element.id) { i, node in
+                    faceButton(id: node.id, address: node.address, name: node.name, size: face,
+                               quiet: lit != nil && lit != node.id
+                                   && !node.walletKeys.contains { $0 == lit })
+                        .position(x: leftX, y: leftY[i])
+                }
+                ForEach(Array(rights.enumerated()), id: \.element.id) { j, column in
+                    let reached = map.columns.contains { $0.id == column.id }
+                    let touchedByLit = lit.map { l in lefts.contains { $0.id == l && $0.walletKeys.contains(column.id) } } ?? false
+                    faceButton(id: column.id, address: column.id, name: column.name, size: face,
+                               quiet: !reached || (lit != nil && lit != column.id && !touchedByLit))
+                        .position(x: rightX, y: rightY[j])
                 }
             }
-            for y in leftY {
-                ctx.fill(Path(ellipseIn: CGRect(x: leftX - dot / 2, y: y - dot / 2,
-                                                width: dot, height: dot)),
-                         with: .color(DS.textSecondary))
-            }
-            for y in rightY {
-                ctx.fill(Path(ellipseIn: CGRect(x: rightX - dot / 2, y: y - dot / 2,
-                                                width: dot, height: dot)),
-                         with: .color(DS.tint))
-            }
+            .animation(reduceMotion ? nil : DS.Motion.standard, value: lit)
         }
         .chartWipe(reduceMotion: reduceMotion)
-        .accessibilityElement()
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(String(localized:
             "\(String(map.connectedCount)) connected addresses across \(String(map.columns.count)) of yours")))
+    }
+
+    @ViewBuilder
+    private func faceButton(id: String, address: String, name: String, size: CGFloat, quiet: Bool) -> some View {
+        Button {
+            onPress?(id)
+        } label: {
+            WalletFace(address: address, size: size, circular: true)
+                .opacity(quiet ? 0.35 : 1)
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text(name))
+        .accessibilityAddTraits(lit == id ? .isSelected : [])
+    }
+
+    /// Faces spaced down the column, the first and last flush with the box.
+    static func ys(_ n: Int, height: CGFloat, face: CGFloat) -> [CGFloat] {
+        guard n > 1 else { return [height / 2] }
+        let usable = height - face
+        return (0..<n).map { face / 2 + usable * CGFloat($0) / CGFloat(n - 1) }
     }
 }
 

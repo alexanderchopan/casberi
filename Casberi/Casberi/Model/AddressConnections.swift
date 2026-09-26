@@ -124,6 +124,14 @@ enum AddressConnections {
     /// empty picture and asked, correctly, what the diagram was even for.
     ///
     /// Ordered by the watch order, so a pair is one link and never two.
+    /// **WHAT ONE RIBBON CARRIES (prd §923)** — how many transactions ran
+    /// between an address and one of your wallets, and their USD where the
+    /// edges were priced. The spine weights the ribbon by it.
+    struct Weight: Equatable {
+        let count: Int
+        let usd: Double?
+        static func key(_ node: String, _ wallet: String) -> String { "\(node)|\(wallet)" }
+    }
     struct WalletLink: Identifiable, Equatable {
         var id: String { "\(a)|\(b)" }
         let a: String
@@ -167,6 +175,12 @@ enum AddressConnections {
         /// True when there is nothing connected. Not the same as the map being
         /// nil: nil means the card cannot say anything at all (fewer than two
         /// wallets watched), this means it can and the answer is none.
+        /// Per ribbon, keyed `Weight.key(node, wallet)` (prd §923).
+        var weights: [String: Weight] = [:]
+        /// The wallets nothing reaches, as columns, so the spine draws them
+        /// quiet beside the touched ones instead of naming them in a footnote
+        /// (prd §923). `untouchedWalletNames` is their names.
+        var untouched: [Column] = []
         var isEmpty: Bool { connectedCount == 0 && walletLinks.isEmpty }
 
         /// How many connected addresses are counted but not drawn. Stated by
@@ -285,14 +299,25 @@ enum AddressConnections {
 
         // Per-wallet totals, over every connected address.
         var totals: [String: Double] = [:]
+        // Per ribbon as well as per wallet (prd §923): the count always, the
+        // money where an edge carried one.
+        var counts: [String: Int] = [:]
+        var money: [String: Double] = [:]
         for edge in edges where connectedKeys.contains(edge.addressKey) {
+            let key = Weight.key(edge.addressKey, edge.walletKey)
+            counts[key, default: 0] += 1
             guard let usd = edge.usd, usd > 0, usd.isFinite else { continue }
             totals[edge.walletKey, default: 0] += usd
+            money[key, default: 0] += usd
         }
+        let weights = Dictionary(uniqueKeysWithValues: counts.map { key, count in
+            (key, Weight(count: count, usd: money[key]))
+        })
 
         let columns = watched.filter { touched.contains($0.key) }
             .map { Column(id: $0.key, name: $0.name, usd: totals[$0.key]) }
-        let untouched = watched.filter { !touched.contains($0.key) }.map(\.name)
+        let untouchedWallets = watched.filter { !touched.contains($0.key) }
+        let untouched = untouchedWallets.map(\.name)
 
         let drawn = Array(connected.prefix(nodeLimit))
         return Map(nodes: drawn,
@@ -303,7 +328,9 @@ enum AddressConnections {
                    // Over every connection, never the drawn prefix — see the
                    // property's own doc for the action that used to disappear.
                    firstUnnamed: connected.first { !$0.named },
-                   walletLinks: walletLinks)
+                   walletLinks: walletLinks,
+                   weights: weights,
+                   untouched: untouchedWallets.map { Column(id: $0.key, name: $0.name, usd: nil) })
     }
 
     // MARK: - The card's words

@@ -770,7 +770,8 @@ extension PrivacyDevnetRoomCard {
     /// rows cannot: how they relate.
     @ViewBuilder var accountsFigure: some View {
         RoomConnectionsFigure(map: PrivacyConnections.map(accounts),
-                              yours: String(localized: "the accounts you follow"))
+                              yours: String(localized: "the accounts you follow"),
+                              caption: scopeCaption)
     }
 
     private func accountDoing(_ account: PrivacyDevnetAccount) -> String {

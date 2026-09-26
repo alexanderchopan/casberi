@@ -56,7 +56,12 @@ extension FeedScreen {
         Section {
             RoomConnectionsFigure(map: AddressConnections.map(context: modelContext),
                                   box: DSRoomChassis.visualSlot,
-                                  yours: String(localized: "the accounts you follow"))
+                                  yours: String(localized: "the accounts you follow"),
+                                  caption: selectedWallet.map {
+                                      WalletScopeRail.caption(for: $0, in: wallet.addresses).name
+                                  } ?? (wallet.addresses.count == 1
+                                        ? String(localized: "1 wallet")
+                                        : String(localized: "\(String(wallet.addresses.count)) wallets")))
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.contentGap,
                                           trailing: DSRoomChassis.inset))
