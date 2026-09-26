@@ -2690,6 +2690,7 @@ harness "Frames devnet transaction self-test" "21 mutations, real on-chain vecto
 # mode, and the biggest-first order breaking — four mutations, each proven to
 # have changed the source before it is trusted to fail.
 harness "Frames flow self-test" "the flow's counts, links, ends, outcomes and order, 4 mutations" "scripts/frames-flow-selftest.sh" "the frames flow self-test failed — run scripts/frames-flow-selftest.sh"
+harness "Zerion lane self-test" "one request at a time, spaced, a 429 waited out on schedule, 4 mutations" "scripts/zerion-lane-selftest.sh" "the zerion lane self-test failed — run scripts/zerion-lane-selftest.sh"
 # The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
 # change flow, compiled whole. Separate from the harness above because that one
 # is four minutes over the whole room and these run in one, so a change to

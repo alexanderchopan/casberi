@@ -2556,9 +2556,19 @@ enum WalletIngest {
                 let blind = Set(addresses.flatMap { networks(for: $0) })
                     .subtracting(ZerionAPI.networkFor.values)
                     .intersection(alchemyNetworks)
-                guard !blind.isEmpty else { return (z.candidates, true) }
-                let a = await collectCandidatesAlchemy(addresses: addresses, only: blind)
-                return (z.candidates + a.candidates, true)
+                // A wallet Zerion did not answer (a refusal past the lane's
+                // retries, prd §934) is asked on Alchemy for EVERY chain it
+                // routes — it was skipped here before, and one wallet's
+                // holdings vanished from the total while the others' stood.
+                var out = z.candidates
+                if !z.unreached.isEmpty {
+                    out += await collectCandidatesAlchemy(addresses: z.unreached).candidates
+                }
+                let answered = addresses.filter { !z.unreached.contains($0) }
+                if !blind.isEmpty, !answered.isEmpty {
+                    out += await collectCandidatesAlchemy(addresses: answered, only: blind).candidates
+                }
+                return (out, true)
             }
         }
         let a = await collectCandidatesAlchemy(addresses: addresses)
@@ -2571,10 +2581,11 @@ enum WalletIngest {
     /// enough to prefer Zerion for the whole set. Each wallet is filtered to ITS
     /// OWN routed networks, so a chain toggled off in `WalletChainStore` is
     /// dropped even though the single Zerion call asked for every mapped chain.
-    private static func collectCandidatesZerion(addresses: [String]) async -> (candidates: [Candidate], reached: Bool) {
+    private static func collectCandidatesZerion(addresses: [String])
+        async -> (candidates: [Candidate], reached: Bool, unreached: [String]) {
         let routed = addresses.map { (address: $0, networks: Set(networks(for: $0))) }
                               .filter { !$0.networks.isEmpty }
-        guard !routed.isEmpty else { return ([], false) }
+        guard !routed.isEmpty else { return ([], false, []) }
         // Bounded like the Alchemy fan-out — Zerion's free tier is 10 req/s, and
         // a watched set of a dozen wallets shouldn't burst past it.
         let holdings = await IngestSupport.boundedGather(routed, maxConcurrent: 4) { r in
@@ -2582,9 +2593,13 @@ enum WalletIngest {
         }
         var candidates: [Candidate] = []
         var reached = false
+        var unreached: [String] = []
         var icons: [(symbol: String, url: String)] = []
         for (i, result) in holdings.enumerated() {
-            guard let result else { continue }   // this wallet unreached — skip it, don't fail the set
+            guard let result else {   // this wallet unreached — Alchemy asks for it (§934), the set stands
+                unreached.append(routed[i].address)
+                continue
+            }
             reached = true
             let allowed = routed[i].networks
             for h in result where allowed.contains(h.network) {
@@ -2603,7 +2618,7 @@ enum WalletIngest {
             }
         }
         TokenIconBook.note(icons)
-        return (candidates, reached)
+        return (candidates, reached, unreached)
     }
 
     /// `only`, when given, restricts the body to those networks — the union

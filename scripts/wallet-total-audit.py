@@ -230,7 +230,9 @@ def audit(texts: dict) -> list:
     cc = body(ingest, "static func collectCandidates(addresses:")
     if not cc:
         bad.append("WalletIngest.collectCandidates is gone — this audit is blind")
-    elif "collectCandidatesAlchemy(addresses: addresses, only:" not in cc:
+    # `addresses:` names whichever wallets Zerion ANSWERED (prd §934 — a wallet
+    # it refused is asked on Alchemy for every chain, in a call of its own).
+    elif not re.search(r"collectCandidatesAlchemy\(addresses: \w+, only:", cc):
         bad.append("collectCandidates no longer asks Alchemy for the chains Zerion cannot map "
                    "— a chain only Alchemy serves is invisible whenever Zerion answers, and "
                    "its picker row is a dead control (prd §826)")
@@ -367,7 +369,7 @@ def self_test() -> int:
          lambda t: t.replace("    // `walletHoldings` and the",
                              "    var countsInWallet = true\n    // `walletHoldings` and the")),
         ("Zerion answering ends the read again", "WalletIngest",
-         lambda t: t.replace("collectCandidatesAlchemy(addresses: addresses, only: blind)",
+         lambda t: t.replace("collectCandidatesAlchemy(addresses: answered, only: blind)",
                              "collectCandidatesAlchemy(addresses: addresses)")),
         # Generic since §828: Robinhood is Zerion-mapped now, so a mutation
         # naming it would test nothing (and one did — it still named the `.v1`

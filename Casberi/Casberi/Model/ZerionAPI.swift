@@ -108,12 +108,45 @@ enum ZerionAPI {
     /// chain-filtered read and its unfiltered retry are the same request made
     /// twice, never two spellings that can drift apart.
     private static func dataRows(_ url: String, auth: String) async -> [[String: Any]]? {
-        let (json, status) = await IngestSupport.getJSONStatus(url, auth: "Basic \(auth)")
-        #if DEBUG
-        // A refused read is invisible otherwise (nil is also "unreachable"),
-        // and the shared key's daily pool is small (prd §826): say the status.
-        if status != 200 { NSLog("[Casberi] zerion: HTTP %d for %@", status, url.prefix(90).description) }
-        #endif
+        // Through the lane (prd §934): one request at a time, and a 429
+        // waited out rather than read as "unreached".
+        var attempt = 0
+        var json: Any?
+        while true {
+            attempt += 1
+            // The day's pool is one for every install (300, measured): once
+            // a refusal says it is empty, nothing is asked until it refills.
+            if await ZerionLane.shared.isExhausted {
+                #if DEBUG
+                NSLog("[Casberi] zerion: day pool exhausted, not asking %@", url.prefix(90).description)
+                #endif
+                return nil
+            }
+            let (body, status, http) = await ZerionLane.shared.run {
+                await IngestSupport.getJSONResponse(url, auth: "Basic \(auth)")
+            }
+            await ZerionLane.shared.note(dayRemaining: http?.value(forHTTPHeaderField: "ratelimit-org-day-remaining"),
+                                         dayReset: http?.value(forHTTPHeaderField: "ratelimit-org-day-reset"),
+                                         status: status)
+            if status == 429, await !ZerionLane.shared.isExhausted,
+               let wait = ZerionLane.delay(attempt: attempt,
+                                           retryAfter: http?.value(forHTTPHeaderField: "Retry-After")
+                                               ?? http?.value(forHTTPHeaderField: "ratelimit-reset")) {
+                #if DEBUG
+                NSLog("[Casberi] zerion: HTTP 429, waiting %.1fs (attempt %d) for %@", wait, attempt,
+                      url.prefix(90).description)
+                #endif
+                try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+                continue
+            }
+            #if DEBUG
+            // A refused read is invisible otherwise (nil is also "unreachable"),
+            // and the shared key's daily pool is small (prd §826): say the status.
+            if status != 200 { NSLog("[Casberi] zerion: HTTP %d for %@", status, url.prefix(90).description) }
+            #endif
+            json = body
+            break
+        }
         guard let root = json as? [String: Any],
               let data = root["data"] as? [[String: Any]] else { return nil }
         return data
