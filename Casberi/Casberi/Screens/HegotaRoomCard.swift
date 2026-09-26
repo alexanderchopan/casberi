@@ -218,8 +218,33 @@ struct HegotaRoomFigure: View {
         case .accounts:        accountsFigure
         case .frames:          framesFigure
         case .coins:           coinsFigure
-        case .permissions:     RoomPermissionsFigure(kinds: HegotaPermissions.kinds(shown), caption: crownCaption)
+        case .permissions:     permissionsFigure
         }
+    }
+
+    /// **Permissions (prd §951): one number over one noun, the holders as
+    /// marks** — the Wallet's crown (§944). The nonce keys that may send for
+    /// these accounts, then whoever paid their gas; the noun is the kind's
+    /// own word when there is one kind, "permissions" when there are two.
+    @ViewBuilder private var permissionsFigure: some View {
+        let kinds = HegotaPermissions.kinds(shown)
+        let total = RoomPermissions.total(kinds)
+        let payers = HegotaSponsor.group(moves).map(\.payer)
+        let watched = accounts.map(\.address)
+        RoomPermissionsFigure(
+            number: String(total),
+            caption: kinds.count == 1 ? kinds[0].label.lowercased()
+                : total == 1 ? String(localized: "permission") : String(localized: "permissions"),
+            holders: lanes.map { lane in
+                RoomPermissionsFigure.Holder(
+                    id: "lane:" + lane.key,
+                    name: lane.looksLikeAddress ? WalletStore.shortAddress(lane.key) : lane.key,
+                    mark: HegotaNonceLane.mark(lane))
+            } + payers.map { payer in
+                RoomPermissionsFigure.Holder(id: "payer:" + payer,
+                                             name: HegotaName.of(payer, watched: watched),
+                                             mark: .face(payer))
+            })
     }
 
     /// Home: the delta and the curve. The figure itself is the slot's headline,
@@ -1957,10 +1982,7 @@ struct HegotaRoomList: View {
     @ViewBuilder private var noncesList: some View {
         if !lanes.isEmpty {
             ForEach(lanes) { lane in
-                WalletRow(mark: lane.looksLikeAddress
-                              ? .face(lane.key)
-                              : .monogram(String(lane.key.dropFirst(2).prefix(2)).uppercased(),
-                                          tint: DS.tint),
+                WalletRow(terminal: HegotaNonceLane.mark(lane),
                           title: lane.looksLikeAddress
                               ? WalletStore.shortAddress(lane.key) : lane.key,
                           // **Per-lane facts, not the same sentence N times.**
@@ -1969,25 +1991,24 @@ struct HegotaRoomList: View {
                           // thing about every key and so distinguishes none of
                           // them. The explainer belongs once, in the figure's
                           // caption, and the row says where THIS key is.
-                          subtitle: laneSubtitle(lane)) {
-                    // **THE CHAIN'S OWN COUNT when we have it (§509).** The
-                    // observed count undercounts by construction — a send that
-                    // moved no ETH emits no transfer log — which is why this
-                    // said "at least" before the counter could be read.
-                    Text(lane.sendCount == 1 ? String(localized: "1 send")
-                                             : String(localized: "\(String(lane.sendCount)) sends"))
-                        .dsText(.subhead12)
-                        .foregroundStyle(lane.countIsExact ? DS.textSecondary : DS.textTertiary)
-                }
+                          // The key's one line (prd §951): how many sends and
+                          // where it stands — no chevron, so the row is the
+                          // whole answer, and no age (§950).
+                          subtitle: laneSubtitle(lane))
             }
         }
     }
 
     private func laneSubtitle(_ lane: HegotaNonceLane) -> String {
-        var parts: [String] = []
+        // **THE CHAIN'S OWN COUNT when we have it (§509)**; the observed
+        // count undercounts by construction, so it says "at least".
+        let n = lane.sendCount
+        var parts: [String] = [lane.countIsExact
+            ? (n == 1 ? String(localized: "1 send") : String(localized: "\(String(n)) sends"))
+            : (n == 1 ? String(localized: "at least 1 send")
+                      : String(localized: "at least \(String(n)) sends"))]
         if let seq = lane.seq {
-            let n = WalletIngest.hexToInt(seq)
-            parts.append(String(localized: "at #\(String(n))"))
+            parts.append(String(localized: "at #\(String(WalletIngest.hexToInt(seq)))"))
         }
         // The per-key form of §504's valueless sends — the steps this key ran
         // that paid nobody, which no transfer log can show.
@@ -1995,14 +2016,7 @@ struct HegotaRoomList: View {
             parts.append(quiet == 1 ? String(localized: "1 moved no value")
                                     : String(localized: "\(String(quiet)) moved no value"))
         }
-        if let when = HegotaFormat.time(lastSend(on: lane)) { parts.append(when) }
-        return parts.isEmpty
-            ? String(localized: "block \(String(lane.lastBlock))")
-            : parts.joined(separator: " · ")
-    }
-
-    private func lastSend(on lane: HegotaNonceLane) -> Date? {
-        moves.first { $0.move.block == lane.lastBlock }?.move.timestamp
+        return parts.joined(separator: " · ")
     }
 
     // MARK: Sponsors
@@ -2018,16 +2032,15 @@ struct HegotaRoomList: View {
             ForEach(sponsors) { sponsor in
                 VStack(spacing: DS.Space.s2) {
                     WalletRow(mark: .face(sponsor.payer),
-                              title: HegotaName.of(sponsor.payer, watched: watched),
-                              subtitle: sponsor.moves.count == 1
-                                  ? String(localized: "paid for 1 transaction")
-                                  : String(localized: "paid for \(String(sponsor.moves.count)) transactions")) {
+                              // No line (prd §951): what they paid for is
+                              // the rows under it, counted by being there.
+                              title: HegotaName.of(sponsor.payer, watched: watched)) {
                         // The gas they actually spent — nil unless EVERY move's
                         // fee was read, because a partial sum understates what
                         // somebody gave you and does it silently.
                         if let fee = sponsor.feeWei {
                             Text(HegotaFormat.eth(fee))
-                                .dsText(.subhead12).foregroundStyle(DS.tint)
+                                .dsText(.label12).foregroundStyle(DS.textSecondary)
                                 .monospacedDigit().lineLimit(1)
                         }
                     }
@@ -3810,5 +3823,15 @@ enum HegotaRoomReadings {
                           sub: WalletStore.shortAddress(account.address),
                           faces: [.wallet(address: account.address)])
         }
+    }
+}
+
+extension HegotaNonceLane {
+    /// One key, one mark, in the crown and its row alike (prd §951): an
+    /// address wears its face, a bare key its first two hex digits.
+    static func mark(_ lane: HegotaNonceLane) -> WalletRowMark {
+        lane.looksLikeAddress
+            ? .face(lane.key)
+            : .monogram(String(lane.key.dropFirst(2).prefix(2)).uppercased(), tint: DS.tint)
     }
 }

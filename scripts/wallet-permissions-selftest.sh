@@ -478,12 +478,16 @@ strip "$CARD" | grep -qE '\.names|rung\.names' \
 # drawn, not merely said" passes, and a figure that draws neither fails.
 # Since prd §936 a class is a BAR (`DSBarList`) as long as its count, under
 # the number (`DSFigureReading`) — a third spelling of "drawn, not said".
+# Since prd §944 (Wallet) and §951 (the devnets) the crown is the number over
+# one MARK PER HOLDER — the fourth spelling, and both crowns must carry it.
 { grep -qE 'dsText\(\.price(40|17)\)' "$CARD" ||
   grep -qE 'dsText\(\.price(40|17)\)' "$FIGURE" ||
   { grep -q 'systemName: "key.fill"' "$FIGURE" &&
     grep -q 'ForEach(0..<shown' "$FIGURE"; } ||
   { grep -q 'DSBarList(bars:' "$FIGURE" &&
-    grep -q 'share: Double(kind.count)' "$FIGURE"; }; } \
-  || fail "the slot's counts are no longer drawn as figures (§546, keys since §924, bars since §936)"
+    grep -q 'share: Double(kind.count)' "$FIGURE"; } ||
+  { grep -q 'DSFigureReading(number:' "$CARD" && grep -q 'AssetMark(name: holder.name' "$CARD" &&
+    grep -q 'DSFigureReading(number:' "$FIGURE" && grep -q 'WalletMarkView(mark: holder.mark' "$FIGURE"; }; } \
+  || fail "the slot's counts are no longer drawn as figures (§546, keys since §924, bars since §936, holders since §944/§951)"
 
 print "  ok   18 mutations, 25 drift guards"

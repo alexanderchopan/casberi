@@ -1975,117 +1975,65 @@ struct VibenetRoomCard: View {
     /// Accounts in the room's own order; keys within an account in the tray's
     /// A–Z, which is §478's settled ruling ("then we aren't making some
     /// judgement call") and is left exactly as it was.
+    /// Every key on the accounts in view, in the tray's order — the crown's
+    /// marks and the list's rows are one population (prd §951).
+    private var permissionKeys: [VibenetTrayKey] {
+        // Admin first: the one key with no limit is the one to see.
+        let ordered = VibenetKeyTray.ordered(room.items.flatMap { item in
+            item.actors.map { VibenetTrayKey(address: item.address, actor: $0) }
+        })
+        return ordered.filter(\.actor.scope.isAdmin) + ordered.filter { !$0.actor.scope.isAdmin }
+    }
+
+    /// **ONE LIST OF KEYS (prd §951)** under the Wallet's group header, each
+    /// key a row in the Wallet's anatomy: the kind's mark, the key named by
+    /// its kind and short id, and ONE line — what it may do, red only for
+    /// Admin, the word that needs you. The account went from the line and
+    /// the per-account block with it: the account menu says whose keys these
+    /// are. The expiry stays on the right, a clock still ahead of you (§764).
     @ViewBuilder
     private var permissionsList: some View {
-        let byAccount = room.items.filter { !$0.actors.isEmpty }
-        if !byAccount.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                ForEach(byAccount, id: \.address) { item in
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        // **THE HEADER AND ITS KEYS SHARE ONE LEADING COLUMN**
-                        // (prd §495, user: *"the letters here have different
-                        // indentations. the …0b1c and secp256k1 for example.
-                        // they need to be the same"*).
-                        //
-                        // The header led with a `rowCircle` face (28) and
-                        // `s2`, the key rows with a `Mark.list` mark (36) and
-                        // `s3` — so their text started ten points apart, one
-                        // line under the other. Same size, same gap now, which
-                        // is also `VibenetEventRow`'s column: three lists in
-                        // this room, one edge.
-                        HStack(spacing: DS.Space.s2) {
-                            WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
-                            Text(Self.displayName(item.address))
-                                .dsText(.subhead12)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                            Text(item.actors.count == 1
-                                 ? String(localized: "1 key")
-                                 : String(localized: "\(item.actors.count) keys"))
-                                .dsText(.subhead12)
-                                .foregroundStyle(DS.textTertiary)
-                            Spacer(minLength: 0)
-                        }
-                        ForEach(VibenetKeyTray.ordered(item.actors.map {
-                            VibenetTrayKey(address: item.address, actor: $0)
-                        })) { key in
-                            permissionRow(key)
-                        }
-                    }
+        let keys = permissionKeys
+        if !keys.isEmpty {
+            RoomListBlock(caption: String(localized: "Keys")) {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ForEach(keys) { key in permissionRow(key) }
                 }
             }
-            .padding(.horizontal, DSRoomChassis.contentInset)
+            // The card's content stands on the tiles' edge; the rows stand in
+            // the Wallet's row column, where every list's marks centre.
+            .padding(.leading, DSRoomChassis.rowInset(forMark: DS.Face.list) - DSRoomChassis.inset)
         }
     }
 
-    /// One key: its type and id, when it lapses, and what it can do as chips.
-    ///
-    /// The chips are `grantedPlainLabels` — the room's ONE list of permission
-    /// wording, so a chip here and a rung in the slot above can never disagree
-    /// about either the words or their order.
     @ViewBuilder
     private func permissionRow(_ key: VibenetTrayKey) -> some View {
-        // **NO MARK ON A KEY ROW** (prd §495, user: *"do you think having the
-        // key icon makes the entry crowded? it makes it harder to separate and
-        // makes it all become a wall. i don't think we need the key icon"* —
-        // and earlier, the argument that settled it: *"if we use key then it
-        // would be like why aren't we using it in places we use a + sign"*).
-        //
-        // The rule the app follows is that a row's mark is its own SUBJECT — a
-        // holding's token, an account's face, an event's change. A key's
-        // subject is a key, and no glyph reads as one, so any mark here is
-        // invented rather than read. Drawn beside the account face above it,
-        // two mark columns turn a short list into a wall.
-        //
-        // The row indents to the header's TEXT column instead, which is what
-        // it did before the mark and is why the two were aligned.
-        let body = VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(key.actor.kind.shortLabel)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                Text(VibenetKeyIdentity.short(key.actor.actorId))
-                    .dsText(.mono12)
-                    .foregroundStyle(DS.textTertiary)
-                Spacer(minLength: DS.Space.s2)
-                if let clock = key.actor.expiryClock(now: .now) {
-                    Text(clock)
-                        .dsText(.label12)
-                        .foregroundStyle(key.actor.expiryStanding(now: .now) == .soon
-                                         ? DS.tint : DS.textTertiary)
-                        .fixedSize()
-                }
+        let power = key.actor.scope.isAdmin
+            ? Text(Self.adminLabel).foregroundColor(DS.destructive)
+            : Text(key.actor.scope.grantedPlainLabels.joined(separator: " · "))
+        let row = WalletRow(mark: .symbol(key.actor.kind.symbolName, tint: Self.mark),
+                            title: "\(key.actor.kind.shortLabel) \(VibenetKeyIdentity.short(key.actor.actorId))",
+                            subtitleText: power) {
+            if let clock = key.actor.expiryClock(now: .now) {
+                Text(clock)
+                    .dsText(.label12)
+                    .foregroundStyle(key.actor.expiryStanding(now: .now) == .soon
+                                     ? DS.tint : DS.textTertiary)
+                    .fixedSize()
             }
-            // **CHIPS, and ADMIN IS ONE OF THEM (user ruling, prd §493:
-            // *"for Admin it doesn't need a sentence. Admin is the chip"*).**
-            //
-            // `grantedPlainLabels` already returns exactly `["Admin"]` for an
-            // unrestricted key — `isAdmin` is `raw == 0`, so there are no bits
-            // to list — which means the chip row needs no admin branch and no
-            // gloss beside it. It says what the key can do in the room's own
-            // one list of permission wording, so a chip here and a rung in the
-            // slot above can never disagree about either the words or their
-            // order.
-            //
-            // The TRAY's own `VibenetScopeChips`: a permission is a fact, so
-            // a `DSStamp` word and never a capsule (prd §746, §782).
-            VibenetScopeChips(scope: key.actor.scope)
+            if onOpenKey != nil { DSChevron() }
         }
-        let padded = body
-            .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
-            .padding(.vertical, DS.Space.s1)
         if let onOpenKey {
             Button {
                 DSHaptic.selection()
                 onOpenKey(key.actor,
                           room.items.first { $0.address == key.address } ?? room.items[0],
                           [])
-            } label: { padded.contentShape(Rectangle()) }
+            } label: { row.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
                 .dsHover()
         } else {
-            padded
+            row
         }
     }
 
@@ -2166,10 +2114,20 @@ struct VibenetRoomCard: View {
             let census = VibenetPolicyAggregation.census(counts)
             // The figure owns its reading since prd §924; only the empty word stays.
             scopeFigure(headline: (keys?.total ?? 0) == 0 ? String(localized: "No keys") : nil) {
-                RoomPermissionsFigure(kinds: census.map {
-                    RoomPermissions.Kind(label: $0.label, count: $0.count,
-                                         unbounded: $0.label == Self.adminLabel)
-                }, caption: crownCaption)
+                // **The Wallet's crown (prd §951)**: the keys on these
+                // accounts, one mark each, the Admin key the one red ring.
+                let held = permissionKeys
+                RoomPermissionsFigure(
+                    number: String(held.count),
+                    caption: held.count == 1 ? String(localized: "key") : String(localized: "keys"),
+                    holders: held.map { key in
+                        RoomPermissionsFigure.Holder(
+                            id: key.id,
+                            name: key.actor.scope.isAdmin ? Self.adminLabel
+                                : VibenetKeyIdentity.short(key.actor.actorId),
+                            mark: .symbol(key.actor.kind.symbolName, tint: Self.mark),
+                            unbounded: key.actor.scope.isAdmin)
+                    })
             }
         }
     }

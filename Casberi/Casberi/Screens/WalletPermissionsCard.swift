@@ -31,7 +31,7 @@ struct WalletPermissionsCard: View {
     /// red ring, the only red in the crown. The marks are a picture, not a
     /// control: a delegation has no honest destination in this app (§112), so
     /// the doors are the rows below, where a grant opens its sheet.
-    /// The devnets keep `RoomPermissionsFigure` until their pass.
+    /// The devnets' `RoomPermissionsFigure` draws the same crown (§951).
     var body: some View {
         let shown = Array(holders.prefix(Self.shown))
         VStack(alignment: .leading, spacing: 0) {
@@ -41,6 +41,11 @@ struct WalletPermissionsCard: View {
                 ForEach(Array(shown.enumerated()), id: \.offset) { _, holder in
                     mark(holder)
                         .frame(maxWidth: .infinity)
+                }
+                // Five columns always (prd §951), the Accounts faces' grid: a
+                // lone holder stands in the first fifth, not the middle.
+                ForEach(0..<max(0, Self.shown - shown.count), id: \.self) { _ in
+                    Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
                 }
             }
             Spacer(minLength: 0)

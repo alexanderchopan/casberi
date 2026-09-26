@@ -900,6 +900,33 @@ extension PrivacyDevnetRoomCard {
         return out
     }
 
+    /// **Permissions (prd §951): the Wallet's crown** — one number over one
+    /// noun, the holders as marks. The spend keys this account has used, then
+    /// whoever paid its gas; the noun is the kind's own words when there is
+    /// one kind.
+    @ViewBuilder var permissionsFigure: some View {
+        let kinds = permissionKinds
+        let total = RoomPermissions.total(kinds)
+        // Whoever paid, off the receipt's own `payer` (§596); a sponsored
+        // move whose receipt was not read is counted and draws no face.
+        let payers = Array(Set(pairs.filter(\.move.sponsored)
+            .compactMap { $0.move.payer?.lowercased() })).sorted()
+        RoomPermissionsFigure(
+            number: String(total),
+            caption: kinds.count == 1 ? kinds[0].label.lowercased()
+                : total == 1 ? String(localized: "permission") : String(localized: "permissions"),
+            holders: keyRows.map { row in
+                RoomPermissionsFigure.Holder(id: "key:" + Self.shortHex(row.key),
+                                             // The tail alone fits a fifth of the box.
+                                             name: "…" + String(Self.shortHex(row.key).suffix(6)),
+                                             mark: .symbol("key.fill", tint: Self.tint))
+            } + payers.map { payer in
+                RoomPermissionsFigure.Holder(id: "payer:" + payer,
+                                             name: WalletStore.shortAddress(payer),
+                                             mark: .face(payer))
+            })
+    }
+
     /// One block per kind, each captioned with the chain's own plain words —
     /// §598's vocabulary, moved from the chip to the caption over the rows it
     /// names.
@@ -928,21 +955,24 @@ extension PrivacyDevnetRoomCard {
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { i, row in
-                    let title = String(localized: "Spent once")
+                    // The key is the title and there is no line (prd §951):
+                    // every key here was spent once, so the words separated
+                    // nothing, and the chevron says it opens its transaction.
+                    let title = Self.shortHex(row.key)
                     if let onOpenMove {
                         Button {
                             DSHaptic.selection()
                             onOpenMove(row.move, row.owner)
                         } label: {
                             WalletRow(mark: .symbol("key.fill", tint: Self.tint),
-                                      title: title, subtitle: Self.shortHex(row.key))
+                                      title: title)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(String(localized: "Spend key \(i + 1), used once. Opens its transaction."))
                     } else {
                         WalletRow(terminal: .symbol("key.fill", tint: Self.tint),
-                                  title: title, subtitle: Self.shortHex(row.key))
+                                  title: title)
                             .accessibilityLabel(String(localized: "Spend key \(i + 1), used once"))
                     }
                 }
@@ -1131,7 +1161,7 @@ extension PrivacyDevnetRoomCard {
         // it drew the gas BUDGET bar — a reading about what steps were allowed
         // to cost, which is not what the scope asks. Both go for the figure
         // five rooms share.
-        case .permissions: RoomPermissionsFigure(kinds: permissionKinds, caption: scopeCaption)
+        case .permissions: permissionsFigure
         case .roots:      windows
         case .home:       EmptyView()
         }

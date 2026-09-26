@@ -435,8 +435,8 @@ struct FramesRoomFigure: View {
 
     /// **PERMISSIONS: WHO WAS ALLOWED TO PAY (prd §692).**
     ///
-    /// The grid is `RoomPermissionsFigure`, shared with four other rooms; this
-    /// chain grants exactly one kind of permission, so it draws one cell.
+    /// The crown is `RoomPermissionsFigure`, shared with three other devnets
+    /// (prd §951): the sponsored share over the sponsors' faces.
     ///
     /// **The lead is the fact only this room can state.** Whose gas: exact,
     /// because `gasUsed` and `effectiveGasPrice` are on every receipt and
@@ -458,13 +458,20 @@ struct FramesRoomFigure: View {
         let theirs = paid.filter(\.1).map(\.0).reduce(0, +)
         let mine = paid.filter { !$0.1 }.map(\.0).reduce(0, +)
         let share = theirs + mine > 0 ? theirs / (theirs + mine) : 0
+        let roster = FramesPayers.roster(moves)
+        // One number over one noun (prd §951): the share of gas somebody else
+        // paid, which only this chain can state, and under it who paid it.
         RoomPermissionsFigure(
-            kinds: kinds,
-            lead: theirs > 0
-                ? RoomPermissions.Lead(figure: Self.percent(share),
-                                       caption: String(localized: "of gas paid by somebody else"))
-                : nil,
-            caption: crownCaption)
+            number: theirs > 0 ? Self.percent(share) : String(roster.count),
+            caption: theirs > 0 ? String(localized: "of gas sponsored")
+                : roster.count == 1 ? String(localized: "sponsor") : String(localized: "sponsors"),
+            holders: roster.map { payer in
+                RoomPermissionsFigure.Holder(
+                    id: payer.id,
+                    name: FramesWatch.shared.name(for: payer.address)
+                        ?? WalletStore.shortAddress(payer.address),
+                    mark: .face(payer.address))
+            })
     }
 
     /// The one kind of permission this chain grants: somebody else paid.
@@ -623,12 +630,11 @@ struct FramesRoomList: View {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 RoomListBlock(caption: String(localized: "Sponsors")) { payers }
                 RoomListBlock(caption: String(localized: "What they paid for")) {
-                    // **THE SPONSORSHIP CLAUSE IS DROPPED HERE.** Every row in
-                    // this scope is sponsored by definition, so the word
-                    // separates nothing and costs the line its remaining
-                    // width — §548's own ruling against the frame-count
-                    // sentence on Activity, one chip over.
-                    rows(pairs.filter { $0.move.sponsored }, showsSponsorship: false)
+                    // **NO LINE HERE (prd §951)** but a word that needs you.
+                    // Every row in this scope is sponsored by definition, and
+                    // the frame count is the sheet's, one tap on — a line that
+                    // repeats or restates the destination separates nothing.
+                    rows(pairs.filter { $0.move.sponsored }, showsLine: false)
                 }
             }
             }
@@ -703,7 +709,7 @@ struct FramesRoomList: View {
     }
 
     @ViewBuilder private func rows(_ list: [(move: FramesMove, owner: String)],
-                                   showsSponsorship: Bool = true) -> some View {
+                                   showsLine: Bool = true) -> some View {
         // **PENDING FIRST, and only in the scopes where it belongs.** Activity
         // is every transaction and Home is where the send lives, so a
         // just-broadcast batch belongs in both. Frames and Sponsors select rows
@@ -731,14 +737,17 @@ struct FramesRoomList: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 let runs = DayRuns.runs(list) { $0.move.timestamp }
                 ForEach(Array(runs.enumerated()), id: \.element.id) { index, run in
-                DSDayHeader(word: DayRuns.word(run), first: index == 0)
+                // Under a group header (Permissions' "What they paid for")
+                // a day header would stand a second title on the first; the
+                // sheet says when (prd §951).
+                if showsLine { DSDayHeader(word: DayRuns.word(run), first: index == 0) }
                 ForEach(run.items, id: \.move.id) { pair in
                     let move = pair.move
                     Button {
                         DSHaptic.selection()
                         onOpenMove(move, pair.owner)
                     } label: {
-                        FramesMoveRow(move: move, showsSponsorship: showsSponsorship)
+                        FramesMoveRow(move: move, showsLine: showsLine)
                             .contentShape(Rectangle())
                     }
                         .buttonStyle(.plain)
@@ -770,6 +779,8 @@ struct FramesMoveRow: View {
     /// False in the Sponsors scope, where every row is sponsored and the word
     /// is a tally of everything.
     var showsSponsorship = true
+    /// No line but a word that needs you (prd §951's list under Permissions).
+    var showsLine = true
 
     /// **THE VERDICT COMES FROM THE MODEL** (2026-09-02). It was spelled out
     /// here, where nothing else could reach it — so the sheet this row now
@@ -818,7 +829,7 @@ struct FramesMoveRow: View {
         // (prd §687).** A plain transfer says nothing here — this chain
         // carries both, the faucet pays out as an ordinary type-0x2 transfer,
         // and "0 frames" over one of those is a count where a noun belongs.
-        if !move.rows.isEmpty {
+        if !move.rows.isEmpty, showsLine {
             add(Text(move.rows.count == 1
                      ? String(localized: "1 frame")
                      : String(localized: "\(String(move.rows.count)) frames"))
@@ -826,7 +837,7 @@ struct FramesMoveRow: View {
         }
         // One word, not a sentence: the scope is called Sponsors and the sheet
         // says who and how much.
-        if move.sponsored, showsSponsorship {
+        if move.sponsored, showsSponsorship, showsLine {
             add(Text(String(localized: "Sponsored")).foregroundColor(DS.textTertiary))
         }
         // Nil draws nothing rather than "now" — the header read is bounded, so
@@ -954,11 +965,9 @@ struct FramesPayerRow: View {
     /// about WHO paid, so the face is the subject rather than decoration.
     var body: some View {
         WalletRow(mark: .face(payer.address),
+                  // No line (prd §951): the count is the sheet's, one tap on.
                   title: FramesWatch.shared.name(for: payer.address)
-                      ?? WalletStore.shortAddress(payer.address),
-                  subtitle: payer.count == 1
-                      ? String(localized: "1 transaction")
-                      : String(localized: "\(String(payer.count)) transactions")) {
+                      ?? WalletStore.shortAddress(payer.address)) {
             // **NOT A ZERO WHEN IT COULD NOT BE TOTALLED.** `FramesPayer
             // .gasWei` is all-or-nothing on purpose, and printing "0.000000"
             // for an incomplete sum understates a specific person's generosity
