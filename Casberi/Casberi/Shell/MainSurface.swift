@@ -827,6 +827,10 @@ struct MainSurface: View {
         switch node {
         case .apps:
             EmptyView()
+        case .settings:
+            SettingsScreen()
+        case .addresses:
+            AddressesScreen()
         case .settingsPage(let page):
             SettingsPageView(page: page)
         case .bridge(let dest):

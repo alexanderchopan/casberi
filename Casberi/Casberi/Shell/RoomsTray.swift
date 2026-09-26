@@ -272,8 +272,8 @@ struct RoomsTray: View {
                      lit: home, index: 0) { pick("All") }
                 door(String(localized: "Connect"), glyph: "square.grid.2x2", index: 1) { accounts(.connect) }
                 door(String(localized: "Manage"), glyph: "slider.horizontal.3", index: 2) { accounts(.manage) }
-                door(String(localized: "Addresses"), glyph: "at", index: 3) { accounts(.addresses) }
-                door(String(localized: "Settings"), glyph: "gearshape", index: 4) { accounts(.settings) }
+                door(String(localized: "Addresses"), glyph: "at", index: 3) { screen(.addresses) }
+                door(String(localized: "Settings"), glyph: "gearshape", index: 4) { screen(.settings) }
             }
             .padding(.top, (DS.Hit.min - Self.mark) / 2)
         }
@@ -415,12 +415,20 @@ struct RoomsTray: View {
         chrome.sourceRequest = target
     }
 
-    /// Open Accounts on one of its sections (prd §796's one screen).
+    /// Open Accounts on Connect or Manage — two views of the app catalog,
+    /// the one pair a switcher may still switch (§933).
     private func accounts(_ section: HomeRoute.AccountsSection) {
         DSHaptic.selection()
         close()
         route.openAccounts = section
         route.present(.apps)
+    }
+
+    /// Open a screen of its own — Settings or Addresses (§933).
+    private func screen(_ door: HomeRoute.Node) {
+        DSHaptic.selection()
+        close()
+        route.present(door)
     }
 
     private func close() {

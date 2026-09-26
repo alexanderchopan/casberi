@@ -364,9 +364,8 @@ struct CasberiApp: App {
             }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
-                    // The Accounts screen's Settings section (prd §796).
-                    focusedScene?.route.openSettings = true
-                    focusedScene?.route.present(.apps)
+                    // Settings, its own screen (prd §933).
+                    focusedScene?.route.present(.settings)
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }

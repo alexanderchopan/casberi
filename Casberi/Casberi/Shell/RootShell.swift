@@ -886,9 +886,14 @@ struct RootShell: View {
             // 2026-07-20), so there's only ever one surface to time against.
             // This onAppear runs after the whole tree mounts — same proven
             // timing as the `-deeplink` hook above.
+            // Settings is its own screen again since prd §933 (a section of
+            // Accounts from §796 to then), so the hook presents it outright;
+            // `-openAddresses YES` is the same shape one word over.
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                sceneState.route.openSettings = true
-                sceneState.route.present(.apps)
+                sceneState.route.present(.settings)
+            }
+            if UserDefaults.standard.bool(forKey: "openAddresses") {
+                sceneState.route.present(.addresses)
             }
             // `-openRoom "<Source>"` scopes the feed to one source's room.
             // Extracted to a method rather than inlined: adding it inline tipped
@@ -2716,9 +2721,9 @@ struct RootShell: View {
         case "account", "apps":
             sceneState.route.present(.apps)
         case "settings":
-            // The Accounts screen, landed on its Settings section (prd §796).
-            sceneState.route.openSettings = true
-            sceneState.route.present(.apps)
+            // Settings, its own screen (prd §933; a section of Accounts from
+            // §796 until then).
+            sceneState.route.present(.settings)
         // casberi://brief — the agent, raised onto the brief (2026-07-25).
         // The hero widget carries the brief's own lede now, so its tap has to
         // land on the sentence it was showing; landing on the feed instead

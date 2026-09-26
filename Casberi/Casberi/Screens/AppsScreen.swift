@@ -231,14 +231,11 @@ struct AppsScreen: View {
     /// than added to it.
     @ViewBuilder
     private func sections(_ proxy: ScrollViewProxy) -> some View {
-        // Addresses takes the query as ITS filter (prd §916): the field above
-        // searches the list you are on, not the catalog.
-        if section == .addresses {
-            AddressesSection(query: query)
-        } else if !query.isEmpty {
+        // Two arms again since prd §933: Settings and Addresses left for
+        // screens of their own, taking §916's "the field filters the list
+        // you are on" with them (`AddressesScreen` has its own field).
+        if !query.isEmpty {
             searchResults
-        } else if section == .settings {
-            SettingsRows()
         } else {
             scopeStrip(proxy)
             catalogList
@@ -263,21 +260,10 @@ struct AppsScreen: View {
                 scopeSeeded = true
                 section = connectedCount > 0 ? .yours : .all
             }
-            // The three direct doors to Settings — ⌘, on the Mac,
-            // `casberi://settings` and `-openSettings YES` — present this
-            // screen and leave this request (prd §796); consumed here, after
-            // the seed, so it wins.
-            if route.openSettings {
-                route.openSettings = false
-                section = .settings
-            }
-            // The rooms tray's You row names a section outright (prd §930).
+            // The rooms tray's You row names a section outright (prd §930);
+            // consumed after the seed, so it wins. Settings and Addresses are
+            // screens of their own since §933, so no door lands them here.
             landRequestedSection()
-            #if DEBUG
-            // `-openAddresses YES` — land on the Addresses segment (prd §916),
-            // the `-openSettings` shape one word over.
-            if UserDefaults.standard.bool(forKey: "openAddresses") { section = .addresses }
-            #endif
         }
         // The store's shape after any connect/disconnect — drives the promote
         // lift (which row just took its seat), the count milestones, and the
@@ -653,38 +639,35 @@ struct AppsScreen: View {
     /// it toggle? like manage and connect"): the same switcher, the same
     /// screen, the list below swaps — so the dock's face toggles one screen in
     /// and out, and nothing is pushed.
-    /// Consume `HomeRoute.openAccounts` — the rooms tray's door to one of the
-    /// four sections (prd §930) — and stand on it. Cleared on read, like
-    /// `openSettings`, so the next plain visit opens on the seed again.
+    /// Consume `HomeRoute.openAccounts` — the rooms tray's door to Connect or
+    /// Manage (prd §930) — and stand on it. Cleared on read, so the next plain
+    /// visit opens on the seed again.
     private func landRequestedSection() {
         guard let door = route.openAccounts else { return }
         route.openAccounts = nil
         switch door {
-        case .connect:   section = .all
-        case .manage:    section = .yours
-        case .addresses: section = .addresses
-        case .settings:  section = .settings
+        case .connect: section = .all
+        case .manage:  section = .yours
         }
         scope = CatalogScope(name: nil)
     }
 
     private enum AccountsHeld: String, CaseIterable, DSSectionScope {
-        // Connect, Manage, Settings (user, 2026-09-20): read left to right
-        // it is the journey, and the first word cues the first act. Where the
-        // screen OPENS is still the seed's — this is only the reading order.
-        // Addresses is the FOURTH word (prd §916 amendment, 2026-09-24): the
-        // parties behind the accounts — a directory like Connect and Manage,
-        // so it lives beside them rather than on the dock.
-        case all, yours, settings, addresses
+        // Connect, Manage (user, 2026-09-20): read left to right it is the
+        // journey, and the first word cues the first act. Where the screen
+        // OPENS is still the seed's — this is only the reading order.
+        // TWO words since prd §933: Settings (§796's third) and Addresses
+        // (§916's fourth) are screens of their own, reached from the rooms
+        // tray, because a switcher switches views of ONE thing and these two
+        // were never views of the catalog.
+        case all, yours
         var id: String { rawValue }
         var label: String {
             // "Manage" and "Connect" (user, 2026-09-16, prd §793): what you do
             // on each side — look after what you hold, add what you don't.
             switch self {
-            case .yours:     String(localized: "Manage")
-            case .all:       String(localized: "Connect")
-            case .settings:  String(localized: "Settings")
-            case .addresses: String(localized: "Addresses")
+            case .yours: String(localized: "Manage")
+            case .all:   String(localized: "Connect")
             }
         }
     }

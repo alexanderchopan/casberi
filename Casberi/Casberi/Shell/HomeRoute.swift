@@ -33,8 +33,14 @@ final class HomeRoute {
     /// real array mutation SwiftUI has never seen before.
     enum Node: Hashable {
         case apps
-        // `settings` is GONE (prd §796): Settings is the third section of
-        // the Accounts screen, reached through `openSettings` below.
+        /// Settings, its own screen again (prd §933). §796 folded it into
+        /// Accounts so the face could toggle one screen; the rooms tray
+        /// (§930) is the menu now, with a door per place, and a switcher may
+        /// only switch views of one thing.
+        case settings
+        /// The Addresses directory, its own screen for the same reason (§933;
+        /// it was Accounts' fourth section since §916's amendment).
+        case addresses
         case bridge(BridgeRouter.Destination)
         /// A tag's project view — the same screen the feed's Themes treemap
         /// opens. Pushed by an Ask answer's ProjectTile and the "open work"
@@ -229,19 +235,13 @@ final class HomeRoute {
     /// `.apps` push above has mounted the stack.
     var openOffer: String?
 
-    /// Land the Accounts screen on its Settings section once it mounts (prd
-    /// §796) — set by the three direct doors (the Mac menu's ⌘,,
-    /// `casberi://settings`, `-openSettings YES`) beside `present(.apps)`, and
-    /// consumed by `AppsScreen` on appear. Settings was its own `Node` until
-    /// §796 made it a section; the doors kept their meaning, not their node.
-    var openSettings = false
-
-    /// The Accounts screen's four sections, as the rooms tray's You row names
-    /// them (prd §930). Set beside `present(.apps)` and consumed by
-    /// `AppsScreen` — on appear, and while it is already up, because the tray
-    /// can be opened over Accounts and a second door must still land.
+    /// The Accounts screen's two sections, as the rooms tray's You row names
+    /// them (prd §930; two since §933 gave Settings and Addresses their own
+    /// screens). Set beside `present(.apps)` and consumed by `AppsScreen` —
+    /// on appear, and while it is already up, because the tray can be opened
+    /// over Accounts and a second door must still land.
     enum AccountsSection: Equatable {
-        case connect, manage, addresses, settings
+        case connect, manage
     }
     var openAccounts: AccountsSection?
 
