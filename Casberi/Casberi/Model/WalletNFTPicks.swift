@@ -342,7 +342,8 @@ struct NFTPickBook: Codable, Equatable, Sendable {
 /// figure box changes height per scope is the reflow §483 spent its whole
 /// ruling avoiding. What changes is how the box is divided.
 ///
-/// **Two densities and no more.** 2x2 up to four, 3x3 past it. A fourth column
+/// **Full rows, up to three across (prd §943).** One to three wide, whichever
+/// shows the most pieces in whole rows. A fourth column
 /// puts the cell under 90pt wide inside a 210pt box, which is a contact sheet
 /// rather than a shelf, and the list below already carries every piece — so
 /// past nine the drawing stops and the rows do the work, exactly as they did
@@ -356,20 +357,29 @@ enum NFTGrid {
     /// The most cells the drawing will ever hold — three squared.
     static let maxCells = 9
 
-    /// How many across, for a given number of pieces to show.
-    ///
-    /// Counts the pieces AVAILABLE, not the pieces drawn, so the density is
-    /// decided before the cap is applied — deriving it from the capped list
-    /// would make five pieces ask for three columns and then be handed nine
-    /// cells' worth of them, which is the same number by luck rather than by
-    /// rule.
-    static func columns(available: Int) -> Int { available > 4 ? 3 : 2 }
+    /// **ONLY FULL ROWS (prd §943).** How many pieces one width can show in
+    /// whole rows inside the nine cells — eight pieces at three across is six,
+    /// never six and a hole. The list under the tiles carries every piece.
+    static func shown(available n: Int, columns c: Int) -> Int {
+        guard n > 0, c > 0 else { return 0 }
+        return min(n, c * c) / c * c
+    }
 
-    /// How many the drawing shows. Squared rather than `columns * rows`
-    /// because the rows follow from the count.
-    static func cap(available: Int) -> Int {
-        let c = columns(available: available)
-        return c * c
+    /// How many across: whichever of one to three shows the most pieces in
+    /// full rows, the narrower on a tie (four is a quad, not three and a
+    /// gap). Counted from the pieces AVAILABLE, so the density is decided
+    /// before the cap is applied.
+    static func columns(available n: Int) -> Int {
+        guard n > 0 else { return 1 }
+        return (1...3).max { a, b in
+            let sa = shown(available: n, columns: a), sb = shown(available: n, columns: b)
+            return sa < sb || (sa == sb && a > b)
+        } ?? 1
+    }
+
+    /// How many the drawing shows.
+    static func cap(available n: Int) -> Int {
+        shown(available: n, columns: columns(available: n))
     }
 
     /// The shown pieces in rows of `columns`.
@@ -383,17 +393,6 @@ enum NFTGrid {
         return stride(from: 0, to: shown.count, by: columns).map {
             Array(shown[$0..<min($0 + columns, shown.count)])
         }
-    }
-
-    /// How many empty cells the LAST row needs so its art stays the same size
-    /// as every other row's.
-    ///
-    /// Without it a final row of one draws a single cell across the full width
-    /// under a row of three, which reads as a feature ("this one is bigger")
-    /// rather than as the end of a list.
-    static func padding(lastRow count: Int, columns: Int) -> Int {
-        guard columns > 0, count > 0, count < columns else { return 0 }
-        return columns - count
     }
 
     /// One cell's side, along either axis: the box, less every gap between the

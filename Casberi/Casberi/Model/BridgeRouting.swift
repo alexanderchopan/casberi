@@ -192,6 +192,9 @@ enum BridgeRouter {
         /// the Wallet feed's "See all". Carries the feed's wallet scope so the
         /// door doesn't silently widen it; nil is every watched wallet.
         case walletHistory(scope: String?)
+        /// One picked NFT collection's pieces, three across (prd §943) — the
+        /// door on each collection row under the NFTs crown.
+        case nftCollection(wallet: String, collection: String, name: String)
         /// The wallet's connection plumbing — chains, WalletConnect key, and
         /// Disconnect (prd §182, 2026-07-22, amending §139). §139 killed doors
         /// to READS ("every safety fact had a better home that isn't a page");
@@ -385,6 +388,7 @@ enum BridgeRouter {
             // the Row and this can't drift apart — `.exchange`'s rule.
             case .packages(let r): r.bridgeID
             case .walletHistory(let scope): "wallethistory:\(scope ?? "all")"
+            case .nftCollection(let wallet, let collection, _): "nftcollection:\(wallet):\(collection)"
             case .walletConnection: "walletconnection"
             case .detail(let id): "detail:\(id)"
             }
@@ -730,6 +734,8 @@ struct BridgeDestinationView: View {
         case .splits:          SplitsScreen()
         case .packages(let r): PackageWatchScreen(registry: r)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
+        case .nftCollection(let wallet, let collection, let name):
+            WalletNFTCollectionScreen(wallet: wallet, collection: collection, name: name)
         case .walletConnection: WalletConnectionScreen()
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
         }

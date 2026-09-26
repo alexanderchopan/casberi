@@ -125,8 +125,9 @@ grep -q 'NFTGrid.cap(available:' "$TMP/card.nc" \
   || fail "the shelf caps its own cells again"
 grep -q 'NFTGrid.side(box:' "$TMP/card.nc" \
   || fail "the shelf sizes its own cells again"
-grep -q 'NFTGrid.padding(lastRow:' "$TMP/card.nc" \
-  || fail "a short last row no longer keeps its cells' size"
+if grep -q 'NFTGrid.padding(lastRow:' "$TMP/card.nc"; then
+  fail "the shelf pads a short last row again — it draws only full rows (prd §943)"
+fi
 ok "the shelf's grid is NFTGrid's arithmetic"
 
 # 1c. The SLOT does not grow. `DSRoomChassis.visualSlot` is the fixed box every
@@ -652,13 +653,19 @@ check("isNFT names both NFT categories and nothing else",
 // is bigger"), a grid one gap wider than its box (whose last column is
 // clipped), or a density decided from the capped list rather than the real one
 // (which is the same answer by luck).
-check("four or fewer is a quad", NFTGrid.columns(available: 1) == 2
-        && NFTGrid.columns(available: 4) == 2)
-check("five goes to three across", NFTGrid.columns(available: 5) == 3)
-check("and no further", NFTGrid.columns(available: 24) == 3)
-check("the cap is the columns squared",
-      NFTGrid.cap(available: 4) == 4 && NFTGrid.cap(available: 5) == 9
-        && NFTGrid.cap(available: 100) == 9)
+// Only full rows (prd §943): the width that shows the most in whole rows,
+// the narrower on a tie, and never a hole.
+check("one is one across", NFTGrid.columns(available: 1) == 1 && NFTGrid.cap(available: 1) == 1)
+check("three is one row of three", NFTGrid.columns(available: 3) == 3 && NFTGrid.cap(available: 3) == 3)
+check("four is a quad", NFTGrid.columns(available: 4) == 2 && NFTGrid.cap(available: 4) == 4)
+check("five is still a quad, not a row of three", NFTGrid.cap(available: 5) == 4)
+check("eight is three by two, never six and a hole",
+      NFTGrid.columns(available: 8) == 3 && NFTGrid.cap(available: 8) == 6)
+check("nine and past is three by three",
+      NFTGrid.cap(available: 9) == 9 && NFTGrid.cap(available: 100) == 9)
+check("every count draws only full rows",
+      (1...30).allSatisfy { NFTGrid.cap(available: $0) % NFTGrid.columns(available: $0) == 0 })
+check("nothing in, nothing drawn", NFTGrid.cap(available: 0) == 0)
 check("nine is the ceiling", NFTGrid.maxCells == 9)
 
 // The chunking. Three at two across is 2+1 and never 1+2 — the odd cell goes
@@ -673,14 +680,6 @@ check("nine in threes is three full rows",
 check("nothing in, nothing out", NFTGrid.rows([Int](), columns: 3).isEmpty)
 check("a zero-column grid draws nothing rather than dividing by it",
       NFTGrid.rows([1, 2], columns: 0).isEmpty && NFTGrid.side(box: 100, gap: 8, count: 0) == 0)
-
-// A short last row is padded so its art stays the size of every other row's.
-check("a last row of one under three needs two blanks",
-      NFTGrid.padding(lastRow: 1, columns: 3) == 2)
-check("a last row of two under three needs one",
-      NFTGrid.padding(lastRow: 2, columns: 3) == 1)
-check("a full row needs none", NFTGrid.padding(lastRow: 3, columns: 3) == 0)
-check("an empty row needs none", NFTGrid.padding(lastRow: 0, columns: 3) == 0)
 
 // The gaps are n-1, not n. Spelling it `box / n - gap` is the error that
 // overflows a fixed box by one gap and clips the last row.

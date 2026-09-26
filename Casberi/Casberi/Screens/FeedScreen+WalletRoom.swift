@@ -908,7 +908,10 @@ extension FeedScreen {
                 WalletNFTCollectionRows(
                     wallet: entry.address,
                     onEdit: { feedSheet = .nftPicks(address: entry.address,
-                                                    label: entry.label.isEmpty ? entry.short : entry.label) })
+                                                    label: entry.label.isEmpty ? entry.short : entry.label) },
+                    onOpen: { collection, name in
+                        route.pushBridge(.nftCollection(wallet: entry.address, collection: collection, name: name))
+                    })
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(WalletCardStyle.rowInsets)

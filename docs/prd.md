@@ -332,6 +332,8 @@ marks chronological position within the pair.
 | §692 (the flow as rows on Home, later Activity) | "Came in" and "Went out" blocks of counterparties above the stream | superseded by §942 — Activity is one row per move in time; the blocks and their model are deleted |
 | §695 (the net, put back) | "in $7K · out $3K · Kept +$4K" over the blocks | superseded by §942 — deleted with the blocks |
 | §727 (a token with no price is a row) | one plain row per unpriced token that came in | superseded by §942 — deleted with the blocks; an unpriced move is its own row in the stream, quiet and unsigned when it reads as nothing |
+| §493 (the list under the NFT quad is every piece) | one row per piece: art, name, collection, chain, OpenSea | amended by §943 — one row per collection you picked, name only; the pieces are one tap in, three across |
+| §514 (2x2 up to four, 3x3 past it, a short last row padded) | the grid could end on empty cells | amended by §943 — only full rows, one to three across, whichever shows the most |
 
 ## 1. Thesis
 
@@ -61692,3 +61694,13 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 **A move is a wallet-list row** (`walletMoveRow`): the counterparty's face and name, a short address when it has none; which of your accounts, only when the room shows all of them; and the amount signed by direction in plain ink, dollars where they round to something, else the token's own quantity. **An amount that reads as nothing wears no sign (§83)**: a stamp with no quantity (`ETH`) or only zeros (`0.0000 ETH`) is quiet and unsigned, never `+$0`. Rows that are not a sent or received transfer (a mint, an approval) keep the feed's row. The stream's day headers wear `DS.brandInk`, as every day header in the feed does (§740).
 
 **Open:** a watched public wallet's stream is mostly unsolicited airdrops and zero-value receipts, which the fold used to hide; whether Activity should quiet them is a ruling not yet made.
+
+## §943 — The Wallet's NFTs: the count over its noun, full rows of art, and a list of the collections you picked, each opening its pieces (user, 2026-09-26)
+
+**User:** *"the pattern is that a list is underneath the crown"*, *"a user selects which nfts to add and then the list shows its collection"*, *"the grid fills of different sizes depending on how many a user has"*, then of the collection rows: *"do we even need the subtext on the main screen list? i don't think so, collection name is fine"*.
+
+**The crown reads the count, then the art.** `WalletNFTShelfCard` draws `DSFigureReading` (`8` / `NFTs`) over the grid, and the grid fills what the box leaves under it — the cells still divide that area (the 2026-08-27 "cover the quadrants" ruling stands). **Only full rows** (`NFTGrid.shown/columns/cap`): whichever of one to three across shows the most pieces in whole rows inside nine cells, the narrower on a tie — eight is three by two, five is a quad, three is one row — so no cell is ever empty; `NFTGrid.padding(lastRow:)` and the blank cells are deleted, and `wallet-nft-selftest` proves every count from 1 to 30 draws whole rows. The unused `header`/`headline` and `chainWord` are deleted.
+
+**The list is one row per collection you picked** (`WalletNFTCollectionRows`, which amends §493's row per piece): the collection's first piece as a circle mark, its name, nothing under it, a chevron. A collection is keyed on its contract AND its name (`WalletNFTCollectionRows.key`), because the demo's pieces share one placeholder contract. "Choose collections" stays under the list.
+
+**A collection opens its pieces** (`BridgeNode.nftCollection(wallet:collection:name:)` → `WalletNFTCollectionScreen`): its name as the screen's head, the pieces three across in square cells at the Photos grid's size, and a piece opens its own OpenSea page (a piece on a chain OpenSea does not list draws as a picture, never a dead control). `WalletNFTArt` is the one drawing of a piece the mark and the grid share.
