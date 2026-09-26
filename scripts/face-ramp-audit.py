@@ -24,7 +24,10 @@ identicon, or an app icon covering for a missing picture.
 DELIBERATELY NOT COVERED, so this can't become a lint that cries wolf: the
 source strip's and Sources Tray's chip metrics (`iconSize`), which are sized
 by their own grid rather than by adjacent text and are already named
-constants; and any SQUARE `BridgeIcon`, which is a brand mark in a tile, not
+constants; a mark inside a circle pack (`DSCirclePack`'s `mark:` closure,
+prd §917), whose diameter IS the figure — the circle's area is its share, so a
+tier would draw a wrong number — escaped only when the size is that closure's
+own diameter parameter; and any SQUARE `BridgeIcon`, which is a brand mark in a tile, not
 a face — that one is not unchecked, it belongs to the OTHER ramp:
 `design-ramp-audit.py` holds it to `DS.Mark`. The two ramps agree on their
 first three rungs by construction (`DS.Mark.badge`/`.row`/`.list` are the
@@ -78,6 +81,32 @@ def faces(src: str):
 
 
 IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_.]*')
+
+# `DSCirclePack(items: …, mark: { circle, diameter in` — the closure header whose
+# second parameter is the circle's diameter.
+PACK_MARK = re.compile(r'DSCirclePack\s*\(.{0,400}?mark:\s*\{\s*\w+\s*,\s*(\w+)\s+in\b', re.S)
+
+
+def in_pack_mark(src: str, size: str, line: int) -> bool:
+    """Is `size` the diameter a `DSCirclePack` hands its `mark:` closure?
+
+    THE PACK ESCAPE (prd §917, 2026-09-25). A circle pack draws each mark AS
+    its circle — area ∝ share — so the mark's size is the figure's datum, not
+    a slot beside text, and no ramp rung can hold it (the same reason the chip
+    metric is escaped: sized by its own geometry, not by adjacent text). It is
+    scoped to the closure's OWN parameter: the call must sit inside the
+    closure body (within a few lines of its header) and name exactly the
+    parameter the header binds. A `diameter` declared anywhere else, or a
+    literal inside the closure, is still a finding (DIRTY_PACK_* pin both).
+    """
+    src = uncommented(src)
+    upto = "\n".join(src.split("\n")[:line - 1])
+    last = None
+    for m in PACK_MARK.finditer(upto):
+        last = m
+    if not last or last.group(1) != size:
+        return False
+    return upto[last.end():].count("\n") <= 8
 
 
 def resolves_to_tier(name: str, src: str, seen: frozenset = frozenset()) -> bool:
@@ -158,6 +187,8 @@ def audit(root: pathlib.Path):
                 continue
             if size in CHIP_METRICS:
                 continue
+            if in_pack_mark(src, size, line):
+                continue
             if size.isdigit():
                 findings.append(
                     f"{f}:{line} {kind}(size: {size}) — a raw number. Use a "
@@ -224,6 +255,22 @@ CLEAN_DOCUMENTED = ('// `WalletFace(size: someFunction())` is how a raw number\n
                     'WalletFace(address: a, size: DS.Face.list, circular: true)')
 
 
+# A mark drawn AS a circle-pack circle (prd §917): its size is the circle's
+# diameter, bound by the pack's own `mark:` closure.
+CLEAN_PACK = ('DSCirclePack(items: packed, mark: { circle, diameter in\n'
+              '    BridgeIcon(name: circle.id, size: diameter, circular: true)\n'
+              '})')
+# A `diameter` that is NOT the pack's parameter — a raw number wearing the
+# escape's name. Without this the escape would pass any local called diameter.
+DIRTY_PACK_NAME = ('let diameter: CGFloat = 46\n'
+                   'DSCirclePack(items: packed, mark: { circle, d in\n'
+                   '    BridgeIcon(name: circle.id, size: diameter, circular: true)\n'
+                   '})')
+# The same name OUTSIDE any pack — a face sized by a free-standing local.
+DIRTY_PACK_OUTSIDE = ('let diameter: CGFloat = 46\n'
+                      'WalletFace(address: a, size: diameter, circular: true)')
+
+
 # A ROUND brand mark heading a screen — the product-page header. Legal on the
 # Mark ramp, which is where a mark that heads a screen belongs.
 CLEAN_MARK_HERO = 'BridgeIcon(name: n, size: DS.Mark.hero, circular: true)'
@@ -250,6 +297,9 @@ def self_test(tmp: pathlib.Path) -> None:
         ("a face interpolated between two tiers", CLEAN_INTERP, False),
         ("…the same interpolation between two raw numbers", DIRTY_INTERP, True),
         ("a comment that NAMES a dirty call", CLEAN_DOCUMENTED, False),
+        ("a mark sized by its circle-pack circle", CLEAN_PACK, False),
+        ("…a `diameter` the pack closure does not bind", DIRTY_PACK_NAME, True),
+        ("…the same name outside any pack", DIRTY_PACK_OUTSIDE, True),
         ("a round brand mark heading a screen", CLEAN_MARK_HERO, False),
         ("…the same rung on a face, which is never a brand mark", DIRTY_MARK_HERO, True),
     ]
