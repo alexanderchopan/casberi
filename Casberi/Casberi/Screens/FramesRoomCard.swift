@@ -726,8 +726,13 @@ struct FramesRoomList: View {
             // Rows drawn empty (prd §769); the sentence is what VoiceOver reads.
             DSSkeletonRows(label: Text(String(localized: "Nothing here yet.")))
         } else {
-            VStack(spacing: DS.Space.s2) {
-                ForEach(list, id: \.move.id) { pair in
+            // **UNDER THE DAY (prd §950)** — the feed's day header over each
+            // day's moves, so a row carries no age of its own.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                let runs = DayRuns.runs(list) { $0.move.timestamp }
+                ForEach(Array(runs.enumerated()), id: \.element.id) { index, run in
+                DSDayHeader(word: DayRuns.word(run), first: index == 0)
+                ForEach(run.items, id: \.move.id) { pair in
                     let move = pair.move
                     Button {
                         DSHaptic.selection()
@@ -745,6 +750,7 @@ struct FramesRoomList: View {
                         // latched per view, dropped under Reduce Motion, and
                         // gone by the next read, so it can never become a badge.
                         .arrivalWash(FramesLiveState.shared.hasJustArrived(move.hash))
+                }
                 }
             }
         }
@@ -831,9 +837,7 @@ struct FramesMoveRow: View {
         // the row carries an age that stands alone. Nil draws nothing: the
         // header read is bounded, so a move outside the window legitimately
         // has no time (§515a).
-        if let when = FramesFormat.time(move.timestamp) {
-            add(Text(when).foregroundColor(DS.textTertiary))
-        }
+        // No age (prd §950): the day header over the run says when.
         return out
     }
 
@@ -899,11 +903,8 @@ struct FramesMoveRow: View {
             // 78pt strip on its framed rows since it shipped, and this list
             // said "3 frames" in words instead. A texture rather than a
             // document, so it does not run on appear.
-            if !move.rows.isEmpty {
-                RoomFrameStrip(steps: FramesFrames.runs([move]).first?.steps ?? [],
-                               height: 5, hue: RoomFrameStyle.hue)
-                    .frame(width: 54)
-            }
+            // The frame strip that stood here is the Frames scope's drawing,
+            // not a row's (prd §950): the line says "3 frames" in words.
             // **WHAT IT MOVED, AND NOTHING ELSE IN THIS COLUMN.** The fee and
             // the gas were here and are now the sheet's — three stacked
             // figures made the money column wider than the words beside it,
@@ -911,9 +912,10 @@ struct FramesMoveRow: View {
             // (§548): every ETH movement is a log and the receipt names both
             // the fee and who paid it. Nil draws nothing rather than a zero.
             if let token = move.leadToken {
+                // Plain ink, the sign carrying direction (prd §942, §950).
                 Text(token.signedLine)
                     .dsText(.price17)
-                    .foregroundStyle(token.raw > 0 ? DS.confirm : DS.textPrimary)
+                    .foregroundStyle(DS.textPrimary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             } else if let delta = move.deltaWei {
                 // One rung for a signed amount in a row (prd §587) — see
@@ -922,7 +924,7 @@ struct FramesMoveRow: View {
                 // beside it and lost to it; `price17` is 17 bold.
                 Text(FramesMoney.signedETH(wei: delta, compact: true))
                     .dsText(.price17)
-                    .foregroundStyle(delta > 0 ? DS.confirm : DS.textPrimary)
+                    .foregroundStyle(DS.textPrimary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             }
         }

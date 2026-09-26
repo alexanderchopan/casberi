@@ -336,6 +336,7 @@ marks chronological position within the pair.
 | §514 (2x2 up to four, 3x3 past it, a short last row padded) | the grid could end on empty cells | amended by §943 — only full rows, one to three across, whichever shows the most |
 | §546 (the Permissions slot is counts, never names) | rung counts with no holder named | superseded by §944 in the Wallet — the holders' marks and names, the Accounts pattern; the devnets keep the counts until their pass |
 | §936 (bars for "how many of each", in the Wallet's Permissions crown) | one bar per power rung under the number | superseded by §944 in the Wallet — the holders' marks; §936's grammar (one number over one caption, one accent, red only for what needs you) stands, and the devnets keep the bars until their pass |
+| §687 (the time, not a chevron, in the trailing slot of a row with no amount) | an age on the right of a devnet move with no figure | superseded by §950 — the day header says when; a row with no amount carries nothing on the right |
 | §864 (the All feed leads with `DemoLead`, and the capsule stands down under it) | a second demo marking at the head of All, the pill hidden while it was on screen | superseded by §946 — the blue pill is the one marking on every screen, All included; §864's cover (the falling letter tiles) stands |
 
 ## 1. Thesis
@@ -61768,3 +61769,15 @@ The source maps keep the pack (§917 stands for them); only `iconMode == "token"
 **The list.** `RoomHoldingsRows` wears each token's own mark (`AssetMark`, a monogram where none is bundled) where it drew one grid glyph for every row, the amount pinned right; Vibenet's hand-drawn list takes the Wallet's figure face (`price17`, primary ink).
 
 `HoldingsTreemap` gains `caption:` (empty on the Wallet) and `Holding.display`; the Wallet is unchanged.
+
+## §950 — The devnets' Activity lists read like the Wallet's: moves under the day, no ages, no strips, one plain figure, on the Wallet's row column (user, 2026-09-26)
+
+**User:** *"perhaps make a canvas of the home screens next to their hegota screen b/c i think even activity we changed"*, then *"continue"*.
+
+**Under the day.** Hegotá Frames, UTXO and Privacy group their Activity moves under `DSDayHeader` (new, `Design/DSDayHeader.swift`): the feed's day divider — the day in the brand ink (§740), in `FeedScreen.dayWord`'s words — for a list that is a card's `VStack` rather than a `List` of its own, with `DayRuns` cutting a list into runs of one day (an undated move files under "Earlier", never under now; Hegotá dates an unread block by its estimate). **A row carries no age**: `FramesFormat.time`, `HegotaFormat.time`/`approximate` and the trailing `RoomWhen.age` leave the rows (§902's rule, the Wallet's since §942); this supersedes §687's time in the trailing slot of a row with no amount.
+
+**One figure, plain.** The step strips (`RoomFrameStrip`, `HegotaFrameStrip`) leave the Activity rows — they are the Frames scope's drawing, and an Activity row says "3 frames" in words; Hegotá keeps its strip in the Frames scope (`leadsWithFrames`). Amounts are plain ink with the sign carrying direction (§942), where received was green. Privacy's rows, which move no amount, carry nothing on the right; its `strip`/`when` helpers are deleted.
+
+**The Wallet's row column.** The three devnet lists were mounted at the tiles' inset, so their row icons centred 9pt left of every Wallet list's; they mount at `DSRoomChassis.rowInset(forMark: DS.Face.list)`, and `DSDayHeader` steps back to the tiles' edge (text is a box). Headers drawn inside those lists that are not their own `List` row (Frames' `Sponsors`, `What they paid for`) moved with the rows and are the unique-screens pass's.
+
+Base Vibenet's Activity is already the feed's own day-grouped stream and is unchanged; its day headers stand at the All feed's inset, a feed-wide question left open.

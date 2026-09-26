@@ -1690,11 +1690,17 @@ struct HegotaRoomList: View {
 
     @ViewBuilder private func movesList(_ list: [(move: HegotaMove, owner: String)]) -> some View {
         if !list.isEmpty {
-            ForEach(list, id: \.move.id) { pair in
-                HegotaMoveRow(move: pair.move,
-                              watched: watched,
-                              madeCoins: coinsMade(by: pair.move)) {
-                    onOpenMove?(pair.move, pair.owner)
+            // **UNDER THE DAY (prd §950)** — the feed's day header over each
+            // day's moves; a row carries no age of its own.
+            let runs = DayRuns.runs(list) { $0.move.timestamp ?? $0.move.estimatedAt }
+            ForEach(Array(runs.enumerated()), id: \.element.id) { index, run in
+                DSDayHeader(word: DayRuns.word(run), first: index == 0)
+                ForEach(run.items, id: \.move.id) { pair in
+                    HegotaMoveRow(move: pair.move,
+                                  watched: watched,
+                                  madeCoins: coinsMade(by: pair.move)) {
+                        onOpenMove?(pair.move, pair.owner)
+                    }
                 }
             }
         }
@@ -2122,12 +2128,13 @@ struct HegotaMoveRow: View {
                 // two come to it.
                 Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
                     .dsText(.price17)
-                    .foregroundStyle(move.incoming ? DS.confirm : DS.textSecondary)
+                    // Plain ink, the sign carrying direction (prd §942, §950).
+                    .foregroundStyle(DS.textPrimary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-                // The frame anatomy as texture. A legacy transaction draws
-                // nothing here, so the two eras are told apart at a glance
-                // rather than by reading a joined string of mode names.
-                if let frames = move.frames, !frames.isEmpty {
+                // The frame anatomy as texture — in the Frames scope only
+                // (prd §950): an Activity row says "3 frames" in words, the
+                // Wallet's one-figure row.
+                if leadsWithFrames, let frames = move.frames, !frames.isEmpty {
                     HegotaFrameStrip(frames: frames,
                                      height: leadsWithFrames ? 9 : 5,
                                      weighted: leadsWithFrames)
@@ -2183,15 +2190,8 @@ struct HegotaMoveRow: View {
             parts.append(frames.count == 1 ? String(localized: "1 frame")
                                            : String(localized: "\(String(frames.count)) frames"))
         }
-        if let when = HegotaFormat.time(move.timestamp) {
-            parts.append(when)
-        } else if let about = HegotaFormat.approximate(move.estimatedAt) {
-            // **A row past the header window is dated to the DAY, and says so.**
-            // Interpolated between two headers we really read, which on this
-            // chain is honest to seconds — but an estimate is a different grade
-            // of fact from a reading, so it never wears a clock.
-            parts.append(about)
-        }
+        // No age (prd §950): the day header over the run says when — an
+        // estimated day files the row under that day, never a clock.
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }

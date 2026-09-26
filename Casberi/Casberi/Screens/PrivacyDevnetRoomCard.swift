@@ -487,9 +487,15 @@ extension PrivacyDevnetRoomCard {
             EmptyView()
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ForEach(shown, id: \.move.id) { pair in
-                    moveRow(pair.move, owner: pair.owner,
-                            showsSponsorship: showsSponsorship)
+                // **UNDER THE DAY (prd §950)** — the feed's day header over
+                // each day's moves; a row carries no age of its own.
+                let runs = DayRuns.runs(shown) { $0.move.date }
+                ForEach(Array(runs.enumerated()), id: \.element.id) { index, run in
+                    DSDayHeader(word: DayRuns.word(run), first: index == 0)
+                    ForEach(run.items, id: \.move.id) { pair in
+                        moveRow(pair.move, owner: pair.owner,
+                                showsSponsorship: showsSponsorship)
+                    }
                 }
                 if showsCeiling { walkCeiling }
             }
@@ -577,18 +583,11 @@ extension PrivacyDevnetRoomCard {
                 WalletRow(mark: Self.mark(for: move),
                           title: Self.moveTitle(move),
                           subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship)) {
-                    // **THE SHAPE OF THE TRANSACTION, ON THE ROW (prd §698)** —
-                    // Hegotá UTXO's framed rows have carried one since they
-                    // shipped and this room said "3 frames" in words instead.
-                    // A texture rather than a document, so it does not run on
-                    // appear.
-                    Self.strip(move)
-                    // **THE TIME, NOT A CHEVRON (prd §687).** One meaning per
-                    // column across the family: the amount where a row has
-                    // one, the time where it does not. A chevron was a third
-                    // thing in the same slot — and the row opens its sheet on
-                    // tap either way, exactly as Frames' rows do without one.
-                    Self.when(move)
+                    // Nothing on the right (prd §950): the step strip is the
+                    // Frames scope's drawing, and the day header says when —
+                    // the time §687 put here for a row with no amount is the
+                    // day's to say now.
+                    EmptyView()
                 }
                 .contentShape(Rectangle())
             }
@@ -599,20 +598,11 @@ extension PrivacyDevnetRoomCard {
             WalletRow(mark: Self.mark(for: move),
                       title: Self.moveTitle(move),
                       subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship)) {
-                Self.strip(move)
-                Self.when(move)
+                EmptyView()
             }
         }
     }
 
-    /// One transaction's steps, at a row's scale (prd §698).
-    @ViewBuilder static func strip(_ move: PrivacyDevnetLiveState.Move) -> some View {
-        if !move.frames.isEmpty {
-            RoomFrameStrip(steps: PrivacyFrames.runs([move]).first?.steps ?? [],
-                           height: 5, hue: RoomFrameStyle.hue)
-                .frame(width: 54)
-        }
-    }
 
     /// **THE SHARED ACTIVITY CHART (prd §686/§687).** Reachable at last: this
     /// room's moves carry a date now, so the same drawing every other
@@ -622,15 +612,6 @@ extension PrivacyDevnetRoomCard {
                           box: DSRoomChassis.figureSlot)
     }
 
-    /// The row's right edge: how long ago, or nothing where the block did not
-    /// date (prd §687). The same age every other devnet row carries — this
-    /// list is sparse and draws no day headers, so the time has to stand
-    /// alone.
-    @ViewBuilder static func when(_ move: PrivacyDevnetLiveState.Move) -> some View {
-        if let when = RoomWhen.age(move.date) {
-            Text(when).dsText(.subhead12).foregroundStyle(DS.textTertiary)
-        }
-    }
 
     /// The mark says what the transaction WAS: a pool spend wears the key, a
     /// framed transaction the stack, a plain transfer the arrows.

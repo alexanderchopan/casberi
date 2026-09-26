@@ -5390,8 +5390,11 @@ struct FeedScreen: View {
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+            // The Wallet's row column (prd §950): a devnet list's icons centre
+            // on the same line as every other room's; its day headers step
+            // back to the tiles' edge themselves (`DSDayHeader`).
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                                      bottom: DS.Space.s4, trailing: DS.Space.s4))
             .task { await FramesLiveState.shared.refresh() }
         } else if source == PrivacyDevnetIdentity.source {
             // **NO `if let`.** `compose` is non-Optional precisely so this arm
@@ -5485,8 +5488,11 @@ struct FeedScreen: View {
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+            // The Wallet's row column (prd §950): a devnet list's icons centre
+            // on the same line as every other room's; its day headers step
+            // back to the tiles' edge themselves (`DSDayHeader`).
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                                      bottom: DS.Space.s4, trailing: DS.Space.s4))
             // The verbs, in their own cell (prd §664) — see the `onSend: nil`
             // above for why they left the list's.
             // **THE SWITCHER WAS MISSING ON THE FIRST BUILD**, found by opening
@@ -5546,8 +5552,11 @@ struct FeedScreen: View {
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+            // The Wallet's row column (prd §950): a devnet list's icons centre
+            // on the same line as every other room's; its day headers step
+            // back to the tiles' edge themselves (`DSDayHeader`).
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                                      bottom: DS.Space.s4, trailing: DS.Space.s4))
         // **`|| roomAgent != nil` OR THIS CHAIN FALLS THROUGH BOTH ARMS AND
         // RENDERS A BLACK SCREEN (prd §845).** §842 added `roomAgent == nil`
         // to the first arm so an agent room would stop being replaced by the
