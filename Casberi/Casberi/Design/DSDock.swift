@@ -95,12 +95,14 @@ enum DSDock {
     /// leading air gives the bar the same seat every chip inside the rail gets,
     /// which is what it is: the rail's first item, not something laid on top of
     /// its border.
-    /// **THE SEAT STANDS ON THE CONTENT'S LEFT LINE (user, 2026-09-26: "can
+    /// **THE FACE IS CENTRED ON THE ROW ICONS' COLUMN (user, 2026-09-26: "can
     /// we align the fab w the icons we have aligned on left so fab is always
-    /// aligned w our icons").** With the slab gone (§930) the rail's inner
-    /// `railLead` was air around nothing; the face's left edge now sits where
-    /// the rows' avatars, the lead card and the tiles start.
-    static let clusterInset: CGFloat = slabInset
+    /// aligned w our icons").** Its centre lands on `DSRoomChassis.rowLeadCentre`
+    /// at the unfolded size; a round mark nearly twice an icon's size reads
+    /// aligned only by its centre.
+    static var clusterInset: CGFloat {
+        DSRoomChassis.rowLeadCentre - agentSize(minimized: false) / 2
+    }
 
     /// Where the bar's trailing edge sits, measured from the window — what the
     /// strip's melt is aligned against so chips dissolve UNDER the bar rather

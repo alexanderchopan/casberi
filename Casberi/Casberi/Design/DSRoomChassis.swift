@@ -163,15 +163,17 @@ enum DSRoomChassis {
     /// spelling, so the left edge is the same from the top of a room to the
     /// bottom.
     static let leadInset: CGFloat = DS.Space.s4 + DS.Space.s3
-    /// **A ROOM'S ROWS START ON THE PAGE'S OUTER LINE (user, 2026-09-26:
-    /// "ideally tray and screen and fab share same justification … so it is
-    /// seamless").** Two left lines stood in a room: containers (the lead
-    /// card, the tiles, the tray, the face) on `inset`, and the feed rows and
-    /// their day headers 12pt further in on `leadInset`. Rows sit in no
-    /// container, so — like the wallet's account rows and Apple's plain lists —
-    /// they take the outer line; what is INSIDE a container (the card's words,
-    /// a sheet's body) keeps `leadInset`.
-    static let rowInset: CGFloat = inset
+    /// **ROUND THINGS ALIGN BY THEIR CENTRES, BOXES BY THEIR EDGES (user,
+    /// 2026-09-26).** For one build the rows took the outer line (`inset`), so
+    /// the row icons' LEFT edges met the face's — and the face, nearly twice
+    /// an icon's size, read 10pt off, because the eye compares the centres of
+    /// round things. The rows stand in `leadInset` again (the icons line up
+    /// with the words inside the lead card), and the face is centred on the
+    /// same column (`rowLeadCentre`, read by `DSDock.clusterInset`). Boxes —
+    /// the card, the tiles, the title, the tray — keep the outer line.
+    static let rowInset: CGFloat = leadInset
+    /// The centre of a feed row's lead mark, measured from the screen edge.
+    static var rowLeadCentre: CGFloat { rowInset + DS.Mark.row / 2 }
 
     /// The air under every lead, before the first day (prd §763). The cover
     /// carried `s4` and a head carried nothing, so the first divider landed
