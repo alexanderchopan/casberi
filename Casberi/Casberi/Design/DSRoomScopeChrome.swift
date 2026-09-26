@@ -73,7 +73,17 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
     @ViewBuilder let figure: (Scope) -> Figure
     @ViewBuilder let acts: (DSAccountSlot) -> Acts
 
-    private var rest: [Scope] { sections.filter { $0 != home } }
+    /// **HOME FIRST, THEN THE ALPHABET (user, 2026-09-26: "home would be
+    /// first and others alphabetized, is that easier for a user especially
+    /// w/ 8 buttons").** The room's own order was by felt importance, which
+    /// nobody could predict; eight tiles are not a sequence anyone reads in
+    /// order, so a guessable order wins. The tiles and the Readings rows
+    /// share it.
+    private var ordered: [Scope] {
+        [home] + sections.filter { $0 != home }
+            .sorted { $0.label.localizedStandardCompare($1.label) == .orderedAscending }
+    }
+    private var rest: [Scope] { Array(ordered.dropFirst()) }
 
     /// The slot the crown draws: the one in scope, else the "All" slot, else
     /// the only one.
@@ -127,7 +137,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
             lead
             if active == home {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    DSScopeTiles(sections: sections, active: active,
+                    DSScopeTiles(sections: ordered, active: active,
                                  attention: attention, onPick: onPick)
                     accountLine
                 }
@@ -157,7 +167,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
                 }
             } else {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    DSScopeTiles(sections: sections, active: active,
+                    DSScopeTiles(sections: ordered, active: active,
                                  attention: attention, onPick: onPick)
                     accountLine
                 }
