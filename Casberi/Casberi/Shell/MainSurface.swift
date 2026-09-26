@@ -392,91 +392,12 @@ struct MainSurface: View {
                 .transaction { t in
                     if t.animation != nil { t.animation = DS.Motion.glide }
                 }
-            if !showsRail {
-                sourceStrip(axis: .horizontal)
-                    // **THE DOCK'S FIRST SEAT BELONGS TO THE AGENT (§591), and
-                    // the strip runs UNDER it rather than beside it.** The bar
-                    // is hosted on `RootShell`'s ZStack one layer above this
-                    // band, so it survives into every pushed room the way this
-                    // inset does not; the strip yields nothing here and instead
-                    // melts its chips out as they pass beneath the bar
-                    // (`SourceChips.headTrailingEdge` reads `DSDock.agentSeat`).
-                    // A `.padding(.leading, agentSeat)` stood here first and
-                    // drew the scroll view's clip as a flat vertical line
-                    // against the bar's round glass.
-                    // **The s6 of air is GONE and its reason went with it
-                    // (§591).** It replaced iPhone's hidden system nav bar —
-                    // a fact about the TOP of the screen and nothing else —
-                    // and at the bottom there is no vacated bar to stand in
-                    // for: the home indicator's own safe area is already
-                    // reserved beneath this inset, so a second s6 would be
-                    // ~40pt of dead chrome under the last row of chips. What
-                    // survives is the 2026-07-30 half of that ruling, which
-                    // was never about the nav bar: air is the first thing
-                    // handed back when the strip folds.
-                    .padding(.vertical, DSDock.slabPad)
-                    // **THE DOCK IS A GLASS BAR** (§591d, user: "it seems like
-                    // the category chips are on a bar but you can't really see
-                    // the bar. can we make it more glass like our silhouette
-                    // and scope chip rail in wallet is? that way it looks more
-                    // purposeful and separate").
-                    //
-                    // The band's own scrim is a page-coloured gradient whose
-                    // job is to stop content colliding with the chips — it
-                    // blocks, it does not CONTAIN, so the strip read as chips
-                    // floating at the bottom of the feed rather than as one
-                    // control. The room chrome answers the identical question
-                    // for the wallet's fused rail (§547, "what if we made the
-                    // silhouette row and the scope rail seem like more of a
-                    // component together") and its answer is this modifier: the
-                    // same `dsGlass` at the same `DSRoomChassis.slabRadius`, so
-                    // the dock and that rail are visibly the same kind of
-                    // object rather than two dialects.
-                    //
-                    // Glass is correct here by the design law's own division —
-                    // this is chrome the feed scrolls UNDER, which is the
-                    // floating layer, never content.
-                    //
-                    // Inset by `s4` so the bar has edges to be separate FROM;
-                    // full bleed is what made it invisible. The chips inside
-                    // still run full width and still melt under the agent bar
-                    // (`DSDock.agentSeat`), so nothing about the scroll or the
-                    // seat moved — this is a background gaining a shape.
-                    // **THE CHIPS SCROLL INSIDE THE BAR** (user: "the other
-                    // categories not yet on the rail are off the screen, they
-                    // should be inside the rail scrolling"). The first cut put
-                    // the glass in a `.background` and inset only THAT, so the
-                    // scroll still ran the window's full width and chips sailed
-                    // out past both ends of the bar they were supposed to be
-                    // in — the bar looked like a plate lying under a row rather
-                    // than a rail holding one.
-                    //
-                    // Clipped to the slab's own shape, then glassed, then
-                    // inset: the clip is what makes the chips belong to the
-                    // bar, and it has to come before the glass so the glass
-                    // sizes to the clipped view. The horizontal inset is
-                    // applied LAST so it moves the whole object, viewport
-                    // included — which is why `SourceChips` converts
-                    // `DSDock.agentSeat` into viewport space (see there).
-                    .clipShape(RoundedRectangle(cornerRadius: DSRoomChassis.slabRadius,
-                                                style: .continuous))
-                    .dsGlass(cornerRadius: DSRoomChassis.slabRadius)
-                    .padding(.horizontal, DSDock.slabInset)
-                    // The rest of the chips' offset from the band's edge —
-                    // `DSDock.chipBottomInset` is this plus `slabPad` above,
-                    // and the bar's own inset is measured from it so the two
-                    // share a centre line (§591d). Follows the fold
-                    // continuously, in a body of its own — see
-                    // `ShellChrome.fold` for why this surface must not read
-                    // that value itself.
-                    .modifier(DSDock.SlabInset())
-                    // `DockScrubCaption` — the scrubbed chip's name floating
-                    // over the slab (2026-09-05) — is DELETED (prd §662b,
-                    // user: "drop it entirely"). It was the Mac dock's hover
-                    // label for marks that carried no word; a category is a
-                    // tile with its word on it now, so the caption repeated
-                    // what the lifted tile already showed, one line higher.
-            }
+            // THE STRIP IS GONE FROM THE PHONE'S BAND (prd §930, 2026-09-26).
+            // The category tiles are rows of the rooms tray now (`RoomsTray`,
+            // a layer of `RootShell`'s stack the face opens), so nothing here
+            // scrolls and the band is the room's own controls alone. The rail
+            // (`sourceStrip(axis: .vertical)`) is untouched: on iPad and Mac
+            // the tiles stand at the leading edge and never needed a scroll.
         }
     }
 
@@ -666,7 +587,14 @@ struct MainSurface: View {
     /// `anchorX(for:)`). Same hop, same reason, as `sourceRequest`.
     private func openStandingFolder() {
         guard let category = currentCategory else { return }
-        chrome.folderRequest = category
+        // On the phone the strip is the rooms tray (prd §930): the seat's tap
+        // raises it, which is the folder one size up — every category and
+        // every source, not just this one's.
+        if showsRail {
+            chrome.folderRequest = category
+        } else {
+            withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
+        }
     }
 
     /// Whether any of the room's face rails has something to pick — the same

@@ -39,6 +39,17 @@ struct DockDoors: View {
                    refreshSpin: chrome.refreshPulse,
                    pullTension: chrome.pullTension,
                    size: markSize,
-                   onBack: onBack)
+                   onBack: onBack,
+                   lit: chrome.roomsTray && onBack == nil)
+            // The capture flight lands on THIS seat since prd §930 — the
+            // door to Home, now that the "All" chip that used to publish the
+            // target is a row of the tray. Same write the chip made.
+            .background {
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { chrome.feedTabFrame = g.frame(in: .global) }
+                        .onChange(of: g.frame(in: .global)) { _, f in chrome.feedTabFrame = f }
+                }
+            }
     }
 }

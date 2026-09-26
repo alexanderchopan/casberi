@@ -38,7 +38,7 @@ final class ShellChrome {
     /// Read from the LEAF that draws, never from a shell body: `RootShell`
     /// and `MainSurface` are the two most expensive bodies in the app, and a
     /// value written on every scroll frame must not be a dependency of
-    /// either. `DSDock.SlabInset` and `DSDock.SeatInset` exist for exactly
+    /// either. `DSDock.SeatInset` exists for exactly
     /// that — a padding that follows the fold, evaluated in a modifier of its
     /// own.
     var fold: CGFloat = 0
@@ -216,6 +216,12 @@ final class ShellChrome {
     /// it can compute. Same hop, same reason, as `sourceRequest` — cleared by
     /// the reader.
     var folderRequest: String?
+
+    /// The rooms tray is up (prd §930): the phone's one navigation surface,
+    /// opened and closed by the face in the dock's seat. A layer of
+    /// `RootShell`'s stack (`RoomsTray`), so the seat stays above it and the
+    /// same tap that opened it closes it (§705's toggle, one size up).
+    var roomsTray = false
 
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);

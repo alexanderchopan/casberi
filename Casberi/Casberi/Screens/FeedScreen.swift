@@ -5784,6 +5784,16 @@ struct FeedScreen: View {
     /// The id the room's head carries, so a scope change can return to it.
     private static let roomTopAnchor = "roomTop"
 
+    /// What the room's head says (prd §930): the All room is Home — the word
+    /// the rooms tray's You row gives its door — Pinned is Pinned, and a
+    /// source room wears its catalog name, so an aliased seat ("Privacy
+    /// Pools") reads as the app you connected.
+    private var roomName: String {
+        if source == "All" { return String(localized: "Home") }
+        if source == Pinboard.room { return String(localized: "Pinned") }
+        return BridgeCatalog.seatName(forSource: source)
+    }
+
     /// Scroll the room back to its own head, with the standard motion so it
     /// reads as the room resetting rather than as a jump of its own — which
     /// is the thing this exists to remove.
@@ -5815,6 +5825,17 @@ struct FeedScreen: View {
         let demoLead = DemoMode.isActive && !DemoCapture.hidesMarking
             && source == "All" && filter.tag == "All"
         return List {
+            // THE ROOM NAMES ITSELF (prd §930). Until the strip folded into
+            // the rooms tray the dock's lit tile said which room this was;
+            // now the room says so, first in its list, on the screen-head
+            // rung a pushed screen already uses (§767, §915). It ends before
+            // the gear's column, which owns the trailing corner (§752).
+            DSScreenHead(title: Text(roomName))
+                .padding(.trailing, DSRoomChassis.gearColumn)
+                .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                     bottom: 0, trailing: DSRoomChassis.inset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             if demoLead {
                 DemoLead()
                     .id(Self.roomTopAnchor)

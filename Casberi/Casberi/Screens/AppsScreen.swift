@@ -271,6 +271,8 @@ struct AppsScreen: View {
                 route.openSettings = false
                 section = .settings
             }
+            // The rooms tray's You row names a section outright (prd §930).
+            landRequestedSection()
             #if DEBUG
             // `-openAddresses YES` — land on the Addresses segment (prd §916),
             // the `-openSettings` shape one word over.
@@ -284,6 +286,9 @@ struct AppsScreen: View {
         .onChange(of: connectedNames) { old, new in
             handleConnectChange(old: old, new: new)
         }
+        // The tray can be raised OVER this screen and a second door tapped, so
+        // a request made while it is already up still lands (prd §930).
+        .onChange(of: route.openAccounts) { _, _ in landRequestedSection() }
         // The catalog is a LIST now (prd §518), so it takes the READING column
         // — and that is the same distinction `DSContentWidth` draws, answered
         // the other way. It was `.wide` because a grid spends extra width on
@@ -648,6 +653,21 @@ struct AppsScreen: View {
     /// it toggle? like manage and connect"): the same switcher, the same
     /// screen, the list below swaps — so the dock's face toggles one screen in
     /// and out, and nothing is pushed.
+    /// Consume `HomeRoute.openAccounts` — the rooms tray's door to one of the
+    /// four sections (prd §930) — and stand on it. Cleared on read, like
+    /// `openSettings`, so the next plain visit opens on the seed again.
+    private func landRequestedSection() {
+        guard let door = route.openAccounts else { return }
+        route.openAccounts = nil
+        switch door {
+        case .connect:   section = .all
+        case .manage:    section = .yours
+        case .addresses: section = .addresses
+        case .settings:  section = .settings
+        }
+        scope = CatalogScope(name: nil)
+    }
+
     private enum AccountsHeld: String, CaseIterable, DSSectionScope {
         // Connect, Manage, Settings (user, 2026-09-20): read left to right
         // it is the journey, and the first word cues the first act. Where the

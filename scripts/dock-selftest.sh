@@ -128,9 +128,10 @@ grep -q 'DSDock.agentSize(fold: chrome.fold)' "$TMP/doors.nc" \
 grep -q 'DSDock.SeatInset()' "$TMP/root.nc" \
   || { echo "✗ RootShell no longer seats the bar through DSDock.SeatInset — the bar's"; \
        echo "  bottom inset would stop following the fold, or the shell body would read it."; fail=1; }
+# `DSDock.SlabInset` is DELETED with the phone's strip (prd §930): the band
+# holds no slab, so nothing pads one. `SeatInset` above is the one fold-follower.
 grep -q 'DSDock.SlabInset()' "$TMP/main.nc" \
-  || { echo "✗ MainSurface no longer pads the slab through DSDock.SlabInset — the slab's air"; \
-       echo "  would stop following the fold, or this surface would read it per tick."; fail=1; }
+  && { echo "✗ MainSurface pads a slab again — the strip is the rooms tray since §930."; fail=1; }
 strip_comments "Casberi/Casberi/Shell/ShellChrome.swift" > "$TMP/chrome.nc"
 grep -q 'func trackFold' "$TMP/chrome.nc" && grep -q 'func settleFold' "$TMP/chrome.nc" \
   || { echo "✗ ShellChrome lost trackFold/settleFold — the fold is a direction flip again."; fail=1; }

@@ -236,6 +236,15 @@ final class HomeRoute {
     /// §796 made it a section; the doors kept their meaning, not their node.
     var openSettings = false
 
+    /// The Accounts screen's four sections, as the rooms tray's You row names
+    /// them (prd §930). Set beside `present(.apps)` and consumed by
+    /// `AppsScreen` — on appear, and while it is already up, because the tray
+    /// can be opened over Accounts and a second door must still land.
+    enum AccountsSection: Equatable {
+        case connect, manage, addresses, settings
+    }
+    var openAccounts: AccountsSection?
+
     /// A catalog CATEGORY the Apps screen should land filtered to — set by a
     /// door that named the category in the same gesture ("Set up an agent"),
     /// consumed by `AppsScreen` on appear, exactly as `openOffer` above is.

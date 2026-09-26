@@ -120,14 +120,14 @@ struct RoomGear: View {
                 DSHaptic.selection()
                 route.path.append(.bridge(destination))
             } label: {
-                // The ACCOUNTS door's own glyph (user ruling 2026-09-06): this
-                // control leads to the room's catalog entry, so it wears the
-                // catalog's mark — a gear said "settings" about a door that
-                // opens an account. The same outline the dock's catalogue door
-                // drew until §798 deleted it, and an outline for the same
-                // reason: a filled glyph at this size beside a strip full of
-                // saturated brand marks reads as a sixth chip.
-                Image(systemName: "square.grid.2x2")
+                // THE MANAGE GLYPH (prd §930, user: "we now need to replace
+                // that w/ the one you chose for manage"). This control leads
+                // to the room's own account page, which is what Manage holds,
+                // so it wears Manage's sliders — the same glyph the rooms
+                // tray's You row draws for that door. It was the catalogue's
+                // grid from 2026-09-06 (a gear said "settings" about a door
+                // that opens an account), and the grid is Connect's now.
+                Image(systemName: "slider.horizontal.3")
                     .dsGlyph(.title)
                     .foregroundStyle(needsYou ? DS.destructive : DS.textSecondary)
                     .frame(width: 42, height: 42)

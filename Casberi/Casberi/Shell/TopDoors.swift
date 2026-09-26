@@ -42,6 +42,10 @@ struct AvatarChip: View {
     /// seat already survives into every one of them and already meant "put it
     /// back" on Settings (the 2026-09-12 toggle), so it says so everywhere.
     var onBack: (() -> Void)? = nil
+    /// The rooms tray is up behind this seat (prd §930): the face wears the
+    /// tint ring while it is the way OUT, so the same mark reads as the
+    /// closer without changing glyph.
+    var lit: Bool = false
     /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
     /// Last time the door actually opened — see `open()` below.
@@ -76,6 +80,12 @@ struct AvatarChip: View {
             // rather than smearing one shape into a differently-rounded
             // neighbour.
             .dsGlassDoor(doorUnion)
+            .overlay {
+                if lit {
+                    Circle().strokeBorder(DS.tint, lineWidth: 1.5)
+                        .transition(.opacity)
+                }
+            }
             // The door is the circle. This one was never as bad as the
             // catalogue's — its `Circle().fill` renders across the whole
             // 46pt, so the region was already whole — but stating it means

@@ -2390,6 +2390,18 @@ struct RootShell: View {
             // What was actually lost with the sheet was DETENTS — dragging UP
             // to full height — not drag-to-dismiss, which is rebuilt in
             // `SourcesOverlay`. Those two got conflated for a moment here.
+            // THE ROOMS TRAY, under the seat (prd §930). A layer of this stack
+            // for §394's reason — a sheet presents in its own context and
+            // would cover the face that closes it — and BEFORE the seat's
+            // cluster, so the face rides above it. Always mounted; it draws
+            // nothing and takes no touch until `chrome.roomsTray`, so its own
+            // `if` can animate the panel in and out. `rootPresented` for
+            // §394a's reason: a layer here sits above the shell's environment
+            // injections and must be handed them.
+            rootPresented(RoomsTray())
+                .environment(sceneState.route)
+                .environment(sceneState.filter)
+
             if !composerOpen {
                 // The floating cluster (whisper + bar) renders as one
                 // coordinated glass system (2026-07-23) — the container gives
@@ -2450,7 +2462,22 @@ struct RootShell: View {
                     // back to, and a seat that did nothing would be §83's
                     // dead control — so it is not mounted at all.
                     if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
-                        DockDoors(onAccounts: { sceneState.route.toggle(.apps) },
+                        DockDoors(onAccounts: {
+                                      // ON THE PHONE THE FACE OPENS THE ROOMS
+                                      // TRAY (prd §930): one button, every
+                                      // room, and its doors to Accounts inside.
+                                      // Pressed again it closes (§705). Where
+                                      // the rail stands the seat is only ever
+                                      // the way back (§875), so the Accounts
+                                      // toggle below is the rail's own door.
+                                      if padShell.railInset == 0 {
+                                          withAnimation(DS.Motion.standard) {
+                                              chrome.roomsTray.toggle()
+                                          }
+                                      } else {
+                                          sceneState.route.toggle(.apps)
+                                      }
+                                  },
                                   onBack: sceneState.route.path.isEmpty
                                       ? nil : { sceneState.route.goBack() })
                     }

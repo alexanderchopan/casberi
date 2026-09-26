@@ -177,12 +177,6 @@ enum DSDock {
         lerp(chipBottomInset(minimized: false), chipBottomInset(minimized: true), fold)
     }
 
-    /// The air under the glass slab — the strip's bottom padding, the part of
-    /// `chipBottomInset` that is not the slab's own vertical pad.
-    static func slabBottomInset(fold: CGFloat) -> CGFloat {
-        chipBottomInset(fold: fold) - slabPad
-    }
-
     static func agentBottomInset(minimized: Bool) -> CGFloat {
         // Centre on centre, not edge on edge: the bar's mark and the chip's
         // mark are the same size now, but the chip's FRAME is larger (it
@@ -194,16 +188,6 @@ enum DSDock {
     }
     static func agentBottomInset(fold: CGFloat) -> CGFloat {
         chipBottomInset(fold: fold) + (chipFrame(fold: fold) - agentSize(fold: fold)) / 2
-    }
-
-    /// The slab's bottom air, following the fold — a modifier of its own so
-    /// the ONLY body that re-evaluates on a scroll tick is this one, not
-    /// `MainSurface`'s (see `ShellChrome.fold`).
-    struct SlabInset: ViewModifier {
-        @Environment(ShellChrome.self) private var chrome
-        func body(content: Content) -> some View {
-            content.padding(.bottom, DSDock.slabBottomInset(fold: chrome.fold))
-        }
     }
 
     /// The bar's seat off the bottom edge, following the fold — the same
