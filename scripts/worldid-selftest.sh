@@ -222,8 +222,11 @@ done
 # 3. THE READ IS BOUGHT BY AN INTENT, never by a row. `fill` may be reached
 #    from a card task and the room's load, and from nowhere that scrolls.
 callers=$(grep -rn "WorldIDSource.shared" --include="*.swift" Casberi/Casberi | grep -v "Model/WorldIDSource.swift" | wc -l | tr -d ' ')
-[[ "$callers" -le 6 ]] \
-  || { echo "✗ $callers callers of WorldIDSource — a read is bought by opening a card or a room, never by a row scrolling past (AddressNames' rule)"; exit 1; }
+# Eight since prd §918: the Addresses card reads the wallets on its OWN open
+# (`.task`, bounded to three), which is exactly the rule — a card opening
+# buys the read. A ninth caller is a row scrolling past until proven otherwise.
+[[ "$callers" -le 8 ]] \
+  || { echo "✗ $callers callers of WorldIDSource — a read is bought by opening a card or a room, never by a row scrolling past (AddressNames' rule; 8 since §918)"; exit 1; }
 
 # 4. THE HOST IS DISCLOSED, and under its own service. It is a `g.alchemy.com`
 #    subdomain, so the receipts screen would file it under the Wallet bridge —
