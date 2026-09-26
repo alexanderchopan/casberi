@@ -326,6 +326,8 @@ marks chronological position within the pair.
 | §916 amendment (Addresses is Accounts' fourth section) | a directory beside Connect, Manage and Settings, sharing the screen's search field | amended by §933 — `Node.addresses`, its own pushed screen with its own field; still a directory under the face, never a room |
 | §752 (the room gear is the one control allowed at the top edge) | `RoomGear`, glass, top-right, the room's door to its own account page, with the seat's attention badge | amended by §937 — the gear is deleted; nothing stands at the top edge, and a room's door is the tray's Manage |
 | §930 (the room gear wears Manage's sliders) | the top-right door keeps Manage's glyph because it opens what Manage holds | amended by §937 — the door is deleted; two doors to one page was one too many once the tray had Manage |
+| §756 (the covered row is lifted out of its run) | the cover draws once; the day it came from is drawn as before | amended by §938 — a day left with no run draws no header |
+| §906 (one box at one position, the cover above the first day) | the cover stands above the first day in every room | amended by §938 — the first day is skipped when the cover was its only row |
 
 ## 1. Thesis
 
@@ -61631,3 +61633,7 @@ Amends §752 and §930. `RoomGear` — the glass circle floating over a room's t
 **What it cost to stay.** Every room head, crown, figure and empty state padded a 44pt column on the right for a control that faded when you scrolled — thirty call sites across the wallet family, three parameters that existed only to carry the number, and a measured band height that existed only because the control floated. Every drawing takes the whole width now. The demo pill ends at the page's inset instead of the column's. Nothing else moved: `DSRoomSlot` still reserves its headline row (that was the drawing's alignment, not the gear's), and the `BridgeStore.seat` name match the gear read is still what the account pages read.
 
 **Guards.** `address-book-selftest.sh` fails if `RoomGear.swift` returns or the chassis regains `gearColumn`; `privacy-selftest.sh`'s §596 line ("every drawing ends at the gear's x") is inverted — a `gearColumn` padding on the card is the defect now. UNSEEN on a device, like every ruling of this day.
+
+## §938 — A day whose only row is the cover draws no header (2026-09-26)
+
+Amends §756 and §906. The cover is lifted OUT of its day's run so the covered thing draws once — and the run it left was still drawn, header and all. On a day-old pour the All feed opened on the cover, then a bare "Today", then "Yesterday": a sentence about nothing, standing where the reader looks first. Two paths had the same gap: `bundle(_:nextEventID:excluding:)` returned the emptied day to `memo.groups`, and `daySection` asked `rows.isEmpty` of what it was HANDED rather than of the run it draws after the lift. Both now ask the question of what is left — `bundle` drops the empty day (the cover still resolves from `memo.days`, untouched), and `daySection` guards on `tiles` and `run`. A header says "here is a day of things"; with nothing under it, it is §83's fake status.

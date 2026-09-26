@@ -3684,6 +3684,11 @@ struct FeedScreen: View {
             }
             return (label, rows)
         }
+        // A day whose only row was the cover has no run left, and a header
+        // over nothing is a sentence about nothing (the All feed showed a
+        // bare "Today" above "Yesterday" on a day-old pour, 2026-09-26). The
+        // cover still resolves from `memo.days`, which is untouched.
+        .filter { !$0.1.isEmpty }
     }
 
     /// The things in a day that are ELIGIBLE to fold, bucketed by source, plus
@@ -11193,7 +11198,10 @@ struct FeedScreen: View {
         let positions = cardRunPositions(count: run.count,
                                          isBreaker: { standsAlone(run[$0]) },
                                          isBoundary: { run[$0].id == boundary })
-        if !rows.isEmpty {
+        // Asked of what the section DRAWS, not of what it was handed: the
+        // cover is lifted out above, so a day holding only the cover has a
+        // header and nothing under it (2026-09-26).
+        if !tiles.isEmpty || !run.isEmpty {
             Section {
                 // UNPINNED (2026-08-29) — a ROW, not a `header:`. The twin in
                 // `bundledSections` carries the full reasoning; the short of it is
