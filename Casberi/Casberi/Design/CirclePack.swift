@@ -58,7 +58,16 @@ enum CirclePack {
         guard !shares.isEmpty, size.width > 0, size.height > 0 else { return [] }
         let positive = shares.filter { $0 > 0 }
         let least = positive.min() ?? 1
-        let cleaned = shares.map { $0 > 0 ? $0 : least }
+        // **IN THE BOX'S UNITS BEFORE ANYTHING ELSE.** The gap is points and
+        // is added to the radii before the fit, so shares in their own units
+        // let it decide the layout: dollars (hundreds) swamp 4pt, but test ETH
+        // (0.006) is swamped BY it — every circle came out equal and fell to
+        // the floor. Scaled so the areas sum to the box's, the ratios are the
+        // shares and the gap is a gap.
+        let raw = shares.map { $0 > 0 ? $0 : least }
+        let sum = raw.reduce(0, +)
+        let unit = sum > 0 ? Double(size.width * size.height) / sum : 1
+        let cleaned = raw.map { $0 * unit }
         // Largest first, stable, remembering where each came from.
         let order = cleaned.indices.sorted { a, b in
             cleaned[a] != cleaned[b] ? cleaned[a] > cleaned[b] : a < b

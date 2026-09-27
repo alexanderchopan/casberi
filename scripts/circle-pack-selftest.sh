@@ -106,6 +106,15 @@ check(Set(e.map { Int(($0.radius * 100).rounded()) }).count == 1, "equal shares 
 let z = CirclePack.layout(shares: [10, 0, 1], in: well)
 check(z[1].radius == z[2].radius, "a zero share is drawn like the smallest positive one")
 
+// SHARES IN ANY UNIT (prd §952). Hegotá UTXO sizes coins in test ETH —
+// 0.006 beside 0.0007 — and the 4pt gap, added before the fit, swamped shares
+// that small: every circle came out equal and fell to the floor. The same
+// ratios in dollars and in ETH must draw the same pack.
+let eth = CirclePack.layout(shares: [0.005937, 0.004937, 0.000737, 0.00000001], in: well)
+let usd = CirclePack.layout(shares: [5_937, 4_937, 737, 0.01], in: well)
+check(eth[0].radius > eth[2].radius * 1.5, "tiny shares still size by share (got \(eth.map { Int($0.radius * 2) }))")
+check(zip(eth, usd).allSatisfy { abs($0.radius - $1.radius) < 0.5 }, "the unit does not change the pack")
+
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 print("✓ circle pack")
 SWIFT
@@ -139,4 +148,5 @@ mutate "radius is the share, not its root" 's/CGFloat\(cleaned\[\$0\]\.squareRoo
 mutate "circles may overlap" 's/< r \+ radii\[j\] - 1e-3/< (r + radii[j]) * 0.5/'
 mutate "the output is re-sorted by size" 's/out\[original\] = Circle/out[rank] = Circle/'
 mutate "the cluster sits flush left" 's/let dx = \(size\.width - \(maxX - minX\)\) \/ 2 - minX/let dx = -minX/'
+mutate "shares keep their own unit" 's/let unit = sum > 0 \? Double\(size\.width \* size\.height\) \/ sum : 1/let unit = 1.0/'
 echo "✓ circle-pack self-test"
