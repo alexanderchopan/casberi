@@ -9,9 +9,13 @@ import SwiftUI
 ///
 /// - **True area.** A tile's area is its share of the total, laid out
 ///   squarified (Bruls, Huizing & van Wijk) so tiles stay close to square.
-/// - **The mark stays small.** A tile carries the token's mark at a fixed
-///   size and its share; no name, because the list under the crown names
-///   every token (user: *"we don't need token name either"*).
+/// - **The mark is proportional, and capped (prd §957).** A tile carries the
+///   token's mark and its share; no name, because the list under the crown
+///   names every token (user: *"we don't need token name either"*). The mark
+///   is `markRatio` of the tile's shorter side, between `markFloor` and
+///   `markCap`: a fixed 22pt read as a speck in a 94% tile (user: *"it just
+///   looks weird to have this banker icon so small in the largest square"*),
+///   and §917's uncapped mark was a 200pt coin.
 /// - **The tail folds.** Anything under `foldShare`, and anything the layout
 ///   would draw narrower than a tap, joins one "Other" tile that shows its
 ///   share only; that tile is never narrower than `minSide`.
@@ -117,6 +121,15 @@ enum HoldingsTreemapLayout {
         return max((side * side * maxA) / (s * s), (s * s) / (side * side * minA))
     }
 
+    static let markRatio: CGFloat = 0.3
+    static let markFloor: CGFloat = 16
+    static let markCap: CGFloat = 56
+
+    /// The mark's side for a tile: the same fraction of every tile.
+    static func markSize(for rect: CGRect) -> CGFloat {
+        min(markCap, max(markFloor, (min(rect.width, rect.height) * markRatio).rounded()))
+    }
+
     /// "97%" — whole percents, "<1%" never (a folded share is Other's).
     static func percent(_ share: Double) -> String {
         "\(max(1, Int((share * 100).rounded())))%"
@@ -201,7 +214,7 @@ struct HoldingsTreemap: View {
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 if !isOther {
-                    AssetMark(name: tile.id, size: small ? 16 : 22)
+                    AssetMark(name: tile.id, size: HoldingsTreemapLayout.markSize(for: tile.rect))
                 }
                 Spacer(minLength: 0)
                 Text(HoldingsTreemapLayout.percent(tile.share))
