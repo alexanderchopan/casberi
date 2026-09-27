@@ -178,6 +178,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-quickActionProbe YES` — fire the Daily Brief quick action's warm landing after launch (NSLogs `quickAction:` then `briefRequest:`). A pass is not evidence the quick action works: it cannot reach `SceneDelegate` delivery (prd §377).
 - `-chipStats "<source:n[,…]>"|clear` — seed the source strip's tap-learning counters (`Model/ChipMemory.swift`); every mount NSLogs `chipLabels:`.
 - `-openRoom "<seat name>"` — land in a source's room headlessly at mount (`RootShell.openRoomIfRequested`; NSLogs `openRoom:`). Pair with `-demoEnter YES` on a prior launch for a furnished room.
+- `-openSection <raw>` — with `-openRoom`, land on a wallet-family room's tile (`home`, `activity`, `holdings`, `accounts`, `frames`, `coins`, `roots`, `permissions`, `positions`, `nfts`, `risk`) 4s after mount, so a screen capture needs no tap (DEBUG; `-openRoom Wallet` works too, re-asked once the category's venues are listed; NSLogs `openSection:`, prd §953).
 - `-openThing "<title prefix>"` — open the newest thing whose title starts with the prefix (NSLogs `openThing:`). It runs at mount, before ingest hooks land anything, so land first and relaunch.
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first).
 - `-uiAnswerProbe "<query>"` — auto-open the composer and send through the real UI path (also read in `Shell/Composer.swift`).

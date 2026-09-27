@@ -177,6 +177,32 @@ struct RootShell: View {
               !room.isEmpty else { return }
         NSLog("[Casberi] openRoom: %@", room)
         chrome.sourceRequest = room
+        #if DEBUG
+        // A room named like its dock category ("Wallet") resolves through the
+        // category's venues, which are not listed yet at mount, so the first
+        // request lands nowhere. Ask once more when they are; a repeat of a
+        // request that already landed is a no-op (`go(to:)`'s same-source
+        // guard).
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            NSLog("[Casberi] openRoom again: %@", room)
+            chrome.sourceRequest = room
+        }
+        // `-openSection <raw>` lands on one of a wallet-family room's tiles
+        // (prd §953) — the section raw value, set on every room that has it,
+        // after the room has mounted, so a capture needs no tap.
+        if let raw = UserDefaults.standard.string(forKey: "openSection"), !raw.isEmpty {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(4))
+                NSLog("[Casberi] openSection: %@", raw)
+                if let s = WalletSection(rawValue: raw) { chrome.walletSection = s }
+                if let s = HegotaSection(rawValue: raw) { chrome.hegotaSection = s }
+                if let s = FramesSection(rawValue: raw) { chrome.framesSection = s }
+                if let s = PrivacyDevnetSection(rawValue: raw) { chrome.privacyDevnetSection = s }
+                if let s = VibenetSection(rawValue: raw) { chrome.vibenetSection = s }
+            }
+        }
+        #endif
     }
 
     var body: some View {

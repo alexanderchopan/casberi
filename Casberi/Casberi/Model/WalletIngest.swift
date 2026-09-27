@@ -1752,22 +1752,28 @@ enum WalletIngest {
 
         /// "$12.4K across 5 tokens" live, or "$12.4K · as of 2h ago" when the
         /// group is a stale last-known snapshot — compact, no cents theater.
-        var subline: String {
-            let amount: String
-            if totalUSD >= 1_000_000 { amount = String(format: "$%.1fM", totalUSD / 1_000_000) }
-            else if totalUSD >= 10_000 { amount = String(format: "$%.0fK", totalUSD / 1_000) }
-            else if totalUSD >= 1_000 { amount = String(format: "$%.1fK", totalUSD / 1_000) }
-            else { amount = String(format: "$%.0f", totalUSD) }
-            if let stale {
-                let mins = max(1, Int(Date.now.timeIntervalSince(stale) / 60))
-                let ago: String
-                if mins < 60 { ago = "\(mins)m ago" }
-                else if mins < 60 * 24 { ago = "\(mins / 60)h ago" }
-                else { ago = "\(mins / 1_440)d ago" }
-                return String(localized: "\(amount) · as of \(ago)")
-            }
-            return String(localized: "\(amount) across \(tokenCount) token")
+        var subline: String { WalletIngest.subline(totalUSD: totalUSD, tokenCount: tokenCount, stale: stale) }
+    }
+
+    /// "$12.4K across 5 tokens" live, or "$12.4K · as of 2h ago" for a stale
+    /// last-known reading — compact, no cents theater. ONE spelling for a
+    /// wallet group and the combined portfolio: the room's holdings crown
+    /// reads its number off this line (`GenTagMap.roomReading`, prd §953).
+    static func subline(totalUSD: Double, tokenCount: Int, stale: Date?) -> String {
+        let amount: String
+        if totalUSD >= 1_000_000 { amount = String(format: "$%.1fM", totalUSD / 1_000_000) }
+        else if totalUSD >= 10_000 { amount = String(format: "$%.0fK", totalUSD / 1_000) }
+        else if totalUSD >= 1_000 { amount = String(format: "$%.1fK", totalUSD / 1_000) }
+        else { amount = String(format: "$%.0f", totalUSD) }
+        if let stale {
+            let mins = max(1, Int(Date.now.timeIntervalSince(stale) / 60))
+            let ago: String
+            if mins < 60 { ago = "\(mins)m ago" }
+            else if mins < 60 * 24 { ago = "\(mins / 60)h ago" }
+            else { ago = "\(mins / 1_440)d ago" }
+            return String(localized: "\(amount) · as of \(ago)")
         }
+        return String(localized: "\(amount) across \(tokenCount) token")
     }
 
     /// A treemap PER watched wallet, sized by USD value — the same TagMap
@@ -1817,7 +1823,10 @@ enum WalletIngest {
             let portfolio = WalletPortfolio.demoFixture(scopeTo: address)
             guard !portfolio.isEmpty else { return nil }
             let cells = portfolio.treemapCells.joined(separator: ", ")
-            return (["root = TagMap(\(q("")), \(q("")), [\(cells)], \(q("token")))"], portfolio)
+            // The line carries the total the room's crown reads (prd §953);
+            // `GenTagMap` hides it wherever the crown draws it.
+            let line = subline(totalUSD: portfolio.totalUSD, tokenCount: portfolio.tokenCount, stale: nil)
+            return (["root = TagMap(\(q("")), \(q(line)), [\(cells)], \(q("token")))"], portfolio)
         }
         let read = await holdingsByWallet()
         var groups = read.groups
@@ -1910,7 +1919,12 @@ enum WalletIngest {
             // a renderer change. And this composer is feed-only — Home and the
             // Today brief build their own `TagMap` documents, where the title
             // is the only label there is and must stay.
-            let doc = ["root = TagMap(\(q("")), \(q("")), [\(portfolio.treemapCells.joined(separator: ", "))], \(q("token")))"]
+            // The line carries the total the room's crown reads (prd §953) —
+            // it was "" and the true-area treemap (§939) never drew for the
+            // combined portfolio; `GenTagMap` hides it where the crown draws.
+            let line = subline(totalUSD: portfolio.totalUSD, tokenCount: portfolio.tokenCount,
+                               stale: portfolio.asOf)
+            let doc = ["root = TagMap(\(q("")), \(q(line)), [\(portfolio.treemapCells.joined(separator: ", "))], \(q("token")))"]
             return (doc, portfolio)
         }
 

@@ -1520,7 +1520,10 @@ extension FeedScreen {
                 if money.contains(where: { ("1"..."9").contains($0) }) { return (sign + money, true) }
             }
             let raw = thing.transferAmount ?? ""
-            return raw.contains(where: { ("1"..."9").contains($0) }) ? (sign + raw, true) : (raw, false)
+            if raw.contains(where: { ("1"..."9").contains($0) }) { return (sign + raw, true) }
+            // A bare unit ("ETH") with no number read as a broken row (prd
+            // §953): draw nothing on the right; a real zero keeps its "0".
+            return raw.contains(where: \.isNumber) ? (raw, false) : ("", false)
         }()
         Button {
             openThing(thing)
