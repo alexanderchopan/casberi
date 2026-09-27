@@ -42444,6 +42444,34 @@
         }
       }
     },
+    "All activity" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Toda la actividad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべてのアクティビティ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 활동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所有动态"
+          }
+        }
+      }
+    },
     "All and Pinned always lead." : {
       "localizations" : {
         "es" : {
@@ -42692,6 +42720,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全有或全无"
+          }
+        }
+      }
+    },
+    "All pins" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todos los pines"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべてのピン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 핀"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所有图钉"
           }
         }
       }
@@ -49431,6 +49487,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Bluesky"
+          }
+        }
+      }
+    },
+    "Board" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tablero"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ボード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "图板"
           }
         }
       }
@@ -107459,6 +107543,34 @@
         }
       }
     },
+    "Person" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Persona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "人物"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사람"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "人物"
+          }
+        }
+      }
+    },
     "Personal access token" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -117515,6 +117627,34 @@
         }
       }
     },
+    "Repository" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Repositorio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リポジトリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仓库"
+          }
+        }
+      }
+    },
     "Reposted" : {
       "localizations" : {
         "es" : {
@@ -124679,6 +124819,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在显示你最近的内容 — 打开某个来源可以看更早的"
+          }
+        }
+      }
+    },
+    "Showing: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mostrando: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "表示中: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "표시 중: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示：%@"
           }
         }
       }
