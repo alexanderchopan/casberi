@@ -232,41 +232,10 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
         if accounts.count > 1 {
             let showing = accounts.first { $0.isShowing(scope) } ?? accounts.first
             if let showing {
-                Menu {
-                    ForEach(accounts) { slot in
-                        Button {
-                            DSHaptic.selection()
-                            withAnimation(DS.Motion.standard) {
-                                onPickAccount(slot.id.isEmpty ? nil : slot.id)
-                            }
-                        } label: {
-                            if slot.isShowing(scope) {
-                                Label(slot.name, systemImage: "checkmark")
-                            } else {
-                                Text(slot.name)
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        HStack(spacing: -(DS.Face.row / 3.5)) {
-                            ForEach(Array(showing.faces.prefix(2).enumerated()), id: \.offset) { pair in
-                                RailFace(face: pair.element, size: DS.Face.row)
-                            }
-                        }
-                        Text(showing.name)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .dsGlyph(.caption)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    .frame(minHeight: DS.Hit.min)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(String(localized: "Account: \(showing.name)")))
+                // The one pull-down (prd §936), shared with GitHub and
+                // Pinterest since §959 — `Design/DSScopeMenu.swift`.
+                DSScopeMenu(slots: accounts, showing: showing,
+                            onPick: onPickAccount)
             }
         }
     }

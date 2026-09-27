@@ -154,6 +154,9 @@ struct FeedScreen: View {
     /// below) — a signal that changes independently of `@Query`'s own
     /// health, unlike `corpusRevision`.
     @Environment(\.scenePhase) private var scenePhase
+    /// Compact is the phone, where a room's scope control stands IN the room
+    /// (prd §959); regular keeps it on the shell's rail.
+    @Environment(\.horizontalSizeClass) var roomSizeClass
 
     init(source: String, isActive: Bool, nearActive: Bool = true, rowBudget: Int? = nil) {
         self.source = source
@@ -602,6 +605,10 @@ struct FeedScreen: View {
         /// can draw the step in its sequence; a step out of its order is a step
         /// without its meaning.
         case framesFrame(FramesMove, Int)
+        /// Everyone a social room's face row leaves behind its `+N` (prd §824),
+        /// routed here since the row moved into the room (§959): a `.sheet`
+        /// inside a List row tears this screen's own sheet down mid-rise.
+        case socialFaces
         /// One address that paid somebody else's gas, with the moves the room
         /// is currently showing — passed rather than re-read, because the room
         /// may be scoped and a sheet that quietly widened to every account
@@ -636,6 +643,7 @@ struct FeedScreen: View {
             case .token(let r): "token:\(r.id)"
             case .allocation: "allocation"
             case .worthALook: "worthALook"
+            case .socialFaces: "socialFaces"
             case .deposits: "deposits"
             case .locks: "locks"
             case .hegotaMove(let m, _): "hegotaMove:\(m.id)"
@@ -4698,6 +4706,8 @@ struct FeedScreen: View {
             ThingSheetView(thing: thing)
         case .token(let route):
             TokenQuickSheet(route: route)
+        case .socialFaces:
+            socialFacesTray
         case .allocation:
             if let portfolio {
                 WalletAllocationTray(portfolio: portfolio)
@@ -5646,6 +5656,10 @@ struct FeedScreen: View {
             // agent room by construction — the very condition that routes them
             // to `agentRoomSections`.
             || roomAgent != nil
+            // A person, repo or board picked from the control IN the room
+            // (prd §959): the generic state would take that control with it,
+            // and its one door leaves the room.
+            || roomScopePicked
     }
 
     /// The day sections of a room that has rows, plus its closing line.
@@ -7424,7 +7438,8 @@ struct FeedScreen: View {
                 // post already draws at card size.
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
                                 replies: threadReplies,
-                                cover: heroShown ? nil : ledeThingID(in: days))
+                                cover: heroShown ? nil : ledeThingID(in: days),
+                                scopeControl: true)
             }
         }
     }
@@ -7615,7 +7630,10 @@ struct FeedScreen: View {
         // `standaloneLead`; this arm below it is what is left for a room whose
         // head is drawn above and so has no tiles here to hold a lead for.
         let leadHeld = coverThing != nil || (scopeTiles != nil && visible.isEmpty)
-        standaloneLead(cover: coverThing, tiles: scopeTiles, listEmpty: visible.isEmpty)
+        standaloneLead(cover: coverThing, tiles: scopeTiles, listEmpty: visible.isEmpty,
+                       menuFollows: roomScopeDraws)
+        // Under the tiles, as the Wallet's account menu is (prd §959).
+        roomScopeSection
         if visible.isEmpty {
             // A tile and a face together can hold nothing (the GitHub rail
             // combines with the tile) — said under the tiles, which stay, the
@@ -7670,7 +7688,10 @@ struct FeedScreen: View {
     /// room emptied by its own pick.
     @ViewBuilder
     private func standaloneLead(cover: Thing?, tiles: DSScopeTiles<RoomKindTile>?,
-                                listEmpty: Bool) -> some View {
+                                listEmpty: Bool,
+                                // The room's scope menu stands right under
+                                // the tiles (§959), at the Wallet's `s2`.
+                                menuFollows: Bool = false) -> some View {
         let leadHeld = cover != nil || (tiles != nil && listEmpty)
         if let cover {
             Section {
@@ -7691,7 +7712,7 @@ struct FeedScreen: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: leadHeld ? 0 : DS.Space.s2,
                                               leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.leadGap,
+                                              bottom: menuFollows ? DS.Space.s2 : DSRoomChassis.leadGap,
                                               trailing: DSRoomChassis.inset))
             }
         }
@@ -8643,7 +8664,11 @@ struct FeedScreen: View {
                                  // header (prd §910) — the six picture rooms
                                  // pass their grid test, everything else none.
                                  isTile: ((Thing) -> Bool)? = nil,
-                                 tileShape: PhotoCell.Shape = .square) -> some View {
+                                 tileShape: PhotoCell.Shape = .square,
+                                 // Draw the room's scope control under the
+                                 // cover (prd §959) — the day-grouped rooms
+                                 // that pick a person or a source.
+                                 scopeControl: Bool = false) -> some View {
         // Computed once for the whole feed rather than per section: every
         // shaped room routes its groups through here, so the folded tail's
         // lighter header (prd §254) reaches all of them from one place.
@@ -8665,6 +8690,18 @@ struct FeedScreen: View {
             groups.flatMap { $0.1 }.first(where: { (thing: Thing) -> Bool in thing.isLive && thing.id == id })
         }
         if let coverThing { Section { ledeListRow(coverThing) } }
+        if scopeControl {
+            // A pick that emptied the room holds the lead with the room's own
+            // empty state (§862), so the control never rises to the top of
+            // the screen (§752) and is still there to undo the pick.
+            if coverThing == nil && groups.isEmpty && roomScopePicked {
+                Section {
+                    emptyLeadRow(headline: DSProse.text("Nothing here yet."),
+                                 words: Text("Nothing here yet."))
+                }
+            }
+            roomScopeSection
+        }
         // The room's own share door stands under whatever leads — the cover
         // here, or the tiles a kind-tiled room drew before calling this —
         // and above the first day, in every room that offers one.

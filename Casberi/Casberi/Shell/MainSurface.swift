@@ -611,15 +611,18 @@ struct MainSurface: View {
     /// test each rail makes, asked once so the folder row can decide to mount
     /// with no venues in it (prd §753).
     private var roomFacesShow: Bool {
-        SocialScopeRail.shows(source: filter.source, accounts: socialAccounts.count)
+        // **THE PHONE'S BAND CARRIES NO FACES (prd §936, §959).** The wallet
+        // family picks its account from the menu under its tiles; GitHub and
+        // Pinterest from the same menu; the social rooms from a row of faces
+        // under the cover (`FeedScreen.roomScopeControl`). The rail keeps all
+        // of them, where no seat shares the band's edge.
+        guard showsRail else { return false }
+        return SocialScopeRail.shows(source: filter.source, accounts: socialAccounts.count)
             || GitHubScopeRail.shows(source: filter.source,
                                      watched: GitHubWatchStore.shared.watches.count)
             || PinterestScopeRail.shows(source: filter.source,
                                         follows: PinterestStore.shared.follows.count)
-            // The wallet family picks its account from the menu under its
-            // tiles on the phone (prd §936); the rail keeps the faces. With
-            // no faces, the wallet rooms draw no capsule on the phone at all.
-            || (showsRail && accountRailItems.count > 1)
+            || accountRailItems.count > 1
     }
 
     /// The faces the folder row carries after its venues (prd §753). At most
@@ -627,10 +630,13 @@ struct MainSurface: View {
     /// wallet family, never two.
     @ViewBuilder
     private var roomFaces: some View {
-        socialScopeRail
-        githubScopeRail
-        pinterestScopeRail
-        if showsRail { accountRail }
+        // On the phone every one of these moved into the room (§959).
+        if showsRail {
+            socialScopeRail
+            githubScopeRail
+            pinterestScopeRail
+            accountRail
+        }
     }
 
     /// The category the room you are STANDING IN belongs to, if any.
