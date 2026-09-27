@@ -149,10 +149,19 @@ grep -q 'static let getKeysSelector = "0x34e80c34"' "$ALTANA" \
 # so a guard that found its string reports failure, and a negative guard that
 # should have fired reports success. A herestring has no pipe to signal.
 INGEST_CODE=$(sed 's://.*::' "$INGEST")
-grep -q 'root = TagMap(\\(q("")), \\(q(""))' <<< "$INGEST_CODE" \
-  || { echo "✗ the combined holdings map grew a title or a subline again (prd §447)."; \
-       echo "  The header above it already says 'What you hold' and the crown above THAT"; \
-       echo "  already says the money. See portfolioRead's own comment."; exit 1; }
+# Since prd §953 the combined document carries its "$35K across N tokens"
+# line again — it is the Holdings crown's NUMBER, read by `GenTagMap.roomReading`
+# to take the true-area treemap branch (§939), which never drew for the
+# combined portfolio while the line was empty. It still DRAWS nothing: the
+# document renders only in the crown's slot, and the renderer hides the line
+# wherever the crown reads it. So: the title stays empty, and the hide is
+# asserted in the renderer rather than the emptiness in the document.
+grep -q 'root = TagMap(\\(q("")), \\(q(line))' <<< "$INGEST_CODE" \
+  || { echo "✗ the combined holdings map grew a title again (prd §447), or lost the line"; \
+       echo "  the crown reads its number from (prd §953)."; exit 1; }
+GEN_CODE=$(sed 's://.*::' Casberi/Casberi/GenUI/GenRenderer.swift)
+grep -qF '!(fillsRoomSlot && Self.roomReading(el.str(1)) != nil)' <<< "$GEN_CODE" \
+  || { echo "✗ the holdings map draws its line under the crown that states it (prd §447, §953)"; exit 1; }
 # …and the SCOPED map keeps its label, which is a wallet's NAME and therefore
 # not a duplicate of anything. Asserted so the cut above can't be over-applied.
 grep -q 'TagMap(\\(q(g.label))' <<< "$INGEST_CODE" \

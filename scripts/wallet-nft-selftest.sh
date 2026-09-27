@@ -880,18 +880,17 @@ mutate_origin "erc1155 dropped from the NFT definition" \
   'category == "erc721" || category == "erc1155"' \
   'category == "erc721"'
 
-# 20. prd §514 — the grid. Each of these renders as an ordinary shelf.
-mutate "the grid stuck at a quad, so a fifth pick is never drawn" \
-  'available > 4 ? 3 : 2' '2'
-mutate "the density decided from the DRAWN list rather than the held one" \
-  'available > 4 ? 3 : 2' 'available > 9 ? 3 : 2'
-mutate "the cap stops following the columns, so a 3x3 draws four" \
-  'return c * c' 'return 4'
-mutate "the last row's blanks dropped, so one piece draws full-width under three" \
-  'return columns - count' 'return 0'
-mutate "a full last row padded, pushing a phantom cell onto every grid" \
-  'guard columns > 0, count > 0, count < columns else { return 0 }' \
-  'guard columns > 0 else { return 0 }'
+# 20. prd §514, redrawn by §943 — the grid: full rows, one to three across,
+# nine at most. Each of these renders as an ordinary shelf.
+mutate "the grid stuck at two across, so three pieces draw as two" \
+  'return (1...3).max { a, b in' 'return (2...2).max { a, b in'
+# (No mutation for `columns`' tie-break: one, two and three across show 1,
+# {0,2,4} and {0,3,6,9} pieces, which never tie above zero, so the branch is
+# unreachable and a mutation of it cannot fail.)
+mutate "the last row left partial, so eight draws as three rows with a hole" \
+  'return min(n, c * c) / c * c' 'return min(n, c * c)'
+mutate "the nine-cell ceiling dropped, so a hundred pieces all draw" \
+  'return min(n, c * c) / c * c' 'return n / c * c'
 mutate "the cell side counts one gap per cell, so the grid overflows its box" \
   'return (box - gap * CGFloat(count - 1)) / CGFloat(count)' \
   'return (box - gap * CGFloat(count)) / CGFloat(count)'
