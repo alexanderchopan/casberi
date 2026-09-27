@@ -61,8 +61,10 @@ Each step is tagged with where it runs.
   and custom product page); `links --pt` prints the campaign links. Reads DAILY instances
   (35 days) and takes each date from the newest instance only (Apple's overwrite rule).
   Sessions and installs/deletions are not read yet. `--self-test` runs offline.
-- [mac] 2026-09-27: no report request existed on the app. **Owed: the user runs
-  `asc-report.py request --yes`**; the first instances land 1–2 days later.
+- [mac, done 2026-09-27] ONGOING report request `4f45d303-e232-46eb-beb9-6f6b74091f92` made
+  (none existed before). First instances land 1–2 days later: run `asc-report.py status`,
+  then `funnel`. A request left unread for long enough stops (`stoppedDueToInactivity`), so
+  the weekly run in workstream 1 also keeps it alive.
 - [cloud] Campaign links: one App Store link per channel,
   `https://apps.apple.com/app/id6788637831?pt=<provider token>&ct=<channel>`. The provider
   token is under App Store Connect → Analytics. Keep the list in this file.
