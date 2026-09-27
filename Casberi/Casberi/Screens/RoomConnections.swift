@@ -92,30 +92,70 @@ struct RoomAccountsRows: View {
     let rows: [Row]
 
     var body: some View {
-        // The groups are named only when there are two (prd §940): a list
-        // of yours alone needs no word over it.
+        // "Yours" over your accounts in every room (prd §954, reversing
+        // §940's "only when there are two"): the Wallet named its group and
+        // Privacy did not, so the same list read as two different screens.
         let split = rows.contains { !$0.watched }
+        let shared = Self.sharedWith(rows)
         ForEach(rows) { row in
-            if split, row.id == rows.first(where: { $0.watched })?.id {
-                DSGroupHeader(word: String(localized: "Yours"))
+            if row.id == rows.first(where: { $0.watched })?.id {
+                header(String(localized: "Yours"))
             }
             if split, row.id == rows.first(where: { !$0.watched })?.id {
-                DSGroupHeader(word: String(localized: "Tied to yours"))
+                header(String(localized: "Tied to yours"))
             }
-            if let onOpen = row.onOpen {
-                Button {
-                    DSHaptic.selection()
-                    onOpen()
-                } label: { body(row).contentShape(Rectangle()) }
-                    .buttonStyle(.plain)
-            } else {
-                body(row)
+            Group {
+                if let onOpen = row.onOpen {
+                    Button {
+                        DSHaptic.selection()
+                        onOpen()
+                    } label: { body(row, drop: shared).contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                } else {
+                    body(row, drop: shared)
+                }
             }
+            // The rows' column in every room (prd §954): the Wallet's list sat
+            // on the List's default inset, 10pt left of every other list.
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                                      bottom: 0, trailing: DS.Space.s4))
         }
     }
 
-    @ViewBuilder private func body(_ row: Row) -> some View {
-        WalletRow(mark: .face(row.address), title: row.name, subtitleText: subtitle(row)) {
+    /// The group header on the tiles' edge wherever the list is mounted (prd
+    /// §954): as its own List row it takes the rows' inset and steps back from
+    /// it; inside a room's stacked list it is already in that column and
+    /// steps back the same. `DSGroupHeader` assumes the first and lands 27pt
+    /// in on Privacy, whose list is one stacked row.
+    private func header(_ word: String) -> some View {
+        Text(word)
+            .dsText(.heading24)
+            .foregroundStyle(DS.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, DSRoomChassis.inset - DSRoomChassis.rowInset(forMark: DS.Face.list))
+            .padding(.top, DS.Space.s6)
+            .padding(.bottom, DS.Space.s1)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                                      bottom: 0, trailing: DS.Space.s4))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// **A LINE EVERY ROW SHARES SAYS NOTHING** (prd §954, the §951 subtext
+    /// rule). When every one of your accounts dealt with the same one party,
+    /// "with …be02" under each is the "Tied to yours" row said again; the line
+    /// stays where it tells rows apart ("with Sam" under two of five).
+    static func sharedWith(_ rows: [Row]) -> [String]? {
+        let yours = rows.filter(\.watched)
+        guard yours.count > 1, let first = yours.first?.with, !first.isEmpty,
+              yours.allSatisfy({ $0.with == first }) else { return nil }
+        return first
+    }
+
+    @ViewBuilder private func body(_ row: Row, drop shared: [String]?) -> some View {
+        WalletRow(mark: .face(row.address), title: row.name,
+                  subtitleText: subtitle(row, dropping: row.watched ? shared : nil)) {
             // Only a tied account carries a figure — what moved with it, the
             // bar's own number. The bare count that stood here repeated the
             // line under the name (prd §940).
@@ -128,13 +168,13 @@ struct RoomAccountsRows: View {
         }
     }
 
-    private func subtitle(_ row: Row) -> Text? {
+    private func subtitle(_ row: Row, dropping shared: [String]?) -> Text? {
         var parts: [String] = []
         if let kind = row.kind { parts.append(kind) }
         if row.unreached {
             // An unread address is not an unconnected one (§83, §515a).
             parts.append(String(localized: "couldn't be reached"))
-        } else if !row.with.isEmpty {
+        } else if !row.with.isEmpty, row.with != shared {
             let names = ListFormatter.localizedString(byJoining: row.with)
             parts.append(String(localized: "with \(names)"))
         }

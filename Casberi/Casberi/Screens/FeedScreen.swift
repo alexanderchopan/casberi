@@ -6683,7 +6683,6 @@ struct FeedScreen: View {
                                             chrome.refreshRooms()
                                         }
                                     },
-                                    onRequestWatch: { feedSheet = .vibenetWatch },
                                     onRename: vibenetRename,
                                     onOpenKeys: { newKeyIDs in
                                         feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
@@ -6748,7 +6747,18 @@ struct FeedScreen: View {
                                     // `vibenetSendRow` was, handed to the card
                                     // so the verbs ride the account card
                                     // rather than a Section below the list.
-                                    acts: { AnyView(vibenetSendRow(scope: $0)) },
+                                    // Follow address closes the acts, as the
+                                    // Wallet's does (prd §954): watching left
+                                    // the Accounts list for Home.
+                                    acts: { scope in
+                                        AnyView(VStack(alignment: .leading, spacing: 0) {
+                                            vibenetSendRow(scope: scope)
+                                            DevnetVerbRow(title: String(localized: "Follow address"),
+                                                          glyph: "eye",
+                                                          tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
+                                                          act: { feedSheet = .vibenetWatch })
+                                        })
+                                    },
                                     // The face rail's two halves, now the
                                     // crown's (prd §482 amendment).
                                     scopedAddress: chrome.vibenetScope)

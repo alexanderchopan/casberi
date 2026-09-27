@@ -1033,6 +1033,9 @@ extension PrivacyDevnetRoomCard {
         } else {
             let groups = PrivacyDevnetRoots.bySource(refs)
             VStack(alignment: .leading, spacing: DS.Space.s2) {
+              // A group header over the sets, like every other list in the
+              // family (prd §954).
+              RoomListBlock(caption: String(localized: "Sets")) {
                 ForEach(Array(groups.enumerated()), id: \.element.source) { index, group in
                     // The row opens the newest transaction that proved
                     // against this source — the object the group is ABOUT.
@@ -1068,6 +1071,7 @@ extension PrivacyDevnetRoomCard {
                         }
                     }
                 }
+              }
                 Text(Self.windowNote)
                     .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
@@ -1331,7 +1335,9 @@ struct PrivacyDevnetRoomList: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
+        // Accounts' rows carry their own air, as in every room's list (prd
+        // §954); `s4` between them spread Privacy's roster 16pt wider.
+        VStack(alignment: .leading, spacing: section == .accounts ? 0 : DS.Space.s4) {
             card.scopeList
 
             // **THE ACTS ARE LAST.** The reading is what the room is for and

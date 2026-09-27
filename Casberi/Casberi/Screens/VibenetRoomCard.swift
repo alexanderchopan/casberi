@@ -135,27 +135,6 @@ struct VibenetRoomCard: View {
     /// its own source is how the two get to disagree.
     var onWatched: () -> Void = {}
 
-    /// Raises the WATCH sheet (`VibenetWatchSheet`) — the lookup §517 made a
-    /// sheet, restored to the surface §545 moved the roster to.
-    ///
-    /// **IT WENT MISSING, AND NOTHING COULD SEE IT.** §545 deleted
-    /// `VibenetAddressBookScreen` and moved this roster onto the room's own
-    /// Accounts scope — correctly — but the sheet's only presenter went with
-    /// the deleted screen, so `VibenetWatchSheet` sat in the tree with no
-    /// caller and the room grew a roster you could rename and unwatch from
-    /// and could not ADD to. That is §472's exact regression back again: the
-    /// discovery list §479 put in this card is in the EMPTY branch, so the
-    /// moment you watch one account the only route to a second is to leave,
-    /// find the catalog and open the setup screen — which §479's own ruling
-    /// names as the dead end it exists to close.
-    ///
-    /// **Routed, not presented** (the reason the deleted `onRequestCreate`
-    /// carried, which outlives it):
-    /// this card lives inside `FeedScreen`'s List rows, and a `.sheet` on a
-    /// row resolves to the same presenting controller as the screen's own
-    /// single sheet — the half-open-then-close bug this codebase has now paid
-    /// for four times. `FeedSheetRoute.vibenetWatch`.
-    var onRequestWatch: () -> Void = {}
     /// Raised by the context menu's "Name this account…" — the alert itself
     /// lives on the SCREEN (a text-entry alert needs `@State` a card
     /// re-composed from a value type shouldn't own), so this just reports
@@ -945,7 +924,9 @@ struct VibenetRoomCard: View {
                 let keys = VibenetKeyAggregation.compose(items, now: .now)?.total ?? 0
                 out[scope] = keys == 0
                     ? scope.emptyHeadline
-                    : RoomPermissions.headline(count: keys) ?? scope.emptyHeadline
+                    // The crown's own noun (prd §951, §954): "8 keys", never
+                    // "8 permissions" over a crown that says keys.
+                    : keys == 1 ? String(localized: "1 key") : String(localized: "\(String(keys)) keys")
             }
         }
         return out
@@ -2524,61 +2505,30 @@ struct VibenetRoomCard: View {
 
     private var accountsCardBody: some View {
         let links = VibenetAccountMapping.links(room.items)
+        // **THE WALLET'S ACCOUNTS SHAPE (prd §954):** "Yours" on the tiles'
+        // edge and one row per account in the rows' column. Watching left for
+        // Home's Actions as "Follow address", as the Wallet's did — reversing
+        // 2026-09-04's "watch stays with the roster" on the user's approval of
+        // one Accounts shape everywhere — and the implementation-count line
+        // went with the other notes (§507's drift is still the model's).
         return card {
-            VStack(alignment: .leading, spacing: 0) {
-                // MAKING ONE LEADS THE LIST (user ruling, 2026-08-29: create
-                // goes "above the existing accounts, not below the list b/c
-                // user may have many"). A verb under a roster of twenty is a
-                // verb nobody finds.
-                //
-                // In the ROOM rather than the address book, also on the user's
-                // ruling: that book's names ledger is SHARED with the real one,
-                // so a devnet account created there would land beside mainnet
-                // wallets — a confusion built in on purpose for renaming and
-                // exactly wrong for making.
-                // **CREATE MOVED TO HOME (2026-09-04, user ruling).** All four
-                // chain acts live on the Home panel now — *"folks testing won't
-                // want to just send, the others are just as important"* — and
-                // the corollary the same ruling carried is that they MOVE
-                // rather than being duplicated: a door here as well would make
-                // three places instead of one, which is the scattering the
-                // ruling was about.
-                //
-                // **WATCH STAYS, and the line between them is what to keep.**
-                // Create WRITES to the chain; watching changes what this roster
-                // SHOWS. The rail is for viewing, so an act that changes the
-                // view belongs with the view — and unlike Create it has no
-                // subject on Home, since watching an address is the one act
-                // here that is not about an account you can sign for.
-                watchAccountRow
-                ForEach(Array(drawn.enumerated()), id: \.element.id) { index, item in
-                    // The last ROW is only the last thing in the card when
-                    // there are no links folded under it — otherwise its
-                    // separator is what joins the roster to the disclosure.
-                    accountRow(item)
+            // This card already stands on the tiles' edge, so the header
+            // takes no step back (a `RoomListBlock` here landed 9pt short);
+            // the rows step in to the rows' column.
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(String(localized: "Yours"))
+                    .dsText(.heading24)
+                    .foregroundStyle(DS.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(drawn.enumerated()), id: \.element.id) { index, item in
+                        accountRow(item)
+                    }
                 }
-                // Not when the spine is the scope's own lead — see `promoted`.
-                if !links.isEmpty, !promoted(.accounts) { linkedDisclosure(links) }
-                // **THE ONE FACT A REDEPLOYING CHAIN OWES A ROSTER (prd
-                // §507).** `AccountCreated` carries a `codeHash`, which was
-                // read by nothing: two accounts sharing it run the same
-                // account implementation and two that do not are two
-                // different builds of it — invisible to every other read
-                // here, and on vibenet the thing most likely to be true
-                // without anybody noticing.
-                //
-                // Drawn ONLY when they really differ. On a healthy roster
-                // they never do, and a line reading "1 implementation" is a
-                // line saying nothing — the always-lit marker this room
-                // deleted once already (§493).
-                if let drift = room.implementationDrift {
-                    Text(drift)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .padding(.top, DS.Space.s2)
-                        .padding(.horizontal, DSRoomChassis.contentInset)
-                }
+                .padding(.leading, DSRoomChassis.rowInset(forMark: DS.Face.list) - DSRoomChassis.inset)
             }
+            // Not when the spine is the scope's own lead — see `promoted`.
+            if !links.isEmpty, !promoted(.accounts) { linkedDisclosure(links) }
         }
     }
 
@@ -2602,35 +2552,6 @@ struct VibenetRoomCard: View {
     ///
     /// Second, not first: creating is the room's own act and watching is
     /// somebody else's account, so the primary verb keeps the lead.
-    @ViewBuilder
-    private var watchAccountRow: some View {
-        Button {
-            DSHaptic.selection()
-            onRequestWatch()
-        } label: {
-            // The subtitle says what the tap ASKS FOR, `createAccountRow`'s
-            // rule: one of these two rows wants an address you already have
-            // and the other does not, and that is the whole of how somebody
-            // picks between them.
-            DSPushRowLabel(title: Text(String(localized: "Watch an account")),
-                           subtitle: DSProse.text("Paste an address, or pick a new one"),
-                           tint: Self.mark) {
-                ZStack {
-                    Circle().fill(Self.mark.opacity(0.18))
-                        .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
-                    Image(systemName: "magnifyingglass")
-                        .dsGlyph(.caption, weight: .semibold)
-                        .foregroundStyle(Self.mark)
-                }
-            }
-            .padding(.vertical, DS.Space.s3)
-            .padding(.horizontal, DSRoomChassis.contentInset)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .dsHover()
-    }
-
     /// **WHO CAN ACT FOR WHOM, FOLDED INTO ACCOUNTS (2026-08-25, prd §477,
     /// user's own suggestion).**
     ///
@@ -2783,62 +2704,16 @@ struct VibenetRoomCard: View {
     }
 
     private func accountRowBody(_ item: VibenetAccountItem, door: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: DS.Space.s3) {
-                WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(Self.displayName(item.address))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    // The room's OWN state sentence, never a second wording.
-                    Text(VibenetRoom.rowLine(item))
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                if door {
-                    DSChevron()
-                }
-            }
-            // WHAT AN UNDEPLOYED ACCOUNT HAS TO SAY, and the one thing it can
-            // do about it. `undeployedExplainer` is nil for every other state
-            // — an unreached account is never told why it is undeployed when
-            // the truth is that we could not look (§83) — so this block is
-            // silent on a healthy row rather than gated by hand.
-            if let why = VibenetRoom.undeployedExplainer(item) {
-                Text(why)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s2)
-                // The faucet, only where the live config actually named one —
-                // an account deploys on its first transaction and a devnet
-                // address needs funds to make one. A hand-off to the
-                // explorer, never a write.
-                if VibenetConfig.cached()?.faucetAddress != nil,
-                   let url = URL(string: VibenetExplorer.faucet) {
-                    Link(destination: url) {
-                        HStack(spacing: 4) {
-                            Text(String(localized: "Devnet faucet"))
-                            Image(systemName: "arrow.up.right")
-                        }
-                        .dsText(.label12)
-                        .foregroundStyle(Self.mark)
-                        .lineLimit(1)
-                        .fixedSize()
-                    }
-                    .padding(.top, DS.Space.s2)
-                }
-            }
+        // The Wallet's row (prd §954): the face, the name, the state in the
+        // room's own words (`rowLine`, never a second wording). The deploy
+        // explainer and the faucet link under an undeployed row are gone
+        // (reversing §476): the line says "Not established yet", and Home's
+        // Top up is the faucet.
+        WalletRow(mark: .face(item.address),
+                  title: Self.displayName(item.address),
+                  subtitle: VibenetRoom.rowLine(item)) {
+            if door { DSChevron() }
         }
-        // NO SEPARATOR (user, 2026-08-25: *"do NOT USE HAIRLINES"*) — §8's
-        // no-line rule has zero exceptions, and a one-point `fillFaint`
-        // rectangle is a hairline whatever the comment beside it called it.
-        // `s3` in its place: air is what this design system separates rows
-        // with, and at `s2` the rows were relying on the line to be a list.
-        .padding(.vertical, DS.Space.s3)
         .contentShape(Rectangle())
     }
 

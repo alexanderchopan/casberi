@@ -1099,15 +1099,16 @@ grep -q 'private var accountsCard: some View' "$TMP/card.nc.swift" \
 grep -q 'VibenetRoom.rowLine(item)' "$TMP/card.nc.swift" \
   || { echo "✗ an account row states its own state sentence — prd §476: rowLine is the one"
        echo "  wording, or an account reads as two different things on two surfaces"; exit 1; }
-# AN UNDEPLOYED ACCOUNT SAYS SO, AND OFFERS THE FAUCET, on the card as well as
-# on its detail. Reported: "for addresses followed but not yet deployed they
-# are just empty" — true by construction, since such an account has no
-# balance, no keys and no links to contribute anywhere.
+# AN UNDEPLOYED ACCOUNT SAYS SO IN ITS ONE LINE (prd §954, reversing §476's
+# explainer and faucet on the card). The row's line is `rowLine`, which reads
+# "Not established yet"; the faucet is Home's Top up, one tap from the room.
+# The explainer stays in the model for the account's own detail, and coming
+# back onto the list would read as an ordinary kindness.
 grep -q 'VibenetRoom.undeployedExplainer(item)' "$TMP/card.nc.swift" \
-  || { echo "✗ an undeployed account is silent on the accounts card again — prd §476"; exit 1; }
-grep -q 'faucetAddress' "$TMP/card.nc.swift" \
-  || { echo "✗ the accounts card no longer offers the faucet — prd §476: an account deploys on"
-       echo "  its first transaction and a devnet address needs funds to make one"; exit 1; }
+  && { echo "✗ the deploy explainer is back under an Accounts row — prd §954: the row's"
+       echo "  line says it, and the Wallet's list carries no paragraph"; exit 1; }
+grep -q 'Devnet faucet' "$TMP/card.nc.swift" \
+  && { echo "✗ a faucet link is back on the Accounts list — prd §954: Home's Top up is it"; exit 1; }
 
 # NOTHING IN THE LINKED FIGURE LEAVES THE APP. The spine's nodes wore an
 # object's treatment with no handler at all, beside a card whose nearest live
@@ -1249,7 +1250,11 @@ done
 # which put the verbs below the list on any Home with history.
 # Since prd §774 the card hands the closure the page's account, so the acts
 # draw on every page and each account's page acts for itself.
-grep -qF 'acts: { AnyView(vibenetSendRow(scope: $0)) }' "$TMP/feed.nc.swift" \
+# Since prd §954 the closure also closes with Follow address, so it names the
+# scope instead of `$0`.
+{ grep -qF 'acts: { AnyView(vibenetSendRow(scope: $0)) }' "$TMP/feed.nc.swift" ||
+  { grep -qF 'acts: { scope in' "$TMP/feed.nc.swift" &&
+    grep -qF 'vibenetSendRow(scope: scope)' "$TMP/feed.nc.swift"; }; } \
   || { echo "✗ vibenet's verbs are not handed to the card — prd §747/§682: they ride the"
        echo "  account card beside the crown, never a Section under the room's list."; exit 1; }
 # **AND NOTHING MAY DRAW BELOW THE FIGURE SLOT EITHER** (2026-09-02, reported
@@ -5591,11 +5596,13 @@ fi
 # a way in. A card cannot present it itself: it lives inside `FeedScreen`'s
 # List rows, where a `.sheet` resolves to the same presenting controller as
 # that screen's own and half-opens before closing again.
-grep -q 'onRequestWatch' "$TMP/card.nc.swift" \
-  || { echo "✗ the roster no longer asks for the watch sheet — prd §517/§562: rename and"; \
-       echo "  unwatch without an add is a roster you cannot put anything into"; exit 1; }
-grep -q 'watchAccountRow' "$TMP/card.nc.swift" \
-  || { echo "✗ the watch row left the roster — the closure with no row is the dead half"; exit 1; }
+# Since prd §954 the way in is Home's "Follow address", the word every other
+# watch door in the app uses — both halves: the act names the sheet, and the
+# screen presents it.
+grep -q 'title: String(localized: "Follow address")' "$TMP/feed.nc.swift" \
+  && grep -q 'act: { feedSheet = .vibenetWatch }' "$TMP/feed.nc.swift" \
+  || { echo "✗ nothing opens the vibenet watch sheet — prd §954 moved the door to Home's"; \
+       echo "  Actions as Follow address; a sheet with no door is the dead half"; exit 1; }
 grep -q 'VibenetWatchSheet' "$TMP/feed.nc.swift" \
   || { echo "✗ nothing presents VibenetWatchSheet — 2026-09-02: it had NO caller at all,"; \
        echo "  so the sheet existed, compiled, and could not be reached from the app"; exit 1; }
@@ -5624,35 +5631,15 @@ if "VibenetDiscoverySection" in body:
     print("  between the way in and your own accounts, which is the ordering complaint")
     print("  that moved it to a sheet (§472 → §476 → §517, three rulings)")
     sys.exit(1)
-# WHAT YOU WATCH IS NEVER PUSHED DOWN BY THE WAY TO ADD. The watch door is a
-# single row at the head of the list — §538's ruling ("create account should be
-# indented same as the list items below it", and a verb under a roster of twenty
-# is a verb nobody finds) and §517's ordering fix at once: a fixed row cannot
-# grow the way an unfold can.
-#
-# **CREATE IS GONE FROM HERE, AND ITS ABSENCE IS NOW THE RULE (2026-09-04, user
-# ruling).** All four chain acts moved to the Home panel — "folks testing won't
-# want to just send, the others are just as important" — and MOVED rather than
-# duplicated, because a door here as well makes three places instead of one.
-# So this asserts the negative too: a create row coming back is the scattering
-# the ruling deleted, and it would read as an ordinary improvement.
-#
-# WATCH STAYS, and the line is worth keeping: an act that WRITES to the chain
-# belongs on Home; an act that changes WHAT THIS ROSTER SHOWS belongs with the
-# roster. Watching is the second kind.
-if "createAccountRow" in body:
-    print("✗ a create door is back on the Accounts scope — 2026-09-04 moved every chain act")
-    print("  to Home, and a door here as well is the scattering that ruling deleted")
+# **NO DOOR IN THE ROSTER (prd §954).** Create moved to Home on 2026-09-04,
+# and watching followed it: the Accounts list is the Wallet's shape, "Yours"
+# over one row per account, and every act is on Home. A create or watch row
+# coming back reads as an ordinary improvement.
+if "createAccountRow" in body or "watchAccountRow" in body:
+    print("✗ a door is back in the Accounts list — prd §954: every act is on Home")
     sys.exit(1)
-try:
-    watch = body.index("watchAccountRow")
-    roster = body.index("ForEach(Array(drawn.enumerated())")
-except ValueError:
-    print("✗ the roster no longer composes watch / accounts — prd §538/§562")
-    sys.exit(1)
-if not (watch < roster):
-    print("✗ the way in is no longer the head of the list — prd §538: a verb under")
-    print("  a roster of twenty is a verb nobody finds")
+if "ForEach(Array(drawn.enumerated())" not in body:
+    print("✗ the roster no longer lists the accounts — prd §954")
     sys.exit(1)
 GUARD
 

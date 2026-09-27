@@ -1661,6 +1661,12 @@ struct HegotaRoomList: View {
     }
 
     var body: some View {
+        // Accounts stands outside the stack (prd §954): its rows and headers
+        // are List rows of their own, so "Yours" reaches the tiles' edge.
+        if section == .accounts { accountsList } else { stacked }
+    }
+
+    private var stacked: some View {
         VStack(spacing: DS.Space.s3) {
             switch section {
             // **HOME IS THE ONE DO; ACTIVITY IS THE STREAM (prd §539,
