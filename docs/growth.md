@@ -1,6 +1,7 @@
 # Growth plan
 
 Started 2026-09-27. How Casberi gets users past posting on X, and which part of it runs where.
+The session that started it is summarized in `docs/growth-handoff.md`.
 
 ## Where it stands
 
