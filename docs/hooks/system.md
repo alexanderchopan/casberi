@@ -117,3 +117,9 @@ text on iOS 27, through `Model/ScreenshotVision.swift`.
   about whether titles get BETTER — that reading needs a device with a real
   library.
 - Guarded by `scripts/screenshot-vision-audit.py` (seven mutations).
+
+## `-openSection <raw>` (DEBUG, prd §953)
+
+With `-openRoom`, lands on a wallet-family room's tile — `home`, `activity`, `holdings`, `accounts`, `frames`, `coins`, `roots`, `permissions`, `positions`, `nfts`, `risk` — 4s after mount, so a screen capture needs no tap. The raw value is set on every room that has it. `-openRoom Wallet` works too: "Wallet" names both a dock category and its room, and the category's venues are not listed at mount, so the hook re-asks the room once 3s in (a repeat of a landed request is a no-op). NSLogs `openRoom again:` and `openSection:`.
+
+The condensed CLAUDE.md line for the wallet-family visualization pass carried, until §954's budget trim: Home crown §920 (`gearClearance`, `changeFormat`, `windowWord`, `Chip.fills`, `flatDomain`); Activity §921; Holdings §922 (`MainnetPrices`, the pack at mainnet prices, `demoPrices` under the demo); Accounts §923 (`Map.weights`, `Map.untouched`, `connectionsMap`); Permissions §924 (`Kind.holders`); Frames §925 (`RoomFrames.flow`, `frames-flow-selftest.sh`); Positions §926; Risk §927 (no floor line); UTXO coins §928 (a pack); Privacy ring §929 (`showsReading`); the review §931 (Zerion's icons in `TokenIconBook`, one ribbon ink for a lone wallet, `Power.word` under the keys); §936 (one number over one caption, `DSBarList`/`DSBarFigure`, one accent, the account menu).
