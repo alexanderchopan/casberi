@@ -96,6 +96,8 @@ struct RoomHomeCrown: View {
             chart: chart,
             caption: caption,
             captionAddress: captionAddress,
+            // An empty caption takes no row (prd §953), as on the Wallet.
+            hidesEmptyCaption: true,
             format: format,
             exactFormat: exactFormat,
             changeFormat: changeFormat,

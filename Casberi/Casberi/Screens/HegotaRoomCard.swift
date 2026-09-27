@@ -301,8 +301,8 @@ struct HegotaRoomFigure: View {
         if let one = scoped {
             return HegotaWatch.shared.name(for: one) ?? WalletStore.shortAddress(one)
         }
-        return head.watched == 1 ? String(localized: "1 account")
-                                 : String(localized: "\(String(head.watched)) accounts")
+        // Unscoped, nothing (prd §953, the Wallet's §483).
+        return ""
     }
 
     static func wei(_ eth: Double) -> Decimal {

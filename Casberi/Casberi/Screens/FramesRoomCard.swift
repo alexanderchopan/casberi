@@ -251,8 +251,9 @@ struct FramesRoomFigure: View {
             return FramesWatch.shared.name(for: one.address)
                 ?? WalletStore.shortAddress(one.address)
         }
-        return head.watched == 1 ? String(localized: "1 account")
-                                 : String(localized: "\(String(head.watched)) accounts")
+        // Unscoped, nothing (prd §953, the Wallet's §483): "All accounts" is
+        // the menu's word directly below.
+        return ""
     }
 
     @ViewBuilder private var sponsorship: some View {

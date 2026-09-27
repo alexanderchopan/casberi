@@ -61801,3 +61801,11 @@ Base Vibenet's Activity is already the feed's own day-grouped stream; in that ro
 
 
 **§952 amended, the pack's unit (same day).** The UTXO coins drew as four equal 44pt circles, and it was a layout bug, not a choice: `CirclePack.layout` added its 4pt gap to the radii before fitting them, so shares in small units (test ETH, 0.006 beside 0.0007) were swamped by the gap and came out equal, then fell to the floor. Shares are now scaled to the box's area first, so the ratios are the shares whatever the unit. The two source-map packs in `GenRenderer` (counts like 12 beside 3) were flattened toward equal by the same bug and draw their true ratios now. `circle-pack-selftest.sh` pins it: the same ratios in dollars and in ETH draw the same pack, with a mutation for the missing scale.
+
+## §953 — Every wallet-family Home stands on the Wallet's lines: headers on the tiles' edge, one crown position, no unscoped caption (user, 2026-09-26)
+
+**The headers.** "Actions" and "Readings" on every Home (`DSRoomScopeChrome`) were padded twice — the label's own `inset` inside the block's — so they stood 16pt inside the tiles' edge while every section's group header (§944, §951) stands on it. The inner padding is deleted; five rooms move at once.
+
+**The crown's position.** Hegotá Frames, UTXO and Privacy handed the chrome a Home crown wrapped in `DSRoomSlot` around a room figure that already carries its own, so their number stood 12–16pt right of the Wallet's and of every section crown (measured 63pt against 47). The outer wrap is a `Group` now (Vibenet wrapped once and was already right). The Wallet's own crown kept a top `s2` from before it lived in the fixed box and stood 8pt LOW; it keeps only a bottom padding, so all five numbers share one line. **Deleting that modifier outright crashed the Wallet on every open** (a SIGSEGV copying a `ForEach` inside `walletTilesSection`'s builder) — a layout-neutral change exposing a latent fault, spun off to its own investigation; the comment on the modifier says not to delete it.
+
+**The caption.** A devnet Home read "2 accounts" above its number, with a chevron on Privacy — the words "All accounts" say directly below. The Wallet's rule applies (§483): the caption names the picked account, or says nothing; an empty caption takes no row (`RoomHomeCrown` passes `hidesEmptyCaption`).

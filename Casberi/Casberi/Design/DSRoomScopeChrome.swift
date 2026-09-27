@@ -144,8 +144,10 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
                 .padding(.horizontal, DSRoomChassis.inset)
                 if let actsSlot {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        // On the tiles' edge, like every section's group
+                        // header (prd §953) — the block's own inset is the
+                        // only one; a second put it 16pt inside.
                         WalletSectionLabel(title: String(localized: "Actions"))
-                            .padding(.horizontal, DSRoomChassis.inset)
                         // NO PLATE (prd §757) — see `DSScopeRows`. The acts and
                         // the readings are one grammar, so they lose the card
                         // together or the two blocks read as different kinds of
@@ -159,7 +161,6 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
                 if !rest.isEmpty {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         WalletSectionLabel(title: String(localized: "Readings"))
-                            .padding(.horizontal, DSRoomChassis.inset)
                         DSScopeRows(sections: rest, attention: attention,
                                     reading: reading, onPick: onPick)
                     }

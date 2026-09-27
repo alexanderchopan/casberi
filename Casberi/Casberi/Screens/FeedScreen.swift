@@ -4209,7 +4209,9 @@ struct FeedScreen: View {
                 onPickAccount: framesPickAccount,
                 reading: { readings[$0] },
                 crown: { slot in
-                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                    // The room figure carries its own slot (prd §953); a second
+                    // one inset the Home crown 12pt past every other crown.
+                    Group {
                         if slot.isShowing(chrome.framesScope) {
                             FramesRoomFigure(head: head,
                                              accounts: framesAccounts,
@@ -4358,7 +4360,9 @@ struct FeedScreen: View {
                 onPickAccount: privacyPickAccount,
                 reading: { readings[$0] },
                 crown: { slot in
-                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                    // The room figure carries its own slot (prd §953); a second
+                    // one inset the Home crown 12pt past every other crown.
+                    Group {
                         if slot.isShowing(chrome.privacyDevnetScope) {
                             PrivacyDevnetRoomCard(
                                 head: head,
@@ -4470,7 +4474,9 @@ struct FeedScreen: View {
                     onPickAccount: hegotaPickAccount,
                     reading: { readings[$0] },
                     crown: { slot in
-                        DSRoomSlot(headline: nil, reservesHeadline: false) {
+                        // The room figure carries its own slot (prd §953); a second
+                        // one inset the Home crown 12pt past every other crown.
+                        Group {
                             if slot.isShowing(chrome.hegotaScope) {
                                 HegotaRoomFigure(head: head,
                                                  accounts: roster,
@@ -9470,7 +9476,13 @@ struct FeedScreen: View {
                 // misalignment you see before you can name it. The number now
                 // leads on the same line as the headings that follow it, which
                 // is where a bare hero sits in Stocks and in Apple Card.
-                .padding(.vertical, DS.Space.s2)
+                // NO TOP PADDING (prd §953): the crown lives in the chassis'
+                // fixed box, which is its own air — the top s2 put the Wallet's
+                // number 8pt below every devnet crown and every section's
+                // figure. KEEP A PADDING HERE: deleting the modifier outright
+                // (same layout, different view type) crashed the Wallet on
+                // open, a SIGSEGV copying a `ForEach` inside this builder.
+                .padding(.bottom, DS.Space.s2)
                 // NO GROUND AT ALL (2026-08-16, the Apple redraw — retiring
                 // the `DS.tint` card this carried for a day). Apple has never
                 // shipped a balance inside a coloured card: Apple Card's sits

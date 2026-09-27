@@ -374,7 +374,8 @@ struct VibenetRoomCard: View {
             return VibenetWatch.shared.name(for: one.address)
                 ?? WalletStore.shortAddress(one.address)
         }
-        return String(localized: "\(String(room.items.count)) accounts")
+        // Unscoped, nothing (prd §953, the Wallet's §483).
+        return ""
     }
 
     private var drawn: [VibenetAccountItem] { Array(room.items.prefix(Self.rowCap)) }

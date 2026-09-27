@@ -750,7 +750,8 @@ extension PrivacyDevnetRoomCard {
         if accounts.count == 1, let one = accounts.first {
             return PrivacyDevnetName.of(one.address)
         }
-        return String(localized: "\(String(accounts.count)) accounts")
+        // Unscoped, nothing (prd §953, the Wallet's §483).
+        return ""
     }
 
     var homeSamples: [WalletStore.ValueSample] {
