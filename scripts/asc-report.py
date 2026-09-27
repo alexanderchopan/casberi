@@ -57,6 +57,9 @@ REPORTS = (("discovery", r"discovery and engagement"),
 CHANNELS = ("x", "instagram", "website", "farcaster", "bluesky", "hn", "producthunt",
             "reddit", "newsletter", "github", "email")
 STORE_URL = f"https://apps.apple.com/app/id{APP_ID}"
+# The account's provider token (public: every campaign link carries it), read off a
+# link App Store Connect generated on 2026-09-27.
+PROVIDER_TOKEN = "129130687"
 
 FIRST = "first-time download"
 REDOWNLOAD = "redownload"
@@ -512,7 +515,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("verb", nargs="?", choices=("status", "request", "funnel", "links"))
     ap.add_argument("--detailed", action="store_true", help="funnel: campaign, referrer, page")
-    ap.add_argument("--pt", default=os.environ.get("ASC_PROVIDER_TOKEN"),
+    ap.add_argument("--pt", default=os.environ.get("ASC_PROVIDER_TOKEN", PROVIDER_TOKEN),
                     help="links: the provider token (or ASC_PROVIDER_TOKEN)")
     ap.add_argument("--yes", action="store_true", help="request: write; without it a dry run")
     ap.add_argument("--self-test", action="store_true")

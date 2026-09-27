@@ -68,6 +68,23 @@ Each step is tagged with where it runs.
 - [cloud] Campaign links: one App Store link per channel,
   `https://apps.apple.com/app/id6788637831?pt=<provider token>&ct=<channel>`. The provider
   token is under App Store Connect → Analytics. Keep the list in this file.
+  Provider token `129130687` (read 2026-09-27; `asc-report.py links` prints these). A new
+  channel is a row in `CHANNELS` in `scripts/asc-report.py` and a row here. The campaign
+  shows only in the DETAILED reports (`funnel --detailed`), which drop small rows.
+
+  | Channel | Link |
+  |---|---|
+  | `x` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=x&mt=8 |
+  | `instagram` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=instagram&mt=8 |
+  | `website` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=website&mt=8 |
+  | `farcaster` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=farcaster&mt=8 |
+  | `bluesky` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=bluesky&mt=8 |
+  | `hn` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=hn&mt=8 |
+  | `producthunt` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=producthunt&mt=8 |
+  | `reddit` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=reddit&mt=8 |
+  | `newsletter` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=newsletter&mt=8 |
+  | `github` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=github&mt=8 |
+  | `email` | https://apps.apple.com/app/id6788637831?pt=129130687&ct=email&mt=8 |
 - [mac] Run `asc-report.py` weekly, or schedule it in the cloud after "Moving ASC work".
 
 ### 2. The store page
