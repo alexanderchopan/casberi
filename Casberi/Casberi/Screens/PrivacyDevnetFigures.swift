@@ -405,8 +405,10 @@ struct PrivacyDevnetSetRings: View {
                 reading(now)
                 Spacer(minLength: DS.Space.s3)
                 HStack(alignment: .top, spacing: 0) {
-                    ForEach(now.prefix(Self.shown)) { set in
-                        ring(set).frame(maxWidth: .infinity)
+                    ForEach(Array(now.prefix(Self.shown).enumerated()), id: \.element.id) { index, set in
+                        ring(set)
+                            .frame(maxWidth: .infinity)
+                            .settleIn(delay: Double(index) * 0.06)
                     }
                     ForEach(0..<max(0, Self.shown - now.count), id: \.self) { _ in
                         Color.clear.frame(maxWidth: .infinity, maxHeight: 1)

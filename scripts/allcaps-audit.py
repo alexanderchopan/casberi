@@ -117,6 +117,10 @@ INTERPOLATION = re.compile(r'\\\(.*?\)')
 # phrase on that card is still a finding.
 KNOWN_ACRONYMS: set[str] = {
     "ETH",
+    # Non-fungible token — the word every wallet and marketplace uses, and the
+    # NFTs crown's own noun ("1 NFT", prd §943); "NFTs" already passes as mixed
+    # case, and "Nft" is a spelling nobody uses.
+    "NFT",
     # An initialism, and the chain's OWN word for the thing (prd §500): EIP-8312
     # names the frame, the predeploy is the UTXO vault, and the RPC says so.
     # "Coins" was the friendly gloss and was deliberately retired — the scope

@@ -52,20 +52,24 @@ struct RoomFramesFigure: View {
         return HStack(alignment: .bottom, spacing: DS.Space.s2) {
             ForEach(drawn) { run in
                 let dim = lit != nil && lit != run.id
-                VStack(spacing: gap) {
-                    ForEach(run.steps.reversed()) { _ in
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Self.troubled(run) ? DS.textTertiary.opacity(0.45) : DS.tint)
-                            .frame(height: block)
-                    }
-                }
-                .opacity(dim ? 0.35 : 1)
-                .frame(maxWidth: 44)
-                .contentShape(Rectangle())
-                .onTapGesture {
+                Button {
                     DSHaptic.selection()
                     lit = lit == run.id ? nil : run.id
+                } label: {
+                    VStack(spacing: gap) {
+                        ForEach(run.steps.reversed()) { _ in
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(Self.troubled(run) ? DS.textTertiary.opacity(0.45) : DS.tint)
+                                .frame(height: block)
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .opacity(dim ? 0.35 : 1)
+                .frame(maxWidth: 44)
+                .accessibilityLabel(Text(run.steps.count == 1 ? String(localized: "1 frame")
+                                         : String(localized: "\(String(run.steps.count)) frames")))
             }
             // Fewer than the cap stand where the cap would: a lone transaction
             // is not stretched across the width.

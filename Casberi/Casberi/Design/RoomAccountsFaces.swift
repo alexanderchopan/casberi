@@ -27,7 +27,7 @@ struct RoomAccountsFaces: View {
     /// Five across fits the box at the face size a roster of PEOPLE wants;
     /// past ten they step down and drop their names, which the list still says.
     private var roomy: Bool { faces.count <= 10 }
-    private var size: CGFloat { roomy ? 56 : 40 }
+    private var size: CGFloat { roomy ? DS.Face.shelf : DS.Face.list }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
