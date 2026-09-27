@@ -154,8 +154,10 @@ Each step is tagged with where it runs.
   Intelligence, widgets, the Apple Intelligence seat once it is live.
 - Ecosystem directories and grants: Farcaster, Base, Safe, World, Gnosis Pay, Obsidian,
   Ethereum Foundation. Claude compiles the list with links and drafts each submission.
-- Instagram: run by the user through Meta's agent, outside this plan. Its links carry
-  `ct=instagram` so its installs show in workstream 1's report.
+- Instagram: run by the user through another service, outside this plan, and it does NOT
+  carry our `ct=instagram` link (user, 2026-09-27). Its installs show in the detailed reports
+  as source "App referrer" with Instagram in Source Info, not as a campaign. The `instagram`
+  campaign is saved but unused.
 - Communities: one post per integration for that integration's users, each with its campaign
   link.
 - Launches: Show HN and Product Hunt, after workstream 2. Update the drafts to the current
