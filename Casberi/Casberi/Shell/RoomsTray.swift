@@ -307,7 +307,6 @@ struct RoomsTray: View {
                 door(String(localized: "Addresses"), glyph: "at", index: 2) { screen(.addresses) }
                 door(String(localized: "Settings"), glyph: "gearshape", index: 3) { screen(.settings) }
             }
-            .padding(.top, (DS.Hit.min - Self.mark) / 2)
         }
     }
 
@@ -357,7 +356,6 @@ struct RoomsTray: View {
                     .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
                 }
             }
-            .padding(.top, (DS.Hit.min - Self.mark) / 2)
         }
     }
 
