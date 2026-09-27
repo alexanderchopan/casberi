@@ -476,7 +476,11 @@ struct AddressesSection: View {
             } else {
                 if !recent.isEmpty {
                     Section {
-                        ForEach(recent) { contact in row(contact) }
+                        // Its OWN ids: a recent contact is filed under its
+                        // letter too, and one id twice in a lazy stack draws
+                        // the second as an empty row (the S group under a
+                        // recent Sam stood blank).
+                        ForEach(recent, id: \.recentKey) { contact in row(contact) }
                     } header: {
                         LetterHead(text: Text("Recent"), tone: DS.brandInk)
                     }
@@ -789,6 +793,12 @@ private struct SamePersonSheet: View {
 
 /// nil is All; otherwise a `BridgeCatalog.categories` name. The Accounts
 /// screen's `CatalogScope`, one type over, for the same reasons it gives.
+private extension Contact {
+    /// A Recent row's identity — the contact's id in the Recent group's own
+    /// namespace, so the same contact under its letter is a different row.
+    var recentKey: String { "recent:" + id }
+}
+
 struct AddressScope: DSTileScope {
     let name: String?
     var id: String { name ?? "\u{1}all" }
