@@ -642,14 +642,20 @@ _controlsGate=$(awk '/private var roomControls: some View/{f=1;print;next} f&&(/
   || { echo "✗ roomControls no longer mounts on venues-or-faces alone (§754) — a lead seat"; \
        echo "  that mounts the capsule by itself gives every folded room the permanent second"; \
        echo "  row 2026-09-06 deleted."; exit 1; }
-# A SOCIAL ROOM'S RESTING CAPSULE CARRIES ITS OWN SEAT ALONE (prd §956): its
-# faces are one network's people, and a sibling network lit between the room's
-# seat and its faces reads as if they were that network's. §823's resting
-# venues stand for every other room with faces.
-grep -q 'let restsAlone = FeedScreen.isSocialRoom(filter.source)' "$TMP/main.nc" \
-  && grep -q 'openVenues.isEmpty && facesShow && !restsAlone ? restingVenues : openVenues' "$TMP/main.nc" \
-  || { echo "✗ a social room's resting capsule carries its sibling rooms again (§956) — X lit"; \
-       echo "  between Farcaster's seat and Farcaster's faces reads as if they were X's."; exit 1; }
+# A SOCIAL ROOM'S CAPSULE CARRIES ITS OWN SEAT ALONE (prd §956): its faces are
+# one network's people, and a sibling network lit between the room's seat and
+# its faces reads as if they were that network's. On the phone the siblings are
+# a swipe or the tray, open folder or not, and a face pick may not open the
+# folder. §823's resting venues stand for every other room with faces.
+grep -q 'let socialRoom = FeedScreen.isSocialRoom(filter.source)' "$TMP/main.nc" \
+  && grep -q 'let openVenues = socialRoom && !showsRail ? \[\] : folderVenues' "$TMP/main.nc" \
+  && grep -q 'openVenues.isEmpty && facesShow && !socialRoom ? restingVenues : openVenues' "$TMP/main.nc" \
+  || { echo "✗ a social room's capsule carries its sibling rooms again (§956) — X lit between"; \
+       echo "  Farcaster's seat and Farcaster's faces reads as if they were X's."; exit 1; }
+_scopeOpen=$(awk '/onChange\(of: chrome.personScope\)/{f=1} f{print} f&&/^        }$/{exit}' "$TMP/main.nc")
+[[ "$_scopeOpen" == *"!FeedScreen.isSocialRoom(filter.source)"* ]] \
+  || { echo "✗ a face pick in a social room opens the category's folder again (§956) — the"; \
+       echo "  folder lays X beside Farcaster's people with no swipe and no tray."; exit 1; }
 # The anchor is the STRIP's geometry, so the strip serves the request — and it
 # must set the anchor BEFORE the folder opens, or the row's first frame springs
 # from wherever the last tap left it (the chip's own rule, `anchorX(for:)`).

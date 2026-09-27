@@ -500,16 +500,18 @@ struct MainSurface: View {
         // keeps §754's one seat and no capsule.
         //
         // **EXCEPT IN A SOCIAL ROOM (prd §956, user: "when a social room is
-        // open, like Farcaster here, we can't have the X room showing").**
+        // open, like Farcaster here, we can't have the X room showing", then
+        // "to reach X, the person should have to swipe or open the tray").**
         // A social room's faces are that network's people, and X lit between
-        // Farcaster's seat and Farcaster's faces read as if they were X's. At
-        // rest the capsule carries the standing seat alone, then All and the
-        // faces; the lead seat's tap still reaches the siblings, and an open
-        // folder still shows them.
-        let openVenues = folderVenues
+        // Farcaster's seat and Farcaster's faces read as if they were X's. On
+        // the phone the capsule carries the standing seat alone, then All and
+        // the faces, open folder or not; the siblings are a swipe or the
+        // tray. Where the rail stands, a folder the rail's chip springs is the
+        // rail's own navigation and keeps its rooms.
+        let socialRoom = FeedScreen.isSocialRoom(filter.source)
+        let openVenues = socialRoom && !showsRail ? [] : folderVenues
         let facesShow = roomFacesShow
-        let restsAlone = FeedScreen.isSocialRoom(filter.source)
-        let venues = openVenues.isEmpty && facesShow && !restsAlone ? restingVenues : openVenues
+        let venues = openVenues.isEmpty && facesShow && !socialRoom ? restingVenues : openVenues
         if !venues.isEmpty || facesShow {
             // BESIDE THE FACE, never under it (prd §935). The capsule stood
             // above the strip; with the strip in the tray (§930) it fell onto
@@ -2085,7 +2087,11 @@ struct MainSurface: View {
         // A scope taken while its own folder is shut re-opens it, or §357's
         // exit is behind a tap nobody knows to make.
         .onChange(of: chrome.personScope) { _, scope in
-            guard scope != nil, let category = currentCategory else { return }
+            // Not in a social room (prd §956): its capsule is up with the faces
+            // and their All, which is the scope's exit, and the folder would
+            // lay the sibling networks beside that network's people.
+            guard scope != nil, !FeedScreen.isSocialRoom(filter.source),
+                  let category = currentCategory else { return }
             chrome.openFolder = .category(category)
         }
         // Where each folded chip reopens (prd §351, generalizing 2026-08-10).
