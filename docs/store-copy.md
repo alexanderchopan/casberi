@@ -10,10 +10,11 @@ promotional text 170, subtitle 30.
 
 ## iOS — description REWRITTEN 2026-09-13 for §697b, REVISED 2026-09-27, NOT YET APPLIED
 
-**2026-09-27 revision (user):** the ask lives on through the keyed agents — each has a room
+**2026-09-27 revision (user):** the ask lives on through the keyed agents — each opens
 with All and Chat (§839, §840). The 09-13 text closed on "isn't another chatbot" and
-named no agent; both descriptions now carry a `YOUR AGENT, IN ITS OWN ROOM` block and
-a new closing line. No MCP claim: `MCPPairing.transportReady` is false. Apple
+named no agent; both descriptions now carry a `YOUR OWN AGENT` block and a new
+closing line. The word "room" is off the store page (user, 2026-09-27: it reads as AI);
+the two shipped What's New records keep it, verbatim. No MCP claim: `MCPPairing.transportReady` is false. Apple
 Intelligence is not named: its seat is dark until the managed entitlement lands (§833).
 
 **The live iOS and Mac descriptions and the promotional text still sell the
@@ -36,7 +37,7 @@ Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
   a reviewer scans on an app that was just rejected under Guideline 3.1.5;
   reordering costs nothing, since keyword order does not affect search ranking)
 
-### iOS description (2,155 chars)
+### iOS description (2,119 chars)
 
 Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app that puts all your accounts in one private feed, so you read them in one place. No account, no servers, no tracking.
 
@@ -47,7 +48,7 @@ ONE FEED
 A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your workouts and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Apple Card, Apple Cash and Savings in the US — and the bank accounts connected to Wallet in the UK — land with the merchant's real name, read on this iPhone and never uploaded.
 
 SEE WHAT'S HAPPENING
-Every app opens as a room shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Home Screen widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.
+Every app opens shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Home Screen widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.
 
 CONNECT HONESTLY
 Over 90 apps across work, wallet, social, reading, notes, schedule, fitness, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.
@@ -55,8 +56,8 @@ Over 90 apps across work, wallet, social, reading, notes, schedule, fitness, mai
 CAPTURE WITHOUT FRICTION
 Share from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.
 
-YOUR AGENT, IN ITS OWN ROOM
-Bring your own key for Claude, ChatGPT, Gemini, Grok, Venice, OpenRouter, NEAR AI, Muse or Bankr. Each agent gets a room: talk to it there, and every conversation lands beside the history you imported from it. Your words go from this iPhone straight to that provider, on your key. Nothing routes through us.
+YOUR OWN AGENT
+Bring your own key for Claude, ChatGPT, Gemini, Grok, Venice, OpenRouter, NEAR AI, Muse or Bankr. Open an agent to talk to it, and every conversation lands beside the history you imported from it. Your words go from this iPhone straight to that provider, on your key. Nothing routes through us.
 
 YOURS, ACTUALLY
 There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
@@ -88,7 +89,7 @@ differences in the copy below, each deliberate: no Apple Card block, "reading"
 where iOS says "workouts", no fitness in the category list, and a
 menu-bar-and-keyboard line where the Apple Card sentence sits on iOS.
 
-### Mac description (2,069 chars)
+### Mac description (2,039 chars)
 
 Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app for Mac that puts all your accounts in one private feed, so you read them in one place. No account, no servers, no tracking.
 
@@ -96,10 +97,10 @@ TRY IT BEFORE YOU CONNECT ANYTHING
 One tap fills Casberi with sample data, so you can feel the whole app first.
 
 ONE FEED
-A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Rooms answer to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.
+A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Every view answers to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.
 
 SEE WHAT'S HAPPENING
-Every app opens as a room shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.
+Every app opens shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.
 
 CONNECT HONESTLY
 Over 90 apps across work, wallet, social, reading, notes, schedule, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.
@@ -107,8 +108,8 @@ Over 90 apps across work, wallet, social, reading, notes, schedule, mail and sto
 CAPTURE WITHOUT FRICTION
 Share from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.
 
-YOUR AGENT, IN ITS OWN ROOM
-Bring your own key for Claude, ChatGPT, Gemini, Grok, Venice, OpenRouter, NEAR AI, Muse or Bankr. Each agent gets a room: talk to it there, and every conversation lands beside the history you imported from it. Your words go from this Mac straight to that provider, on your key. Nothing routes through us.
+YOUR OWN AGENT
+Bring your own key for Claude, ChatGPT, Gemini, Grok, Venice, OpenRouter, NEAR AI, Muse or Bankr. Open an agent to talk to it, and every conversation lands beside the history you imported from it. Your words go from this Mac straight to that provider, on your key. Nothing routes through us.
 
 YOURS, ACTUALLY
 There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
