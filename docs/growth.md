@@ -64,13 +64,25 @@ Each step is tagged with where it runs.
 
 ### 2. The store page
 
-- [cloud] `scripts/asc-copy.py` — read back every live field (subtitle, description, keywords,
-  promotional text, What's New, per locale) into `docs/store-copy.md`; apply from the file with
-  `--apply`.
+- [cloud, written 2026-09-27] `scripts/asc-copy.py` — `read` saves every live field (subtitle,
+  description, keywords, promotional text, What's New, per locale) to `docs/store-live.json`;
+  `diff` compares en-US with the drafts in `docs/store-copy.md`; `apply --platform --field`
+  is a dry run until `--yes`, then writes and reads back. `--self-test` runs offline.
 - [cloud, drafted 2026-09-27, awaiting approval] Description and promotional text rewritten around the feed and bring your
   own agent (`docs/store-copy.md`). No MCP claim until workstream 5 passes.
 - [cloud] Keywords per locale the app already ships.
-- [mac] Run `asc-copy.py` to read back, then `--apply`.
+- [mac] Run it (key staged per `docs/testflight-handoff.md`):
+  ```sh
+  scripts/dev-keys.sh get-file asc-p8 /tmp/asc.p8
+  scripts/asc-copy.py read          # record the live subtitle in store-copy.md
+  scripts/asc-copy.py diff
+  scripts/asc-copy.py apply --platform IOS --field promotionalText        # dry run
+  scripts/asc-copy.py apply --platform IOS --field promotionalText --yes  # after approval
+  scripts/asc-copy.py apply --platform MAC_OS --field promotionalText --yes
+  rm -f /tmp/asc.p8
+  ```
+  Description and keywords need a version in an editable state; they go with the next
+  submission.
 
 ### 3. Audience tests
 
@@ -129,11 +141,11 @@ Each step is tagged with where it runs.
 Open Claude Code in `~/Developer/casberi` with Xcode running and the project open, then paste:
 
 ```
-Read docs/growth.md. We run the Mac-tagged steps. Start with workstream 1 and 2:
-write scripts/asc-report.py, asc-copy.py and asc-reviews.py on top of scripts/asc-jwt.py,
-passing the .p8 the way docs/testflight-handoff.md does (dev-keys.sh, inline only).
-Read back the live store fields into docs/store-copy.md before changing anything, show me
-the diff, and wait for my approval before any --apply or --post.
+Read docs/growth.md. We run the Mac-tagged steps, starting with workstream 2:
+stage the key per docs/testflight-handoff.md, run scripts/asc-copy.py read and diff,
+record the live subtitle in docs/store-copy.md, show me the diff, and wait for my
+approval before any apply --yes. Then workstream 1: write scripts/asc-report.py the
+same way asc-copy.py is built (asc-jwt.py, stdlib, an offline --self-test).
 ```
 
 If this file is on the `claude/growth-planning-strategy-0zpz7y` branch and not yet on
