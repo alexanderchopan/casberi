@@ -416,7 +416,7 @@ struct FramesRoomFigure: View {
         // a settle that changes what the figure draws must redraw it rather
         // than mutate it in place, or the strips change under the reader with
         // no beat.
-        RoomFramesFigure(runs: frameRuns, hue: RoomFrameStyle.hue, caption: crownCaption)
+        RoomFramesFigure(runs: frameRuns)
             .id(newestHash)
     }
 
@@ -610,7 +610,7 @@ struct FramesRoomList: View {
             // transfer parses to NO frames (measured), so admitting the
             // one-step transactions admits genuinely framed ones and no
             // transfers, and the list finally shows what the headline counts.
-            rows(pairs.filter { !$0.move.rows.isEmpty })
+            rows(pairs.filter { !$0.move.rows.isEmpty }, namesSteps: true)
         case .permissions:
             // **TWO KINDS OF ROW, SAID TO BE TWO** (user, 2026-09-02: *"sponsors
             // list also is messy"*). A person and a transaction have different
@@ -709,7 +709,8 @@ struct FramesRoomList: View {
     }
 
     @ViewBuilder private func rows(_ list: [(move: FramesMove, owner: String)],
-                                   showsLine: Bool = true) -> some View {
+                                   showsLine: Bool = true,
+                                   namesSteps: Bool = false) -> some View {
         // **PENDING FIRST, and only in the scopes where it belongs.** Activity
         // is every transaction and Home is where the send lives, so a
         // just-broadcast batch belongs in both. Frames and Sponsors select rows
@@ -747,7 +748,7 @@ struct FramesRoomList: View {
                         DSHaptic.selection()
                         onOpenMove(move, pair.owner)
                     } label: {
-                        FramesMoveRow(move: move, showsLine: showsLine)
+                        FramesMoveRow(move: move, showsLine: showsLine, namesSteps: namesSteps)
                             .contentShape(Rectangle())
                     }
                         .buttonStyle(.plain)
@@ -781,6 +782,8 @@ struct FramesMoveRow: View {
     var showsSponsorship = true
     /// No line but a word that needs you (prd §951's list under Permissions).
     var showsLine = true
+    /// The Frames scope's line: the steps in the order they ran (prd §952).
+    var namesSteps = false
 
     /// **THE VERDICT COMES FROM THE MODEL** (2026-09-02). It was spelled out
     /// here, where nothing else could reach it — so the sheet this row now
@@ -829,7 +832,10 @@ struct FramesMoveRow: View {
         // (prd §687).** A plain transfer says nothing here — this chain
         // carries both, the faucet pays out as an ordinary type-0x2 transfer,
         // and "0 frames" over one of those is a count where a noun belongs.
-        if !move.rows.isEmpty, showsLine {
+        if namesSteps, let run = FramesFrames.runs([move]).first {
+            add(Text(run.steps.map(\.modeName).joined(separator: " → "))
+                .foregroundColor(DS.textTertiary))
+        } else if !move.rows.isEmpty, showsLine {
             add(Text(move.rows.count == 1
                      ? String(localized: "1 frame")
                      : String(localized: "\(String(move.rows.count)) frames"))
@@ -837,7 +843,7 @@ struct FramesMoveRow: View {
         }
         // One word, not a sentence: the scope is called Sponsors and the sheet
         // says who and how much.
-        if move.sponsored, showsSponsorship, showsLine {
+        if move.sponsored, showsSponsorship, showsLine, !namesSteps {
             add(Text(String(localized: "Sponsored")).foregroundColor(DS.textTertiary))
         }
         // Nil draws nothing rather than "now" — the header read is bounded, so

@@ -373,78 +373,121 @@ struct PrivacyDevnetKindMix: View {
 // file mid-work. That landed; every sheet in this room reads `DSCount` now, and
 // this had no callers at all while still building a `NumberFormatter` per call.
 
-/// **THE PROOFS AS BARS (prd §936).** The ring (§596, §929) drew each proof's
-/// snapshot as a mark on an arc that drains; the tile draws the same fact in
-/// the grammar every other tile uses — one bar per snapshot, as long as the
-/// share of the chain's 8192-slot memory it still has, ticking as the chain
-/// advances. A snapshot inside its last tenth, or already out, is the one red
-/// bar: that is the proof that needs a fresh snapshot. The drift is the
-/// model's (`PrivacyDevnetFigure.drifted`), never recomputed here.
-struct PrivacyDevnetProofBars: View {
-    let marks: [PrivacyDevnetFigure.Mark]
-    var remaining: UInt64?
-    var readAt: Date?
-    var caption: String?
-    let reduceMotion: Bool
-    @State private var lit: String?
+/// **THE SNAPSHOTS CROWN IS ONE RING PER SET (prd §952).** The freshest
+/// proof's time over its noun, and under it each set the account proves
+/// against as a mark with a timer ring — how much of the chain's memory it has
+/// left — its time under it, the Accounts and Permissions grammar (§941,
+/// §951). A set that has left the memory is an empty red ring. One set per
+/// ring, not one proof per bar (§936's bars, deleted here): the crown and the
+/// list below count the same things. The rings drift between reads through
+/// the model's own clamp (`PrivacyDevnetFigure.drifted`).
+struct PrivacyDevnetSetRings: View {
+    struct SetReading: Identifiable, Equatable {
+        let id: Int
+        /// The set's ordinal, or nil for a lone set (it wears the clock, as
+        /// its row does — a "1" beside no other number labels nothing).
+        let ordinal: String?
+        /// Share of the chain's memory left, 0...1; nil once it has gone.
+        var fraction: Double?
+    }
 
-    /// The share of the window under which a snapshot is about to leave it.
+    let sets: [SetReading]
+    var readAt: Date?
+    let reduceMotion: Bool
+
+    static let shown = 5
     static let leavingShare: Double = 0.1
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: reduceMotion ? 600 : 6)) { context in
-            let drifted = drifted(now: context.date)
-            DSBarFigure(reading: { reading(drifted) },
-                        bars: DSBarList(bars: Self.bars(drifted), lit: lit) { picked in
-                            lit = lit == picked ? nil : picked
-                        })
+            let now = drifted(now: context.date)
+            VStack(alignment: .leading, spacing: 0) {
+                reading(now)
+                Spacer(minLength: DS.Space.s3)
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(now.prefix(Self.shown)) { set in
+                        ring(set).frame(maxWidth: .infinity)
+                    }
+                    ForEach(0..<max(0, Self.shown - now.count), id: \.self) { _ in
+                        Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(String(localized: "The chain's memory")))
+        .accessibilityElement(children: .combine)
     }
 
-    private func drifted(now: Date) -> [PrivacyDevnetFigure.Mark] {
-        guard let readAt else { return marks }
+    private func drifted(now: Date) -> [SetReading] {
+        guard let readAt else { return sets }
         let elapsed = now.timeIntervalSince(readAt)
-        guard elapsed > 0 else { return marks }
-        return marks.map { mark in
-            guard let position = mark.position else { return mark }
-            var moved = mark
-            moved.position = PrivacyDevnetFigure.drifted(position: position, secondsSinceRead: elapsed)
+        guard elapsed > 0 else { return sets }
+        return sets.map { set in
+            guard let f = set.fraction else { return set }
+            var moved = set
+            moved.fraction = PrivacyDevnetFigure.drifted(position: f, secondsSinceRead: elapsed)
             return moved
         }
     }
 
-    static func id(_ mark: PrivacyDevnetFigure.Mark) -> String { "\(mark.set):\(mark.slot)" }
-
-    static func bars(_ marks: [PrivacyDevnetFigure.Mark]) -> [DSBarList.Bar] {
-        marks.sorted { ($0.position ?? -1) > ($1.position ?? -1) }.map { mark in
-            let share = max(0, min(1, mark.position ?? 0))
-            let proofs = mark.count == 1 ? String(localized: "1 proof")
-                                         : String(localized: "\(String(mark.count)) proofs")
-            let left = mark.position.map {
-                PrivacyDevnetRoots.approximate(slots: UInt64(max(0, $0) * Double(PrivacyDevnetRoots.windowSlots)))
-            } ?? String(localized: "gone")
-            return DSBarList.Bar(id: id(mark), label: proofs, value: left, share: share,
-                                 alarm: (mark.position ?? 0) < leavingShare)
-        }
+    private static func left(_ fraction: Double) -> String {
+        PrivacyDevnetRoots.approximate(slots: UInt64(max(0, fraction) * Double(PrivacyDevnetRoots.windowSlots)))
     }
 
     @ViewBuilder
-    private func reading(_ drifted: [PrivacyDevnetFigure.Mark]) -> some View {
-        let proofs = drifted.reduce(0) { $0 + $1.count }
-        let leaving = drifted.filter { ($0.position ?? 0) < Self.leavingShare }.reduce(0) { $0 + $1.count }
-        if let lit, let mark = drifted.first(where: { Self.id($0) == lit }) {
-            DSFigureReading(number: mark.position.map {
-                                PrivacyDevnetRoots.approximate(slots: UInt64(max(0, $0) * Double(PrivacyDevnetRoots.windowSlots)))
-                            } ?? String(localized: "Gone"),
-                            caption: String(localized: "left in the chain's memory"))
+    private func reading(_ sets: [SetReading]) -> some View {
+        let gone = sets.filter { ($0.fraction ?? 0) <= 0 }.count
+        let leaving = sets.filter { ($0.fraction ?? 0) > 0 && ($0.fraction ?? 0) < Self.leavingShare }.count
+        let alarm = gone > 0 ? String(localized: "\(String(gone)) gone")
+            : leaving > 0 ? String(localized: "\(String(leaving)) leaving") : nil
+        if let freshest = sets.compactMap(\.fraction).filter({ $0 > 0 }).max() {
+            DSFigureReading(number: Self.left(freshest),
+                            caption: String(localized: "left on the freshest proof"),
+                            alarm: alarm)
         } else {
-            DSFigureReading(number: remaining.map { PrivacyDevnetRoots.approximate(slots: $0) } ?? String(proofs),
-                            caption: [remaining == nil ? (proofs == 1 ? String(localized: "proof") : String(localized: "proofs"))
-                                                       : String(localized: "left on the freshest proof"),
-                                      caption].compactMap { $0 }.joined(separator: " · "),
-                            alarm: leaving > 0 ? String(localized: "\(String(leaving)) leaving") : nil)
+            DSFigureReading(number: String(sets.count),
+                            caption: sets.count == 1 ? String(localized: "set") : String(localized: "sets"),
+                            alarm: alarm)
         }
+    }
+
+    private func ring(_ set: SetReading) -> some View {
+        let size: CGFloat = 48
+        let fraction = max(0, min(1, set.fraction ?? 0))
+        let gone = fraction <= 0
+        let leaving = !gone && fraction < Self.leavingShare
+        return VStack(spacing: DS.Space.s1) {
+            ZStack {
+                Circle()
+                    .stroke(gone ? DS.destructive : DS.fillFaint, lineWidth: gone ? 2 : 4)
+                if !gone {
+                    Circle()
+                        .trim(from: 0, to: fraction)
+                        .stroke(DS.tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }
+                if let ordinal = set.ordinal {
+                    Text(ordinal)
+                        .dsText(.heading17)
+                        .foregroundStyle(gone ? DS.destructive : DS.tint)
+                } else {
+                    Image(systemName: "clock.fill")
+                        .dsGlyph(.subhead)
+                        .foregroundStyle(gone ? DS.destructive : DS.tint)
+                }
+            }
+            .frame(width: size, height: size)
+            .padding(4)
+            Text(gone ? String(localized: "gone") : Self.left(fraction))
+                .dsText(.label12)
+                .foregroundStyle(gone || leaving ? DS.destructive : DS.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(set.ordinal.map { String(localized: "Set \($0)") } ?? String(localized: "The set"))
+                            + Text(", ")
+                            + Text(gone ? String(localized: "gone") : Self.left(fraction)))
     }
 }

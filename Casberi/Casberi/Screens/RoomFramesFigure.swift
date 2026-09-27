@@ -1,73 +1,94 @@
 import SwiftUI
 
-/// THE FRAMES SCOPE'S DRAWING — one component, three rooms (prd §698).
-///
-/// A caption, a stack of per-transaction strips, a legend naming the modes, and
-/// a census note where the stack is capped. It is Hegotá UTXO's figure
-/// generalised: that room had reasoned the whole shape out (§510, §566) and the
-/// other two each drew something else, one of which — Privacy's gas budget bar
-/// — was not a frames reading at all.
-///
-/// **Every dimension derives from `DSRoomChassis.figureSlot`** (§665), so the
-/// figure grows with the slot instead of clipping into the rail beneath it.
+/// THE FRAMES SCOPE'S DRAWING — one component, three rooms (prd §698, drawn
+/// as columns since §952): the transactions over one column each, a block per
+/// frame. The column area is read off its `GeometryReader`, so the figure
+/// fills the slot it is given and clips nothing (§665).
 struct RoomFramesFigure: View {
     let runs: [RoomFrames.Run]
-    /// Kept for the callers' signature; the bars wear the one accent (prd §936).
-    let hue: (String) -> Color
-    var onOpenStep: ((String, Int) -> Void)? = nil
-    var caption: String? = nil
     @State private var lit: String?
 
-    private var mix: RoomFrames.Mix? { RoomFrames.mix(runs) }
+    /// The newest this many transactions; older ones are counted, not drawn.
+    static let shown = 12
+
+    /// Oldest on the left, newest on the right — the callers hand moves
+    /// newest first, the way their lists read.
+    private var drawn: [RoomFrames.Run] {
+        Array(RoomFrames.runs(runs).prefix(Self.shown).reversed())
+    }
 
     var body: some View {
-        if let mix {
-            // **WHAT RAN, AS BARS (prd §936).** The flow (§925) — nodes by
-            // position, ribbons between them, a stub where runs ended — is
-            // deleted: one bar per kind of step, as long as its count, in the
-            // one accent; the failed steps are the one red bar. The rows
-            // below still draw each transaction's strip.
-            DSBarFigure(reading: { reading(mix) },
-                        bars: DSBarList(bars: Self.bars(mix), lit: lit) { picked in
-                            lit = lit == picked ? nil : picked
-                        })
+        let all = RoomFrames.runs(runs)
+        if !all.isEmpty {
+            // **ONE COLUMN PER TRANSACTION, A BLOCK PER FRAME (prd §952).**
+            // One number over one noun — the transactions — and under it what
+            // each one was made of, oldest to newest, in the one accent. A
+            // transaction with a step that failed or rolled back is grey. §936's
+            // bars are deleted here: one bar per kind of step said "Step 12" on
+            // Privacy (its frames carry no mode), and "Failed" was an outcome
+            // drawn as a kind. The rows below name the steps.
+            VStack(alignment: .leading, spacing: 0) {
+                reading(all)
+                Spacer(minLength: DS.Space.s3)
+                GeometryReader { geo in
+                    columns(height: geo.size.height)
+                }
+                .frame(maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text(RoomFrames.caption(mix)))
+            .accessibilityLabel(Text(RoomFrames.mix(all).map(RoomFrames.caption) ?? ""))
         }
     }
 
-    static let failedID = "·failed"
+    private static func troubled(_ run: RoomFrames.Run) -> Bool {
+        run.steps.contains { $0.outcome == .failed || $0.outcome == .rolledBack }
+    }
 
-    static func bars(_ mix: RoomFrames.Mix) -> [DSBarList.Bar] {
-        let peak = Double(max(mix.slices.map(\.count).max() ?? 1, mix.failed, 1))
-        var out = mix.slices.map {
-            DSBarList.Bar(id: $0.id, label: $0.modeName, value: String($0.count),
-                          share: Double($0.count) / peak)
+    private func columns(height: CGFloat) -> some View {
+        let tallest = CGFloat(drawn.map(\.steps.count).max() ?? 1)
+        let gap: CGFloat = 3
+        let block = max(4, min(16, (height - gap * (tallest - 1)) / tallest))
+        return HStack(alignment: .bottom, spacing: DS.Space.s2) {
+            ForEach(drawn) { run in
+                let dim = lit != nil && lit != run.id
+                VStack(spacing: gap) {
+                    ForEach(run.steps.reversed()) { _ in
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Self.troubled(run) ? DS.textTertiary.opacity(0.45) : DS.tint)
+                            .frame(height: block)
+                    }
+                }
+                .opacity(dim ? 0.35 : 1)
+                .frame(maxWidth: 44)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    DSHaptic.selection()
+                    lit = lit == run.id ? nil : run.id
+                }
+            }
+            // Fewer than the cap stand where the cap would: a lone transaction
+            // is not stretched across the width.
+            ForEach(0..<max(0, 6 - drawn.count), id: \.self) { _ in
+                Color.clear.frame(maxWidth: 44, maxHeight: 1)
+            }
         }
-        if mix.failed > 0 {
-            out.append(DSBarList.Bar(id: failedID, label: String(localized: "Failed"),
-                                     value: String(mix.failed),
-                                     share: Double(mix.failed) / peak, alarm: true))
-        }
-        return out
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
     }
 
     @ViewBuilder
-    private func reading(_ mix: RoomFrames.Mix) -> some View {
-        if let lit, let slice = mix.slices.first(where: { $0.id == lit }) {
-            DSFigureReading(number: String(slice.count),
-                            caption: slice.count == 1 ? String(localized: "\(slice.modeName) step")
-                                                      : String(localized: "\(slice.modeName) steps"))
-        } else if lit == Self.failedID {
-            DSFigureReading(number: String(mix.failed),
-                            caption: mix.failed == 1 ? String(localized: "step failed")
-                                                     : String(localized: "steps failed"))
+    private func reading(_ all: [RoomFrames.Run]) -> some View {
+        if let lit, let run = all.first(where: { $0.id == lit }) {
+            // A pressed column reads its own transaction: its frames, and the
+            // trouble word when there is one.
+            let n = run.steps.count
+            DSFigureReading(number: String(n),
+                            caption: n == 1 ? String(localized: "frame") : String(localized: "frames"),
+                            alarm: Self.troubled(run) ? String(localized: "didn't finish") : nil)
         } else {
-            let noun = mix.transactions == 1 ? String(localized: "transaction")
-                                             : String(localized: "transactions")
-            DSFigureReading(number: String(mix.transactions),
-                            caption: [noun, caption].compactMap { $0 }.joined(separator: " · "),
-                            alarm: mix.failed > 0 ? String(localized: "\(String(mix.failed)) failed") : nil)
+            DSFigureReading(number: String(all.count),
+                            caption: all.count == 1 ? String(localized: "transaction")
+                                                    : String(localized: "transactions"))
         }
     }
 }

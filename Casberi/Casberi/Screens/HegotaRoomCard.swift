@@ -952,8 +952,7 @@ struct HegotaRoomFigure: View {
     /// Hegotá Frames tinted its strips by OUTCOME while this room tinted by
     /// MODE — one drawing, two meanings, in adjacent rooms.
     @ViewBuilder private var framesFigure: some View {
-        RoomFramesFigure(runs: HegotaFrames.runs(framedMoves), hue: RoomFrameStyle.hue,
-                         caption: crownCaption)
+        RoomFramesFigure(runs: HegotaFrames.runs(framedMoves))
     }
 
     /// What the mix says in one line. The commonest step LEADS, because on this
@@ -1045,13 +1044,11 @@ struct HegotaRoomFigure: View {
         if let pressed, let number = pressedHeadline(pressed) {
             return DSFigureReading(number: number, caption: pressedLine(pressed) ?? crownCaption)
         }
-        let change = coins.filter(\.isChange).count
-        var parts = [coins.count == 1 ? String(localized: "unspent coin") : String(localized: "unspent coins")]
-        if change > 0 { parts.append(String(localized: "\(String(change)) change")) }
-        if !spentCoins.isEmpty { parts.append(String(localized: "\(String(spentCoins.count)) spent")) }
-        parts.append(crownCaption)
+        // One noun (prd §952): the change and spent counts are the list's
+        // two groups, and whose is the account menu's.
         return DSFigureReading(number: String(coins.count),
-                               caption: parts.filter { !$0.isEmpty }.joined(separator: " · "))
+                               caption: coins.count == 1 ? String(localized: "unspent coin")
+                                                         : String(localized: "unspent coins"))
     }
 
     private func pressedHeadline(_ tile: CoinTile?) -> String? {
@@ -1759,12 +1756,17 @@ struct HegotaRoomList: View {
     @ViewBuilder private var framesList: some View {
         let list = framedPairs
         if !list.isEmpty {
-            ForEach(list, id: \.move.id) { pair in
-                HegotaMoveRow(move: pair.move,
-                              watched: watched,
-                              madeCoins: coinsMade(by: pair.move),
-                              leadsWithFrames: true) {
-                    onOpenMove?(pair.move, pair.owner)
+            // Under the day, like Activity (prd §952).
+            let runs = DayRuns.runs(list) { $0.move.timestamp ?? $0.move.estimatedAt }
+            ForEach(Array(runs.enumerated()), id: \.element.id) { index, run in
+                DSDayHeader(word: DayRuns.word(run), first: index == 0)
+                ForEach(run.items, id: \.move.id) { pair in
+                    HegotaMoveRow(move: pair.move,
+                                  watched: watched,
+                                  madeCoins: coinsMade(by: pair.move),
+                                  leadsWithFrames: true) {
+                        onOpenMove?(pair.move, pair.owner)
+                    }
                 }
             }
         }
@@ -1901,7 +1903,7 @@ struct HegotaRoomList: View {
                 // reconciliation it is a companion to, in a list with as much room
                 // as it needs.
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(String(localized: "These UTXOs account for exactly what the vault holds."))
+                    Text(String(localized: "These coins account for exactly what the vault holds."))
                     if let census = censusLine {
                         Text(census)
                     }
@@ -1934,15 +1936,19 @@ struct HegotaRoomList: View {
             DSHaptic.selection()
             onOpenCoin?(coin, everyCoin, unspentIndices)
         } label: {
+            // Where it came from, and the amount on the right (prd §952): the
+            // row's money trails its title like every row in the family, the
+            // age is the sheet's, and the vault's ordinal is not what a row
+            // is scanned for.
             WalletRow(mark: .symbol(coin.isChange ? "arrow.uturn.backward" : "arrow.down",
                                     tint: spent ? DS.textTertiary : DS.tint),
-                      title: HegotaFormat.eth(coin.wei),
-                      subtitle: coinSubtitle(coin)) {
-                // The vault's own allocation counter — which coin came first.
-                // An ORDINAL, which is why the age beside it in the subtitle is
-                // worth having: #45 says nothing about when.
-                Text(String(localized: "#\(String(coin.index))"))
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary).monospacedDigit()
+                      title: coinOrigin(coin)) {
+                Text(HegotaFormat.eth(coin.wei))
+                    .dsText(.price17).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit().lineLimit(1)
+                    // The title gives way first; the money never shrinks.
+                    .fixedSize()
+                DSChevron()
             }
             .opacity(spent ? 0.72 : 1)
             .contentShape(Rectangle())
@@ -1950,12 +1956,9 @@ struct HegotaRoomList: View {
         .buttonStyle(.plain)
     }
 
-    private func coinSubtitle(_ coin: HegotaCoin) -> String {
-        let origin = coin.isChange
-            ? String(localized: "change from your own spend")
-            : String(localized: "from \(HegotaName.of(coin.source, watched: watched))")
-        guard let when = HegotaFormat.time(coin.timestamp) else { return origin }
-        return "\(origin) · \(when)"
+    private func coinOrigin(_ coin: HegotaCoin) -> String {
+        coin.isChange ? String(localized: "Change")
+                      : String(localized: "From \(HegotaName.of(coin.source, watched: watched))")
     }
 
     // MARK: Nonces
@@ -2127,33 +2130,24 @@ struct HegotaMoveRow: View {
         WalletRow(mark: party == .vault ? .symbol("tray.full", tint: DS.tint)
                                         : .face(move.counterparty),
                   title: title, subtitle: subtitle) {
-            VStack(alignment: .trailing, spacing: 3) {
-                // **SIGNED.** Direction lived only in colour, which is the one
-                // channel a person can't be assumed to read — and green-vs-grey
-                // is a far weaker signal than a sign every other money row in
-                // this app carries.
-                // ONE RUNG FOR A SIGNED AMOUNT IN A ROW (prd §587). This was
-                // `subhead12` — 12pt — while the Wallet room's own activity
-                // rows draw the same fact at `price17` and Frames drew it at
-                // `body17`. Four activity surfaces, three sizes, for one
-                // kind of figure. `price17` is the app's row-money rung and
-                // the one the most-drawn surface already uses, so the other
-                // two come to it.
-                Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
-                    .dsText(.price17)
-                    // Plain ink, the sign carrying direction (prd §942, §950).
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-                // The frame anatomy as texture — in the Frames scope only
-                // (prd §950): an Activity row says "3 frames" in words, the
-                // Wallet's one-figure row.
-                if leadsWithFrames, let frames = move.frames, !frames.isEmpty {
-                    HegotaFrameStrip(frames: frames,
-                                     height: leadsWithFrames ? 9 : 5,
-                                     weighted: leadsWithFrames)
-                        .frame(width: leadsWithFrames ? 78 : 54)
-                }
-            }
+            // **SIGNED.** Direction lived only in colour, which is the one
+            // channel a person can't be assumed to read — and green-vs-grey
+            // is a far weaker signal than a sign every other money row in
+            // this app carries.
+            // ONE RUNG FOR A SIGNED AMOUNT IN A ROW (prd §587). This was
+            // `subhead12` — 12pt — while the Wallet room's own activity
+            // rows draw the same fact at `price17` and Frames drew it at
+            // `body17`. Four activity surfaces, three sizes, for one
+            // kind of figure. `price17` is the app's row-money rung and
+            // the one the most-drawn surface already uses, so the other
+            // two come to it.
+            Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
+                .dsText(.price17)
+                // Plain ink, the sign carrying direction (prd §942, §950).
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+            // The strip that stood under the amount is gone (prd §952): the
+            // line names the steps in order and the crown draws them.
         }
     }
 
@@ -2187,7 +2181,7 @@ struct HegotaMoveRow: View {
 
     /// What it became, and when. **The outcome beats the mechanism**: a deposit
     /// that turned into three UTXOs says more than the modes that did it, and
-    /// the modes are drawn beside it as the strip anyway.
+    /// the Frames scope names the modes in order instead.
     private var subtitle: String? {
         var parts: [String] = []
         // In the Frames scope the STEPS lead, named in the order they ran —

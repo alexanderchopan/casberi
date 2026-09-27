@@ -279,9 +279,8 @@ struct PrivacyDevnetRoomCard: View {
                               changeFormat: { PrivacyDevnetMoney.line(wei: Self.wei($0), places: 2) })
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else if !ringMarks.isEmpty {
-                PrivacyDevnetProofBars(marks: ringMarks, remaining: freshestRemaining,
-                                       readAt: readAt, caption: scopeCaption,
-                                       reduceMotion: reduceMotion)
+                PrivacyDevnetSetRings(sets: setReadings, readAt: readAt,
+                                      reduceMotion: reduceMotion)
             } else if !pairs.isEmpty {
                 // **NO PROOFS YET, BUT TRANSACTIONS: THE SLOT DRAWS THE MOVES
                 // (prd §664, 2026-09-09, user's phone: "60 transactions, and
@@ -335,6 +334,22 @@ struct PrivacyDevnetRoomCard: View {
     /// aged out, which had no picture at all, only a sentence.
     private var marks: [PrivacyDevnetFigure.Mark] {
         PrivacyDevnetFigure.marks(accounts.flatMap(\.roots), headSlot: headSlot)
+    }
+
+    /// Each set the account proves against, in `bySource`'s order — the
+    /// same order and ordinals as the Snapshots rows (prd §952).
+    var setReadings: [PrivacyDevnetSetRings.SetReading] {
+        let groups = PrivacyDevnetRoots.bySource(accounts.flatMap(\.roots))
+        return groups.enumerated().map { index, group in
+            let fraction: Double?
+            switch PrivacyDevnetRoots.standing(of: group.newest, headSlot: headSlot) {
+            case .live(let left): fraction = Double(left) / Double(PrivacyDevnetRoots.windowSlots)
+            case .ahead:          fraction = 1
+            case .aged:           fraction = nil
+            }
+            return .init(id: index, ordinal: groups.count > 1 ? String(index + 1) : nil,
+                         fraction: fraction)
+        }
     }
 
     /// How many distinct sets are on the ring. One wears no ordinals — a
@@ -464,7 +479,7 @@ extension PrivacyDevnetRoomCard {
             if pairs.allSatisfy({ $0.move.frames.isEmpty }) {
                 DSSkeletonRows()
             } else {
-                list(pairs.filter { !$0.move.frames.isEmpty })
+                list(pairs.filter { !$0.move.frames.isEmpty }, onlyFrames: true)
             }
         case .permissions:
             if keyRows.isEmpty && !moves.contains(where: \.sponsored) {
@@ -479,7 +494,8 @@ extension PrivacyDevnetRoomCard {
 
     @ViewBuilder func list(_ shown: [(move: PrivacyDevnetLiveState.Move, owner: String)],
                            showsSponsorship: Bool = true,
-                           showsCeiling: Bool = true) -> some View {
+                           showsCeiling: Bool = true,
+                           onlyFrames: Bool = false) -> some View {
         // **NOTHING HERE WHEN THERE IS NOTHING (prd §610)** — the slot above
         // the rail carries the empty state now, and a second copy under the
         // switcher is one sentence in two places at two sizes.
@@ -494,7 +510,7 @@ extension PrivacyDevnetRoomCard {
                     DSDayHeader(word: DayRuns.word(run), first: index == 0)
                     ForEach(run.items, id: \.move.id) { pair in
                         moveRow(pair.move, owner: pair.owner,
-                                showsSponsorship: showsSponsorship)
+                                showsSponsorship: showsSponsorship, onlyFrames: onlyFrames)
                     }
                 }
                 if showsCeiling { walkCeiling }
@@ -574,7 +590,8 @@ extension PrivacyDevnetRoomCard {
     /// where Frames keeps it; the block stays, because it is the only clock
     /// this walk has.
     @ViewBuilder func moveRow(_ move: PrivacyDevnetLiveState.Move, owner: String,
-                              showsSponsorship: Bool = true) -> some View {
+                              showsSponsorship: Bool = true,
+                              onlyFrames: Bool = false) -> some View {
         if let onOpenMove {
             Button {
                 DSHaptic.selection()
@@ -582,7 +599,8 @@ extension PrivacyDevnetRoomCard {
             } label: {
                 WalletRow(mark: Self.mark(for: move),
                           title: Self.moveTitle(move),
-                          subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship)) {
+                          subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship,
+                                                    onlyFrames: onlyFrames)) {
                     // Nothing on the right (prd §950): the step strip is the
                     // Frames scope's drawing, and the day header says when —
                     // the time §687 put here for a row with no amount is the
@@ -597,7 +615,8 @@ extension PrivacyDevnetRoomCard {
             // a chevron over a dead tap is §83's fake promise.
             WalletRow(mark: Self.mark(for: move),
                       title: Self.moveTitle(move),
-                      subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship)) {
+                      subtitleText: Self.moveMeta(move, showsSponsorship: showsSponsorship,
+                                                    onlyFrames: onlyFrames)) {
                 EmptyView()
             }
         }
@@ -649,7 +668,8 @@ extension PrivacyDevnetRoomCard {
     /// wrapping one clause into a one-word column; a run wraps as a sentence
     /// and is capped at a line).
     static func moveMeta(_ m: PrivacyDevnetLiveState.Move,
-                         showsSponsorship: Bool = true) -> Text? {
+                         showsSponsorship: Bool = true,
+                         onlyFrames: Bool = false) -> Text? {
         var out: Text?
         func add(_ piece: Text) {
             out = out.map { $0 + Text(verbatim: " · ") + piece } ?? piece
@@ -663,6 +683,9 @@ extension PrivacyDevnetRoomCard {
                      ? String(localized: "1 frame")
                      : String(localized: "\(String(m.frameCount)) frames")))
         }
+        // In the Frames scope the count is the line (prd §952): the spend keys
+        // are Permissions', the snapshot is Snapshots', one tile away.
+        if onlyFrames { return out }
         if m.nullifierCount > 0 {
             add(Text(m.nullifierCount == 1
                      ? String(localized: "1 spend key")
@@ -1087,29 +1110,20 @@ extension PrivacyDevnetRoomCard {
     /// fact as a countdown.
     static func standingMeta(_ r: PrivacyDevnetRoots.Reference,
                              headSlot: UInt64, count: Int) -> Text {
-        let proofs = count == 1 ? String(localized: "1 proof")
-                                : String(localized: "\(String(count)) proofs")
-        let sep = Text(verbatim: " · ")
+        // Only the time left (prd §952): the slot count and the proofs are the
+        // sheet's, one tap on, and the footnote names the window once.
+        _ = count
         switch PrivacyDevnetRoots.standing(of: r, headSlot: headSlot) {
         case .live(let left):
             return Text(String(localized: "\(PrivacyDevnetRoots.approximate(slots: left)) left"))
-                + sep + Text(String(localized: "\(String(left)) slots"))
-                + sep + Text(proofs)
-        case .aged(let by):
-            return Text(String(localized: "Left the chain's memory \(String(by)) slots ago"))
-                + sep + Text(proofs)
+        case .aged:
+            return Text(String(localized: "Gone")).foregroundColor(DS.destructive)
         case .ahead:
             // The head is behind the reference — a lagging node, not freshness.
             return Text(String(localized: "Waiting for the chain to catch up"))
-                + sep + Text(proofs)
         }
     }
 
-    /// One spelling, and it lives with the seat's other naming
-    /// (`PrivacyDevnetName.shortHex`, prd §598) — this was the second of two
-    /// hex shorteners in one seat, eliding at a different length from the
-    /// sheet's, so a key and the transaction that spent it were cut
-    /// differently on the same screen.
     static func shortHex(_ d: Data) -> String { PrivacyDevnetName.shortHex(d) }
 }
 
@@ -1148,7 +1162,7 @@ extension PrivacyDevnetRoomCard {
         // the steps were ALLOWED TO COST, which is not what the scope asks, and
         // the same bar that sat over Sponsors until §692. The budgets are a
         // per-step fact and the frame sheet states them.
-        case .frames:     RoomFramesFigure(runs: frameRuns, hue: RoomFrameStyle.hue, caption: scopeCaption)
+        case .frames:     RoomFramesFigure(runs: frameRuns)
         // **NO FIGURE (prd §606).** These two drew a count as N identical
         // shapes — eight rings for eight keys, a row of pips per address —
         // over data with nothing to compare. "We can count; what does that
@@ -1214,11 +1228,9 @@ extension PrivacyDevnetRoomCard {
         if refs.isEmpty {
             EmptyView()
         } else {
-            // The proofs as bars under one number (prd §936); the ring is
-            // deleted from the room.
-            PrivacyDevnetProofBars(marks: marks, remaining: freshestRemaining,
-                                   readAt: readAt, caption: scopeCaption,
-                                   reduceMotion: reduceMotion)
+            // One timer ring per set under the freshest proof's time (prd §952).
+            PrivacyDevnetSetRings(sets: setReadings, readAt: readAt,
+                                  reduceMotion: reduceMotion)
         }
     }
 
