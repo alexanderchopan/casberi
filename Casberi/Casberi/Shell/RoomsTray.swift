@@ -64,6 +64,14 @@ struct RoomsTray: View {
     /// the same across and down. The name column stays 118 — "Shopping" needs
     /// it.
     static let markGap: CGFloat = 0
+    /// The air between one category and the next: none. Every row stands on
+    /// the 44pt floor, so a category starts where a wrapped line of marks
+    /// would — one pitch down and across, and a category with more marks
+    /// than fit grows a line of its own (user, 2026-09-27: "without the
+    /// extra spacing between sections. let it be dynamic if a row is added
+    /// then a row is created but otherwise tighten the categories"). It was
+    /// `DS.Space.s6`, 24pt on top of the 16pt the targets already leave.
+    static let rowGap: CGFloat = 0
     /// A grabber drag past this, down, collapses or closes; up, grows.
     static let detentDrag: CGFloat = 56
     /// The two detents, as shares of the screen: rest shows You and the first
@@ -135,7 +143,7 @@ struct RoomsTray: View {
         return VStack(spacing: 0) {
             grabber
             ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                VStack(alignment: .leading, spacing: Self.rowGap) {
                     youRow
                     ForEach(Array(categories.enumerated()), id: \.element) { index, category in
                         categoryRow(category, index: index)
