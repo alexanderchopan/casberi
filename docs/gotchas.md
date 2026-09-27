@@ -86,3 +86,42 @@ why this reads as an intermittent bug rather than a wrong API. `demo-marking-aud
 check two fails a flag raised from `onAppear`, with the mutation to prove it.
 
 Found by review, not by running it.
+
+## A `some View` changed in one file can leave its CALLER in another file compiled against the old type (2026-09-26)
+
+**Symptom.** Deleting a layout-neutral `.padding(.vertical, DS.Space.s2)` from the Wallet
+crown (`FeedScreen.walletTilesSection`, in `FeedScreen.swift`) made the Wallet crash on every
+open: `EXC_BAD_ACCESS` at `0x0000000100000008`, `swift_retain` ←
+`ValueWitnesses<BridgeObjectBox>::initializeWithCopy` ← `initializeWithCopy for ForEach` ←
+`ViewBuilder.buildBlock` ← `closure #4 … FeedScreen.walletScopeChromeSection` (the crown
+closure, in `FeedScreen+WalletRoom.swift`) ← `DSRoomSlot.body`. Putting any padding back
+"fixed" it, and the fix was committed with a comment saying the modifier could not be removed.
+
+**Cause: the Debug build, not the code.** Inside one module, a caller in file B specialises a
+`some View` function from file A to its UNDERLYING type (this is ordinary opaque-type
+substitution, and it happens at `-Onone`) — so B's machine code bakes in the concrete view
+type's layout. Swift 6.4's incremental build (Debug is `SWIFT_COMPILATION_MODE` incremental;
+Release is `wholemodule`) treats a change to A's function BODY as private to A and recompiles
+A alone, even though the body change changed the return type. B keeps copying the value with
+the old layout: the `Optional` of the empty `walletTodayCard` (its `ForEach`) sat at a
+different offset, so its nil tag was read as a pointer. Deleting `.padding` changes the type;
+swapping `.vertical` for `.bottom` does not, which is why "any padding" matched the stale
+caller and "no padding" did not.
+
+**Measured (2026-09-26, own DerivedData, own simulator):** a CLEAN build with the padding
+deleted opens the Wallet fine. Restoring the padding and building incrementally recompiled
+`FeedScreen.swift` only (`SwiftCompile` lines) — and that build, of the committed tree that
+"worked", crashed in the same frame. Forcing `FeedScreen+WalletRoom.o` to rebuild fixes it.
+
+**RULE: a crash whose top app frames are a value-witness copy (`initializeWithCopy`,
+`outlined copy`, `swift_retain`/`objc_retain` on a junk pointer) under a `some View` builder,
+appearing right after an edit that changed a view's TYPE, is a stale build until a clean
+build says otherwise.** Rebuild clean (or delete the caller file's `.o` in
+`Objects-normal/arm64`) before reading any code. It cannot reach a ship: the Release archive
+is whole-module. It can reach `verify.sh`, whose fixed DerivedData paths build incrementally,
+as a false red.
+
+**Why no source audit:** the "pattern" is every non-private `some View` member called from
+another file — 102 of 144 in the app (extension-split screens, the `Design/` modifiers) — which
+is ordinary SwiftUI. The lever that would close the class is Debug `wholemodule`, at the cost of
+recompiling the whole module on every Debug build; not taken without a ruling.

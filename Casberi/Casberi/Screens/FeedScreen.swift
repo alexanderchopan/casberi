@@ -9479,10 +9479,10 @@ struct FeedScreen: View {
                 // NO TOP PADDING (prd §953): the crown lives in the chassis'
                 // fixed box, which is its own air — the top s2 put the Wallet's
                 // number 8pt below every devnet crown and every section's
-                // figure. KEEP A PADDING HERE: deleting the modifier outright
-                // (same layout, different view type) crashed the Wallet on
-                // open, a SIGSEGV copying a `ForEach` inside this builder.
-                .padding(.bottom, DS.Space.s2)
+                // figure. The bottom s2 went with it: the box holds the height.
+                // (Deleting this modifier once "crashed the Wallet on open" —
+                // a stale incremental build, not this code: docs/gotchas.md,
+                // "a `some View` changed in one file".)
                 // NO GROUND AT ALL (2026-08-16, the Apple redraw — retiring
                 // the `DS.tint` card this carried for a day). Apple has never
                 // shipped a balance inside a coloured card: Apple Card's sits
