@@ -1,6 +1,6 @@
 # Casberi
 
-Native iOS app — a personal corpus of "things" (links, screenshots, events, chats, voice notes, agent outputs) with on-device generative UI synthesis. Solo project, pre-App Store (Developer Program enrollment active; shipping via TestFlight, App Store v1 not yet submitted).
+Native iOS app — a personal corpus of "things" (links, screenshots, events, chats, voice notes, agent outputs) with on-device generative UI synthesis. Solo project, live on the App Store (iOS and Mac); betas ship via TestFlight. Growth plan: `docs/growth.md`.
 
 **How this file is organised.** It is a RULE SHEET, loaded into every session — rules,
 build commands, gotchas, and a one-line index of every DEBUG hook. The long-form record
