@@ -38,6 +38,10 @@ struct SettingsScreen: View {
 struct AddressesScreen: View {
     @State private var query = ""
     @FocusState private var searchFocused: Bool
+    /// The list's scope and the scopes it holds, up here because on the phone
+    /// the tiles ride the capsule beside the seat (`DSScopeDock`, prd §960).
+    @State private var scope = AddressScope(name: nil)
+    @State private var scopes: [AddressScope] = []
 
     var body: some View {
         ScrollView {
@@ -48,10 +52,13 @@ struct AddressesScreen: View {
                             focus: $searchFocused,
                             glyph: "magnifyingglass", clearable: true,
                             size: .slab, submitLabel: .search, action: {})
-                AddressesSection(query: query)
+                AddressesSection(query: query, scope: $scope) { scopes = $0 }
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s4)
+        }
+        .dsScopeDock(sections: query.isEmpty ? scopes : [], active: scope) { picked in
+            withAnimation(DS.Motion.standard) { scope = picked }
         }
         .scrollIndicators(.hidden)
         .dsAdaptiveContentWidth(.reading)

@@ -30,7 +30,13 @@ struct AddressesSection: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var contacts: [Contact] = []
-    @State private var scope = AddressScope(name: nil)
+    /// Owned by `AddressesScreen` since prd §960: on the phone the tiles ride
+    /// the capsule beside the seat, which is mounted on the SCREEN (the list
+    /// is scroll content, and a capsule on it would sit at the list's end).
+    @Binding var scope: AddressScope
+    /// The scopes this list holds, handed up for that capsule.
+    var onScopes: ([AddressScope]) -> Void = { _ in }
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var opened: Contact?
     /// The wallet the naming alert is naming — a `Not named yet` row's own
     /// `Name`, or the resolver's bare address.
@@ -86,7 +92,7 @@ struct AddressesSection: View {
                let b = ContactIndexSources.contact(forKey: suggestion.b) {
                 suggestionRow(suggestion, a: a, b: b)
             }
-            if query.isEmpty, scopes.count > 2 {
+            if query.isEmpty, scopes.count > 2, !DSScopeDock<AddressScope>.atBottom(sizeClass) {
                 DSScopeTiles(sections: scopes, active: scope, strip: true) { picked in
                     withAnimation(DS.Motion.standard) { scope = picked }
                 }
@@ -110,6 +116,7 @@ struct AddressesSection: View {
         // The index is rebuilt on appear, never in a body (§628). It reads
         // the stores and the ledger only — no network.
         .task { await refresh() }
+        .onChange(of: scopes, initial: true) { _, held in onScopes(held) }
         // The resolver, debounced behind the typing: one web3.bio ask per
         // settled query, only for a query SHAPED like an address, a name or
         // a handle, and only when nobody here already carries it.

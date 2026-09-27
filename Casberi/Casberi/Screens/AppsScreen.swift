@@ -17,6 +17,10 @@ struct AppsScreen: View {
     @Environment(HomeRoute.self) private var route
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
+    /// Compact is the phone, where the category tiles ride the capsule
+    /// beside the seat (`DSScopeDock`, prd §960) instead of standing under
+    /// the search field.
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var pairing = false
     @State private var query = ""
     @FocusState private var searchFocused: Bool
@@ -150,6 +154,7 @@ struct AppsScreen: View {
                     VStack(alignment: .leading, spacing: DS.Space.s6) {
                         // The screen's name, in the content (prd §767).
                         DSScreenHead(title: Text("Accounts"))
+                            .id(Self.topAnchor)
                         // The search field leads the page (user ruling,
                         // 2026-07-23: "make sure the search bar is at the
                         // top") — a visible slab, not the nav bar's
@@ -170,6 +175,17 @@ struct AppsScreen: View {
                     }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s4)
+                }
+                // The category tiles within the thumb's reach on the phone
+                // (prd §960): a capsule beside the seat. Down while a search
+                // is up — the hits are not a catalogue, and the strip never
+                // stood over them either.
+                .dsScopeDock(sections: query.isEmpty ? scopes : [],
+                             active: scope, attention: troubledScopes) { picked in
+                    withAnimation(DS.Motion.standard) {
+                        scope = picked
+                        proxy.scrollTo(Self.topAnchor, anchor: .top)
+                    }
                 }
                 #if DEBUG
                 .onAppear {
@@ -735,6 +751,9 @@ struct AppsScreen: View {
     /// The strip's scroll anchor: a pick pulls the CONTROL to the top, so the
     /// chips stay reachable and the list below them is the thing that changed.
     private static let scopeAnchor = "catalog-scope"
+    /// The page's top: on the phone the chips ride the bottom capsule (prd
+    /// §960), and a pick there scrolls the list back to its start.
+    private static let topAnchor = "catalog-top"
 
     /// All, then every category with something behind it.
     ///
@@ -774,7 +793,10 @@ struct AppsScreen: View {
     @ViewBuilder
     private func scopeStrip(_ proxy: ScrollViewProxy) -> some View {
         let all = scopes
-        if all.count > 2 {
+        // On the phone the tiles ride the capsule at the bottom (prd §960)
+        // and nothing stands here — a zero-height anchor still cost the
+        // stack's spacing twice, a band of air over the list.
+        if !DSScopeDock<CatalogScope>.atBottom(sizeClass), all.count > 2 {
             DSScopeTiles(sections: all, active: scope,
                          attention: troubledScopes, strip: true) { picked in
                 withAnimation(DS.Motion.standard) {

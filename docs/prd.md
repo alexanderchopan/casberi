@@ -61855,3 +61855,13 @@ Over a screenshot of the You row's Connect (a grid) and Manage (sliders) circles
 **Seen:** Farcaster's row under the cover and the Wallet's menu after the refactor, on the simulator; GitHub's menu under its tiles with two watches stubbed in for one build (the demo holds no watch and the hook needs a token). **Not seen:** the menu open, a pick, and Pinterest with follows — the simulator panel's tap access was not granted.
 
 **Not done.** `FaceScopeRail`'s header still argues "chrome is pinned" (§357); on the phone the three rails now scroll away like the Wallet's menu, and the rows' authors name the pick.
+
+## §960 — On the phone, Accounts' and Addresses' category tiles ride a glass capsule beside the seat, not under the search field (a tester via the user: "the category chips should be at the bottom b/c you can't reach them at the top"; mocked as four options, the user picked "A", 2026-09-27)
+
+1. **One component, `Design/DSScopeDock.swift`**, the room faces' arrangement (§935): a glass capsule that starts where the seat ends (`DSDock.agentSeat`) and shares its centre line through the fold, holding `DSScopeTiles(strip: true)` scrolling sideways. It costs no height — a pushed screen's `dsSeatClearance` already keeps the last row off that line — and the keyboard covers it as it covers the seat (§865).
+2. **Phone only.** `DSScopeDock.atBottom(sizeClass)` is the one question both screens ask before drawing their inline strip, so the strip and the capsule never both draw; where the rail stands (iPad, Mac) the strip stays under the search field.
+3. **Down while a search is up**, as the strip was: the hits are not a catalogue.
+4. **A pick scrolls the page to its top** (Accounts' `topAnchor`); the inline strip's `scopeAnchor` stays for iPad/Mac and the `-appsShelf` hook. Addresses' `scope` moved up to `AddressesScreen`, because the capsule has to mount on the screen, not on the list's scroll content.
+5. **All stays A–Z** (user, same day): the mockup drew All with category headers and was wrong; the app's All is one alphabetical list.
+
+**Seen:** both screens on the iPhone 17 Pro simulator, the capsule on the seat's line, Agents picked through `-appsShelf` on Accounts, a tile tapped on Addresses filtering the list. **Not seen:** iPad/Mac (unchanged path), the folded seat, Dynamic Type sizes.
