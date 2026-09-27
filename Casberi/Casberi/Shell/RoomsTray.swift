@@ -10,9 +10,9 @@ import SwiftUI
 /// face: a row per category, its name at the left and its connected sources
 /// beside it as bare brand circles, wrapping inside the column when a category
 /// is crowded — so the first line of every row is the same shape whether
-/// Wallet holds two accounts or fourteen. A `You` row leads with the five
-/// doors the face used to open on its own: Home (the All room), Connect,
-/// Manage, Addresses and Settings.
+/// Wallet holds two accounts or fourteen. A `You` row leads with four doors:
+/// Home (the All room), Connect, Addresses and Settings. Manage is not a door
+/// (prd §958): Connect lands on the same screen, whose switcher reaches it.
 ///
 /// **A layer of `RootShell`'s stack, never a sheet (§394).** A sheet presents
 /// in its own context and would cover the face; this sits UNDER the seat so
@@ -281,9 +281,11 @@ struct RoomsTray: View {
         return bridges.bridges.contains { seats.contains($0.name) && $0.status == .attention }
     }
 
-    /// You: the five doors the face opened on its own until §930, as bare
-    /// glyph circles the way the source marks are bare brand circles. Home
-    /// fills when you are standing in it; the rest are outlines.
+    /// You: four doors, as bare glyph circles the way the source marks are
+    /// bare brand circles. Home fills when you are standing in it; the rest
+    /// are outlines. Manage's door is deleted (prd §958, user: "both of these
+    /// buttons lead to sort of the same place"): Connect opens Accounts, and
+    /// its `Connect | Manage` switcher is one tap from what Manage held.
     private var youRow: some View {
         let home = filter.source == "All" && route.path.isEmpty
         return HStack(alignment: .top, spacing: DS.Space.s3) {
@@ -301,10 +303,9 @@ struct RoomsTray: View {
             FlowLayout(spacing: Self.markGap) {
                 door(String(localized: "Home"), glyph: home ? "house.fill" : "house",
                      lit: home, index: 0) { pick("All") }
-                door(String(localized: "Connect"), glyph: "square.grid.2x2", index: 1) { accounts(.connect) }
-                door(String(localized: "Manage"), glyph: "slider.horizontal.3", index: 2) { accounts(.manage) }
-                door(String(localized: "Addresses"), glyph: "at", index: 3) { screen(.addresses) }
-                door(String(localized: "Settings"), glyph: "gearshape", index: 4) { screen(.settings) }
+                door(String(localized: "Connect"), glyph: "square.grid.2x2", index: 1) { connect() }
+                door(String(localized: "Addresses"), glyph: "at", index: 2) { screen(.addresses) }
+                door(String(localized: "Settings"), glyph: "gearshape", index: 3) { screen(.settings) }
             }
             .padding(.top, (DS.Hit.min - Self.mark) / 2)
         }
@@ -446,12 +447,11 @@ struct RoomsTray: View {
         chrome.sourceRequest = target
     }
 
-    /// Open Accounts on Connect or Manage — two views of the app catalog,
-    /// the one pair a switcher may still switch (§933).
-    private func accounts(_ section: HomeRoute.AccountsSection) {
+    /// Open Accounts on Connect; its switcher holds Manage (§933, §958).
+    private func connect() {
         DSHaptic.selection()
         close()
-        route.openAccounts = section
+        route.openConnect = true
         route.present(.apps)
     }
 

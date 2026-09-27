@@ -260,8 +260,8 @@ struct AppsScreen: View {
                 scopeSeeded = true
                 section = connectedCount > 0 ? .yours : .all
             }
-            // The rooms tray's You row names a section outright (prd §930);
-            // consumed after the seed, so it wins. Settings and Addresses are
+            // The rooms tray's Connect door names its section outright (prd
+            // §930, §958); consumed after the seed, so it wins. Settings and Addresses are
             // screens of their own since §933, so no door lands them here.
             landRequestedSection()
         }
@@ -274,7 +274,7 @@ struct AppsScreen: View {
         }
         // The tray can be raised OVER this screen and a second door tapped, so
         // a request made while it is already up still lands (prd §930).
-        .onChange(of: route.openAccounts) { _, _ in landRequestedSection() }
+        .onChange(of: route.openConnect) { _, _ in landRequestedSection() }
         // The catalog is a LIST now (prd §518), so it takes the READING column
         // — and that is the same distinction `DSContentWidth` draws, answered
         // the other way. It was `.wide` because a grid spends extra width on
@@ -639,16 +639,13 @@ struct AppsScreen: View {
     /// it toggle? like manage and connect"): the same switcher, the same
     /// screen, the list below swaps — so the dock's face toggles one screen in
     /// and out, and nothing is pushed.
-    /// Consume `HomeRoute.openAccounts` — the rooms tray's door to Connect or
-    /// Manage (prd §930) — and stand on it. Cleared on read, so the next plain
+    /// Consume `HomeRoute.openConnect` — the rooms tray's door to Connect
+    /// (prd §930, §958) — and stand on it. Cleared on read, so the next plain
     /// visit opens on the seed again.
     private func landRequestedSection() {
-        guard let door = route.openAccounts else { return }
-        route.openAccounts = nil
-        switch door {
-        case .connect: section = .all
-        case .manage:  section = .yours
-        }
+        guard route.openConnect else { return }
+        route.openConnect = false
+        section = .all
         scope = CatalogScope(name: nil)
     }
 

@@ -235,15 +235,12 @@ final class HomeRoute {
     /// `.apps` push above has mounted the stack.
     var openOffer: String?
 
-    /// The Accounts screen's two sections, as the rooms tray's You row names
-    /// them (prd §930; two since §933 gave Settings and Addresses their own
-    /// screens). Set beside `present(.apps)` and consumed by `AppsScreen` —
-    /// on appear, and while it is already up, because the tray can be opened
-    /// over Accounts and a second door must still land.
-    enum AccountsSection: Equatable {
-        case connect, manage
-    }
-    var openAccounts: AccountsSection?
+    /// Land Accounts on Connect — the rooms tray's one door to the catalog
+    /// (prd §930; its Manage door is deleted, §958, because the screen's own
+    /// switcher reaches Manage). Set beside `present(.apps)` and consumed by
+    /// `AppsScreen` — on appear, and while it is already up, because the tray
+    /// can be opened over Accounts and the door must still land.
+    var openConnect = false
 
     /// A catalog CATEGORY the Apps screen should land filtered to — set by a
     /// door that named the category in the same gesture ("Set up an agent"),
