@@ -498,9 +498,18 @@ struct MainSurface: View {
         // rooms are never behind the lone lead seat's unmarked tap. No row is
         // added — the mount below is unchanged — and a room with no faces
         // keeps §754's one seat and no capsule.
+        //
+        // **EXCEPT IN A SOCIAL ROOM (prd §956, user: "when a social room is
+        // open, like Farcaster here, we can't have the X room showing").**
+        // A social room's faces are that network's people, and X lit between
+        // Farcaster's seat and Farcaster's faces read as if they were X's. At
+        // rest the capsule carries the standing seat alone, then All and the
+        // faces; the lead seat's tap still reaches the siblings, and an open
+        // folder still shows them.
         let openVenues = folderVenues
         let facesShow = roomFacesShow
-        let venues = openVenues.isEmpty && facesShow ? restingVenues : openVenues
+        let restsAlone = FeedScreen.isSocialRoom(filter.source)
+        let venues = openVenues.isEmpty && facesShow && !restsAlone ? restingVenues : openVenues
         if !venues.isEmpty || facesShow {
             // BESIDE THE FACE, never under it (prd §935). The capsule stood
             // above the strip; with the strip in the tray (§930) it fell onto
