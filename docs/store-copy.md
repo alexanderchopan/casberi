@@ -8,6 +8,11 @@ take a PATCH, description / What's New / keywords / subtitle answer 409.
 Caps: description 4000, What's New 4000, review notes 4000, keywords 100,
 promotional text 170, subtitle 30.
 
+**Live subtitle (read 2026-09-27, `asc-copy.py read`): `One app for your things`** — both the
+live appInfo (READY_FOR_SALE) and the in-review one (WAITING_FOR_REVIEW). Shared by iOS and
+Mac: the subtitle rides the app, not a version. Promotional text was EMPTY on both
+platforms until it was applied the same day (below). Full snapshot: `docs/store-live.json`.
+
 ## iOS — description REWRITTEN 2026-09-13 for §697b, REVISED 2026-09-27, NOT YET APPLIED
 
 **2026-09-27 revision (user):** the ask lives on through the keyed agents — each opens
@@ -148,6 +153,6 @@ Bugs
 
 Bankr answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 
-### Promotional text — both platforms (134 chars) — REVISED 2026-09-27, NOT YET APPLIED
+### Promotional text — both platforms (134 chars) — APPLIED 2026-09-27 (iOS 1.0.39 live, 1.0.40 in review; Mac 1.0.40 live)
 
 Your apps, wallets and agents in one private feed. Bring your own key for Claude, ChatGPT or Gemini and talk to it beside your things.

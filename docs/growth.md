@@ -55,9 +55,14 @@ Each step is tagged with where it runs.
 
 ### 1. Measurement
 
-- [cloud] `scripts/asc-report.py` — request the Analytics Reports (App Store discovery and
-  engagement, downloads, sessions, retention) once, then download the weekly instances and
-  print impressions → page views → downloads by source, campaign and country.
+- [mac, written 2026-09-27] `scripts/asc-report.py` — `status`; `request` (ONGOING, dry run
+  until `--yes`, needs the Admin role); `funnel` prints impressions → page views → first-time
+  downloads per week, by source, device and territory (`--detailed` adds campaign, referrer
+  and custom product page); `links --pt` prints the campaign links. Reads DAILY instances
+  (35 days) and takes each date from the newest instance only (Apple's overwrite rule).
+  Sessions and installs/deletions are not read yet. `--self-test` runs offline.
+- [mac] 2026-09-27: no report request existed on the app. **Owed: the user runs
+  `asc-report.py request --yes`**; the first instances land 1–2 days later.
 - [cloud] Campaign links: one App Store link per channel,
   `https://apps.apple.com/app/id6788637831?pt=<provider token>&ct=<channel>`. The provider
   token is under App Store Connect → Analytics. Keep the list in this file.
@@ -69,8 +74,14 @@ Each step is tagged with where it runs.
   description, keywords, promotional text, What's New, per locale) to `docs/store-live.json`;
   `diff` compares en-US with the drafts in `docs/store-copy.md`; `apply --platform --field`
   is a dry run until `--yes`, then writes and reads back. `--self-test` runs offline.
-- [cloud, drafted 2026-09-27, awaiting approval] Description and promotional text rewritten around the feed and bring your
+- [cloud, drafted 2026-09-27] Description and promotional text rewritten around the feed and bring your
   own agent (`docs/store-copy.md`). No MCP claim until workstream 5 passes.
+- [mac, done 2026-09-27] `read` + `diff` run; live subtitle recorded (`One app for your
+  things`). **Promotional text APPLIED** to iOS 1.0.39, iOS 1.0.40 (in review) and Mac 1.0.40,
+  read back. The diff showed the iOS description DRAFT is behind the live text (live says
+  "More than 100 apps" and already has an agents block; the draft says "Over 90") and the live
+  iOS text has a typo ("Iry what is coming to Ethereum"): reconcile the draft against
+  `docs/store-live.json` before 1.0.41. The iOS keywords draft is the live set reordered.
 - [cloud] Keywords per locale the app already ships.
 - [mac] Run it (key staged per `docs/testflight-handoff.md`):
   ```sh
