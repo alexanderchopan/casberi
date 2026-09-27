@@ -798,27 +798,6 @@ enum FramesPayers {
 /// The dateline grammar, mirroring `HegotaFormat`'s so the two devnet rooms
 /// read alike. Foundation-only, like everything else in this file.
 enum FramesFormat {
-    /// How long ago, in the app's own coarse grain.
-    ///
-    /// **Nil is a real answer and every caller draws nothing for it.** The
-    /// header read is bounded, so a move past the window has no time — a
-    /// different thing from a move at the epoch, and substituting "now" for a
-    /// miss is the fake status §83 bans.
-    static func time(_ date: Date?, now: Date = Date()) -> String? {
-        guard let date else { return nil }
-        let seconds = max(0, now.timeIntervalSince(date))
-        let minutes = Int(seconds / 60)
-        if minutes < 1 { return String(localized: "just now") }
-        if minutes < 60 { return String(localized: "\(String(minutes))m ago") }
-        let hours = minutes / 60
-        if hours < 24 { return String(localized: "\(String(hours))h ago") }
-        let days = hours / 24
-        if days < 7 { return String(localized: "\(String(days))d ago") }
-        let weeks = days / 7
-        if weeks < 52 { return String(localized: "\(String(weeks))w ago") }
-        return String(localized: "\(String(weeks / 52))y ago")
-    }
-
     /// TWO shared formatters, not two built per call (PERF, prd §628).
     /// `stamp` is read from a sheet's head, so it built a `NumberFormatter`
     /// AND a `DateFormatter` on every render of it — the most expensive pair

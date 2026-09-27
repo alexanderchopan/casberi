@@ -1518,17 +1518,9 @@ check("and a self-paid move belongs to nobody",
       FramesPayers.moves(of: me, in: [selfPaid]).isEmpty)
 
 // --- SAYING WHEN ------------------------------------------------------------
-// **NIL IS A REAL ANSWER.** The header read is bounded, so a move past the
-// window has no time — a different thing from a move at the epoch, and
-// substituting "now" for a miss is the fake status §83 bans.
-check("an unread time is no time", FramesFormat.time(nil) == nil)
+// `FramesFormat.time` is deleted (prd §954 cleanup): no row carries an age
+// since §950, and the day header says when.
 let now = Date(timeIntervalSince1970: 1_788_303_520)
-check("a fresh block is just now",
-      FramesFormat.time(now.addingTimeInterval(-30), now: now) == "just now")
-check("an older one is counted in minutes",
-      FramesFormat.time(now.addingTimeInterval(-3000), now: now) == "50m ago")
-check("and past the hour it stops counting them",
-      FramesFormat.time(now.addingTimeInterval(-5508), now: now) == "1h ago")
 // **THE BLOCK IS ALWAYS SAID AND THE TIME ONLY WHEN IT WAS READ.** The block
 // is the chain's own identity for the moment — exact, and the thing you paste
 // into an explorer — so it survives when the time does not.
@@ -2337,10 +2329,6 @@ mutate "the sponsor roster's count tiebreak dropped" $F4 \
 mutate "a sponsor's moves taken from the wrong payer" $F4 \
   '$0.sponsored && $0.payer.lowercased() == payer.lowercased()' \
   '$0.sponsored && $0.sender.lowercased() == payer.lowercased()'
-mutate "an unread time rendered as the epoch" $F4 \
-  'guard let date else { return nil }
-        let seconds = max(0, now.timeIntervalSince(date))' \
-  'let seconds = max(0, now.timeIntervalSince(date ?? Date(timeIntervalSince1970: 0)))'
 mutate "the dateline dropping the block it could always state" $F4 \
   'guard let date else { return String(localized: "Block \(number)") }' \
   'guard let date else { return "" }'
