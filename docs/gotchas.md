@@ -123,5 +123,7 @@ as a false red.
 
 **Why no source audit:** the "pattern" is every non-private `some View` member called from
 another file — 102 of 144 in the app (extension-split screens, the `Design/` modifiers) — which
-is ordinary SwiftUI. The lever that would close the class is Debug `wholemodule`, at the cost of
-recompiling the whole module on every Debug build; not taken without a ruling.
+is ordinary SwiftUI. The lever that would close the class is Debug `wholemodule`: measured
+2026-09-26 at ~170s per one-file rebuild against ~45–50s today, every build, every session.
+**DECLINED (user, 2026-09-27)** — a rare Debug-only crash that a clean rebuild clears does not
+buy a 4× slower build. Do not re-propose it.
