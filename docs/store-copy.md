@@ -8,7 +8,13 @@ take a PATCH, description / What's New / keywords / subtitle answer 409.
 Caps: description 4000, What's New 4000, review notes 4000, keywords 100,
 promotional text 170, subtitle 30.
 
-## iOS — description REWRITTEN 2026-09-13 for §697b, NOT YET APPLIED
+## iOS — description REWRITTEN 2026-09-13 for §697b, REVISED 2026-09-27, NOT YET APPLIED
+
+**2026-09-27 revision (user):** the ask lives on through the keyed agents — each has a room
+with All and Chat (§839, §840). The 09-13 text closed on "isn't another chatbot" and
+named no agent; both descriptions now carry a `YOUR AGENT, IN ITS OWN ROOM` block and
+a new closing line. No MCP claim: `MCPPairing.transportReady` is false. Apple
+Intelligence is not named: its seat is dark until the managed entitlement lands (§833).
 
 **The live iOS and Mac descriptions and the promotional text still sell the
 ask** ("ASK IT", "an agent that answers from it"). prd §697b deprecated the
@@ -30,7 +36,7 @@ Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
   a reviewer scans on an app that was just rejected under Guideline 3.1.5;
   reordering costs nothing, since keyword order does not affect search ranking)
 
-### iOS description (1,767 chars)
+### iOS description (2,155 chars)
 
 Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app that puts all your accounts in one private feed, so you read them in one place. No account, no servers, no tracking.
 
@@ -49,10 +55,13 @@ Over 90 apps across work, wallet, social, reading, notes, schedule, fitness, mai
 CAPTURE WITHOUT FRICTION
 Share from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.
 
+YOUR AGENT, IN ITS OWN ROOM
+Bring your own key for Claude, ChatGPT, Gemini, Grok, Venice, OpenRouter, NEAR AI, Muse or Bankr. Each agent gets a room: talk to it there, and every conversation lands beside the history you imported from it. Your words go from this iPhone straight to that provider, on your key. Nothing routes through us.
+
 YOURS, ACTUALLY
 There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
 
-Casberi isn't another chatbot. It's your own things, in one feed.
+Your own things in one feed, with your own agent beside them.
 
 ### iOS What's New — append these two bullets
 
@@ -79,7 +88,7 @@ differences in the copy below, each deliberate: no Apple Card block, "reading"
 where iOS says "workouts", no fitness in the category list, and a
 menu-bar-and-keyboard line where the Apple Card sentence sits on iOS.
 
-### Mac description (1,739 chars)
+### Mac description (2,069 chars)
 
 Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app for Mac that puts all your accounts in one private feed, so you read them in one place. No account, no servers, no tracking.
 
@@ -98,10 +107,13 @@ Over 90 apps across work, wallet, social, reading, notes, schedule, mail and sto
 CAPTURE WITHOUT FRICTION
 Share from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.
 
+YOUR AGENT, IN ITS OWN ROOM
+Bring your own key for Claude, ChatGPT, Gemini, Grok, Venice, OpenRouter, NEAR AI, Muse or Bankr. Each agent gets a room: talk to it there, and every conversation lands beside the history you imported from it. Your words go from this Mac straight to that provider, on your key. Nothing routes through us.
+
 YOURS, ACTUALLY
 There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
 
-Casberi isn't another chatbot. It's your own things, in one feed.
+Your own things in one feed, with your own agent beside them.
 
 ### Mac What's New — APPLIED 2026-09-08 on 1.0.15 (1,891 chars)
 
@@ -135,6 +147,6 @@ Bugs
 
 Bankr answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 
-### Promotional text — both platforms (149 chars) — REWRITTEN 2026-09-13, NOT YET APPLIED
+### Promotional text — both platforms (134 chars) — REVISED 2026-09-27, NOT YET APPLIED
 
-Everything you build is scattered across apps, wallets and agents. Casberi puts all your accounts in one private feed, so you read them in one place.
+Your apps, wallets and agents in one private feed. Bring your own key for Claude, ChatGPT or Gemini and talk to it beside your things.

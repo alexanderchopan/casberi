@@ -67,8 +67,8 @@ Each step is tagged with where it runs.
 - [cloud] `scripts/asc-copy.py` — read back every live field (subtitle, description, keywords,
   promotional text, What's New, per locale) into `docs/store-copy.md`; apply from the file with
   `--apply`.
-- [cloud] Rewrite the description and promotional text around bring your own agent and the
-  feed. No MCP claim until workstream 5 passes.
+- [cloud, drafted 2026-09-27, awaiting approval] Description and promotional text rewritten around the feed and bring your
+  own agent (`docs/store-copy.md`). No MCP claim until workstream 5 passes.
 - [cloud] Keywords per locale the app already ships.
 - [mac] Run `asc-copy.py` to read back, then `--apply`.
 
@@ -109,6 +109,8 @@ Each step is tagged with where it runs.
   Intelligence, widgets, the Apple Intelligence seat once it is live.
 - Ecosystem directories and grants: Farcaster, Base, Safe, World, Gnosis Pay, Obsidian,
   Ethereum Foundation. Claude compiles the list with links and drafts each submission.
+- Instagram: run by the user through Meta's agent, outside this plan. Its links carry
+  `ct=instagram` so its installs show in workstream 1's report.
 - Communities: one post per integration for that integration's users, each with its campaign
   link.
 - Launches: Show HN and Product Hunt, after workstream 2. Update the drafts to the current
