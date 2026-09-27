@@ -279,8 +279,13 @@ guard DSRoomScopeChrome.swift "chrome.accountRail = rail" \
   "the chrome no longer publishes its accounts — the rail above the dock is empty (§750)"
 # Since prd §936 the phone picks the account from the menu under the tiles,
 # so the rail mounts only where the iPad/Mac rail stands (`showsRail`).
+# §959 moved the social, GitHub and Pinterest rails under the same `if
+# showsRail {` block, so the mount is read inside `roomFaces`, not off one line.
 grep -q "private var accountRail: some View" Casberi/Casberi/Shell/MainSurface.swift \
-  && grep -qE "^        (if showsRail \{ )?accountRail( \})?$" Casberi/Casberi/Shell/MainSurface.swift \
+  && awk '/private var roomFaces: some View/{on=1} on&&/^    }$/{exit} on' Casberi/Casberi/Shell/MainSurface.swift \
+       | tr -d ' ' | grep -q '^ifshowsRail{' \
+  && awk '/private var roomFaces: some View/{on=1} on&&/^    }$/{exit} on' Casberi/Casberi/Shell/MainSurface.swift \
+       | grep -qE '^ +accountRail$' \
   || fail "the shell no longer mounts the account rail beside the social faces (§750; on the rail only since §936)"
 deny DSRoomScopeChrome.swift "DSAccountDeck(" \
   "the account deck is back — the faces over the figure read as a contacts header (§750)"

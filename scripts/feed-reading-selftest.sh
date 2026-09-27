@@ -309,7 +309,9 @@ grep -q 'leaderboard' "$TMP/feed.nocomment" \
 grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\b' "$TMP/feed.nocomment" \
   && { echo "✗ a count lede is back in a shaped room — the newest thing is its head (prd §732)"; exit 1; }
 # Music, the reading list and the generic room path (social, RSS, notes, media…).
-[ "$(grep -c 'cover: heroShown ? nil : ledeThingID(in: days))' "$FEED")" -ge 3 ] \
+# The PREFIX, not the closing paren: §959 gave the generic path a trailing
+# `scopeControl:` argument, and a guard pinned to `)` read that as the cover gone.
+[ "$(grep -c 'cover: heroShown ? nil : ledeThingID(in: days)' "$FEED")" -ge 3 ] \
   || { echo "✗ a headless room no longer covers its newest thing (prd §732)"; exit 1; }
 # Every picture-grid room leads with its newest thing, lifted out ABOVE the
 # grid (`newestLead`): X and Instagram since prd §821, Photos, Files, Snapchat

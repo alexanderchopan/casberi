@@ -15,8 +15,10 @@ import SwiftUI
 /// false there and the caller keeps its strip inline. Both callers ask that
 /// ONE question, so the inline strip and the capsule can never both draw.
 ///
-/// **The keyboard covers it (prd §865)**, as it covers the seat: both halves
-/// of the bottom line or neither.
+/// **It stands down while the keyboard is up (prd §865)**: the keyboard
+/// covers the seat, and the capsule is the seat's row. Not by
+/// `dsStaysUnderKeyboard` — that belongs to the dock's two files, because on
+/// a scroll view it pins the content under the keyboard (`dock-selftest.sh`).
 struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
     let sections: [Scope]
     let active: Scope
@@ -39,7 +41,7 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
 
     func body(content: Content) -> some View {
         content.overlay(alignment: .bottomLeading) {
-            if sizeClass == .compact, sections.count > 2 {
+            if sizeClass == .compact, sections.count > 2, !chrome.keyboardUp {
                 DSScopeTiles(sections: sections, active: active,
                              attention: attention, strip: true, onPick: onPick)
                     .padding(.horizontal, DS.Space.s1)
@@ -52,7 +54,6 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
                     // of the pushed screen's seat clearance; the seat is
                     // measured from the safe area's bottom, under it.
                     .offset(y: DSDock.seatClearance - bottomInset)
-                    .dsStaysUnderKeyboard()
                     .transition(.opacity)
             }
         }
