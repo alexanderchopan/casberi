@@ -222,6 +222,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-findProbe` — fill the composer and fire Find (prd §215, the composer's deterministic door): runs KeptAskComposers.search → docs/hooks/agent.md · prd §215
 - `-openComposer` `-composerDraft` — open the composer empty (screenshots the ask chips); -composerDraft "<text>" → docs/hooks/agent.md
 - `-openNote YES` — raise the note sheet at mount (prd §969, `Shell/NoteCaptureSheet.swift`; NSLogs `openNote:`); pair with `-openRoom "Notes"` for the room. Dismiss KEEPS a non-empty note under `You` → docs/hooks/system.md · prd §969
+- `-noteVoice YES` — land the note sheet SPEAKING (prd §970; pair with `-openNote YES`; NSLogs `noteVoice:`). The sheet's wide key is the composer's foot rule — mic, Stop, Done — Stop puts the words in the field to read, and holding the room's New tile (`DSScopeTiles.onHold`, `ShellChrome.newNoteByVoice`) lands here with the mic live. The sim has no mic: a pass shows the band, never a transcript → docs/hooks/system.md · prd §970
 - `-oembedProbe` — ask an allowlisted host what a saved link IS, keylessly (prd §244, Model/OEmbed.swift), and NSLog every field → docs/hooks/bridges.md · prd §244
 - `-keepAskProbe` — Kept asks (docs/agent-brief.md rulings 1/4/5/13, Model/KeptAskStore.swift, Model/KeptAskComposers.swift) → docs/hooks/agent.md
 - `-byokKey` — store (or clear ALL) an agent key headlessly (Keychain via TokenVault) → docs/hooks/agent.md

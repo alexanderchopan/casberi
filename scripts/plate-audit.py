@@ -85,7 +85,8 @@ WELL_ALLOWED = {
     "Glass.swift": (0, "the definition itself"),
     "DSRoomHead.swift": (1, "the room lead's well, `dsRoomHeadBlock` (prd §766)"),
     "DSRoomScopeChrome.swift": (1, "a room scope's figure well (prd §766)"),
-    "Composer.swift": (2, "the composer's draft field and its live transcript — the floating layer"),
+    "Composer.swift": (1, "the composer's draft field — the floating layer"),
+    "VoiceListeningBand.swift": (1, "the live transcript, one band for the composer and the note sheet (§970) — the floating layer"),
     "AgentChatView.swift": (1, "the agent room's entry field — the one thing §782 "
                                "leaves a well for, and the same shape the composer's "
                                "own draft field takes (prd §840)"),

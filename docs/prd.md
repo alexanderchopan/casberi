@@ -62001,3 +62001,21 @@ A peer session moved the Pinned room's door from the tray's foot into the You ro
 8. **Swipe-to-delete is NOT built, and the reason is measured, not moral.** The user asked for it. The feed pager owns every horizontal drag on the window (`PageSwipeCatcher`: "a page turn and a scroll can't share one finger", the 2026-07-16 measurement that retired the both-edge row swipe), so a trailing swipe on a Notes row would turn the page, never reveal a verb. Delete and Move ride the row's press menu beside Pin, and the note sheet's dial — a later ruling.
 
 **Seen:** the tree builds against `origin/main` (Debug, iPhone 17 Pro simulator destination), and the mockup the user chose from. **Not seen:** the room, the tray and the sheet on the simulator — skipped at the user's word ("skip the sim for now", 2026-09-28), with `verify.sh` ("we will do that later"); the first cloud session should install `-openRoom "Notes"` and `-openNote YES` before anything else. Not built: Folders and Move, Delete on the row's menu and the dial, and the catalogue's Apple Notes seat — each a later ruling.
+
+## §970 — A note can be spoken: the sheet's wide key carries the one verb, and holding New lands speaking (user: "we need a way on new tap or new note user can dictate by voice … we can't have five buttons in the rail", then "Okay, do it", 2026-09-28)
+
+The Notes room's rail stays at four tiles. The mic went where the composer already keeps its own: the band's one wide key.
+
+1. **The sheet's band follows the composer's foot rule.** `NoteCaptureSheet`'s wide slot is one capsule carrying the one verb available — the mic (ink) with nothing written, Stop (tint) while listening, Done (ink) once there are words. The quiet Done over an empty field is deleted: it closed and kept nothing, which the chevron already does (§83's dead control). The Share disc is unchanged and stays grey until there are words.
+
+2. **Stop lands the words in the field, never in a saved note.** The transcript is read before `VoiceCapture.stop(keep: false)` (the composer's own near-miss, §581c), goes into the draft after anything already typed, and the keyboard rises over it. You read what was heard, fix a word, and Done keeps it. The audio file is dropped — a note is words. Pulling the sheet down mid-sentence ends the dictation the same way and keeps the words, because dismiss keeps (§969) and the band showed every word as it landed.
+
+3. **The listening band is one shape.** `Shell/VoiceListeningBand.swift` — the dot, the clock, "Listening", the transcript — is drawn by the composer and the sheet. Each keeps its own `VoiceCapture`; the band reads two values.
+
+4. **Held New lands speaking.** `DSScopeTiles` gained `onHold`, taken only by a verb tile; the Notes room passes it, and `ShellChrome.newNoteByVoice()` sets `noteVoiceOnOpen` and bumps `newNote`. The sheet consumes the flag on appear, starts the mic and leaves the keyboard down. This is §384's hold-to-speak, whose bar door died with the bar (`ShellChrome.openVoice()` has no caller today); New is its only live door. A `Button` still fires on the release that ends a long press, so the tile consumes that one release (`held`), and clears it after a second if no release reaches the button.
+
+5. **The mic refused is one line, not a second one.** The composer's "No mic access" sentence folds into the sheet's one footnote (§748), so the screen keeps one explaining line in every state.
+
+6. **`-noteVoice YES`** lands the sheet speaking, for the sweep; paired with `-openNote YES`. The simulator has no microphone, so a pass shows the band and the Stop key and never a transcript.
+
+**Seen:** the mockup the user chose from (the page under `notes-voice-mockup.html`, six frames). **Not seen:** the sheet on a device — this landed from a Linux session with no Xcode, so the build, the hold-then-release sequence on `DSScopeTiles` (whether the button's release fires after the long press, and whether the one-second window is ever needed) and the keyboard's fall when the mic starts are the first things to look at on the phone. Not built: keeping the audio as a voice thing (declined: a note is words), and a mic on the room's tiles (declined: the fifth button).

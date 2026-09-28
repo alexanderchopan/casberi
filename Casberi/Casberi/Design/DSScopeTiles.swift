@@ -65,7 +65,17 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// §969): drawn in tint, never lit, and every tap fires — a verb has no
     /// "already picked".
     var verbs: Set<Scope> = []
+    /// A verb tile HELD (prd §970): the Notes room's New, held, opens the
+    /// note sheet speaking. Nil, and a hold is a tap. Only a verb tile takes
+    /// the hold — a scope has nothing a hold could mean.
+    var onHold: ((Scope) -> Void)? = nil
     let onPick: (Scope) -> Void
+
+    /// The verb whose hold just fired. A `Button` still fires on the release
+    /// that ends a long press, so the release after a hold is consumed here
+    /// and never counted as the tap. Cleared by that release, or by a short
+    /// window if no release reaches the button.
+    @State private var held: Scope? = nil
 
     private static var columns: Int { 4 }
     private static var stripTileWidth: CGFloat { 52 }
@@ -112,6 +122,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         let isOn = section == active && !isVerb
         let wants = attention.contains(section)
         Button {
+            if held == section { held = nil; return }
             guard !isOn else { return }
             DSHaptic.selection()
             onPick(section)
@@ -142,6 +153,18 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             .contentShape(shape)
         }
         .buttonStyle(PressSpring())
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.45)
+                .onEnded { _ in
+                    guard isVerb, let onHold else { return }
+                    held = section
+                    DSHaptic.tap()
+                    onHold(section)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        if held == section { held = nil }
+                    }
+                }
+        )
         .dsHover()
         .accessibilityLabel(wants
                             ? Text("\(section.label), \(section.summary), needs you")

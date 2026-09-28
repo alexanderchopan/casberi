@@ -2425,32 +2425,10 @@ struct Composer: View {
         }
     }
 
-    /// The live mic, above the foot.
+    /// The live mic, above the foot — the one band the note sheet draws too
+    /// (`VoiceListeningBand`, prd §970).
     private var recordingBand: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(spacing: DS.Space.s2) {
-                Circle().fill(DS.destructive).frame(width: 8, height: 8)
-                    .opacity(0.4 + 0.6 * abs(sin(voice.elapsed * 2)))
-                Text(String(format: "%d:%02d", Int(voice.elapsed) / 60, Int(voice.elapsed) % 60))
-                    .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    // Tabular, because it rolls — see `LiveTimeText` (prd §586).
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                Text("Listening")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Spacer()
-            }
-            if !voice.transcript.isEmpty {
-                Text(voice.transcript)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(4)
-            }
-        }
-        .padding(DS.Space.s3)
-        .dsWell()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s3)
-        .animation(DS.Motion.standard, value: voice.elapsed)
+        VoiceListeningBand(elapsed: voice.elapsed, transcript: voice.transcript)
     }
 
     // MARK: - The foot (prd §581)

@@ -3188,12 +3188,15 @@ struct FeedScreen: View {
 
     /// The Notes room's tiles (prd §969): All · Pinned · Folders · New, on the
     /// same template as every room's. New is a VERB in the row — it never
-    /// lights, and its tap raises the note sheet instead of scoping.
+    /// lights, and its tap raises the note sheet instead of scoping. Held,
+    /// it raises the sheet with the mic live (prd §970): the same sheet, the
+    /// same tile, no fifth button.
     private var notesTiles: DSScopeTiles<NotesScope> {
         DSScopeTiles(sections: NotesScope.allCases,
                      active: chrome.notesScope,
                      attention: [],
-                     verbs: [.new]) { picked in
+                     verbs: [.new],
+                     onHold: { _ in chrome.newNoteByVoice() }) { picked in
             if picked.isVerb {
                 chrome.newNote += 1
             } else {

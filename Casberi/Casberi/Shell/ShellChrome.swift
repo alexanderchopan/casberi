@@ -517,6 +517,16 @@ final class ShellChrome {
     /// answers by raising the note sheet, the way `pinPulse` is felt. Bumped
     /// only; whoever raises the sheet reads it.
     var newNote = 0
+    /// Hold the Notes room's New tile → the note sheet rises with the mic
+    /// already live (prd §970) — §384's hold-to-speak, on the one tile that
+    /// makes a note. The same verb the sheet's own mic key starts, reached in
+    /// one gesture. Consumed on read by the sheet, like `voiceOnOpen`, so a
+    /// later tap of New never inherits a live microphone.
+    var noteVoiceOnOpen = false
+    func newNoteByVoice() {
+        noteVoiceOnOpen = true
+        newNote += 1
+    }
 
     /// A question asked from inside an agent's room, for `RootShell` to answer
     /// (prd §840). The room cannot call the ask path itself: `answerDocument`
