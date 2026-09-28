@@ -1,7 +1,7 @@
 import Foundation
 
 /// A room's own share card (docs/social-spec.md section 6, item 3): a week on
-/// GitHub, a streak on Duolingo — a figure the room can stand behind, drawn
+/// GitHub, a streak on Duolingo, a week of workouts — a figure the room can stand behind, drawn
 /// by the same `ShareCardView` a thing's card is, reached by one door row
 /// under the room's tiles.
 ///
@@ -23,6 +23,9 @@ enum RoomShareCard {
         struct Row: Hashable {
             let at: Date
             let title: String
+            /// The row's encoded facts — read only by the workout week,
+            /// which sums the `.metric` km and Duration a workout carries.
+            var facts: [String] = []
         }
     }
 
@@ -31,6 +34,7 @@ enum RoomShareCard {
         switch source {
         case "GitHub":   return "Share this week"
         case "Duolingo": return "Share your streak"
+        case _ where workoutSources.contains(source): return "Share this week"
         default:         return nil
         }
     }
@@ -41,8 +45,20 @@ enum RoomShareCard {
         switch input.source {
         case "GitHub":   return await gitHubWeek(input, now: now)
         case "Duolingo": return await duolingoStreak(input, now: now)
+        case _ where workoutSources.contains(input.source): return workoutWeek(input, now: now)
         default:         return nil
         }
+    }
+
+    /// The rooms workouts land in: Apple Health, and the two riders that
+    /// claim what they wrote (`HealthRiders.riders`).
+    static let workoutSources: Set<String> = ["Apple Health", "Strava", "Garmin"]
+
+    /// Whether a thing is a workout — it carries the Duration metric
+    /// `HealthIngest.workoutFacts` always writes. The door's gate in a room
+    /// that also holds sleep and steps.
+    static func isWorkout(facts: [String]) -> Bool {
+        facts.contains { ThingFact(encoded: $0).map { $0.action == .metric && $0.label == "Duration" } ?? false }
     }
 
     // MARK: GitHub
@@ -179,5 +195,50 @@ enum RoomShareCard {
     private static func leadingInt(_ s: String) -> Int? {
         let digits = s.prefix { $0.isNumber }
         return digits.isEmpty ? nil : Int(digits)
+    }
+
+    // MARK: Workouts
+
+    /// The week's workouts, as measured: the distance they carry when any
+    /// does, else the time moving. Summed off the facts Health wrote, never
+    /// estimated; a week with no workout draws no card.
+    static func workoutWeek(_ input: Input, now: Date) -> ShareCard.Model? {
+        let workouts = input.rows.filter { isWorkout(facts: $0.facts) }
+        let meters = perDay(workouts, now: now) { row in
+            metric(row, "km").flatMap(Double.init).map { Int(($0 * 1000).rounded()) }
+        }
+        let seconds = perDay(workouts, now: now) { row in metric(row, "Duration").flatMap(clockSeconds) }
+        let totalSeconds = seconds.reduce(0, +)
+        guard totalSeconds > 0 else { return nil }
+        let totalMeters = meters.reduce(0, +)
+        let moving = Duration.seconds(totalSeconds)
+            .formatted(.units(allowed: [.hours, .minutes], width: .narrow))
+        let name = BridgeCatalog.seatName(forSource: input.source)
+        if totalMeters > 0 {
+            let km = (Double(totalMeters) / 1000).formatted(.number.precision(.fractionLength(1)))
+            return ShareCard.Model(source: input.source, sourceName: name, author: nil,
+                                   day: weekRange(now: now), title: "",
+                                   words: String(localized: "\(moving) moving"),
+                                   link: nil, artURL: nil, faceURL: nil,
+                                   figure: km, caption: String(localized: "km this week"),
+                                   bars: meters)
+        }
+        return ShareCard.Model(source: input.source, sourceName: name, author: nil,
+                               day: weekRange(now: now), title: "", words: "",
+                               link: nil, artURL: nil, faceURL: nil,
+                               figure: moving, caption: String(localized: "moving this week"),
+                               bars: seconds)
+    }
+
+    private static func metric(_ row: Input.Row, _ label: String) -> String? {
+        row.facts.lazy.compactMap(ThingFact.init(encoded:))
+            .first { $0.action == .metric && $0.label == label }?.value
+    }
+
+    /// "26:00" or "1:02:30" — `HealthIngest.clock`'s two shapes — in seconds.
+    static func clockSeconds(_ clock: String) -> Int? {
+        let parts = clock.split(separator: ":").map { Int($0) }
+        guard (2...3).contains(parts.count), !parts.contains(nil) else { return nil }
+        return parts.compactMap { $0 }.reduce(0) { $0 * 60 + $1 }
     }
 }

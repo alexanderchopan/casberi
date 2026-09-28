@@ -177,6 +177,18 @@ and Send end it; the app reads only the result to dismiss.
 **Not in scope.** No recipient search of its own (that is section 1's). No group
 send. No scheduling. Nothing is sent without the composer's own Send.
 
+**Amended 2026-09-28 (the recipient).** The generic Messages and Mail rows open
+with the To line EMPTY. Sending a thing on is usually to someone other than
+the person it is from, and a silently prefilled wrong name is worse than an
+empty field. The thing's own person, when section 5 resolves one — a person,
+named, not you, with a phone or an email (their Contacts card's `.call` /
+`.mail` facts, else a mail identity, else the thing's `detectedTel` /
+`detectedMailto`) — gets a row of its own that says who: `Send to Sam`,
+Messages when there is a phone, else Mail (`ShareTray.recipient(for:context:)`).
+When the card cannot be drawn, `Share…` still stands and carries the link, or
+the title in words; the tray never spins with no door. The card's foot carries
+`casberi.app` on its far edge, quieter than the mark.
+
 ---
 
 ## 4. Acts by seat (share-card session, LATER — not in the first pass)
@@ -245,5 +257,12 @@ Both commit through a temp index scoped to their own paths (memory:
    run there (`canSendText()` is false), so their proof is a device.
 2. section 1 lands; section 5's `reach(for:)` wires in as one line per row.
 3. Card sources beyond a thing: a week on GitHub, a run, a streak — each a
-   `ShareCard.Model` built by its room, same drawing.
+   `ShareCard.Model` built by its room, same drawing. Built 2026-09-24 (GitHub,
+   Duolingo, a workout's card); the workout WEEK followed 2026-09-28 in
+   Apple Health, Strava and Garmin — kilometres summed off the rows' `km`
+   facts with the time moving under them, or the time alone when nothing
+   moved a distance. Every room card reads the ROOM's rows on the tap, cover
+   included (the day groups lift the newest thing out to draw it as the
+   cover, so the card undercounted exactly the latest row). A reading week
+   is NOT built: the app records what landed, not what was read.
 4. section 4, one seat at a time, each behind a ruling.

@@ -7,9 +7,9 @@ import MessageUI
 /// for Messages and Mail, and it ends on its own Cancel or Send, which is
 /// all the app reads.
 ///
-/// Recipients are prefilled only from what the thing already carries
-/// (`detectedTel` / `detectedMailto`); the unified address book's
-/// `ContactIndex.contact(for:)` takes over that line when it lands (section 5).
+/// A recipient is prefilled only on the tray's named row (`Send to Sam`),
+/// resolved through the address book (`ShareTray.recipient(for:context:)`,
+/// section 5); the generic rows open with the To line empty.
 enum MessageCompose {
     /// Whether this device can raise the Messages composer at all — false on
     /// the simulator and on a Mac with no Messages account, in which case the

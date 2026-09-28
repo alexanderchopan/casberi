@@ -23,6 +23,8 @@ enum ShareCard {
     /// messaging and social surface previews whole.
     static let size = CGSize(width: 360, height: 450)
     static let scale: CGFloat = 3
+    /// Where the app lives, printed on every card's foot.
+    static let home = "casberi.app"
 
     struct Model {
         /// `thing.source` — what `BridgeIcon` draws the lead from.

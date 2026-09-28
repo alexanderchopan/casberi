@@ -7778,6 +7778,34 @@
         }
       }
     },
+    "%@ moving" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ en movimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "運動時間 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "운동 시간 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "运动 %@"
+          }
+        }
+      }
+    },
     "%@ moves had no price to read" : {
       "localizations" : {
         "es" : {
@@ -81123,6 +81151,34 @@
         }
       }
     },
+    "km this week" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "km esta semana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週のkm"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주 km"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本周公里数"
+          }
+        }
+      }
+    },
     "Kraken didn't say what this key can do." : {
       "localizations" : {
         "es" : {
@@ -87565,6 +87621,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "移动…"
+          }
+        }
+      }
+    },
+    "moving this week" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "en movimiento esta semana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週の運動時間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주 운동 시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本周运动时长"
           }
         }
       }

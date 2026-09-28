@@ -7734,11 +7734,16 @@ struct FeedScreen: View {
     /// under the tiles, never at the top of the screen (prd §752). The tap
     /// copies the rows' bare facts out, so the sheet never holds a `Thing`.
     @ViewBuilder private func roomShareDoor(_ visible: [Thing]) -> some View {
-        if let label = RoomShareCard.doorLabel(source: source), !visible.isEmpty {
+        if let label = RoomShareCard.doorLabel(source: source), !visible.isEmpty,
+           roomShareCanDraw(visible) {
             Section {
                 DSDoorRow(icon: "square.and.arrow.up", label: LocalizedStringKey(label)) {
-                    let rows = visible.filter(\.isLive)
-                        .map { RoomShareCard.Input.Row(at: $0.capturedAt, title: $0.title) }
+                    // The ROOM's rows, read on the tap: most rooms lift their
+                    // newest thing out of the day groups to draw it as the
+                    // cover, so the groups this door stands in are missing
+                    // exactly the row a week card most needs.
+                    let rows = self.visible.filter(\.isLive)
+                        .map { RoomShareCard.Input.Row(at: $0.capturedAt, title: $0.title, facts: $0.facts) }
                     roomShare = RoomShareCard.Input(source: source, rows: rows)
                 }
                 .listRowBackground(Color.clear)
@@ -7747,6 +7752,15 @@ struct FeedScreen: View {
                                           bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
             }
         }
+    }
+
+    /// Apple Health also holds sleep and steps, so its door stands only over
+    /// a workout among the newest rows (a week's worth, bounded — the scan is
+    /// a head's, once per body, never per row). The riders' rooms are
+    /// workouts only.
+    private func roomShareCanDraw(_ visible: [Thing]) -> Bool {
+        guard source == "Apple Health" else { return true }
+        return visible.prefix(60).contains { $0.isLive && RoomShareCard.isWorkout(facts: $0.facts) }
     }
 
     /// A SOURCE room's day grouping, memoized (PERF 2026-08-01, prd §263).

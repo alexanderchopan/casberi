@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// The share tray (docs/social-spec.md section 3) — what the dial's Share disc
 /// raises: the card, drawn at width so the person sees exactly what goes
@@ -9,8 +10,14 @@ import SwiftUI
 ///
 /// Rows the device cannot honour are not drawn (§83): the simulator and a
 /// Mac with no Messages account have no Messages row; there is always
-/// `Share…`. Recipients come from the thing's own detector results until
-/// `ContactIndex.contact(for:)` lands (section 5).
+/// `Share…`, even when the card cannot be drawn (then it carries the link).
+///
+/// The generic rows open with NO recipient: sending a thing on is usually to
+/// someone other than the person it is from, and a prefilled wrong name is
+/// worse than an empty field. The thing's own person, when the address book
+/// holds one with a way to reach them (section 5), is a row of its own that
+/// says who — `Send to Sam` — so the choice is visible, never hidden in a
+/// composer's To line.
 struct ShareTray: View {
     /// What the card is of: one thing, or a room's own figure (section 6,
     /// item 3 — `RoomShareCard`).
@@ -34,10 +41,29 @@ struct ShareTray: View {
     /// The room could not draw a card (nothing this week, nothing read) —
     /// said in the slot, never a spinner that spins for ever (§83).
     @State private var nothingToDraw = false
+    /// The thing's own person, resolved on open through the address book.
+    @State private var recipient: Recipient?
+    @Environment(\.modelContext) private var context
 
     private enum Composer: String, Identifiable {
-        case messages, mail
+        case messages, mail, messagesTo, mailTo
         var id: String { rawValue }
+    }
+
+    /// Who the named row sends to, and the one channel it opens: a phone
+    /// in Messages first, else an email in Mail.
+    struct Recipient: Equatable {
+        let name: String
+        let phone: String?
+        let email: String?
+    }
+
+    /// The named row's channel, or nil when this device cannot open it.
+    private var recipientChannel: Composer? {
+        guard let recipient else { return nil }
+        if recipient.phone != nil, MessageCompose.canText { return .messagesTo }
+        if recipient.email != nil, MessageCompose.canMail { return .mailTo }
+        return nil
     }
 
     /// Pad, title, gap, the card at `previewHeight`, the rows, pad — the
@@ -45,7 +71,8 @@ struct ShareTray: View {
     /// its detent.
     private static let previewHeight: CGFloat = 420
     private var trayHeight: CGFloat {
-        let rows = CGFloat(1 + (MessageCompose.canText ? 1 : 0) + (MessageCompose.canMail ? 1 : 0))
+        let rows = CGFloat(1 + (MessageCompose.canText ? 1 : 0) + (MessageCompose.canMail ? 1 : 0)
+                           + (recipientChannel != nil ? 1 : 0))
         return DS.Space.s6 + 40 + DS.Space.s4 + Self.previewHeight + DS.Space.s3
              + rows * DS.Hit.min + DS.Space.s6
     }
@@ -62,6 +89,10 @@ struct ShareTray: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: Self.previewHeight)
                 VStack(spacing: 0) {
+                    if let recipient, let channel = recipientChannel {
+                        DSDoorRow(icon: channel == .messagesTo ? "message" : "envelope",
+                                  title: Text("Send to \(recipient.name)")) { composer = channel }
+                    }
                     if MessageCompose.canText {
                         DSDoorRow(icon: "message", label: "Send in Messages") { composer = .messages }
                     }
@@ -73,8 +104,12 @@ struct ShareTray: View {
                                   preview: SharePreview(shareTitle, image: Image(uiImage: image))) {
                             DSDoorRowLabel(icon: "square.and.arrow.up", title: Text("Share…"))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                         .dsHover()
+                    } else if nothingToDraw {
+                        // No card to send, but the thing still goes out: its
+                        // link, or its words (§83 — the door never vanishes).
+                        fallbackShare
                     }
                 }
             }
@@ -82,14 +117,14 @@ struct ShareTray: View {
         .task { await build() }
         .sheet(item: $composer) { which in
             switch which {
-            case .messages:
+            case .messages, .messagesTo:
                 TextComposer(body: composeBody, attachment: image?.pngData(), attachmentName: "casberi.png",
-                             recipients: MessageCompose.phone(fromTel: thing?.detectedTel).map { [$0] } ?? [])
+                             recipients: which == .messagesTo ? (recipient?.phone).map { [$0] } ?? [] : [])
                     .ignoresSafeArea()
-            case .mail:
+            case .mail, .mailTo:
                 MailComposer(subject: shareTitle, body: composeBody, attachment: image?.pngData(),
                              attachmentName: "casberi.png",
-                             recipients: MessageCompose.address(fromMailto: thing?.detectedMailto).map { [$0] } ?? [])
+                             recipients: which == .mailTo ? (recipient?.email).map { [$0] } ?? [] : [])
                     .ignoresSafeArea()
             }
         }
@@ -110,6 +145,21 @@ struct ShareTray: View {
                 .foregroundStyle(DS.textTertiary)
         } else {
             DSSpinner()
+        }
+    }
+
+    /// `Share…` with no card: the link when the thing has one, else the
+    /// subject in words.
+    @ViewBuilder private var fallbackShare: some View {
+        let label = DSDoorRowLabel(icon: "square.and.arrow.up", title: Text("Share…"))
+        if let link = model?.link {
+            ShareLink(item: link) { label }
+                .buttonStyle(RowPress())
+                .dsHover()
+        } else {
+            ShareLink(item: shareTitle) { label }
+                .buttonStyle(RowPress())
+                .dsHover()
         }
     }
 
@@ -134,13 +184,15 @@ struct ShareTray: View {
     @MainActor private func build() async {
         switch source {
         case .thing(let thing):
-            guard let base = ShareCard.model(for: thing) else { return }
+            guard let base = ShareCard.model(for: thing) else { nothingToDraw = true; return }
             model = base
+            recipient = Self.recipient(for: thing, context: context)
             let pixels = thing.isLive ? thing.previewImageData : nil
             let filled = await ShareCard.fetchingPictures(base, storedPixels: pixels)
             guard !Task.isCancelled else { return }
             model = filled
             image = ShareCard.render(filled)
+            if image == nil { nothingToDraw = true }
         case .room(let input):
             let built = await RoomShareCard.model(input)
             guard !Task.isCancelled else { return }
@@ -153,5 +205,33 @@ struct ShareTray: View {
             image = ShareCard.render(built)
             if image == nil { nothingToDraw = true }
         }
+    }
+
+    /// The person the thing is from or about, when the address book holds
+    /// one (section 5) and it is a person, not you, with a way to reach
+    /// them: a phone or an email off their Contacts card, else a mail
+    /// identity, else the thing's own detected `tel:` / `mailto:`. Read on
+    /// open, never from a body (§628); one fetch, of one card.
+    @MainActor
+    static func recipient(for thing: Thing, context: ModelContext) -> Recipient? {
+        guard thing.isLive, let contact = ContactIndexSources.contact(for: thing),
+              contact.kind == .person, !contact.isUnnamed,
+              !ContactIndexSources.isYours(contact) else { return nil }
+        var phone: String?
+        var email: String?
+        if let key = contact.identities.first(where: { $0.kind == .contact })?.key,
+           let ref = ContactIndexSources.cardRef(forKey: key) {
+            var fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+            fetch.fetchLimit = 4
+            let card = (try? context.fetch(fetch))?.first { $0.isLive && $0.kind == .contact }
+            let facts = card?.factList ?? []
+            phone = facts.first { $0.action == .call }?.value
+            email = facts.first { $0.action == .mail }?.value
+        }
+        if email == nil { email = contact.identities.first { $0.kind == .email }?.body }
+        if phone == nil { phone = MessageCompose.phone(fromTel: thing.detectedTel) }
+        if email == nil { email = MessageCompose.address(fromMailto: thing.detectedMailto) }
+        guard phone != nil || email != nil else { return nil }
+        return Recipient(name: contact.name, phone: phone, email: email)
     }
 }
