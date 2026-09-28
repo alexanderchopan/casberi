@@ -7434,9 +7434,14 @@ struct FeedScreen: View {
                 // A room with no head covers its newest thing (prd §732). A
                 // post or thread card declines it (`standsAlone`): the newest
                 // post already draws at card size.
+                // Pinterest's pins tile under their day at 2:3 (the picture
+                // rooms' grid, prd §910); a pin with no image stays a row.
+                let pins = source == "Pinterest"
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
                                 replies: threadReplies,
                                 cover: heroShown ? nil : ledeThingID(in: days),
+                                isTile: pins ? Self.isPinTile : nil,
+                                tileShape: pins ? .pin : .square,
                                 scopeControl: true)
             }
         }
@@ -9837,6 +9842,15 @@ struct FeedScreen: View {
     /// becomes a tile, whatever it carries. The same honesty rule the three
     /// mixed rooms before it settled — a tile promises a picture, so a post
     /// with a caption stays a post card, because the caption is the post.
+    /// A Pinterest pin with a picture — every pin the feed gave an image. A
+    /// pin is judged by looking, and its title is usually the first line of a
+    /// description or the literal word "Pin" (prd §912), so the room is a
+    /// wall of pins at 2:3 rather than a column of names.
+    private static func isPinTile(_ thing: Thing) -> Bool {
+        thing.isLive && thing.source == "Pinterest"
+            && !(thing.previewImageURL ?? "").isEmpty
+    }
+
     private static func isTelegramPhotoTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == TelegramChannel.source
             && Corpus.arrivedLive(thing)
@@ -9875,6 +9889,12 @@ struct FeedScreen: View {
         // caption; its title is the placeholder word the importer gave it, and
         // printing that under every cell is a grid of identical labels.
         if thing.source == InstagramImport.source { return nil }
+        // An untitled pin's title is the placeholder word the ingest gave it.
+        // A titled one says its name; the line after the seam (prd §915)
+        // cannot fit a third of the screen.
+        if thing.source == "Pinterest" {
+            return thing.title == "Pin" ? nil : TitleSeam.split(thing.title).name
+        }
         // A file the camera named says nothing a person wrote (prd §910):
         // IMG_4021 under a photograph is a label saying nothing, the X and
         // Instagram case one room over. A name a person gave keeps it, the

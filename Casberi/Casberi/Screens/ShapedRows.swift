@@ -1985,9 +1985,19 @@ struct PhotoCell: View {
         /// A photograph — a square, centred. Files, Snapchat memories, and a
         /// wordless picture post.
         case square
+        /// A Pinterest pin — 2:3, the platform's own default, cropped from the
+        /// TOP the way Pinterest's grid cuts a long pin: its headline is up
+        /// there.
+        case pin
 
-        var ratio: CGFloat { self == .screenshot ? 3.0 / 4.0 : 1 }
-        var anchor: Alignment { self == .screenshot ? .top : .center }
+        var ratio: CGFloat {
+            switch self {
+            case .screenshot: 3.0 / 4.0
+            case .square: 1
+            case .pin: 2.0 / 3.0
+            }
+        }
+        var anchor: Alignment { self == .square ? .center : .top }
     }
 
     let thing: Thing
@@ -2144,6 +2154,17 @@ struct PhotoWell: View {
         // than `UIImage(data:)` here, whose bitmap would decode at draw.
         if let stored = await StoredPixels.prepared(for: thing) {
             image = stored.image
+            return
+        }
+        // A picture the corpus only holds by URL (a Pinterest pin): the same
+        // loader and arrival grammar as `RemoteThumb`. A screenshot carries no
+        // URL, so it never reaches here.
+        if let url = thing.previewImageURL, !url.isEmpty {
+            if case .image(let art, let fresh) = await RemoteImageLoader.load(urlString: url,
+                                                                              targetSide: 600) {
+                if fresh { withAnimation(DS.Motion.standard) { image = art } }
+                else { image = art }
+            }
             return
         }
         let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
