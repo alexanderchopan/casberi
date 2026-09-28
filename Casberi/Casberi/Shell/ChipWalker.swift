@@ -33,7 +33,6 @@ actor ChipWalker {
     struct Walk: Sendable {
         /// Every seat with a row, newest first — the order the strip wears.
         var newest: [String]
-        var hasPinned: Bool
     }
 
     /// One walk against the shared container, or nil when no container has
@@ -68,13 +67,9 @@ actor ChipWalker {
             out.append((name, newest.capturedAt))
         }
         let ordered = out.sorted { $0.1 > $1.1 }.map(\.0)
-        // `Pinboard.hasAny`'s read, spelled here because that helper is
-        // main-actor-isolated and this context is not.
-        var pinned = FetchDescriptor<Thing>(predicate: #Predicate { $0.pinnedAt != nil })
-        pinned.fetchLimit = 1
-        pinned.propertiesToFetch = [\.pinnedAt]
-        let hasPinned = ((try? modelContext.fetch(pinned))?.first?.isLive) ?? false
-        return Walk(newest: ordered, hasPinned: hasPinned)
+        // The Notes room's door is always drawn (prd §969), so the walk no
+        // longer asks whether anything is pinned.
+        return Walk(newest: ordered)
     }
 }
 

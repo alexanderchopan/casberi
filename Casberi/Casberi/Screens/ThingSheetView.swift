@@ -2768,7 +2768,9 @@ struct ThingSheetView: View {
         DSHaptic.tap()
         let pinned = Pinboard.toggle(thing)
         chrome.pinPulse += 1
-        verbResult = pinned ? String(localized: "Pinned") : String(localized: "Unpinned")
+        // The confirmation says WHERE it went (prd §969): Pin is how anything
+        // in the app gets into the Notes room.
+        verbResult = pinned ? String(localized: "Pinned to Notes") : String(localized: "Unpinned")
         verbResultIsError = false
     }
 

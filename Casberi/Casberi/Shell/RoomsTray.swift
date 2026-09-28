@@ -148,9 +148,6 @@ struct RoomsTray: View {
                     ForEach(Array(categories.enumerated()), id: \.element) { index, category in
                         categoryRow(category, index: index)
                     }
-                    if chrome.chipOrder.contains(Pinboard.room) {
-                        pinnedRow
-                    }
                 }
                 // The row discs centre on the column the face and every
                 // room's row icons share (user, 2026-09-26: "should we move
@@ -286,8 +283,15 @@ struct RoomsTray: View {
     /// are outlines. Manage's door is deleted (prd §958, user: "both of these
     /// buttons lead to sort of the same place"): Connect opens Accounts, and
     /// its `Connect | Manage` switcher is one tap from what Manage held.
+    ///
+    /// Notes is the second door, right after Home (prd §969): the room you
+    /// build — the notes you write and everything you pin — behind a door
+    /// that is ALWAYS drawn, because a door that appears only once something
+    /// is in the room (§961's Pinned) is a door nobody can find the first
+    /// time. An empty room draws its empty state (§769), not nothing.
     private var youRow: some View {
         let home = filter.source == "All" && route.path.isEmpty
+        let notes = Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty
         return HStack(alignment: .top, spacing: DS.Space.s3) {
             // The face the button wears — your photo or the octopus — never
             // the empty contact glyph.
@@ -303,9 +307,11 @@ struct RoomsTray: View {
             FlowLayout(spacing: Self.markGap) {
                 door(String(localized: "Home"), glyph: home ? "house.fill" : "house",
                      lit: home, index: 0) { pick("All") }
-                door(String(localized: "Connect"), glyph: "square.grid.2x2", index: 1) { connect() }
-                door(String(localized: "Addresses"), glyph: "at", index: 2) { screen(.addresses) }
-                door(String(localized: "Settings"), glyph: "gearshape", index: 3) { screen(.settings) }
+                door(String(localized: "Notes"), glyph: notes ? "note.text" : "note",
+                     lit: notes, index: 1) { pick(Pinboard.room) }
+                door(String(localized: "Connect"), glyph: "square.grid.2x2", index: 2) { connect() }
+                door(String(localized: "Addresses"), glyph: "at", index: 3) { screen(.addresses) }
+                door(String(localized: "Settings"), glyph: "gearshape", index: 4) { screen(.settings) }
             }
         }
     }
@@ -357,18 +363,6 @@ struct RoomsTray: View {
                 }
             }
         }
-    }
-
-    /// Pinned keeps the row it had on the dock — a list you built by hand.
-    private var pinnedRow: some View {
-        Button {
-            pick(Pinboard.room)
-        } label: {
-            rowName(glyph: "pin.fill", word: String(localized: "Pinned"),
-                    lit: filter.source == Pinboard.room, broken: false)
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityLabel(Text("Pinned"))
     }
 
     // MARK: - Pieces

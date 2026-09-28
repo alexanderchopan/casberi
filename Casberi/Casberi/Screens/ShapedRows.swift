@@ -36,6 +36,11 @@ struct BandRow: View {
     /// can't support. It's the same fact the title used to carry, moved — not
     /// a second fact invented for the column.
     var moneyColumn: Bool = false
+    /// The Notes room's clock (prd §969): the room draws one plain list with
+    /// no day dividers, so each row carries its own time at the trailing
+    /// edge — Apple Notes' and Messages' grammar. Nil everywhere else: a
+    /// row's age went in §902, because the day header already says when.
+    var stamp: Date? = nil
     /// Where this row sits in its run, for the naming RIPPLE (prd §171,
     /// 2026-07-22): renaming a counterparty rewrites every landed transfer
     /// with that address, and the rewrite used to happen invisibly. Now each
@@ -676,6 +681,10 @@ struct BandRow: View {
                     // dispute or a deadline that landed since you left is a
                     // fact the row may not drop (§83).
                     LiveTimeText(date: thing.capturedAt, color: DS.destructive)
+                } else if let stamp {
+                    // The Notes room's clock (prd §969) — the room has no day
+                    // header to say when, so the row does, in the line's ink.
+                    LiveTimeText(date: stamp, color: DS.textSecondary)
                 }
             }
         } below: {

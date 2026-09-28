@@ -508,6 +508,16 @@ final class ShellChrome {
     /// agent is not a room you looked something up in.
     var agentScope: AgentRoomScope = .all
 
+    /// Which of the Notes room's tiles is standing (prd §969) — All, Pinned
+    /// or Folders; never New, which is a verb. Here for `agentScope`'s
+    /// reason, and cleared on every source change like it.
+    var notesScope: NotesScope = .all
+
+    /// The Notes room's New tile, pressed (prd §969) — a counter `RootShell`
+    /// answers by raising the note sheet, the way `pinPulse` is felt. Bumped
+    /// only; whoever raises the sheet reads it.
+    var newNote = 0
+
     /// A question asked from inside an agent's room, for `RootShell` to answer
     /// (prd §840). The room cannot call the ask path itself: `answerDocument`
     /// and `keyedAnswerDocument` are private to `RootShell` and injected into

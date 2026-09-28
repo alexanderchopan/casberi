@@ -221,6 +221,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The furnished demo is a MODE you enter and leave, not a dev-only seed** → docs/hooks/system.md · prd §217
 - `-findProbe` — fill the composer and fire Find (prd §215, the composer's deterministic door): runs KeptAskComposers.search → docs/hooks/agent.md · prd §215
 - `-openComposer` `-composerDraft` — open the composer empty (screenshots the ask chips); -composerDraft "<text>" → docs/hooks/agent.md
+- `-openNote YES` — raise the note sheet at mount (prd §969, `Shell/NoteCaptureSheet.swift`; NSLogs `openNote:`); pair with `-openRoom "Notes"` for the room. Dismiss KEEPS a non-empty note under `You` → docs/hooks/system.md · prd §969
 - `-oembedProbe` — ask an allowlisted host what a saved link IS, keylessly (prd §244, Model/OEmbed.swift), and NSLog every field → docs/hooks/bridges.md · prd §244
 - `-keepAskProbe` — Kept asks (docs/agent-brief.md rulings 1/4/5/13, Model/KeptAskStore.swift, Model/KeptAskComposers.swift) → docs/hooks/agent.md
 - `-byokKey` — store (or clear ALL) an agent key headlessly (Keychain via TokenVault) → docs/hooks/agent.md
@@ -443,6 +444,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - **Every room's lead is one well with three zones (prd §766): statement, body, and a foot pinned to the bottom (`DSRoomChassis.LeadFooter`, the room's "N things since <month>").** → docs/hooks/design.md · prd §766
 - **A lead's BODY is a ladder (§772), EVERY cover holds the box (§904), the ladder GROWS (§905), and each CATEGORY has a face (§907, §908).** → docs/hooks/design.md · prd §772 · §904 · §905 · §907 · §908
 - **The dock is a TRAY behind the face (prd §930): the phone's one navigation button opens `Shell/RoomsTray.swift`, a layer under the seat** → docs/hooks/design.md · prd §930 · §932 · §935 · §937 · §958
+- **Notes is a room in You, and Pinned folds into it (prd §969): one always-drawn door, tiles All · Pinned · Folders · New, one plain list with no day dividers and the time at the row's trailing edge, `Pinboard.room` is `"Notes"`.** Membership is a pin or a note of yours (`Pinboard.inRoom`); the note sheet is the composer's shape and its dismiss keeps; swipe-to-delete is NOT built because the pager owns every horizontal drag (measured 2026-07-16) → docs/hooks/system.md · prd §969
 - **The wallet-family visualization pass (prd §920–§929, reviewed §931, §936)** → docs/hooks/design.md · prd §920 · §931 · §936 · §954
 - **Every room opens on the box, and twelve more rooms carry kind tiles; a room's tiles never depend on its head (`standaloneLead`)** → docs/hooks/design.md · prd §911
 - **Kind tiles (prd §815, §816): Safe, GitHub, Stripe, App Store Connect, Hugging Face, PostHog, L2BEAT and Walletbeat; a `DSTileScope` case wears the constant of its own NAME; Instagram, X and TikTok get NO tiles** → docs/hooks/design.md · prd §815 · §816 · §904 · §821 · §831

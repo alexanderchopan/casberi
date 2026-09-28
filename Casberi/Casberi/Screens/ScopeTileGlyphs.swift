@@ -97,6 +97,28 @@ enum ScopeTileGlyph {
     static let workouts     = "figure.run"
     static let sleep        = "bed.double"
     static let mood         = "face.smiling"
+    /// The Notes room's tiles (prd §969). Pin is the dial's own pin glyph —
+    /// the same meaning, so the same symbol; a folder is a folder; New is
+    /// the bare plus, a verb in the tile row and the one tile that never
+    /// lights. (`square.and.pencil` was refused for Chat above and is not
+    /// re-proposed here either.)
+    static let pinned       = "pin"
+    static let folders      = "folder"
+    static let new          = "plus"
+}
+
+/// The Notes room's tiles (prd §969). Conformed here for the reason every
+/// other scope enum is — `NotesScope` stays Foundation-only so a harness can
+/// compile it whole.
+extension NotesScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:     return ScopeTileGlyph.all
+        case .pinned:  return ScopeTileGlyph.pinned
+        case .folders: return ScopeTileGlyph.folders
+        case .new:     return ScopeTileGlyph.new
+        }
+    }
 }
 
 /// The rooms' kind tiles (prd §815, §816). Activity and Permissions are the

@@ -226,15 +226,19 @@ struct FeedScreen: View {
             d.fetchLimit = min(Self.allRoomFetchLimit, rowBudget ?? .max)
             _things = Query(d)
         } else if Pinboard.isPinnedRoom(source) {
-            // The pinned room is the one room that is not a source, so it is
-            // the one room whose rows are not selected by `source` and not
-            // sorted by `capturedAt`.
+            // The Notes room is the one room that is not a source, so it is
+            // the one room whose rows are not selected by ONE `source`: what
+            // you pinned, from anywhere, and the notes you wrote (`source ==
+            // "You"`, narrowed to the note kind in `feedThings` — a kind
+            // cannot be predicated, and your other captures are a handful).
             //
-            // The sort is the point: every other room orders by when the thing
+            // The ORDER is the point, and it is `Pinboard.stamp`'s, applied in
+            // `feedThings`: every other room orders by when the thing
             // HAPPENED, and this one orders by when YOU acted. A pin you made
             // this morning on a two-year-old screenshot belongs at the top —
             // that is what makes this a list you built rather than another
-            // slice of the same river. See `Thing.pinnedAt`.
+            // slice of the same river. See `Thing.pinnedAt`. The query's own
+            // sort is only a stable pre-order for that pass.
             //
             // Unbounded deliberately, unlike the All room above: this list is
             // as long as you made it by hand, so there is no corpus-scale
@@ -242,8 +246,8 @@ struct FeedScreen: View {
             // on purpose — the one place in the app where that would be
             // unambiguously wrong. `rowBudget` is ignored here for the same
             // reason: there is no corpus-scale materialisation to defer.
-            _things = Query(filter: #Predicate<Thing> { $0.pinnedAt != nil },
-                            sort: \Thing.pinnedAt, order: .reverse)
+            _things = Query(filter: #Predicate<Thing> { $0.pinnedAt != nil || $0.source == "You" },
+                            sort: \Thing.capturedAt, order: .reverse)
         } else {
             // A SOURCE room, bounded and light-columned the same way (2026-08-14).
             //
@@ -2369,9 +2373,20 @@ struct FeedScreen: View {
         // nil (so this is a no-op) unless that task actually found a live
         // `@Query` disagreeing with a raw fetch on the same store.
         if source != "All", let fallback = sourceRoomFallbackSnapshot {
-            return Pinboard.isPinnedRoom(source) ? fallback : Corpus.surfaced(fallback, room: source)
+            return Pinboard.isPinnedRoom(source) ? notesOrder(fallback) : Corpus.surfaced(fallback, room: source)
         }
-        return Pinboard.isPinnedRoom(source) ? things : Corpus.surfaced(things, room: source)
+        return Pinboard.isPinnedRoom(source) ? notesOrder(things) : Corpus.surfaced(things, room: source)
+    }
+
+    /// The Notes room's rows in the Notes room's order (prd §969): the
+    /// query's `source == "You"` half narrowed to the note kind, then newest
+    /// first by `Pinboard.stamp` — the pin's time for a pin, the capture for
+    /// a note. One plain list, no day dividers: the feed's dividers say when
+    /// something ARRIVED, and a note you wrote is not news (user: "apple notes
+    /// also doesn't separate by days").
+    private func notesOrder(_ rows: [Thing]) -> [Thing] {
+        rows.filter { $0.isLive && Pinboard.inRoom($0) }
+            .sorted { Pinboard.stamp($0) > Pinboard.stamp($1) }
     }
 
     /// `rawOverride` is the escape hatch the safety-net refresh below uses:
@@ -2380,7 +2395,7 @@ struct FeedScreen: View {
     /// does) so the SAME filtering rules apply whether the source array
     /// came from the live `@Query` or from a raw fetch that bypassed it.
     private func liveVisible(rawOverride: [Thing]? = nil, kindPick: Bool = true) -> [Thing] {
-        let base = rawOverride.map { Pinboard.isPinnedRoom(source) ? $0 : Corpus.surfaced($0, room: source) }
+        let base = rawOverride.map { Pinboard.isPinnedRoom(source) ? notesOrder($0) : Corpus.surfaced($0, room: source) }
             ?? feedThings
         // The kind tile's census (prd §815), built only while a tile other
         // than All is picked — one walk of the refs, because a Safe pending
@@ -2409,6 +2424,7 @@ struct FeedScreen: View {
                 && vibenetScopeAllows(thing)
                 && personScopeAllows(thing)
                 && githubScopeAllows(thing)
+                && notesScopeAllows(thing)
                 // The kind tile (prd §815), which COMBINES with the GitHub
                 // face rail above rather than replacing it.
                 && (census.map {
@@ -3049,6 +3065,19 @@ struct FeedScreen: View {
                                     url: thing.content, authorHandle: thing.authorHandle)
     }
 
+    /// The Notes room's tile (prd §969), gated on the room like the two
+    /// above. Pinned narrows to what you pinned — a pinned note included,
+    /// which is what "this one on top" means here. Folders draws the folder
+    /// list in place of the rows (the rows arm), so it narrows nothing here;
+    /// New is a verb and never stands.
+    private func notesScopeAllows(_ thing: Thing) -> Bool {
+        guard Pinboard.isPinnedRoom(source) else { return true }
+        switch chrome.notesScope {
+        case .pinned:              return Pinboard.isPinned(thing)
+        case .all, .folders, .new: return true
+        }
+    }
+
     /// The kind tile in force in a kind-tile room (prd §815, §816),
     /// resolved: a pick whose kind is no longer offered is All. Before the
     /// room's first head computation there is no presence to resolve against,
@@ -3155,6 +3184,36 @@ struct FeedScreen: View {
                             attention: heads?.kindAttention ?? []) { picked in
             withAnimation(DS.Motion.standard) { chrome.roomKind = picked }
         }
+    }
+
+    /// The Notes room's tiles (prd §969): All · Pinned · Folders · New, on the
+    /// same template as every room's. New is a VERB in the row — it never
+    /// lights, and its tap raises the note sheet instead of scoping.
+    private var notesTiles: DSScopeTiles<NotesScope> {
+        DSScopeTiles(sections: NotesScope.allCases,
+                     active: chrome.notesScope,
+                     attention: [],
+                     verbs: [.new]) { picked in
+            if picked.isVerb {
+                chrome.newNote += 1
+            } else {
+                withAnimation(DS.Motion.standard) { chrome.notesScope = picked }
+            }
+        }
+    }
+
+    /// THE NOTES ROOM (prd §969): the newest thing as the cover in the lead
+    /// box, the tiles under it, then ONE plain list in `Pinboard.stamp`'s
+    /// order — no day dividers (user: "apple notes also doesn't separate by
+    /// days"). The room never has a head, so the tiles always stand here.
+    @ViewBuilder
+    private func notesSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        let coverID = ledeThingID(in: [(Pinboard.room, visible)])
+        let cover = coverThing(coverID, in: visible)
+        standaloneLead(cover: cover, tiles: notesTiles, listEmpty: visible.isEmpty,
+                       emptyWords: Text(emptyLine))
+        daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
+                   cover: coverID, headed: false)
     }
 
     /// The Pinterest room's follow scope (prd §819): every pin carries the
@@ -5852,7 +5911,7 @@ struct FeedScreen: View {
     /// Pools") reads as the app you connected.
     private var roomName: String {
         if source == "All" { return String(localized: "Home") }
-        if source == Pinboard.room { return String(localized: "Pinned") }
+        if source == Pinboard.room { return String(localized: "Notes") }
         return BridgeCatalog.seatName(forSource: source)
     }
 
@@ -7397,19 +7456,7 @@ struct FeedScreen: View {
                             cover: heroShown || ledeStands ? nil : ledeThingID(in: days))
         default:
             if Pinboard.isPinnedRoom(source) {
-                // ONE group, in the `@Query`'s own order — which is pin order,
-                // newest pin first. Every other room here day-groups on
-                // `capturedAt`, and doing that to this one would sort your list
-                // by the corpus's clock instead of yours: a pin you made this
-                // morning on a two-year-old screenshot would land under a 2024
-                // header, below things you pinned weeks ago. That is exactly
-                // the failure `Thing.pinnedAt` is a DATE rather than a Bool to
-                // avoid, and it would arrive by the back door.
-                // The newest pin is the cover (prd §911), lifted out of the
-                // one group so it draws once.
-                let pinCoverID = ledeThingID(in: [(Pinboard.room, visible)])
-                if let pinCover = coverThing(pinCoverID, in: visible) { Section { ledeListRow(pinCover) } }
-                daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false, cover: pinCoverID)
+                notesSections(visible, nextEventID: nextEventID)
             } else if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, nextEventID: nextEventID, dated: false)
             } else if shape == .all {
@@ -7702,11 +7749,15 @@ struct FeedScreen: View {
     /// tiles sat at the top of the screen — §752's one outright ban — on any
     /// room emptied by its own pick.
     @ViewBuilder
-    private func standaloneLead(cover: Thing?, tiles: DSScopeTiles<RoomKindTile>?,
-                                listEmpty: Bool,
-                                // The room's scope menu stands right under
-                                // the tiles (§959), at the Wallet's `s2`.
-                                menuFollows: Bool = false) -> some View {
+    private func standaloneLead<Scope: DSTileScope>(
+        cover: Thing?, tiles: DSScopeTiles<Scope>?,
+        listEmpty: Bool,
+        // The room's scope menu stands right under the tiles (§959), at the
+        // Wallet's `s2`.
+        menuFollows: Bool = false,
+        // What the held lead says over an empty list; the kind tile's summary
+        // unless the room has its own line (Notes, prd §969).
+        emptyWords: Text? = nil) -> some View {
         let leadHeld = cover != nil || (tiles != nil && listEmpty)
         if let cover {
             Section {
@@ -7717,7 +7768,7 @@ struct FeedScreen: View {
         } else if tiles != nil, listEmpty {
             Section {
                 emptyLeadRow(headline: DSProse.text("Nothing here yet."),
-                             words: Text(roomKindPick.summary))
+                             words: emptyWords ?? Text(roomKindPick.summary))
             }
         }
         if let tiles {
@@ -10843,6 +10894,9 @@ struct FeedScreen: View {
                     BandRow(thing: thing,
                             emphasized: thing.id == nextEventID,
                             live: isLive(thing),
+                            // The Notes room has no day dividers, so the
+                            // row carries its own time (prd §969).
+                            stamp: Pinboard.isPinnedRoom(source) ? Pinboard.stamp(thing) : nil,
                             imageOnly: imageOnly,
                             wideArt: wideArt)
                 }
@@ -11166,19 +11220,22 @@ struct FeedScreen: View {
 
     private var emptyLine: String {
         let tagLabel = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
-        // The pinned room is normally unreachable while empty — its chip only
-        // exists once something is pinned — but the shell renders whatever
-        // `filter.source` names whether or not it has a chip, so unpinning the
-        // last thing while standing here lands exactly on this line. It says what
-        // the verb is rather than that the room is empty, because unlike every
-        // other room nothing will ever arrive here on its own.
+        // The Notes room is reachable while empty — its door is always drawn
+        // (prd §969) — so this line is the first thing a person sees there.
+        // It says what the two verbs are rather than that the room is empty,
+        // because unlike every other room nothing will ever arrive here on
+        // its own.
         if Pinboard.isPinnedRoom(source) {
-            // `DS.secondaryGesture`, not a literal (prd §607): pinning lives in
-            // a `contextMenu`, which is a right-click under a pointer, so the
-            // Mac was told to perform a gesture it does not have — on the one
-            // line standing between a person and a room that never fills on
-            // its own.
-            return String(localized: "Nothing pinned. \(DS.secondaryGesture) anything to pin it.")
+            switch chrome.notesScope {
+            case .pinned:
+                // `DS.secondaryGesture`, not a literal (prd §607): pinning
+                // lives in a `contextMenu`, which is a right-click under a
+                // pointer, so the Mac was told to perform a gesture it does
+                // not have.
+                return String(localized: "Nothing pinned. \(DS.secondaryGesture) anything to pin it.")
+            case .all, .folders, .new:
+                return String(localized: "Write a note, or \(DS.secondaryGesture) anything to pin it here.")
+            }
         }
         switch (source != "All", filter.tag != "All") {
         case (true, true):   return "Nothing from \(source) under \(tagLabel) yet."
@@ -11264,7 +11321,12 @@ struct FeedScreen: View {
                             // Monday's photographs, and the grid needed its
                             // own day pills because it stood outside the days.
                             isTile: ((Thing) -> Bool)? = nil,
-                            tileShape: PhotoCell.Shape = .square) -> some View {
+                            tileShape: PhotoCell.Shape = .square,
+                            // The Notes room's one plain list (prd §969): no
+                            // header at all — its rows are yours, ordered by
+                            // when you acted, and a day over them would say
+                            // the corpus's clock instead.
+                            headed: Bool = true) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -11304,31 +11366,33 @@ struct FeedScreen: View {
                 // on what the system hands a header slot.
                 // The day alone — its count is deleted (prd §914, user:
                 // "people don't want to know").
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(label)
-                        .dsText(.heading24)
-                        // The folded tail weighs less than today (prd §254) —
-                        // see the twin in `bundledSections` for the reasoning.
-                        .fontWeight(coarse ? .semibold : .bold)
-                        // The day wears the brand hue (prd §740); a group
-                        // named by something other than time keeps the
-                        // primary ramp.
-                        .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
+                if headed {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(label)
+                            .dsText(.heading24)
+                            // The folded tail weighs less than today (prd §254) —
+                            // see the twin in `bundledSections` for the reasoning.
+                            .fontWeight(coarse ? .semibold : .bold)
+                            // The day wears the brand hue (prd §740); a group
+                            // named by something other than time keeps the
+                            // primary ramp.
+                            .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
+                    }
+                    .textCase(nil)
+                    // In a wallet-family room the day stands on the tiles' edge,
+                    // as the Wallet's and every devnet's do (prd §950); the feed
+                    // keeps its own column.
+                    .padding(.leading, shape == .vibenet ? DSRoomChassis.inset : DSRoomChassis.rowInset)
+                    // Days read as clusters: the gap ABOVE a day header is the
+                    // feed's biggest (2026-07-13), and since 2026-07-21 the day's
+                    // rows also share one card — the header's s6 plus the card's own
+                    // silhouette say "new day" without drawing a line.
+                    .padding(.top, DS.Space.s6)
+                    .padding(.bottom, DS.Space.s1)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
-                .textCase(nil)
-                // In a wallet-family room the day stands on the tiles' edge,
-                // as the Wallet's and every devnet's do (prd §950); the feed
-                // keeps its own column.
-                .padding(.leading, shape == .vibenet ? DSRoomChassis.inset : DSRoomChassis.rowInset)
-                // Days read as clusters: the gap ABOVE a day header is the
-                // feed's biggest (2026-07-13), and since 2026-07-21 the day's
-                // rows also share one card — the header's s6 plus the card's own
-                // silhouette say "new day" without drawing a line.
-                .padding(.top, DS.Space.s6)
-                .padding(.bottom, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
                 // The day's pictures, first (prd §910): a grid cannot interleave
                 // with rows by the minute, and the day is the grain the header
                 // promises.

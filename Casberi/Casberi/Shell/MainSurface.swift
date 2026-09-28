@@ -1158,7 +1158,7 @@ struct MainSurface: View {
             // nine seconds, and the fallback's 54–119ms walk on every launch.
             guard generation > chipWalkApplied else { return }
             chipWalkApplied = generation
-            let computed = assembleChips(ordered: walk.newest, hasPinned: walk.hasPinned)
+            let computed = assembleChips(ordered: walk.newest)
             liveChips = computed.labels
             if freeze { frozenChips = computed.labels }
             categoryVenues = computed.venues
@@ -1425,14 +1425,14 @@ struct MainSurface: View {
         for (name, _) in SwipeClock.span("newestPerSource", { newestPerSource() }) {
             ordered.append(name)
         }
-        return assembleChips(ordered: ordered, hasPinned: Pinboard.hasAny(in: modelContext))
+        return assembleChips(ordered: ordered)
     }
 
     /// The pure half of `computedChips`: the walked order plus everything the
-    /// strip decides on main — the connected live-room seats, the pinned
+    /// strip decides on main — the connected live-room seats, the Notes
     /// room, the catalog fold and the stored category order. Shared by the
     /// synchronous fallback and the background walk (PERF 2026-09-08).
-    private func assembleChips(ordered walked: [String], hasPinned: Bool)
+    private func assembleChips(ordered walked: [String])
         -> (labels: [String], venues: [String: [String]], sources: [String]) {
         var ordered = walked
         var seen = Set(ordered)
@@ -1471,19 +1471,19 @@ struct MainSurface: View {
         // `ChipMemory` still RECORDS visits — the daily brief and the agent
         // panel rank by them — but nothing about the dock reads it.
         let learned = ordered
-        // Pinned sits second, right after All, and does NOT enter the learned
-        // sort above (2026-08-10). Two reasons it is placed rather than ranked:
-        // it is not a source, so `ChipMemory`'s recency-and-visits weighting has
-        // nothing meaningful to say about it; and its position is the one thing
-        // about it that should never move, because a list you built by hand is
-        // useless if you have to hunt for the door to it.
+        // Notes sits second, right after All, and does NOT enter the learned
+        // sort above (2026-08-10, as Pinned). Two reasons it is placed rather
+        // than ranked: it is not a source, so `ChipMemory`'s recency-and-visits
+        // weighting has nothing meaningful to say about it; and its position
+        // is the one thing about it that should never move, because a list you
+        // built by hand is useless if you have to hunt for the door to it.
         //
-        // Gated on something actually being pinned — an empty Pinned room would
-        // be a chip that opens nothing, which is the dead control §83 forbids.
-        // It disappears again when you unpin the last thing, and that is
-        // correct: the room's whole content is your own list, so an empty one
-        // has nothing to explain.
-        let pinned = hasPinned ? [Pinboard.room] : []
+        // ALWAYS present (prd §969). Pinned was gated on something being
+        // pinned, because an empty room behind a chip was §83's dead control;
+        // Notes is the room where you WRITE, so an empty one is where a first
+        // note starts, and the tray's door is drawn regardless (§769: an empty
+        // room draws what would fill it).
+        let pinned = [Pinboard.room]
         // EVERY catalog category folds into its own chip, ALWAYS (prd §351,
         // 2026-08-11 — generalizes what was one Markets-specific fold applied
         // above a floor of 2). Applied LAST, over the finished list, so the
@@ -2133,6 +2133,8 @@ struct MainSurface: View {
             // this reset and never wrote it — the comment was here, the line
             // was not.
             chrome.agentScope = .all
+            // The Notes room opens on All too (prd §969).
+            chrome.notesScope = .all
             chrome.pinterestScope = nil
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a

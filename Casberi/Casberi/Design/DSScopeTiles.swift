@@ -61,6 +61,10 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// fill, because the dock's don't: a row of ten grey squares is the plate
     /// §782 deleted.
     var strip: Bool = false
+    /// The tiles that are VERBS, not scopes (the Notes room's New, prd
+    /// §969): drawn in tint, never lit, and every tap fires — a verb has no
+    /// "already picked".
+    var verbs: Set<Scope> = []
     let onPick: (Scope) -> Void
 
     private static var columns: Int { 4 }
@@ -104,7 +108,8 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
 
     @ViewBuilder
     private func tile(_ section: Scope) -> some View {
-        let isOn = section == active
+        let isVerb = verbs.contains(section)
+        let isOn = section == active && !isVerb
         let wants = attention.contains(section)
         Button {
             guard !isOn else { return }
@@ -124,9 +129,9 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                     .dsText(.dockCaption10)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? Color.white : wants ? DS.attention : DS.textPrimary)
+                    .foregroundStyle(isOn ? Color.white : wants ? DS.attention : isVerb ? DS.tint : DS.textPrimary)
             }
-            .foregroundStyle(isOn ? Color.white : DS.textPrimary)
+            .foregroundStyle(isOn ? Color.white : isVerb ? DS.tint : DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
             .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised)) }
             // **BECOMING THE PICK IS A CROSSFADE (prd §966).** The fill and the
