@@ -91,6 +91,11 @@ guard "time-sensitive is claimed by the deadline alarms alone" \
       'self == \.disputeOpened \|\| self == \.deadlineNear' "$PLAN"
 guard "the deadline window rejects the past (> 0, not just <= window)" \
       'delta > 0 && delta <= deadlineWindow' "$PLAN"
+# A deadline's news is the clock reaching the window, not the row landing. A
+# deadline plan stamped with `capturedAt` drew the landing date as its dateline
+# ("Apple Wallet · Sep 6" on a banner sent Sep 27).
+guard "a deadline plan is stamped with the sweep's clock, not the row's landing" \
+      'occurredAt: now,' "$SWEEP"
 guard "the digest still schedules for a future slot (a trigger, not a fire-now)" \
       'UNTimeIntervalNotificationTrigger' "$NOTIFY"
 # The daily whisper was cut (prd §706) — a pending one from an older install

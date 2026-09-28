@@ -100,7 +100,12 @@ enum NotifySweep {
                 title: headline(.deadlineNear),
                 body: "\(thing.title) — due \(phrase).",
                 link: "casberi://thing/\(thing.id.uuidString)",
-                occurredAt: thing.capturedAt,
+                // The event is the clock entering the window, which is NOW.
+                // `capturedAt` is when the row landed — weeks back for a bill
+                // read off an old statement — and the dateline drew it as the
+                // subtitle: "Apple Wallet · Sep 6" on a banner sent Sep 27
+                // about a payment due Sep 29.
+                occurredAt: now,
                 deadline: due,
                 source: thing.source,
                 art: art(for: thing),
