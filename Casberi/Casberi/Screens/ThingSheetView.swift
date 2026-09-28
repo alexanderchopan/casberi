@@ -2902,12 +2902,36 @@ struct ThingSheetView: View {
     /// where the account is not in it (unwatched, or no read has landed on
     /// this device yet) the sheet simply does not rise, rather than opening a
     /// detail about an account nothing knows anything about.
+    ///
+    /// **A tap never does nothing (user: "my account in the thing sheet doesn't
+    /// open").** The snapshot can lag the watch list — a chain reset, a create
+    /// closed by a swipe — so a watched account missing from it is read once
+    /// and then opened. An account this phone does not watch opens on the
+    /// chain's explorer, the hand-off the Transaction row already makes.
     private func openVibenetAccount(_ address: String) {
-        guard !address.isEmpty,
-              let room = VibenetRoomSource.card(),
-              room.items.contains(where: { $0.address.caseInsensitiveCompare(address) == .orderedSame })
-        else { return }
-        faceTarget = .vibenet(address)
+        guard !address.isEmpty else { return }
+        if Self.vibenetSnapshotHolds(address) {
+            faceTarget = .vibenet(address)
+            return
+        }
+        Task { @MainActor in
+            if VibenetWatch.shared.addresses.contains(where: {
+                $0.caseInsensitiveCompare(address) == .orderedSame
+            }) {
+                _ = await VibenetRoomSource.compose()
+                if Self.vibenetSnapshotHolds(address) {
+                    faceTarget = .vibenet(address)
+                    return
+                }
+            }
+            if let url = URL(string: VibenetExplorer.address(address)) { openURL(url) }
+        }
+    }
+
+    private static func vibenetSnapshotHolds(_ address: String) -> Bool {
+        VibenetRoomSource.card()?.items.contains {
+            $0.address.caseInsensitiveCompare(address) == .orderedSame
+        } ?? false
     }
 
     private func openAddressCard(_ address: String) {

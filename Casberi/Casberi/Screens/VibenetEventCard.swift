@@ -98,31 +98,34 @@ struct VibenetEventCard: View {
             // `DSSheetHead`, which other sheets share, so the card composes
             // its own head rather than moving that one.
             VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: DS.Space.s3) {
-                Button { onAccount(facts.account) } label: {
+            // The face AND the name open the account: the name is what a
+            // finger reaches for, and only the face answered.
+            Button { onAccount(facts.account) } label: {
+                HStack(alignment: .center, spacing: DS.Space.s3) {
                     WalletFace(address: facts.account, size: DS.Face.shelf, circular: true)
-                }
-                .buttonStyle(.plain)
-                .dsHover()
-                .accessibilityLabel(Text("Open account"))
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(verbatim: facts.accountName)
-                            .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1).truncationMode(.middle)
-                        Spacer(minLength: DS.Space.s2)
-                        if let happenedAt {
-                            Text(FeedScreen.dayWord(happenedAt))
-                                .dsText(.label12)
-                                .foregroundStyle(DS.brandInk)
-                                .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text(verbatim: facts.accountName)
+                                .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                                .lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: DS.Space.s2)
+                            if let happenedAt {
+                                Text(FeedScreen.dayWord(happenedAt))
+                                    .dsText(.label12)
+                                    .foregroundStyle(DS.brandInk)
+                                    .lineLimit(1)
+                            }
                         }
+                        Text(verbatim: whereLine)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
                     }
-                    Text(verbatim: whereLine)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .dsHover()
+            .accessibilityHint(Text("Open account"))
             VStack(alignment: .leading, spacing: 0) {
                 Text(verbatim: title)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)

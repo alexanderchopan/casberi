@@ -5140,32 +5140,24 @@ struct FeedScreen: View {
                 // arguments by declaration.
                 advancedSupported: true)
         case .vibenetCreate:
-            VibenetCreateSheet { address in
-                // Watching it is what puts it in the room — the sheet does
-                // not know what a watch list is, and this is the one place
-                // the two meet, DISMISS FIRST (the `.vibenetKeys` ruling
-                // above: the room re-composes behind this sheet, and asking
-                // for that while the sheet is still up lands the change
-                // under a covered screen).
+            // The sheet already watched the account (`create()`). Two halves:
+            // the room re-reads the chain the moment the account lands, however
+            // the sheet is closed afterwards — a swipe never reached the old
+            // single callback, so the room kept its one account — and "Done"
+            // dismisses first (the `.vibenetKeys` ruling: nothing lands under
+            // a covered screen) and rains for the arrival (§655 amendment).
+            VibenetCreateSheet(onCreated: { _ in
                 feedSheet = nil
-                _ = VibenetWatch.shared.add(address)
-                // `onWatched`'s own fix, one call site over (user, 2026-08-30:
-                // "after user creates account... doesn't show a new account
-                // was created"). Watching alone changes nothing this screen
-                // has READ — the room is composed from `VibenetState.saved`,
-                // a flat UserDefaults snapshot with no observation — so the
-                // account existed, was watched, and the room kept showing its
-                // old self until something ELSE happened to touch it. Both
-                // halves, same as `onWatched`: read the chain now, then bump
-                // the term this screen's memoised head recomputes on.
+                chrome.rain(sources: [VibenetIdentity.source])
+            }, onLanded: { _ in
+                // Watching alone changes nothing this screen has READ: the room
+                // is composed from `VibenetState.saved`, a flat snapshot with
+                // no observation. Read the chain, then move the memoised head.
                 Task {
                     _ = await VibenetRoomSource.compose()
-                    // An account was MADE — the one arrival this sheet
-                    // produces, and the same moment Hegotá's key sheet and
-                    // Frames' makeKey already rain for (§655 amendment).
-                    chrome.rain(sources: [VibenetIdentity.source])
+                    chrome.refreshRooms()
                 }
-            }
+            })
         case .vibenetWatch:
             VibenetWatchSheet {
                 // The create branch's own two halves, for its own stated

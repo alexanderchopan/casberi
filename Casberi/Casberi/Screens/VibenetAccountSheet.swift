@@ -65,7 +65,11 @@ struct VibenetAccountSheet: View {
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
-    private var item: VibenetAccountItem? { room.items.first { $0.address == address } }
+    // Case-blind, as the door that opens this sheet matches: a stamped
+    // address in another case raised the sheet and dismissed it at once.
+    private var item: VibenetAccountItem? {
+        room.items.first { $0.address.caseInsensitiveCompare(address) == .orderedSame }
+    }
 
     var body: some View {
         NavigationStack {

@@ -15,9 +15,13 @@ import SwiftData
 /// faucet pays" is a fact on a receipt rather than a feature to opt into,
 /// because it is not a decision anybody makes.
 struct VibenetCreateSheet: View {
-    /// Called with the new account's address once the chain has it, so the room
-    /// can watch it without this sheet knowing what a watch list is.
+    /// Called when "Done" is tapped on the finished account.
     var onCreated: (String) -> Void
+    /// Called the moment the chain has the account, before anybody taps
+    /// anything: the room re-reads here, because the sheet is also closed by a
+    /// swipe, which never reaches `onCreated` (user: "when i create an account
+    /// it still says i have one account").
+    var onLanded: (String) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -200,8 +204,10 @@ struct VibenetCreateSheet: View {
                 }
             }
         case .done(let account):
-            actionVerb(title: String(localized: "Watch it"),
-                       glyph: "eye",
+            // "Done", not "Watch it": `create()` already watched it, so the
+            // verb asked for something that had happened.
+            actionVerb(title: String(localized: "Done"),
+                       glyph: "checkmark",
                        busy: false) {
                 onCreated(account)
                 dismiss()
@@ -565,6 +571,7 @@ struct VibenetCreateSheet: View {
             // offering to create a second one. It is watched here, at the one
             // moment the app is certain the account is yours.
             _ = VibenetWatch.shared.add(address)
+            onLanded(address)
             phase = .done(account: address)
         } catch {
             phase = .ready

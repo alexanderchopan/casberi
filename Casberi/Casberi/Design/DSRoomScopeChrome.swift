@@ -234,8 +234,16 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
             if let showing {
                 // The one pull-down (prd §936), shared with GitHub and
                 // Pinterest since §959 — `Design/DSScopeMenu.swift`.
-                DSScopeMenu(slots: accounts, showing: showing,
-                            onPick: onPickAccount)
+                HStack(spacing: DS.Space.s2) {
+                    DSScopeMenu(slots: accounts, showing: showing,
+                                onPick: onPickAccount)
+                    // One account showing: its address, one tap from the
+                    // picker that named it. Every slot id in the family is the
+                    // address; "All" is "" and has none to copy.
+                    if !showing.id.isEmpty {
+                        CopyAddressButton(address: showing.id)
+                    }
+                }
             }
         }
     }

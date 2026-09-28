@@ -804,6 +804,11 @@ struct VibenetAccountDetail: View {
     /// haptic is a MOMENT and fires once, where the `TimelineView` around it
     /// re-evaluates every second.
     @State private var landed = false
+    /// "Copy address" swaps to "Copied" for 1.2s (prd §867): a bare
+    /// tap-to-copy read as broken (user: "there is a 'copy address' in
+    /// activity but it doesnt work"), and on `VibenetAccountSheet` there is no
+    /// haptic sink either, so the swap is the only thing the tap shows.
+    @State private var addressCopied = false
 
     /// Bumped whenever the control acts, purely so the label re-reads
     /// `isTracking`. See `trackOnLockScreen`.
@@ -1329,8 +1334,13 @@ struct VibenetAccountDetail: View {
                 // type to stop. An address is that doc's own named
                 // `copySensitive` case.
                 DSPasteboard.copySensitive(item.address)
+                withAnimation(DS.Motion.standard) { addressCopied = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    withAnimation(DS.Motion.standard) { addressCopied = false }
+                }
             } label: {
-                verbRow(String(localized: "Copy address"), glyph: "doc.on.doc")
+                verbRow(addressCopied ? String(localized: "Copied") : String(localized: "Copy address"),
+                        glyph: addressCopied ? "checkmark" : "doc.on.doc")
             }
             .buttonStyle(PressSpring())
             .dsHover()
