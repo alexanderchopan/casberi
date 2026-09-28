@@ -27,7 +27,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 MODEL="Casberi/Casberi/Model/NetworkReceiptsInsight.swift"
-SCREEN="Casberi/Casberi/Screens/NetworkReceiptsScreen.swift"
+SCREEN="Casberi/Casberi/Screens/NetworkReachScreen.swift"
 GRID="Casberi/Casberi/Design/UnitTreemap.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 for f in "$MODEL" "$SCREEN" "$GRID" "$PROBES"; do

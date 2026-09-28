@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Network-receipts coverage audit (prd §277).
 
-`NetworkReceiptsScreen` tells the person what Casberi actually reached, and
+`NetworkReachScreen` (the receipts half, §967) tells the person what Casberi actually reached, and
 its own copy names what it cannot see. That claim is only true while every
 request either rides an instrumented transport or is on the short, stated
 list of exceptions — and the failure mode is silent: a new bridge written

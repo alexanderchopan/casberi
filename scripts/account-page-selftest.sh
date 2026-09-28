@@ -135,8 +135,8 @@ grep -qiE 'leaves? (the|this|your) (phone|device)|routes through|no server' "$TM
   && { echo "✗ a privacy slogan is on the account page — the app's reaches live in settings (§702)"; exit 1; }
 grep -qiE 'What it reaches|reachFact|AccountReach' "$TMP/page-bare.swift" "$TMP/shape-bare.swift" \
   && { echo "✗ the What it reaches row is back on the account page — it lives in settings alone (§702)"; exit 1; }
-grep -q 'NetworkReachScreen()' "$SETTINGS" \
-  || { echo "✗ settings no longer opens the reach registry — the one place the app's hosts are stated (§702)"; exit 1; }
+grep -q 'route.push(.reach)' "$SETTINGS" \
+  || { echo "✗ settings no longer opens the reach screen — the one place the app's hosts are stated (§702, §967)"; exit 1; }
 
 # 6. The room door keeps RoomDoor's three writes in RoomDoor's order.
 python3 - "$TMP/page-bare.swift" <<'PY' || { echo "✗ the Activity row's door no longer closes, pops, then asks — in that order (RoomDoor's lesson)"; exit 1; }

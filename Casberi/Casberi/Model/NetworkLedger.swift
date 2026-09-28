@@ -194,7 +194,7 @@ final class NetworkLedger: @unchecked Sendable {
 // MARK: - Resolution (2026-08-18)
 //
 // The one place a recorded host becomes a service name. It lived inside
-// `NetworkReceiptsScreen` until the Privacy tray's receipts DOOR started
+// `NetworkReceiptsScreen` (now `NetworkReachScreen`, §967) until the Privacy tray's receipts DOOR started
 // stating the same verdict on its own row — and a second copy of this rule is
 // exactly how the door and the screen behind it come to disagree about whether
 // a host is on the list, which on a privacy screen is the worst possible

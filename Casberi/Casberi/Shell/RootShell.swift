@@ -921,6 +921,21 @@ struct RootShell: View {
             if UserDefaults.standard.bool(forKey: "openAddresses") {
                 sceneState.route.present(.addresses)
             }
+            // `-openReach YES` — the reach screen, the same shape (prd §967).
+            // `-seedReceipts YES` records a week's worth of receipts through
+            // the ledger's own recorder first, one host of them undeclared, so
+            // the merged rows and the finding can be seen on a fresh install.
+            if UserDefaults.standard.bool(forKey: "seedReceipts") {
+                for (host, count) in [("api.zerion.io", 214), ("public.api.bsky.app", 88),
+                                      ("api.github.com", 41), ("api.anthropic.com", 3),
+                                      ("tracker.example.net", 2)] {
+                    for _ in 0..<count { NetworkLedger.shared.record(host: host) }
+                }
+                NSLog("seedReceipts| \(NetworkLedger.shared.snapshot().count) hosts")
+            }
+            if UserDefaults.standard.bool(forKey: "openReach") {
+                sceneState.route.present(.reach)
+            }
             // `-openRoom "<Source>"` scopes the feed to one source's room.
             // Extracted to a method rather than inlined: adding it inline tipped
             // this already-enormous view expression past the type-checker's

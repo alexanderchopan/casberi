@@ -106,8 +106,9 @@ ALLOWANCE = {
     # The devnet's test-ETH disclosure (b, the 3.1.5 line), and the passkey
     # account's two branches (created vs create), which are exclusive (b).
     "FramesScreen.swift": (3, "test ETH + exclusive key-custody states (b)"),
-    # Receipts: what is not recorded (a) and what forgetting does not do (a).
-    "NetworkReceiptsScreen.swift": (2, "receipts ceiling and forget; (a)"),
+    # The reach screen (§967): Private Relay does not cover an app's own
+    # requests (a), and what the ledger does not record (a).
+    "NetworkReachScreen.swift": (2, "relay line and the ledger's ceiling; (a)"),
     # A Safe you cannot sign vs one you just signed — exclusive states (b).
     "SafeQueueCard.swift": (2, "exclusive states; signing (b)"),
     # The watch form and the co-signer block: the second is the one place the

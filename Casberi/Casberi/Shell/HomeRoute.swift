@@ -41,6 +41,11 @@ final class HomeRoute {
         /// The Addresses directory, its own screen for the same reason (§933;
         /// it was Accounts' fourth section since §916's amendment).
         case addresses
+        /// What this app reaches and what it reached — one pushed directory
+        /// of the registry and the ledger (prd §967), so its category tiles
+        /// can ride the seat's capsule like Accounts' and Addresses' (§960).
+        /// It was two sheets under the Data tray.
+        case reach
         case bridge(BridgeRouter.Destination)
         /// A tag's project view — the same screen the feed's Themes treemap
         /// opens. Pushed by an Ask answer's ProjectTile and the "open work"

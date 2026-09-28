@@ -22,21 +22,6 @@ enum AccountDetail: String, Identifiable {
     var id: String { rawValue }
 }
 
-/// The Privacy home's sub-pages, presented through ONE `.sheet(item:)`.
-///
-/// Deliberately an enum rather than a second `@State` flag (prd §277): two
-/// sibling `.sheet(isPresented:)` modifiers on one view resolve to the same
-/// presenting controller, and the second tears the first down mid-transition
-/// — the half-opening sheet this codebase has now paid for three times. One
-/// screen, one presentation.
-enum PrivacySubPage: String, Identifiable {
-    /// What this app MAY reach — the curated registry (prd §205).
-    case reach
-    /// What it ACTUALLY reached — the observed ledger (prd §277).
-    case receipts
-    var id: String { rawValue }
-}
-
 struct AccountDetailSheet: View {
     let detail: AccountDetail
     @Environment(\.modelContext) private var modelContext
@@ -57,11 +42,13 @@ struct AccountDetailSheet: View {
     @State private var importing = false
     @State private var importResult: String?
     @State private var deleteResult: String?
-    /// "What this app reaches" (prd §205) — the in-motion half of the privacy
-    /// story (what LEAVES this iPhone), a sub-page of this one Privacy home so
-    /// it sits beside the at-rest half (on device / iCloud) instead of
-    /// competing as a second privacy row.
-    @State private var privacyPage: PrivacySubPage?
+    /// "What this app reaches" is its own pushed screen (prd §967, one
+    /// screen for the registry and the ledger), so the door here leaves this
+    /// tray and pushes — `dismiss` where this is a sheet, never in the pane,
+    /// where it would pop the page instead.
+    @Environment(HomeRoute.self) private var route
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dsInPane) private var inPane
     /// Mirrored rather than read live: `Notifications.settings` is a computed
     /// UserDefaults pair, which SwiftUI cannot observe, so a toggle bound
     /// straight to it would not redraw its own switch.
@@ -86,7 +73,7 @@ struct AccountDetailSheet: View {
     /// "when you tap, and on its own".
     @State private var librarianOn = false
     /// The receipts card's own verdict, composed from the ledger exactly as
-    /// `NetworkReceiptsScreen` composes it. Nil on an empty ledger, which is
+    /// `NetworkReachScreen` composes it. Nil on an empty ledger, which is
     /// a fresh install and gets the door's standing subtitle instead.
     @State private var reach: NetworkReceiptsInsight.Reach?
     /// How many registry services are reachable right now.
@@ -124,25 +111,6 @@ struct AccountDetailSheet: View {
             reachingNow = NetworkReach.reachingNow(
                 connected: Set(store.bridges.filter { $0.status == .connected }.map(\.name))
             ).count
-        }
-        // `dsNavSheet` (prd §560) — this pair had NO sizing, so on iPad and Mac
-        // it presented as a ~540×620 box while its literal sibling one line up
-        // in `AccountScreen` was sized. Both screens gained their own close
-        // control in the same pass; see `NetworkReachScreen`.
-        .sheet(item: $privacyPage) { page in
-            NavigationStack {
-                switch page {
-                case .reach: NetworkReachScreen()
-                case .receipts: NetworkReceiptsScreen()
-                }
-            }
-            .dsNavSheet()
-            // THE SAME RE-INJECTION THIS SHEET ITSELF NEEDED (prd §872) —
-            // `NetworkReachScreen` holds a required
-            // `@Environment(BridgeStore.self)`, and a sheet raised from a
-            // sheet is hosted no differently from one raised from a screen.
-            // See `SettingsRows.presented(_:)` for the whole finding.
-            .environment(store)
         }
         // The export's other half — the file comes back in whole (dedupe by id).
         .fileImporter(isPresented: $importing,
@@ -531,16 +499,14 @@ struct AccountDetailSheet: View {
                                     set: { BalancePrivacy.shared.hidden = $0; DSHaptic.tap() }))
             // The in-motion half (prd §205): what LEAVES this iPhone. The rows
             // above are your copy AT REST (on device / iCloud); this opens the
-            // full list of every service the app talks to. Same privacy home,
-            // one tap deeper.
-            door("What this app reaches", reachDoorLine) { privacyPage = .reach }
-            // The same question asked of BEHAVIOUR rather than of a list
-            // (prd §277). The row above is what the app may reach and is
-            // hand-maintained; this is what it actually did reach, recorded
-            // as it happened — so the claim can be checked rather than
-            // trusted, and a host nobody declared shows up as one.
-            door("What it actually reached", receiptsDoorLine,
-                 subtitleTone: receiptsDoorTone) { privacyPage = .receipts }
+            // one screen holding every service the app talks to AND what it
+            // actually reached this week (prd §967 — the registry and the
+            // ledger were two sheets). The line is the ledger's own verdict
+            // where there is one, so a host nobody declared reads here first.
+            door("What this app reaches", reachLine, subtitleTone: reachTone) {
+                if !inPane { dismiss() }
+                route.push(.reach)
+            }
             // The tripwire, said out loud (2026-08-18). `SecretScan` (prd
             // §277) has redacted spotted credentials from the Spotlight/Siri
             // donation and from keyed-agent grounding since it shipped, and no
@@ -569,22 +535,16 @@ struct AccountDetailSheet: View {
     // cost nothing new: the registry is a static list, and the receipts card
     // composes from a ledger this sheet already had to read nothing extra for.
 
-    /// "N reaching now · M listed" — the honest pair, because the registry's
-    /// full length counts services you would only reach if you connected them,
-    /// and stating that number alone would overstate what this app touches.
-    private var reachDoorLine: String {
-        String(localized: "\(reachingNow) reaching now · \(NetworkReach.endpoints.count) listed")
-    }
-
-    /// The receipts card's own verdict, one row earlier. An empty ledger keeps
-    /// the standing subtitle: a fresh install has reached nothing, and "All
-    /// declared" over zero requests is a claim about an absence.
-    ///
-    /// The FINDING half is worded verbatim as `ReachCard`'s own pill, singular
-    /// split included — a door and the card it opens saying the same fact in
-    /// two different phrasings reads as two different facts.
-    private var receiptsDoorLine: String {
-        guard let reach else { return String(localized: "Receipts from the last seven days") }
+    /// The door's one line. An empty ledger states the registry's honest pair
+    /// — "N reaching now · M listed", because the registry's full length
+    /// counts services you would only reach if you connected them. A week
+    /// with receipts states the ledger's verdict instead, worded verbatim as
+    /// `ReachCard`'s own stamp — a door and the card it opens saying one fact
+    /// in two phrasings reads as two facts.
+    private var reachLine: String {
+        guard let reach else {
+            return String(localized: "\(reachingNow) reaching now · \(NetworkReach.endpoints.count) listed")
+        }
         guard reach.clean else {
             return reach.undeclaredHosts == 1
                 ? String(localized: "1 not on the list")
@@ -597,13 +557,12 @@ struct AccountDetailSheet: View {
     /// reach map's own grammar (§300), one screen earlier. Deliberately NOT
     /// `destructive`: an undeclared host is a finding to look at, not a
     /// failure, and the map behind this door already draws it in attention.
-    private var receiptsDoorTone: Color {
+    private var reachTone: Color {
         guard let reach else { return DS.textTertiary }
         return reach.clean ? DS.confirm : DS.attention
     }
 
-    /// A row that opens a privacy sub-page. Two of them, so the shape lives in
-    /// one place. Badge-less since the Statement pass — the title is the
+    /// A row that opens the reach screen — the shape kept in one place. Badge-less since the Statement pass — the title is the
     /// wayfinding, the chevron is the affordance (`DSPushRow`).
     /// `subtitleTone` carries a door's own verdict where it has one — the same
     /// parameter `toggleRow` takes for a failing sync, and for the same

@@ -850,6 +850,8 @@ struct MainSurface: View {
             SettingsScreen()
         case .addresses:
             AddressesScreen()
+        case .reach:
+            NetworkReachScreen()
         case .settingsPage(let page):
             SettingsPageView(page: page)
         case .bridge(let dest):
