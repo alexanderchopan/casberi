@@ -58,6 +58,9 @@ struct NoteCaptureSheet: View {
     /// recognizer gets up to a second for its last words, and a second tap in
     /// that second must not keep the recording twice.
     @State private var stopping = false
+    /// Bumped when Record meets a refused microphone (prd §973): the key
+    /// shakes and the phone says so, the app's feel for a failure you caused.
+    @State private var refusals = 0
 
     private var hasDraft: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -136,9 +139,10 @@ struct NoteCaptureSheet: View {
                 .padding(.horizontal, DS.Space.s4 + DS.Space.s1)
                 .padding(.top, DS.Space.s3)
 
-            // The live mic, the composer's own band (prd §970).
+            // The live mic, the composer's own band (prd §970), which settles
+            // in as recording starts (prd §973).
             if isRecording {
-                VoiceListeningBand(elapsed: voice.elapsed, transcript: voice.transcript)
+                VoiceListeningBand(voice: voice, word: String(localized: "Recording"))
             }
 
             // THE BAND: Share in the composer's tint disc, and the composer's
@@ -151,6 +155,12 @@ struct NoteCaptureSheet: View {
                         .frame(width: AgentDestinationKeys.side, height: AgentDestinationKeys.side)
                         .background(hasDraft ? DS.tint : DS.surfaceRaised, in: Circle())
                         .contentShape(Circle())
+                        // Waking, the app's way (prd §973): the fill crossfades
+                        // (§966) and the disc gives the armed pop the other
+                        // sheets give a button that comes alive with the
+                        // field's first character.
+                        .animation(DS.Motion.standard, value: hasDraft)
+                        .armedPop(hasDraft)
                         .dsHover()
                 }
                 .buttonStyle(PressSpring())
@@ -165,6 +175,9 @@ struct NoteCaptureSheet: View {
             .padding(.bottom, DS.Space.s4)
         }
         .background(DS.page.ignoresSafeArea())
+        // The band arriving and leaving moves the rows above it; that move
+        // eases with the rest of the sheet's changes (prd §973).
+        .animation(reduceMotion ? nil : DS.Motion.standard, value: isRecording)
         .onAppear {
             // Held New (prd §970): recording when the sheet lands, keyboard
             // down. Consumed on read, so a later tap of New arrives typing,
@@ -205,29 +218,56 @@ struct NoteCaptureSheet: View {
         )
     }
 
+    /// What the wide key says right now (prd §971, §973).
+    private enum KeyVerb: Equatable { case record, stop, keeping, done }
+
+    private var keyVerb: KeyVerb {
+        if stopping { return .keeping }
+        if isRecording { return .stop }
+        return hasDraft ? .done : .record
+    }
+
     /// The one verb available (prd §971), the composer's foot rule applied to
     /// the note: Stop while recording, Done once there are words, else
     /// Record — the voice kind's own waveform, so the key says what it makes.
     /// A quiet Done over an empty field was §83's dead control — it closed and
     /// kept nothing, which the chevron already does.
-    @ViewBuilder
+    ///
+    /// **ONE key, never four (prd §973).** The verb changes and the key stays,
+    /// so waveform MORPHS to stop (§867's rule for a glyph that changes), and
+    /// while Stop keeps — up to a second, the recognizer settling — stop
+    /// morphs to a check: the mark a copy leaves on its own disc, here the
+    /// mark of a note kept. The toast then says where it went.
     private var wideKey: some View {
-        if isRecording {
-            AgentWideKey(title: String(localized: "Stop"), glyph: "stop.fill", tone: .tint) {
-                DSHaptic.tap()
-                stopAndKeep()
-            }
-        } else if hasDraft {
-            AgentWideKey(title: String(localized: "Done"), tone: .ink) {
-                DSHaptic.tap()
-                keepAndClose()
-            }
-        } else {
-            AgentWideKey(glyph: "waveform", tone: .ink) {
-                DSHaptic.tap()
-                startRecording()
+        let verb = keyVerb
+        let title: String? = switch verb {
+            case .stop:     String(localized: "Stop")
+            case .done:     String(localized: "Done")
+            case .record, .keeping: nil
+        }
+        let glyph: String? = switch verb {
+            case .record:  "waveform"
+            case .stop:    "stop.fill"
+            case .keeping: "checkmark"
+            case .done:    nil
+        }
+        let spoken: String? = switch verb {
+            case .record:  String(localized: "Record a voice note")
+            case .keeping: String(localized: "Keeping the voice note")
+            case .stop, .done: nil
+        }
+        return AgentWideKey(title: title, glyph: glyph,
+                            tone: (verb == .stop || verb == .keeping) ? .tint : .ink,
+                            spoken: spoken) {
+            switch verb {
+            case .record:  DSHaptic.tap(); startRecording()
+            case .stop:    DSHaptic.tap(); stopAndKeep()
+            case .done:    DSHaptic.tap(); keepAndClose()
+            case .keeping: break   // already keeping; the check says so
             }
         }
+        .shake(on: refusals)
+        .animation(DS.Motion.standard, value: verb)
     }
 
     // MARK: - Recording
@@ -237,7 +277,19 @@ struct NoteCaptureSheet: View {
     /// at once. The permission asks arrive here, in context.
     private func startRecording() {
         focused = false
-        Task { await voice.start() }
+        let capture = voice
+        Task { @MainActor in
+            await capture.start()
+            // Refused — now or on an earlier ask, which iOS does not repeat
+            // (prd §973). Without this the tap did nothing you could see or
+            // feel; the footnote already names the way to allow it. A shake
+            // with its failure buzz, as the connect screens do for a failed
+            // proof.
+            if capture.phase == .denied {
+                refusals += 1
+                DSHaptic.failure()
+            }
+        }
     }
 
     /// Stop, and keep what was recorded as a VOICE thing under `You`, then

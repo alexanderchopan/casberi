@@ -3189,13 +3189,17 @@ struct FeedScreen: View {
     /// same template as every room's. New is a VERB in the row — it never
     /// lights, and its tap raises the note sheet instead of scoping. Held,
     /// it raises the sheet with the mic live (prd §970): the same sheet, the
-    /// same tile, no fifth button.
+    /// same tile, no fifth button. Its plus arms into the voice kind's
+    /// waveform as the hold builds (prd §973).
     private var notesTiles: DSScopeTiles<NotesScope> {
         DSScopeTiles(sections: NotesScope.allCases,
                      active: chrome.notesScope,
                      attention: [],
                      verbs: [.new],
-                     onHold: { _ in chrome.newNoteByVoice() }) { picked in
+                     hold: DSScopeTiles<NotesScope>.Hold(
+                        glyph: "waveform",
+                        label: String(localized: "Record a note"),
+                        act: { _ in chrome.newNoteByVoice() })) { picked in
             if picked.isVerb {
                 chrome.newNote += 1
             } else {

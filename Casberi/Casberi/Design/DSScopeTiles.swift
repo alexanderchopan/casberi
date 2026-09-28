@@ -65,10 +65,23 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// §969): drawn in tint, never lit, and every tap fires — a verb has no
     /// "already picked".
     var verbs: Set<Scope> = []
-    /// A verb tile HELD (prd §970): the Notes room's New, held, opens the
-    /// note sheet speaking. Nil, and a hold is a tap. Only a verb tile takes
-    /// the hold — a scope has nothing a hold could mean.
-    var onHold: ((Scope) -> Void)? = nil
+    /// A verb tile's SECOND verb, reached by holding it (prd §970, §973): the
+    /// Notes room's New, held, opens the note sheet recording. Nil, and a hold
+    /// is a tap. Only a verb tile takes it — a scope has nothing a hold could
+    /// mean.
+    ///
+    /// **A hold you can see, feel and reach (prd §973).** A finger resting on
+    /// the tile past a tap ARMS it: the glyph morphs into `glyph` (the plus
+    /// becomes the waveform), which says what holding will do before it does
+    /// it. The hold lands with the LIFT buzz — the app's feel for picking
+    /// something up by holding it — not the tap's. And VoiceOver, which cannot
+    /// hold, gets the verb as a named action, `label`.
+    struct Hold {
+        let glyph: String
+        let label: String
+        let act: (Scope) -> Void
+    }
+    var hold: Hold? = nil
     let onPick: (Scope) -> Void
 
     /// The verb whose hold just fired. A `Button` still fires on the release
@@ -76,6 +89,14 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// and never counted as the tap. Cleared by that release, or by a short
     /// window if no release reaches the button.
     @State private var held: Scope? = nil
+    /// The verb tile a finger is resting on (prd §973), and the one that has
+    /// rested long enough to arm — past a tap, before the hold lands.
+    @GestureState private var pressing: Scope? = nil
+    @State private var arming: Scope? = nil
+    @State private var armTask: Task<Void, Never>? = nil
+    /// Past a tap's length, short of the hold's 0.45s: long enough that a tap
+    /// never flickers the glyph, short enough to be seen before the sheet.
+    private static var armDelay: Duration { .milliseconds(180) }
 
     private static var columns: Int { 4 }
     private static var stripTileWidth: CGFloat { 52 }
@@ -131,8 +152,8 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                 // The dock's glyph, bouncing once when its tile becomes the
                 // pick — in the strip only, the one place these tiles ARE the
                 // dock's (user, 2026-09-17). A room's scope grid stays still.
-                CategoryGlyph(name: section.glyph, size: Self.glyphSize,
-                              isActive: strip && isOn)
+                CategoryGlyph(name: arming == section ? (hold?.glyph ?? section.glyph) : section.glyph,
+                              size: Self.glyphSize, isActive: strip && isOn)
                 // A section that wants you says so in its WORD's tone, never
                 // a dot (user, 2026-09-24: "if we want yellow just make the
                 // word Risk yellow"). The picked tile stays white on its tint.
@@ -155,16 +176,35 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         .buttonStyle(PressSpring())
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.45)
+                .updating($pressing) { down, state, _ in
+                    state = (down && isVerb && hold != nil) ? section : nil
+                }
                 .onEnded { _ in
-                    guard isVerb, let onHold else { return }
+                    guard isVerb, let hold else { return }
                     held = section
-                    DSHaptic.tap()
-                    onHold(section)
+                    DSHaptic.lift()
+                    hold.act(section)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         if held == section { held = nil }
                     }
                 }
         )
+        // ARMING (prd §973): a finger still down past a tap's length morphs
+        // the glyph; lifting early, or the hold landing, morphs it back.
+        .onChange(of: pressing == section) { _, down in
+            guard isVerb, hold != nil else { return }
+            armTask?.cancel()
+            guard down else { arming = nil; return }
+            armTask = Task { @MainActor in
+                try? await Task.sleep(for: Self.armDelay)
+                if !Task.isCancelled { arming = section }
+            }
+        }
+        .accessibilityActions {
+            if isVerb, let hold {
+                Button(hold.label) { hold.act(section) }
+            }
+        }
         .dsHover()
         .accessibilityLabel(wants
                             ? Text("\(section.label), \(section.summary), needs you")

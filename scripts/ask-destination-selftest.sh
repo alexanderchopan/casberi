@@ -359,7 +359,7 @@ guard "an empty agent list offers the catalog as a key" "$WORK/terminal.nc" \
 # `askDirectly()` is the draft-send. A dead control renders as a perfectly
 # ordinary armed blue pill, so this is guarded rather than remembered.
 guard "the send routes the draft through askDirectly" "$WORK/composer.nc" \
-      'AgentWideKey\(title: String\(localized: "Send"\), tone: .tint\) \{ askDirectly\(\) \}'
+      'FootVerb\(title: String\(localized: "Send"\), tone: .tint\) \{ askDirectly\(\) \}'
 askwithkey_calls=$(grep -c 'askWithKey()' "$WORK/composer.nc")
 if [[ $askwithkey_calls -ne 2 ]]; then
   print -u2 "  ✗ drift: askWithKey has $askwithkey_calls sites, expected 2 (its definition and the deferred retry)"
@@ -404,6 +404,19 @@ if [[ $mirror_writes -lt 3 ]]; then
 fi
 print "  ok   the key mirror refreshes at the raise and both settles"
 
+# ---- THE FOOT IS ONE KEY (prd §973) -------------------------------------
+# The verb changes and the key stays, so a glyph that changes MORPHS (§867)
+# instead of one key hard-cutting to another. Five `AgentWideKey`s in the slot
+# was five identities, and nothing could travel between them.
+foot_keys=$(awk '/private var footSlot/,/^    }$/' "$WORK/composer.nc" | grep -c 'AgentWideKey(')
+if [[ $foot_keys -ne 1 ]]; then
+  print -u2 "  ✗ drift: the foot draws $foot_keys wide keys, expected ONE whose verb changes"
+  exit 1
+fi
+guard_absent "no wide key is drawn outside the foot's one" "$WORK/composer.nc" \
+      'AgentWideKey\(title: String\(localized: "(Ask|Send|Stop)"\)'
+print "  ok   the foot draws one key and footVerb names it"
+
 # ---- THE VERB IS WHATEVER IS AVAILABLE ----------------------------------
 # A dim Send with nothing to send is the dead control §83 bans. At rest the
 # slot carries Record — the voice-note capture path, a thing that really enters
@@ -411,7 +424,7 @@ print "  ok   the key mirror refreshes at the raise and both settles"
 # The resting verb is the mic, and it is a CAPSULE like every other verb — a
 # round mic beside the round destination keys read as a fourth destination.
 guard "the resting verb is the mic, not a dead send" "$WORK/composer.flat" \
-      'AgentWideKey\(glyph: "mic", tone: .ink\)'
+      'FootVerb\(glyph: "mic", tone: .ink'
 # THERE IS A WAY BACK, AND IT IS VISIBLE (prd §581c amendment, reported in
 # capitals: "THERE IS NO WAY TO GO BACK TO THE APP"). §581 deleted the ✕ and
 # the chevron as duplicated exits and replaced them with a swipe that was
@@ -430,9 +443,9 @@ guard_absent "the stop-and-keep verb stays deleted" "$WORK/composer.nc" \
 guard "a dictation ends in the field, asking nothing" "$WORK/composer.flat" \
       'private func endDictation\(\) \{'
 guard_absent "the verb slot is never a circle" "$WORK/composer.nc" \
-      'AgentWideKey\(.*compact: true'
+      '(AgentWideKey|FootVerb)\(.*compact: true'
 guard "a live ask offers Stop" "$WORK/composer.nc" \
-      'AgentWideKey\(title: String\(localized: "Stop"\)'
+      'FootVerb\(title: String\(localized: "Stop"\)'
 # ONE VERB, ALWAYS (prd §581 amendment). The device used to add a second round
 # key for Find, which put four controls in the row that is meant to be read
 # without looking. The foot holds exactly one wide verb per state — and that
@@ -440,9 +453,9 @@ guard "a live ask offers Stop" "$WORK/composer.nc" \
 # raised the composer focused. Guarded so a fourth control cannot drift back
 # in without the deletion being reconsidered on purpose.
 guard_absent "Find is not a key in the foot" "$WORK/composer.nc" \
-      'AgentWideKey\(glyph: "magnifyingglass"'
+      '(AgentWideKey|FootVerb)\(glyph: "magnifyingglass"'
 guard "the device's verb is Ask" "$WORK/composer.nc" \
-      'AgentWideKey\(title: String\(localized: "Ask"\), tone: .tint\)'
+      'FootVerb\(title: String\(localized: "Ask"\), tone: .tint\)'
 
 # WHO ANSWERS IS SAID IN WORDS. Reported 2026-09-03: "you can't tell when you
 # selected which agent" — a brand mark is opaque and full-bleed, so the lit
@@ -473,7 +486,10 @@ guard_absent "the destination keys do not flip" "$WORK/terminal.nc" \
       'coinFlip\('
 # NO RETRY ON A LIVE JOB (§580): a second identical job on an agent that can act
 # can act twice.
-SLOT=$(awk '/private var footSlot/,/^    }$/' "$WORK/composer.nc")
+# The foot draws ONE key and `footVerb` chooses what it says (prd §973), so
+# the retry check reads both.
+SLOT=$(awk '/private var footSlot/,/^    }$/' "$WORK/composer.nc"; \
+       awk '/private var footVerb/,/^    }$/' "$WORK/composer.nc")
 print -r -- "$SLOT" | grep -qiE 'retry|resend' \
   && { print -u2 "  ✗ drift: the foot offers a retry — a live job must never be re-sent"; exit 1 }
 print "  ok   the foot offers no retry"

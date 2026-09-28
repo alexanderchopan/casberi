@@ -84,11 +84,17 @@ private struct ShakeOn: ViewModifier {
     /// Increment to shake; each new value plays one shake.
     let trigger: Int
     @State private var phase: CGFloat = 0
+    /// Added 2026-09-28 (prd §973), when the note sheet's Record key became
+    /// the second caller: the shake had no guard, the one modifier in this
+    /// file without it. Under Reduce Motion the failure is still said — by the
+    /// caller's buzz and its line — and nothing knocks.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
             .modifier(Shake(animatableData: phase))
             .onChange(of: trigger) {
+                guard !reduceMotion else { return }
                 phase = 0
                 withAnimation(.linear(duration: 0.4)) { phase = 1 }
             }

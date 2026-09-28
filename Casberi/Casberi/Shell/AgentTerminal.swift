@@ -239,20 +239,30 @@ struct AgentWideKey: View {
     /// Icon-only keys are round, so Find beside Ask reads as a sibling of the
     /// destination keys rather than as a squashed button.
     var compact = false
+    /// What a glyph-only key says to VoiceOver (prd §973). The default is the
+    /// wording a bare mic has always carried; a key whose glyph means
+    /// something else — dictating, keeping — names it.
+    var spoken: String? = nil
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: DS.Space.s2) {
+                // ONE KEY, MORPHING (prd §973, the §867 rule): a host draws a
+                // single key whose verb changes, so a glyph that changes —
+                // waveform to stop, stop to check — travels instead of
+                // hard-cutting, and a word arriving or leaving fades.
                 if let glyph {
                     Image(systemName: glyph)
                         .dsGlyph(.feature, weight: .regular)
+                        .dsSymbolSwap(glyph)
                 }
                 if let title {
                     Text(title)
                         .dsText(.heading24)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+                        .transition(.opacity)
                 }
             }
             .foregroundStyle(ink)
@@ -269,7 +279,7 @@ struct AgentWideKey: View {
             .dsHover()
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(title ?? (glyph.map { _ in "Record a voice note" } ?? ""))
+        .accessibilityLabel(title ?? spoken ?? (glyph.map { _ in String(localized: "Record a voice note") } ?? ""))
     }
 
     private var shape: AnyShape {

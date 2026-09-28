@@ -62058,3 +62058,25 @@ The Notes room's rail stays at four tiles. The mic went where the composer alrea
 6. **Folders is deleted until folders exist.** §969 drew the tile before the feature: it lit and showed the same list as All, a dead control (§83). The case left `NotesScope` with its glyph (§723). The tiles are All · Pinned · New, and the empty room says "Write or record a note".
 
 **Seen:** the static audits, and the Python halves of the note-sheet, category-fold and demo checks run against the edited tree. **Not seen:** a build or a device — this landed from a Linux session with no Xcode, so the Swift self-tests run in CI on macOS and the rest waits for the phone: a locked-screen recording, a call mid-recording, the last word of a sentence reaching the title, and the tray with no Voice room after the first launch. New strings reach the catalog on the Mac's next string sync.
+
+## §973 — The note sheet and the Notes room move the way the rest of the app moves (user: "do we have the same surprise and delight in the buttons we do elsewhere? it's a system and needs to be cohesive", then "fix all", 2026-09-28)
+
+A review against the design law found every control pressing correctly (§965) and the tiles crossfading (§966), and every moment BETWEEN presses snapping. Each fix uses a motion the app already has, and the shared pieces carry them, so the composer moved in the same pass — §867's rule that a feel added at one door onto an act is a regression at the other.
+
+1. **The wide key is ONE key whose verb changes.** `AgentWideKey` morphs its glyph (`dsSymbolSwap`) and fades its word. The note sheet draws one key through Record (waveform), Stop, Keeping and Done; the composer's five foot keys became one key driven by a `FootVerb` value (`ask-destination-selftest.sh` counts one). Waveform morphs to stop, mic to stop, instead of one key hard-cutting to another.
+
+2. **Stop morphs to a check while it keeps** — the up-to-a-second settle of §972 — the mark a copy leaves on its own disc (§867), here for a kept note. The toast then says where it went.
+
+3. **The moves ease.** The sheet animates its key on its verb and its layout on recording; the composer's foot animates on recording beside drafting and sending, where mic to Stop was the one snap. The listening band arrives with `settleIn()`.
+
+4. **Share wakes the app's way:** its fill crossfades (§966) and it takes the `armedPop` five sheets give a button that comes alive with the field's first character.
+
+5. **The recording dot `breathing()`s** — the one loop the app keeps for something real in progress — where it stepped its opacity off the clock and ignored Reduce Motion. The clock rolls whole seconds; the band reads its own `VoiceCapture`, so its ten-a-second changes re-render the band and not the composer's body.
+
+6. **A live level strip, in the player's bar anatomy.** The recorder meters its input (`VoiceCapture.levels`, ten samples a second, the last 24, dBFS −50…0 mapped to 0…1); the band draws them as `VoiceContent`'s 3pt tint capsules, 6…22pt, flat at the start like the player's placeholder. The shape you watch while recording is the shape the kept note plays back with.
+
+7. **A refused mic answers.** Record on a refused microphone shakes the key with the failure buzz, as a connect screen does for a failed proof; the footnote already names the way to allow it. `shake(on:)` gained the Reduce Motion guard it was the one modifier in `MicroMotion.swift` without.
+
+8. **The hold on New is seen, felt and reachable.** `DSScopeTiles.Hold` replaces `onHold` and carries the hold's glyph and name: a finger resting past a tap (180ms) ARMS the tile and the plus morphs to the waveform (`CategoryGlyph` morphs any glyph that changes); the hold lands with `DSHaptic.lift()`, the app's feel for picking something up by holding it; VoiceOver gets "Record a note" as a named action. The composer's bare mic says "Dictate your question" to VoiceOver instead of "Record a voice note", which it has not done since §581c.
+
+**Seen:** the static audits and the ask-destination harness's patterns run against the edited composer. **Not seen:** a build or a device — no Xcode in this session. On the phone: the morphs, the arming at 180ms against the hold at 450ms, the level strip's range against real speech, and all of it under Reduce Motion.

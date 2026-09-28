@@ -34,6 +34,17 @@ final class VoiceCapture: NSObject {
     /// (prd §972). Capture has STOPPED when this turns true; the caller keeps
     /// what was recorded rather than leaving a clock that runs over nothing.
     private(set) var interrupted = false
+    /// The last `levelBars` input levels, 0...1, oldest first (prd §973) —
+    /// the live strip the listening band draws in the player's own bar
+    /// anatomy, so what you watch while recording is the shape you play back.
+    /// Starts as flat zeros, the player's own even placeholder, and fills
+    /// from the trailing edge.
+    private(set) var levels: [CGFloat] = []
+    static let levelBars = 24
+    /// How often the clock and the level advance. A tenth of a second: the
+    /// level strip reads as live at that rate, and the clock only draws
+    /// whole seconds.
+    private static let tick: TimeInterval = 0.1
 
     /// The recognizer handed over its last words (prd §972). Set by the final
     /// result, or by the recognizer ending on an error; read by `settle`.
@@ -92,6 +103,7 @@ final class VoiceCapture: NSObject {
         elapsed = 0
         interrupted = false
         recognitionDone = false
+        levels = Array(repeating: 0, count: Self.levelBars)
 
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.record, mode: .measurement)
@@ -107,6 +119,7 @@ final class VoiceCapture: NSObject {
         recorder = try? AVAudioRecorder(
             url: Self.folder.appendingPathComponent("\(fileID.uuidString).m4a"),
             settings: settings)
+        recorder?.isMeteringEnabled = true   // the live level strip (prd §973)
         recorder?.record()
 
         // The live transcript — the engine taps the mic in parallel. iOS 26
@@ -160,8 +173,9 @@ final class VoiceCapture: NSObject {
         audioEngine = engine
 
         phase = .recording
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            self?.elapsed += 0.5
+        timer = Timer.scheduledTimer(withTimeInterval: Self.tick, repeats: true) { [weak self] _ in
+            // Scheduled on the main run loop, so this IS the main actor.
+            MainActor.assumeIsolated { self?.advance() }
         }
 
         // A call or an alarm takes the microphone and capture stops under us
@@ -185,6 +199,18 @@ final class VoiceCapture: NSObject {
                 content: .init(state: .init(startedAt: .now), staleDate: nil))
         }
         #endif
+    }
+
+    /// One tick: the clock, and the input level off the recorder's meter.
+    /// `averagePower` is dBFS, -160 (silence) to 0 (full scale); speech sits
+    /// between about -50 and -10, so that window maps to the strip's 0...1.
+    private func advance() {
+        elapsed += Self.tick
+        guard let recorder else { return }
+        recorder.updateMeters()
+        let db = recorder.averagePower(forChannel: 0)
+        levels.append(CGFloat(max(0, min(1, (db + 50) / 50))))
+        if levels.count > Self.levelBars { levels.removeFirst(levels.count - Self.levelBars) }
     }
 
     /// End the INPUT and give the recognizer a bounded moment to hand over its
@@ -254,7 +280,7 @@ final class VoiceCapture: NSObject {
         audioEngine = nil; recognitionRequest = nil; recognitionTask = nil; recorder = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
 
-        defer { phase = .idle; transcript = ""; elapsed = 0 }
+        defer { phase = .idle; transcript = ""; elapsed = 0; levels = [] }
         guard keep else {
             try? FileManager.default.removeItem(
                 at: Self.folder.appendingPathComponent("\(fileID.uuidString).m4a"))

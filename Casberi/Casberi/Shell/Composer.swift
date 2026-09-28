@@ -2428,7 +2428,7 @@ struct Composer: View {
     /// The live mic, above the foot — the one band the note sheet draws too
     /// (`VoiceListeningBand`, prd §970).
     private var recordingBand: some View {
-        VoiceListeningBand(elapsed: voice.elapsed, transcript: voice.transcript)
+        VoiceListeningBand(voice: voice)
     }
 
     // MARK: - The foot (prd §581)
@@ -2505,6 +2505,9 @@ struct Composer: View {
             }
             .animation(DS.Motion.standard, value: hasDraft)
             .animation(DS.Motion.standard, value: inFlight)
+            // Recording is the third state the foot moves between (prd §973);
+            // mic to Stop snapped while the other two animated.
+            .animation(DS.Motion.standard, value: isRecording)
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
@@ -2574,12 +2577,21 @@ struct Composer: View {
     /// bans. It is also the one place two verbs are right where §529's
     /// Ask/Do pair was not: Ask reaches a model and Find provably reaches
     /// none, which is a difference somebody can act on.
-    @ViewBuilder
+    /// The foot's one key (prd §581), drawn ONCE (prd §973): the verb changes
+    /// and the key stays, so its glyph morphs — mic to stop — instead of one
+    /// key hard-cutting to another. `footVerb` below chooses the verb, and
+    /// every reason for every choice stays with it.
     private var footSlot: some View {
+        let verb = footVerb
+        return AgentWideKey(title: verb.title, glyph: verb.glyph, tone: verb.tone,
+                            spoken: verb.spoken, action: verb.act)
+            .layoutPriority(1)
+    }
+
+    private var footVerb: FootVerb {
         if inFlight || handingOff {
-            AgentWideKey(title: String(localized: "Stop"), glyph: "stop.fill",
-                         tone: .ink) { stopAsk() }
-                .layoutPriority(1)
+            return FootVerb(title: String(localized: "Stop"), glyph: "stop.fill",
+                            tone: .ink) { stopAsk() }
         } else if isRecording {
             // "STOP AND KEEP" IS GONE (2026-09-03, reported in capitals). The
             // word `keep` promised the thing §581c just retired — filing what
@@ -2591,9 +2603,8 @@ struct Composer: View {
             // Deliberately not "stop and ask": a transcript is the one input
             // you have not read yet, and sending it unseen is how a
             // misheard word becomes an instruction to an agent with a wallet.
-            AgentWideKey(title: String(localized: "Stop"),
-                         glyph: "stop.fill", tone: .tint) { endDictation() }
-                .layoutPriority(1)
+            return FootVerb(title: String(localized: "Stop"),
+                            glyph: "stop.fill", tone: .tint) { endDictation() }
         } else if hasDraft {
             // ONE VERB, ALWAYS (2026-09-03, user: "i think we need to
             // simpolify it somehow too"). The device used to add a second
@@ -2612,11 +2623,9 @@ struct Composer: View {
             // says. What is lost is §215's separate promise that nothing was
             // written and no model ran. One line brings the key back.
             if activeAskAgent == nil {
-                AgentWideKey(title: String(localized: "Ask"), tone: .tint) { commit() }
-                    .layoutPriority(1)
+                return FootVerb(title: String(localized: "Ask"), tone: .tint) { commit() }
             } else {
-                AgentWideKey(title: String(localized: "Send"), tone: .tint) { askDirectly() }
-                    .layoutPriority(1)
+                return FootVerb(title: String(localized: "Send"), tone: .tint) { askDirectly() }
             }
         } else {
             // A ROUND MIC READS AS A FOURTH DESTINATION. Seen on the
@@ -2624,11 +2633,11 @@ struct Composer: View {
             // with nothing in the shape saying the last one is a verb. The
             // slot is always a capsule now, in every state — the "screen can't
             // change shape" rule applied to the foot itself.
-            AgentWideKey(glyph: "mic", tone: .ink) {
+            return FootVerb(glyph: "mic", tone: .ink,
+                            spoken: String(localized: "Dictate your question")) {
                 DSHaptic.tap()
                 Task { await voice.start() }
             }
-            .layoutPriority(1)
         }
     }
 
@@ -4294,4 +4303,14 @@ private struct FlowRow: Layout {
             lineH = max(lineH, sz.height)
         }
     }
+}
+
+/// One verb for the composer's foot key (prd §973) — what `footSlot` draws.
+/// A value, so the foot holds ONE `AgentWideKey` whose content changes.
+private struct FootVerb {
+    var title: String? = nil
+    var glyph: String? = nil
+    var tone: AgentWideKey.Tone = .ink
+    var spoken: String? = nil
+    let act: () -> Void
 }

@@ -29,6 +29,10 @@ struct CategoryGlyph: View {
     var body: some View {
         Image(systemName: name)
             .font(.system(size: size, weight: .medium))
+            // A glyph that changes MORPHS (§867) — a held tile's plus into
+            // its hold verb's glyph (prd §973). The dock's names never change,
+            // so there it never runs.
+            .dsSymbolSwap(name)
             .frame(width: size + 6, height: size + 2)
             .symbolEffect(.bounce.up, value: landTick)
             .onChange(of: isActive) { _, on in
