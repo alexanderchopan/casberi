@@ -239,10 +239,6 @@ struct AgentWideKey: View {
     /// Icon-only keys are round, so Find beside Ask reads as a sibling of the
     /// destination keys rather than as a squashed button.
     var compact = false
-    /// What a glyph-only key SAYS to VoiceOver. The composer's bare mic
-    /// records a voice note; the note sheet's dictates (prd §970). Nil keeps
-    /// the composer's wording.
-    var spoken: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -273,7 +269,7 @@ struct AgentWideKey: View {
             .dsHover()
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(title ?? spoken ?? (glyph.map { _ in "Record a voice note" } ?? ""))
+        .accessibilityLabel(title ?? (glyph.map { _ in "Record a voice note" } ?? ""))
     }
 
     private var shape: AnyShape {

@@ -23,14 +23,18 @@ import SwiftData
 /// The typed-text-never-saves rule is UNTOUCHED for the ask surface: that
 /// field asks, this one keeps, and the two are different sheets.
 ///
-/// **Speaking a note (prd §970).** The band's wide key follows the composer's
-/// foot rule — one capsule, the one verb available: the mic with nothing
-/// written, Stop while listening, Done once there are words. Stop puts the
-/// transcript IN THE FIELD, never straight into a saved note: a transcript
-/// is the one input you have not read yet (§581c's reasoning, which holds
-/// for a note as it does for an ask), so you read it, fix a word, and Done
-/// keeps it. The audio is dropped — a note is words. Holding the room's New
-/// tile lands here with the mic already live (`ShellChrome.noteVoiceOnOpen`).
+/// **Dictation is Apple's, and the band's mic is a VOICE NOTE (prd §971,
+/// superseding §970's dictation).** The field is focused on appear, so the
+/// keyboard's own mic key dictates into it on the phone, and the Mac's
+/// system dictation types into the same field; nothing here draws a second
+/// dictation door. The wide key follows the composer's foot rule — one
+/// capsule, the one verb available: Record with nothing written, Stop while
+/// recording, Done once there are words. Stop KEEPS a voice thing under
+/// `You` — the audio and its transcript — and closes: one tap in, one tap
+/// out, no review state, because a note is never edited after capture and
+/// the audio is the record. A written sheet keeps words, an empty sheet
+/// records; no sheet holds both. Holding the room's New tile lands here
+/// recording (`ShellChrome.noteVoiceOnOpen`).
 struct NoteCaptureSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
@@ -43,13 +47,13 @@ struct NoteCaptureSheet: View {
 
     @State private var draft = ""
     @FocusState private var focused: Bool
-    /// The sheet's own mic (prd §970), never the composer's.
+    /// The sheet's own mic (prd §971), never the composer's.
     @State private var voice = VoiceCapture()
 
     private var hasDraft: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    private var isListening: Bool { voice.phase == .recording }
+    private var isRecording: Bool { voice.phase == .recording }
 
     /// The one explaining line (prd §748): what happens to the words, or,
     /// with the mic refused, the route to allowing it — the composer's own
@@ -58,7 +62,7 @@ struct NoteCaptureSheet: View {
         if voice.phase == .denied {
             return Text("No mic access. Allow Casberi in \(DS.settingsAppName)")
         }
-        if isListening { return Text("Stop, and the words land here to read") }
+        if isRecording { return Text("Stop, and it is kept in Notes") }
         return hasDraft
             ? Text("Kept in Notes · share it anywhere")
             : Text("Kept in Notes when you close this")
@@ -124,12 +128,12 @@ struct NoteCaptureSheet: View {
                 .padding(.top, DS.Space.s3)
 
             // The live mic, the composer's own band (prd §970).
-            if isListening {
+            if isRecording {
                 VoiceListeningBand(elapsed: voice.elapsed, transcript: voice.transcript)
             }
 
             // THE BAND: Share in the composer's tint disc, and the composer's
-            // wide slot carrying the one verb available (prd §970).
+            // wide slot carrying the one verb available (prd §971).
             HStack(spacing: DS.Space.s3) {
                 ShareLink(item: draft) {
                     Image(systemName: "square.and.arrow.up")
@@ -153,21 +157,21 @@ struct NoteCaptureSheet: View {
         }
         .background(DS.page.ignoresSafeArea())
         .onAppear {
-            // Held New (prd §970): the mic is live when the sheet lands and
-            // the keyboard stays down. Consumed on read, so a later tap of
-            // New arrives typing, as it should.
-            var speak = chrome.noteVoiceOnOpen
+            // Held New (prd §970): recording when the sheet lands, keyboard
+            // down. Consumed on read, so a later tap of New arrives typing,
+            // as it should.
+            var record = chrome.noteVoiceOnOpen
             chrome.noteVoiceOnOpen = false
             #if DEBUG
-            // `-noteVoice YES` — land speaking, for the screen sweep. The
+            // `-noteVoice YES` — land recording, for the screen sweep. The
             // simulator has no microphone, so a pass shows the band and the
             // Stop key, never a transcript.
             if UserDefaults.standard.bool(forKey: "noteVoice") {
                 NSLog("[Casberi] noteVoice: raised")
-                speak = true
+                record = true
             }
             #endif
-            if speak { startListening() } else { focused = true }
+            if record { startRecording() } else { focused = true }
         }
         // The swipe down the composer also has: keep, then go.
         .gesture(
@@ -180,16 +184,17 @@ struct NoteCaptureSheet: View {
         )
     }
 
-    /// The one verb available (prd §970), the composer's foot rule applied to
-    /// the note: Stop while listening, Done once there are words, else the
-    /// mic. A quiet Done over an empty field was §83's dead control — it
-    /// closed and kept nothing, which the chevron already does.
+    /// The one verb available (prd §971), the composer's foot rule applied to
+    /// the note: Stop while recording, Done once there are words, else
+    /// Record — the voice kind's own waveform, so the key says what it makes.
+    /// A quiet Done over an empty field was §83's dead control — it closed and
+    /// kept nothing, which the chevron already does.
     @ViewBuilder
     private var wideKey: some View {
-        if isListening {
+        if isRecording {
             AgentWideKey(title: String(localized: "Stop"), glyph: "stop.fill", tone: .tint) {
                 DSHaptic.tap()
-                endDictation()
+                keepVoiceAndClose()
             }
         } else if hasDraft {
             AgentWideKey(title: String(localized: "Done"), tone: .ink) {
@@ -197,34 +202,54 @@ struct NoteCaptureSheet: View {
                 keepAndClose()
             }
         } else {
-            AgentWideKey(glyph: "mic", tone: .ink, spoken: String(localized: "Speak a note")) {
+            AgentWideKey(glyph: "waveform", tone: .ink) {
                 DSHaptic.tap()
-                startListening()
+                startRecording()
             }
         }
     }
 
-    // MARK: - Speaking
+    // MARK: - Recording
 
-    /// Start listening. The keyboard goes down first: the band draws where
-    /// the field's words will land, and a keyboard over a live mic is two
-    /// ways to write at once.
-    private func startListening() {
+    /// Start recording. The keyboard goes down first: the band draws where
+    /// the field stood, and a keyboard over a live mic is two ways to write
+    /// at once. The permission asks arrive here, in context.
+    private func startRecording() {
         focused = false
         Task { await voice.start() }
     }
 
-    /// End a dictation: the words go to the field and the keyboard rises
-    /// over them. READ THE TRANSCRIPT FIRST — `VoiceCapture.stop` clears it
-    /// in a `defer` and returns nil under `keep: false` (the composer's own
-    /// near-miss, §581c). Spoken words are added after anything typed, so a
-    /// note begun by hand and finished aloud keeps both.
-    private func endDictation() {
-        let spoken = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        _ = voice.stop(keep: false)
-        guard !spoken.isEmpty else { return }
-        draft = hasDraft ? draft.trimmingCharacters(in: .whitespacesAndNewlines) + " " + spoken : spoken
-        focused = true
+    /// Stop, and keep what was recorded as a VOICE thing under `You` — the
+    /// transcript as its words, the first line as its title, the audio in
+    /// the thing's synced field and its file reference for the local player
+    /// — then close. Nothing heard and nothing said lands nothing.
+    ///
+    /// `stop(keep: true)` returns the transcript and the file reference
+    /// together; the file is read for its bytes right after, once, so the
+    /// note follows the person to their other devices (a voice note on one
+    /// phone only is half a feature).
+    private func keepVoiceAndClose() {
+        defer { onClose() }
+        guard let piece = voice.stop(keep: true) else { return }
+        let words = piece.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bytes = VoiceCapture.audioURL(for: piece.sourceRef).flatMap { try? Data(contentsOf: $0) }
+        guard !words.isEmpty || (bytes?.count ?? 0) > 0 else {
+            if let url = VoiceCapture.audioURL(for: piece.sourceRef) {
+                try? FileManager.default.removeItem(at: url)
+            }
+            return
+        }
+        let thing = Thing(
+            kind: .voice,
+            title: words.isEmpty ? String(localized: "Voice note") : IngestSupport.titleLine(words),
+            content: words,
+            source: "You",
+            sourceRef: piece.sourceRef)
+        thing.audio = bytes
+        modelContext.insert(thing)
+        modelContext.saveHonestly()
+        SpotlightIndex.index([thing])
+        onLand(thing)
     }
 
     // MARK: - Keeping
@@ -233,10 +258,9 @@ struct NoteCaptureSheet: View {
     /// a link, everything else a note), under the person's own source — then
     /// close. Empty words close and keep nothing.
     private func keepAndClose() {
-        // Pulled down mid-sentence: what was heard is kept, as what was typed
-        // is — dismiss keeps (§969), and the band showed every word as it
-        // landed.
-        if isListening { endDictation() }
+        // Pulled down mid-recording: the recording is kept, as typed words
+        // are — dismiss keeps (§969).
+        if isRecording { keepVoiceAndClose(); return }
         defer { onClose() }
         guard hasDraft, let thing = Capture.thing(from: draft) else { return }
         // A note is a note even when it holds a link: `Capture.thing` turns a

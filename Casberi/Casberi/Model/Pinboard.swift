@@ -47,10 +47,11 @@ enum Pinboard {
 
     // MARK: - Membership
 
-    /// A note you wrote — or shared in, or dictated as text: your own source,
-    /// the note kind. The room's second membership, beside the pin.
+    /// A note you wrote — or shared in, or dictated as text — or SPOKE (prd
+    /// §971, a voice thing the note sheet recorded): your own source, the
+    /// note or voice kind. The room's second membership, beside the pin.
     static func isNote(_ thing: Thing) -> Bool {
-        thing.source == "You" && thing.kind == .note
+        thing.source == "You" && (thing.kind == .note || thing.kind == .voice)
     }
 
     /// Whether the room holds this thing: pinned, or a note of yours. The

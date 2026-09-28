@@ -343,6 +343,7 @@ marks chronological position within the pair.
 | §939 (a holdings tile's mark stays 22pt, 16pt on a small tile, never scaled) | the same small mark in a 94% tile as in a 5% one | superseded by §957 — the mark is 0.3 of the tile's shorter side, 16pt to 56pt; §939's true-area layout, share, Other and colours stand |
 | §937 (the tray's Manage is a room's one door) | a Manage circle in the rooms tray's You row, beside Connect | superseded by §958 — the You row is Home, Connect, Addresses, Settings; Connect opens Accounts, whose switcher holds Manage; §937's deletion of `RoomGear` and `gearColumn` stands |
 | §864 (the All feed leads with `DemoLead`, and the capsule stands down under it) | a second demo marking at the head of All, the pill hidden while it was on screen | superseded by §946 — the blue pill is the one marking on every screen, All included; §864's cover (the falling letter tiles) stands |
+| §970 (the sheet dictates on its own: Stop puts the transcript in the field) | the note sheet's wide key ran `VoiceCapture` as a dictation — Stop landed the words in the field to read, and the audio was dropped | superseded by §971 — dictation is the keyboard's own mic key over the focused field, and the wide key RECORDS: Stop keeps a `.voice` thing under `You` and closes; the listening band, the hold on New and `-noteVoice` stand
 
 ## 1. Thesis
 
@@ -62019,3 +62020,21 @@ The Notes room's rail stays at four tiles. The mic went where the composer alrea
 6. **`-noteVoice YES`** lands the sheet speaking, for the sweep; paired with `-openNote YES`. The simulator has no microphone, so a pass shows the band and the Stop key and never a transcript.
 
 **Seen:** the mockup the user chose from (the page under `notes-voice-mockup.html`, six frames). **Not seen:** the sheet on a device — this landed from a Linux session with no Xcode, so the build, the hold-then-release sequence on `DSScopeTiles` (whether the button's release fires after the long press, and whether the one-second window is ever needed) and the keyboard's fall when the mic starts are the first things to look at on the phone. Not built: keeping the audio as a voice thing (declined: a note is words), and a mic on the room's tiles (declined: the fifth button).
+
+## §971 — Dictation is Apple's, and the note sheet's mic KEEPS A VOICE NOTE (user: "how would we also factor in somebody who wants to save a voice note? Apple has a built-in mic already on the keyboard. so we should use that if possible", then "okay, do it", 2026-09-28; supersedes §970's dictation, keeps its band, hold and hook)
+
+§970 built a dictation of its own — Stop put the transcript in the field — beside a dictation the phone already draws: the sheet focuses its field on appear, so the keyboard's mic key is there, and the Mac's system dictation types into the same field. A second dictation door was the sheet's original comment's own objection. Deleted. And the app had a voice KIND with a working player (`VoiceContent`, the waveform lead, the pink) and NO capture path since §581c retired the composer's Record — a player with no door.
+
+1. **The wide key with nothing written is Record**, in the voice kind's own waveform glyph, ink tone; Stop (tint) while recording; Done once there are words. The composer's foot rule, unchanged from §970.
+
+2. **Stop keeps and closes.** `VoiceCapture.stop(keep: true)` returns the transcript and the file reference; the sheet makes a `.voice` thing under `You` — the transcript as its words, `IngestSupport.titleLine` as its title ("Voice note" when nothing was heard), the file reference for the local player and the bytes in `Thing.audio` (external storage) so it syncs. One tap in, one tap out; no review state, because a note is never edited after capture and the audio is the record. Nothing heard and nothing said lands nothing, and the file is removed. Pulling the sheet down mid-recording keeps it, because dismiss keeps (§969).
+
+3. **A written sheet keeps words, an empty sheet records.** The key rule already does this; no sheet holds both a draft and a recording, so nothing decides which wins.
+
+4. **The Notes room admits voice.** `Pinboard.isNote` is `source == "You"` and kind `.note` OR `.voice`. The row's lead already draws the kind's waveform and the thing sheet already plays it; nothing new is drawn.
+
+5. **Held New records** (§970's hold, unchanged). `-noteVoice YES` lands recording.
+
+6. **Weighed and accepted:** the bytes in the synced field grow the store by about a megabyte a minute (a voice note on one device only is half a feature); a misheard transcript becomes the title (the words are the caption, the audio is the record).
+
+**Seen:** the static audits. **Not seen:** a device — this landed from a Linux session with no Xcode, like §970. First on the phone: the build, a recording landing in the room with its waveform lead and playing from its sheet, the keyboard's mic key over the field, and the Data read after Stop (small, on the main actor, once).
