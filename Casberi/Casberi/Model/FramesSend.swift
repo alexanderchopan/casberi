@@ -21,7 +21,10 @@ import Foundation
 ///    never been used: all 5 type-`0x06` transactions write the address in
 ///    full, and re-encoding proves it — literal matches 5/5, empty matches
 ///    **0/5**. An empty signer here produces a hash the node recomputes
-///    differently and refuses as an invalid signature.
+///    differently and refuses as an invalid signature. (Measured on 81410. On
+///    `frames-devnet-0` the spec allows either spelling and its own traffic
+///    writes empty; this app's literal signer was accepted and mined there,
+///    `0x2e781e50…` in block 27,233 — prd §962.)
 /// 2. **A real state budget, where Hegotá sends `stateGas: 0`.** Execution
 ///    gas cannot pay for state growth, and a transfer to an address that does
 ///    not exist yet grows state — which on a four-day-old devnet is the common

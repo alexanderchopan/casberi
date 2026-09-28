@@ -267,37 +267,24 @@ enum FramesRead {
         }
     }
 
-    /// **WHY A FRAME FAILED, when the chain can tell us.**
+    /// **A FRAME THAT FAILED HAVING SPENT ITS WHOLE EXECUTION BUDGET — and
+    /// which budget ran out, this chain does not say (prd §962, MEASURED).**
     ///
-    /// The faucet's own error guide: *"A frame reverts having used exactly its
-    /// `execution` budget, with `stateGasUsed: 0x0` — missing state budget,
-    /// not execution. Raising `--frame-gas-limit` will not help."* Two
-    /// failures that render identically, and the chain publishes the
-    /// discriminator.
-    ///
-    /// Returns nil when the frame succeeded, or when the reading cannot be
-    /// made — an absent `stateGasUsed` is **not** evidence of a state
-    /// starvation, and saying so would send somebody to raise a budget that
-    /// was never the problem (§83, on the one line a developer would act on).
-    enum Starvation: Equatable { case state, execution }
-
-    static func starvation(frame: Frame, outcome: FrameOutcome) -> Starvation? {
-        guard !outcome.succeeded else { return nil }
-        guard let used = outcome.gasUsed, let budget = frame.executionGas,
-              used == budget else { return nil }
-        // Only a REPORTED zero is evidence. Nil is "the chain did not say".
-        guard let state = outcome.stateGasUsed else { return nil }
-        // **AND ON `frames-devnet-0` A ZERO IS NOT EVIDENCE EITHER (prd §962).**
-        // EIPs `b75cbe61`: "When a frame reverts, restore … `state_gas_left` to
-        // frame entry. Its final `gas_used.state` is therefore zero", and a
-        // state charge the pool cannot cover halts the frame exceptionally,
-        // which spends its whole execution budget. So a state-starved frame
-        // and an execution-starved one publish the same receipt here, and
-        // naming one would send somebody to raise the wrong budget. Measured
-        // on 81410, whose receipts kept the charge; unproven on this chain
-        // until `-framesStitchProbe …|state=0` is read back.
-        guard state > 0 else { return nil }
-        return .execution
+    /// On 81410 the receipt kept a state charge, so `stateGasUsed: 0x0` on a
+    /// frame that used exactly its execution budget meant the STATE budget
+    /// was missing, and this answered `.state` or `.execution`. On
+    /// `frames-devnet-0` (EIPs `b75cbe61`) a reverted frame's state is rolled
+    /// back to zero, and a state charge the pool cannot cover halts the frame
+    /// exceptionally, spending all of its execution gas. Measured 2026-09-27
+    /// with `-framesStitchProbe`: a value leg to a fresh address with
+    /// `state=0` (`0x54da1f56…`) and a leg with `exec=1000` (`0xa19d664c…`)
+    /// both read `status 0x0`, execution used == budget, state 0. Naming a
+    /// cause would send somebody to raise the wrong budget, so this only says
+    /// the budget was spent — and nothing when the chain did not report one.
+    static func exhaustedBudget(frame: Frame, outcome: FrameOutcome) -> Bool {
+        guard !outcome.succeeded,
+              let used = outcome.gasUsed, let budget = frame.executionGas else { return false }
+        return used == budget
     }
 }
 

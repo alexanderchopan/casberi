@@ -6974,15 +6974,15 @@ enum ProbeHooks {
                       }())
                 for (i, frame) in frames.enumerated() {
                     let out = i < outcomes.count ? outcomes[i] : nil
-                    let starved = out.flatMap { FramesRead.starvation(frame: frame, outcome: $0) }
-                    NSLog("[Casberi] framesFrame| %d %@ to=%@ exec=%@/%@ state=%@/%@ ok=%@ starved=%@",
+                    let spent = out.map { FramesRead.exhaustedBudget(frame: frame, outcome: $0) } ?? false
+                    NSLog("[Casberi] framesFrame| %d %@ to=%@ exec=%@/%@ state=%@/%@ ok=%@ spent=%@",
                           i, frame.modeName, frame.target ?? "-",
                           out?.gasUsed.map(String.init) ?? "-",
                           frame.executionGas.map(String.init) ?? "-",
                           out?.stateGasUsed.map(String.init) ?? "-",
                           frame.stateGas.map(String.init) ?? "-",
                           out.map { $0.succeeded ? "YES" : "NO" } ?? "-",
-                          starved.map { String(describing: $0) } ?? "-")
+                          spent ? "YES" : "NO")
                 }
             }
         },

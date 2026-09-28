@@ -788,7 +788,7 @@ struct FramesFrameSheet: View {
     private func hasBudget(_ row: FramesFrameRow) -> Bool {
         if let limit = row.frame.executionGas, limit > 0, row.outcome?.gasUsed != nil { return true }
         if let limit = row.frame.stateGas, limit > 0 { return true }
-        return row.outcome.flatMap { FramesRead.starvation(frame: row.frame, outcome: $0) } != nil
+        return row.outcome.map { FramesRead.exhaustedBudget(frame: row.frame, outcome: $0) } ?? false
     }
 
     @ViewBuilder private func budget(_ row: FramesFrameRow) -> some View {
@@ -824,12 +824,10 @@ struct FramesFrameSheet: View {
             Text(String(localized: "State budget \(DSCount.grouped(limit))"))
                 .dsText(.label12).foregroundStyle(DS.textTertiary).monospacedDigit()
         }
-        if let starvation = row.outcome.flatMap({ FramesRead.starvation(frame: row.frame, outcome: $0) }) {
-            Text(starvation == .state
-                 // The one sentence here somebody would ACT on, so it keeps
-                 // its full length while everything around it loses a clause.
-                 ? String(localized: "It ran out of STATE budget, not execution — raising the execution limit will not help.")
-                 : String(localized: "It used its whole execution budget and reverted."))
+        if row.outcome.map({ FramesRead.exhaustedBudget(frame: row.frame, outcome: $0) }) == true {
+            // The one sentence here somebody would ACT on, so it names both
+            // budgets: this chain's receipt cannot tell them apart (prd §962).
+            Text(String(localized: "It used its whole execution budget and failed. This chain doesn't say whether execution or state ran out."))
                 .dsText(.subhead12).foregroundStyle(DS.destructive)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -991,9 +989,9 @@ struct FramesFrameSheet: View {
 
 /// One gas budget against what was spent of it.
 ///
-/// **The bar is CLAMPED and the figures are not.** A frame that reverts having
-/// used exactly its budget is the state-starvation signature this chain's own
-/// guide names, so `used == limit` is a real and important reading; anything
+/// **The bar is CLAMPED and the figures are not.** A frame that fails having
+/// used exactly its budget ran out of one of its two budgets (prd §962), so
+/// `used == limit` is a real and important reading; anything
 /// above it would be a drawing running off its own track, and the numbers
 /// beside it say what really happened either way.
 struct FramesBudgetBar: View {

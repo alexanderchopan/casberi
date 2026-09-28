@@ -1050,183 +1050,194 @@ final class FramesLiveState {
 // MARK: - The demo
 
 extension FramesLiveState {
-    /// **EVERY FIGURE BELOW IS REAL**, read off rpc1.frames.ethrex.xyz on
-    /// 2026-09-01 (`HegotaLiveState.seedDemo`'s rule, and it earned itself the
-    /// same way here). Asked for a fixture, the honest answer is the chain's
-    /// own numbers — and they immediately showed two things no invented
-    /// fixture would have.
+    /// **EVERY FIGURE BELOW IS REAL** — re-measured on `frames-devnet-0` on
+    /// 2026-09-27 (prd §962) from transactions THIS APP sent, each read back
+    /// off the node (`HegotaLiveState.seedDemo`'s rule). Asked for a fixture,
+    /// the honest answer is the chain's own numbers, and they keep showing
+    /// what no invented fixture would.
     ///
-    /// **The chain those numbers came from was reset on or before 2026-09-08
-    /// (prd §656): same chain id, new genesis, head back to ~14k blocks.** The
-    /// figures stay exactly as they are and the demo is not wrong — a demo is a
-    /// fixture, and these are the numbers a real chain produced, which is the
-    /// only property this rule ever asked of them. The note is here so the next
-    /// reader who tries to re-derive them from a node, finds nothing, and
-    /// concludes the seed is invented, stops at this paragraph instead.
+    /// **One: the frames' gas does not add up to the transaction's.** 3,051,
+    /// 100 and 3,000 of execution against a receipt of 213,416 — most of it the
+    /// 183,600 of STATE gas the send frame spent creating the recipient's
+    /// account. A room that adds its frames' execution up and calls the total
+    /// the cost is wrong by two orders of magnitude.
     ///
-    /// **One: the balance overflows the obvious type.** This address holds
-    /// 99,999.999762 ETH, a genesis-funded dev account, which as wei does not
-    /// fit a `UInt64` — the reason `FramesMoney` exists and the reason
-    /// `balanceWeiHex` is a string.
+    /// **Two: `stateGasUsed` is reported on every frame here**, and it is the
+    /// creation charge exactly (120 bytes × 1,530) on every leg to a fresh
+    /// address. On a FAILED frame it is always zero — the spec rolls it back —
+    /// which is why the sheet names no cause for one (`exhaustedBudget`).
     ///
-    /// **Two: the frames' gas does not add up to the transaction's.** 100 and
-    /// 3,000 against a receipt of 210,790. A fixture with tidy numbers would
-    /// have let a room ship that adds its frames up and calls the total the
-    /// cost.
-    ///
-    /// `stateGasUsed` is nil on both frames because **this chain does not
-    /// report it** — measured on a transaction sent to a freshly generated
-    /// address, which grows state, so this is the field's absence rather than
-    /// a fixture's omission. A demo that filled it in would show a bar the
-    /// real room can never draw.
+    /// The fixture's first cut (2026-09-01) was 81410's figures; that chain is
+    /// no longer the seat's, so they are gone rather than carried as history.
+    /// Two moves are still not this chain's: the sponsored transfer (sponsoring
+    /// needs a second phone) and the second watched address's send — both are
+    /// shaped from the measured budgets and marked where they stand.
     nonisolated static func seedDemo() {
-        let me   = "0x1647a6abaf35cacf94dc450f8474d15b524b7d5f"
+        let me   = "0x3157fdbd6f7ed0865e04159b38dcf320a26ebc51"
         let peer = "0x80cfe5da326d0ab7a1d2ffc61745c57885dc2e32"
-        let dead = "0x00000000000000000000000000000000deadbe02"
-        let eth  = Decimal(string: "1000000000000000000")!
+        // A real account on this chain — the first send created it.
+        let known = "0x1c0db5acaf1e2cde6a75e4f2feb3ce11b67c24d8"
+        let expiry = "0x0000000000000000000000000000000000008141"
+        let milli = "0x38d7ea4c68000"   // 0.001 ETH
+        let price: UInt64 = 1_000_000_007   // measured on every send below
 
-        func frame(_ mode: UInt64, _ flags: UInt64, to: String, value: String) -> FramesRead.Frame {
-            .init(mode: mode, flags: flags, target: to, executionGas: 100_000,
-                  stateGas: 250_000, value: value, data: "0x")
+        func frame(_ mode: UInt64, _ flags: UInt64, to: String, value: String = "0x0",
+                   exec: UInt64, state: UInt64, data: String = "0x") -> FramesRead.Frame {
+            .init(mode: mode, flags: flags, target: to, executionGas: exec,
+                  stateGas: state, value: value, data: data)
         }
-        func outcome(_ ok: Bool, _ used: UInt64, logs: Int) -> FramesRead.FrameOutcome {
-            .init(succeeded: ok, gasUsed: used, stateGasUsed: nil, logCount: logs)
+        func outcome(_ ok: Bool, _ used: UInt64, state: UInt64 = 0, logs: Int = 0) -> FramesRead.FrameOutcome {
+            .init(succeeded: ok, gasUsed: used, stateGasUsed: state, logCount: logs)
         }
-        // Every frame transaction on this chain is signed by its sender with
-        // secp256k1 and a literal signer (prd §548, 5 of 5).
+        // Every frame transaction this app sends is signed by its sender with
+        // secp256k1 and a literal signer.
         func signed(_ who: String) -> FramesRead.Signature {
             .init(scheme: 1, signer: who, signsTransaction: true)
         }
 
-        // **WHEN: THE SPACING IS MEASURED, ONLY THE ANCHOR MOVES.**
-        //
-        // Every block above is real and so is every interval between them,
-        // read off rpc1.frames.ethrex.xyz on 2026-09-02 — 60,258 sits 5,508
-        // seconds after 59,340, which sits 240 after 59,300, and so on down to
-        // the faucet payment 6,948 seconds before the newest.
-        //
-        // What is NOT carried over is the absolute time. A demo entered next
-        // year over the true timestamps reads "1y ago" on every row, and
-        // `DemoMode.restampIfStale` — which exists for exactly that and shifts
-        // the corpus by whole days — cannot reach this fixture: it lives in
-        // memory and is installed fresh on entry. So the newest transaction
-        // sits a few minutes back and every other keeps its real distance from
-        // it. Same bargain the restamp makes (shift everything by one amount,
-        // keep the shape), taken at install time instead of on a stale check.
-        //
-        // **AND THE SCALE IS STRETCHED (2026-09-10).** The intervals above are
-        // measured, and measured they span TWO HOURS — so the Home crown could
-        // offer neither a 7d nor a 30d chip, and this room wore a different
-        // crown from the rest of the wallet family for no reason a person
-        // would accept ("the crown does not look like the others"). One
-        // multiplier, applied to every gap, so the ORDER and the PROPORTIONS
-        // stay exactly as the chain produced them and only the scale is the
-        // demo's: 480 puts the faucet payment about 38 days back, which is a
-        // history a month-long window can honestly be drawn over.
-        let demoTimeStretch: TimeInterval = 480
+        // **WHEN: THE SPACING IS MEASURED, ONLY THE ANCHOR AND SCALE MOVE.**
+        // The five transactions below span 504 real seconds — the faucet
+        // payment 504 before the newest, the first send 468, the partial 72,
+        // the rolled-back batch 36. A demo entered next year over the true
+        // timestamps reads "1y ago" on every row, and `DemoMode.restampIfStale`
+        // cannot reach this in-memory fixture, so the newest sits a few minutes
+        // back and every other keeps its real PROPORTION of the gap. The
+        // stretch puts the faucet ~38 days back, so the Home crown can offer
+        // 7d and 30d like the rest of the wallet family.
+        let demoTimeStretch: TimeInterval = 6_500
         let anchor = Date().addingTimeInterval(-240)
         func at(_ secondsBefore: TimeInterval) -> Date {
             anchor.addingTimeInterval(-secondsBefore * demoTimeStretch)
         }
+        // Each send leads with its deadline frame: 8 big-endian seconds, five
+        // minutes after it was signed (`FramesSend.deadline`), in DEMO time so
+        // the sheet's deadline agrees with the row's.
+        func expiryFrame(_ secondsBefore: TimeInterval) -> FramesRead.Frame {
+            let deadline = UInt64(at(secondsBefore).timeIntervalSince1970 + 300)
+            return frame(1, 0x00, to: expiry, exec: 20_000, state: 0,
+                         data: "0x" + String(format: "%016llx", deadline))
+        }
+        let expiryRan = outcome(true, 3_051)
+        let verify = frame(1, 0x03, to: me, exec: 20_000, state: 0)
+        let verifyRan = outcome(true, 100)
 
-        // 1. THE FAUCET. An ordinary type-0x2 transfer — no frames — which is
-        //    how every account on this chain actually begins.
+        // 1. THE FAUCET. An ordinary type-0x2 transfer from ethpandaops'
+        //    proof-of-work faucet — no frames — which is how every account
+        //    here begins. 16 ETH, and 204,600 gas: the 183,600 of it that is
+        //    state is our account being created.
         let funded = FramesMove(
-            hash: "0x46619c8ef349691b6c647e742436816d1c282c6b7479d36e72ed5894ee9320e4",
-            blockNumber: 59_100, sender: "0xf0667e65e0e5281a39d95d84770b6e2065740466",
-            payer: "0xf0667e65e0e5281a39d95d84770b6e2065740466",
-            succeeded: true, gasUsed: 21_000, timestamp: at(6948),
-            rows: [], deltaWei: eth)
+            hash: "0x89ab6427d5fe06a9aed4a6dc21f258ea2e5cc75f4263d774d18911fdfdf002c5",
+            blockNumber: 27_230, sender: "0x7a40026a3b9a41754a95eec8c92c6b99886f440c",
+            payer: "0x7a40026a3b9a41754a95eec8c92c6b99886f440c",
+            succeeded: true, gasUsed: 204_600, timestamp: at(504),
+            rows: [], deltaWei: Decimal(string: "16000000000000000000")!)
 
-        // 2. A FRAME TRANSACTION — verify, then send. Lights the Frames scope.
+        // 2. A FRAME TRANSACTION — deadline, verify, then send to an address
+        //    that did not exist. Lights the Frames scope.
         let sent = FramesMove(
-            hash: "0x9d12f7722ab15d93ff377f19f923458cae8d6009b0a2b11eb2cd1ca006748674",
-            blockNumber: 59_180, sender: me, payer: me, succeeded: true, gasUsed: 210_790,
-            // MEASURED: the 0.001 send cost 1,210,790,000,000,000 wei against a
-            // 210,790 gas receipt, so this chain quoted exactly 1 gwei.
-            effectiveGasPriceWei: 1_000_000_000,
-            timestamp: at(6468),
+            hash: "0x2e781e50d1343dbdd9fa50b1f723a8f5ef6e83d3ad353c8f2f0b65f81b9938d4",
+            blockNumber: 27_233, sender: me, payer: me, succeeded: true, gasUsed: 213_416,
+            effectiveGasPriceWei: price,
+            timestamp: at(468),
             rows: [
-                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
-                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
+                .init(frame: expiryFrame(468), outcome: expiryRan),
+                .init(frame: verify, outcome: verifyRan),
+                .init(frame: frame(2, 0x00, to: known, value: milli, exec: 100_000, state: 250_000),
+                      outcome: outcome(true, 3_000, state: 183_600, logs: 1)),
             ],
-            deltaWei: -(Decimal(string: "1210790000000000")!),
+            deltaWei: -(Decimal(string: "1213416001493912")!),
             signatures: [signed(me)])
 
-        // 3. **A TRANSACTION THAT FAILED AND MOVED MONEY ANYWAY.** Not
-        //    invented: this is the shape measured on chain (§548's second
-        //    follow-up) — frames are not atomic by default, so an earlier
-        //    frame's transfer persists under a `status: 0x0`. It is the whole
-        //    reason this room draws frames rather than outcomes, and a demo
-        //    that never shows it teaches the opposite.
+        // 3. **A TRANSACTION THAT FAILED AND MOVED MONEY ANYWAY.** Frames are
+        //    not atomic by default: the first leg's transfer to an account
+        //    that exists persists (its log is there) while the second, to a
+        //    fresh address with no state budget, fails having spent its whole
+        //    execution budget — and the transaction reports `status: 0x0`.
+        //    It is the whole reason this room draws frames, not outcomes.
         let partial = FramesMove(
-            hash: "0x9bb9cfef1c41c97b101ce20e934e13f3a7e3d5662c2e0352b26b9998f9f8c58d",
-            blockNumber: 59_240, sender: me, payer: me, succeeded: false, gasUsed: 316_273, effectiveGasPriceWei: 1_000_000_000,
-            timestamp: at(6108),
+            hash: "0xcd2462037e4e5cd4fcf4982a76c7fbddae68b7de3bcff4c0584c4fc9b1db4112",
+            blockNumber: 27_266, sender: me, payer: me, succeeded: false, gasUsed: 136_291,
+            effectiveGasPriceWei: price,
+            timestamp: at(72),
             rows: [
-                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
-                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
-                .init(frame: frame(2, 0x00, to: peer, value: "0x38d7ea4c68000"), outcome: outcome(false, 100_000, logs: 0)),
+                .init(frame: expiryFrame(72), outcome: expiryRan),
+                .init(frame: verify, outcome: verifyRan),
+                .init(frame: frame(2, 0x00, to: known, value: milli, exec: 100_000, state: 0),
+                      outcome: outcome(true, 3_000, logs: 1)),
+                .init(frame: frame(2, 0x00, to: "0x315a0846b3b342aedcdbbe29507884efd45c5ee3",
+                                   value: milli, exec: 100_000, state: 0),
+                      outcome: outcome(false, 100_000)),
             ],
-            deltaWei: -(Decimal(string: "1316273000000000")!),
+            deltaWei: -(Decimal(string: "1136291000954037")!),
             signatures: [signed(me)])
 
-        // 4. **A ROLLED-BACK BATCH.** The frame reports `status: 0x1` and
-        //    emitted no log, because the batch it was in reverted — the trap
-        //    that makes `valueLanded` read effects rather than status.
+        // 4. **A ROLLED-BACK BATCH.** The same two legs, joined. The first
+        //    reports `status: 0x1` and emitted NO log, because the batch it
+        //    was in failed — the trap that makes `valueLanded` read effects
+        //    rather than status. Only the fee left.
         let rolled = FramesMove(
-            hash: "0x2642331b604d901b59d8f3d6ff5dea314c57ab090d2bf661bbc287b79fefeb63",
-            blockNumber: 59_300, sender: me, payer: me, succeeded: false, gasUsed: 240_100, effectiveGasPriceWei: 1_000_000_000,
-            timestamp: at(5748),
+            hash: "0xca57f1b6811c0958ca6e20f08d4689b3229ec2f84e4b2594c31b69799c904e96",
+            blockNumber: 27_269, sender: me, payer: me, succeeded: false, gasUsed: 136_279,
+            effectiveGasPriceWei: price,
+            timestamp: at(36),
             rows: [
-                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
-                .init(frame: frame(2, 0x04, to: peer, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 0)),
-                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(false, 100_000, logs: 0)),
+                .init(frame: expiryFrame(36), outcome: expiryRan),
+                .init(frame: verify, outcome: verifyRan),
+                .init(frame: frame(2, 0x04, to: known, value: milli, exec: 100_000, state: 0),
+                      outcome: outcome(true, 3_000)),
+                .init(frame: frame(2, 0x00, to: "0x6773a9367035fb62ffd3ebdec22eb64b84f37644",
+                                   value: milli, exec: 100_000, state: 0),
+                      outcome: outcome(false, 100_000)),
             ],
-            deltaWei: -(Decimal(string: "240100000000000")!),
+            deltaWei: -(Decimal(string: "136279000953953")!),
             signatures: [signed(me)])
 
-        // 4b. **A THREE-LEG STITCH THAT WORKED** — the capability this chain
-        //     exists for, and the shape the send now builds (prd §548 sixth
-        //     follow-up). Every number below is MEASURED off the transaction
-        //     this app really sent: 595,948 gas at 1,000,000,007 wei, three
-        //     legs of 0.001 / 0.002 / 0.003 to three addresses that did not
-        //     exist before it.
-        //
-        //     It earns its place because it is the only fixture where the
-        //     strip's cells have DIFFERENT widths — value-sized, so a batch
-        //     reads as ascending — and the only one where a row says
-        //     "3 addresses". A demo that only ever shows two-frame
-        //     transactions teaches that this chain does two-frame
-        //     transactions.
+        // 4b. **A THREE-LEG STITCH THAT WORKED** — 0.001 / 0.002 / 0.003 to
+        //     three addresses that did not exist, 599,566 gas. The only
+        //     fixture whose strip cells have DIFFERENT widths, and the only row
+        //     that says "3 addresses": a demo of two-frame transactions teaches
+        //     that this chain does two-frame transactions.
         let stitched = FramesMove(
-            hash: "0x31e7311acfbc2280df90c46b009eba7f4d45fa698a42de0e86a8eb1771bb72d8",
-            blockNumber: 60_258, sender: me, payer: me, succeeded: true,
-            gasUsed: 595_948, effectiveGasPriceWei: 1_000_000_007,
+            hash: "0x22c010c23767fd1df30615eaf43c5abb5fde5a809e989dcaa93c8ae65894608d",
+            blockNumber: 27_272, sender: me, payer: me, succeeded: true,
+            gasUsed: 599_566, effectiveGasPriceWei: price,
             timestamp: at(0),
             rows: [
-                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
-                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
-                .init(frame: frame(2, 0x00, to: peer, value: "0x71afd498d0000"), outcome: outcome(true, 3_000, logs: 1)),
-                .init(frame: frame(2, 0x00, to: "0xc3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
-                                   value: "0xaa87bee538000"), outcome: outcome(true, 3_000, logs: 1)),
+                .init(frame: expiryFrame(0), outcome: expiryRan),
+                .init(frame: verify, outcome: verifyRan),
+                .init(frame: frame(2, 0x00, to: "0x1fc5a8a668d49e40eba8118bae4920fc16c31b7d",
+                                   value: milli, exec: 100_000, state: 250_000),
+                      outcome: outcome(true, 3_000, state: 183_600, logs: 1)),
+                .init(frame: frame(2, 0x00, to: "0xe66f55487908fd572448bf84d6038a41ee64cad0",
+                                   value: "0x71afd498d0000", exec: 100_000, state: 250_000),
+                      outcome: outcome(true, 3_000, state: 183_600, logs: 1)),
+                .init(frame: frame(2, 0x00, to: "0x50266e69af3c65370e5d992d39ed775e9795a4d1",
+                                   value: "0xaa87bee538000", exec: 100_000, state: 250_000),
+                      outcome: outcome(true, 3_000, state: 183_600, logs: 1)),
             ],
             // 0.006 out plus the measured fee, to the wei.
-            deltaWei: -(Decimal(string: "6595948004171636")!),
+            deltaWei: -(Decimal(string: "6599566004196962")!),
             signatures: [signed(me)])
 
         // 5. **SOMEBODY ELSE PAID.** `payer` differs from `sender`, which
         //    lights the Sponsors scope — the reading this chain publishes that
-        //    ordinary chains hide. No transaction on the real chain has been
-        //    sponsored yet, so this is the one shape here the chain has not
-        //    itself produced; it is the scope's only way to be seen.
+        //    ordinary chains hide. **NOT SENT** — sponsoring needs a second
+        //    phone — so this is the one move here the chain has not produced:
+        //    its frames are `FramesTransaction.sponsored`'s own shape and
+        //    budgets, and its gas is summed from measured parts — the first
+        //    send's 23,665 outside its frames, the three frames it shares, a
+        //    cold payer's 2,600, and a second signature's 2,800 plus its bytes.
         let sponsored = FramesMove(
             hash: "0x5b131baf9e0b9635a0fd58a6410f50e66c6450736999cace47826982de1cf026",
-            blockNumber: 59_340, sender: me, payer: peer, succeeded: true, gasUsed: 402_873, effectiveGasPriceWei: 1_000_000_000,
-            timestamp: at(5508),
+            blockNumber: 27_250, sender: me, payer: peer, succeeded: true, gasUsed: 36_731,
+            effectiveGasPriceWei: price,
+            timestamp: at(300),
             rows: [
-                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
-                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
+                .init(frame: expiryFrame(300), outcome: expiryRan),
+                .init(frame: frame(1, 0x02, to: me, exec: 20_000, state: 0), outcome: verifyRan),
+                .init(frame: frame(1, 0x01, to: peer, exec: 20_000, state: 183_600), outcome: outcome(true, 2_600)),
+                .init(frame: frame(2, 0x00, to: known, value: milli, exec: 100_000, state: 250_000),
+                      outcome: outcome(true, 3_000, logs: 1)),
             ],
             // The fee is NOT subtracted: somebody else paid it. That is the
             // whole point of the scope, and of `delta`'s payer check.
@@ -1236,11 +1247,12 @@ extension FramesLiveState {
             // execution and index 1 for payment).
             signatures: [signed(me), signed(peer)])
 
-        // **THE TOKENS ARE THIS CHAIN'S OWN (prd §688).** Both contracts and
-        // both symbols were read off rpc1.frames.ethrex.xyz on 2026-09-11 —
-        // `YDS` at 0x25e6…0920 and `DAI` at 0x7d6f…cf3f, eighteen decimals
-        // each, with real holders carrying 1,993.9 and 999. The amounts below
-        // are this fixture's, the assets are not invented.
+        // **THE TOKENS ARE 81410'S (prd §688), and frames-devnet-0 has none
+        // yet** — measured 2026-09-27: no Transfer log from any contract but
+        // the coin's own `0x…fe` in the whole chain. `YDS` and `DAI` were read
+        // off 81410 on 2026-09-11, eighteen decimals each, with real holders.
+        // Kept because the Holdings scope draws a token the moment one exists
+        // here, and a demo with no token cannot show that it can.
         func token(_ contract: String, _ symbol: String, _ whole: String) -> DevnetTokens.Holding {
             DevnetTokens.Holding(contract: contract, symbol: symbol, decimals: 18,
                                  raw: Decimal(string: whole)!)
@@ -1264,15 +1276,20 @@ extension FramesLiveState {
         // but that they both dealt with somebody else.
         let watchedSend = FramesMove(
             hash: "0x7ac41d0b8e5a2f3c6d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e",
-            blockNumber: 59_210, sender: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",
+            blockNumber: 27_240, sender: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",
             payer: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",
-            succeeded: true, gasUsed: 210_790, effectiveGasPriceWei: 1_000_000_000,
-            timestamp: at(6300),
+            // Not sent either: an address you WATCH has no key here. Its gas
+            // is the first send's, less the account it did not create.
+            succeeded: true, gasUsed: 29_816, effectiveGasPriceWei: price,
+            timestamp: at(400),
             rows: [
-                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"),
+                .init(frame: expiryFrame(400), outcome: expiryRan),
+                .init(frame: frame(1, 0x03, to: "0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9",
+                                   exec: 20_000, state: 0), outcome: verifyRan),
+                .init(frame: frame(2, 0x00, to: known, value: milli, exec: 100_000, state: 250_000),
                       outcome: outcome(true, 3_000, logs: 1)),
             ],
-            deltaWei: -(Decimal(string: "1210790000000000")!),
+            deltaWei: -(Decimal(string: "1029816000208712")!),
             signatures: [signed("0x5b3772a23fa2214ad2c7ec27dd74bde28dac3ba9")])
 
         let watched = FramesAccount(
@@ -1284,18 +1301,13 @@ extension FramesLiveState {
 
         let fixture = [FramesAccount(
             address: me,
-            // **DERIVED FROM THE MOVES ABOVE, NOT MEASURED (2026-09-10).**
-            // Every delta here is real, and the balance used to be real too —
-            // read off the live account on 2026-09-02, by which time it had
-            // made far more transactions than the six representative ones
-            // this fixture carries. The two numbers therefore disagreed by
-            // 0.93 ETH, and the Home curve walked backwards straight through
-            // zero: one faucet payment of 1 ETH minus 0.0104 of measured
-            // spending cannot leave 0.0607 behind. This is the balance those
-            // six moves actually produce, so the reconstruction closes on
-            // zero the way a real account's does.
-            balanceWeiHex: "0xdbbe581d938128c",
-            nonce: 4,
+            // **DERIVED FROM THE MOVES ABOVE (2026-09-10's rule).** 16 ETH in,
+            // minus every delta here, to the wei — so the Home curve closes on
+            // zero the way a real account's does. The live account is lower by
+            // the two starved sends that measured `exhaustedBudget`, which this
+            // fixture does not carry.
+            balanceWeiHex: "0xdde79678e5792cf0",
+            nonce: 5,
             moves: [sponsored, stitched, rolled, partial, sent, funded],
             tokens: [yds]), watched]
         Task { @MainActor in FramesLiveState.shared.installDemo(fixture) }

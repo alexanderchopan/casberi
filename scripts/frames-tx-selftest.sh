@@ -320,12 +320,26 @@ grep -qF 'hexInt(f["gasLimit"])' "$WORK/read.nc" \
 if grep -qE 'stateGasUsed.*\?\?\s*0' "$WORK/read.nc"; then
   echo "✗ FramesRead defaults stateGasUsed to zero — an absent field would be reported as a state starvation"; exit 1
 fi
-python3 - "$WORK/read.nc" <<'PYSTARVE' || exit 1
+# **AND NO CAUSE IS NAMED (prd §962, measured).** On frames-devnet-0 a
+# state-starved frame and an execution-starved one publish the same receipt —
+# status 0, execution used == budget, state 0 — so the reading that names
+# which budget ran out is deleted, and must not come back by reading state.
+python3 - "$WORK/read.nc" "Casberi/Casberi/Screens/FramesSheets.swift" <<'PYSTARVE' || exit 1
 import sys, io
 src = io.open(sys.argv[1], encoding="utf-8").read()
-body = src[src.find("static func starvation("):]
-if "guard let state = outcome.stateGasUsed else { return nil }" not in body:
-    print("✗ FramesRead.starvation no longer refuses to judge without a reported stateGasUsed")
+start = src.find("static func exhaustedBudget(")
+if start < 0:
+    print("✗ FramesRead.exhaustedBudget is gone"); sys.exit(1)
+body = src[start:src.find("\n    }", start)]
+if "stateGasUsed" in body:
+    print("✗ exhaustedBudget reads stateGasUsed — on this chain a reverted frame's state is always zero, so it cannot name a cause")
+    sys.exit(1)
+if "static func starvation(" in src or "enum Starvation" in src:
+    print("✗ the state-vs-execution verdict is back — frames-devnet-0's receipts cannot separate the two (prd §962)")
+    sys.exit(1)
+sheet = io.open(sys.argv[2], encoding="utf-8").read()
+if "ran out of STATE budget" in sheet:
+    print("✗ the frame sheet names a state starvation again — this chain's receipt cannot say that")
     sys.exit(1)
 sys.exit(0)
 PYSTARVE
@@ -904,6 +918,33 @@ check("a frame receipt with its frameReceipts is",
 check("an ordinary transfer has no frames to miss",
       FramesRead.servesFrames(method: "eth_getTransactionByHash", result: ["type": "0x2"]))
 check("and nothing else is judged", FramesRead.servesFrames(method: "eth_getBalance", result: "0x0"))
+
+// ============ WHICH BUDGET RAN OUT — measured, and unanswerable (prd §962).
+// Two starved legs this app sent on frames-devnet-0, 2026-09-27: a value leg
+// to a fresh address with no state budget (0x54da1f56…) and a leg with 1,000
+// execution gas to an existing one (0xa19d664c…). Their failed frames, as the
+// node reported them — the same reading, so the sheet may only say the budget
+// was spent.
+let starvedState = FramesRead.outcomes(inReceipt: ["frameReceipts": [
+    ["status": "0x0", "gasUsed": "0x186a0", "stateGasUsed": "0x0", "logs": [[String: Any]]()]]])[0]
+let starvedExec = FramesRead.outcomes(inReceipt: ["frameReceipts": [
+    ["status": "0x0", "gasUsed": "0x3e8", "stateGasUsed": "0x0", "logs": [[String: Any]]()]]])[0]
+let legState = FramesRead.Frame(mode: 2, flags: 0, target: "0x4073c128e87151ad148b0e7d934f0a95d6b1a5a1",
+                                executionGas: 100_000, stateGas: 0, value: "0x38d7ea4c68000", data: "0x")
+let legExec = FramesRead.Frame(mode: 2, flags: 0, target: "0x1c0db5acaf1e2cde6a75e4f2feb3ce11b67c24d8",
+                               executionGas: 1_000, stateGas: 250_000, value: "0x38d7ea4c68000", data: "0x")
+check("a state-starved frame reads as its budget spent",
+      FramesRead.exhaustedBudget(frame: legState, outcome: starvedState))
+check("and so does an execution-starved one — the receipt cannot tell them apart",
+      FramesRead.exhaustedBudget(frame: legExec, outcome: starvedExec))
+check("both report zero state, which is why no cause is named",
+      starvedState.stateGasUsed == 0 && starvedExec.stateGasUsed == 0)
+let landedLeg = FramesRead.outcomes(inReceipt: ["frameReceipts": [
+    ["status": "0x1", "gasUsed": "0x3e8", "stateGasUsed": "0x2cd30", "logs": [[String: Any]]()]]])[0]
+check("a frame that landed is never 'spent', even at exactly its budget",
+      !FramesRead.exhaustedBudget(frame: legExec, outcome: landedLeg))
+check("a failure short of its budget is not 'spent'",
+      !FramesRead.exhaustedBudget(frame: legState, outcome: starvedExec))
 
 // ============ VECTOR 2 — real, a different sender, a different fee ceiling
 // and a DIFFERENT gas pair (0x13880/0x30d40, where v1 is 0x186a0/0x3d090), so
@@ -2295,6 +2336,10 @@ mutate "a VERIFY frame asks 81410's 100,000 again" $F \
 F2=FramesMoney.swift
 F3=FramesSection.swift
 F4=FramesReading.swift
+mutate "a landed frame read as spent" $F4 \
+  'guard !outcome.succeeded,' 'guard true,'
+mutate "any failure read as a spent budget" $F4 \
+  'return used == budget' 'return used <= budget'
 mutate "a frame transaction served bare is drawn as one with no frames" $F4 \
   'case "eth_getTransactionByHash": return row["frames"] is [Any]' 'case "eth_getTransactionByHash": return true'
 mutate "a frame receipt served bare is drawn as one with no outcomes" $F4 \
