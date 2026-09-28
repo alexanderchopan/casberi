@@ -48,7 +48,15 @@ enum FramesPasskeyAccount {
     /// its code** — 120 bytes for the account and 64 for the code at 1,530 gas
     /// a byte is ~282,000; 450,000 stays under the 500,000 the mempool allows
     /// the whole validation prefix.
-    static let deployExecutionGas: UInt64 = 150_000
+    ///
+    /// **Execution is 40,000, not 150,000 (prd §962).** The deploy frame sits
+    /// in the validation prefix, whose execution is capped at 100,000 with
+    /// the signature's cost — 150,000 alone was over it. Measured on
+    /// `frames-devnet-0` 2026-09-27: `eth_estimateGas` of this exact call
+    /// through the proxy is 313,610, of which ~281,500 is the state above and
+    /// 12,000 the plain-transaction intrinsic, leaving ~19,000 of execution.
+    /// Deadline 20,000 + deploy 40,000 + verify 20,000 + P-256 6,700 = 86,700.
+    static let deployExecutionGas: UInt64 = 40_000
     static let deployStateGas: UInt64 = 450_000
 
     /// The address EIP-8141 names a P-256 signer by: `keccak256(qx ‖ qy)[12:]`.
@@ -122,7 +130,7 @@ enum FramesPasskeyAccount {
             frames: FramesTransaction.expiryPrefix(deadline)
                 + (deploy ? [deployFrame(owner: owner)] : [])
                 + [FramesTransaction.Frame(mode: 1, flags: 0x03, target: account,
-                                           executionGas: executionGas, stateGas: 0,
+                                           executionGas: FramesTransaction.verifyExecutionGas, stateGas: 0,
                                            value: Data(), data: Data())]
                 + legs.enumerated().map { index, leg in
                     FramesTransaction.Frame(mode: 2,

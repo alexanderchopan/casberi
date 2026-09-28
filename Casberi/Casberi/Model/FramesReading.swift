@@ -223,6 +223,21 @@ enum FramesRead {
         return UInt64(body, radix: 16)
     }
 
+    /// **Whether an answer carries the frame fields its type promises** (prd
+    /// §962). A type-`0x06` transaction with no `frames`, or its receipt with
+    /// no `frameReceipts`, is one node behind a load balancer that has not
+    /// implemented the read (geth issue 35783) — not a transaction with no
+    /// frames. Anything that is not a frame transaction, and every other
+    /// method, passes: this judges only what it can know is incomplete.
+    static func servesFrames(method: String, result: Any) -> Bool {
+        guard let row = result as? [String: Any], (row["type"] as? String) == "0x6" else { return true }
+        switch method {
+        case "eth_getTransactionByHash": return row["frames"] is [Any]
+        case "eth_getTransactionReceipt": return row["frameReceipts"] is [Any]
+        default: return true
+        }
+    }
+
     /// Frames off an `eth_getTransactionByHash` result.
     static func frames(inTransaction tx: [String: Any]) -> [Frame] {
         guard let raw = tx["frames"] as? [[String: Any]] else { return [] }
@@ -272,7 +287,17 @@ enum FramesRead {
               used == budget else { return nil }
         // Only a REPORTED zero is evidence. Nil is "the chain did not say".
         guard let state = outcome.stateGasUsed else { return nil }
-        return state == 0 ? .state : .execution
+        // **AND ON `frames-devnet-0` A ZERO IS NOT EVIDENCE EITHER (prd §962).**
+        // EIPs `b75cbe61`: "When a frame reverts, restore … `state_gas_left` to
+        // frame entry. Its final `gas_used.state` is therefore zero", and a
+        // state charge the pool cannot cover halts the frame exceptionally,
+        // which spends its whole execution budget. So a state-starved frame
+        // and an execution-starved one publish the same receipt here, and
+        // naming one would send somebody to raise the wrong budget. Measured
+        // on 81410, whose receipts kept the charge; unproven on this chain
+        // until `-framesStitchProbe …|state=0` is read back.
+        guard state > 0 else { return nil }
+        return .execution
     }
 }
 

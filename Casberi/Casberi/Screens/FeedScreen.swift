@@ -1281,7 +1281,6 @@ struct FeedScreen: View {
             case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was sent.")
             case .prefixTooLarge:   return String(localized: "That's more frames than this chain will verify at once — remove one.")
             case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
-            case .faucet(let verdict): return verdict.sentence
             case .requestUnreadable, .requestSignatureInvalid, .notTheSponsor:
                 return FramesSend.sentence(failure)
             }
@@ -1376,7 +1375,6 @@ struct FeedScreen: View {
             // The node's OWN words (§530): a refusal with no reason cannot be
             // acted on, and on a send that is the worst place for it.
             case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
-            case .faucet(let verdict): return verdict.sentence
             case .requestUnreadable, .requestSignatureInvalid, .notTheSponsor:
                 return FramesSend.sentence(failure)
             }

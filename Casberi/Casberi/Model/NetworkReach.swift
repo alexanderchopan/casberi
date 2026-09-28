@@ -393,18 +393,16 @@ enum NetworkReach {
                          "rpc3.privacy.ethrex.xyz",
                          "faucet.privacy.ethrex.xyz"]),
         // Frames devnet (prd §548, 2026-09-01). A SEPARATE seat from Hegotá
-        // and therefore a separate entry: different chain (81410), different
-        // hosts, different faucet, and a signing key of its own. The faucet
-        // host is listed from day one rather than added later — Hegotá's was
-        // in the non-reach denylist for a day after its key sheet grew a Claim
-        // button, so the privacy screen omitted a host the app really reached
-        // (§531). This app POSTs to it, so it is declared.
+        // and therefore a separate entry: different chain, different hosts,
+        // and a signing key of its own. Since prd §962 the chain is ethpandaops'
+        // `frames-devnet-0` (`FramesNetwork.current`), reached through ONE
+        // public endpoint. Its faucet is proof-of-work plus a captcha, so the
+        // app only OPENS that page — it is in the reach audit's non-reach
+        // denylist, and the old `faucet.frames.ethrex.xyz` claim is deleted.
         Endpoint(service: "Hegotá Frames",
                  reach: .whenConnected(bridge: "Hegotá Frames"),
-                 purpose: "Reads a watched address's balance and its frame transactions — what each frame did, what it spent of its two gas budgets, and who paid for it — from the Frames devnet, the public test network for EIP-8141 frame transactions. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because this chain's money has no value to protect and the network itself says it may be reset without notice. Asking the faucet for test ETH sends the address you are asking for, and nothing else; it needs no key and no signature.",
-                 hosts: ["rpc1.frames.ethrex.xyz", "rpc2.frames.ethrex.xyz",
-                         "rpc3.frames.ethrex.xyz",
-                         "faucet.frames.ethrex.xyz"]),
+                 purpose: "Reads a watched address's balance and its frame transactions — what each frame did, what it spent of its two gas budgets, and who paid for it — from frames-devnet-0, the public test network for EIP-8141 frame transactions, run by the Ethereum Foundation's devops team. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because this chain's money has no value to protect and the network itself may be reset without notice. Top up opens the network's faucet page in the browser; the app sends it nothing.",
+                 hosts: ["rpc.frames-devnet-0.ethpandaops.io"]),
         // Altana (prd §403). Reach is WALLET, not "Altana": the seat rides the
         // watched wallets and its sweep runs whenever a wallet is watched, so
         // gating the disclosure on the seat being "connected" would understate

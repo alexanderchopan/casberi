@@ -82,7 +82,7 @@ PYM
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.9x faster).
   # Re-probe before trusting it again after adding mutations.
-  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift FramesNetwork.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -90,6 +90,8 @@ PYM
 fi
 
 TX="Casberi/Casberi/Model/FramesTransaction.swift"
+# WHICH devnet (prd §962) — the chain id the encoder signs over, and the hosts.
+NET="Casberi/Casberi/Model/FramesNetwork.swift"
 RLPF="Casberi/Casberi/Model/RLP.swift"
 KC="Casberi/Casberi/Model/Keccak256.swift"
 MONEY="Casberi/Casberi/Model/FramesMoney.swift"
@@ -117,7 +119,7 @@ PASSKEY="Casberi/Casberi/Model/FramesPasskeyAccount.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
-for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW" "$SPONSOR" "$PASSKEY"; do
+for f in "$TX" "$NET" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW" "$SPONSOR" "$PASSKEY"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -147,8 +149,25 @@ for forbidden in nonceKeys nonceSequence recentRootReferences; do
     echo "✗ FramesTransaction names \`$forbidden\` — that is Hegotá's envelope, and this chain implements neither"; exit 1
   fi
 done
-grep -qF 'static let chainID: UInt64 = 81410' "$WORK/tx.nc" \
-  || { echo "✗ FramesTransaction no longer pins chain 81410"; exit 1; }
+# The encoder signs for ONE chain, and it is `FramesNetwork`'s (prd §962) —
+# never a literal of its own, or a relaunch edits one and not the other and
+# every send is a good signature over another chain's digest.
+grep -qF 'static let chainID: UInt64 = FramesNetwork.current.chainID' "$WORK/tx.nc" \
+  || { echo "✗ FramesTransaction no longer reads its chain id from FramesNetwork"; exit 1; }
+strip_comments "$NET" > "$WORK/net.nc"
+grep -qF 'chainID: 7_034_189_865' "$WORK/net.nc" \
+  || { echo "✗ FramesNetwork no longer pins frames-devnet-0 (7034189865)"; exit 1; }
+# The chain's hosts come from the network value, never a second literal list.
+grep -qF 'static let hosts = FramesNetwork.current.rpcHosts' "$WORK/bridge.nc" \
+  || { echo "✗ FramesRPC keeps its own host list — a relaunch would edit one and read the other"; exit 1; }
+# A bare frame answer is asked again, never drawn (prd §962): the one read
+# helper every transaction and receipt goes through must consult the check.
+grep -qF 'FramesRead.servesFrames(method: method, result: result)' "$WORK/bridge.nc" \
+  || { echo "✗ FramesRPC.call no longer re-asks a frame transaction served without its frames — one read in four draws a transaction with none"; exit 1; }
+# The old chain is gone from the app, hosts and all.
+if grep -qE 'frames\.ethrex\.xyz|81410' "$WORK/net.nc" "$WORK/bridge.nc" "$WORK/send.nc" "$WORK/tx.nc"; then
+  echo "✗ a Frames file still reaches chain 81410"; exit 1
+fi
 
 # --- the key ----------------------------------------------------------------
 # Device-only and non-syncing. Worthless money is not a reason to let a signing
@@ -267,16 +286,21 @@ PYPREFIX
 # the faucet's measured hourly rate limit becomes indistinguishable from a dead
 # host, and the sheet's "already claimed this hour" branch becomes unreachable.
 # Found by mutating this guard rather than by reading it.
+# ONE since prd §962 — the faucet claim is deleted, so the broadcast is the
+# only write left, and it must keep the node's own words.
 bodies=$(grep -o 'postJSONBody' "$WORK/send.nc" | wc -l | tr -d ' ')
-[[ "$bodies" == "2" ]] \
-  || { echo "✗ FramesSend reads a refusal body $bodies time(s) — both the faucet claim and the broadcast must keep the far end's own words, or a refusal becomes one placeholder sentence"; exit 1; }
+[[ "$bodies" == "1" ]] \
+  || { echo "✗ FramesSend reads a refusal body $bodies time(s) — the broadcast must keep the node's own words, or a refusal becomes one placeholder sentence"; exit 1; }
 if grep -qE '[^B]postJSON\(|IngestSupport\.postJSON\(' "$WORK/send.nc"; then
   echo "✗ FramesSend reaches a helper that drops the body on a non-200 — the reason is the thing worth having here"; exit 1
 fi
-# ONE faucet classifier for both devnets. A second copy drifts, and then the
-# two seats disagree about what "already claimed this hour" looks like.
-grep -qF 'HegotaFaucetVerdict' "$WORK/send.nc" \
-  || { echo "✗ FramesSend no longer shares the faucet classifier — a forked copy drifts from the shape it classifies"; exit 1; }
+# NO faucet claim (prd §962). frames-devnet-0's faucet is proof-of-work plus
+# hCaptcha, so a POST from here could only fail — and the reach audit lists
+# its host as a page the app never contacts. A claim coming back makes that
+# disclosure false the same day (§531).
+if grep -qE 'claimFaucet|api/claim|FaucetVerdict' "$WORK/send.nc"; then
+  echo "✗ FramesSend claims from a faucet again — this chain's faucet is a captcha page, and the reach audit says the app never contacts it"; exit 1
+fi
 # Never the other chain's hosts.
 if grep -qF 'hegota.ethrex.xyz' "$WORK/send.nc"; then
   echo "✗ FramesSend reaches a Hegotá host"; exit 1
@@ -736,6 +760,7 @@ PYSCOPE
 echo "  ok   drift guards: the rows open, the verdict has one home, and the face rail really scopes"
 
 cp "$TX" "$WORK/FramesTransaction.swift"
+cp "$NET" "$WORK/FramesNetwork.swift"
 cp "$RLPF" "$WORK/RLP.swift"
 cp "$KC" "$WORK/Keccak256.swift"
 cp "$MONEY" "$WORK/FramesMoney.swift"
@@ -831,6 +856,54 @@ check("vector 1R's keccak is the POST-RESTART chain's own transaction hash",
 // the two chains would get silently wrong.
 check("vector 1R still carries a literal signer, not Hegota's empty one",
       RLP.hex(FramesTransaction.encoded(v1r)).contains("942c835d53b4c19cb1dd6c7cf28c4b87240f7e5a1580b841"))
+
+// ============ VECTOR D0 — frames-devnet-0, the chain this seat is on (prd
+// §962). A real atomic batch mined in block 0x697f, read off the public
+// endpoint 2026-09-27: one VERIFY frame and three SENDER frames, the first two
+// joined. It is one of four distinct shapes in 2,565 frame transactions that
+// ALL re-encode to the node's hash through this file unchanged, and the one
+// chosen to discriminate: the load generator writes an EMPTY signer and an
+// EMPTY verify target (the spec's "the sender"), both of which this app never
+// writes, and the chain id is the new one — 0x1a3453829, five bytes where
+// 81410 was three.
+let sd0 = hx("0xf51c9382183dff9019ce55e344932ed1a27fe046")
+let d0target = hx("0x6101cc8d3fd683dde0aab1eb365410f3dac167b9")
+let vd0 = FramesTransaction.Fields(
+    chainID: 0x1a3453829, nonce: 0x30a2, sender: sd0,
+    frames: [
+        .init(mode: 1, flags: 0x03, target: Data(), executionGas: 0x1388, stateGas: 0, value: Data(), data: Data()),
+        .init(mode: 2, flags: 0x04, target: d0target, executionGas: 0x7530, stateGas: 0, value: Data(), data: Data()),
+        .init(mode: 2, flags: 0x04, target: d0target, executionGas: 0x7530, stateGas: 0, value: Data(), data: Data()),
+        .init(mode: 2, flags: 0x00, target: d0target, executionGas: 0x7530, stateGas: 0, value: Data(), data: Data()),
+    ],
+    signatures: [
+        .init(scheme: 1, signer: Data(), msg: Data(),
+              signature: hx("0x0063dd7ef85b34faf5a67adeb8ce51f6a0a373dd87c6abbf7da6cecc480da224b73d7020ea94b559e60edfd4af04e0d637c2eacfd4e85c86d5bb6cd80e783bb5c1")),
+    ],
+    maxPriorityFeePerGas: 0x77359400, maxFeePerGas: 0x4a817c800,
+    maxFeePerBlobGas: 0, blobVersionedHashes: [])
+check("vector D0's keccak is frames-devnet-0's own transaction hash",
+      keccakHex(FramesTransaction.encoded(vd0))
+        == "0xa8fb7f5e93869c16a6c93a13fe4b9137a00d6b5676953cac0a55bff144074ed1")
+check("and the encoder signs for that chain", FramesTransaction.chainID == 0x1a3453829)
+check("the load generator's own VERIFY frame fits the prefix budget this file enforces",
+      FramesTransaction.prefixWithinBudget(vd0))
+
+// ============ A FRAME TRANSACTION SERVED WITHOUT ITS FRAMES (prd §962). One
+// node behind the public endpoint answers type 0x06 with the envelope and no
+// frame fields — 621 of 2,565 measured. It must be asked again, never drawn
+// as a transaction with no frames; anything else passes untouched.
+check("a frame transaction with no frames is not an answer",
+      !FramesRead.servesFrames(method: "eth_getTransactionByHash", result: ["type": "0x6", "hash": "0x1"]))
+check("a frame receipt with no frameReceipts is not an answer",
+      !FramesRead.servesFrames(method: "eth_getTransactionReceipt", result: ["type": "0x6", "status": "0x1"]))
+check("a frame transaction with its frames is",
+      FramesRead.servesFrames(method: "eth_getTransactionByHash", result: ["type": "0x6", "frames": [[String: Any]]()]))
+check("a frame receipt with its frameReceipts is",
+      FramesRead.servesFrames(method: "eth_getTransactionReceipt", result: ["type": "0x6", "frameReceipts": [[String: Any]]()]))
+check("an ordinary transfer has no frames to miss",
+      FramesRead.servesFrames(method: "eth_getTransactionByHash", result: ["type": "0x2"]))
+check("and nothing else is judged", FramesRead.servesFrames(method: "eth_getBalance", result: "0x0"))
 
 // ============ VECTOR 2 — real, a different sender, a different fee ceiling
 // and a DIFFERENT gas pair (0x13880/0x30d40, where v1 is 0x186a0/0x3d090), so
@@ -965,26 +1038,46 @@ check("the VERIFY frame moves no value", built.frames[0].value.isEmpty)
 // reads as an execution failure. On a devnet whose accounts are minutes old
 // that is the common case, not an edge one.
 check("a built transfer carries a real state budget", built.frames[1].stateGas >= 250_000)
-check("a built transfer pins this chain", built.chainID == 81410)
+check("a built transfer pins this chain — frames-devnet-0 (prd §962)", built.chainID == 7_034_189_865)
 check("a built transfer starts unsigned", built.signatures.isEmpty)
 
-// ============ THE VALIDATION PREFIX IS BOUNDED at 500,000 here, and only
-// mode-1 frames sit in it. Counting every frame refuses transactions the chain
-// would have accepted; counting none lets the node refuse with a sentence that
-// names no remedy.
-check("the measured prefix ceiling is 500,000", FramesTransaction.maxVerifyGas == 500_000)
-check("a built transfer fits the prefix", FramesTransaction.prefixWithinBudget(built))
-var fatPrefix = built
+// ============ THE VALIDATION PREFIX (prd §962): EIP-8141's public mempool caps
+// every frame before the first SENDER frame at 100,000 of execution PLUS the
+// signatures' verification cost, and 500,000 of state. Counting every frame
+// refuses transactions the chain would have accepted; counting none lets the
+// node refuse with a sentence that names no remedy. 81410 allowed 500,000 of
+// execution and the VERIFY frame asked 100,000 — over the spec's whole budget
+// once its signature is counted.
+check("the prefix's execution ceiling is the spec's 100,000", FramesTransaction.maxVerifyGas == 100_000)
+check("the prefix's state ceiling is the spec's 500,000", FramesTransaction.maxVerifyStateGas == 500_000)
+check("verifying costs what the spec says: secp256k1 2,800, P-256 6,700",
+      FramesTransaction.signatureGas(scheme: 1) == 2_800 && FramesTransaction.signatureGas(scheme: 2) == 6_700)
+check("a VERIFY frame asks 20,000 and no state", built.frames[0].executionGas == 20_000 && built.frames[0].stateGas == 0)
+check("an unsigned transaction is never judged to fit — its signature is part of the budget",
+      !FramesTransaction.prefixWithinBudget(built))
+var signedBuilt = built
+signedBuilt.signatures = [.init(scheme: 1, signer: s1, msg: Data(), signature: Data())]
+check("a built transfer fits the prefix", FramesTransaction.prefixWithinBudget(signedBuilt))
+var sigTips = signedBuilt
+sigTips.frames[0].executionGas = 100_000 - 2_800 + 1
+check("the signature's cost is counted: one gas over with it is refused", !FramesTransaction.prefixWithinBudget(sigTips))
+sigTips.frames[0].executionGas = 100_000 - 2_800
+check("and exactly at the ceiling with it fits", FramesTransaction.prefixWithinBudget(sigTips))
+var fatState = signedBuilt
+fatState.frames[0].stateGas = 500_001
+check("a prefix over 500,000 of state is refused", !FramesTransaction.prefixWithinBudget(fatState))
+var fatPrefix = signedBuilt
 fatPrefix.frames[0].executionGas = 600_000
 check("an oversized VERIFY frame is refused", !FramesTransaction.prefixWithinBudget(fatPrefix))
-var fatSender = built
+var fatSender = signedBuilt
 fatSender.frames[1].executionGas = 5_000_000
+fatSender.frames[1].stateGas = 5_000_000
 check("a large SENDER frame does NOT count against the prefix",
       FramesTransaction.prefixWithinBudget(fatSender))
-var twoVerify = built
-twoVerify.frames.append(.init(mode: 1, flags: 0x03, target: s1,
-                              executionGas: 450_000, stateGas: 0,
-                              value: Data(), data: Data()))
+var twoVerify = signedBuilt
+twoVerify.frames.insert(.init(mode: 1, flags: 0x03, target: s1,
+                              executionGas: 80_000, stateGas: 0,
+                              value: Data(), data: Data()), at: 1)
 check("two VERIFY frames are summed against the prefix",
       !FramesTransaction.prefixWithinBudget(twoVerify))
 
@@ -1736,15 +1829,35 @@ let deadAddr = hx("0x000000000000000000000000000000000000dead")
 let daiAddr = hx("0x7d6fa7c366f36046656b019dc9a27f171628cf3f")
 let oneGwei = hx("0x3b9aca00")
 let fixedDeadline: UInt64 = 0x6aa5f05c
+// **THESE RAN ON CHAIN 81410, and the seat has moved (prd §962).** The builders
+// now sign for frames-devnet-0 with the spec's prefix budgets, so each vector
+// is rebuilt through the SHIPPING builder and then handed back the only two
+// things that changed — 81410's chain id and the budgets it was sent with. What
+// is left to match is everything else the node verified: the frame order, the
+// modes, the flags, the targets, the values, the calldata and the signature
+// entries. The new id and budgets are asserted on their own, above.
+func as81410(_ fields: FramesTransaction.Fields, selfVerifyState: UInt64 = 250_000) -> FramesTransaction.Fields {
+    var out = fields
+    out.chainID = 81410
+    for i in out.frames.indices where out.frames[i].mode != 2 {
+        let f = out.frames[i]
+        if f.target == FramesTransaction.expiryVerifier { continue }
+        if f.mode == 0 { out.frames[i].executionGas = 150_000; continue }
+        out.frames[i].executionGas = 100_000
+        if f.flags == 0x03 { out.frames[i].stateGas = selfVerifyState }
+        if f.flags == 0x01 { out.frames[i].stateGas = 250_000 }
+    }
+    return out
+}
 func signedBy(_ fields: FramesTransaction.Fields, _ who: Data) -> FramesTransaction.Fields {
     var out = fields
     out.signatures = [.init(scheme: 1, signer: who, msg: Data(), signature: Data())]
     return out
 }
-let vDeadline = signedBy(FramesTransaction.transfer(
+let vDeadline = signedBy(as81410(FramesTransaction.transfer(
     sender: senderA, to: deadAddr, value: oneGwei, nonce: 3,
     maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000,
-    deadline: fixedDeadline), senderA)
+    deadline: fixedDeadline)), senderA)
 check("V-DEADLINE: a transfer under a deadline is the preimage the node verified",
       keccakHex(FramesTransaction.signingPreimage(vDeadline))
         == "0x730c502c1d349fc3ce6c7ac582f5164fbff3f995dfe9cf08f0ad6c79bfb4f573")
@@ -1757,10 +1870,10 @@ check("no deadline is still the pinned two-frame transfer",
       FramesTransaction.transfer(sender: senderA, to: deadAddr, value: oneGwei, nonce: 3,
                                  maxPriorityFeePerGas: 1, maxFeePerGas: 1).frames.count == 2)
 let daiLeg = FramesTransaction.tokenLeg(contract: daiAddr, to: bobAddr, amount: hx("0x4563918244f40000"))!
-let vToken = signedBy(FramesTransaction.stitched(
+let vToken = signedBy(as81410(FramesTransaction.stitched(
     sender: senderA, legs: [daiLeg], atomic: false, nonce: 4,
     maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000,
-    deadline: fixedDeadline), senderA)
+    deadline: fixedDeadline)), senderA)
 check("V-TOKEN: five DAI to Bob under a deadline is the preimage the node verified",
       keccakHex(FramesTransaction.signingPreimage(vToken))
         == "0xebba1b3911663f9e6eacd3bdfe0b67e0ac522352f8d1c78c3b2a79507d1fa128")
@@ -1771,10 +1884,11 @@ check("and reads back as a payment to the person",
                        executionGas: 1, stateGas: 1, value: "0x0",
                        data: "0x" + RLP.hex(daiLeg.data)).tokenTransfer?.recipient
         == "0x61c93cfd66431c2d6f5e29d224fd29afd4550f2e")
-let vMixed = signedBy(FramesTransaction.stitched(
+let vMixedHere = signedBy(FramesTransaction.stitched(
     sender: senderA, legs: [.init(recipient: deadAddr, value: oneGwei), daiLeg], atomic: true, nonce: 5,
     maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000,
     deadline: fixedDeadline), senderA)
+let vMixed = as81410(vMixedHere)
 check("V-STITCH: a coin leg joined to a token leg, under a deadline, is the preimage the node verified",
       keccakHex(FramesTransaction.signingPreimage(vMixed))
         == "0xf534109cf8b23f70624cb33a864e3c310db7db8f2b8f74147d3fcbc2c68d138b")
@@ -1785,7 +1899,7 @@ check("a token leg refuses an amount wider than a word",
 check("and an empty amount",
       FramesTransaction.tokenLeg(contract: daiAddr, to: bobAddr, amount: Data()) == nil)
 check("the verify budget still fits with the deadline frame in the prefix",
-      FramesTransaction.prefixWithinBudget(vMixed))
+      FramesTransaction.prefixWithinBudget(vMixedHere))
 
 // --- ASKING SOMEBODY ELSE TO PAY (prd §728c) ----------------------------------
 // **THE PREIMAGE BOTH SIGNATURES WERE VERIFIED OVER.** An independent encoder
@@ -1798,13 +1912,15 @@ let vSponsored = FramesTransaction.sponsored(
     maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: fixedDeadline)
 let sponsoredHash = "0xa898994ad6d82bd1d5eb9fc5e2d3b54a9a0ec3f92d9653a91af64434de0e9e3a"
 check("V-SPONSORED: somebody else paying is the preimage the node verified both signatures over",
-      keccakHex(FramesTransaction.signingPreimage(vSponsored)) == sponsoredHash)
+      keccakHex(FramesTransaction.signingPreimage(as81410(vSponsored))) == sponsoredHash)
+check("a sponsored prefix — deadline, two VERIFY frames, two signatures — fits the spec's budget",
+      FramesTransaction.prefixWithinBudget(vSponsored))
 check("the sender approves running only, the sponsor paying only",
       vSponsored.frames.map(\.flags) == [0, 2, 1, 0])
 check("signatures are sender then sponsor — the default code reads 0 to run and 1 to pay",
       vSponsored.signatures.map(\.signer) == [senderA, bobAddr])
-check("the paying frame carries the state budget, for a sender that does not exist yet",
-      vSponsored.frames[2].stateGas == 250_000 && vSponsored.frames[1].stateGas == 0)
+check("the paying frame carries exactly the creation charge, for a sender that does not exist yet",
+      vSponsored.frames[2].stateGas == 183_600 && vSponsored.frames[1].stateGas == 0)
 let aliceSig = hx("0x010afe41ede03a018aa0646893a82f638bc9e6548b0cfa26b14adf4d4529312d6830469b9383fca8430da0a0fae4edfb3c0268d3a907950baedfabacd2f9fb2f31")
 let ask = FramesSponsor.request(for: vSponsored, sponsor: bobAddr, legs: [sponsoredLeg], atomic: false,
                                 deadline: fixedDeadline, senderSignature: aliceSig)
@@ -1814,7 +1930,8 @@ check("a request travels as a casberi link",
 let askBack = askLink.flatMap(FramesSponsor.request(from:))
 check("and arrives identical", askBack == ask)
 check("and rebuilds the exact transaction the sender signed",
-      askBack.flatMap(FramesSponsor.fields).map { keccakHex(FramesTransaction.signingPreimage($0)) } == sponsoredHash)
+      askBack.flatMap(FramesSponsor.fields).map { keccakHex(FramesTransaction.signingPreimage($0)) }
+        == keccakHex(FramesTransaction.signingPreimage(vSponsored)))
 check("with the sender's signature in place and the sponsor's empty",
       askBack.flatMap(FramesSponsor.fields)?.signatures.map(\.signature) == [aliceSig, Data()])
 let bobHex = "0x61c93cfd66431c2d6f5e29d224fd29afd4550f2e"
@@ -1830,7 +1947,7 @@ check("past its deadline it is refused",
       FramesSponsor.refusal(ask, mine: bobHex, now: inTime.addingTimeInterval(120), senderNonce: 7) == .expired)
 check("a sender who has sent something since makes it stale",
       FramesSponsor.refusal(ask, mine: bobHex, now: inTime, senderNonce: 8) == .stale)
-var futureFormat = ask; futureFormat.format = 2
+var futureFormat = ask; futureFormat.format = FramesSponsorRequest.currentFormat + 1
 check("malformed outranks everything else",
       FramesSponsor.refusal(futureFormat, mine: nil, now: inTime.addingTimeInterval(9_999), senderNonce: 0) == .malformed)
 let daiHex = "0x7d6fa7c366f36046656b019dc9a27f171628cf3f"
@@ -1881,7 +1998,7 @@ let vPasskey = FramesPasskeyAccount.transaction(
     owner: ownerBytes, deploy: true, legs: [.init(recipient: deadAddr, value: oneGwei)], atomic: false,
     nonce: 0, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: fixedDeadline)
 check("V-PASSKEY: the first send — deadline, deploy, verify, send — is the preimage the node checked a P-256 signature over",
-      keccakHex(FramesTransaction.signingPreimage(vPasskey))
+      keccakHex(FramesTransaction.signingPreimage(as81410(vPasskey, selfVerifyState: 0)))
         == "0xf2e4e15d557ff4ae2759bd6b84dae2bc5139740a0e8469eb1015692ac4424cdb")
 check("its one signature entry is P-256, naming the owner",
       vPasskey.signatures.count == 1 && vPasskey.signatures[0].scheme == 2
@@ -1890,9 +2007,10 @@ let vPasskeyNext = FramesPasskeyAccount.transaction(
     owner: ownerBytes, deploy: false, legs: [.init(recipient: deadAddr, value: oneGwei)], atomic: false,
     nonce: 2, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: fixedDeadline)
 check("V-PASSKEY-NEXT: once the code exists, no deploy frame",
-      keccakHex(FramesTransaction.signingPreimage(vPasskeyNext))
+      keccakHex(FramesTransaction.signingPreimage(as81410(vPasskeyNext, selfVerifyState: 0)))
         == "0x804194e5fc2152a02ee4e68707d0e94889766e5140164d84c401e76758fdc8ac")
-check("the deploy frame is inside the verify budget", FramesTransaction.prefixWithinBudget(vPasskey))
+check("the deploy frame is inside the verify budget — 20,000 + 40,000 + 20,000 + 6,700",
+      FramesTransaction.prefixWithinBudget(vPasskey) && deployF.executionGas == 40_000)
 // Low-s: EIP-8141 refuses a high-s P-256 signature, and the Enclave signs either half.
 let halfN = FramesPasskeyAccount.curveHalfOrder
 let r32 = Data(repeating: 0x11, count: 32)
@@ -1994,37 +2112,37 @@ check("anybody but the entry point is an ordinary receive",
 // this app ships must reproduce the node's own hash byte for byte.
 let executedSponsorSigA = hx("0x010671a039dec54217e54ff6a0aa52be7cc9907d7bdf2533d044234486fca678df111e3d1f7de32464f857cf48571a12610f5de019c52c24be06a42029f2c4402c")
 let executedSponsorSigB = hx("0x01a4498bd019ce4e55df468e894554099cd418f0679fec6da4d0fc4a0a4ff475dc68fb4acd08d4fd2c252915ca32f8bef57bb5563b2de7401bf8aafd5cd6097c73")
-var executedPasskey = FramesPasskeyAccount.transaction(
+var executedPasskey = as81410(FramesPasskeyAccount.transaction(
     owner: ownerBytes, deploy: true, legs: [.init(recipient: deadAddr, value: oneGwei)], atomic: false,
-    nonce: 0, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa8326c)
+    nonce: 0, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa8326c), selfVerifyState: 0)
 executedPasskey.signatures[0].signature = hx("0x9bb0f1baad24b97bcc41e9412a4363924bbf4d12fe1e682ce4c42c466ffe05ba4f0a111085ac106fd5f9adb3bb6c1ab0b221becf6c05be0c3e9e7090ee11baedc2de27efb59662488b4b6d6ff699c2dccd148510c6eda3f9c99eb8e17c464adb49c9e8b7f98a71150bf175a22c49278c0a8dde08496efcdb321496e340df34cc")
 check("EXECUTED: the passkey account's first transaction — deploy, P-256 verify, send — is the one that ran (block 75,719)",
       keccakHex(FramesTransaction.encoded(executedPasskey))
         == "0x176065d6cd418811c1349e9259d18b49b546a510f3413a243dd89a229bf2dcb3")
-var executedSponsored = FramesTransaction.sponsored(
+var executedSponsored = as81410(FramesTransaction.sponsored(
     sender: senderA, sponsor: bobAddr, legs: [.init(recipient: deadAddr, value: oneGwei)], atomic: false,
-    nonce: 1, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa83316)
+    nonce: 1, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa83316))
 executedSponsored.signatures[0].signature = executedSponsorSigA
 executedSponsored.signatures[1].signature = executedSponsorSigB
 check("EXECUTED: a transfer somebody else paid for is the one that ran, payer the sponsor (block 75,720)",
       keccakHex(FramesTransaction.encoded(executedSponsored))
         == "0xaeef4a327474272a42689a1e1ff4acafbfad7b7fac086021cf1f00bba0f17a4e")
-var executedToken = FramesTransaction.stitched(
+var executedToken = as81410(FramesTransaction.stitched(
     sender: senderA,
     legs: [.init(recipient: daiAddr, value: Data(),
                  data: FramesTransaction.erc20TransferSelector + Data(repeating: 0, count: 12) + bobAddr + Data(repeating: 0, count: 32))],
-    atomic: false, nonce: 2, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa83318)
+    atomic: false, nonce: 2, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa83318))
 executedToken.signatures = [.init(scheme: 1, signer: senderA, msg: Data(),
     signature: hx("0x01e418028ed673b4dd4df5f2406000d5f4e4c3b0e536db49c6955b5f508518ad8d5794705a74455625a3f119f4f7402fcf940f5a840f45fdc405004252fd121cf7"))]
 check("EXECUTED: a frame CARRYING CALLDATA reproduces the chain's own hash — §654a's open question, closed for this encoder (block 75,722)",
       keccakHex(FramesTransaction.encoded(executedToken))
         == "0xbfa7da5cd4385a591875ffe8f50b7b7c6c9c505d6f834b5cf0732736dd0172cd")
-var executedSkip = FramesTransaction.stitched(
+var executedSkip = as81410(FramesTransaction.stitched(
     sender: senderA,
     legs: [.init(recipient: bobAddr, value: hx("0x01")),
            .init(recipient: bobAddr, value: hx("0x0c9f2c9cd04674edea40000000")),
            .init(recipient: bobAddr, value: hx("0x01"))],
-    atomic: true, nonce: 3, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa8331f)
+    atomic: true, nonce: 3, maxPriorityFeePerGas: 1_000_000_000, maxFeePerGas: 10_000_000_000, deadline: 0x6aa8331f))
 executedSkip.signatures = [.init(scheme: 1, signer: senderA, msg: Data(),
     signature: hx("0x003f61939dcc7a95b7d5d0e0beb37c37e29b32da01267db47bcac9a99332d6b2794953434922a89dcf74c5eb3faef2ed53cbc75149b5a85106c1833536b24ded43"))]
 check("EXECUTED: an atomic batch whose middle leg could not pay is the one that ran (block 75,724)",
@@ -2074,11 +2192,11 @@ check("the census counts a send's expiry check and its deploy apart from verific
       namedRuns.first?.steps.map(\.modeName) == ["Expiry", "Deploy", "Verify", "Send"])
 
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
-print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash (1 on the post-restart chain)")
+print("  ok   encoder: 4 real vectors byte-exact, keccak == the chain's own hash (1 on frames-devnet-0)")
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift FramesNetwork.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -2153,7 +2271,7 @@ mutate "no signature ever elided" $F \
 mutate "the elision test inverted" $F \
   'var isElided: Bool { msg.isEmpty }' 'var isElided: Bool { !msg.isEmpty }'
 mutate "the type byte changed" $F 'txType: UInt8 = 0x06' 'txType: UInt8 = 0x04'
-mutate "the chain id changed" $F 'chainID: UInt64 = 81410' 'chainID: UInt64 = 3151908'
+mutate "the chain id changed" FramesNetwork.swift 'chainID: 7_034_189_865' 'chainID: 81410'
 mutate "the signature entry's fields reordered" $F \
   '.bytes(signer),
                    .bytes(msg)' \
@@ -2163,14 +2281,24 @@ mutate "the VERIFY frame no longer approves payment" $F \
   'Frame(mode: 1, flags: 0x03' 'Frame(mode: 1, flags: 0x01'
 mutate "a built transfer sends with no state budget" $F \
   'stateGas: UInt64 = 250_000' 'stateGas: UInt64 = 0'
-mutate "the prefix budget counts every frame, not just VERIFY" $F \
-  'f.frames.filter { $0.mode == 1 }' 'f.frames.filter { _ in true }'
-mutate "the prefix ceiling raised past what the chain allows" $F \
-  'maxVerifyGas: UInt64 = 500_000' 'maxVerifyGas: UInt64 = 5_000_000'
+mutate "the prefix budget counts every frame, not just the validation prefix" $F \
+  'f.frames.prefix { $0.mode != 2 }' 'f.frames.prefix { _ in true }'
+mutate "the prefix ceiling raised back to 81410's 500,000" $F \
+  'maxVerifyGas: UInt64 = 100_000' 'maxVerifyGas: UInt64 = 500_000'
+mutate "the signatures' verification cost left out of the prefix" $F \
+  '&+ f.signatures.reduce(UInt64(0)) { $0 &+ signatureGas(scheme: $1.scheme) }' '&+ 0'
+mutate "the prefix's state cap dropped" $F \
+  '&& state <= maxVerifyStateGas' '&& state >= 0'
+mutate "a VERIFY frame asks 81410's 100,000 again" $F \
+  'static let verifyExecutionGas: UInt64 = 20_000' 'static let verifyExecutionGas: UInt64 = 100_000'
 
 F2=FramesMoney.swift
 F3=FramesSection.swift
 F4=FramesReading.swift
+mutate "a frame transaction served bare is drawn as one with no frames" $F4 \
+  'case "eth_getTransactionByHash": return row["frames"] is [Any]' 'case "eth_getTransactionByHash": return true'
+mutate "a frame receipt served bare is drawn as one with no outcomes" $F4 \
+  'case "eth_getTransactionReceipt": return row["frameReceipts"] is [Any]' 'case "eth_getTransactionReceipt": return true'
 mutate "wei narrowed back to UInt64" $F2 \
   'var total = Decimal(0)' 'var total = Decimal(UInt64(body, radix: 16) ?? 0); if true { return total }; var unused = Decimal(0); _ = unused'
 mutate "an empty balance read as zero" $F2 \
@@ -2240,18 +2368,12 @@ mutate "the atomic flag reaching the last payload frame" $F \
   'let joined = atomic && index < last' \
   'let joined = atomic'
 mutate "the VERIFY frame dropped from a stitch" $F \
-  'frames: expiryPrefix(deadline) + [Frame(mode: 1, flags: 0x03, target: sender,
-                                     executionGas: executionGas, stateGas: stateGas,
-                                     value: Data(), data: Data())]
+  'frames: expiryPrefix(deadline) + [verifyFrame(sender: sender)]
                           + legs.enumerated().map { index, leg in' \
   'frames: expiryPrefix(deadline) + legs.enumerated().map { index, leg in'
 mutate "the VERIFY frame no longer approving payment" $F \
-  'frames: expiryPrefix(deadline) + [Frame(mode: 1, flags: 0x03, target: sender,
-                                     executionGas: executionGas, stateGas: stateGas,
-                                     value: Data(), data: Data())]' \
-  'frames: expiryPrefix(deadline) + [Frame(mode: 1, flags: 0x01, target: sender,
-                                     executionGas: executionGas, stateGas: stateGas,
-                                     value: Data(), data: Data())]'
+  'frames: expiryPrefix(deadline) + [verifyFrame(sender: sender)]' \
+  'frames: expiryPrefix(deadline) + [verifyFrame(sender: sender)].map { var f = $0; f.flags = 0x01; return f }'
 mutate "a payload frame built as a VERIFY frame" $F \
   'return Frame(mode: 2, flags: joined ? atomicFlag : 0x00,' \
   'return Frame(mode: 1, flags: joined ? atomicFlag : 0x00,'
@@ -2518,4 +2640,4 @@ if (( MUT_OK + MUT_FAILS != MUTN )); then
 fi
 (( MUT_FAILS == 0 )) || { echo "  $MUT_FAILS mutation(s) failed"; exit 1; }
 echo "  ok   drift guards: the envelope stays seven fields and never grows Hegotá's three"
-echo "✓ frames transaction self-test passed — encoder, 3 real vectors (1 post-restart), $MUTN mutations"
+echo "✓ frames transaction self-test passed — encoder, 4 real vectors (1 on frames-devnet-0), $MUTN mutations"

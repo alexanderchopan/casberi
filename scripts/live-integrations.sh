@@ -1346,59 +1346,67 @@ PY2
 fi
 
 hr
-# ── Frames devnet (prd §548) ────────────────────────────────────────────────
+# ── Frames devnet (prd §548, §962) ──────────────────────────────────────────
 # The seat's whole subject is a transaction TYPE, and this chain has no
 # indexer and no contract behind its shape — so when the wire moves, the room
 # does not break, it goes QUIET, drawing a transaction with no frames. That is
-# indistinguishable from a transaction that had none (§311's failure). Nightly,
-# because the chain is days old and its own footer says it may be reset
-# without notice.
-print -P "%F{45}Frames devnet%f (keyless, EIP-8141)"
-FR="https://rpc1.frames.ethrex.xyz"
-FR_TX="0x7b75f255ab1ecc85bd7bb4610606ee92204688b6a902c2a0a7834c06e7b7be63"   # re-pinned after the 2026-09-08 restart
+# indistinguishable from a transaction that had none (§311's failure).
+#
+# Since prd §962 (2026-09-27) the seat is on ethpandaops' frames-devnet-0: ONE
+# public endpoint load-balanced across geth, nethermind, reth and ethrex. One
+# of those answers a type-0x06 read with no frame fields (geth issue 35783,
+# ~1 in 4), which the app re-asks (`FramesRPC.bareRetries`) — so every read
+# below that needs frames asks up to four times, and reports how many came
+# back bare. ethpandaops RELAUNCHES as devnet-1, -2 … with a new chain id: a
+# chain-id miss here means edit `FramesNetwork`, re-pin this block, re-measure.
+print -P "%F{45}Frames devnet%f (keyless, EIP-8141, frames-devnet-0)"
+FR="https://rpc.frames-devnet-0.ethpandaops.io"
+FR_ID="0x1a3453829"   # 7034189865 — FramesNetwork.devnet0.chainID
+FR_TX="0xa8fb7f5e93869c16a6c93a13fe4b9137a00d6b5676953cac0a55bff144074ed1"   # frames-tx-selftest's vector D0
 
-# 1. All three hosts, and the chain id the encoder PINS (81410 = 0x13e02). A
-#    host answering for another chain is a signature sent to the wrong place.
-fr_up=0
-for h in rpc1 rpc2 rpc3; do
-  id=$(raw "https://$h.frames.ethrex.xyz" '{"id":1,"jsonrpc":"2.0","method":"eth_chainId","params":[]}' \
-        | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
-  [[ "$id" == "0x13e02" ]] && (( fr_up++ ))
-done
-if (( fr_up == 3 )); then
-  pass "Frames — all three RPC hosts serve chain 81410"
-elif (( fr_up > 0 )); then
-  warn "Frames — only $fr_up of 3 hosts answered with chain 81410 (the seat retries, so this is survivable)"
+# Ask up to four times for an answer that carries its frame fields.
+fr_full() {  # $1 method, $2 hash, $3 the field that must be there
+  local i out
+  for i in 1 2 3 4; do
+    out=$(raw "$FR" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"$1\",\"params\":[\"$2\"]}")
+    if print -r -- "$out" | python3 -c "import sys,json;r=json.load(sys.stdin).get('result') or {};sys.exit(0 if '$3' in r else 1)" 2>/dev/null; then
+      print -r -- "$out"; return 0
+    fi
+  done
+  print -r -- "$out"
+}
+
+# 1. The chain id the encoder PINS. A host answering for another chain is a
+#    signature sent to the wrong place — or ethpandaops relaunched.
+id=$(raw "$FR" '{"id":1,"jsonrpc":"2.0","method":"eth_chainId","params":[]}' \
+      | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
+if [[ "$id" == "$FR_ID" ]]; then
+  pass "Frames — the endpoint serves frames-devnet-0 (chain 7034189865)"
+  fr_up=1
+elif [[ -n "$id" ]]; then
+  fail "Frames — the endpoint serves chain $id, not frames-devnet-0; ethpandaops relaunched — edit FramesNetwork, re-pin this block"
+  fr_up=0
 else
-  fail "Frames — no host served chain 81410; the whole seat reads nothing"
+  fail "Frames — the endpoint did not answer; the whole seat reads nothing"
+  fr_up=0
 fi
 
 if (( fr_up > 0 )); then
-  # 2. **The genesis hash.** A relaunched devnet answers everything perfectly
-  #    and with NOTHING, so this is the only thing separating "quiet" from
-  #    "this is a different chain now". A change is news, not a failure — and
-  #    on this chain it is expected, so it warns.
+  # 2. **The genesis hash.** A relaunch under the SAME id would answer every
+  #    read perfectly and with nothing; this is what tells it apart.
   fgen=$(raw "$FR" '{"id":1,"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x0",false]}' \
           | python3 -c 'import sys,json;print((json.load(sys.stdin).get("result") or {}).get("hash",""))' 2>/dev/null)
-  if [[ "$fgen" == "0x4225d87803ea7b0da245a4390c18e8afe373cb0eb1482e218e1cdc200cfc27ab" ]]; then
-    pass "Frames — genesis matches the pinned post-restart chain (re-pinned 2026-09-08, §654a; NOT the chain the seat was built on)"
+  if [[ "$fgen" == "0xe0dd50fffe934d7f04262f097d24e7b5d286742fc13065c876fc5c683af18c42" ]]; then
+    pass "Frames — genesis matches frames-devnet-0 as pinned on 2026-09-27"
   elif [[ -n "$fgen" ]]; then
-    # It has restarted once already (2026-09-08, prd §654a) and the envelope
-    # came back UNCHANGED — the shipped encoder reproduced 3 of 3 live
-    # empty-data transfers byte-exactly, which is the only shape the app
-    # builds. So a restart is a re-measure of the pinned material, not a
-    # presumption that signing is broken; check before alarming anybody.
-    warn "Frames — THE DEVNET RESTARTED AGAIN (genesis is now $fgen); re-pin FR_TX and the genesis here, re-measure frames-tx-selftest's vectors, and re-run the encoder against a live transfer before assuming the envelope moved (it did not on 2026-09-08)"
+    warn "Frames — THE DEVNET RESTARTED (genesis is now $fgen); re-pin FR_TX and the genesis here and re-run frames-tx-selftest against a live transaction"
   else
     warn "Frames — the genesis header did not read; the restart check could not run"
   fi
 
-  # 2b. **THE TWO CONTRACTS THE SENDS NOW DEPEND ON (prd §728b, §728d).**
-  #     Every send leads with a deadline frame that calls the expiry verifier
-  #     at 0x…8141, and a passkey account is installed through the deterministic
-  #     deployment proxy at 0x4e59…956c. A relaunch that ships without either
-  #     breaks both silently: the verify frame reverts and the node refuses
-  #     every send, or the passkey account's address can never get its code.
+  # 2b. **THE TWO CONTRACTS THE SENDS DEPEND ON (prd §728b, §728d).** Every
+  #     send leads with a deadline frame calling the expiry verifier at
+  #     0x…8141; a passkey account is installed through the proxy at 0x4e59…
   fexp=$(raw "$FR" '{"id":1,"jsonrpc":"2.0","method":"eth_getCode","params":["0x0000000000000000000000000000000000008141","latest"]}' \
           | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
   if [[ "$fexp" == "0x60083614600a575f5ffd5b5f3560c01c4211601657005b5f5ffd" ]]; then
@@ -1416,13 +1424,10 @@ if (( fr_up > 0 )); then
     warn "Frames — the deployment proxy at 0x4e59…956c holds no code; a new passkey account can never be installed on this chain"
   fi
 
-  # 3. **THE ENVELOPE'S OWN FIELD NAMES**, which is what the encoder is written
-  #    against and what nothing else can check. `frames`/`signatures` on the
-  #    transaction, and the frame's `gasLimit` — NOT Hegotá's
-  #    `executionGasLimit`, the divergence a reader written for one chain gets
-  #    silently nil on.
-  fshape=$(raw "$FR" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\":[\"$FR_TX\"]}" \
-            | python3 -c '
+  # 3. **THE ENVELOPE'S OWN FIELD NAMES**, which the encoder is written
+  #    against. `frames`/`signatures` on the transaction, and the frame's
+  #    `gasLimit` — NOT Hegotá's `executionGasLimit`.
+  fshape=$(fr_full eth_getTransactionByHash "$FR_TX" frames | python3 -c '
 import sys, json
 r = (json.load(sys.stdin).get("result") or {})
 if not r: print("gone"); raise SystemExit
@@ -1440,20 +1445,19 @@ print(":".join([
       warn "Frames — the pinned type-0x06 transaction is gone (a reset, most likely); the envelope's field names are unverified tonight" ;;
     0x6:frames:sigs:gasLimit:stateGasLimit:-)
       pass "Frames — a type-0x06 still carries frames, signatures and both per-frame budgets under the names the encoder writes" ;;
+    0x6:-:*)
+      warn "Frames — four asks in a row came back without frames; the app re-asks four times too, so rows are going unread tonight" ;;
     *:*:*:executionGasLimit:*)
       fail "Frames — a frame's execution budget is now spelled executionGasLimit (Hegotá's name); every frame in the room draws with no budget" ;;
     *:*:*:*:*:nonceKeys)
-      warn "Frames — the chain now serves keyed nonces; the 7-field envelope is wrong and the Nonces scope this seat declined is now buildable" ;;
+      warn "Frames — the chain now serves keyed nonces; the 7-field envelope is wrong" ;;
     *)
       fail "Frames — the type-0x06 shape moved ($fshape); the encoder signs a list the chain no longer hashes" ;;
   esac
 
-  # 4. **Per-frame outcomes**, the reading the whole seat exists for. Also
-  #    reports whether `stateGasUsed` has appeared — absent on all 5
-  #    transactions when the seat was built (all plain transfers that grow no
-  #    state), and its arrival is what unblocks the room's second gas bar.
-  frcpt=$(raw "$FR" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$FR_TX\"]}" \
-           | python3 -c '
+  # 4. **Per-frame outcomes**, the reading the whole seat exists for, with the
+  #    payer and `stateGasUsed` — reported on every frame on this chain.
+  frcpt=$(fr_full eth_getTransactionReceipt "$FR_TX" frameReceipts | python3 -c '
 import sys, json
 r = (json.load(sys.stdin).get("result") or {})
 if not r: print("gone"); raise SystemExit
@@ -1462,33 +1466,27 @@ print(":".join([
   str(len(fr)),
   "status" if fr and "status" in fr[0] else "-",
   "payer" if r.get("payer") else "-",
-  "stateGasUsed" if any("stateGasUsed" in x for x in fr) else "-",
+  "stateGasUsed" if fr and all("stateGasUsed" in x for x in fr) else "-",
 ]))' 2>/dev/null)
   case "$frcpt" in
     gone|"") warn "Frames — the pinned receipt did not read; per-frame outcomes are unverified tonight" ;;
-    2:status:payer:stateGasUsed)
-      # ARRIVED 2026-09-08 with the restart, and NON-ZERO (0x2cd30 measured).
-      # §548 recorded its absence; the room still weights its frame strip by
-      # execution gas alone, which CLAUDE.md says is correct only while the
-      # second dimension is always zero. It no longer is — the drawing half is
-      # owed (prd §654a) and is a room change, not this row's business.
-      pass "Frames — the receipt decomposes into per-frame outcomes, names its payer, and carries stateGasUsed (non-zero since the restart; the room does not draw it yet — §654a)" ;;
-    2:status:payer:-)
-      warn "Frames — stateGasUsed has GONE from the receipts; it arrived with the 2026-09-08 restart, so its disappearance means another reset or a client downgrade" ;;
+    4:status:payer:stateGasUsed)
+      pass "Frames — the receipt decomposes into per-frame outcomes, names its payer, and carries stateGasUsed" ;;
+    0:-:-:-)
+      warn "Frames — four asks in a row came back without frameReceipts; per-frame outcomes are unverified tonight" ;;
+    4:status:payer:-)
+      warn "Frames — stateGasUsed has GONE from the receipts; a client change, most likely" ;;
     *) fail "Frames — the receipt shape moved ($frcpt); a row can no longer say what each frame did" ;;
   esac
 
-  # 5. The faucet is up. A GET on the claim endpoint 404s by design, which
-  #    proves the service answers WITHOUT spending the one claim per source IP
-  #    per hour — a nightly that burned it would make the app's own claim fail
-  #    every morning.
-  fcode=$(curl -s -m 12 -o /dev/null -w '%{http_code}' https://faucet.frames.ethrex.xyz/api/claim 2>/dev/null)
-  if [[ "$fcode" == "404" || "$fcode" == "405" ]]; then
-    pass "Frames — the faucet service is answering (no claim spent)"
-  elif [[ -z "$fcode" || "$fcode" == "000" ]]; then
-    warn "Frames — the faucet host did not answer; a new account cannot be funded"
+  # 5. The faucet PAGE is up (the app only opens it — proof-of-work plus
+  #    hCaptcha). Its config is a keyless GET that spends nothing.
+  fcfg=$(curl -s -m 12 https://faucet.frames-devnet-0.ethpandaops.io/api/getFaucetConfig 2>/dev/null \
+          | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d.get("faucetCoinType",""))' 2>/dev/null)
+  if [[ "$fcfg" == "native" ]]; then
+    pass "Frames — the faucet page is up (Top up opens it)"
   else
-    warn "Frames — the faucet answered $fcode to a bare GET; its routing may have changed"
+    warn "Frames — the faucet page did not answer; Top up opens a page that cannot fund anybody"
   fi
 fi
 

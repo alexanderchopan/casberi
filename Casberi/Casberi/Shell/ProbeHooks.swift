@@ -6896,9 +6896,11 @@ enum ProbeHooks {
                 let (rawID, rawHead, gas) = await (idCall, headCall, gasCall)
                 let chainID = FramesRead.hexInt(rawID)
                 let head = FramesRead.hexInt(rawHead)
-                NSLog("[Casberi] frames| reached=%@ chain=%@ expected=81410 head=%@ gasPrice=%@",
+                NSLog("[Casberi] frames| network=%@ reached=%@ chain=%@ expected=%llu head=%@ gasPrice=%@",
+                      FramesNetwork.current.name,
                       rawID == nil ? "NO" : "YES",
                       chainID.map(String.init) ?? "-",
+                      FramesTransaction.chainID,
                       head.map(String.init) ?? "-",
                       gas.map(String.init) ?? "-")
                 if let chainID, chainID != FramesTransaction.chainID {
@@ -7030,8 +7032,18 @@ enum ProbeHooks {
         // can be scripted through a keypad reliably enough to be evidence. The
         // hash it prints is checkable against the chain, which is.
         Hook(key: "framesStitchProbe") { value, _ in
-            let parts = value.split(separator: "|", maxSplits: 1).map(String.init)
-            let atomic = parts.count > 1 && parts[1].lowercased() == "atomic"
+            // Options after `|`: `atomic`, and `exec=N` / `state=N` to give
+            // every leg those budgets — a leg starved on purpose is how a
+            // failed frame's receipt is measured (prd §962).
+            let parts = value.split(separator: "|").map(String.init)
+            let options = parts.dropFirst().map { $0.lowercased() }
+            let atomic = options.contains("atomic")
+            func option(_ name: String) -> UInt64? {
+                options.first { $0.hasPrefix(name + "=") }.flatMap { UInt64($0.dropFirst(name.count + 1)) }
+            }
+            let budgets: (execution: UInt64, state: UInt64)? =
+                option("exec") == nil && option("state") == nil ? nil
+                : (option("exec") ?? 100_000, option("state") ?? 250_000)
             var legs: [FramesTransaction.Leg] = []
             for spec in parts[0].split(separator: ",") {
                 let pair = spec.split(separator: ":", maxSplits: 1).map(String.init)
@@ -7057,7 +7069,8 @@ enum ProbeHooks {
                 do {
                     let hash = try await FramesSend.sendStitched(legs: legs, atomic: atomic,
                                                                  nonce: nonce,
-                                                                 deadline: FramesSend.deadline())
+                                                                 deadline: FramesSend.deadline(),
+                                                                 legBudgets: budgets)
                     NSLog("[Casberi] framesStitch| sent tx=%@", hash)
                 } catch let f as FramesSend.Failure {
                     NSLog("[Casberi] framesStitch| refused=%@", String(describing: f))
@@ -7089,19 +7102,16 @@ enum ProbeHooks {
                       nonce.map { String($0) } ?? "-")
             }
         },
-        // `-framesKeyProbe YES|claim` — this phone's Frames signing key, and
+        // `-framesKeyProbe YES` — this phone's Frames signing key, and
         // §531's whole triple, because that bug is transplanted code and so
         // is its blind spot: `presence()` answers `.none` the moment the
         // cached address is missing and never asks the keychain, so an item
         // that OUTLIVED a reinstall is invisible to every screen while
         // `SecItemAdd` answers `-25299` forever.
         //
-        // **`claim` is a WORD, not a flag** (`-librarianProbe run`'s ruling):
-        // the faucet allows one claim per source IP per hour, so a probe that
-        // spent it on every headless run is one nobody could put in a sweep.
-        // Bare `YES` reports and spends nothing.
-        Hook(key: "framesKeyProbe") { value, _ in
-            let spend = value.lowercased() == "claim"
+        // It no longer claims: `frames-devnet-0`'s faucet is proof-of-work plus
+        // hCaptcha (prd §962), so it prints the page and the address to paste.
+        Hook(key: "framesKeyProbe") { _, _ in
             Task { @MainActor in
                 let presence = FramesKey.presence()
                 let address = FramesKey.address()
@@ -7126,25 +7136,10 @@ enum ProbeHooks {
                     }
                 }
                 guard let account = FramesKey.address() else {
-                    NSLog("[Casberi] framesKey| no account — nothing to claim for"); return
+                    NSLog("[Casberi] framesKey| no account — nothing to fund"); return
                 }
-                guard spend else {
-                    NSLog("[Casberi] framesKey| faucet=not asked (pass -framesKeyProbe claim to spend the hour)")
-                    return
-                }
-                do {
-                    let claim = try await FramesSend.claimFaucet(for: account)
-                    NSLog("[Casberi] framesKey| faucet=sent tx=%@", claim.transactionHash)
-                } catch let f as FramesSend.Failure {
-                    if case .faucet(let verdict) = f {
-                        NSLog("[Casberi] framesKey| faucet=%@ says=%@",
-                              String(describing: verdict), verdict.sentence ?? "-")
-                    } else {
-                        NSLog("[Casberi] framesKey| faucet=%@", String(describing: f))
-                    }
-                } catch {
-                    NSLog("[Casberi] framesKey| faucet=%@", String(describing: error))
-                }
+                NSLog("[Casberi] framesKey| faucet=%@ fund=%@",
+                      FramesNetwork.current.faucetPage, account)
             }
         },
         // `-hegotaProbe YES` — the whole read, phase by phase, then ONE LINE

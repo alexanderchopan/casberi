@@ -10,12 +10,16 @@ import SwiftUI
 /// the value — and without the first the transaction has no payer and is
 /// invalid. `plan` hands those to the sheet as `DevnetSendStep`s.
 ///
-/// **Both halves, unlike vibenet.** That room draws Send alone because its
-/// faucet is a payer that sponsors gas rather than something an address can
-/// claim from, so a Top up tile there would be the dead control §83 bans. This
-/// chain has a real `POST /api/claim`, so the ink half can act.
+/// **Top up OPENS the faucet here (prd §962).** On chain 81410 it claimed in
+/// place through `POST /api/claim`. `frames-devnet-0`'s faucet is
+/// proof-of-work plus hCaptcha, which only a person in a browser can do, so
+/// the row is a door: it wears the push row's trailing mark and its fact says
+/// where it goes, so it never looks like it acts in place and then leaves
+/// (§553b's promise). The address is copied first, because the page asks for
+/// it.
 struct FramesSendCard: View {
     @Environment(ShellChrome.self) private var chrome
+    @Environment(\.openURL) private var openURL
 
     /// **WHOSE HOME THIS IS (prd §774, user: "send and top up … on each
     /// account's home page … they may do it from home but may also from the
@@ -32,8 +36,6 @@ struct FramesSendCard: View {
     @State private var keyAddress: String? = FramesKey.address()
     @State private var creating = false
     @State private var createError: String?
-    @State private var topUpBusy = false
-    @State private var topUpNote: String?
 
     /// `DS.tint` rather than an invented hue — the seat's own icon is the
     /// brand and the console is chrome around it.
@@ -43,6 +45,8 @@ struct FramesSendCard: View {
     /// (prd §774): nil with one. Read on appear, never in the body — the
     /// build-525 rule — and set directly by `makeAnother`.
     @State private var from: String?
+    /// The Top up row's fact when the tap did not open the page (the demo).
+    @State private var topUpNote: String?
 
     var body: some View {
         if stranger {
@@ -53,9 +57,10 @@ struct FramesSendCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 DevnetSendPanel(
                     tint: Self.mark,
-                    // The faucet leaves nothing to open — it funds the address in
-                    // place, so the tile acts here.
-                    topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
+                    // A door, not an act: the faucet is a page a person
+                    // mines and solves a captcha on (prd §962).
+                    topUp: .init(note: topUpNote ?? String(localized: "Opens the faucet"),
+                                 opens: true, action: topUp),
                     onSend: {
                         // This page's account becomes the one the send sheet
                         // signs as. A passkey account is not a `FramesKey`
@@ -183,37 +188,21 @@ struct FramesSendCard: View {
 
     // MARK: - Top up
 
+    /// The CURRENT account, read at the tap: a face picked on the rail can
+    /// have changed it since this card's state was set (prd §774). Copied, so
+    /// the faucet's address field is one paste. Not in a demo: the tour's
+    /// account is nobody's, and a live faucet page for it is the gap
+    /// `devnet-console-audit.py` check 8 names.
     private func topUp() {
-        // The CURRENT account, read at the tap: a face picked on the rail can
-        // have changed it since this card's state was set (prd §774).
-        guard !topUpBusy, let address = account ?? FramesKey.address() else { return }
-        topUpBusy = true
-        topUpNote = nil
-        Task { @MainActor in
-            defer { topUpBusy = false }
-            do {
-                _ = try await FramesSend.claimFaucet(for: address)
-                topUpNote = nil
-                await FramesLiveState.shared.refresh()
-                chrome.rain(sources: [FramesIdentity.source])
-            } catch let failure as FramesSend.Failure {
-                if case .faucet(let verdict) = failure {
-                    topUpNote = Self.faucetNote(verdict)
-                } else {
-                    topUpNote = String(localized: "The faucet didn't answer.")
-                }
-            } catch {
-                topUpNote = String(localized: "The faucet didn't answer.")
-            }
+        guard !DemoMode.isActive else {
+            topUpNote = String(localized: "The faucet isn't reached in the demo.")
+            return
         }
-    }
-
-    /// **The rate limit and a real failure read the SAME way, on purpose**
-    /// (§525, and `DevnetSendPanel.TopUp.note`'s own rule): the hourly refusal
-    /// is expected rather than a fault, and either way the next step is
-    /// identical — tap it again later.
-    private static func faucetNote(_ verdict: HegotaFaucetVerdict) -> String {
-        verdict.sentence ?? String(localized: "The faucet didn't answer.")
+        guard let address = account ?? FramesKey.address(),
+              let url = URL(string: FramesNetwork.current.faucetPage) else { return }
+        UIPasteboard.general.string = address
+        chrome.flash(String(localized: "Address copied"))
+        openURL(url)
     }
 }
 

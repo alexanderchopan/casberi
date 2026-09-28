@@ -1,23 +1,17 @@
 import Foundation
 
 /// SENDING ON THE FRAMES DEVNET (prd §548, 2026-09-01) — the one place this
-/// app writes to chain 81410, and the only caller of `FramesKey.sign`.
+/// app writes to `FramesNetwork.current`, and the only caller of
+/// `FramesKey.sign`.
 ///
-/// ## THE FAUCET'S CLASSIFIER IS SHARED, NOT FORKED
+/// ## THE FAUCET IS A PAGE NOW (prd §962)
 ///
-/// `POST faucet.frames.ethrex.xyz/api/claim` takes `{"address": "0x…"}` and
-/// answers `{"msg": …, "txhash": "0x…"}` — **byte-for-byte the shape Hegotá's
-/// faucet uses**, including the bare 429 for its hourly limit (measured
-/// 2026-09-01). So `HegotaFaucetVerdict` classifies this one correctly with no
-/// change, and it is used rather than copied: two classifiers of one wire
-/// shape drift, and then two seats disagree about what "already claimed this
-/// hour" looks like. That type carries §531's whole reasoning — the ordering
-/// of its checks is the whole of its correctness — and none of it is
-/// chain-specific.
-///
-/// The name is Hegotá's because renaming it would churn a passing harness's
-/// seventeen assertions for no behavioural gain; `DevnetFaucetVerdict` below
-/// is what this file calls it, and a later pass may make that the real name.
+/// On chain 81410 the faucet was one keyless `POST /api/claim`, classified by
+/// Hegotá's `HegotaFaucetVerdict`, and the Top up row claimed in place. The
+/// `frames-devnet-0` faucet is proof-of-work plus hCaptcha — a person mines in
+/// a browser and solves the captcha — so there is nothing here to call, and
+/// the claim, its failure case and its classifier alias are deleted with the
+/// verb (§723). `FramesSendCard` opens `FramesNetwork.current.faucetPage`.
 ///
 /// ## TWO DIVERGENCES FROM `HegotaSend`, BOTH MEASURED, BOTH SILENT IF WRONG
 ///
@@ -46,17 +40,8 @@ import Foundation
 /// signature". Asserted in the harness rather than left to this comment.
 enum FramesSend {
 
-    /// One classifier for both devnets' faucets — see the type doc.
-    typealias DevnetFaucetVerdict = HegotaFaucetVerdict
-
-    private static let faucetClaimEndpoint = "https://faucet.frames.ethrex.xyz/api/claim"
-
     enum Failure: Error, Equatable {
         case noKey
-        /// The faucet's own verdict, carried whole rather than flattened to a
-        /// string (§531). The rate limit is not a fault and a screen has to be
-        /// able to tell it apart from one.
-        case faucet(DevnetFaucetVerdict)
         /// The chain refused it, **in the node's own words** (§530).
         case broadcastRefused(String)
         /// No host answered at all. Never reported as a refusal — not knowing
@@ -86,8 +71,6 @@ enum FramesSend {
         case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was sent.")
         case .prefixTooLarge:   return String(localized: "The verify steps ask for more gas than this chain allows.")
         case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
-        case .faucet(let verdict):
-            return verdict.sentence ?? String(localized: "The faucet didn't send anything.")
         case .requestUnreadable:
             return String(localized: "That request doesn't describe a transaction this app can pay for.")
         case .requestSignatureInvalid:
@@ -95,30 +78,6 @@ enum FramesSend {
         case .notTheSponsor:
             return String(localized: "This request asks a different account to pay.")
         }
-    }
-
-    struct Claimed: Equatable { let transactionHash: String }
-
-    // MARK: - The faucet
-
-    /// Ask the faucet to fund `address`. No key, no signature — this is the
-    /// network's own gift, not an act this phone's key performs.
-    ///
-    /// **`postJSONBody`, NOT `postJSON`** (§531): `postJSON` returns nil for
-    /// ANY non-200, so the hourly rate limit arrives indistinguishable from a
-    /// dead host. `postJSONStatus` is not enough either — it drops the BODY on
-    /// a non-200, and this service's own `{"msg": "…"}` is the thing worth
-    /// reading.
-    static func claimFaucet(for address: String) async throws -> Claimed {
-        let body: [String: Any] = ["address": address]
-        let answered = await IngestSupport.postJSONBody(faucetClaimEndpoint, body: body,
-                                                        service: FramesIdentity.source)
-        let root = answered.json as? [String: Any]
-        let verdict = DevnetFaucetVerdict.of(status: answered.status,
-                                             msg: root?["msg"] as? String,
-                                             txHash: root?["txhash"] as? String)
-        if case .sent(let hash) = verdict { return Claimed(transactionHash: hash) }
-        throw Failure.faucet(verdict)
     }
 
     // MARK: - Reading what a send needs
@@ -277,16 +236,27 @@ enum FramesSend {
                              nonce: UInt64,
                              deadline: UInt64,
                              maxPriorityFeePerGas: UInt64 = 1_000_000_000,
-                             maxFeePerGas: UInt64 = 10_000_000_000) async throws -> String {
+                             maxFeePerGas: UInt64 = 10_000_000_000,
+                             legBudgets: (execution: UInt64, state: UInt64)? = nil) async throws -> String {
         guard let address = FramesKey.address(),
               let sender = RLP.data(fromHex: address) else { throw Failure.noKey }
         guard !legs.isEmpty else { throw Failure.chainUnreachable }
+        // `legBudgets` is `-framesStitchProbe`'s alone: a leg starved on
+        // purpose is how a failure's receipt is measured (prd §962). Every
+        // screen sends the defaults.
+        var planned = FramesTransaction.stitched(sender: sender, legs: legs, atomic: atomic,
+                                                 nonce: nonce,
+                                                 maxPriorityFeePerGas: maxPriorityFeePerGas,
+                                                 maxFeePerGas: maxFeePerGas,
+                                                 deadline: deadline)
+        if let legBudgets {
+            for i in planned.frames.indices where planned.frames[i].mode == 2 {
+                planned.frames[i].executionGas = legBudgets.execution
+                planned.frames[i].stateGas = legBudgets.state
+            }
+        }
         return try await signAndBroadcast(
-            FramesTransaction.stitched(sender: sender, legs: legs, atomic: atomic,
-                                       nonce: nonce,
-                                       maxPriorityFeePerGas: maxPriorityFeePerGas,
-                                       maxFeePerGas: maxFeePerGas,
-                                       deadline: deadline),
+            planned,
             sender: sender)
     }
 
@@ -306,12 +276,12 @@ enum FramesSend {
         // that could have been made before the prompt should be). This matters
         // MORE with stitching: the prefix cost grows with the frame count, so
         // a long batch is the case that actually hits the ceiling.
-        guard FramesTransaction.prefixWithinBudget(fields) else { throw Failure.prefixTooLarge }
-
         // **The entry is present BEFORE the digest is taken**, carrying its
         // real signer and an empty signature — only the signature bytes are
-        // elided. See the trap in the type doc.
+        // elided. See the trap in the type doc. Seeded before the budget
+        // check too, because verifying it is part of that budget (prd §962).
         fields.signatures = [.init(scheme: 1, signer: sender, msg: Data(), signature: Data())]
+        guard FramesTransaction.prefixWithinBudget(fields) else { throw Failure.prefixTooLarge }
 
         let preimage = FramesTransaction.signingPreimage(fields)
         let digest = [UInt8](Keccak256.hash([UInt8](preimage)))

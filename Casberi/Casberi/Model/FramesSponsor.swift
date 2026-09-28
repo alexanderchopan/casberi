@@ -47,15 +47,17 @@ extension FramesTransaction {
             frames: expiryPrefix(deadline)
                 // The sender approves running as it — and nothing about paying.
                 + [Frame(mode: 1, flags: 0x02, target: sender,
-                         executionGas: executionGas, stateGas: 0,
+                         executionGas: verifyExecutionGas, stateGas: 0,
                          value: Data(), data: Data()),
                    // The sponsor approves paying. **It carries the state
                    // budget**: approving payment for a sender that does not
                    // exist yet creates it, and EIP-8141 charges that creation
                    // to the frame approving payment. A sender with no coin is
                    // exactly who asks for a sponsor.
+                   // Exactly the creation charge: the prefix's state is capped
+                   // at 500,000 (prd §962).
                    Frame(mode: 1, flags: 0x01, target: sponsor,
-                         executionGas: executionGas, stateGas: stateGas,
+                         executionGas: verifyExecutionGas, stateGas: newAccountStateGas,
                          value: Data(), data: Data())]
                 + legs.enumerated().map { index, leg in
                     Frame(mode: 2, flags: atomic && index < last ? atomicFlag : 0x00,
@@ -108,7 +110,10 @@ extension FramesTransaction {
 /// about the shape produce a request the sponsor refuses as malformed rather
 /// than a signature over something else.
 struct FramesSponsorRequest: Codable, Equatable, Identifiable, Sendable {
-    static let currentFormat = 1
+    /// 2 since prd §962: the chain and the prefix budgets changed, so a
+    /// format-1 request rebuilds to a different transaction than its sender
+    /// signed — refused as unreadable, never as a bad signature.
+    static let currentFormat = 2
 
     var format: Int
     var sender: String

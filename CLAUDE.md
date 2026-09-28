@@ -227,7 +227,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The agent rooms, past §367 — and the fold that already existed** → docs/hooks/agent.md · prd §418
 - **External agents got two doors, and neither is a server** → docs/hooks/agent.md · prd §34
 - `-ghWatchPerson "<login|@login|profile URL>"` `-ghPeopleProbe` — watch a PERSON on GitHub → docs/hooks/bridges.md · prd §519
-- `-framesProbe` `-framesTxProbe` `-framesKeyProbe` `-framesPendingProbe` `-framesPasskeyProbe` — The Frames devnet (prd §548) → docs/hooks/devnets.md · prd §548 · §728 · §728d
+- `-framesProbe` `-framesTxProbe` `-framesKeyProbe` `-framesPendingProbe` `-framesPasskeyProbe` — The Frames devnet, which chain is `FramesNetwork` → docs/hooks/devnets.md · prd §548 · §728 · §962
 - **A wallet-family room's Actions ride EVERY page (prd §774, supersedes §747's All-only): All acts for the current account, your own account's page for itself, a stranger's page keeps only the room verb (`Create account`, `Follow address`).** Frames/Hegotá/Privacy hold N keys per phone and `address()` is the CURRENT one (`-framesKeyProbe`/`-privacyKeyProbe` print `held=`) → docs/hooks/devnets.md · prd §774
 - `-ghClientID <id>` — override the GitHub device-flow client id; `-ghDeviceProbe YES` — start the device flow, NSLog the user code (`Model/GitHubDeviceFlow.swift`).
 - `-intentProbe "<query>"` — run the Shortcuts intents' shared matcher (`IntentCorpus.match` in `Model/CasberiIntents.swift`, grounding Search Casberi / Ask Casberi) and NSLog the hits.

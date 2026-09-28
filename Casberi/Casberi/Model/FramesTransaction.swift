@@ -43,6 +43,13 @@ import Foundation
 /// a complete census rather than a sample, and it is also a small one: re-run
 /// the harness against a wider population once the chain has one.
 ///
+/// **AND AGAIN ON `frames-devnet-0` (prd §962, 2026-09-27)**, the ethpandaops
+/// multi-client devnet this seat moved to: every distinct shape in 2,565 frame
+/// transactions sampled across the chain (four — two to five frames, an
+/// atomic batch, empty `signer`s) re-encodes to the node's own hash with this
+/// file unchanged, which is also EIP-8141 at `b75cbe61` word for word. Only
+/// the chain id moved, and it lives in `FramesNetwork`.
+///
 /// ## WHAT CARRIES OVER FROM HEGOTÁ UNCHANGED, AND IS STILL LOAD-BEARING
 ///
 /// 1. **`v ‖ r ‖ s` — the recovery byte comes FIRST**, and `v` is a bare 0/1,
@@ -67,6 +74,11 @@ import Foundation
 /// which the harness pins — so the convention is carried over from the shared
 /// spec rather than measured. It fails safe: this file only ever WRITES what
 /// it is given, so an empty stays empty and a literal stays literal.
+///
+/// **Proven on `frames-devnet-0` (prd §962):** every transaction its load
+/// generator mines writes an EMPTY `signer` and three of four shapes an empty
+/// `target`, and all four re-encode to the node's hash. The spec allows both
+/// spellings (`len(sig.signer) == 0 or 20`); this app still writes literally.
 enum FramesTransaction {
 
     /// Measured off this chain's own type census, blocks 0–56,503:
@@ -76,8 +88,9 @@ enum FramesTransaction {
     /// The chain this file encodes for. A `chainID` field that disagreed with
     /// the chain the bytes are sent to produces a signature the node refuses
     /// with no useful reason, so it is named here beside the envelope rather
-    /// than passed in from a screen.
-    static let chainID: UInt64 = 81410
+    /// than passed in from a screen. **Which chain is `FramesNetwork`'s** —
+    /// one value, so a relaunched devnet is one edit (prd §962).
+    static let chainID: UInt64 = FramesNetwork.current.chainID
 
     // MARK: - The pieces
 
@@ -220,9 +233,7 @@ enum FramesTransaction {
                nonce: nonce,
                sender: sender,
                frames: expiryPrefix(deadline) + [
-                   Frame(mode: 1, flags: 0x03, target: sender,
-                         executionGas: executionGas, stateGas: stateGas,
-                         value: Data(), data: Data()),
+                   verifyFrame(sender: sender),
                    Frame(mode: 2, flags: 0x00, target: recipient,
                          executionGas: executionGas, stateGas: stateGas,
                          value: value, data: Data()),
@@ -359,9 +370,7 @@ enum FramesTransaction {
         return Fields(chainID: chainID,
                       nonce: nonce,
                       sender: sender,
-                      frames: expiryPrefix(deadline) + [Frame(mode: 1, flags: 0x03, target: sender,
-                                     executionGas: executionGas, stateGas: stateGas,
-                                     value: Data(), data: Data())]
+                      frames: expiryPrefix(deadline) + [verifyFrame(sender: sender)]
                           + legs.enumerated().map { index, leg in
                               // The flag joins THIS frame to the NEXT, so the
                               // last one never carries it — the node refuses
@@ -379,17 +388,62 @@ enum FramesTransaction {
                       blobVersionedHashes: [])
     }
 
-    /// The validation prefix is bounded at 500,000 gas on this chain — frames
-    /// plus signature cost. Stated here so a builder can refuse before the
-    /// node does, since the node's refusal for this is one sentence about
-    /// `MAX_VERIFY_GAS` that names no remedy.
-    static let maxVerifyGas: UInt64 = 500_000
+    // MARK: - The validation prefix (prd §962)
 
-    /// Does this transaction's validation prefix fit? Only mode-1 frames sit
-    /// in the prefix.
+    /// **EIP-8141's public-mempool bounds on the validation prefix** — every
+    /// frame before the first SENDER frame: the deadline, a deploy, the VERIFY
+    /// frames. `MAX_VERIFY_GAS` is 100,000 across their execution budgets PLUS
+    /// the cost of verifying the signatures; `MAX_VERIFY_STATE_GAS` is 500,000
+    /// across their state budgets (EIPs `b75cbe61`, "Structural Rules" 6).
+    ///
+    /// Chain 81410 allowed 500,000 of execution and this file asked 100,000
+    /// for the VERIFY frame alone — which, with its signature, is over the
+    /// spec's whole budget, so every send would have been refused by
+    /// `frames-devnet-0`'s mempool. Stated here so a builder refuses before
+    /// the node does, since the node's refusal names no remedy.
+    static let maxVerifyGas: UInt64 = 100_000
+    static let maxVerifyStateGas: UInt64 = 500_000
+
+    /// A VERIFY frame's execution budget. The default code "draws no
+    /// execution gas of its own" — the only charge is the target's access at
+    /// entry, 100 for the always-warm sender (measured 100 on 81410) and 2,600
+    /// for a cold sponsor. The passkey account's code adds a few dozen
+    /// opcodes. 20,000 is generous, and three of them plus a deadline and two
+    /// signatures still fit the 100,000.
+    static let verifyExecutionGas: UInt64 = 20_000
+
+    /// `STATE_BYTES_PER_NEW_ACCOUNT × CPSB` = 120 × 1,530. What APPROVE
+    /// charges the PAYMENT-approving frame when the sender does not exist
+    /// yet, and what a value frame to a fresh address is charged at entry.
+    static let newAccountStateGas: UInt64 = 183_600
+
+    /// The sender approving execution and payment through the default code.
+    /// **No state budget**: a sender paying for itself holds coin, so it
+    /// exists and APPROVE creates nothing (the spec's own worked example
+    /// sets the prefix's state limits to zero).
+    static func verifyFrame(sender: Data) -> Frame {
+        Frame(mode: 1, flags: 0x03, target: sender,
+              executionGas: verifyExecutionGas, stateGas: 0,
+              value: Data(), data: Data())
+    }
+
+    /// What verifying one signature costs, by scheme (`signature_gas`).
+    static func signatureGas(scheme: UInt64) -> UInt64 {
+        switch scheme {
+        case 1: return 2_800   // SECP256K1
+        case 2: return 6_700   // P256
+        default: return 100    // ARBITRARY
+        }
+    }
+
+    /// Does this transaction's validation prefix fit both bounds? The
+    /// signature entries must already be present — each is seeded before the
+    /// digest is taken, so every caller has them by now.
     static func prefixWithinBudget(_ f: Fields) -> Bool {
-        let prefix = f.frames.filter { $0.mode == 1 }
-            .reduce(UInt64(0)) { $0 &+ $1.executionGas }
-        return prefix <= maxVerifyGas
+        let prefix = f.frames.prefix { $0.mode != 2 }
+        let execution = prefix.reduce(UInt64(0)) { $0 &+ $1.executionGas }
+            &+ f.signatures.reduce(UInt64(0)) { $0 &+ signatureGas(scheme: $1.scheme) }
+        let state = prefix.reduce(UInt64(0)) { $0 &+ $1.stateGas }
+        return !f.signatures.isEmpty && execution <= maxVerifyGas && state <= maxVerifyStateGas
     }
 }

@@ -1,8 +1,14 @@
 import Foundation
 
-/// THE FRAMES DEVNET (prd §548, 2026-09-01) — chain 81410, the reference
-/// devnet for EIP-8141 frame transactions, and the only chain this app reaches
-/// where a transaction is a SEQUENCE rather than one opaque outcome.
+/// THE FRAMES DEVNET (prd §548, 2026-09-01) — the reference devnet for
+/// EIP-8141 frame transactions, and the only chain this app reaches where a
+/// transaction is a SEQUENCE rather than one opaque outcome.
+///
+/// **Which devnet is `FramesNetwork.current`** — ethpandaops'
+/// `frames-devnet-0` since prd §962 (2026-09-27). Everything below about
+/// "this chain" before that date was measured on chain 81410, the ethrex
+/// team's single-client net, and is kept as the record of how the seat was
+/// built.
 ///
 /// ## WHY A SEAT, WHEN THE CHAIN IS NEARLY EMPTY
 ///
@@ -57,23 +63,30 @@ enum FramesIdentity {
 
     /// The block explorer and the faucet's own page — opened in the person's
     /// OWN browser on a tap, never reached by us for a page. They are in the
-    /// reach audit's non-reach denylist for exactly that reason; the faucet's
-    /// `/api/claim` endpoint IS reached and is declared in `NetworkReach`.
-    static let explorer = "https://dora.frames.ethrex.xyz"
-    static let faucet = "https://faucet.frames.ethrex.xyz"
+    /// reach audit's non-reach denylist for exactly that reason. Since prd
+    /// §962 the faucet is ONLY a page: proof-of-work plus hCaptcha, which a
+    /// person does in a browser, so nothing here claims from it.
+    static let explorer = FramesNetwork.current.explorer
+    static let faucet = FramesNetwork.current.faucetPage
 }
 
 // MARK: - RPC (keyless)
 
 enum FramesRPC {
-    /// **Three hosts, tried in order.** Measured 2026-09-01: all three answer
-    /// `eth_chainId` with `0x13e02`, so a host being down is a retry rather
-    /// than an outage.
-    static let hosts = [
-        "https://rpc1.frames.ethrex.xyz",
-        "https://rpc2.frames.ethrex.xyz",
-        "https://rpc3.frames.ethrex.xyz",
-    ]
+    /// **Tried in order** — `FramesNetwork.current.rpcHosts`. On 81410 that
+    /// was three hosts; on `frames-devnet-0` it is one public endpoint that
+    /// load-balances every client's node.
+    static let hosts = FramesNetwork.current.rpcHosts
+
+    /// **How many times ONE host is asked again for an answer that came back
+    /// without its frames** (prd §962). The public endpoint balances across
+    /// geth, nethermind, reth and ethrex, and one of them answers a type-`0x06`
+    /// transaction or receipt with the envelope and no frame fields (geth
+    /// issue 35783) — measured 621 of 2,565 transactions, about one in four.
+    /// Drawn as it came, that is a transaction with no frames: a wrong row, not
+    /// a missing one. Four asks leave about one read in 250 unanswered, which
+    /// the room already says honestly (§515a).
+    static let bareRetries = 4
 
     /// One JSON-RPC call, walking the hosts until one answers.
     ///
@@ -83,15 +96,23 @@ enum FramesRPC {
     /// rather than drawing a zero (§515a).
     static func call(method: String, params: [Any]) async -> Any? {
         let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": method, "params": params]
-        for host in hosts {
-            guard let root = await IngestSupport.postJSON(host, body: body,
-                                                          service: FramesIdentity.source)
-                    as? [String: Any] else { continue }
-            if let result = root["result"], !(result is NSNull) { return result }
-            // A host that ANSWERED with an error has answered — walking on
-            // would ask two more hosts the same malformed question and report
-            // "unreachable" for what is really our own bad request.
-            if root["error"] != nil { return nil }
+        hosts: for host in hosts {
+            for _ in 0..<bareRetries {
+                guard let root = await IngestSupport.postJSON(host, body: body,
+                                                              service: FramesIdentity.source)
+                        as? [String: Any] else { continue hosts }
+                if let result = root["result"], !(result is NSNull) {
+                    // A frame transaction served WITHOUT its frames is asked
+                    // again, never drawn — see `bareRetries`.
+                    if FramesRead.servesFrames(method: method, result: result) { return result }
+                    continue
+                }
+                // A host that ANSWERED with an error has answered — walking on
+                // would ask two more hosts the same malformed question and report
+                // "unreachable" for what is really our own bad request.
+                if root["error"] != nil { return nil }
+                continue hosts
+            }
         }
         return nil
     }
@@ -287,7 +308,41 @@ struct FramesSentRecord: Codable, Equatable {
 @MainActor
 @Observable
 final class FramesLiveState {
-    static let shared = FramesLiveState()
+    static let shared: FramesLiveState = {
+        // BEFORE the instance exists: its stored properties restore
+        // themselves from these keys as they are initialised.
+        forgetOtherNetwork()
+        return FramesLiveState()
+    }()
+
+    /// **A DIFFERENT DEVNET IS NOT A RELAUNCH (prd §962).** Everything this
+    /// install stored describes the chain it was read from — the last read's
+    /// accounts, the genesis baseline, the head, every hash it sent. Moving
+    /// the seat to another `FramesNetwork` would otherwise draw the old
+    /// chain's moves as this one's, and the genesis check would then report a
+    /// RELAUNCH, which is a claim about a chain nobody relaunched. So a chain
+    /// id this install has not stored for is a clean slate, said nowhere. The
+    /// keys and watched addresses stay: an address is the same account on
+    /// every chain.
+    ///
+    /// **Except the demo's rows.** In a demo the cached accounts ARE the
+    /// fixture, installed once on entry and read from here on every launch
+    /// after; they belong to no chain, and wiping them left the tour's room on
+    /// "Reading the chain…" forever (seen on the simulator, 2026-09-27).
+    nonisolated static func forgetOtherNetwork() {
+        let defaults = UserDefaults.standard
+        let current = NSNumber(value: FramesNetwork.current.chainID)
+        guard (defaults.object(forKey: networkKey) as? NSNumber) != current else { return }
+        var stale = [genesisKey, relaunchHashKey, relaunchAtKey,
+                     headAtKey, headBlockKey, headSinceKey, finalizedKey, sentKey]
+        if !DemoMode.isActive { stale += [cacheKey, readAtKey] }
+        for key in stale {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.set(current, forKey: networkKey)
+    }
+    private static let networkKey = "frames.chain.network.v1"
+
     private init() {
         // Restored BEFORE any read, so the room draws what it last knew rather
         // than a blank. `try?` with an empty fallback: a cache that cannot be
@@ -447,6 +502,8 @@ final class FramesLiveState {
     /// READ, never a claim** — `PrivacyDevnetLiveState.observedRelaunch`'s
     /// rule.
     nonisolated static func observedRelaunch() -> (key: String, at: Date)? {
+        // The sweep can ask before the room has ever been built.
+        forgetOtherNetwork()
         guard let hash = UserDefaults.standard.string(forKey: relaunchHashKey),
               let at = UserDefaults.standard.object(forKey: relaunchAtKey) as? Date
         else { return nil }

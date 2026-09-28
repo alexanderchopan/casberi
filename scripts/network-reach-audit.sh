@@ -58,7 +58,12 @@ KNOWN_NON_REACH=(
   # write is exactly the moment to re-read every entry that says a host is
   # never touched.
   dora.hegota.ethrex.xyz
-  dora.frames.ethrex.xyz
+  # The Frames devnet's explorer and faucet PAGE (prd §962): ethpandaops'
+  # faucet is proof-of-work plus hCaptcha, which a person does in a browser,
+  # so the app only opens it — `FramesSendCard.topUp` is `openURL`, no POST.
+  # If an in-app claim ever lands, this entry is wrong the same day (§531).
+  dora.frames-devnet-0.ethpandaops.io
+  faucet.frames-devnet-0.ethpandaops.io
   dora.privacy.ethrex.xyz
   # The privacy devnet's faucet PAGE (prd §593). Here for a reason its two
   # siblings' faucets no longer qualify for: this seat is WATCH-ONLY while its

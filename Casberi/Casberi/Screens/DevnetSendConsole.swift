@@ -159,6 +159,7 @@ enum DevnetAmountInput {
 /// `.sheet` (a `.sheet` attached to a view inside a `List` row resolves to the
 /// same presenting controller as the screen's own and half-opens then closes,
 /// paid for three times already); Top up acts in place and reports on itself
+/// — except on Frames, whose faucet is a page (`TopUp.opens`, prd §962) —
 /// in its own row.
 struct DevnetSendPanel: View {
     let tint: Color
@@ -186,6 +187,11 @@ struct DevnetSendPanel: View {
     struct TopUp {
         var busy = false
         var note: String? = nil
+        /// The row is a DOOR: it opens the faucet's page rather than claiming
+        /// in place, and wears the push row's trailing mark to say so. Only
+        /// Frames (prd §962), whose faucet is proof-of-work plus a captcha;
+        /// Hegotá and vibenet claim in place (§553b), so theirs stay false.
+        var opens = false
         var action: () -> Void
     }
 
@@ -196,7 +202,7 @@ struct DevnetSendPanel: View {
             if let topUp {
                 DevnetVerbRow(title: String(localized: "Top up"), glyph: "drop",
                               tint: tint, fact: topUp.note, busy: topUp.busy,
-                              act: topUp.action)
+                              opens: topUp.opens, act: topUp.action)
                     .disabled(topUp.busy)
                     .accessibilityLabel(Text("Top up from the faucet"))
             }
@@ -216,6 +222,8 @@ struct DevnetVerbRow: View {
     let tint: Color
     var fact: String? = nil
     var busy = false
+    /// A door rather than an act — the push row's trailing mark.
+    var opens = false
     let act: () -> Void
 
     var body: some View {
@@ -223,7 +231,7 @@ struct DevnetVerbRow: View {
                   fact: fact.map { Text($0) },
                   tint: tint,
                   busy: busy,
-                  opens: false,
+                  opens: opens,
                   action: act) {
             ZStack {
                 Circle().fill(DS.fillFaint)
