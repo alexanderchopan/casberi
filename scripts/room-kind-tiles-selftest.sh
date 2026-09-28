@@ -330,7 +330,9 @@ for r in 'source: "Apple Health"' '"hkworkout:\(record.activityID)"' 'let ref = 
 done
 # The Cursor room draws its tiles by hand inside its repository shape, and
 # Walletbeat's and L2BEAT's stand alone when their head is nil (prd §911).
-grep -qF 'private func standaloneLead(cover: Thing?, tiles: DSScopeTiles<RoomKindTile>?,' "$FEED" \
+# Generic over the tile scope since prd §969 (Notes' tiles ride it too).
+grep -qF 'private func standaloneLead<Scope: DSTileScope>(' "$FEED" \
+  && grep -qF 'cover: Thing?, tiles: DSScopeTiles<Scope>?,' "$FEED" \
   || { echo "✗ FeedScreen lost standaloneLead — the cover, empty lead and tiles in one drawing"; exit 1; }
 [[ $(grep -c 'standaloneLead(cover:' "$FEED") -ge 4 ]] \
   || { echo "✗ fewer than four rooms draw the standalone lead (kind-tile rooms, Cursor, Walletbeat, L2BEAT)"; exit 1; }
