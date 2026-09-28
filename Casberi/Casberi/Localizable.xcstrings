@@ -78708,6 +78708,34 @@
         }
       }
     },
+    "It used its whole execution budget and failed. This chain doesn't say whether execution or state ran out." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agotó todo su presupuesto de ejecución y falló. Esta cadena no indica si se agotó la ejecución o el estado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実行予算をすべて使い切り、失敗しました。このチェーンは、不足したのが実行か状態かを示しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실행 예산을 모두 소진하고 실패했습니다. 이 체인은 실행과 상태 중 무엇이 부족했는지 알려 주지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "它用尽了全部执行预算并失败。这条链没有说明耗尽的是执行预算还是状态预算。"
+          }
+        }
+      }
+    },
     "It used its whole execution budget and reverted." : {
       "localizations" : {
         "es" : {
