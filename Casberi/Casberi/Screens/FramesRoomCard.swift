@@ -258,6 +258,13 @@ struct FramesRoomFigure: View {
 
     @ViewBuilder private var sponsorship: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if head.watched == 0 && accounts.isEmpty {
+                // Nothing here yet, in Privacy's words and weight; Create
+                // account sits under the crown.
+                Text(String(localized: "No account on this chain yet."))
+                    .dsText(.heading24)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             // **THE CURVE, WHERE THERE IS ONE.** Two points is a line
             // between two facts and draws honestly; one point is a flat line
             // along the floor, which reads as "went to zero" — the most

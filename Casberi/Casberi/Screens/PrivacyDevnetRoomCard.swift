@@ -1244,50 +1244,6 @@ extension PrivacyDevnetRoomCard {
 
 // MARK: - The quiet state's door (prd §593d)
 
-/// Two rows offering the addresses that have something to show.
-///
-/// **Not a re-pitch and not a list of every address on the chain** — the two
-/// measured examples, each named for the READING it makes possible, which is
-/// the same claim the connect screen's own rows make and in the same words. The
-/// pool participant leads because it is the only one of the two whose
-/// transactions reference a root, so it is the only way to see the Roots scope
-/// at all without waiting for somebody else to use the chain.
-///
-/// A DOOR, never a claim: tapping watches the address, which is a read.
-struct PrivacyDevnetExampleDoors: View {
-    let onWatch: (String) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(String(localized: "Or watch one that has something to show"))
-                .dsText(.subhead12)
-                .foregroundStyle(DS.textTertiary)
-            ForEach(PrivacyDevnetExample.all) { example in
-                Button { onWatch(example.address) } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(example.title)
-                                .dsText(.body17)
-                                .foregroundStyle(DS.textPrimary)
-                            Text(example.detail)
-                                .dsText(.subhead12)
-                                .foregroundStyle(DS.textTertiary)
-                        }
-                        Spacer(minLength: DS.Space.s3)
-                        Image(systemName: "plus.circle")
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    .frame(minHeight: DS.Hit.min)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-
 // MARK: - The rows, outside the box (prd §593d)
 
 /// Every scope's LIST, as its own feed section.
@@ -1318,8 +1274,6 @@ struct PrivacyDevnetRoomList: View {
     /// only drawn when both are present, since a send card missing one of its
     /// acts is worse than none.
     var onShield: (() -> Void)?
-    /// Watch one of the measured example addresses from the quiet state.
-    var onWatchExample: ((String) -> Void)?
     /// Open one transaction's sheet (prd §596).
     var onOpenMove: ((PrivacyDevnetLiveState.Move, String) -> Void)?
     /// Open one watched address's sheet (prd §596).
@@ -1379,21 +1333,6 @@ struct PrivacyDevnetRoomList: View {
         // the send card and the feed already read it here (prd §598).
         .task { PrivacyDevnetLiveState.shared.setMine(PrivacyDevnetKey.address()) }
     }
-
-    /// Whether the room offers its two example addresses — a room with nothing
-    /// to read gets them, a room with rows does not (prd §610). `FeedScreen`
-    /// mounts the doors as their OWN List row, after the verb tiles (prd §680):
-    /// §664 moved the tiles out of this VStack into their own row, which put
-    /// them AFTER the example list this VStack still held — buttons under a
-    /// list of rows. The card's own order was always tiles, then doors.
-    static func showsExamples(_ head: PrivacyDevnetRoom.Head) -> Bool {
-        switch head.lede {
-        case .quiet, .unwatched: return true
-        case .reading, .relaunched, .rootLive, .rootsAged, .spends, .moved: return false
-        }
-    }
-
-    private var showsExamples: Bool { Self.showsExamples(head) }
 }
 
 

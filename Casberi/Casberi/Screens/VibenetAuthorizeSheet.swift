@@ -95,7 +95,9 @@ struct VibenetAuthorizeSheet: View {
                                     // words, and it is the one worth being sure
                                     // of before granting somebody a key.
                                     title: headTitle,
-                                    secondary: accountName,
+                                    // The form's title IS the account, so it
+                                    // is not said again under itself.
+                                    secondary: phase == .done ? accountName : nil,
                                     sentence: headSentence)
                         switch phase {
                         case .form: formBody
@@ -178,7 +180,7 @@ struct VibenetAuthorizeSheet: View {
     private var headSentence: String? {
         switch phase {
         case .form:
-            String(localized: "This costs TWO Face ID prompts — one approving the change itself, one authorizing the transaction that carries it.")
+            String(localized: "This costs two Face ID prompts — one approving the change itself, one authorizing the transaction that carries it.")
         case .done:
             String(localized: "The transaction is on its way to the chain.")
         }
@@ -324,7 +326,7 @@ struct VibenetAuthorizeSheet: View {
                 }
             }
             .scrollIndicators(.hidden)
-            DSToggleRow(title: Text(String(localized: "Full control")),
+            DSToggleRow(title: Text(String(localized: "Admin")),
                         detail: Text(String(localized: "Every permission, including changing this account's keys.")),
                         isOn: $admin.animation(DS.Motion.standard),
                         tint: Self.mark)
@@ -333,7 +335,7 @@ struct VibenetAuthorizeSheet: View {
                     DSToggleRow(title: Text(entry.name), isOn: bitBinding(entry.bit), tint: Self.mark)
                 }
                 if composed == nil {
-                    Text(String(localized: "Turn on at least one, or choose Full control."))
+                    Text(String(localized: "Turn on at least one, or choose Admin."))
                         .dsText(.label12)
                         .foregroundStyle(DS.destructive)
                         .fixedSize(horizontal: false, vertical: true)
@@ -401,7 +403,7 @@ struct VibenetAuthorizeSheet: View {
         // Said under the switches already.
         case .noScope: nil
         case .unchanged: String(localized: "Nothing changes yet.")
-        case .lastAdmin: String(localized: "This is the account's only full-control key. Without one, nobody could change this account again — give another key full control first.")
+        case .lastAdmin: String(localized: "This is the account's only Admin key. Without one, nobody could change this account again — make another key Admin first.")
         case .policyGate: String(localized: "This key is limited to one contract, and this sheet can't carry that limit over. Change it on Base's console.")
         }
     }
@@ -411,7 +413,7 @@ struct VibenetAuthorizeSheet: View {
         case .thisPhoneLosesAdmin:
             String(localized: "This phone won't be able to change this account's keys afterwards.")
         case .grantsAdmin:
-            String(localized: "Full control can do anything with this account, including removing this phone's key.")
+            String(localized: "Admin can do anything with this account, including removing this phone's key.")
         }
     }
 

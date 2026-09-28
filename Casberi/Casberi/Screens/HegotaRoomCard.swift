@@ -265,7 +265,13 @@ struct HegotaRoomFigure: View {
     /// over an unread chain is the fake status §83 forbids.
     @ViewBuilder private var crownFigure: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if !head.hasRead {
+            if head.watched == 0 && accounts.isEmpty {
+                // Nothing here yet, in Privacy's words and weight; Create
+                // account sits under the crown.
+                Text(String(localized: "No account on this chain yet."))
+                    .dsText(.heading24)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if !head.hasRead {
                 Text(String(localized: "Reading the chain…"))
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             } else if head.everythingUnreached {
@@ -282,6 +288,16 @@ struct HegotaRoomFigure: View {
                               format: { HegotaFormat.crown(Self.wei($0)) },
                               exactFormat: { HegotaFormat.eth(Self.wei($0)) },
                               changeFormat: { HegotaFormat.short(Self.wei($0)) },
+                              box: DSRoomChassis.figureSlot)
+            } else if head.hasRead, let balance = shownBalance {
+                // **NO LINE YET STILL SAYS THE NUMBER** — Frames' crown. A new
+                // account has one reading, so the branch above drew nothing
+                // and the room showed an empty box over its own Top up.
+                RoomHomeCrown(caption: crownCaption,
+                              format: { HegotaFormat.crown(Self.wei($0)) },
+                              exactFormat: { HegotaFormat.eth(Self.wei($0)) },
+                              changeFormat: { HegotaFormat.short(Self.wei($0)) },
+                              fallbackTotal: NSDecimalNumber(decimal: balance / Self.wei(1)).doubleValue,
                               box: DSRoomChassis.figureSlot)
             }
         }
@@ -1805,32 +1821,23 @@ struct HegotaRoomList: View {
     // without it — so the send sheet it names was unreachable from this view.
     // The card is on the account card now and takes its closure there.
 
+    /// **THIS PHONE'S KEY, BACK (user, 2026-09-28).** §689 dropped this row
+    /// and with it the only door to `HegotaKeySheet`, so no screen could
+    /// remove the key. Drawn only when there is one — Create account is
+    /// Home's — and off the stored address, never a Keychain read in a body.
     @ViewBuilder private var thisPhoneRow: some View {
-        let present = HegotaKey.presence() == .present
-        // The title is a VERB while there's no account yet — the exact wording
-        // vibenet's own `createAccountRow` uses (user, 2026-08-29: this row
-        // needs to say "create an account", the same way vibenet does). A
-        // noun-phrase label ("This phone's account") over an account that
-        // doesn't exist yet reads as a fact rather than an invitation, and
-        // hides the one thing this row does.
-        DSPushRow(title: Text(present
-                              ? String(localized: "This phone's account")
-                              : String(localized: "Create an account")),
-                  subtitle: Text(present
-                                 ? String(localized: "The one account here you control")
-                                 : String(localized: "This phone becomes its key")),
-                  tint: HegotaModeStyle.room,
-                  action: onOpenKeySheet) {
-            ZStack {
-                Circle().fill(HegotaModeStyle.room.opacity(0.18))
-                    .frame(width: DS.Mark.row, height: DS.Mark.row)
-                // `plus` while there's nothing yet — the same CREATE
-                // semantic vibenet's own `createAccountRow` icon carries,
-                // rather than `key.fill` implying a credential already
-                // exists to manage.
-                Image(systemName: present ? "key.fill" : "plus")
-                    .dsGlyph(.caption, weight: .semibold)
-                    .foregroundStyle(HegotaModeStyle.room)
+        if HegotaKey.address() != nil {
+            DSPushRow(title: Text(String(localized: "This phone")),
+                      subtitle: Text(String(localized: "The key that signs here")),
+                      tint: HegotaModeStyle.room,
+                      action: onOpenKeySheet) {
+                ZStack {
+                    Circle().fill(HegotaModeStyle.room.opacity(0.18))
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                    Image(systemName: "key.fill")
+                        .dsGlyph(.caption, weight: .semibold)
+                        .foregroundStyle(HegotaModeStyle.room)
+                }
             }
         }
     }
@@ -1843,6 +1850,7 @@ struct HegotaRoomList: View {
     }
 
     @ViewBuilder private var accountsList: some View {
+        thisPhoneRow
         RoomAccountsRows(rows: HegotaConnections.rows(shown, onOpen: onOpenAccount),
                          splitsByPhone: true)
     }

@@ -46,6 +46,13 @@ enum HegotaRoomSource {
                         watching: max(HegotaWatch.shared.addresses.count,
                                       HegotaLiveState.shared.accounts.count,
                                       DemoMode.isActive ? 1 : 0))
+            // **NEVER NIL** — Privacy's contract. With nothing watched and no
+            // account the nil fell through to the generic "Hegotá UTXO is
+            // connected. Nothing has landed" card, which claimed a connection
+            // and hid Create account: the room was a dead end (measured).
+            ?? HegotaRoom.Head(lead: .nothing, hasRead: true, balanceWei: nil,
+                               reached: 0, watched: 0, coinCount: 0, coinsWei: nil,
+                               sponsoredCount: 0, laneCount: 0, moveCount: 0)
     }
 
     @MainActor

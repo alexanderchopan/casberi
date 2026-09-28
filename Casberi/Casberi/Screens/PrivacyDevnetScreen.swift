@@ -127,4 +127,12 @@ enum PrivacyDevnetExample {
                       title: String(localized: "An address that sent early"),
                       detail: String(localized: "The chain's first hour")),
     ]
+
+    /// The examples a SEND may suggest. The pool participant is a contract
+    /// (it has code on 8141) that reverts a plain transfer, so a send to it
+    /// spent gas and moved nothing (measured 2026-09-28, status 0 on its
+    /// SENDER frame). Worth watching; not somewhere to send.
+    static let recipients: [DevnetExample] = all.filter {
+        $0.address != "0x8fdab78244c5fa43809d064fc93e6c0e5041971d"
+    }
 }

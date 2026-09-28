@@ -514,6 +514,10 @@ struct FeedScreen: View {
         /// `hegotaAccount`'s exact reason: the row lives in `HegotaRoomList`,
         /// which is inside this List's rows, and cannot present its own sheet.
         case hegotaKeySheet
+        /// A web page in the in-app Safari sheet (prd §653) — a faucet page
+        /// raised from a room's Top up, which sits inside this List's rows and
+        /// cannot present its own sheet.
+        case web(URL)
         // `hegotaSendSheet` was HERE and is deleted (prd §539, 2026-08-31):
         // sending is the Hegotá room's own Home scope now (`HegotaSendCard`),
         // not a sheet raised from inside another sheet.
@@ -652,6 +656,7 @@ struct FeedScreen: View {
             case .hegotaFrame(let m, let i): "hegotaFrame:\(m.id)#\(i)"
             case .hegotaAccount(let a): "hegotaAccount:\(a.address)"
             case .hegotaKeySheet: "hegotaKeySheet"
+            case .web(let url): "web:\(url.absoluteString)"
             case .hegotaCoin(let c, _, _): "hegotaCoin:\(c.index)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
@@ -989,7 +994,7 @@ struct FeedScreen: View {
         let me = PrivacyDevnetKey.address()
         var seen = Set<String>()
         var out: [(address: String, name: String?)] = []
-        for address in PrivacyDevnetWatch.shared.addresses + PrivacyDevnetExample.all.map(\.address) {
+        for address in PrivacyDevnetWatch.shared.addresses + PrivacyDevnetExample.recipients.map(\.address) {
             let key = address.lowercased()
             guard !seen.contains(key) else { continue }
             guard me == nil || address.caseInsensitiveCompare(me!) != .orderedSame else { continue }
@@ -1018,13 +1023,6 @@ struct FeedScreen: View {
     /// somebody standing in a quiet room gets something to read without leaving
     /// it, so this watches and refreshes in place — where the connect screen's
     /// own first watch routes here, because there the room IS the new place.
-    private func watchPrivacyDevnetExample(_ address: String) {
-        guard PrivacyDevnetWatch.shared.add(address) else { return }
-        PrivacyDevnetBridge.registerBridge(store: bridges)
-        Task { await PrivacyDevnetLiveState.shared.refresh() }
-        chrome.refreshRooms()   // a watch list changed; nothing arrived (§655 amendment)
-    }
-
     /// Send on Ethrex Privacy.
     ///
     /// **`freshKey` is this chain's own control and neither sibling has one**
@@ -4269,7 +4267,8 @@ struct FeedScreen: View {
                             .map { $0.caseInsensitiveCompare(slot.id) == .orderedSame } == true
                     FramesSendCard(account: slot.id.isEmpty ? nil : slot.id,
                                    stranger: !mine,
-                                   onSend: { feedSheet = .framesSend })
+                                   onSend: { feedSheet = .framesSend },
+                                   onOpenPage: { feedSheet = .web($0) })
                         .id(slot.id)
                 }
             )
@@ -4553,9 +4552,10 @@ struct FeedScreen: View {
     /// property is read by a room that may not be vibenet, and an unguarded
     /// version would publish a vibenet strip over whatever room is on screen.
     private var vibenetSectionPublication: VibenetSectionPublication {
-        guard shape == .vibenet, let room = VibenetRoomSource.card() else {
+        guard shape == .vibenet else {
             return .init(sections: [], attention: [])
         }
+        let room = VibenetRoomSource.roomOrEmpty()
         // `hasEvents` is asked of the ROWS rather than of the room, because
         // "Recent" is the only scope whose content is not the card's: an
         // account watched today has a full roster and no events at all, and a
@@ -4837,6 +4837,8 @@ struct FeedScreen: View {
             }
         case .hegotaKeySheet:
             HegotaKeySheet()
+        case .web(let url):
+            DSWebSheet(url: url) { feedSheet = nil }
         case .hegotaCoin(let coin, let all, let unspent):
             HegotaCoinSheet(coin: coin, all: all, unspent: unspent)
         case .nftPicks(let address, let label):
@@ -5123,7 +5125,8 @@ struct FeedScreen: View {
                 isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
                 perform: { _, amount, _, _ in await shieldPrivacyDevnet(amount: amount) },
                 fixedDestination: PrivacyDevnetPool.address,
-                verb: String(localized: "Shield"))
+                verb: String(localized: "Shield"),
+                note: String(localized: "Shielded ETH can't be taken back out in Casberi yet."))
         case .vibenetSend(let account):
             DevnetSendSheet(
                 venue: String(localized: "vibenet"),
@@ -5481,28 +5484,6 @@ struct FeedScreen: View {
             // thing under the rail was a list. Every other wallet room leads
             // with its verbs. So does this one now; the last few moves follow
             // them.
-            if privacyScope == .home {
-                // **THE VERBS MOVED ONTO THE ACCOUNT CARD (prd §747).** §682's
-                // ruling — the verbs sit under the rail, never under the list —
-                // is kept by construction now rather than by ordering two
-                // sections carefully: they are ON the card, beside the crown,
-                // above the scope rows. The example doors stay here, after it.
-                // The example doors AFTER the verbs, in their own row (prd
-                // §680, user: "showing buttons on top of a list which
-                // shouldn't happen"). §664 gave the tiles their own row and
-                // left the doors inside the card, which inverted the card's
-                // own order. Own row for the same reason the tiles got one:
-                // a shared cell under-reports the grid's height.
-                if PrivacyDevnetRoomList.showsExamples(head) {
-                    Section {
-                        PrivacyDevnetExampleDoors(onWatch: watchPrivacyDevnetExample)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
-                }
-            }
                 PrivacyDevnetRoomList(
                     head: head,
                     section: privacyScope,
@@ -5519,7 +5500,6 @@ struct FeedScreen: View {
                     // way (`vibenetSendRow`).
                     onSend: nil,
                     onShield: nil,
-                    onWatchExample: watchPrivacyDevnetExample,
                     // **THESE ROWS WERE TERMINAL BY CONSTRUCTION** (prd §596,
                     // user: "none of the lists open thing sheets") — the seat
                     // lands no `Thing`, so its sheets had to be built the way
@@ -5672,7 +5652,7 @@ struct FeedScreen: View {
     /// its rows are always zero) — this is that reasoning applied to the room
     /// that lands rows but can legitimately have none of them in view.
     private var keepsChromeWhenEmpty: Bool {
-        (shape == .vibenet && VibenetRoomSource.card() != nil)
+        shape == .vibenet
             // A picked kind tile is this room's navigation too (prd §815):
             // the tiles stay, and say "nothing here" under themselves.
             || roomKindPick != .all
@@ -9189,9 +9169,7 @@ struct FeedScreen: View {
             // Scoped by the face rail, exactly as the wallet crown is
             // (2026-08-23): pick one and the card describes that account
             // alone; pick All and it describes them all.
-            return VibenetRoomSource.card()
-                .map { $0.scoped(to: chrome.vibenetScope) }
-                .map { .vibenet($0) }
+            return .vibenet(VibenetRoomSource.roomOrEmpty().scoped(to: chrome.vibenetScope))
         case PeerRoomSource.source:
             return PeerRoomSource.compose(things: visible).map { .peer($0) }
         case PrivacyPoolsRoomSource.source:

@@ -180806,6 +180806,174 @@
           }
         }
       }
+    },
+    "No account on this chain yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todavía no hay ninguna cuenta en esta cadena."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このチェーンにはまだアカウントがありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 체인에는 아직 계정이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这条链上还没有账户。"
+          }
+        }
+      }
+    },
+    "Shielded ETH can't be taken back out in Casberi yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El ETH protegido todavía no se puede retirar desde Casberi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保護したETHは、まだCasberiから取り出せません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보호된 ETH는 아직 Casberi에서 다시 꺼낼 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已屏蔽的 ETH 目前还无法在 Casberi 中取回。"
+          }
+        }
+      }
+    },
+    "Turn on at least one, or choose Admin." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activa al menos uno o elige Admin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "少なくとも1つをオンにするか、Adminを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하나 이상 켜거나 Admin을 선택하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请至少打开一项，或选择 Admin。"
+          }
+        }
+      }
+    },
+    "This is the account's only Admin key. Without one, nobody could change this account again — make another key Admin first." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Es la única clave Admin de la cuenta. Sin una, nadie podría volver a cambiar esta cuenta: haz Admin a otra clave primero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これはこのアカウント唯一のAdminキーです。これがなければ、誰もこのアカウントを変更できなくなります。先に別のキーをAdminにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정의 유일한 Admin 키입니다. 이 키가 없으면 아무도 이 계정을 다시 바꿀 수 없습니다. 먼저 다른 키를 Admin으로 만드세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是此账户唯一的 Admin 密钥。没有它，任何人都无法再更改此账户——请先将另一个密钥设为 Admin。"
+          }
+        }
+      }
+    },
+    "Admin can do anything with this account, including removing this phone's key." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Admin puede hacer cualquier cosa con esta cuenta, incluso quitar la clave de este teléfono."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Adminは、この端末のキーの削除を含め、このアカウントで何でもできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Admin은 이 기기의 키 제거를 포함해 이 계정으로 무엇이든 할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Admin 可以对此账户执行任何操作，包括移除这台手机的密钥。"
+          }
+        }
+      }
+    },
+    "This costs two Face ID prompts — one approving the change itself, one authorizing the transaction that carries it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esto requiere dos solicitudes de Face ID: una para aprobar el cambio y otra para autorizar la transacción que lo lleva."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face IDの確認が2回必要です。1回は変更自体の承認、もう1回はそれを運ぶトランザクションの承認です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID 확인이 두 번 필요합니다. 한 번은 변경 자체를 승인하고, 한 번은 이를 담은 트랜잭션을 승인합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这需要两次 Face ID 验证——一次批准更改本身，一次授权承载它的交易。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -223,7 +223,7 @@ enum PrivacyDevnetRoom {
         case .relaunched:
             return String(localized: "This devnet was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours.")
         case .unwatched:
-            return String(localized: "Watch an address to see what it did on this chain.")
+            return String(localized: "No account on this chain yet.")
         case .reading:
             return String(localized: "Reading the chain…")
         case .quiet(let watching):

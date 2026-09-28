@@ -2174,6 +2174,16 @@ enum VibenetRoomSource {
         guard let room = VibenetState.saved, !room.items.isEmpty else { return nil }
         return room
     }
+
+    /// **THE ROOM'S OWN HEAD NEVER GOES NIL** (Privacy's contract, Hegotá's
+    /// and Frames' since). `card()` stays nil-when-empty for its readers that
+    /// ask "is there data"; the room itself draws an empty one, so nothing
+    /// watched is a room with Create account in it rather than the generic
+    /// "Base Vibenet is connected" card, which hid it (measured).
+    @MainActor
+    static func roomOrEmpty() -> VibenetRoom {
+        card() ?? .compose(items: [], branch: nil, commit: nil, configReached: true)
+    }
 }
 
 /// The last composed room, kept so the feed's head can draw without

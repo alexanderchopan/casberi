@@ -37,6 +37,7 @@ struct HegotaSendCard: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
+    @Environment(BridgeStore.self) private var store
 
     @State private var creating = false
     @State private var createError: String?
@@ -128,6 +129,7 @@ struct HegotaSendCard: View {
             do {
                 let made = try HegotaKey.createAnother()
                 _ = HegotaWatch.shared.add(made)
+                HegotaBridge.registerBridge(store: store)
                 chrome.hegotaScope = made
                 refreshFrom()
                 DSHaptic.success()
@@ -190,6 +192,9 @@ struct HegotaSendCard: View {
                 // scoped the way `makeAnother` does it.
                 let made = try HegotaKey.create()
                 _ = HegotaWatch.shared.add(made)
+                // Registered, or a room reached straight from the catalog has
+                // no seat: the account would be missing from the rooms tray.
+                HegotaBridge.registerBridge(store: store)
                 chrome.hegotaScope = made
                 refreshFrom()
                 DSHaptic.success()

@@ -52,6 +52,12 @@ enum FramesRoomSource {
             // stall read on the live seat before entering must not follow the
             // person into a room that is not reading anything.
             alert: DemoMode.isActive ? nil : live.alert())
+            // **NEVER NIL** — Privacy's contract, and Hegotá's since. No key and
+            // nothing watched fell through to the generic "connected" card,
+            // which hid Create account.
+            ?? FramesRoom.Head(lead: .balance, hasRead: true, balanceWeiHex: nil,
+                               reached: 0, watched: 0, moveCount: 0, frameCount: 0,
+                               sponsoredCount: 0, rolledBackCount: 0, curve: [], series: [])
     }
 
     /// The accounts this room is showing, after the face rail's scope.

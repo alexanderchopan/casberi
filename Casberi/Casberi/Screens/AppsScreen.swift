@@ -1047,7 +1047,21 @@ struct AppsScreen: View {
         return { route.fromAccountsList(open) }
     }
 
+    /// **A DEVNET OPENS ITS ROOM, connected or not (user, 2026-09-28: "watch
+    /// addresses is kind of confusing").** Its account page led with a watch
+    /// field and addresses worth watching, so making your own account meant
+    /// watching a stranger first, then finding Activity, then Home. The room
+    /// always draws now, and its first act is Create account.
+    private static let devnetRooms: Set<String> = [
+        VibenetIdentity.source, HegotaIdentity.source,
+        FramesIdentity.source, PrivacyDevnetIdentity.source,
+    ]
+
     private func rowOpen(_ entry: Ranked) -> (() -> Void)? {
+        if Self.devnetRooms.contains(entry.offer.name) {
+            let room = entry.offer.name
+            return { DSHaptic.tap(); route.path = []; chrome.sourceRequest = room }
+        }
         if let id = roomSeat(entry) {
             return { DSHaptic.tap(); BridgeRouter.open(seatID: id, route: route, chrome: chrome) }
         }

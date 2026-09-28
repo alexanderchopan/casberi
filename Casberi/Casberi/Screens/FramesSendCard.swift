@@ -19,6 +19,7 @@ import SwiftUI
 /// it.
 struct FramesSendCard: View {
     @Environment(ShellChrome.self) private var chrome
+    @Environment(BridgeStore.self) private var store
     @Environment(\.openURL) private var openURL
 
     /// **WHOSE HOME THIS IS (prd §774, user: "send and top up … on each
@@ -32,6 +33,9 @@ struct FramesSendCard: View {
     var account: String? = nil
     var stranger = false
     let onSend: () -> Void
+    /// The faucet page, in the in-app Safari sheet (prd §653). It left for
+    /// Safari, so after the captcha you had to find your way back.
+    var onOpenPage: ((URL) -> Void)? = nil
 
     @State private var keyAddress: String? = FramesKey.address()
     @State private var creating = false
@@ -131,6 +135,7 @@ struct FramesSendCard: View {
             createError = nil
             keyAddress = made
             _ = FramesWatch.shared.add(made)
+            FramesBridge.registerBridge(store: store)
             chrome.framesScope = made
             refreshFrom()
             Task { await FramesLiveState.shared.refresh() }
@@ -175,6 +180,9 @@ struct FramesSendCard: View {
         do {
             let made = try FramesKey.create()
             keyAddress = made
+            // Registered, or a room reached straight from the catalog has no
+            // seat: the account would be missing from the rooms tray.
+            FramesBridge.registerBridge(store: store)
             createError = nil
             // Read it now and turn the room to it, as `makeAnother` does. The
             // room reads this phone's key unwatched, but nothing asked it to
@@ -210,7 +218,7 @@ struct FramesSendCard: View {
               let url = URL(string: FramesNetwork.current.faucetPage) else { return }
         UIPasteboard.general.string = address
         chrome.flash(String(localized: "Address copied"))
-        openURL(url)
+        if let onOpenPage { onOpenPage(url) } else { openURL(url) }
     }
 }
 

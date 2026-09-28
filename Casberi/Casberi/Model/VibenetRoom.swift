@@ -105,7 +105,7 @@ struct VibenetScope: Equatable, Codable {
     /// (Subscriptions' own build), so offering it here would be a control
     /// that signs something incomplete.
     static let presets: [(name: String, raw: UInt16)] = [
-        (String(localized: "Full control"),          0),
+        (String(localized: "Admin"),                 0),
         (String(localized: "Send only"),              sender),
         (String(localized: "Send + pay gas"),         sender | selfPayer),
         (String(localized: "Pay gas only"),           selfPayer),

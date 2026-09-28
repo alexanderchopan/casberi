@@ -788,6 +788,10 @@ struct DevnetSendSheet: View {
     /// The verb the amount screen and the commit button say — already localized
     /// by the caller. Nil is "Send".
     var verb: String? = nil
+    /// One sentence the verb owes before it runs — Shield's is that nothing
+    /// in this app brings the money back out (Unshield needs a prover it does
+    /// not have, prd §614). Drawn under the held line; nil draws nothing.
+    var note: String? = nil
 
     /// **WHAT THE SHEET CAN SEND, when that is more than the coin (prd §728b).**
     /// Fewer than two draws the plain unit exactly as before. With two or
@@ -1069,6 +1073,11 @@ struct DevnetSendSheet: View {
             }
             .frame(height: DS.Space.s6)
             .padding(.top, DS.Space.s1)
+
+            if let note {
+                DSFootnote(prose: note)
+                    .padding(.top, DS.Space.s2)
+            }
 
             Spacer(minLength: DS.Space.s4)
 
