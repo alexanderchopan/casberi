@@ -95,7 +95,7 @@ struct VibenetKeySheet: View {
         // The height is the blocks that will actually draw — a key with no
         // terms and no origin is a genuinely shorter object than a session key
         // with both.
-        DSTray(title: actor.kind.plainTitle, height: trayHeight,
+        DSTray(title: isThisPhone ? VibenetThisPhone.keyName : actor.kind.plainTitle, height: trayHeight,
                detents: [.height(trayHeight), .large]) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {

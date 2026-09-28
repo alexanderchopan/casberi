@@ -257,6 +257,9 @@ struct DSAccountSlot: Identifiable, Equatable {
     let name: String
     let sub: String?
     let faces: [FaceScopeRail.Item.Face]
+    /// The picker's section for this slot, nil for none. Vibenet splits "On
+    /// this phone" from "Watching"; a room that sets none draws a flat menu.
+    var group: String? = nil
 }
 
 extension DSAccountSlot {

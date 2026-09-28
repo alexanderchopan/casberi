@@ -294,7 +294,8 @@ struct VibenetKeyTraySheet: View {
                     // `shortLabel` exists for exactly this and loses nothing
                     // here: the tray is titled keys, so "secp256k1" needs no
                     // "key" after it, and "Passkey" is unchanged.
-                    Text(key.actor.kind.shortLabel)
+                    Text(VibenetThisPhone.isKey(key.actor.actorId, ours: VibenetThisPhone.actorID())
+                         ? VibenetThisPhone.keyName : key.actor.kind.shortLabel)
                         .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)

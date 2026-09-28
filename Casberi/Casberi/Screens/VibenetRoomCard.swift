@@ -872,6 +872,11 @@ struct VibenetRoomCard: View {
     /// under it, which a 66pt slot had no room for.
     @MainActor
     private static func slots(_ strip: [VibenetAccountItem]) -> [DSAccountSlot] {
+        // This phone's accounts first, each group under its own header in
+        // the picker — the Accounts list's split (`VibenetThisPhone`).
+        let ours = VibenetThisPhone.actorID()
+        let strip = strip.filter { VibenetThisPhone.actsFor($0, ours: ours) }
+            + strip.filter { !VibenetThisPhone.actsFor($0, ours: ours) }
         let named = strip.map { item in
             VibenetWatch.shared.name(for: item.address)
                 ?? VibenetRoom.shortAddress(item.address)
@@ -885,7 +890,9 @@ struct VibenetRoomCard: View {
             DSAccountSlot(id: item.address,
                           name: name,
                           sub: VibenetRoom.shortAddress(item.address),
-                          faces: [.wallet(address: item.address)])
+                          faces: [.wallet(address: item.address)],
+                          group: VibenetThisPhone.actsFor(item, ours: ours)
+                              ? VibenetThisPhone.onPhoneGroup : VibenetThisPhone.watchingGroup)
         }
     }
 
@@ -1977,9 +1984,10 @@ struct VibenetRoomCard: View {
     private var permissionsList: some View {
         let keys = permissionKeys
         if !keys.isEmpty {
+            let ours = VibenetThisPhone.actorID()
             RoomListBlock(caption: String(localized: "Keys")) {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(keys) { key in permissionRow(key) }
+                    ForEach(keys) { key in permissionRow(key, ours: ours) }
                 }
             }
             // The card's content stands on the tiles' edge; the rows stand in
@@ -1989,13 +1997,23 @@ struct VibenetRoomCard: View {
     }
 
     @ViewBuilder
-    private func permissionRow(_ key: VibenetTrayKey) -> some View {
+    private func permissionRow(_ key: VibenetTrayKey, ours: String?) -> some View {
         let power = key.actor.scope.isAdmin
             ? Text(Self.adminLabel).foregroundColor(DS.destructive)
             : Text(key.actor.scope.grantedPlainLabels.joined(separator: " · "))
-        let row = WalletRow(mark: .symbol(key.actor.kind.symbolName, tint: Self.mark),
-                            title: "\(key.actor.kind.shortLabel) \(VibenetKeyIdentity.short(key.actor.actorId))",
-                            subtitleText: power) {
+        // **WHOSE KEY, ON WHICH ACCOUNT** (user: "can't tell which key is for
+        // my account"). This phone's key is named "This phone" and wears the
+        // phone; with more than one account the line ends on the account's
+        // name, reversing §951's "the account menu says whose keys these are"
+        // — this list only draws on All, where the menu names nobody.
+        let mine = VibenetThisPhone.isKey(key.actor.actorId, ours: ours)
+        let line = room.items.count > 1
+            ? power + Text(verbatim: " · \(Self.displayName(key.address))")
+            : power
+        let row = WalletRow(mark: .symbol(mine ? "iphone" : key.actor.kind.symbolName, tint: Self.mark),
+                            title: mine ? VibenetThisPhone.keyName
+                                : "\(key.actor.kind.shortLabel) \(VibenetKeyIdentity.short(key.actor.actorId))",
+                            subtitleText: line) {
             if let clock = key.actor.expiryClock(now: .now) {
                 Text(clock)
                     .dsText(.label12)
@@ -2099,15 +2117,19 @@ struct VibenetRoomCard: View {
                 // **The Wallet's crown (prd §951)**: the keys on these
                 // accounts, one mark each, the Admin key the one red ring.
                 let held = permissionKeys
+                let ours = VibenetThisPhone.actorID()
                 RoomPermissionsFigure(
                     number: String(held.count),
                     caption: held.count == 1 ? String(localized: "key") : String(localized: "keys"),
                     holders: held.map { key in
                         RoomPermissionsFigure.Holder(
                             id: key.id,
-                            name: key.actor.scope.isAdmin ? Self.adminLabel
+                            name: VibenetThisPhone.isKey(key.actor.actorId, ours: ours)
+                                ? VibenetThisPhone.keyName
+                                : key.actor.scope.isAdmin ? Self.adminLabel
                                 : VibenetKeyIdentity.short(key.actor.actorId),
-                            mark: .symbol(key.actor.kind.symbolName, tint: Self.mark),
+                            mark: .symbol(VibenetThisPhone.isKey(key.actor.actorId, ours: ours)
+                                          ? "iphone" : key.actor.kind.symbolName, tint: Self.mark),
                             unbounded: key.actor.scope.isAdmin)
                     })
             }
@@ -2503,9 +2525,16 @@ struct VibenetRoomCard: View {
             }
     }
 
+    /// One header and its accounts in the Accounts list.
+    private struct AccountGroup: Identifiable {
+        let title: String
+        let items: [VibenetAccountItem]
+        var id: String { title }
+    }
+
     private var accountsCardBody: some View {
         let links = VibenetAccountMapping.links(room.items)
-        // **THE WALLET'S ACCOUNTS SHAPE (prd §954):** "Yours" on the tiles'
+        // **THE WALLET'S ACCOUNTS SHAPE (prd §954):** the group headers on the tiles'
         // edge and one row per account in the rows' column. Watching left for
         // Home's Actions as "Follow address", as the Wallet's did — reversing
         // 2026-09-04's "watch stays with the roster" on the user's approval of
@@ -2515,17 +2544,33 @@ struct VibenetRoomCard: View {
             // This card already stands on the tiles' edge, so the header
             // takes no step back (a `RoomListBlock` here landed 9pt short);
             // the rows step in to the rows' column.
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(String(localized: "Yours"))
-                    .dsText(.heading24)
-                    .foregroundStyle(DS.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(drawn.enumerated()), id: \.element.id) { index, item in
-                        accountRow(item)
+            //
+            // **TWO GROUPS, NOT ONE "YOURS"** (user: "it's hard to tell which
+            // account was created by me on my device vs one i follow"): the
+            // accounts this phone's key can act for, then the ones you watch.
+            // A group with no rows draws no header.
+            let ours = VibenetThisPhone.actorID()
+            let groups: [AccountGroup] = [
+                AccountGroup(title: VibenetThisPhone.onPhoneGroup,
+                             items: drawn.filter { VibenetThisPhone.actsFor($0, ours: ours) }),
+                AccountGroup(title: VibenetThisPhone.watchingGroup,
+                             items: drawn.filter { !VibenetThisPhone.actsFor($0, ours: ours) }),
+            ].filter { !$0.items.isEmpty }
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                ForEach(groups) { group in
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        Text(group.title)
+                            .dsText(.heading24)
+                            .foregroundStyle(DS.textPrimary)
+                            .accessibilityAddTraits(.isHeader)
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(group.items) { item in
+                                accountRow(item)
+                            }
+                        }
+                        .padding(.leading, DSRoomChassis.rowInset(forMark: DS.Face.list) - DSRoomChassis.inset)
                     }
                 }
-                .padding(.leading, DSRoomChassis.rowInset(forMark: DS.Face.list) - DSRoomChassis.inset)
             }
             // Not when the spine is the scope's own lead — see `promoted`.
             if !links.isEmpty, !promoted(.accounts) { linkedDisclosure(links) }

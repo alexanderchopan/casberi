@@ -834,7 +834,10 @@ struct VibenetAccountDetail: View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: DS.Space.s2) {
-                    Text(actor.kind.plainTitle)
+                    // This phone's key says so (user: "can't tell which key is
+                    // for my account"); the id tail stays beside it.
+                    Text(VibenetThisPhone.isKey(actor.actorId, ours: VibenetThisPhone.actorID())
+                         ? VibenetThisPhone.keyName : actor.kind.plainTitle)
                         .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)

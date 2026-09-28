@@ -30,21 +30,12 @@ struct DSScopeMenu: View {
 
     var body: some View {
         Menu {
-            ForEach(slots) { slot in
-                Button {
-                    DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) {
-                        onPick(slot.id.isEmpty ? nil : slot.id)
-                    }
-                } label: {
-                    if slot.id == showing.id {
-                        Label(slot.name, systemImage: "checkmark")
-                    } else {
-                        Text(slot.name)
-                    }
-                    if subtitles, let sub = slot.sub {
-                        Text(sub)
-                    }
+            // Ungrouped slots ("All") first, then each group under its own
+            // section header, in the order the room listed them.
+            ForEach(slots.filter { $0.group == nil }) { slot in item(slot) }
+            ForEach(groups, id: \.self) { group in
+                Section(group) {
+                    ForEach(slots.filter { $0.group == group }) { slot in item(slot) }
                 }
             }
         } label: {
@@ -67,5 +58,31 @@ struct DSScopeMenu: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(verbatim: spoken(showing.name)))
+    }
+
+    private var groups: [String] {
+        var seen: [String] = []
+        for case let group? in slots.map(\.group) where !seen.contains(group) {
+            seen.append(group)
+        }
+        return seen
+    }
+
+    private func item(_ slot: DSAccountSlot) -> some View {
+        Button {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) {
+                onPick(slot.id.isEmpty ? nil : slot.id)
+            }
+        } label: {
+            if slot.id == showing.id {
+                Label(slot.name, systemImage: "checkmark")
+            } else {
+                Text(slot.name)
+            }
+            if subtitles, let sub = slot.sub {
+                Text(sub)
+            }
+        }
     }
 }

@@ -4883,7 +4883,13 @@ struct FeedScreen: View {
             // sheet routing straight to its send sheet) — both routes are
             // bound through the same `feedSheet` item, so re-assigning it
             // to a new identity is a replace, not a stacked present.
-            VibenetKeySheet(actor: actor, item: item, sharedKeys: shared, onEditScope: { editing in
+            // `onScope` wired as the tray's `onPick` is: the head's account
+            // disc was drawn disabled on this route, so the account a key acts
+            // for could not be opened from its own sheet.
+            VibenetKeySheet(actor: actor, item: item, sharedKeys: shared, onScope: { address in
+                feedSheet = nil
+                chrome.vibenetScope = address
+            }, onEditScope: { editing in
                 guard let address = VibenetTransaction.data(fromHex: item.address) else { return }
                 let seq = item.changeSequences
                 feedSheet = .vibenetAuthorize(
