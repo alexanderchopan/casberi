@@ -1531,6 +1531,40 @@
         }
       }
     },
+    "%@ (%@) → new key (%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$@) → new key (%3$@)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ (%2$@) → clave nueva (%3$@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@（%2$@）→ 新しいキー（%3$@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ (%2$@) → 새 키 (%3$@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@（%2$@）→ 新密钥（%3$@）"
+          }
+        }
+      }
+    },
     "%@ (@%@) started following you" : {
       "localizations" : {
         "en" : {
@@ -67364,6 +67398,34 @@
         }
       }
     },
+    "Every permission, including changing this account's keys." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todos los permisos, incluido cambiar las claves de esta cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントのキーの変更を含む、すべての権限。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정의 키 변경을 포함한 모든 권한."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所有权限，包括更改此账户的密钥。"
+          }
+        }
+      }
+    },
     "Every rating here is Walletbeat's own judgment, in their words. Casberi reads their public review and never scores a wallet itself." : {
       "localizations" : {
         "es" : {
@@ -72971,6 +73033,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完全控制"
+          }
+        }
+      }
+    },
+    "Full control can do anything with this account, including removing this phone's key." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El control total puede hacer cualquier cosa con esta cuenta, incluso quitar la clave de este teléfono."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フルコントロールでは、この端末のキーの削除を含め、このアカウントで何でもできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전체 제어는 이 기기의 키 제거를 포함해 이 계정으로 무엇이든 할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "完全控制可以对此账户执行任何操作，包括移除这台手机的密钥。"
           }
         }
       }
@@ -89482,6 +89572,34 @@
         }
       }
     },
+    "New key: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Clave nueva: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいキー：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 키: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新密钥：%@"
+          }
+        }
+      }
+    },
     "New models" : {
       "localizations" : {
         "es" : {
@@ -95496,6 +95614,34 @@
         }
       }
     },
+    "Nothing changes yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todavía no cambia nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ何も変わりません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 바뀌는 것이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "暂时没有任何变化。"
+          }
+        }
+      }
+    },
     "Nothing coming up." : {
       "localizations" : {
         "es" : {
@@ -99918,6 +100064,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在此设备上"
+          }
+        }
+      }
+    },
+    "On this phone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En este teléfono"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この端末"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기에"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台手机上"
           }
         }
       }
@@ -117228,6 +117402,34 @@
         }
       }
     },
+    "Replace this key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reemplazar esta clave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このキーを置き換える"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 키 교체"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "替换此密钥"
+          }
+        }
+      }
+    },
     "Replaced after %@ — %@ never executed; a rival transaction went through at the same nonce instead" : {
       "localizations" : {
         "en" : {
@@ -133386,6 +133588,34 @@
         }
       }
     },
+    "That's the key being replaced." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa es la clave que se reemplaza."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それが置き換えられるキーです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "교체되는 키입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这就是要被替换的密钥。"
+          }
+        }
+      }
+    },
     "That's your Google password. Gmail takes an app password here — tap Get an app password." : {
       "localizations" : {
         "es" : {
@@ -134514,6 +134744,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你关注的链"
+          }
+        }
+      }
+    },
+    "The change" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El cambio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "変更内容"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "변경 사항"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "变更"
           }
         }
       }
@@ -135998,6 +136256,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "网络拒绝了此操作：%@"
+          }
+        }
+      }
+    },
+    "The new key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La clave nueva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいキー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新密钥"
           }
         }
       }
@@ -139467,6 +139753,34 @@
         }
       }
     },
+    "This is the account's only full-control key. Without one, nobody could change this account again — give another key full control first." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Es la única clave con control total de la cuenta. Sin una, nadie podría volver a cambiar esta cuenta: da control total a otra clave primero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これはこのアカウントで唯一のフルコントロールキーです。これがなければ、誰もこのアカウントを変更できなくなります。先に別のキーにフルコントロールを与えてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정의 유일한 전체 제어 키입니다. 이 키가 없으면 아무도 이 계정을 다시 바꿀 수 없습니다. 먼저 다른 키에 전체 제어를 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是此账户唯一的完全控制密钥。没有它，任何人都无法再更改此账户——请先给另一个密钥完全控制。"
+          }
+        }
+      }
+    },
     "This is the biggest yet." : {
       "localizations" : {
         "es" : {
@@ -139715,6 +140029,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此密钥已运行一次。"
+          }
+        }
+      }
+    },
+    "This key is limited to one contract, and this sheet can't carry that limit over. Change it on Base's console." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta clave está limitada a un contrato y esta hoja no puede trasladar ese límite. Cámbiala en la consola de Base."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このキーは1つのコントラクトに限定されており、この画面ではその制限を引き継げません。Baseのコンソールで変更してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 키는 하나의 컨트랙트로 제한되어 있으며, 이 시트에서는 그 제한을 옮길 수 없습니다. Base 콘솔에서 변경하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此密钥仅限一个合约，此页面无法沿用该限制。请在 Base 控制台中更改。"
           }
         }
       }
@@ -140163,6 +140505,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这部手机将无法再代表 %@ 操作，也无法自行恢复。现在只需一个签名即可执行，且无法撤销。"
+          }
+        }
+      }
+    },
+    "This phone won't be able to change this account's keys afterwards." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Después, este teléfono no podrá cambiar las claves de esta cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この後、この端末ではこのアカウントのキーを変更できなくなります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이후에는 이 기기에서 이 계정의 키를 변경할 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "之后，这台手机将无法更改此账户的密钥。"
           }
         }
       }
@@ -142637,6 +143007,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "开启某个来源后，其最新优惠（每条标题已标明价格）会作为商品出现在你的订阅流中。"
+          }
+        }
+      }
+    },
+    "Turn on at least one, or choose Full control." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activa al menos uno o elige Control total."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "少なくとも1つをオンにするか、フルコントロールを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하나 이상 켜거나 전체 제어를 선택하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请至少打开一项，或选择完全控制。"
           }
         }
       }
