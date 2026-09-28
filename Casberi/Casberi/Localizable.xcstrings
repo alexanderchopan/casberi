@@ -40878,6 +40878,34 @@
         }
       }
     },
+    "Add a photo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir una foto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "写真を追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사진 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加照片"
+          }
+        }
+      }
+    },
     "Add a read-only key pair and what needs you keeps arriving — a firing alarm, a failed deploy, a spend anomaly. Give the IAM user a read-only policy; this file only ever reads regardless." : {
       "localizations" : {
         "es" : {
@@ -108448,6 +108476,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "照片"
+          }
+        }
+      }
+    },
+    "Photo on this note" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Foto en esta nota"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このノートの写真"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 노트의 사진"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此笔记中的照片"
           }
         }
       }

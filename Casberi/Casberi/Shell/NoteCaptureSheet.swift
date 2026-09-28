@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 /// THE NOTE CAPTURE SHEET (prd §969, 2026-09-28) — the one place in the app you WRITE.
 ///
@@ -40,6 +41,18 @@ import SwiftData
 /// last words, the audio is stored once, and a call that takes the mic or a
 /// sheet closed by another path keeps what was recorded. A voice note's
 /// source is `You`, like every note here; there is no "Voice" room.
+///
+/// **A note can hold ONE picture (prd §974).** The band's photo disc opens
+/// the system picker; the picked picture is drawn above the words, in the
+/// lead's well, the way the sheet under the note draws it (`NoteEntryPhoto`).
+/// It is stored on the note in `previewImageData` at the app's one stored
+/// size — the 480pt / q0.7 JPEG every screenshot, folder image and journal
+/// photograph already is — so the room's row, the lede's cover and the
+/// sheet draw it with nothing new. Tapping the picture asks Change or
+/// Remove, the profile photo's own dialog. A picture with no words keeps a
+/// note titled "Photo"; a picture is words' company, never a recording's —
+/// with one attached the wide key says Done, and while recording the disc
+/// is greyed, because a voice note is its audio.
 struct NoteCaptureSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
@@ -61,10 +74,19 @@ struct NoteCaptureSheet: View {
     /// Bumped when Record meets a refused microphone (prd §973): the key
     /// shakes and the phone says so, the app's feel for a failure you caused.
     @State private var refusals = 0
+    /// The note's one picture (prd §974): the bytes the note will store and
+    /// the bitmap the well draws, decoded once at pick time.
+    @State private var picture: NotePicture?
+    @State private var pickerOpen = false
+    @State private var pickerItem: PhotosPickerItem?
+    /// Change or Remove, over a picture already attached.
+    @State private var pictureDialogOpen = false
 
     private var hasDraft: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
+    /// Something to keep: words, or a picture alone (prd §974).
+    private var hasContent: Bool { hasDraft || picture != nil }
     private var isRecording: Bool { voice.phase == .recording }
 
     /// The one explaining line (prd §748): what happens to the words, or,
@@ -98,13 +120,23 @@ struct NoteCaptureSheet: View {
                         .dsHover()
                 }
                 .buttonStyle(PressSpring())
-                .accessibilityLabel(hasDraft ? Text("Keep the note and go back") : Text("Back to your things"))
+                .accessibilityLabel(hasContent ? Text("Keep the note and go back") : Text("Back to your things"))
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s3)
 
             Spacer(minLength: 0)
+
+            // THE PICTURE (prd §974): above the words, in the lead's well —
+            // the order the sheet under the note keeps (`NoteEntryPhoto`),
+            // so what you see here is what you will open.
+            if let picture {
+                pictureWell(picture)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+                    .transition(.opacity)
+            }
 
             // THE WELL: the words at the head rung, as on the ask surface
             // (prd §577 — the sentence being written is the subject of the
@@ -168,6 +200,7 @@ struct NoteCaptureSheet: View {
                 // greyed, and does not open.
                 .disabled(!hasDraft)
                 .accessibilityLabel(Text("Share the note"))
+                photoDisc
                 wideKey
             }
             .padding(.horizontal, DS.Space.s4)
@@ -178,6 +211,26 @@ struct NoteCaptureSheet: View {
         // The band arriving and leaving moves the rows above it; that move
         // eases with the rest of the sheet's changes (prd §973).
         .animation(reduceMotion ? nil : DS.Motion.standard, value: isRecording)
+        .animation(reduceMotion ? nil : DS.Motion.standard, value: picture != nil)
+        // The system picker (prd §974), the profile photo's own door.
+        .photosPicker(isPresented: $pickerOpen, selection: $pickerItem, matching: .images)
+        .onChange(of: pickerItem) { _, item in
+            guard let item else { return }
+            Task { @MainActor in
+                if let raw = try? await item.loadTransferable(type: Data.self),
+                   let attached = await NotePicture.prepared(raw) {
+                    picture = attached
+                }
+                pickerItem = nil
+            }
+        }
+        // A set picture can come off, not just be replaced — the profile
+        // photo's dialog, word for word.
+        .confirmationDialog("Your photo", isPresented: $pictureDialogOpen) {
+            Button("Change photo") { DSHaptic.tap(); pickerOpen = true }
+            Button("Remove photo", role: .destructive) { DSHaptic.tap(); picture = nil }
+            Button("Cancel", role: .cancel) {}
+        }
         .onAppear {
             // Held New (prd §970): recording when the sheet lands, keyboard
             // down. Consumed on read, so a later tap of New arrives typing,
@@ -191,6 +244,15 @@ struct NoteCaptureSheet: View {
             if UserDefaults.standard.bool(forKey: "noteVoice") {
                 NSLog("[Casberi] noteVoice: raised")
                 record = true
+            }
+            // `-notePicture YES` — land with a picture attached (prd §974),
+            // for the screen sweep: the simulator's photo library needs a
+            // hand to pick from, so the hook draws one and attaches it the
+            // way the picker would.
+            if UserDefaults.standard.bool(forKey: "notePicture"),
+               let drawn = NotePicture.drawnSample() {
+                NSLog("[Casberi] notePicture: attached %d bytes", drawn.bytes.count)
+                picture = drawn
             }
             #endif
             if record { startRecording() } else { focused = true }
@@ -224,7 +286,61 @@ struct NoteCaptureSheet: View {
     private var keyVerb: KeyVerb {
         if stopping { return .keeping }
         if isRecording { return .stop }
-        return hasDraft ? .done : .record
+        return hasContent ? .done : .record
+    }
+
+    // MARK: - The picture (prd §974)
+
+    /// The band's photo disc: the composer's disc anatomy in ink, live
+    /// whenever the note could take a picture. With one attached it raises
+    /// Change / Remove rather than a second picker over the first. Greyed
+    /// while recording, as Share is over nothing: a voice note is its audio,
+    /// and a disc that did nothing would be §83's dead control.
+    private var photoDisc: some View {
+        let live = !isRecording && !stopping
+        return Button {
+            DSHaptic.tap()
+            if picture == nil { pickerOpen = true } else { pictureDialogOpen = true }
+        } label: {
+            Image(systemName: "photo")
+                .dsGlyph(.feature, weight: .regular)
+                .foregroundStyle(live ? DS.textPrimary : DS.textTertiary)
+                .frame(width: AgentDestinationKeys.side, height: AgentDestinationKeys.side)
+                .background(DS.surfaceRaised, in: Circle())
+                .dsTapTarget(Circle())
+                .animation(DS.Motion.standard, value: live)
+                .dsHover()
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!live)
+        .accessibilityLabel(picture == nil ? Text("Add a photo") : Text("Photo on this note"))
+    }
+
+    /// The picked picture, pinned to the lead's height and clipped — never
+    /// left to report its own size upward (the `scaledToFill`-in-a-ZStack
+    /// trap). A tile, so it presses (`PressSpring`) and its tap asks Change or
+    /// Remove.
+    private func pictureWell(_ picture: NotePicture) -> some View {
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+        return Button {
+            DSHaptic.selection()
+            pictureDialogOpen = true
+        } label: {
+            Color.clear
+                .frame(height: DSRoomChassis.leadHeight)
+                .frame(maxWidth: .infinity)
+                .overlay {
+                    Image(uiImage: picture.image)
+                        .resizable()
+                        .scaledToFill()
+                }
+                .clipped()
+                .clipShape(shape)
+                .contentShape(shape)
+                .dsHover()
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text("Photo on this note"))
     }
 
     /// The one verb available (prd §971), the composer's foot rule applied to
@@ -358,16 +474,70 @@ struct NoteCaptureSheet: View {
         // are — dismiss keeps (§969).
         if isRecording { stopAndKeep(); return }
         defer { onClose() }
-        guard hasDraft, let thing = Capture.thing(from: draft) else { return }
-        // A note is a note even when it holds a link: `Capture.thing` turns a
-        // URL into a link thing for the paste chip's sake, and a link thing
-        // would stand outside this room's membership (`Pinboard.isNote`).
-        thing.kind = .note
+        guard let thing = keptThing() else { return }
+        thing.previewImageData = picture?.bytes
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
         onLand(thing)
     }
+
+    /// The note the words make, or the note a picture alone makes (prd
+    /// §974): a picture with nothing written keeps a note titled "Photo",
+    /// which is the lede a row needs and nothing the picture does not say.
+    /// Nothing written and nothing attached keeps nothing.
+    private func keptThing() -> Thing? {
+        if hasDraft, let thing = Capture.thing(from: draft) {
+            // A note is a note even when it holds a link: `Capture.thing`
+            // turns a URL into a link thing for the paste chip's sake, and a
+            // link thing would stand outside this room's membership
+            // (`Pinboard.isNote`).
+            thing.kind = .note
+            return thing
+        }
+        guard picture != nil else { return nil }
+        return Thing(kind: .note, title: String(localized: "Photo"),
+                     source: NoteSheetSource.keptSource)
+    }
+}
+
+/// A picture attached to a note being written (prd §974): the bytes the note
+/// stores and the bitmap the sheet draws, made once when the picker answers.
+struct NotePicture: Equatable {
+    let bytes: Data
+    let image: UIImage
+
+    /// The picker's bytes, brought to the app's ONE stored picture size —
+    /// `ImportMedia.thumbnail(data:)`, the 480pt / q0.7 JPEG every other
+    /// `previewImageData` writer makes — decoded off the main actor. A
+    /// picture that will not decode attaches nothing.
+    static func prepared(_ raw: Data) async -> NotePicture? {
+        guard let bytes = await ImportMedia.thumbnail(data: raw),
+              let image = UIImage(data: bytes) else { return nil }
+        return NotePicture(bytes: bytes, image: image)
+    }
+
+    #if DEBUG
+    /// A drawn picture for `-notePicture YES`: a two-colour gradient at the
+    /// stored size, so the sweep sees the well, the disc's state and the kept
+    /// note's row without a photo library to pick from.
+    static func drawnSample() -> NotePicture? {
+        let size = CGSize(width: 480, height: 320)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            let colors = [UIColor.systemPink.cgColor, UIColor.systemIndigo.cgColor] as CFArray
+            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                         colors: colors, locations: [0, 1]) {
+                ctx.cgContext.drawLinearGradient(
+                    gradient, start: .zero,
+                    end: CGPoint(x: size.width, y: size.height), options: [])
+            }
+        }
+        guard let bytes = image.jpegData(compressionQuality: 0.7) else { return nil }
+        return NotePicture(bytes: bytes, image: image)
+    }
+    #endif
 }
 
 /// The note sheet's two triggers on `RootShell` (prd §969): the Notes room's

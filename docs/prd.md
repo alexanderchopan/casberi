@@ -62080,3 +62080,25 @@ A review against the design law found every control pressing correctly (§965) a
 8. **The hold on New is seen, felt and reachable.** `DSScopeTiles.Hold` replaces `onHold` and carries the hold's glyph and name: a finger resting past a tap (180ms) ARMS the tile and the plus morphs to the waveform (`CategoryGlyph` morphs any glyph that changes); the hold lands with `DSHaptic.lift()`, the app's feel for picking something up by holding it; VoiceOver gets "Record a note" as a named action. The composer's bare mic says "Dictate your question" to VoiceOver instead of "Record a voice note", which it has not done since §581c.
 
 **Seen:** the static audits and the ask-destination harness's patterns run against the edited composer. **Not seen:** a build or a device — no Xcode in this session. On the phone: the morphs, the arming at 180ms against the hold at 450ms, the level strip's range against real speech, and all of it under Reduce Motion.
+
+## §974 — A note can hold ONE picture (user: "can the notes feature somebody upload an attachment to it", "specifically, a picture", then "do it", 2026-09-28)
+
+§969 ruled the note sheet as the app's one capture path for writing, §971 gave it a voice, and neither said anything about a picture. Before this a picture could stand in the Notes room only as its own thing, pinned beside a note; it could not be part of one.
+
+1. **The band's photo disc is the door.** `NoteCaptureSheet` gains a third control between Share and the wide key: a `photo` disc in the composer's disc anatomy, ink on the raised surface, `PressSpring`, 44pt target. It opens the system photo picker (`photosPicker`, the profile photo's own door on `AccountScreen`). With a picture attached it raises Change / Remove instead of a second picker over the first — the profile photo's dialog, word for word ("Your photo", "Change photo", "Remove photo"), so a set picture can come off and not only be replaced.
+
+2. **The picture is drawn above the words, in the lead's well.** Pinned to `DSRoomChassis.leadHeight` and clipped to the widget radius — the order and the shape the sheet under the note keeps (`NoteEntryPhoto`, §399/§893), so what you see while writing is what you will open. The tile presses and its tap asks Change or Remove. It arrives with the sheet's standard ease, Reduce Motion guarded.
+
+3. **Stored at the app's ONE picture size, in the field every reader already reads.** The picker's bytes go through `ImportMedia.thumbnail(data:)` — the 480pt / q0.7 JPEG every screenshot, folder image, journal photograph and imported cover already is — off the main actor, once, at pick time (`NotePicture.prepared`). The note keeps them in `previewImageData`. Nothing downstream changed: the room's row leads with the picture (`ShapedRows.leader` → `.photoData` → `PhotoWell`), the lede's cover draws it (`FeedLedeCard.art`), the sheet under the note draws it in the well and zooms it (`.entry` shape's `NoteEntryPhoto`, `PhotoViewer` over stored bytes), and CloudKit mirrors it as the asset it already mirrors for a screenshot. A picture that will not decode attaches nothing.
+
+4. **A picture alone keeps a note.** `hasContent` is words or a picture; the wide key says Done over either, the chevron and the pull-down keep either. A picture with nothing written keeps a note titled "Photo" (`keptThing`), which is the lede a row needs and nothing the picture does not say. Nothing written and nothing attached still keeps nothing.
+
+5. **A picture is words' company, never a recording's.** With a picture attached the wide key is Done, so Record is not offered; while recording the disc is greyed and dead to the hand, as Share is over nothing (§83: a disc that did nothing would be a dead control). A voice note is its audio.
+
+6. **Share stays words.** The Share disc hands over the draft and greys with no words, as before; a picture-only note has nothing to share from here and the disc says so by staying grey. Sharing the picture too is a later ruling if anyone reaches for it.
+
+7. **`-notePicture YES`** lands the sheet with a drawn picture attached (`NotePicture.drawnSample`, a two-colour gradient at the stored size; NSLogs `notePicture:`), paired with `-openNote YES`, because the simulator's photo library needs a hand to pick from and the sweep has none.
+
+Two strings joined the catalog with es/ja/ko/zh-Hans: "Add a photo" (the disc, VoiceOver) and "Photo on this note" (the disc with a picture, and the tile). The dialog's three lines and the "Photo" title were already there.
+
+**Seen:** the static audits (accessibility, design template, footnote, localization coverage, PRD index) green on the tree. **Not seen:** a build or a device — no Xcode in this session. On the phone: the picker's return into the sheet's own layer (the sheet is a `RootShell` layer, not a `.sheet`, so the picker presents over the shell), the well's crop on a tall photograph, and the kept note's row and sheet. Not built: more than one picture, a picture on a voice note, sharing the picture, and a picture from the camera — each a later ruling.
