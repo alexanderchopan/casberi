@@ -21,3 +21,9 @@ Every entry below is **verbatim** as it was written — nothing was summarised, 
 ## Moved from CLAUDE.md verbatim (2026-09-24, the 100KB rule)
 
 - **Two surfaces on one card reading DIFFERENT STORES is a contradiction no render can show (prd §837).** The Privacy devnet's Home said "Nothing on this chain from the 4 addresses you watch, yet." over 1.0000 ETH and a line falling 983,579 ETH (-100.0%): the sentence read the live walk, the crown read `RoomValueHistory`, and a relaunch had emptied one and not the other. A SAMPLED line is fenced to its chain (`RoomValueHistory.fence`/`belongs`, whose stamp is checked on every read so a device that crossed the relaunch is repaired, not just the next one) — a DERIVED line needs none, because a relaunch takes the moves with it. §606's "the sentence yields to the figure" is `PrivacyDevnetRoom.sentenceStands`, in the model, covering the crown and not the ring alone — and a sentence that STANDS owns the slot (`drawsFigure`, derived from it, never a second switch), because `DSRoomSlot` clips. And a ratio may not claim a wipeout the number above denies (`TokenChartStyle.readsAsWipeout`, `isFlat`'s mirror at -99.95%) → prd §837 · §610 · §83
+
+## Moved from CLAUDE.md verbatim (2026-09-27, the context budget)
+
+Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
+
+- **A wallet-family room's Actions ride EVERY page (prd §774, supersedes §747's All-only): All acts for the current account, your own account's page for itself, a stranger's page keeps only the room verb (`Create account`, `Follow address`).** Frames/Hegotá/Privacy hold N keys per phone and `address()` is the CURRENT one (`-framesKeyProbe`/`-privacyKeyProbe` print `held=`) → docs/hooks/devnets.md · prd §774

@@ -127,3 +127,16 @@ is ordinary SwiftUI. The lever that would close the class is Debug `wholemodule`
 2026-09-26 at ~170s per one-file rebuild against ~45–50s today, every build, every session.
 **DECLINED (user, 2026-09-27)** — a rare Debug-only crash that a clean rebuild clears does not
 buy a 4× slower build. Do not re-propose it.
+
+## Moved from CLAUDE.md verbatim (2026-09-27, the context budget)
+
+Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
+
+- Installing for probes: pick the NEWEST DerivedData (`ls -dt ~/Library/Developer/Xcode/DerivedData/Casberi-*` — plain `ls -d` is alphabetical and served a day-old binary for 30 minutes on 2026-07-14). `runAll` NSLogs `probeArgs:` with the launch args it saw — if that line is missing or stale, you're running the wrong binary.
+- **Verify the INSTALLED binary, not just the newest one.** `ls -dt` globs every `Casberi-*` DerivedData, so a concurrent session can serve you their app without your hooks. Check with `strings "$(xcrun simctl get_app_container booted com.casberi.app app)/Casberi" | grep -c '^myHookKey$'`. A `database is locked` build error clears on retry → docs/gotchas.md
+- On a fresh sim install the demo seeds re-ask Photos/Calendar/Health permission at launch, and the queued sheets block everything (probes still run, but the UI is unusable and Health's ask stalls its probe). Pre-grant what simctl can (`xcrun simctl privacy booted grant photos com.casberi.app` — AFTER install; uninstall wipes grants) and tap the Health sheet once via computer-use; grants then persist for every later headless run.
+- **A quick action is registered on the app delegate and DELIVERED to the scene delegate.** RULE: for any UIKit hook about the scene (quick actions, state restoration, cold-launch URL or activity), check which delegate the lifecycle delivers it to; getting it wrong fails silently → docs/gotchas.md · prd §377
+- **A feed row never carries a presentation of its own — one screen, one `.sheet`.** A `.sheet` inside a `List` row resolves to the same presenter and tears the thing sheet down mid-rise. Anything walkable in a row renders as context (`allowsHitTesting(false)`), and the walk lives in the sheet (`ThingSheetView.walkingTo`) → docs/gotchas.md
+- **`HomeRoute` is ONE ordered array bound to `NavigationStack(path:)` and resolved by one `navigationDestination(for: HomeRoute.Node.self)`.** Sibling `navigationDestination(item:)` bindings don't nest. A plain valueless `NavigationLink` pushes a frame `path` doesn't track, so a screen that may have something pushed on it enters through `route.path` → docs/gotchas.md
+- **The first frame walks a deep SwiftUI tree and has overflowed the main stack three times.** `OTHER_LDFLAGS -Wl,-stack_size,0x800000` and `ENABLE_DEBUG_DYLIB = NO` are load-bearing. If it recurs, FLATTEN the composition tree, not more stack — a card at an eager screen head renders flat → docs/gotchas.md
+- **A container that has not been sized proposes a PLACEHOLDER, not zero, and a `List` cell born there keeps it (the ~0.3s narrow feed at launch).** The `NavigationStack` hands its root 36pt on the first pass; the room is pinned to a width read by a `GeometryReader` in that same pass, never to `@State` written during it → docs/gotchas.md · prd §805
