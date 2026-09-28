@@ -84,6 +84,7 @@ deliberately does not check are in `docs/verify.md`.
 - **`WalletChainStore.effectiveIDs` is the ONE rule for which chains are on, and the static `activeNetworkIDs()` (which EVERY ingest reads) resolves through it (prd §827).** → docs/hooks/wallet.md · prd §827 · §83
 - **Tempo (Stripe's L1, 4217) is ON by default and read through Zerion ONLY (`onAlchemy: false`, prd §810).** No native coin: never read a native balance there. `network-reach-audit.sh` honours `onAlchemy: false`, so such a row discloses no Alchemy host → prd §810 · §828
 - **Alchemy serves Robinhood with NO PRICES (measured: 25 rows, 0 priced, the native ETH included), so Robinhood reads through Zerion (`robinhood`, 4663) since prd §828.** → docs/hooks/wallet.md · prd §828
+- **Robinhood is read on Alchemy BESIDE Zerion (`WalletIngest.zerionOmits`), and a DEX-only token is priced by `DexPrices` (GeckoTerminal) only off a pool ≥$10K holding ≤25% of it; a native coin takes the cent floor on either arm (prd §968)** → prd §968
 - **Zerion is ONE request a second and 300 a day for EVERY install (`ratelimit-org-tier: demo`, measured 2026-09-26, prd §934)** → docs/hooks/wallet.md · prd §934
 - **The wallet crown counts YOUR accounts, and Zerion answering does not end the read (prd §826).** → docs/hooks/wallet.md · prd §826
 - **One chain may not empty every wallet's balances, and a wallet we could not reach stands on its LAST READING, stamped (prd §825) — the room showed a Privy app wallet's stored figure and none of the person's own.** → docs/hooks/wallet.md · prd §825

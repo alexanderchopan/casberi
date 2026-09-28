@@ -99,6 +99,7 @@ FILES = {
     "WalletChainStore": ROOT / "Casberi/Casberi/Model/WalletChainStore.swift",
     "ZerionAPI": ROOT / "Casberi/Casberi/Model/ZerionAPI.swift",
     "DefiLlamaPrices": ROOT / "Casberi/Casberi/Model/DefiLlamaPrices.swift",
+    "DexPrices": ROOT / "Casberi/Casberi/Model/DexPrices.swift",
 }
 
 # Chains whose Alchemy Portfolio answer carries balances and NO prices —
@@ -223,6 +224,10 @@ def audit(texts: dict) -> list:
             bad.append("fetchHeldTokensUncached no longer varies its floor by the answering "
                        "arm — $1.99 on Zerion's trash-filtered read drops the person's own "
                        "small positions (prd §826)")
+        if "c.contract == nil" not in fh.split("let floor =")[-1].split("\n")[0]:
+            bad.append("fetchHeldTokensUncached puts a native coin under the $1.99 spam "
+                       "floor again — nobody can airdrop a chain's own coin, and the "
+                       "Alchemy fallback drops every small ETH balance (2026-09-28)")
         if re.search(r">=\s*holdingFloor", fh):
             bad.append("fetchHeldTokensUncached is back to the flat `holdingFloor` (prd §826)")
 
@@ -308,6 +313,35 @@ def audit(texts: dict) -> list:
         bad.append("backstopPrices no longer prices a native coin through its wrapped form — "
                    "a native row has no contract, so the coin a wallet holds most of is the "
                    "one thing guaranteed to vanish when Alchemy leaves it unpriced (prd §828)")
+
+    # 13 — a chain Zerion answers INCOMPLETELY is read on Alchemy too, and
+    # what comes back unpriced is priced off a deep enough pool (2026-09-28:
+    # ~$185 of MUSEGOD on Robinhood, left out by Zerion, crown read $8).
+    omits = re.search(r"static let zerionOmits: Set<String> = \[(.*?)\]", ingest)
+    omits = set(re.findall(r'"([a-z0-9-]+)"', omits.group(1))) if omits else set()
+    if not omits:
+        bad.append("WalletIngest.zerionOmits is gone or empty — a token Zerion leaves out "
+                   "of a chain it maps can never be read (2026-09-28)")
+    if cc and "zerionOmits" not in cc:
+        bad.append("collectCandidates no longer asks Alchemy for the chains in `zerionOmits` "
+                   "— Robinhood's memecoins vanish whenever Zerion answers (2026-09-28)")
+    if cc and "zerionHeld.contains(heldKey(" not in cc:
+        bad.append("collectCandidates no longer drops the Alchemy copy of a token Zerion "
+                   "returned — every such holding counts twice (2026-09-28)")
+    dex_nets = set(re.findall(r'"([a-z0-9-]+-mainnet)":', code["DexPrices"]))
+    for net in sorted(omits - dex_nets):
+        bad.append(f"`{net}` is in zerionOmits with no DexPrices network — Alchemy lists "
+                   f"its balances unpriced, so reading it adds nothing (2026-09-28)")
+    if bp and "DexPrices.prices(" not in bp:
+        bad.append("backstopPrices no longer asks DexPrices — a token that trades only on a "
+                   "DEX stays unpriced and drops at `price > 0` (2026-09-28)")
+    if bp and "admits(amount:" not in bp:
+        bad.append("backstopPrices takes a pool price without the depth gate — an airdrop "
+                   "quoted in a one-dollar pool can inflate the total (2026-09-28)")
+    admits = body(code["DexPrices"], "func admits(amount:")
+    if "reserveFloor" not in admits or "depthShare" not in admits:
+        bad.append("DexPrices.admits no longer checks both the reserve floor and the depth "
+                   "share (2026-09-28)")
 
     # 5 — and it is drawn, and passed.
     if "asOf" not in body(code["WalletFeedTiles"], "struct WalletBalanceHeadline"):
@@ -398,8 +432,24 @@ def self_test() -> int:
          lambda t: t.replace("if !unpricedChains.isEmpty {", "if false {")),
         ("an answered-but-unpriced chain is never recorded", "WalletIngest",
          lambda t: t.replace("await UnpricedNetworks.shared.record(", "_ = (")),
+        ("Zerion-omitted chains stop riding the Alchemy union", "WalletIngest",
+         lambda t: t.replace(".subtracting(Set(ZerionAPI.networkFor.values).subtracting(zerionOmits))",
+                             ".subtracting(ZerionAPI.networkFor.values)")),
+        ("the Alchemy copy of a Zerion row is kept", "WalletIngest",
+         lambda t: t.replace(".filter { !zerionHeld.contains(heldKey($0)) }", "")),
+        ("Robinhood loses its pool prices", "DexPrices",
+         lambda t: t.replace('"robinhood-mainnet": "robinhood",', "")),
+        ("the pool backstop is skipped", "WalletIngest",
+         lambda t: t.replace("let pools = await DexPrices.prices(for: dexAsk)",
+                             "let pools: [String: DexPrices.Priced] = [:]")),
+        ("the depth gate is dropped", "WalletIngest",
+         lambda t: t.replace("p.admits(amount: c.amount) else { return c }", "p.price > 0 else { return c }")),
+        ("the reserve floor is dropped", "DexPrices",
+         lambda t: t.replace("reserveUSD >= DexPrices.reserveFloor\n                && ", "")),
+        ("native coins lose the cent floor", "WalletIngest",
+         lambda t: t.replace("(c.trashFiltered || c.contract == nil) ? unwatchedFloor", "c.trashFiltered ? unwatchedFloor")),
         ("the flat $1.99 floor comes back", "WalletIngest",
-         lambda t: t.replace("let floor = c.trashFiltered ? unwatchedFloor : holdingFloor",
+         lambda t: t.replace("let floor = (c.trashFiltered || c.contract == nil) ? unwatchedFloor : holdingFloor",
                              "let floor = holdingFloor").replace("usd >= floor", "usd >= holdingFloor")),
     ]
     for label, key, mutate in cases:

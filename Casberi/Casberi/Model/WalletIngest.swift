@@ -2530,7 +2530,12 @@ enum WalletIngest {
             // still absurdly large (see `holdingCeiling`) — treemapWeight clamps
             // that safely, but left in it would inflate the displayed combined
             // total and dominate the allocation bar.
-            let floor = c.trashFiltered ? unwatchedFloor : holdingFloor
+            // A NATIVE coin takes the cent floor on either arm (2026-09-28):
+            // nobody can airdrop a chain's own coin, so the spam line has
+            // nothing to catch there. Measured with Zerion's shared day pool
+            // spent: the Alchemy fallback dropped every one of the user's
+            // sub-$1.99 ETH and MON balances across seven chains.
+            let floor = (c.trashFiltered || c.contract == nil) ? unwatchedFloor : holdingFloor
             guard usd.isFinite, usd >= floor, usd < holdingCeiling else { return nil }
             return HeldToken(symbol: c.symbol, contract: c.contract,
                              network: c.network, usd: usd, amount: c.amount,
@@ -2573,9 +2578,11 @@ enum WalletIngest {
         if ZerionAPI.isConfigured {
             let z = await collectCandidatesZerion(addresses: addresses)
             if z.reached {
-                // The selected chains Zerion cannot see, for these addresses.
+                // The selected chains Zerion cannot see, for these addresses —
+                // and the ones it maps but leaves real tokens out of
+                // (`zerionOmits`).
                 let blind = Set(addresses.flatMap { networks(for: $0) })
-                    .subtracting(ZerionAPI.networkFor.values)
+                    .subtracting(Set(ZerionAPI.networkFor.values).subtracting(zerionOmits))
                     .intersection(alchemyNetworks)
                 // A wallet Zerion did not answer (a refusal past the lane's
                 // retries, prd §934) is asked on Alchemy for EVERY chain it
@@ -2587,13 +2594,35 @@ enum WalletIngest {
                 }
                 let answered = addresses.filter { !z.unreached.contains($0) }
                 if !blind.isEmpty, !answered.isEmpty {
+                    // A token Zerion already returned is Zerion's row; the
+                    // Alchemy copy of it would count it twice.
+                    let zerionHeld = Set(z.candidates.map(heldKey))
                     out += await collectCandidatesAlchemy(addresses: answered, only: blind).candidates
+                        .filter { !zerionHeld.contains(heldKey($0)) }
                 }
                 return (out, true)
             }
         }
         let a = await collectCandidatesAlchemy(addresses: addresses)
         return (a.candidates, a.reached)
+    }
+
+    /// Chains Zerion maps and still answers INCOMPLETELY, so Alchemy is asked
+    /// for them beside Zerion, never instead (2026-09-28). Measured on
+    /// Robinhood: the user's wallet held ~$185 of MUSEGOD there and Zerion's
+    /// `/positions` returned the chain without it, trash filter or not — its own
+    /// chart dropped the token the same day. Alchemy lists every balance there
+    /// unpriced (§828), and `DexPrices` prices what has a deep enough pool.
+    /// Every entry costs one Alchemy Portfolio call per holdings pass for
+    /// anyone following the chain.
+    static let zerionOmits: Set<String> = ["robinhood-mainnet"]
+
+    /// One holding's identity across the two arms: the owner, the chain and the
+    /// contract (a native coin has none). Lowercased for EVM hex only — a
+    /// Solana mint's case is the address.
+    private static func heldKey(_ c: Candidate) -> String {
+        let contract = c.contract.map { $0.hasPrefix("0x") ? $0.lowercased() : $0 } ?? "native"
+        return "\(c.owner.lowercased())|\(c.network)|\(contract)"
     }
 
     /// Zerion's holdings for the given wallets, mapped into `Candidate`s — the
@@ -2920,12 +2949,32 @@ enum WalletIngest {
         // wallets appears once per owner) so the cap counts distinct mints.
         guard !unpriced.isEmpty else { return candidates }
         let found = await DefiLlamaPrices.prices(for: Array(unpriced.prefix(100)))
-        guard !found.isEmpty else { return candidates }
 
-        return candidates.map { c in
+        let llamaPriced = found.isEmpty ? candidates : candidates.map { c in
             guard c.price == nil, let contract = priceContract(c),
                   let p = found["\(c.network)|\(contract)"],
                   p.confidence >= DefiLlamaPrices.confidenceFloor else { return c }
+            var priced = c
+            priced.price = p.price
+            return priced
+        }
+
+        // Last, a pool price for what is still unpriced on a chain whose real
+        // money trades only on DEXes (`DexPrices`) — gated on the pool's
+        // depth, per holding, so an airdrop quoted in a one-dollar pool stays
+        // out of the total.
+        let dexAsk = llamaPriced.compactMap { c -> (network: String, contract: String)? in
+            guard c.price == nil, DexPrices.network[c.network] != nil,
+                  let contract = c.contract else { return nil }
+            return (network: c.network, contract: contract)
+        }
+        guard !dexAsk.isEmpty else { return llamaPriced }
+        let pools = await DexPrices.prices(for: dexAsk)
+        guard !pools.isEmpty else { return llamaPriced }
+        return llamaPriced.map { c in
+            guard c.price == nil, let contract = c.contract,
+                  let p = pools["\(c.network)|\(contract)"],
+                  p.admits(amount: c.amount) else { return c }
             var priced = c
             priced.price = p.price
             return priced

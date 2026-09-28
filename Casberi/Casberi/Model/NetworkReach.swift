@@ -204,6 +204,10 @@ enum NetworkReach {
                          // fetched only from Zerion's own CDN, never learned
                          // by a request of their own.
                          "cdn.zerion.io", "coins.llama.fi",
+                         // A pool price for a token that trades only on a DEX
+                         // (`DexPrices`, 2026-09-28): carries the token's
+                         // contract, never your address.
+                         "api.geckoterminal.com",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
                          "arb1.arbitrum.io", "eth.api.onfinality.io", "polygon.api.onfinality.io"]),
         // World ID (2026-09-16, prd §785). ITS OWN HOST, and that is a fix
