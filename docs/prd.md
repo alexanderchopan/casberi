@@ -61901,3 +61901,11 @@ Chain 81410 (`*.frames.ethrex.xyz`) is the ethrex team's single-client net. `fra
 **Rotate is "Replace this key".** A new key takes an old one's place in ONE config change carrying authorize-then-revoke (`VibenetSend.replaceActor`), so the account never holds both or neither. `sendConfigChange` takes a list of changes; authorize and revoke pass one each.
 
 **Not seen.** No build ran in the session (no Swift toolchain), and none of these writes has been sent on chain: authorize, revoke and a two-change config transaction are all unmeasured end to end, and the session could not reach `api.vibes.base.org` to check that the reset chain names the signing contracts again (§656).
+
+## §964 — Frames, UTXO and Privacy split their accounts the way Vibenet does: On this phone, then Watching (user: "for the way you did accounts should we do the same for the other devnets?", then "yes do it", 2026-09-28)
+
+§963's split, carried to the three devnets that draw their Accounts list through the shared `RoomAccountsRows`. There the test is simpler than Vibenet's: an account IS its key's address, so "on this phone" is `FramesKey.holds` (plus the Frames passkey's account), `HegotaKey.holds` and `PrivacyDevnetKey.holds` — each a defaults read, never a Keychain one. `RoomAccountsRows(splitsByPhone: true)` orders and heads the list **On this phone**, **Watching**, then **Tied to yours**; the account picker takes the same sections through `DSAccountSlot.groupedByPhone`.
+
+**The Wallet keeps one "Yours" (§954).** It watches addresses and holds no key on this phone, so an "On this phone" group there would always be empty.
+
+**Not carried over: the key naming.** §963's "This phone" key names a key among several on one account; these devnets' Permissions are not such a list (Frames: who sponsored, UTXO: nonce keys, Privacy: spend keys), so each is its own pass.

@@ -1843,7 +1843,8 @@ struct HegotaRoomList: View {
     }
 
     @ViewBuilder private var accountsList: some View {
-        RoomAccountsRows(rows: HegotaConnections.rows(shown, onOpen: onOpenAccount))
+        RoomAccountsRows(rows: HegotaConnections.rows(shown, onOpen: onOpenAccount),
+                         splitsByPhone: true)
     }
 
     private func subtitle(_ account: HegotaAccount) -> String {
@@ -3726,6 +3727,7 @@ enum HegotaConnections {
                 name: HegotaWatch.shared.name(for: account.address)
                     ?? WalletStore.shortAddress(account.address),
                 kind: nil,
+                onPhone: HegotaKey.holds(account.address),
                 unreached: !account.reached,
                 onOpen: onOpen.map { open in { open(account) } })
         }
@@ -3817,12 +3819,12 @@ enum HegotaRoomReadings {
                 ? String(localized: "Nothing watched on this chain yet")
                 : ListFormatter.localizedString(byJoining: named),
             faces: accounts.prefix(2).map { .wallet(address: $0.address) })
-        return [all] + zip(accounts, named).map { account, name in
+        return DSAccountSlot.groupedByPhone([all] + zip(accounts, named).map { account, name in
             DSAccountSlot(id: account.address,
                           name: name,
                           sub: WalletStore.shortAddress(account.address),
                           faces: [.wallet(address: account.address)])
-        }
+        }, onPhone: { HegotaKey.holds($0) })
     }
 }
 

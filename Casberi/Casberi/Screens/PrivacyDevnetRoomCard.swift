@@ -725,7 +725,8 @@ extension PrivacyDevnetRoomCard {
     }
 
     @ViewBuilder var roster: some View {
-        RoomAccountsRows(rows: PrivacyConnections.rows(accounts, onOpen: onOpenAccount))
+        RoomAccountsRows(rows: PrivacyConnections.rows(accounts, onOpen: onOpenAccount),
+                         splitsByPhone: true)
     }
 
     /// **HOLDINGS (prd §680).** Every watched address, richest first, with
@@ -1527,6 +1528,7 @@ enum PrivacyConnections {
                 address: account.address,
                 name: PrivacyDevnetName.of(account.address),
                 kind: nil,
+                onPhone: PrivacyDevnetKey.holds(account.address),
                 unreached: !account.reached,
                 onOpen: onOpen.map { open in { open(account) } })
         }
@@ -1594,11 +1596,11 @@ extension PrivacyDevnetRoomCard {
                 ? String(localized: "Nothing watched on this chain yet")
                 : ListFormatter.localizedString(byJoining: named),
             faces: accounts.prefix(2).map { .wallet(address: $0.address) })
-        return [all] + zip(accounts, named).map { account, name in
+        return DSAccountSlot.groupedByPhone([all] + zip(accounts, named).map { account, name in
             DSAccountSlot(id: account.address,
                           name: name,
                           sub: WalletStore.shortAddress(account.address),
                           faces: [.wallet(address: account.address)])
-        }
+        }, onPhone: { PrivacyDevnetKey.holds($0) })
     }
 }

@@ -83,6 +83,9 @@ struct RoomAccountsRows: View {
         /// **Whether YOU follow it (prd §689c, §940).** Yours come first, the
         /// accounts tied to them after, each group under its own name.
         var watched: Bool = true
+        /// **This phone holds its key** (the devnets' `…Key.holds`). Read only
+        /// where the list `splitsByPhone`.
+        var onPhone: Bool = false
         /// True when the chain did not answer for it; the row says so instead
         /// of reading as an address with nothing going on (§515a).
         let unreached: Bool
@@ -90,19 +93,23 @@ struct RoomAccountsRows: View {
     }
 
     let rows: [Row]
+    /// **ON THIS PHONE, THEN WATCHING (prd §964, Vibenet's §963 split).** The
+    /// devnets, where this phone holds keys, split your accounts by whether
+    /// it holds theirs; the Wallet holds none and keeps one "Yours".
+    var splitsByPhone = false
 
     var body: some View {
-        // "Yours" over your accounts in every room (prd §954, reversing
-        // §940's "only when there are two"): the Wallet named its group and
-        // Privacy did not, so the same list read as two different screens.
-        let split = rows.contains { !$0.watched }
+        // A header over each group in every room (prd §954, reversing §940's
+        // "only when there are two"): the Wallet named its group and Privacy
+        // did not, so the same list read as two different screens.
+        let ordered = splitsByPhone
+            ? rows.filter { $0.watched && $0.onPhone } + rows.filter { $0.watched && !$0.onPhone }
+                + rows.filter { !$0.watched }
+            : rows
         let shared = Self.sharedWith(rows)
-        ForEach(rows) { row in
-            if row.id == rows.first(where: { $0.watched })?.id {
-                header(String(localized: "Yours"))
-            }
-            if split, row.id == rows.first(where: { !$0.watched })?.id {
-                header(String(localized: "Tied to yours"))
+        ForEach(ordered) { row in
+            if row.id == ordered.first(where: { group($0) == group(row) })?.id {
+                header(group(row))
             }
             Group {
                 if let onOpen = row.onOpen {
@@ -124,6 +131,12 @@ struct RoomAccountsRows: View {
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                       bottom: 0, trailing: DS.Space.s4))
         }
+    }
+
+    private func group(_ row: Row) -> String {
+        guard row.watched else { return String(localized: "Tied to yours") }
+        guard splitsByPhone else { return String(localized: "Yours") }
+        return row.onPhone ? String(localized: "On this phone") : String(localized: "Watching")
     }
 
     /// The group header on the tiles' edge wherever the list is mounted (prd

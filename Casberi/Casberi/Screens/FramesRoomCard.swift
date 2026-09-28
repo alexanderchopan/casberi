@@ -582,7 +582,8 @@ struct FramesRoomList: View {
     /// room's Holdings list has used since it shipped, which is what makes two
     /// rooms' Holdings read as one screen rather than two.
     @ViewBuilder private var accountsRows: some View {
-        RoomAccountsRows(rows: FramesConnections.rows(accounts, onOpen: onOpenAccount))
+        RoomAccountsRows(rows: FramesConnections.rows(accounts, onOpen: onOpenAccount),
+                         splitsByPhone: true)
     }
 
     @ViewBuilder private var holdingsRows: some View {
@@ -1357,9 +1358,17 @@ enum FramesConnections {
             })
     }
 
+    /// This phone holds the account's key: one of `FramesKey`'s, or the
+    /// passkey's account (prd §964).
+    static func onPhone(_ address: String, passkey: String?) -> Bool {
+        FramesKey.holds(address)
+            || passkey.map { $0.caseInsensitiveCompare(address) == .orderedSame } == true
+    }
+
     static func rows(_ accounts: [FramesAccount],
                      onOpen: ((FramesAccount) -> Void)?) -> [RoomAccountsRows.Row] {
         let drawn = map(accounts)
+        let passkey = FramesPasskey.accountAddress()
         let followed = accounts.map { account -> RoomAccountsRows.Row in
             return RoomAccountsRows.Row(
                 key: account.address.lowercased(),
@@ -1367,6 +1376,7 @@ enum FramesConnections {
                 name: FramesWatch.shared.name(for: account.address)
                     ?? WalletStore.shortAddress(account.address),
                 kind: nil,
+                onPhone: FramesConnections.onPhone(account.address, passkey: passkey),
                 unreached: !account.reached,
                 onOpen: onOpen.map { open in { open(account) } })
         }

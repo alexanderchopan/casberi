@@ -5632,14 +5632,15 @@ if "VibenetDiscoverySection" in body:
     print("  that moved it to a sheet (§472 → §476 → §517, three rulings)")
     sys.exit(1)
 # **NO DOOR IN THE ROSTER (prd §954).** Create moved to Home on 2026-09-04,
-# and watching followed it: the Accounts list is the Wallet's shape, "Yours"
-# over one row per account, and every act is on Home. A create or watch row
+# and watching followed it: the Accounts list is the Wallet's shape, a header
+# over one row per account ("On this phone", then "Watching" since §963), and
+# every act is on Home. A create or watch row
 # coming back reads as an ordinary improvement.
 if "createAccountRow" in body or "watchAccountRow" in body:
     print("✗ a door is back in the Accounts list — prd §954: every act is on Home")
     sys.exit(1)
-if "ForEach(Array(drawn.enumerated())" not in body:
-    print("✗ the roster no longer lists the accounts — prd §954")
+if "ForEach(group.items)" not in body or "drawn.filter" not in body:
+    print("✗ the roster no longer lists the accounts in their groups — prd §954, §963")
     sys.exit(1)
 GUARD
 

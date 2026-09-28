@@ -4277,7 +4277,8 @@ struct FeedScreen: View {
                     byJoining: roster.map { FramesWatch.shared.name(for: $0.address)
                         ?? WalletStore.shortAddress($0.address) }),
             faces: roster.prefix(2).map { .wallet(address: $0.address) })
-        return [all] + roster.map { account in
+        let passkey = FramesPasskey.accountAddress()
+        return DSAccountSlot.groupedByPhone([all] + roster.map { account in
             DSAccountSlot(
                 id: account.address,
                 name: FramesWatch.shared.name(for: account.address)
@@ -4285,7 +4286,7 @@ struct FeedScreen: View {
                 sub: FramesMoney.eth(fromWeiHex: account.balanceWeiHex ?? "")
                     .map { String(localized: "\($0) test ETH") },
                 faces: [.wallet(address: account.address)])
-        }
+        }, onPhone: { FramesConnections.onPhone($0, passkey: passkey) })
     }
 
     /// What each Frames scope holds, before you open it (prd §747).

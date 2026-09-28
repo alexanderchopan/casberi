@@ -263,6 +263,23 @@ struct DSAccountSlot: Identifiable, Equatable {
 }
 
 extension DSAccountSlot {
+    /// **THE PICKER'S ON THIS PHONE / WATCHING SECTIONS (prd §964)** for a
+    /// devnet, where this phone holds keys: "All" stays first and ungrouped,
+    /// this phone's accounts follow, then the ones you watch. Vibenet builds
+    /// its own (`VibenetThisPhone`) with the same two words.
+    static func groupedByPhone(_ slots: [DSAccountSlot],
+                               onPhone: (String) -> Bool) -> [DSAccountSlot] {
+        let accounts = slots.filter { !$0.id.isEmpty }.map { slot -> (DSAccountSlot, Bool) in
+            var slot = slot
+            let held = onPhone(slot.id)
+            slot.group = held ? String(localized: "On this phone") : String(localized: "Watching")
+            return (slot, held)
+        }
+        return slots.filter { $0.id.isEmpty }
+            + accounts.filter { $0.1 }.map { $0.0 }
+            + accounts.filter { !$0.1 }.map { $0.0 }
+    }
+
     func isShowing(_ scope: String?) -> Bool {
         guard let scope, !scope.isEmpty else { return id.isEmpty }
         return id.caseInsensitiveCompare(scope) == .orderedSame
