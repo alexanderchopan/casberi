@@ -360,7 +360,7 @@ struct NetworkReachScreen: View {
             } label: {
                 serviceLabel(row, opens: true)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         } else {
             serviceLabel(row, opens: false)
         }
