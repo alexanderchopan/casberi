@@ -792,6 +792,12 @@ enum DemoSeedAll {
         // And Hegotá's fixture account — forgotten BY ADDRESS, never a
         // blanket clear, since a dev install may be watching a real one.
         HegotaLiveState.forgetDemo()
+        // Frames and Privacy had a `teardownDemo` each and nothing called
+        // either: Frames PERSISTS its fixture, so after Exit the room drew the
+        // demo's 17.99 test ETH as the person's own until a real read ran —
+        // and none runs with no key and no watch.
+        FramesLiveState.teardownDemo()
+        PrivacyDevnetLiveState.teardownDemo()
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real

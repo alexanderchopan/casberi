@@ -201,7 +201,7 @@ struct DevnetSendPanel: View {
                           tint: tint, fact: from, act: onSend)
             if let topUp {
                 DevnetVerbRow(title: String(localized: "Top up"), glyph: "drop",
-                              tint: tint, fact: topUp.note, busy: topUp.busy,
+                              tint: tint, note: topUp.note, busy: topUp.busy,
                               opens: topUp.opens, act: topUp.action)
                     .disabled(topUp.busy)
                     .accessibilityLabel(Text("Top up from the faucet"))
@@ -221,6 +221,10 @@ struct DevnetVerbRow: View {
     let glyph: String
     let tint: Color
     var fact: String? = nil
+    /// A sentence under the title, wrapped. The faucet's answers are whole
+    /// sentences ("Already claimed this hour — …"), and as the trailing fact
+    /// they were cut to "Already claimed t…rk." with the reason in the cut.
+    var note: String? = nil
     var busy = false
     /// A door rather than an act — the push row's trailing mark.
     var opens = false
@@ -228,6 +232,7 @@ struct DevnetVerbRow: View {
 
     var body: some View {
         DSPushRow(title: Text(title),
+                  subtitle: note.map { Text($0) },
                   fact: fact.map { Text($0) },
                   tint: tint,
                   busy: busy,

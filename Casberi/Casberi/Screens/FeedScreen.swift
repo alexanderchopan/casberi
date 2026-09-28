@@ -1054,8 +1054,13 @@ struct FeedScreen: View {
         do {
             let hash = try await PrivacyDevnetSend.sendValue(
                 to: to, weiHex: "0x" + (wei.isEmpty ? "0" : RLP.hex(wei)), freshKey: key)
-            _ = hash
             await PrivacyDevnetLiveState.shared.refresh()
+            // Returned at broadcast — read again once mined (Hegotá's case).
+            Task { @MainActor in
+                if await PrivacyDevnetSend.awaitInclusion(hash) {
+                    await PrivacyDevnetLiveState.shared.refresh()
+                }
+            }
             return nil
         } catch let failure as PrivacyDevnetSend.Failure {
             switch failure {
@@ -1094,9 +1099,14 @@ struct FeedScreen: View {
             return String(localized: "Couldn't make a note on this phone — nothing was shielded.")
         }
         do {
-            _ = try await PrivacyDevnetSend.shield(
+            let hash = try await PrivacyDevnetSend.shield(
                 weiHex: "0x" + (wei.isEmpty ? "0" : RLP.hex(wei)), rho: rho)
             await PrivacyDevnetLiveState.shared.refresh()
+            Task { @MainActor in
+                if await PrivacyDevnetSend.awaitInclusion(hash) {
+                    await PrivacyDevnetLiveState.shared.refresh()
+                }
+            }
             return nil
         } catch let failure as PrivacyDevnetSend.Failure {
             switch failure {
@@ -1422,7 +1432,16 @@ struct FeedScreen: View {
                 throw error
             }
             HegotaSend.landReceipt(txHash: hash, kind: .sent(to: to, amount: amount), in: modelContext)
+            // `sendValue` returns at BROADCAST, so a read now is the balance
+            // before the send (measured: the crown kept the recipient's old
+            // figure until the next sweep). Read again once it is mined; the
+            // sheet does not wait for that.
             await HegotaLiveState.shared.refresh()
+            Task { @MainActor in
+                if await HegotaSend.awaitInclusion(hash) {
+                    await HegotaLiveState.shared.refresh()
+                }
+            }
             return nil
         } catch let f as HegotaSend.Failure {
             switch f {
@@ -4259,6 +4278,12 @@ struct FeedScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
+        // The room's read hangs HERE, on the chrome every scope draws —
+        // Privacy's placement. It hung on `FramesRoomList`'s row, which has
+        // nothing to draw until a read has landed, so a room with a key and
+        // no read yet (a first account, or any room after the demo's Exit)
+        // never read at all and sat on "Reading the chain…" (measured).
+        .task { await FramesLiveState.shared.refresh() }
     }
 
     /// The Frames accounts as deck cards, "All" first.
@@ -5417,7 +5442,6 @@ struct FeedScreen: View {
             // back to the tiles' edge themselves (`DSDayHeader`).
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                       bottom: DS.Space.s4, trailing: DS.Space.s4))
-            .task { await FramesLiveState.shared.refresh() }
         } else if source == PrivacyDevnetIdentity.source {
             // **NO `if let`.** `compose` is non-Optional precisely so this arm
             // cannot be skipped: the seat is in `LiveRoomSources`, so falling

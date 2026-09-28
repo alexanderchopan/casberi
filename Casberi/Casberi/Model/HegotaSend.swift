@@ -205,6 +205,20 @@ enum HegotaSend {
         return value
     }
 
+    /// True once `hash` has a receipt, false if none arrived within `timeout`.
+    /// A read, not a write: it lets the room re-read after a send is mined
+    /// rather than at broadcast, when every balance is still the old one.
+    static func awaitInclusion(_ hash: String, timeout: Duration = .seconds(45)) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if await HegotaRPC.call(method: "eth_getTransactionReceipt", params: [hash]) != nil {
+                return true
+            }
+            try? await Task.sleep(for: .seconds(3))
+        }
+        return false
+    }
+
     // MARK: - The one write that signs
 
     /// Broadcast. The only write verb in this app's Hegotá code that follows a

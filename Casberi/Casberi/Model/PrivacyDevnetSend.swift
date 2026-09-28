@@ -161,6 +161,19 @@ enum PrivacyDevnetSend {
         return try await send(fields)
     }
 
+    /// True once `hash` has a receipt, false if none arrived within `timeout`.
+    /// Send and shield return at broadcast, so the room reads again after this.
+    static func awaitInclusion(_ hash: String, timeout: Duration = .seconds(45)) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if await PrivacyDevnetRPC.call(method: "eth_getTransactionReceipt", params: [hash]) != nil {
+                return true
+            }
+            try? await Task.sleep(for: .seconds(3))
+        }
+        return false
+    }
+
     // MARK: - Sending
 
     /// The smallest useful transaction: a VERIFY frame, then the transfer.
@@ -337,8 +350,12 @@ enum PrivacyDevnetSend {
                                    "method": "eth_sendRawTransaction",
                                    "params": [raw]]
         for host in PrivacyDevnetChain.hosts {
+            // `.json`: `postJSONBody` answers `(json, status)`, and casting that
+            // TUPLE to a dictionary always failed — every host was skipped, so
+            // each send and shield went out and then read "Couldn't reach the
+            // chain — nothing was sent" (measured: mined at nonce 0, gas spent).
             guard let root = await IngestSupport.postJSONBody(
-                    host, body: body, service: PrivacyDevnetIdentity.source) as? [String: Any]
+                    host, body: body, service: PrivacyDevnetIdentity.source).json as? [String: Any]
             else { continue }
             if let hash = root["result"] as? String { return hash }
             if let err = root["error"] as? [String: Any],

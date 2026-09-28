@@ -113,9 +113,8 @@ struct HegotaSendCard: View {
     }
 
     /// A further account on this phone (prd §774). Watched so it has a face
-    /// on the rail — the first account is offered a watch on the account
-    /// page, but a second made from the room has no other way in — scoped so
-    /// the room turns to it, and current so Send and Top up act for it.
+    /// on the rail (the first one is too, in `makeKey`), scoped so the room
+    /// turns to it, and current so Send and Top up act for it.
     private func makeAnother() {
         guard !DemoMode.isActive else {
             createError = String(localized: "No key is made in the demo — this is where your own would be.")
@@ -184,9 +183,18 @@ struct HegotaSendCard: View {
         Task { @MainActor in
             defer { creating = false }
             do {
-                _ = try HegotaKey.create()
+                // **THE KEY'S OWN ACCOUNT IS WATCHED (Privacy's §602, here).**
+                // The room reads only watched addresses, so a key made and
+                // not watched had no face, no row and no balance — the first
+                // account a person made here appeared nowhere. Watched and
+                // scoped the way `makeAnother` does it.
+                let made = try HegotaKey.create()
+                _ = HegotaWatch.shared.add(made)
+                chrome.hegotaScope = made
+                refreshFrom()
                 DSHaptic.success()
                 pour()
+                await HegotaLiveState.shared.refresh()
             } catch {
                 createError = String(localized: "Couldn't make a key on this phone.")
             }

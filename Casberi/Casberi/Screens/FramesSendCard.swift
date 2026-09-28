@@ -173,8 +173,16 @@ struct FramesSendCard: View {
         creating = true
         defer { creating = false }
         do {
-            keyAddress = try FramesKey.create()
+            let made = try FramesKey.create()
+            keyAddress = made
             createError = nil
+            // Read it now and turn the room to it, as `makeAnother` does. The
+            // room reads this phone's key unwatched, but nothing asked it to
+            // until the next sweep, so the new account stood under whatever
+            // the crown last drew (measured: a demo fixture's 17.99 test ETH).
+            chrome.framesScope = made
+            refreshFrom()
+            Task { await FramesLiveState.shared.refresh() }
             // The arrival is worth a moment — it is the only thing this seat
             // makes rather than reads. The seat's own tile falls (prd §655);
             // a bare bump rained the last pull's roster.
