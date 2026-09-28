@@ -35,6 +35,11 @@ import SwiftData
 /// the audio is the record. A written sheet keeps words, an empty sheet
 /// records; no sheet holds both. Holding the room's New tile lands here
 /// recording (`ShellChrome.noteVoiceOnOpen`).
+///
+/// **Kept whole (prd §972).** Stop waits up to a second for the recognizer's
+/// last words, the audio is stored once, and a call that takes the mic or a
+/// sheet closed by another path keeps what was recorded. A voice note's
+/// source is `You`, like every note here; there is no "Voice" room.
 struct NoteCaptureSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
@@ -49,6 +54,10 @@ struct NoteCaptureSheet: View {
     @FocusState private var focused: Bool
     /// The sheet's own mic (prd §971), never the composer's.
     @State private var voice = VoiceCapture()
+    /// Stop was pressed and the recording is being kept (prd §972): the
+    /// recognizer gets up to a second for its last words, and a second tap in
+    /// that second must not keep the recording twice.
+    @State private var stopping = false
 
     private var hasDraft: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -173,6 +182,18 @@ struct NoteCaptureSheet: View {
             #endif
             if record { startRecording() } else { focused = true }
         }
+        // A call or an alarm took the microphone (prd §972): capture stopped,
+        // so keep what was recorded and close, rather than leave a clock
+        // running over nothing.
+        .onChange(of: voice.interrupted) { _, now in
+            if now { stopAndKeep() }
+        }
+        // The sheet went away by some path that is not its own (prd §972):
+        // never leave the mic live behind it. What was recorded is kept, as a
+        // pull-down keeps it.
+        .onDisappear {
+            if isRecording { stopAndKeep(closing: false) }
+        }
         // The swipe down the composer also has: keep, then go.
         .gesture(
             DragGesture(minimumDistance: 24)
@@ -194,7 +215,7 @@ struct NoteCaptureSheet: View {
         if isRecording {
             AgentWideKey(title: String(localized: "Stop"), glyph: "stop.fill", tone: .tint) {
                 DSHaptic.tap()
-                keepVoiceAndClose()
+                stopAndKeep()
             }
         } else if hasDraft {
             AgentWideKey(title: String(localized: "Done"), tone: .ink) {
@@ -219,37 +240,60 @@ struct NoteCaptureSheet: View {
         Task { await voice.start() }
     }
 
-    /// Stop, and keep what was recorded as a VOICE thing under `You` — the
-    /// transcript as its words, the first line as its title, the audio in
-    /// the thing's synced field and its file reference for the local player
-    /// — then close. Nothing heard and nothing said lands nothing.
+    /// Stop, and keep what was recorded as a VOICE thing under `You`, then
+    /// close (or not, when the sheet is already gone).
     ///
-    /// `stop(keep: true)` returns the transcript and the file reference
-    /// together; the file is read for its bytes right after, once, so the
-    /// note follows the person to their other devices (a voice note on one
-    /// phone only is half a feature).
-    private func keepVoiceAndClose() {
-        defer { onClose() }
-        guard let piece = voice.stop(keep: true) else { return }
+    /// Everything the work needs is captured BEFORE the task starts — the
+    /// recorder, the store, the two closures — because the disappear path runs
+    /// it after the view has left the hierarchy, where reading `@State` hands
+    /// back a fresh, idle recorder instead of the live one.
+    private func stopAndKeep(closing: Bool = true) {
+        guard !stopping else { return }
+        stopping = true
+        let capture = voice, context = modelContext, land = onLand, close = onClose
+        Task { @MainActor in
+            if let thing = await Self.keepRecording(capture, in: context) { land(thing) }
+            if closing { close() }
+        }
+    }
+
+    /// The recording, kept: the recognizer settles first (its last words,
+    /// bounded to a second, prd §972), then `stop(keep: true)` hands over the
+    /// transcript and the file. The thing carries the transcript as its words,
+    /// the first line as its title, and the audio in its synced field — a
+    /// voice note on one phone only is half a feature.
+    ///
+    /// **The audio is stored ONCE (prd §972).** The store has held voice audio
+    /// since the 2026-07-07 move, which read each loose file in and deleted
+    /// it; keeping the file as well left a second copy the move never runs
+    /// again to clear, and it outlived the note when the note was deleted. The
+    /// file goes once its bytes are in the store, and stays only if they could
+    /// not be read, so the local player still has something to play.
+    ///
+    /// Nothing heard and nothing recorded lands nothing.
+    @MainActor
+    private static func keepRecording(_ voice: VoiceCapture, in context: ModelContext) async -> Thing? {
+        await voice.settle()
+        guard let piece = voice.stop(keep: true) else { return nil }
         let words = piece.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        let bytes = VoiceCapture.audioURL(for: piece.sourceRef).flatMap { try? Data(contentsOf: $0) }
-        guard !words.isEmpty || (bytes?.count ?? 0) > 0 else {
-            if let url = VoiceCapture.audioURL(for: piece.sourceRef) {
-                try? FileManager.default.removeItem(at: url)
-            }
-            return
+        let url = VoiceCapture.audioURL(for: piece.sourceRef)
+        let bytes = url.flatMap { try? Data(contentsOf: $0) }
+        if bytes != nil, let url { try? FileManager.default.removeItem(at: url) }
+        guard !words.isEmpty || (bytes?.isEmpty == false) else {
+            if let url { try? FileManager.default.removeItem(at: url) }
+            return nil
         }
         let thing = Thing(
             kind: .voice,
             title: words.isEmpty ? String(localized: "Voice note") : IngestSupport.titleLine(words),
             content: words,
-            source: "You",
+            source: NoteSheetSource.keptSource,
             sourceRef: piece.sourceRef)
         thing.audio = bytes
-        modelContext.insert(thing)
-        modelContext.saveHonestly()
+        context.insert(thing)
+        context.saveHonestly()
         SpotlightIndex.index([thing])
-        onLand(thing)
+        return thing
     }
 
     // MARK: - Keeping
@@ -260,7 +304,7 @@ struct NoteCaptureSheet: View {
     private func keepAndClose() {
         // Pulled down mid-recording: the recording is kept, as typed words
         // are — dismiss keeps (§969).
-        if isRecording { keepVoiceAndClose(); return }
+        if isRecording { stopAndKeep(); return }
         defer { onClose() }
         guard hasDraft, let thing = Capture.thing(from: draft) else { return }
         // A note is a note even when it holds a link: `Capture.thing` turns a

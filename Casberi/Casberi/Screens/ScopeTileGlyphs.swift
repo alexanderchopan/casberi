@@ -98,12 +98,12 @@ enum ScopeTileGlyph {
     static let sleep        = "bed.double"
     static let mood         = "face.smiling"
     /// The Notes room's tiles (prd §969). Pin is the dial's own pin glyph —
-    /// the same meaning, so the same symbol; a folder is a folder; New is
-    /// the bare plus, a verb in the tile row and the one tile that never
-    /// lights. (`square.and.pencil` was refused for Chat above and is not
-    /// re-proposed here either.)
+    /// the same meaning, so the same symbol; New is the bare plus, a verb in
+    /// the tile row and the one tile that never lights. (`square.and.pencil`
+    /// was refused for Chat above and is not re-proposed here either.) The
+    /// Folders tile and its `folder` glyph are deleted until folders exist
+    /// (prd §972).
     static let pinned       = "pin"
-    static let folders      = "folder"
     static let new          = "plus"
 }
 
@@ -115,7 +115,6 @@ extension NotesScope: DSTileScope {
         switch self {
         case .all:     return ScopeTileGlyph.all
         case .pinned:  return ScopeTileGlyph.pinned
-        case .folders: return ScopeTileGlyph.folders
         case .new:     return ScopeTileGlyph.new
         }
     }

@@ -91,16 +91,22 @@ enum Pinboard {
     }
 }
 
-/// The Notes room's tiles (prd §969): All · Pinned · Folders · New. All is
+/// The Notes room's tiles (prd §969, §972): All · Pinned · New. All is
 /// lit by default and first, as in every room; New is LAST and never lights —
 /// it is a verb in the row, drawn in tint, and it raises the note sheet (the
 /// user weighed New first and All first: "notes should be default", and the
 /// default is whichever tile is lit, not whichever is first).
 ///
+/// **Folders is DELETED until folders exist (prd §972).** §969 drew the tile
+/// before the feature: it lit, and showed the same list as All — a control
+/// that did nothing, §83's dead control. A feature deleted from the surface
+/// is deleted from the model (§723), so the case went with the tile; folders,
+/// when built, bring it back with something to show.
+///
 /// Foundation-only, like every scope enum, so a harness can compile it
 /// whole; the glyphs are `ScopeTileGlyphs.swift`'s.
 enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, pinned, folders, new
+    case all, pinned, new
 
     var id: String { rawValue }
 
@@ -108,7 +114,6 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:     return String(localized: "All")
         case .pinned:  return String(localized: "Pinned")
-        case .folders: return String(localized: "Folders")
         case .new:     return String(localized: "New")
         }
     }
@@ -118,8 +123,7 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:     return String(localized: "Your notes and everything you pinned")
         case .pinned:  return String(localized: "What you pinned")
-        case .folders: return String(localized: "Your folders")
-        case .new:     return String(localized: "Write a note")
+        case .new:     return String(localized: "Write or record a note")
         }
     }
 

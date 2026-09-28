@@ -85,7 +85,7 @@ enum FeedFold {
 
     static func tier(_ t: Thing) -> FeedTier {
         if t.kind == .screenshot || t.kind == .voice
-            || t.source == "You" || t.source == "Voice" { return .made }
+            || t.source == "You" { return .made }
         if t.kind == .approval || t.kind == .transaction
             || t.kind == .event || t.kind == .reminder
             || t.dueAt != nil || t.isFlagged { return .concerns }
@@ -113,7 +113,7 @@ enum FeedFold {
     /// a picture can carry, the answer is a strip rather than an exemption.
     static func bundleable(_ t: Thing) -> Bool {
         t.kind != .screenshot && t.kind != .voice && t.kind != .approval
-            && t.source != "You" && t.source != "Voice"
+            && t.source != "You"
             // REVERSED 2026-08-09 (user: following 140 Farcaster accounts made
             // "deliberate reads" the wrong call at that follow count — the
             // 2026-07-12 ruling held for a handful of watched accounts, not a

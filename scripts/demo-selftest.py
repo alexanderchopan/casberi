@@ -219,11 +219,10 @@ DEMO_GATED_READS = [
 # `KNOWN_EXEMPT` pattern this codebase uses everywhere else for "we checked,
 # this one's real". Adding a name here without checking is how this class of
 # audit rots; each entry states what it IS instead.
-KNOWN_NO_CATALOG_SEAT = {
-    # An always-on device capability (voice notes recorded in-app), not a
-    # connectable bridge — there is nothing in the catalog to connect.
-    "Voice",
-}
+# Empty since prd §972: "Voice" was the one entry (voice notes recorded
+# in-app), and a voice note is a note of yours now, under `You`, with no seat
+# of its own in the demo either.
+KNOWN_NO_CATALOG_SEAT: set = set()
 
 # `DemoSeedAll.seatTable` names whose real `Thing.source` differs from
 # `BridgeCatalog.offers`' DISPLAY name — the catalog name is marketing
@@ -1653,8 +1652,8 @@ def self_test():
     ok &= verify_fixture(
         "a seatTable name with no matching catalog offer is caught",
         lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
-            '("Voice", "3 notes", "Transcribes on device."),',
-            '("Voice", "3 notes", "Transcribes on device."),\n'
+            '("Contacts", "Synced 6m ago", "Reads the people you know."),',
+            '("Contacts", "Synced 6m ago", "Reads the people you know."),\n'
             '        ("Totally Fake Bridge Name", "Synced", "Does nothing real."),',
             1,
         )),
@@ -1663,8 +1662,8 @@ def self_test():
     ok &= verify_fixture(
         "a seatTable name with no seeded row anywhere else is caught",
         lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
-            '("Voice", "3 notes", "Transcribes on device."),',
-            '("Voice", "3 notes", "Transcribes on device."),\n'
+            '("Contacts", "Synced 6m ago", "Reads the people you know."),',
+            '("Contacts", "Synced 6m ago", "Reads the people you know."),\n'
             '        ("Quandrafloop Sync Test", "Synced", "Nowhere else in the file."),',
             1,
         )),

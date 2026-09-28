@@ -217,7 +217,7 @@ enum DemoCorpus {
                   source: "Reminders", capturedAt: ago(hours: 12), mark: .todo,
                   tags: ["Fitness"]),
             Thing(kind: .voice, title: "New PR on deadlift",
-                  content: "Hit 140kg, felt clean.", source: "Voice",
+                  content: "Hit 140kg, felt clean.", source: "You",
                   capturedAt: ago(hours: 14), tags: ["Fitness"]),
 
             // ── Home cluster ───────────────────────────────────────────────
@@ -271,7 +271,7 @@ enum DemoCorpus {
                   content: "https://example.com/pkm", source: "You",
                   capturedAt: ago(hours: 52), mark: .saved),
             Thing(kind: .voice, title: "Idea for the weekend",
-                  content: "Coastal drive, leave early.", source: "Voice",
+                  content: "Coastal drive, leave early.", source: "You",
                   capturedAt: ago(hours: 24)),
         ]
     }

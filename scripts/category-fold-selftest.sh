@@ -1189,32 +1189,17 @@ for name in ("Kalshi", "Polymarket", "GeckoTerminal", "Circle x402", "1Claw", "O
         sys.exit(f'✗ "{name}" is no longer in Corpus.retiredSources — its rows would earn a chip and a room for a seat the catalog does not offer')
 print(f"  ✓ real catalog: {len(entries)} categories, every one names ≥1 real offer; no Markets; {len(retired)} retired seats offered nowhere")
 
-# Every SEATLESS source (a device capability the catalog has nothing to
-# connect — "Voice") must name a category that really exists. Its whole job is
-# to keep such a source inside the fold instead of sitting alone beside a row
-# of category words (user ruling 2026-08-11); a category renamed out from under
-# this table sends it silently back to the strip's bare circle and the tray's
-# "Other" block, which looks exactly like the bug it fixed.
-names = {n for n, _ in entries}
-table = re.search(r'categoryBySeatlessSource:\s*\[String:\s*String\]\s*=\s*\[(.*?)\n    \]', src, re.S)
-if not table:
-    sys.exit("✗ BridgeCatalog.categoryBySeatlessSource not found — a seatless source"
-             " (Voice) is filed nowhere again")
-pairs = re.findall(r'"([^"]+)"\s*:\s*"([^"]+)"', table.group(1))
-if not pairs:
-    sys.exit("✗ categoryBySeatlessSource parsed to zero entries")
-for source, category in pairs:
-    if category not in names:
-        sys.exit(f'✗ categoryBySeatlessSource maps "{source}" → "{category}",'
-                 f" which is not a real category (have: {sorted(names)})")
-    # It must ALSO be genuinely seatless: gaining a real offer makes the entry
-    # dead code, and the live `offer(forSource:)` answer would then win.
-    if re.search(r'name:\s*"%s"' % re.escape(source), src):
-        sys.exit(f'✗ "{source}" now has a real catalog offer — drop it from'
-                 " categoryBySeatlessSource, whose entries are for sources with no seat")
-if "Voice" not in dict(pairs):
-    sys.exit('✗ "Voice" is no longer filed by categoryBySeatlessSource')
-print(f"  ✓ seatless sources: {len(pairs)} filed, every one into a real category")
+# "Voice" is filed NOWHERE (prd §972). It was the one seatless source, kept in
+# the Notes fold by a `categoryBySeatlessSource` table (user ruling 2026-08-11);
+# a voice note is a note of yours now, under `You`, and the table went with its
+# only entry. A table back with no seat behind it would file a room for a
+# source nothing writes — which is how a "Voice" room reached the tray.
+if re.search(r'categoryBySeatlessSource', src):
+    sys.exit("✗ BridgeCatalog.categoryBySeatlessSource is back — a source with no seat"
+             " has no category (prd §972)")
+if re.search(r'name:\s*"Voice"', src):
+    sys.exit('✗ "Voice" is a catalog offer — a voice note is a note of yours (prd §972)')
+print("  ✓ no seatless source is filed; Voice is not a seat (prd §972)")
 PY
 
 # --- the fixture catalog -----------------------------------------------------

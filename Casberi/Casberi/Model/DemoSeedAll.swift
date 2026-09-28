@@ -5160,8 +5160,9 @@ enum DemoSeedAll {
             }
         }
         out += (0..<3).map { i in
+            // A voice note is a note of yours, under `You` (prd §972).
             row(.voice, ["Idea for the panel", "Shopping list", "Note to self — call Nils"][i],
-                source: "Voice", ref: "demo:voice:\(i)", days: Double(1 + i * 4), hour: 8,
+                source: "You", ref: "demo:voice:\(i)", days: Double(1 + i * 4), hour: 8,
                 content: "0:2\(i) · transcribed on device")
         }
         return out
@@ -5994,7 +5995,6 @@ enum DemoSeedAll {
         // by design, so the seat is the only place the demo can say it is
         // connected at all.
         ("Contacts", "Synced 6m ago", "Reads the people you know."),
-        ("Voice", "3 notes", "Transcribes on device."),
     ]
 }
 

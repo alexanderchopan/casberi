@@ -155,4 +155,36 @@ enum SourceRename {
         HegotaIdentity.seatID: HegotaIdentity.source,
         PrivacyDevnetIdentity.seatID: PrivacyDevnetIdentity.source,
     ]
+
+    /// Voice notes converge onto `You` (prd §972), at EVERY launch.
+    ///
+    /// A voice note's source was "Voice" from 2026-07-06 — a source with no
+    /// seat, filed under Notes by hand, which drew a "Voice" room in the tray
+    /// and split the kind in two once the note sheet began keeping voice notes
+    /// under `You`. The name is retired: every voice note is a note of yours,
+    /// in the Notes room, with the kept-note anatomy.
+    ///
+    /// NOT `Corpus.renamedSources`, whose values must be live offers
+    /// (`source-alias-audit.py` check A) — `You` is no seat, and bending that
+    /// table would weaken the check that caught a real stranded seat. The
+    /// SHAPE is the same one for the same reason: rows from another device
+    /// still on an older build, or unmerged in the iCloud zone, land after any
+    /// one-shot has run. One counted read on an indexed `source ==` predicate,
+    /// and a fetch only when it answers non-zero — which in the steady state
+    /// is never.
+    @MainActor
+    @discardableResult
+    static func sweepVoice(context: ModelContext) -> Int {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Voice" })
+        guard let count = try? context.fetchCount(descriptor), count > 0 else { return 0 }
+        var moved = 0
+        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+            thing.source = NoteSheetSource.keptSource
+            moved += 1
+        }
+        // Saved here for the reason `sweep` saves its own: this runs on every
+        // launch, where the migration block that used to carry saves does not.
+        if moved > 0 { _ = context.saveHonestly() }
+        return moved
+    }
 }

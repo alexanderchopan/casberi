@@ -110,7 +110,7 @@ func song(_ cover: String) -> Thing {
 
 // ---- tier ---------------------------------------------------------------
 check(FeedFold.tier(shot()) == .made, "a screenshot is something you made")
-check(FeedFold.tier(Thing(kind: .voice, source: "Voice")) == .made, "a voice note is made")
+check(FeedFold.tier(Thing(kind: .voice, source: "You")) == .made, "a voice note is made")
 check(FeedFold.tier(Thing(kind: .link, source: "You")) == .made, "anything from You is made")
 check(FeedFold.tier(Thing(kind: .transaction, source: "Wallet")) == .concerns,
       "money moving concerns you")
@@ -133,7 +133,7 @@ check(!FeedFold.ambient([post("a"), shot()]), "one thing you made keeps the fold
 
 // ---- bundleable ---------------------------------------------------------
 check(!FeedFold.bundleable(shot()), "a screenshot never collapses into a sentence")
-check(!FeedFold.bundleable(Thing(kind: .voice, source: "Voice")), "a voice note never does")
+check(!FeedFold.bundleable(Thing(kind: .voice, source: "You")), "a voice note never does")
 check(!FeedFold.bundleable(Thing(kind: .approval, source: "Wallet")), "an approval never does")
 check(!FeedFold.bundleable(Thing(kind: .link, source: "Tokens")), "a watched token never does")
 check(!FeedFold.bundleable(Thing(kind: .link, source: "Bitrefill")), "a Bitrefill order never does")

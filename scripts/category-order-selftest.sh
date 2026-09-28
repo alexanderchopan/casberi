@@ -4,7 +4,8 @@
 #
 #   Casberi/Casberi/Model/CategoryOrder.swift
 #     — defaultOrder  (the 2026-08-11 ruling, kept as the default — minus the
-#                      Markets slot since prd §638 deleted that category)
+#                      Markets slot since prd §638 deleted that category, and
+#                      the Voice slot since prd §972)
 #     — reconcile     (a stored order made safe to sort by)
 #     — rank          (where a label sorts; Int.max for one we've never heard of)
 #     — set / reset / isCustom
@@ -200,15 +201,18 @@ let d = CategoryOrder.defaultOrder
 func rawStored() -> [String]? { UserDefaults.standard.stringArray(forKey: "chips.categoryOrder") }
 
 // --- the default itself -----------------------------------------------------
-// TEN since prd §638 (2026-09-06): the 2026-08-11 ruling named eleven slots
-// and "Markets" was one of them; the category is deleted, so the ruling's
-// order stands minus that slot. Pinned as a count AND as the absence, so a
-// Markets slot creeping back fails here rather than drawing a folder for a
-// band the catalog no longer has.
-check("the default order is the 2026-08-11 ruling minus Markets (§638)", d.count == 10)
+// NINE since prd §972 (2026-09-28): the 2026-08-11 ruling named eleven slots.
+// "Markets" left with its category (§638), and "Voice" left when a voice note
+// became a note of yours with no source of its own (§972). Pinned as a count
+// AND as the absences, so either slot creeping back fails here rather than
+// drawing a folder for a band nothing fills.
+check("the default order is the 2026-08-11 ruling minus Markets (§638) and Voice (§972)", d.count == 9)
 check("Markets is not a slot (the category is deleted, §638)", !d.contains("Markets"))
 check("a stored order from before §638 sheds its Markets slot",
       !CategoryOrder.reconcile(["Wallet", "Markets", "Work"]).contains("Markets"))
+check("Voice is not a slot (no source carries it, §972)", !d.contains("Voice"))
+check("a stored order from before §972 sheds its Voice slot",
+      !CategoryOrder.reconcile(["Notes", "Voice", "Wallet"]).contains("Voice"))
 check("no duplicate slot", Set(d).count == d.count)
 check("Wallet leads (user: 'more important to users')", d.first == "Wallet")
 check("Social sits after Life and before Media (user ruling)",

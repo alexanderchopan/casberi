@@ -61,19 +61,17 @@ enum CategoryOrder {
     /// The category strip's default order (user ruling 2026-08-11) — see
     /// `MainSurface.computedChips()` for the reasoning behind each position.
     ///
-    /// "Voice" is not a catalog category (it has no offer at all — an
-    /// always-on device capability, `KNOWN_NO_CATALOG_SEAT` in
-    /// `demo-selftest.py`), so it never folds and never appears in
-    /// `CategoryFold`'s own name set, but it is still one of the fixed
-    /// positions a person actually sees in the strip. Every catalog category
-    /// IS here, and the harness proves it against `BridgeCatalog` rather than
-    /// trusting this list to have been updated.
+    /// Every catalog category IS here, and the harness proves it against
+    /// `BridgeCatalog` rather than trusting this list to have been updated.
+    /// "Voice" left this list on 2026-09-28 (prd §972): a voice note is a note
+    /// of yours, in the Notes room, and no source carries the name any more;
+    /// `reconcile` drops it from a stored order as it drops any retired name.
     /// "Markets" left this list on 2026-09-06 (prd §638) with the category
     /// itself; `reconcile` drops it from any stored order the same way it
     /// drops every name the catalog has stopped answering to.
     static let defaultOrder: [String] = [
         "Wallet", "Work", "Agents", "Life", "Social",
-        "Media", "Reading", "Notes", "Voice", "Shopping",
+        "Media", "Reading", "Notes", "Shopping",
     ]
 
     /// The order in force — the stored one reconciled against `defaultOrder`,

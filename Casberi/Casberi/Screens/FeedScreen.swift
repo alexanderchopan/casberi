@@ -2275,7 +2275,7 @@ struct FeedScreen: View {
             // image at all, so a connected folder of screenshots rendered as
             // pure text while its thumbnails sat in the store undrawn.
             case "Notes", "Day One", "Apple Journal", "Obsidian": self = .notes
-            case "You", "Voice":        self = .you
+            case "You":                 self = .you
             // Spotify joins Apple Music here (prd §906): it took the `.plain`
             // branch, so its room grouped by day and drew band rows while the
             // other music room grouped by listening session and led with the
@@ -3067,14 +3067,13 @@ struct FeedScreen: View {
 
     /// The Notes room's tile (prd §969), gated on the room like the two
     /// above. Pinned narrows to what you pinned — a pinned note included,
-    /// which is what "this one on top" means here. Folders draws the folder
-    /// list in place of the rows (the rows arm), so it narrows nothing here;
-    /// New is a verb and never stands.
+    /// which is what "this one on top" means here. New is a verb and never
+    /// stands. (Folders is deleted until folders exist, prd §972.)
     private func notesScopeAllows(_ thing: Thing) -> Bool {
         guard Pinboard.isPinnedRoom(source) else { return true }
         switch chrome.notesScope {
         case .pinned:              return Pinboard.isPinned(thing)
-        case .all, .folders, .new: return true
+        case .all, .new:           return true
         }
     }
 
@@ -11236,8 +11235,8 @@ struct FeedScreen: View {
                 // pointer, so the Mac was told to perform a gesture it does
                 // not have.
                 return String(localized: "Nothing pinned. \(DS.secondaryGesture) anything to pin it.")
-            case .all, .folders, .new:
-                return String(localized: "Write a note, or \(DS.secondaryGesture) anything to pin it here.")
+            case .all, .new:
+                return String(localized: "Write or record a note, or \(DS.secondaryGesture) anything to pin it here.")
             }
         }
         switch (source != "All", filter.tag != "All") {

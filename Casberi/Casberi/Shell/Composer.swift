@@ -2546,12 +2546,20 @@ struct Composer: View {
     /// afterwards gets an empty string and the dictation silently does
     /// nothing (§581c's own near-miss, kept from recurring by being in one
     /// function rather than at each call site).
+    ///
+    /// The recognizer SETTLES first (prd §972): the input ends and it gets up
+    /// to a second to hand over its last words, so the field never receives a
+    /// sentence missing its end. A second Stop while it settles does nothing.
     private func endDictation() {
-        let spoken = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        voice.stop(keep: false)
-        guard !spoken.isEmpty else { return }
-        draft = spoken
-        fieldFocused = true
+        let capture = voice
+        Task { @MainActor in
+            guard await capture.settle() else { return }
+            let spoken = capture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+            capture.stop(keep: false)
+            guard !spoken.isEmpty else { return }
+            draft = spoken
+            fieldFocused = true
+        }
     }
 
     /// The verb that is available, and only that one.

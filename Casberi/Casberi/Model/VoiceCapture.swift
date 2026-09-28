@@ -30,6 +30,16 @@ final class VoiceCapture: NSObject {
     private(set) var phase: Phase = .idle
     private(set) var transcript = ""
     private(set) var elapsed: TimeInterval = 0
+    /// The system took the microphone mid-recording — a call, an alarm, Siri
+    /// (prd §972). Capture has STOPPED when this turns true; the caller keeps
+    /// what was recorded rather than leaving a clock that runs over nothing.
+    private(set) var interrupted = false
+
+    /// The recognizer handed over its last words (prd §972). Set by the final
+    /// result, or by the recognizer ending on an error; read by `settle`.
+    @ObservationIgnored private var recognitionDone = false
+    @ObservationIgnored private var settling = false
+    @ObservationIgnored private var interruptionObserver: NSObjectProtocol?
 
     private var recorder: AVAudioRecorder?
     private var recognizer: SFSpeechRecognizer?
@@ -80,6 +90,8 @@ final class VoiceCapture: NSObject {
         fileID = UUID()
         transcript = ""
         elapsed = 0
+        interrupted = false
+        recognitionDone = false
 
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.record, mode: .measurement)
@@ -127,11 +139,19 @@ final class VoiceCapture: NSObject {
                 request.append(buffer)
             }
             recognitionRequest = request
-            recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, _ in
+            recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
                 // Pull the plain String out here so nothing non-Sendable crosses
-                // the hop back to the main actor.
-                guard let text = result?.bestTranscription.formattedString else { return }
-                Task { @MainActor in self?.transcript = text }
+                // the hop back to the main actor. The final result and an error
+                // both END the recognition, and `settle` waits on that (prd
+                // §972) — carried in the same hop as the words, so the flag can
+                // never land before the text it vouches for.
+                let text = result?.bestTranscription.formattedString
+                let ended = (result?.isFinal ?? false) || error != nil
+                guard text != nil || ended else { return }
+                Task { @MainActor in
+                    if let text { self?.transcript = text }
+                    if ended { self?.recognitionDone = true }
+                }
             }
         }
 
@@ -142,6 +162,17 @@ final class VoiceCapture: NSObject {
         phase = .recording
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.elapsed += 0.5
+        }
+
+        // A call or an alarm takes the microphone and capture stops under us
+        // (prd §972). Say so, so the caller keeps what was recorded instead of
+        // drawing a live clock — and a Live Activity — over silence.
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  AVAudioSession.InterruptionType(rawValue: raw) == .began else { return }
+            MainActor.assumeIsolated { self?.interrupted = true }
         }
 
         // The Live Activity (§15): recording state only — the lock screen
@@ -156,11 +187,53 @@ final class VoiceCapture: NSObject {
         #endif
     }
 
+    /// End the INPUT and give the recognizer a bounded moment to hand over its
+    /// final words (prd §972), before `stop` reads them.
+    ///
+    /// `stop` alone takes whatever partial result exists at that instant: the
+    /// legacy task is cancelled before its final result arrives, and the iOS 26
+    /// analyzer finalizes after the words were already read. With no review
+    /// step between Stop and a kept voice note, the clipped last words became
+    /// the title. The wait is capped (a second by default) so a recognizer that
+    /// never answers can only cost that second, never hang the Stop key.
+    ///
+    /// Returns false when there was nothing to settle (not recording) or a
+    /// settle is already running — a second Stop tap must not race the first
+    /// into `stop` and read the unfinished words.
+    @discardableResult
+    func settle(within timeout: TimeInterval = 1.0) async -> Bool {
+        guard phase == .recording, !settling else { return false }
+        settling = true
+        defer { settling = false }
+        timer?.invalidate(); timer = nil
+        recorder?.stop()                    // finalizes the file
+        audioEngine?.stop()
+        audioEngine?.inputNode.removeTap(onBus: 0)
+        audioEngine = nil                   // `stop` must not remove the tap twice
+        if #available(iOS 26.0, *), let session = modernSession as? ModernSpeechSession {
+            modernSession = nil             // `stop` must not finish it twice
+            Task { await session.finishInput() }
+        } else if let request = recognitionRequest {
+            request.endAudio()
+        } else {
+            return true
+        }
+        let deadline = Date().addingTimeInterval(timeout)
+        while !recognitionDone, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        return true
+    }
+
     /// Stops and returns the finished piece: transcript + the audio file ref.
     /// Discard (`keep: false`) removes the file.
     @discardableResult
     func stop(keep: Bool = true) -> (transcript: String, sourceRef: String)? {
         timer?.invalidate(); timer = nil
+        if let interruptionObserver {
+            NotificationCenter.default.removeObserver(interruptionObserver)
+            self.interruptionObserver = nil
+        }
         #if !targetEnvironment(macCatalyst)
         if let activity {
             let done = activity
@@ -208,6 +281,13 @@ final class VoiceCapture: NSObject {
         do {
             let session = try await ModernSpeechSession(transcriber: transcriber) { [weak self] text in
                 Task { @MainActor in self?.transcript = text }
+            } onEnded: { [weak self] text in
+                // The last words and the flag in ONE hop (prd §972): two
+                // separate main-actor tasks carry no ordering promise.
+                Task { @MainActor in
+                    if !text.isEmpty { self?.transcript = text }
+                    self?.recognitionDone = true
+                }
             }
             modernSession = session
             NSLog("VoiceCapture: SpeechAnalyzer path engaged")
@@ -229,7 +309,8 @@ private final class ModernSpeechSession {
     private let inputContinuation: AsyncStream<AnalyzerInput>.Continuation
     private var resultsTask: Task<Void, Never>?
 
-    init(transcriber: SpeechTranscriber, onTranscript: @escaping (String) -> Void) async throws {
+    init(transcriber: SpeechTranscriber, onTranscript: @escaping (String) -> Void,
+         onEnded: @escaping (String) -> Void) async throws {
         let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
         inputContinuation = continuation
         let analyzer = SpeechAnalyzer(modules: [transcriber])
@@ -245,20 +326,28 @@ private final class ModernSpeechSession {
             // holding only the last spoken chunk. A non-final (volatile)
             // result previews on top without being committed.
             var finalized = ""
+            // What the person last SAW — finalized plus any volatile tail — so
+            // a torn-down sequence never hands `onEnded` fewer words than the
+            // band was showing.
+            var latest = ""
             do {
                 for try await result in transcriber.results {
                     let text = String(result.text.characters)
                     if result.isFinal {
                         finalized += text
-                        onTranscript(finalized)
+                        latest = finalized
                     } else {
-                        onTranscript(finalized + text)
+                        latest = finalized + text
                     }
+                    onTranscript(latest)
                 }
             } catch {
                 // A finalize/cancel tears the results sequence down — the
                 // same quiet-stop shape as the legacy task's cancel().
             }
+            // The sequence ended — finalized through the end of input, or torn
+            // down. Either way these are the last words (prd §972).
+            onEnded(latest)
         }
     }
 
@@ -272,6 +361,15 @@ private final class ModernSpeechSession {
     func finish() async {
         inputContinuation.finish()
         resultsTask?.cancel()
+        try? await analyzer.finalizeAndFinishThroughEndOfInput()
+    }
+
+    /// End the input and let the analyzer finalize what it heard, WITHOUT
+    /// cancelling the results loop (prd §972) — so the final result reaches
+    /// `onEnded` instead of being torn down with the sequence, as `finish`
+    /// does for a discard.
+    func finishInput() async {
+        inputContinuation.finish()
         try? await analyzer.finalizeAndFinishThroughEndOfInput()
     }
 }

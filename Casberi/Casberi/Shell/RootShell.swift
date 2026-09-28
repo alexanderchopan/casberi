@@ -558,6 +558,9 @@ struct RootShell: View {
                 // which share a `sourceRef`, collapse in the same pass.
                 SourceRename.sweep(context: modelContext)
                 SourceRename.sweepSeats(bridges)
+                // Voice notes under the retired "Voice" source converge onto
+                // `You` (prd §972), in the same every-launch shape.
+                SourceRename.sweepVoice(context: modelContext)
                 #if DEBUG
                 // `[wall]` because these now yield: the figure is elapsed
                 // time across the suspensions, not main-actor time held, and
@@ -587,14 +590,11 @@ struct RootShell: View {
                         // demo-seed path; `Thing.isSample` is gone now (nothing set it
                         // true, and every container that reached v1 already purged),
                         // so lightweight migration simply drops the column.
-                        // One-time rename (2026-07-06): voice notes' source is
-                        // "Voice" now; older ones carried "You".
-                        let stale = (try? modelContext.fetch(FetchDescriptor<Thing>(
-                            predicate: #Predicate { $0.source == "You" }
-                        ))) ?? []
-                        for thing in stale where thing.kind == .voice {
-                            thing.source = "Voice"
-                        }
+                        // The 2026-07-06 rename that moved voice notes from
+                        // "You" to "Voice" is DELETED (prd §972): the name is
+                        // retired and `SourceRename.sweepVoice` moves them back
+                        // at every launch. Left here, it would undo that sweep
+                        // on a fresh install's first launch.
                         // One-time move (2026-07-07): voice audio used to live as
                         // loose files keyed by sourceRef; it belongs in the store
                         // so sync carries it. Load each file in, then remove it.

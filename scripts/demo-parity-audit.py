@@ -187,9 +187,10 @@ def ref_family(ref):
 
 # ── Check K — the demo never invents a kind ─────────────────────────────────
 #
-# A source the demo seeds but no bridge lands (`You`, `Voice`) has no bridge
-# opinion to disagree with; those are the app's own capture paths.
-KNOWN_NO_BRIDGE_KIND = {"You", "Voice", "Contacts"}
+# A source the demo seeds but no bridge lands (`You`) has no bridge opinion to
+# disagree with; that is the app's own capture path. "Voice" left with its
+# source (prd §972).
+KNOWN_NO_BRIDGE_KIND = {"You", "Contacts"}
 
 
 def check_k_kinds(demo, bridges):

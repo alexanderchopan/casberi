@@ -13,11 +13,10 @@ enum NoteSheetSource {
     /// The sources whose things are notes — writing kept to be read back.
     ///
     /// The catalog's `Notes` group (Obsidian, Day One, Apple Journal, Apple
-    /// Notes) plus two that sit elsewhere for good reasons and are notes all
-    /// the same: **Kindle**, which browses under `Reading` because that is
-    /// where you would look for it but lands marked passages, and **Voice**,
-    /// which has no catalog seat at all (it is an always-on device capability,
-    /// and `BridgeCatalog` maps it to the Notes category by hand).
+    /// Notes) plus **Kindle**, which browses under `Reading` because that is
+    /// where you would look for it but lands marked passages — a note all the
+    /// same. **Voice** left this set with its source (prd §972): a voice note
+    /// is kept under `You` and takes the kept-note anatomy (`isKeptNote`).
     ///
     /// **"Apple Notes" is in this set and nothing lands under it**, which is
     /// itself a finding rather than an oversight: the seat is share-sheet
@@ -35,7 +34,7 @@ enum NoteSheetSource {
     /// `note-sheet-selftest.sh`, so a renamed or added `Notes` seat fails the
     /// build rather than silently losing its anatomy.
     static let sources: Set<String> = [
-        "Obsidian", "Day One", "Apple Journal", "Apple Notes", "Kindle", "Voice",
+        "Obsidian", "Day One", "Apple Journal", "Apple Notes", "Kindle",
     ]
 
     static func isNotes(_ source: String) -> Bool { sources.contains(source) }
@@ -63,8 +62,11 @@ enum NoteSheetSource {
     /// force it to carry an exception forever.
     static let keptSource = "You"
 
+    /// A voice note is one too (prd §972): it was recorded here, under `You`
+    /// since the "Voice" source was retired, and it keeps the anatomy the
+    /// Voice seat gave it — the `recorded` act, no provenance sentence.
     static func isKeptNote(_ thing: Thing) -> Bool {
-        thing.source == keptSource && thing.kind == .note
+        thing.source == keptSource && (thing.kind == .note || thing.kind == .voice)
     }
 
     /// The one source whose export is a single named file worth naming.
@@ -257,10 +259,9 @@ enum NoteSheetSource {
     static func origin(for source: String) -> NoteReception.Origin {
         switch source {
         case "Obsidian":  return .vault
-        // Nothing was brought and nothing is read for either of these. The
-        // sentence they earn differs by ACT, not by origin — see
-        // `NoteReception.sentence`.
-        case "Voice":     return .device
+        // Nothing was brought and nothing is read for a note kept here — a
+        // typed one or a recorded one (prd §972). The sentence it earns
+        // differs by ACT, not by origin — see `NoteReception.sentence`.
         case keptSource:  return .device
         default:          return .export
         }

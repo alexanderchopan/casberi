@@ -196,13 +196,17 @@ if missing:
     print("  \u2717 catalog Notes seats missing from NoteSheetSource.sources: "
           + ", ".join(sorted(missing)))
     sys.exit(1)
-# Kindle browses under Reading and Voice has no seat at all — both are notes,
-# and both are named here so a rename of either is caught too.
-for extra in ("Kindle", "Voice"):
+# Kindle browses under Reading and is notes all the same — named here so a
+# rename is caught too. Voice is NOT in the set (prd §972): no source carries
+# the name, and a voice note takes the kept-note anatomy under `You`.
+for extra in ("Kindle",):
     if extra not in listed:
         print("  \u2717 %s is missing from NoteSheetSource.sources" % extra)
         sys.exit(1)
-print("  \u2713 every catalog Notes seat is in NoteSheetSource.sources (%d + Kindle + Voice)"
+if "Voice" in listed:
+    print("  \u2717 Voice is back in NoteSheetSource.sources — no source carries it (prd §972)")
+    sys.exit(1)
+print("  \u2713 every catalog Notes seat is in NoteSheetSource.sources (%d + Kindle, no Voice)"
       % len(offers))
 PY
 
@@ -250,12 +254,12 @@ guard "an inline wikilink resolves before it walks" \
 # §399's ruling: a note under `You` gets the anatomy, and claims nothing about
 # who wrote it.
 guard "a kept note reaches the anatomy" 'isKeptNote\(thing\)' "$SOURCE"
-guard "…and only when it is a note" \
-  'thing\.source == keptSource && thing\.kind == \.note' "$SOURCE"
+guard "…and only when it is a note, typed or recorded (prd §972)" \
+  'thing\.source == keptSource && \(thing\.kind == \.note \|\| thing\.kind == \.voice\)' "$SOURCE"
 # NOT by joining `sources`, which the catalog guard below checks against the
 # Notes group — `You` is not a catalog seat.
 absent "You is not smuggled into the catalog-checked source set" \
-  '"Obsidian", "Day One", "Apple Journal", "Apple Notes", "Kindle", "Voice", "You"' "$SOURCE"
+  '"Obsidian", "Day One", "Apple Journal", "Apple Notes", "Kindle", "You"' "$SOURCE"
 # The day shelf excludes SIBLINGS, not the whole source — the old rule hid every
 # screenshot, link and voice note from the same day in the room this widened to.
 guard "the day shelf excludes same source AND same kind" \
@@ -445,7 +449,7 @@ check("a vault with no path still says where it read from",
                                   words: 300))?
         .provenance == "Read from your Obsidian vault.")
 check("a device note has NO sentence (prd §632) — nothing for it to name",
-      NoteReception.compose(input(source: "Voice", origin: .device,
+      NoteReception.compose(input(source: "You", origin: .device,
                                   act: .recorded, words: 310))?
         .provenance == nil)
 check("an export names the source",
@@ -734,7 +738,7 @@ let keptDevice = NoteReception.compose(.init(
 check("a short note typed here has NO reception block at all (prd §632)",
       keptDevice == nil)
 let recorded = NoteReception.compose(.init(
-    shape: .entry, source: "Voice", origin: .device, act: .recorded,
+    shape: .entry, source: "You", origin: .device, act: .recorded,
     words: 400, writtenAt: date(2026, 5, 14), landedAt: date(2026, 5, 14),
     now: date(2026, 6, 1)))!
 check("a long voice note keeps its readings and still says no sentence",
