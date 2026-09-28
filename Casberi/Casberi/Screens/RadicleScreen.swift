@@ -134,7 +134,7 @@ struct RadicleScreen: View {
                             ?? repo.delegates.map(\.display).joined(separator: ", "))
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 

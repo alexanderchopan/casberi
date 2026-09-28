@@ -105,7 +105,7 @@ struct WalletbeatReportCard: View {
 				.dsText(.subhead12)
 				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
 		}
-		.buttonStyle(.plain)
+		.buttonStyle(RowPress())
 		.dsHover()
 	}
 
@@ -153,7 +153,7 @@ struct WalletbeatReportCard: View {
 					}
 					.contentShape(Rectangle())
 				}
-				.buttonStyle(.plain)
+				.buttonStyle(RowPress())
 				// A bar is tappable only once the attributes it summarises exist to scroll
 				// to. Before the live read lands there is no anchor, and a control that
 				// does nothing is the dead control §83 bans.
@@ -421,7 +421,7 @@ struct WalletbeatAttributeRow: View {
 							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}
-					.buttonStyle(.plain)
+					.buttonStyle(RowPress())
 					.dsHover()
 					.padding(.top, DS.Space.s1)
 				}

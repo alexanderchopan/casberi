@@ -65,7 +65,7 @@ struct RoomFramesFigure: View {
                     }
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 .opacity(dim ? 0.35 : 1)
                 .frame(maxWidth: 44)
                 .accessibilityLabel(Text(run.steps.count == 1 ? String(localized: "1 frame")

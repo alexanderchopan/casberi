@@ -424,7 +424,7 @@ struct WalletNFTCollectionRows: View {
                 DSHaptic.selection()
                 onOpen(collection.id, collection.name)
             } label: { body.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
         } else {
             body

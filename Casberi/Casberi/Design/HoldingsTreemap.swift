@@ -231,7 +231,7 @@ struct HoldingsTreemap: View {
             .opacity(lit != nil && !isLit ? 0.35 : 1)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .accessibilityLabel(Text("\(isOther ? String(localized: "Other") : tile.id), \(HoldingsTreemapLayout.percent(tile.share))"))
         .accessibilityAddTraits(isLit ? .isSelected : [])
     }

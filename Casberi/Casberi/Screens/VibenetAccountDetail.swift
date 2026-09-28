@@ -656,7 +656,7 @@ struct VibenetAccountDetail: View {
                             } label: {
                                 keyRow(actor, door: true).contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(RowPress())
                             .dsHover()
                             .chartArrival(index: index, reduceMotion: reduceMotion)
                         } else {
@@ -717,7 +717,7 @@ struct VibenetAccountDetail: View {
                     .dsText(.label12)
                     .foregroundStyle(Self.mark)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
             .padding(.top, DS.Space.s3)
             .id(lockScreenTick)
@@ -1091,14 +1091,14 @@ struct VibenetAccountDetail: View {
         if sub.watched, let onScope {
             Button { DSHaptic.selection(); onScope(sub.address) }
                 label: { inner.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
         } else if !sub.watched {
             Button {
                 DSHaptic.selection()
                 VibenetWatch.shared.add(sub.address)
             } label: { inner.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
         } else {
             inner

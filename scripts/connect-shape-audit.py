@@ -164,7 +164,12 @@ def check_status_last(name, body):
 
 # ── check 3 ────────────────────────────────────────────────────────────────
 
-PLAIN_BUTTON = re.compile(r"Button\s*(?:\(action:[^\n]*\)\s*)?\{((?:.|\n){0,500}?)\.buttonStyle\(\.plain\)")
+# `.plain`, `RowPress()` or `PressSpring()`: since prd §965 a Button carries one
+# of the two press styles, so a check keyed on `.plain` alone would go blind on
+# every site the sweep touched (the §720 class — a rule that reaches only what
+# still spells it the old way).
+PLAIN_BUTTON = re.compile(r"Button\s*(?:\(action:[^\n]*\)\s*)?\{((?:.|\n){0,500}?)"
+                          r"\.buttonStyle\((?:\.plain|RowPress\(\)|PressSpring\(\))\)")
 
 
 def check_controls_are_slabs(name, body):
@@ -307,6 +312,10 @@ struct X: View {
 }
 '''
 
+# The same link wearing the press style every Button carries since §965: the
+# check must still see it, or the sweep that added the style blinded it.
+DIRTY_LINK_PRESSED = DIRTY_LINK.replace(".buttonStyle(.plain)", ".buttonStyle(RowPress())")
+
 CONTENT_LINK = '''
 struct X: View {
     var body: some View {
@@ -362,6 +371,8 @@ def self_test():
          check_status_last, CLEAN_STATUS, False)
     case("catches a blue text link doing a control's job in a slab block",
          check_controls_are_slabs, DIRTY_LINK, True)
+    case("still catches it wearing RowPress, the style every Button carries since §965",
+         check_controls_are_slabs, DIRTY_LINK_PRESSED, True)
     case("passes a content disclosure on a screen that is not a connect page",
          check_controls_are_slabs, CONTENT_LINK, False)
     case("ignores the banned shape quoted in a comment",

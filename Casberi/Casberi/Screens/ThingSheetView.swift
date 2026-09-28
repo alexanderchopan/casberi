@@ -396,7 +396,7 @@ struct ThingSheetView: View {
                                 // DRAWN 30, TARGETED 44.
                                 .dsTapTarget(Circle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressSpring())
                         .dsHover()
                         .accessibilityLabel(Text("Back"))
                         // A bare chevron: the tooltip names it on Mac with the
@@ -1653,7 +1653,7 @@ struct ThingSheetView: View {
                         sourceLine
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsHover()
                 } else {
                     sourceLine
@@ -1676,7 +1676,7 @@ struct ThingSheetView: View {
             } label: {
                 faceMark
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .dsHover()
             // A bare face: the only control here with no word in it.
             .accessibilityLabel(Text("Open profile"))
@@ -2819,7 +2819,7 @@ struct ThingSheetView: View {
                                title: tracking ? Text("Stop watching it")
                                                : Text("Watch it from the lock screen"))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
             .frame(maxWidth: .infinity)
             .onAppear { tracking = MoneyActivityDriver.isTracking(id) }
@@ -3065,7 +3065,7 @@ struct ThingSheetView: View {
                                        String(localized: "Carry on with \($0.agent)")
                                    } ?? String(localized: "Carry on")))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
             }
         }
@@ -3121,7 +3121,7 @@ struct ThingSheetView: View {
                     }
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
             }
         }
@@ -3166,7 +3166,7 @@ struct ThingSheetView: View {
                         }
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsHover()
                 }
             }
@@ -3234,7 +3234,7 @@ struct ThingSheetView: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .accessibilityHint(Text("Opens Calendar on this day"))
             .dsHover()
             // The words' column, under the title it belongs to (§885).
@@ -3273,7 +3273,7 @@ struct ThingSheetView: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)

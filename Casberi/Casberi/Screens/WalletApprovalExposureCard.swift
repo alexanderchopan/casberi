@@ -148,7 +148,7 @@ struct WalletApprovalExposureCard: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .padding(.vertical, DS.Space.s2)
     }
 
@@ -189,7 +189,7 @@ struct WalletApprovalExposureCard: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .padding(.vertical, DS.Space.s2)
     }
 }

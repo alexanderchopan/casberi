@@ -125,7 +125,7 @@ struct DSRangeChips<Option: Hashable>: View {
                             .frame(minHeight: Self.hit)
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressSpring())
                     .accessibilityAddTraits(r == range ? .isSelected : [])
                 }
                 Spacer(minLength: 0)

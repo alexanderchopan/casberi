@@ -609,7 +609,7 @@ extension PrivacyDevnetRoomCard {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         } else {
             // A preview has no sheet to open, so no chevron and no button —
             // a chevron over a dead tap is §83's fake promise.
@@ -993,7 +993,7 @@ extension PrivacyDevnetRoomCard {
                                       title: title)
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                         .accessibilityLabel(String(localized: "Spend key \(i + 1), used once. Opens its transaction."))
                     } else {
                         WalletRow(terminal: .symbol("key.fill", tint: Self.tint),
@@ -1062,7 +1062,7 @@ extension PrivacyDevnetRoomCard {
                             }
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                     } else {
                         WalletRow(mark: mark, title: title,
                                   subtitleText: Self.standingMeta(group.newest,
@@ -1280,7 +1280,7 @@ struct PrivacyDevnetExampleDoors: View {
                     .frame(minHeight: DS.Hit.min)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

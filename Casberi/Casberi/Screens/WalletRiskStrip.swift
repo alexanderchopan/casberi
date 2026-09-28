@@ -117,7 +117,7 @@ struct WalletRiskStrip: View {
         }()
         if let door {
             Button(action: door) { block.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
         } else {
             block
         }

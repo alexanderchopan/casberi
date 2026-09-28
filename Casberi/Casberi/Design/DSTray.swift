@@ -109,7 +109,7 @@ struct DSTray<Content: View>: View {
                 if !inPane {
                     Spacer(minLength: DS.Space.s3)
                     Button(String(localized: "Done")) { dismiss() }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                         .dsText(.body17)
                         .foregroundStyle(DS.tint)
                 }

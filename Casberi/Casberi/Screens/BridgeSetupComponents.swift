@@ -247,7 +247,7 @@ struct AgentActiveStatusRow: View {
                         DSPushRowTrail(fact: Text("Make active"), factTone: DS.tint, opens: false)
                             .dsTapTarget()
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsHover()
                 }
             }
@@ -390,7 +390,7 @@ struct BridgeSearchResultRow: View {
                 Spacer()
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsListRow()
     }
 }

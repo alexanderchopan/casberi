@@ -326,7 +326,7 @@ struct DSSlabField: View {
             .animation(DS.Motion.standard, value: live)
             .dsActRowFrame(glyphless: glyph == nil)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .disabled(!live)
     }
 
@@ -354,7 +354,7 @@ struct DSSlabField: View {
                 .foregroundStyle(DS.textTertiary)
                 .dsTapTarget(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .accessibilityLabel(Text("Clear"))
     }
 
@@ -384,7 +384,7 @@ struct DSSlabField: View {
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .transition(.opacity)
             }
             // An EMPTY verb means this slab is one of a pair — the first of
@@ -399,7 +399,7 @@ struct DSSlabField: View {
                         .foregroundStyle(armed ? DS.tint : DS.textTertiary)
                         .animation(DS.Motion.standard, value: armed)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .disabled(!armed)
             }
         }
@@ -602,7 +602,7 @@ struct DSSlabButton: View {
             .dsActRowFrame(glyphless: systemImage == nil)
             .animation(DS.Motion.standard, value: busy)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .disabled(!enabled || busy)
         .dsDoorWayOut(url)
     }
@@ -652,7 +652,7 @@ struct DSSlabButton: View {
             .animation(DS.Motion.standard, value: busy)
             .animation(DS.Motion.standard, value: enabled)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .disabled(!enabled || busy)
         .dsDoorWayOut(url)
     }
@@ -748,7 +748,7 @@ struct DSSlabDoor: View {
             }
             .dsActRowFrame(glyphless: systemImage == nil)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .disabled(inert)
         .opacity(inert ? 0.5 : 1)
         .dsDoorWayOut(url)
@@ -784,7 +784,7 @@ struct DSSlabDoor: View {
             .background(DS.gray100, in: DSSlab.shape)
             .contentShape(DSSlab.shape)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .disabled(inert)
         .opacity(inert ? 0.5 : 1)
         .dsDoorWayOut(url)

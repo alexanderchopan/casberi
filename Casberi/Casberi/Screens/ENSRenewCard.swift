@@ -105,7 +105,7 @@ struct ENSRenewCard: View {
                             RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
                                 .fill(option == term ? DS.fillStrong : DS.fillFaint))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
             }
         }
     }

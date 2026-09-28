@@ -2030,7 +2030,7 @@ struct VibenetRoomCard: View {
                           room.items.first { $0.address == key.address } ?? room.items[0],
                           [])
             } label: { row.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
         } else {
             row
@@ -2367,7 +2367,7 @@ struct VibenetRoomCard: View {
                 .background(Capsule(style: .continuous)
                     .fill(on ? DS.fillStrong : DS.fillFaint))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
     }
 
@@ -2391,7 +2391,7 @@ struct VibenetRoomCard: View {
                 .frame(minWidth: DS.Hit.min, minHeight: DS.Hit.min)
                 .background(Capsule(style: .continuous).fill(DS.fillFaint))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         .accessibilityLabel(Text(String(localized: "Address book")))
     }
@@ -2454,7 +2454,7 @@ struct VibenetRoomCard: View {
             .background(Capsule(style: .continuous)
                 .fill(on ? DS.fillStrong : DS.fillFaint))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
     }
 
@@ -2640,7 +2640,7 @@ struct VibenetRoomCard: View {
                 .padding(.vertical, DS.Space.s2)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
             if linksOpen {
                 VibenetLinkSpine(links: links,
@@ -2709,7 +2709,7 @@ struct VibenetRoomCard: View {
                     DSHaptic.selection()
                     onScope(item.address)
                 } label: { accountRowBody(item, door: true) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsHover()
             } else {
                 accountRowBody(item, door: false)
@@ -2931,7 +2931,7 @@ struct VibenetRoomCard: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
         } else {
             Text(aggregate.countHeadline)
@@ -3264,7 +3264,7 @@ struct VibenetRoomCard: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .padding(.vertical, isLead ? 0 : DS.Space.s2)
         .contextMenu {
             Button {

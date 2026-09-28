@@ -306,7 +306,7 @@ struct SafeScreen: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
             } else {
                 DSSlabDoor(title: String(localized: "Make this phone a signer"),
                            systemImage: "signature") {
@@ -460,7 +460,7 @@ struct SafeScreen: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
             } else if SafeEnclaveKey.enclaveAvailable, enclaveRoute == true {
                 DSSlabDoor(title: String(localized: "Make a vault-chip key"), systemImage: "cpu") {
                     makeEnclaveKey()

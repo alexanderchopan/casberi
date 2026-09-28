@@ -245,7 +245,7 @@ struct SocialQuoteCard: View {
     var body: some View {
         if walkable {
             Button { walking = true } label: { cardBody }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .sheet(isPresented: $walking) {
                     SocialPostSheet(post: card, source: source)
                 }
@@ -325,7 +325,7 @@ struct SocialPostThread: View {
                     } label: {
                         header
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                 } else {
                     header
                 }
@@ -339,7 +339,7 @@ struct SocialPostThread: View {
                         Text("Open on \(source)")
                             .dsText(.body17).foregroundStyle(DS.tint)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                 }
                 if !replies.isEmpty {
                     SocialRepliesSection(replies: replies, source: source, open: open)
@@ -424,7 +424,7 @@ struct SocialRepliesSection: View {
             // wearing a tap that would go nowhere — no dead controls.
             if reply.ref != nil {
                 Button { open(reply.card) } label: { words(reply) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
             } else {
                 words(reply)
             }
@@ -446,7 +446,7 @@ struct SocialRepliesSection: View {
                 profile = SocialProfile(source: source, handle: reply.handle,
                                         displayName: nil, bio: nil, avatarURL: reply.avatarURL)
             } label: { avatarIcon(reply) }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .accessibilityLabel(Text("Open profile for \(reply.handle)"))
         } else {
             avatarIcon(reply)

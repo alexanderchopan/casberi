@@ -185,7 +185,7 @@ struct RSSScreen: View {
                 Text("Import an OPML file")
                     .dsText(.subhead12).foregroundStyle(DS.tint)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             if !rss.feeds.isEmpty, let exportURL {
                 Text("·").dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 ShareLink(item: exportURL) {
@@ -239,7 +239,7 @@ struct RSSScreen: View {
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 

@@ -969,6 +969,13 @@ enum DS {
 /// The press feel for tappable tiles and pills: a soft spring dip, matching
 /// iOS's own control feedback (polish 2026-07-07; on `DS.Motion.press` since
 /// the 2026-08-04 spring unification).
+///
+/// **EVERY `Button` WEARS THIS OR `RowPress` (prd §965, 2026-09-28).** A
+/// control that is its own shape — a disc, a chip, a face, a kind tile, a
+/// pack cell, a slab card — dips here; a control the width of its column, or
+/// a bare word, settles and dims through `RowPress`. `.buttonStyle(.plain)`
+/// on a Button is an instant dim with no motion, and 196 of them stood in
+/// the rooms until that pass; `ds-template-audit.py` check D fails one now.
 struct PressSpring: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -999,6 +1006,11 @@ struct PressLift: ButtonStyle {
 /// full-size slab. Instead: a near-imperceptible settle plus a dim — the
 /// UIKit cell-highlight grammar, sprung. Shared here (not in FeedScreen) so
 /// any future list of bare rows presses the same way.
+///
+/// Since prd §965 it is the press of every row-shaped Button in the app —
+/// door rows, push rows, the devnets' account and move rows, a room head's
+/// lines, a sheet's eyebrow, a text link — and the reason is the one above:
+/// a full-width row dipping 4% reads as a tile, and a row is not a tile.
 struct RowPress: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

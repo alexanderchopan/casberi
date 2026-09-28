@@ -173,7 +173,7 @@ struct VibenetKeySheet: View {
             Button { onScope?(item.address) } label: {
                 WalletFace(address: item.address, size: DS.Face.shelf, circular: true)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .disabled(onScope == nil)
             .dsHover()
         },

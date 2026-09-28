@@ -568,7 +568,7 @@ extension FeedScreen {
             .padding(.vertical, DS.Space.s2)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
     }
 
     /// **THE LEVERAGED POSITIONS, THE BARS' OWN LEGEND (prd §947).** One row
@@ -1294,7 +1294,7 @@ extension FeedScreen {
                                           title: thing.title,
                                           subtitle: Self.dueLine(thing))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(RowPress())
                         }
                     }
                 }

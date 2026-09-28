@@ -1353,7 +1353,7 @@ struct OnThisDayHero: View {
             .dsRoomHeadBlock()
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsRoomHeadPlacement()
         .accessibilityLabel(Text("\(echo.label). \(echo.thing.title)"))
     }
@@ -1511,7 +1511,7 @@ struct CalendarHeatmapHero: View {
                     .dsTapTarget()
                     .padding(.top, DS.Space.s1)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
             }
         }
@@ -1741,7 +1741,7 @@ struct LiveStreamHero: View {
             .dsWell(cornerRadius: DS.Radius.widget)
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         // The frame IS the well (prd §766): its edge stands where every other
         // lead's box does.
         .dsRoomHeadPlacement()
@@ -2013,7 +2013,7 @@ private struct GenMediaTile: View {
                 DSHaptic.selection()
                 openURL(url)
             } label: { frame }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         } else {
             frame.pinnedRowActions(id: thingId, openable: openable,
                                    open: thingOpen, handoff: thingHandoff)
@@ -2186,7 +2186,7 @@ struct GenSection: View {
                 header
             } else {
                 Button { roomOpen?(room) } label: { header.contentShape(Rectangle()) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsTapCard()
             }
         }
@@ -3782,7 +3782,7 @@ private struct GenFaces: View {
                                             .frame(maxWidth: size(i) + 16)
                                     }
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(PressSpring())
                                 .disabled(p.id.isEmpty)
                                 .chartArrival(index: i, reduceMotion: reduceMotion)
                             }
@@ -4138,7 +4138,7 @@ private struct GenAlerts: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                         .disabled(item.id.isEmpty)
                     }
                 }
@@ -4515,7 +4515,7 @@ struct GenFrontPage: View {
                 .padding(.horizontal, DS.Space.s4)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .disabled(!hasDoor)
             // A roomless section shows its own modules — see the door note
             // above. These are the visual ones ("Your day"'s contact sheet,
@@ -5109,7 +5109,7 @@ private struct GenDayNoteLine: View {
             line
         } else {
             Button { thingOpen?(id) } label: { line }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
         }
     }
 }
@@ -5472,7 +5472,7 @@ private struct GenMoneyHero: View {
                         KindGlyph(kind: .transaction, size: 28)
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .disabled(el.str(8).isEmpty)
             } else if !el.str(3).isEmpty {
                 Text(el.str(3))
@@ -5659,7 +5659,7 @@ private struct GenLeadRow: View {
             .padding(.vertical, DS.Space.s2)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .disabled(el.str(3).isEmpty)
     }
 }
@@ -5714,7 +5714,7 @@ private struct GenLeadPost: View {
             .padding(.vertical, DS.Space.s2)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .disabled(el.str(4).isEmpty)
     }
 }
@@ -5746,7 +5746,7 @@ private struct GenAskMore: View {
                     .padding(.vertical, DS.Space.s2)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
             }
         }
     }
@@ -5895,7 +5895,7 @@ private struct GenMoversTile: View {
                             }
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                         .disabled(m.thingID.isEmpty)
                     }
                 }
@@ -6060,7 +6060,7 @@ private struct GenNextTile: View {
             card
         } else {
             Button { thingOpen?(id) } label: { card }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
         }
     }
 }

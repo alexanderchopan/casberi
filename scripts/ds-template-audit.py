@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Design-template audit (prd §715, 2026-09-13; check C prd §746, 2026-09-15).
+"""Design-template audit (prd §715, 2026-09-13; check C prd §746, 2026-09-15;
+check D prd §965, 2026-09-28).
 
 WHY THIS EXISTS. User: "where if anywhere in the app do we have hand rolled
 things we should be using templates for" → "do all". The sweep found the
@@ -40,6 +41,27 @@ a file whose allowance is spent to zero fails as stale (delete the entry). A
 file under its allowance passes with a note to tighten it, because the files
 named "owned elsewhere" are being rewritten by other sessions at the same time
 and a check that fails the moment they delete a capsule punishes the fix.
+
+  D. A `Button` STYLED `.plain` (prd §965). User: "all the buttons in the rooms
+     [should] have some very subtle micro animation when you touch them". The
+     app has had two press styles since 2026-08-04 — `PressSpring` (a 0.96 dip
+     for a disc, a chip, a face, a tile) and `RowPress` (a 0.99 settle plus a
+     dim for a row or a word) — and 190 Buttons wore neither: `.plain` gives
+     an instant dim with no motion, so a wallet verb, a GitHub tile, a
+     devnet's account row and every door row answered the finger with a
+     flicker. A Button carries one of the two now, and `.plain` on a Button is
+     a finding. `.plain` on a `ShareLink`, a `Menu`, a `Link` or a
+     `NavigationLink` is untouched — `sharelink-style-audit.py` REQUIRES it on
+     a share control in a List row (§693), and those controls draw their own
+     press. Check D reads `Design/` too, because the templates are where a
+     plain Button reaches every screen at once.
+
+HOW D TELLS WHOSE STYLE IT IS. The modifier's expression chain is walked
+backwards over balanced braces and parens to its head: `Button {…} label: {…}`,
+`Button(action:) {…}` and `Button("x") {…}.dsText(…)` all resolve to `Button`;
+`ShareLink {…}`, `content.buttonStyle(.plain)` in a ViewModifier and
+`Group {…}.buttonStyle(.plain)` do not. A style handed to a container that
+holds Buttons is the stated ceiling — none exists in the tree today.
 
 A fourth check — a copy capsule's "Copied"/"Copy" state pair → `DSCopyCapsule`
 — was written and REMOVED on 2026-09-13 when its only match was the reusable
@@ -97,6 +119,84 @@ EXEMPT = {
                                    "action (§717 kept GenUI kinds) — owed: whether an inert verb shape may render at all is a "
                                    "§83 ruling, not a shape swap"),
 }
+
+# ── D. A Button pressed by nothing (prd §965) ─────────────────────────────────
+PRESS_WHY = ("a Button styled .plain answers the finger with a flicker — a row or a word "
+             "takes RowPress(), a disc, chip, face or tile takes PressSpring()")
+PLAIN_STYLE = re.compile(r"\.buttonStyle\(\s*\.plain\s*\)")
+
+# The same ratchet as C: path relative to Casberi/Casberi → (plain Buttons it
+# may still carry, why). Each is a control whose press is drawn by something
+# other than a ButtonStyle, or a surface whose touch handling is measured and
+# user-protected.
+EXEMPT_PLAIN = {
+    "Shell/SourceChips.swift": (1, "the dock chip lifts on the pointer wave and is the travelling fill's "
+                                   "source frame (§359); a press dip would move the fill's anchor"),
+    "Shell/DockFolderRow.swift": (2, "the dock, a user-protected differentiator: nothing about it changes here"),
+    "Shell/TopDoors.swift": (1, "the face door's tap is a highPriorityGesture (the pager pan), so the "
+                                "Button's own press never fires — a style there would be dead"),
+    "Shell/RoomsTray.swift": (1, "the tray's scrim: a full-screen dismiss, not a control anyone looks at"),
+    "Screens/DevnetSendConsole.swift": (1, "the keypad draws its own pressed circle inside the key (§553)"),
+}
+
+
+def _matching_opener(src: str, close: int) -> int:
+    """Index of the bracket opening the one at `close`, or -1."""
+    depth, i = 0, close
+    while i >= 0:
+        ch = src[i]
+        if ch in ")}]":
+            depth += 1
+        elif ch in "({[":
+            depth -= 1
+            if depth == 0:
+                return i
+        i -= 1
+    return -1
+
+
+def press_host(src: str, pos: int) -> str:
+    """The control a `.buttonStyle` at `pos` styles — the head of its chain.
+
+    Walks back over balanced brackets, trailing-closure labels (`label:`) and
+    dotted modifiers until it reaches a bare identifier: `Button`, `ShareLink`,
+    `Group`, `content`, ... An empty string means the chain could not be read.
+    """
+    i = pos - 1
+    while True:
+        while i >= 0 and src[i] in " \t\n":
+            i -= 1
+        if i < 0:
+            return ""
+        if src[i] in ")}]":
+            opener = _matching_opener(src, i)
+            if opener < 0:
+                return ""
+            i = opener - 1
+            continue
+        if src[i] == ":":            # `label:` / `action:` — a closure's label
+            i -= 1
+            name = _ident_before(src, i + 1)
+            i -= len(name)
+            continue
+        name = _ident_before(src, i + 1)
+        if not name:
+            return ""
+        j = i - len(name)            # index before the identifier
+        k = j
+        while k >= 0 and src[k] in " \t\n":
+            k -= 1
+        if k >= 0 and src[k] == ".":  # a modifier in the chain, keep walking
+            i = k - 1
+            continue
+        return name
+
+
+def plain_button_lines(src: str):
+    """1-based line numbers of every `.buttonStyle(.plain)` styling a Button."""
+    return [src.count("\n", 0, m.start()) + 1
+            for m in PLAIN_STYLE.finditer(src)
+            if press_host(src, m.start()) == "Button"]
 
 
 def strip_comments(text: str) -> str:
@@ -203,15 +303,29 @@ def pill_lines(src: str):
     return sorted(lines)
 
 
-def scan(root: Path, exempt=None):
+def scan(root: Path, exempt=None, exempt_plain=None):
     exempt = EXEMPT if exempt is None else exempt
+    exempt_plain = EXEMPT_PLAIN if exempt_plain is None else exempt_plain
     findings, notes = [], []
     app = root / APP
     for path in sorted(app.rglob("*.swift")):
         rel = path.relative_to(app)
+        src = strip_comments(path.read_text(encoding="utf-8"))
+        # D reads Design/ too: a plain Button in a template reaches every screen.
+        key = rel.as_posix()
+        plain = plain_button_lines(src)
+        allowed, reason = exempt_plain.get(key, (0, ""))
+        if key in exempt_plain and not plain:
+            findings.append(("D", f"{APP}/{key}",
+                             "stale exemption — this file styles no Button .plain now; delete its entry"))
+        elif len(plain) > allowed:
+            for no in plain:
+                findings.append(("D", f"{APP}/{key}:{no}",
+                                 PRESS_WHY + (f" (allowance {allowed}: {reason})" if key in exempt_plain else "")))
+        elif key in exempt_plain and len(plain) < allowed:
+            notes.append(f"  note: {APP}/{key} styles {len(plain)} of its {allowed} plain — tighten the allowance")
         if rel.parts and rel.parts[0] == "Design":
             continue
-        src = strip_comments(path.read_text(encoding="utf-8"))
         for no, line in enumerate(src.split("\n"), 1):
             for tag, rx, why in CHECKS:
                 if rx.search(line):
@@ -234,14 +348,14 @@ def scan(root: Path, exempt=None):
 def self_test() -> int:
     ok = True
 
-    def run(planted, exempt=None):
+    def run(planted, exempt=None, exempt_plain=None):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             for rel, body in planted.items():
                 p = root / APP / rel
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text(body)
-            return scan(root, exempt or {})
+            return scan(root, exempt or {}, exempt_plain or {})
 
     # A and B, as before.
     got, _ = run({
@@ -317,6 +431,61 @@ def self_test() -> int:
     case = (not within and len(over) == 2 and len(stale) == 1
             and "stale" in stale[0][2] and not under and len(notes) == 1)
     print(f"  {'ok  ' if case else 'FAIL'} C's ratchet: within passes, over fails, stale fails, under notes")
+    ok &= case
+
+    # D — every spelling of a Button styled .plain fires, in Screens/ AND Design/.
+    dirty_plain = (
+        'struct Plain: View { var body: some View { VStack {\n'
+        '  Button { go() } label: {\n'
+        '      Text("a").contentShape(Rectangle())\n'
+        '  }\n'
+        '  .buttonStyle(.plain)\n'                                                  # 5
+        '  Button(role: .destructive, action: act) { Text("b") }\n'
+        '      .buttonStyle(.plain)\n'                                              # 7
+        '  Button("c") { go() }\n'
+        '      .dsText(.body17)\n'
+        '      .foregroundStyle(DS.tint)\n'
+        '      .buttonStyle(.plain)\n'                                              # 11
+        '  if let act { Button(action: act) { row } .buttonStyle( .plain ) }\n'      # 12
+        '} } }\n')
+    got, _ = run({"Screens/Plain.swift": dirty_plain,
+                  "Design/DSPlain.swift": 'struct DSPlain: View { var body: some View { Button { go() } label: { Text("x") }.buttonStyle(.plain) } }\n'})
+    lines = sorted(int(loc.rsplit(":", 1)[1]) for t, loc, _ in got if t == "D" and "Screens" in loc)
+    design = [loc for t, loc, _ in got if t == "D" and "Design" in loc]
+    case = lines == [5, 7, 11, 12] and len(design) == 1
+    print(f"  {'ok  ' if case else 'FAIL'} D fires on every spelling of a plain Button, Design/ included ({lines}, {len(design)})")
+    ok &= case
+
+    # D — THE DISCRIMINATING ONE: the two press styles, the controls that draw
+    # their own press, a style handed to `content`, and a comment.
+    clean_plain = (
+        '// Button { } label: { }.buttonStyle(.plain) in a comment\n'
+        'struct Pressed: View { var body: some View { VStack {\n'
+        '  Button { go() } label: { Text("a") }.buttonStyle(RowPress())\n'
+        '  Button { go() } label: { Chip(text: "b") }.buttonStyle(PressSpring())\n'
+        '  ShareLink(item: url) { Text("c") }.buttonStyle(.plain)\n'
+        '  Menu { Button("d") { go() } } label: { Text("d") }.buttonStyle(.plain)\n'
+        '  Link("e", destination: url).buttonStyle(.plain)\n'
+        '  NavigationLink(value: node) { Text("f") }.buttonStyle(.plain)\n'
+        '} } }\n'
+        'struct Ground: ViewModifier {\n'
+        '  func body(content: Content) -> some View { content.buttonStyle(.plain) }\n'
+        '}\n')
+    got, _ = run({"Screens/Pressed.swift": clean_plain})
+    case = not [f for f in got if f[0] == "D"]
+    print(f"  {'ok  ' if case else 'FAIL'} D stays quiet on the press styles, ShareLink/Menu/Link, content and comments ({got})")
+    ok &= case
+
+    # D — the ratchet, both directions.
+    one_plain = 'struct One: View { var body: some View { Button { go() } label: { Text("a") }.buttonStyle(.plain) } }\n'
+    two_plain = one_plain + 'struct Two: View { var body: some View { Button("b") { go() }.buttonStyle(.plain) } }\n'
+    within, _ = run({"Shell/Dock.swift": one_plain}, exempt_plain={"Shell/Dock.swift": (1, "the dock")})
+    over, _ = run({"Shell/Dock.swift": two_plain}, exempt_plain={"Shell/Dock.swift": (1, "the dock")})
+    stale, _ = run({"Shell/Dock.swift": none}, exempt_plain={"Shell/Dock.swift": (1, "the dock")})
+    under, notes = run({"Shell/Dock.swift": one_plain}, exempt_plain={"Shell/Dock.swift": (2, "the dock")})
+    case = (not within and len(over) == 2 and len(stale) == 1
+            and "stale" in stale[0][2] and not under and len(notes) == 1)
+    print(f"  {'ok  ' if case else 'FAIL'} D's ratchet: within passes, over fails, stale fails, under notes")
     ok &= case
 
     print(f"ds-template-audit self-test: {'OK' if ok else 'FAIL'}")

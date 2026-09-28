@@ -144,7 +144,7 @@ struct ReplyingToCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
         .accessibilityLabel(Text("Replying to \(parent.handle). Opens the post."))
     }
@@ -198,7 +198,7 @@ struct SocialPersonContent: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
             .accessibilityHint(Text("Opens their profile"))
             .dsTooltip(String(localized: "Opens their profile"))
@@ -236,7 +236,7 @@ struct SocialPersonContent: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
     }
 }

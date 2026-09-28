@@ -1576,7 +1576,7 @@ struct HegotaChainNotice: View {
                         Text(String(localized: "Start again from the new chain"))
                             .dsText(.subhead12).foregroundStyle(DS.tint)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1960,7 +1960,7 @@ struct HegotaRoomList: View {
             .opacity(spent ? 0.72 : 1)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
     }
 
     private func coinOrigin(_ coin: HegotaCoin) -> String {
@@ -2129,7 +2129,7 @@ struct HegotaMoveRow: View {
         } label: {
             row.contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .padding(.leading, inset ? DS.Space.s6 : 0)
     }
 
@@ -2292,7 +2292,7 @@ struct HegotaMoveSheet: View {
                 Text(String(localized: "Watch \(WalletStore.shortAddress(address))"))
                     .dsText(.body17).foregroundStyle(DS.tint)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 
@@ -2574,7 +2574,7 @@ struct HegotaMoveSheet: View {
                     } label: {
                         frameRow(index: index, frame: frame).contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                 }
             }
         }
@@ -2849,7 +2849,7 @@ struct HegotaFrameSheet: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
     }
 
     /// Where this step sat in the sequence — the whole strip again, with this
@@ -3315,7 +3315,7 @@ struct HegotaAccountSheet: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
     }
 
     /// **THE OTHER HALF OF THE MONEY, and a door to it.** Coins live in the
@@ -3345,7 +3345,7 @@ struct HegotaAccountSheet: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 

@@ -141,7 +141,7 @@ struct L2beatMilestoneHead: View {
 				.frame(maxWidth: .infinity, alignment: .leading)
 				.contentShape(Rectangle())
 			}
-			.buttonStyle(.plain)
+			.buttonStyle(RowPress())
 			.dsHover()
 		}
 	}

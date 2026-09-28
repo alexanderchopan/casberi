@@ -110,7 +110,7 @@ struct AgentChatThread: View {
                             .dsText(.subhead12)
                             .foregroundStyle(DS.tint)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     // The pending state is keyed to THIS room (§841): a global
                     // flag drew "Asking Claude…" in Claude's room for a
                     // question Bankr was answering.
@@ -185,7 +185,7 @@ struct AgentChatEntry: View {
                     // (§83) — it never just ignores the tap.
                     .foregroundStyle(canSend ? DS.tint : DS.textTertiary)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .disabled(!canSend)
             // The glyph is 28pt, so the TARGET was 28pt — under the 44pt
             // floor, on the one control this surface exists to press.

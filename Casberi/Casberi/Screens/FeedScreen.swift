@@ -8847,7 +8847,7 @@ struct FeedScreen: View {
                     .padding(.vertical, DS.Space.s2)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -10112,7 +10112,7 @@ struct FeedScreen: View {
                 .padding(.vertical, DS.Space.s1)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .padding(.top, DS.Space.s6)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -11562,7 +11562,7 @@ struct FeedScreen: View {
             .padding(.vertical, DS.Space.s2)
             .frame(minHeight: DS.Hit.min)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .listRowBackground(Color.clear)
         .listRowInsets(.init(top: Self.rowAir,
                              leading: DSRoomChassis.rowInset,
@@ -12135,7 +12135,7 @@ private struct EmptyFeedPile: View {
         } label: {
             BridgeIcon(name: name, size: size)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .accessibilityLabel(Text(name))
         .rotationEffect(.degrees(fell ? Self.tilt[i] : Self.tilt[i] * 0.4))
         .offset(y: fell ? Self.restY[i] : -Self.fallFrom)

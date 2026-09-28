@@ -217,7 +217,7 @@ struct VibenetKeyTraySheet: View {
             rowBody(key, door: true)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
         .contextMenu { copyItems(key) }
     }

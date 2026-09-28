@@ -291,7 +291,7 @@ struct WalletBalanceHeadline: View {
                     Button(action: onOpen) {
                         reading.contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                 } else {
                     reading
                 }
@@ -800,7 +800,7 @@ struct WalletCompositionStrip: View {
         let block = DSFigureReading(number: readingNumber, caption: readingCaptionLine)
         if let door {
             Button(action: door) { block.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
         } else {
             block
         }
@@ -1225,7 +1225,7 @@ struct WalletFaceChips: View {
             } label: {
                 capsule(entry)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
         } else {
             // A read, not a door — see the type's own note on why a venue
             // chip can't be tappable.
@@ -2055,7 +2055,7 @@ struct WalletWorthALookTray: View {
                                    glyph: door.leaves ? "arrow.up.right" : "arrow.up")
                         .dsTapTarget()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
             }
         }
@@ -2237,7 +2237,7 @@ struct WalletWorthALookTray: View {
             .padding(.horizontal, 3)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
     }
 }
 

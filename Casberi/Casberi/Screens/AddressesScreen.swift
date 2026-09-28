@@ -225,7 +225,7 @@ struct AddressesSection: View {
             .frame(minHeight: Self.rowPitch)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
         .dsListRow()
     }
@@ -628,7 +628,7 @@ struct AddressesSection: View {
                             .frame(minHeight: DS.Hit.min)
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsHover()
                 } else {
                     // The seats this contact is on, as the dock's own marks —
@@ -640,7 +640,7 @@ struct AddressesSection: View {
             .frame(minHeight: Self.rowPitch)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
         .dsListRow()
     }
@@ -1215,13 +1215,13 @@ struct ContactSheet: View {
                 Button(action: act) {
                     DSPushRowLabel(title: title, fact: fact, opens: true) { mark }.contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
             } else {
                 Button { copy(value, key: identity.key) } label: {
                     DSPushRowLabel(title: title, opens: false) { mark }.contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
             }
             Button {
@@ -1233,7 +1233,7 @@ struct ContactSheet: View {
                     .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .dsTapTarget()
             .accessibilityLabel(Text("Copy"))
         }
@@ -1331,7 +1331,7 @@ struct ContactSheet: View {
             .frame(minHeight: AddressesSection.rowPitch)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
         .dsListRow()
     }

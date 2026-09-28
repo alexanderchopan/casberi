@@ -99,7 +99,7 @@ struct NoteProse: View {
                         .dsText(.body17)
                         .foregroundStyle(DS.tint)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
             }
         }
@@ -288,7 +288,7 @@ struct NoteSiblingList: View {
                         .padding(.vertical, DS.Space.s2)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsHover()
                 }
             }
@@ -571,7 +571,7 @@ struct NoteOtherYearsList: View {
                         .padding(.vertical, DS.Space.s2)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsHover()
                     .accessibilityElement(children: .combine)
                 }

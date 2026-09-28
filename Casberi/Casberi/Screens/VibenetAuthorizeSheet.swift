@@ -319,7 +319,7 @@ struct VibenetAuthorizeSheet: View {
                         } label: {
                             Chip(text: preset.name, selected: composed == (preset.raw | (preset.raw == 0 ? 0 : kept)))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressSpring())
                     }
                 }
             }

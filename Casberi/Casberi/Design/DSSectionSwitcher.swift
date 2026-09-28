@@ -236,7 +236,7 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
             }
             .contentShape(pickShape)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         .id(section.id)
         // The dot is visual and carries real information, so the label says it

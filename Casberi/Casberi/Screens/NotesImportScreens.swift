@@ -297,7 +297,7 @@ struct NotesShareScreen: View {
                 .frame(minHeight: 56)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 }

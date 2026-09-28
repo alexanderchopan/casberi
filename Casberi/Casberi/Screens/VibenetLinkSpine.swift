@@ -242,7 +242,7 @@ struct VibenetLinkSpine: View {
                 } label: {
                     nodeBody(address, emphasised: emphasised).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 .dsHover()
             } else {
                 nodeBody(address, emphasised: emphasised)

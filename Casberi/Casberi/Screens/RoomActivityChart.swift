@@ -145,7 +145,7 @@ struct RoomActivityChart: View {
                                     caption: [noun, when].filter { !$0.isEmpty }.joined(separator: " · "))
         if let onOpen {
             Button(action: { DSHaptic.selection(); onOpen() }) { block }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
         } else {
             block
         }

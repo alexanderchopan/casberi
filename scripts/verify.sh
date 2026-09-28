@@ -783,7 +783,8 @@ print -P "%F{green}✓ sharelink style audit%f"
 # Two hand-rolled template shapes a text check can tell apart objectively
 # (prd §715): a plain ProgressView and the reading sheet's detents. Everything
 # else the §715 sweep moved is a judgement a lint would cry wolf on, and is not
-# checked.
+# checked. Check C is a capsule drawn by hand (prd §746); check D is a Button
+# styled `.plain`, which presses with a flicker (prd §965).
 step "Design-template audit"
 "$ROOT/scripts/ds-template-audit.py" --self-test >/dev/null \
   || fail "the design-template audit's own self-test failed — the check is broken, not the code"

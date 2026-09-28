@@ -123,7 +123,7 @@ struct VibenetEventCard: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
             .accessibilityHint(Text("Open account"))
             VStack(alignment: .leading, spacing: 0) {
@@ -191,7 +191,7 @@ struct VibenetEventCard: View {
                     label: String(localized: "Transaction"),
                     value: Self.shortHash(hash))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
                 .padding(.top, DS.Space.s3)
             }

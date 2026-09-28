@@ -58,7 +58,7 @@ struct ObsidianScreen: View {
                 Button("Change") { picking = true }
                     .dsText(.body17)
                     .foregroundStyle(DS.tint)
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
             }
             .padding(.vertical, DS.Space.s1)
         } else {

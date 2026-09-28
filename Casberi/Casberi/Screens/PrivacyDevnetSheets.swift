@@ -384,7 +384,7 @@ struct PrivacyDevnetMoveSheet: View {
                 Text(String(localized: "Watch \(WalletStore.shortAddress(address))"))
                     .dsText(.body17).foregroundStyle(DS.tint)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 
@@ -469,7 +469,7 @@ struct PrivacyDevnetAccountSheet: View {
                     }
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
             }
             // **Nil is not zero** (§515a) — an unread balance is not an empty
             // account, and this is the largest type on the sheet.

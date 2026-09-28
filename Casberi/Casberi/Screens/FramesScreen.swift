@@ -209,7 +209,7 @@ struct FramesPasskeyRow: View {
                     .foregroundStyle(FramesPasskey.enclaveAvailable ? DS.tint : DS.textTertiary)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .disabled(!FramesPasskey.enclaveAvailable)
                 DSFootnote(prose: FramesPasskey.enclaveAvailable
                      ? String(localized: "Signed by a key in this phone's Secure Enclave, which never leaves it.")

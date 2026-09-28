@@ -100,7 +100,7 @@ struct L2beatRiskCard: View {
 				.dsText(.subhead12)
 				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
 		}
-		.buttonStyle(.plain)
+		.buttonStyle(RowPress())
 		.dsHover()
 		.disabled(project == nil)
 	}
@@ -253,7 +253,7 @@ struct L2beatRiskCard: View {
 							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}
-					.buttonStyle(.plain)
+					.buttonStyle(RowPress())
 					.dsHover()
 				}
 				VStack(alignment: .leading, spacing: DS.Space.s4) {

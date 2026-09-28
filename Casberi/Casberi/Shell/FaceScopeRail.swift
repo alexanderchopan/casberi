@@ -355,7 +355,7 @@ struct FaceScopeRail: View {
                 .frame(width: inFolder ? DS.Hit.min : nil, height: inFolder ? DS.Hit.min : nil)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         .accessibilityLabel(Text(label))
         .dsTooltip(label)
@@ -486,7 +486,7 @@ struct FaceScopeRail: View {
             .frame(width: inFolder ? DS.Hit.min : nil, height: inFolder ? DS.Hit.min : nil)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         .dsTooltip(String(localized: "Show everything"))
         .accessibilityAddTraits(isOn ? .isSelected : [])
@@ -549,7 +549,7 @@ struct FaceScopeRail: View {
             .frame(width: inFolder ? DS.Hit.min : nil, height: inFolder ? DS.Hit.min : nil)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         // **The tooltip is the only place the full identity can go.** The caption
         // is `lineLimit(1)` inside a 66pt slot, so an unnamed wallet reads as
@@ -667,7 +667,7 @@ struct FaceScopeRail: View {
                    alignment: drawsCaption ? .top : .center)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         .accessibilityLabel(Text(title))
         // Captionless, so on Mac the tooltip is the only thing that says what
@@ -1045,7 +1045,7 @@ struct SocialFacesTray: View {
                                          size: DS.Face.list)
                             }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                     }
                 }
             }

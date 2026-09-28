@@ -477,7 +477,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 .padding(.vertical, DS.Space.s4)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .plainAccountRow()
     }
 
@@ -540,7 +540,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                     .frame(minHeight: AccountFactRow.height)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .padding(.top, DS.Space.s4)
             .plainAccountRow()
             }
@@ -680,7 +680,7 @@ struct AccountFactRow: View {
                 DSHaptic.tap()
                 action()
             } label: { line }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .plainAccountRow()
         } else {
             line.plainAccountRow()
@@ -714,7 +714,7 @@ struct AccountRosterRow: View {
                 DSHaptic.tap()
                 open()
             } label: { line }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         } else {
             line
         }

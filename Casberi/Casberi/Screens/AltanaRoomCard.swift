@@ -141,7 +141,7 @@ struct AltanaRoomCard: View {
             .opacity(finished ? 0.45 : 1)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibility(row)))
     }

@@ -108,7 +108,7 @@ struct L2beatStripKey: View {
 
 		if let onPick {
 			Button { DSHaptic.tap(); onPick(axis) } label: { body }
-				.buttonStyle(.plain)
+				.buttonStyle(RowPress())
 				.dsHover()
 		} else {
 			body

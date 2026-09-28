@@ -71,7 +71,7 @@ struct PostSheetHead: View {
             } label: {
                 faceMark
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .dsHover()
             .accessibilityLabel(Text("Open profile"))
             .dsTooltip(String(localized: "Open profile"))

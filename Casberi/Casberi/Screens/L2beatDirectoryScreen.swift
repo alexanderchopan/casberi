@@ -118,7 +118,7 @@ struct L2beatDirectoryScreen: View {
 										.dsText(.subhead12)
 										.foregroundStyle(order == option ? DS.textPrimary : DS.textTertiary)
 								}
-								.buttonStyle(.plain)
+								.buttonStyle(RowPress())
 							}
 							Spacer()
 						}
@@ -290,7 +290,7 @@ struct L2beatDirectoryScreen: View {
 						.foregroundStyle(DS.tint)
 						.frame(width: 58, alignment: .trailing)
 				}
-				.buttonStyle(.plain)
+				.buttonStyle(RowPress())
 			}
 		}
 		.padding(.vertical, DS.Space.s2)

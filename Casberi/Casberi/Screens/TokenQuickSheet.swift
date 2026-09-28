@@ -185,7 +185,7 @@ struct TokenQuickSheet: View {
                 .padding(.vertical, DS.Space.s4)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 }

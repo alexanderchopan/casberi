@@ -23,7 +23,7 @@ struct SheetPartyHead<Face: View>: View {
                     DSHaptic.tap()
                     onFace()
                 } label: { face() }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 .dsHover()
             } else {
                 face()

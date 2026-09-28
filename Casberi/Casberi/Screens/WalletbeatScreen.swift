@@ -241,7 +241,7 @@ struct WalletbeatScreen: View {
 					.frame(minHeight: AccountFactRow.height)
 					.contentShape(Rectangle())
 				}
-				.buttonStyle(.plain)
+				.buttonStyle(RowPress())
 			}
 		}
 	}

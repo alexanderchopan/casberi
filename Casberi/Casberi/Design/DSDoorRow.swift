@@ -56,7 +56,7 @@ struct DSDoorRow: View {
         Button(role: role, action: act) {
             DSDoorRowLabel(icon: icon, title: title, role: role)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
     }
 }

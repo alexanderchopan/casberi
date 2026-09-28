@@ -90,7 +90,9 @@ SHARE_NAMES = ("ShareLink", "ThingShareLink")
 # somebody writes down, not a regex that already covers it. Self-test
 # mutations 7 and 8 hold both halves — this one accepted, `.automatic` (the
 # style that really does hand the row the action) still reported.
-OK_STYLE = re.compile(r"\.buttonStyle\(\s*(?:\.(?:plain|borderless)\s*\)|PressSpring\(\s*\)\s*\))")
+# `RowPress` written down 2026-09-28 (prd §965): the row's own press style,
+# the second of the app's two, so a share control set in a row may wear it.
+OK_STYLE = re.compile(r"\.buttonStyle\(\s*(?:\.(?:plain|borderless)\s*\)|(?:PressSpring|RowPress)\(\s*\)\s*\))")
 
 # An enclosing `{` whose opener says "this is a menu, not content".
 MENU_OPENER = re.compile(

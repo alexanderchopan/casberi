@@ -258,7 +258,7 @@ struct AltanaScreen: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .disabled(watching)
     }
 

@@ -425,7 +425,7 @@ struct TokenSetupScreen: View {
                     Spacer()
                     Button("Cancel") { cancelDeviceFlow() }
                         .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                 }
             }
             // The sign-in path's one sentence — the scope, which is the
@@ -514,7 +514,7 @@ struct TokenSetupScreen: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
     }
 
     /// GitHub only — the contribution year (2026-09-11). Paints only once a

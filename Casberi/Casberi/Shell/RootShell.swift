@@ -4873,7 +4873,7 @@ struct RootShell: View {
                         .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
                         .dsTapTarget(Capsule(style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
             }
         }
         .padding(.horizontal, DS.Space.s4)

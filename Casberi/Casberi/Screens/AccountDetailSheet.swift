@@ -207,17 +207,17 @@ struct AccountDetailSheet: View {
             Button { importing = true } label: {
                 actionLabel("Import", icon: "square.and.arrow.down")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
             HStack(spacing: DS.Space.s8) {
                 Button { confirmDelete = true } label: {
                     dangerLabel("Delete things")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 Button { confirmDeleteAccess = true } label: {
                     dangerLabel("Delete access")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 // A THIRD verb, and only when there is a key (prd §425). It is
                 // not folded into "Delete access" on purpose: that wipe is one
                 // service-wide Keychain call, and a token deleted by mistake is
@@ -228,7 +228,7 @@ struct AccountDetailSheet: View {
                     Button { confirmDeleteSigner = true } label: {
                         dangerLabel("Delete signing key")
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                 }
             }
             .frame(maxWidth: .infinity)

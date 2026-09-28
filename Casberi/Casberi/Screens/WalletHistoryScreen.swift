@@ -94,7 +94,7 @@ struct WalletHistoryScreen: View {
                                     WalletHistoryRow(thing: thing,
                                                      walletLabel: walletLabel(thing))
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(RowPress())
                                 // Nothing draws a line (design law, zero
                                 // exceptions) — a List hands out separators by
                                 // default, so every row here opts out explicitly.

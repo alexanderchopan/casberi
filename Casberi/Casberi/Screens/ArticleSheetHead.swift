@@ -121,7 +121,7 @@ struct ArticleSheetHead: View {
             } label: {
                 eyebrowLine.contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .dsHover()
         } else {
             eyebrowLine

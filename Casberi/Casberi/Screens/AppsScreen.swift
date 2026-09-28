@@ -640,7 +640,7 @@ struct AppsScreen: View {
                         .fixedSize()
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
                 .accessibilityAddTraits(isOn ? [.isSelected] : [])
             }

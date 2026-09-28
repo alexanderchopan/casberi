@@ -267,7 +267,7 @@ struct DevnetAccountRow: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .disabled(watching)
         .animation(DS.Motion.standard, value: watching)
     }
@@ -706,7 +706,7 @@ struct DevnetExplorerRow: View {
                 .frame(maxWidth: .infinity, alignment: plain ? .leading : .center)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .modifier(ExplorerGround(plain: plain))
         }
     }

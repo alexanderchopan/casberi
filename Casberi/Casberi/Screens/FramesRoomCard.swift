@@ -669,7 +669,7 @@ struct FramesRoomList: View {
                     } label: {
                         FramesPayerRow(payer: payer).contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                 }
             }
         }
@@ -754,7 +754,7 @@ struct FramesRoomList: View {
                         FramesMoveRow(move: move, showsLine: showsLine, namesSteps: namesSteps)
                             .contentShape(Rectangle())
                     }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                         // **THE SETTLE, ON THE ROW SOMEBODY IS WATCHING.**
                         // The pending row above it fades out and the real one
                         // arrives in the same beat, so a send becoming real is

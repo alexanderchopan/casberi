@@ -98,7 +98,7 @@ struct PhotoViewer: View {
                 .dsGlass(cornerRadius: 18, variant: .clear)
                 .dsTapTarget(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         .padding(DS.Space.s4)
         .accessibilityLabel(Text("Close"))

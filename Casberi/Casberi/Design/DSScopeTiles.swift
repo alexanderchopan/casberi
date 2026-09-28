@@ -131,7 +131,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised)) }
             .contentShape(shape)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         .accessibilityLabel(wants
                             ? Text("\(section.label), \(section.summary), needs you")

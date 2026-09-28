@@ -457,7 +457,7 @@ extension DSRoomChassis {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .accessibilityLabel(Text(verbatim: spoken ?? "\(title), \(line)"))
             .chartArrival(index: index, reduceMotion: reduceMotion)
         }
@@ -518,7 +518,7 @@ extension DSRoomChassis {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .chartArrival(index: index, reduceMotion: reduceMotion)
         }
     }
@@ -604,7 +604,7 @@ extension DSRoomChassis {
                 .foregroundStyle(DS.tint)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 

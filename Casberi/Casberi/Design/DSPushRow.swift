@@ -152,7 +152,7 @@ struct DSPushRow<Leading: View>: View {
                            subtitleTone: subtitleTone,
                            tint: tint, busy: busy, opens: opens, leading: leading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
     }
 }
@@ -206,7 +206,7 @@ struct DSMoreLink: View {
             .foregroundStyle(tint)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
     }
 }

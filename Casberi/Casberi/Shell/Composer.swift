@@ -1726,7 +1726,7 @@ struct Composer: View {
                             // A CHOICE among completions (prd §746).
                             Chip(text: tag, glyph: "tag")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressSpring())
                     }
                     Spacer()
                 }
@@ -2290,7 +2290,7 @@ struct Composer: View {
                 .dsTapTarget(Circle())
                 .dsHover()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .disabled(!enabled)
         .accessibilityLabel(glyph == "chevron.left" ? "Earlier answer" : "Later answer")
     }
@@ -2411,7 +2411,7 @@ struct Composer: View {
                                            : (kind == "today" ? String(localized: "Keep this view")
                                               : String(localized: "Keep")))))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
                 .disabled(keepJustLanded)
             }

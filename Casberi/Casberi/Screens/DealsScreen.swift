@@ -52,7 +52,7 @@ struct DealsScreen: View {
                 .frame(minHeight: AccountFactRow.height)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
         if syncing {
             HStack(spacing: DS.Space.s2) {

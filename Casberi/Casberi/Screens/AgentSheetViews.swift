@@ -63,7 +63,7 @@ struct AgentTurnsView: View {
                         .dsText(.subhead12)
                         .foregroundStyle(DS.tint)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
                 .frame(maxWidth: .infinity, alignment: .center)
             }

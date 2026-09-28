@@ -290,7 +290,7 @@ struct PrivacyPoolsRoomCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             .accessibilityLabel(Text("\(PrivacyPoolsRoom.name(row.slice)), \(PrivacyPoolsRoom.legendLine(row))"))
         }
     }

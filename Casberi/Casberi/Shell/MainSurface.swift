@@ -1929,7 +1929,7 @@ struct MainSurface: View {
             .lineLimit(1)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
         .dsHover()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(brief.title). \(brief.detail)")

@@ -54,7 +54,7 @@ struct WalletConnectionScreen: View {
                     .frame(minHeight: AccountFactRow.height)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .plainAccountRow()
             }
             // Bitcoin is watched and has been since 2026-07-27, and this

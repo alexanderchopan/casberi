@@ -373,7 +373,7 @@ struct FramesMoveSheet: View {
                     } label: {
                         frameRow(index: index, row: row).contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                 }
             }
         }
@@ -542,7 +542,7 @@ struct FramesMoveSheet: View {
                 Text(String(localized: "Watch \(WalletStore.shortAddress(address))"))
                     .dsText(.body17).foregroundStyle(DS.tint)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 
@@ -978,7 +978,7 @@ struct FramesFrameSheet: View {
             .foregroundStyle(DS.tint)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowPress())
     }
 
     @ViewBuilder private func note(_ text: String, tone: Color) -> some View {
@@ -1176,7 +1176,7 @@ struct FramesPayerSheet: View {
                             FramesMoveRow(move: move, showsSponsorship: false)
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                     }
                 }
             }
@@ -1197,7 +1197,7 @@ struct FramesPayerSheet: View {
                 Text(String(localized: "Watch \(WalletStore.shortAddress(payer.address))"))
                     .dsText(.body17).foregroundStyle(DS.tint)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
         }
     }
 
@@ -1284,7 +1284,7 @@ struct FramesAccountSheet: View {
                     }
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
             }
             if let line = FramesMoney.balanceLine(weiHex: account.balanceWeiHex) {
                 Text(line)
@@ -1379,7 +1379,7 @@ struct FramesAccountSheet: View {
                     Text(String(localized: "Stop watching"))
                         .dsText(.body17).foregroundStyle(DS.textTertiary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
             } else {
                 Button {
                     DSHaptic.selection()
@@ -1391,7 +1391,7 @@ struct FramesAccountSheet: View {
                     Text(String(localized: "Watch this address"))
                         .dsText(.body17).foregroundStyle(DS.tint)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
             }
         }
     }

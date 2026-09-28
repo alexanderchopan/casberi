@@ -471,6 +471,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - Swipe verbs are reads only (writes live in the sheet, with consent). Feed chips only when they differentiate.
 - **A row that names a place is a BUTTON, or it is deleted — the “From” row is gone from every sheet (prd §736).** → docs/hooks/design.md · prd §736
 - **Every disc on the dial PRESSES (`PressSpring`), a glyph that changes MORPHS (`dsSymbolSwap(icon)` inside `disc`), and a copy marks its own disc for 1.2s (prd §867).** → docs/hooks/design.md · prd §867 · §693
+- **Every `Button` answers the hand (prd §965): a row or a word wears `RowPress`, a disc, chip, face, tile or slab wears `PressSpring`, never `.plain` — `ds-template-audit.py` check D fails a plain Button, the dock, the face door, the tray scrim and the keypad excepted by ratchet** → docs/hooks/design.md · prd §965
 - **Honesty rule: no dead controls, no fake status (prd §83).** A hand-painted button swaps its background when disabled; never quote a price off a stale trade; a change that rounds to zero has no sign or colour. "End-to-end encrypted" requires Advanced Data Protection — don't overclaim → docs/hooks/design.md
 - **The Mac takes its own point scale — `DSTextStyle.macScale = 0.88`, one lever.** `DS.Face`/`DS.Mark` and the `widget*` rungs opt out (`design-ramp-audit.py` check 5) → docs/hooks/design.md · prd §631
 - **A walked row on the Mac can be taken with ⌘C, Space and drag-out, through one resolver (`Shell/MacRowHandoff.swift`)** → docs/hooks/design.md · prd §631

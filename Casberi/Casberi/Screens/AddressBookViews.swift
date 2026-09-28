@@ -278,7 +278,7 @@ struct AddressBookRow: View {
                         .frame(width: 32, height: 32)
                         .dsTapTarget()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 .accessibilityLabel(Text(watched ? "Watching \(shownName), tap to stop"
                                                  : "Watch \(shownName)"))
             } else if let activity, activity.count > 0,
@@ -1206,7 +1206,7 @@ struct AddressCard: View {
                 .contentShape(Rectangle())
                 .dsTapTarget()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPress())
             // A contact's or a profile's name is not ours to rewrite
             // (`canRename`), so the tap is removed rather than left to do
             // nothing — §83, in the one place the card is stating who somebody
@@ -1369,7 +1369,7 @@ struct AddressCard: View {
                         .padding(.vertical, DS.Space.s2)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(RowPress())
                     .dsHover()
                     .accessibilityLabel(Text("\(line.label), \(line.value). Copy"))
                     .transition(.scale(scale: 0.96).combined(with: .opacity))
@@ -2318,7 +2318,7 @@ struct AddressCard: View {
                                 .dsText(.subhead12)
                                 .foregroundStyle(DS.tint)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                         .dsHover()
                     }
                 }

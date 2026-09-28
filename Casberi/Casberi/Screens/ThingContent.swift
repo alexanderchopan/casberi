@@ -1166,7 +1166,7 @@ private struct ChatBubbles: View {
                     Text("Show \(hiddenCount) more")
                         .dsText(.subhead12).foregroundStyle(DS.tint)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowPress())
                 .dsHover()
             }
         }
@@ -1241,7 +1241,7 @@ private struct VoiceContent: View {
                             .foregroundStyle(DS.tint)
                             .dsTapTarget(Circle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressSpring())
                     .dsHover()
                     .accessibilityLabel(playing ? "Pause" : "Play")
                     // A bare transport glyph — it says the same word to a

@@ -117,7 +117,7 @@ struct RoomAccountsRows: View {
                         DSHaptic.selection()
                         onOpen()
                     } label: { body(row, drop: shared).contentShape(Rectangle()) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(RowPress())
                 } else {
                     body(row, drop: shared)
                 }

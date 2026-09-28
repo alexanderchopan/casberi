@@ -120,7 +120,7 @@ struct StarterPackImportSheet: View {
                     .foregroundStyle(DS.textSecondary)
                     .dsTapTarget()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .accessibilityLabel(Text("Back to the pack list"))
             Text(pack.creatorHandle.isEmpty ? "Bluesky" : "by @\(pack.creatorHandle)")
                 .dsText(.subhead12).foregroundStyle(DS.textTertiary)
