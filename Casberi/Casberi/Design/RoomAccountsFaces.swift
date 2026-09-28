@@ -75,6 +75,8 @@ struct RoomAccountsFaces: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The tap picks; a long press copies the address (`RoomAccountCopy`).
+        .contextMenu { RoomAccountCopy(address: face.id) }
         .accessibilityLabel(Text(face.name))
         .accessibilityAddTraits(lit ? .isSelected : [])
     }

@@ -115,6 +115,10 @@ struct RoomAccountsRows: View {
                     body(row, drop: shared)
                 }
             }
+            // Every account row copies its address on a long press (a right
+            // click on the Mac), yours and the tied ones alike: the list is
+            // where the address is drawn, so it is where it is taken from.
+            .contextMenu { RoomAccountCopy(address: row.address) }
             // The rows' column in every room (prd §954): the Wallet's list sat
             // on the List's default inset, 10pt left of every other list.
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
@@ -179,6 +183,24 @@ struct RoomAccountsRows: View {
             parts.append(String(localized: "with \(names)"))
         }
         return parts.isEmpty ? nil : Text(parts.joined(separator: " · "))
+    }
+}
+
+/// **THE ACCOUNT'S ONE VERB AT ROW SCALE: COPY ITS ADDRESS.** Shared by the
+/// accounts list and the crown's faces in every wallet-family room, so the
+/// Wallet and the four devnets offer it in one word and one glyph.
+/// `copySensitive`, as every address copy in the app (prd §277): short-lived
+/// and never sent to another device.
+struct RoomAccountCopy: View {
+    let address: String
+
+    var body: some View {
+        Button {
+            DSHaptic.tap()
+            DSPasteboard.copySensitive(address)
+        } label: {
+            Label(String(localized: "Copy address"), systemImage: "doc.on.doc")
+        }
     }
 }
 

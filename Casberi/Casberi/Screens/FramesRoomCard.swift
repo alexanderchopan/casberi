@@ -581,7 +581,7 @@ struct FramesRoomList: View {
     /// room's Holdings list has used since it shipped, which is what makes two
     /// rooms' Holdings read as one screen rather than two.
     @ViewBuilder private var accountsRows: some View {
-        RoomAccountsRows(rows: FramesConnections.rows(accounts, onOpen: nil))
+        RoomAccountsRows(rows: FramesConnections.rows(accounts, onOpen: onOpenAccount))
     }
 
     @ViewBuilder private var holdingsRows: some View {

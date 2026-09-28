@@ -2676,6 +2676,7 @@ struct VibenetRoomCard: View {
             } label: {
                 Label(String(localized: "Name this account…"), systemImage: "pencil")
             }
+            RoomAccountCopy(address: item.address)
             Button(role: .destructive) {
                 unwatch(item.address)
             } label: {
@@ -3226,12 +3227,7 @@ struct VibenetRoomCard: View {
             } label: {
                 Label(String(localized: "Name this account…"), systemImage: "pencil")
             }
-            Button {
-                DSHaptic.tap()
-                UIPasteboard.general.string = item.address
-            } label: {
-                Label(String(localized: "Copy address"), systemImage: "doc.on.doc")
-            }
+            RoomAccountCopy(address: item.address)
             Button(role: .destructive) {
                 onRemove(item.address)
             } label: {
