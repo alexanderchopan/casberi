@@ -3610,6 +3610,15 @@ else
   # api.ensideas.com, stamped 11:30 on a 14:19 pour) was reported as the
   # demo's. That was the "time-windowed ENS flake": a slow launch, not a leak.
   xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -receiptsForget YES >/dev/null 2>&1 || true
+  # The DEVICE-LEVEL domain too (2026-09-28). `simctl spawn defaults write`
+  # lands in the simulator's own Preferences dir, not the app container, and
+  # the app reads that copy as a fallback the moment the container's key is
+  # gone. A peer seeding the Reach screen that way at 10:57 left a five-host
+  # fixture (one of them `tracker.example.net`, undeclared on purpose) that
+  # the forget above could not touch, and this step reported it as the demo's
+  # reach on a shared sim five hours later. The app never writes here, so
+  # the delete only ever removes a hand-planted fixture.
+  xcrun simctl spawn "$DEVICE_ID" defaults delete "$BUNDLE" network.receipts.v1 >/dev/null 2>&1 || true
   # Wait for the key to leave the plist the next launch reads — the removal
   # LANDING, not the hook running. It rides DefaultsWrite's queue and then
   # cfprefsd, and a terminate 1s after the hook's log line still lost it.
