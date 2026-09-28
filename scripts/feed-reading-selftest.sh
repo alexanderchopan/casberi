@@ -341,7 +341,10 @@ grep -q 'let perRow = 3$' "$FEED" \
 grep -q 'perRow = items.count > 12' "$FEED" \
   && { echo "✗ the grid reflows on its count again (prd §910)"; exit 1; }
 # THE CELL: the room's shape, the caption under the picture, no pill.
-grep -q 'case screenshot$' "$ROWS" && grep -q 'self == .screenshot ? .top : .center' "$ROWS" \
+# The pin (a7a8bcef) made `.square` the one centred shape, so the anchor now
+# reads from that side; either spelling puts a screenshot's crop at the top.
+grep -q 'case screenshot$' "$ROWS" \
+  && grep -qE 'self == \.screenshot \? \.top : \.center|self == \.square \? \.center : \.top' "$ROWS" \
   || { echo "✗ a screenshot tile is no longer cropped from its top (prd §910)"; exit 1; }
 grep -q 'dayPill' "$ROWS" \
   && { echo "✗ the tile wears a day pill again — the day header says when (prd §910, §746)"; exit 1; }
