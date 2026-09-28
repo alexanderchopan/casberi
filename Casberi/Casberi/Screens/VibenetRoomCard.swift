@@ -2453,6 +2453,8 @@ struct VibenetRoomCard: View {
             .padding(.trailing, DS.Space.s3).padding(.vertical, 4)
             .background(Capsule(style: .continuous)
                 .fill(on ? DS.fillStrong : DS.fillFaint))
+            // Becoming the pick is a crossfade (prd §966).
+            .animation(DS.Motion.standard, value: on)
         }
         .buttonStyle(PressSpring())
         .dsHover()

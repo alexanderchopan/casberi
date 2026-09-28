@@ -482,6 +482,10 @@ struct FaceScopeRail: View {
             .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, inFolder ? 0 : DS.Space.s1)
             .modifier(pickGlass(isOn))
+            // Becoming the pick is a crossfade on the template's own clock
+            // (prd §966): the lift, the ink and the lens ride it whether or
+            // not the room's handler wrapped the pick in `withAnimation`.
+            .animation(DS.Motion.standard, value: isOn)
             // In the folder the lens overhangs a 44pt seat, as a venue's does.
             .frame(width: inFolder ? DS.Hit.min : nil, height: inFolder ? DS.Hit.min : nil)
             .contentShape(Rectangle())
@@ -545,6 +549,10 @@ struct FaceScopeRail: View {
             .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, inFolder ? 0 : DS.Space.s1)
             .modifier(pickGlass(isOn))
+            // Becoming the pick is a crossfade on the template's own clock
+            // (prd §966): the lift, the ink and the lens ride it whether or
+            // not the room's handler wrapped the pick in `withAnimation`.
+            .animation(DS.Motion.standard, value: isOn)
             // In the folder the lens overhangs a 44pt seat, as a venue's does.
             .frame(width: inFolder ? DS.Hit.min : nil, height: inFolder ? DS.Hit.min : nil)
             .contentShape(Rectangle())

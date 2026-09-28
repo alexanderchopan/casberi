@@ -129,6 +129,11 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             .foregroundStyle(isOn ? Color.white : DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
             .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised)) }
+            // **BECOMING THE PICK IS A CROSSFADE (prd §966).** The fill and the
+            // ink ride the template's own clock, so a room whose pick handler
+            // forgets `withAnimation` still slides the tint in under the
+            // finger instead of snapping it on release.
+            .animation(DS.Motion.standard, value: isOn)
             .contentShape(shape)
         }
         .buttonStyle(PressSpring())

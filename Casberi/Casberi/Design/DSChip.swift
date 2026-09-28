@@ -122,6 +122,9 @@ struct DSRangeChips<Option: Hashable>: View {
                             .dsText(.subhead12)
                             .fontWeight(r == range ? .semibold : .regular)
                             .foregroundStyle(r == range ? DS.textPrimary : DS.textTertiary)
+                            // The pick crossfades (prd §966); the weight snaps,
+                            // which is the one channel SwiftUI will not tween.
+                            .animation(DS.Motion.standard, value: r == range)
                             .frame(minHeight: Self.hit)
                             .contentShape(Rectangle())
                     }

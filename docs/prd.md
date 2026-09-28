@@ -61932,3 +61932,23 @@ One clock: both styles animate on `DS.Motion.press`, so every pressed control in
 **Owed, not touched.** `DSTileButtonStyle` (`Screens/AccountScreen.swift`) is a third press — 0.98 and 0.85 on `DS.Motion.standard`, eight callers on the Accounts tiles — and the one control in the app not on the press clock. The ask was the rooms; whether it folds into `PressSpring` is a separate look at that screen.
 
 **Not seen.** Authored on Linux with no Xcode and no Swift toolchain: no build, no device. The change is a `ButtonStyle` swap at 196 sites, every one a type the app target already declares at file scope, so it cannot fail to compile on its own; the feel is unmeasured. The exact count: 159 `RowPress`, 37 `PressSpring`, in 84 files.
+
+## §966 — Becoming the pick is a crossfade, in the template (user: "why for example wouldn't we want the wallet buttons to animate when pressed? eg holding permissions etc" → "we are talking about for all buttons not just those on wallet?" → "ok do it", 2026-09-28)
+
+**The question was right about a different half.** The wallet's section tiles (Holdings, Permissions, the rest of `DSScopeTiles`) press since §965 — the 4% dip on touch. What snapped was the moment after: on release the fill went from raised to tint and the word to white in one frame. Telegram and Signal animate that too, and it is the larger part of what makes their controls feel alive (§965's reference note).
+
+**The rule.** A control that becomes the pick crossfades its fill and its ink on `DS.Motion.standard` — the clock `Chip` has used for its own selected state since §746 and every pick handler in the app already wraps its `withAnimation` in — **and the crossfade lives in the template, not at the call site.** The pick handlers mostly animate (`MainSurface`'s three rails, the section switcher's seven callers, the scope-tile screens), but "mostly" is the §720 class: a fix applied where the shape is called reaches only the callers that remembered. `DSScopeDock` and `DSRoomScopeChrome` pass `onPick` straight through, and Privacy Pools' `onPickScope` animates nothing. With `.animation(_, value:)` inside the template every room gets the crossfade, including the ones nobody wrote a handler for.
+
+**Where it landed — five sites, all app-wide because they are shared:**
+
+- `DSScopeTiles` — the wallet family's section tiles and the twelve rooms with kind tiles (GitHub, Safe, Stripe, App Store Connect, Hugging Face, PostHog, L2BEAT, Walletbeat, the devnets): fill and ink on `isOn`.
+- `DSRangeChips` slim — the crown's 7d / 30d / Watched words: ink on `r == range`. The weight still snaps; SwiftUI does not tween a font weight, and a crossfading colour carries the change.
+- `FaceScopeRail` — the All circle and every face slot: the lift, the ink and the glass lens on `isOn`.
+- `VibenetRoomCard`'s account face chips: the capsule's fill on `on`.
+- `Chip` needed nothing (§746 already), and `RoomAccountsFaces` animates `selected` at the strip's root, so a second clock on each face was written and removed the same minute.
+
+**Not touched, and why.** `DSSectionSwitcher` glides its fill through `matchedGeometryEffect` under its callers' `withAnimation` and has its own rulings (§724, §782); every one of its seven callers animates, measured, so nothing was owed there. The dock chips (`SourceChips`), the dock folder and the rooms tray's `lit` rows are the user-protected surface §965 also left alone. The crown's face chips in `WalletFeedTiles` carry no selected state — there is no pick to animate. A grade indicator (`PurchaseStageView`'s Nutri-Score letters) reads a value, it is not a control. The dock strip's glyph bounce stays strip-only (2026-09-17: "a room's scope grid stays still").
+
+**No audit, measured and refused.** A check for "a fill or ink read off a pick flag with no `.animation` naming it" was prototyped over the tree: 25 lines, several of them not picks (a weekday's opacity, the Nutri-Score letter, the dock) and the one real miss it could not see at all — `DSRangeChips`, whose flag is the expression `r == range`, not a name. A lint keyed on flag names is blind to expressions and cries wolf on indicators; the doctrine from `design-motion-audit.py` stands (a check that fires on correct code gets deleted). The rule is one line in the template's comment and this entry.
+
+**Not seen.** Authored on Linux, no Xcode: four `.animation(_, value:)` lines, unbuilt and unmeasured. A concern to check on the device: `FaceScopeRail`'s modifier sits after `pickGlass`, so it also carries the lens's glass travel — on the same `standard` clock its callers already use, so where they animated nothing should change.
