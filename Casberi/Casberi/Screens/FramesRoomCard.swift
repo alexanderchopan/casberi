@@ -528,6 +528,7 @@ struct FramesRoomList: View {
     /// answer "whose?" is a sheet about a stranger's money.
     let onOpenMove: (FramesMove, String) -> Void
     var onOpenPayer: ((FramesPayer) -> Void)? = nil
+    var onOpenAccount: ((FramesAccount) -> Void)? = nil
 
     @Environment(ShellChrome.self) private var chrome
 

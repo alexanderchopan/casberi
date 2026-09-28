@@ -5400,7 +5400,8 @@ struct FeedScreen: View {
                                },
                                onOpenPayer: { payer in
                                    feedSheet = .framesPayer(payer, framesShownMoves)
-                               })
+                               },
+                               onOpenAccount: { feedSheet = .framesAccount($0) })
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
