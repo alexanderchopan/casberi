@@ -32,11 +32,27 @@ struct VibenetAuthorizeSheet: View {
     /// prefills the paste field with its id (read-only, so scope alone
     /// changes) and the sheet's own words say "Editing", not "Authorize".
     var editing: VibenetActor?
+    /// With `editing`: a NEW key takes `editing`'s place in one transaction
+    /// (`VibenetSend.replaceActor`), where without it the same key's scope
+    /// changes. The paste field opens for the new key and the switches start
+    /// at the old key's scope.
+    var replacing: Bool = false
 
     @Environment(\.modelContext) private var modelContext
 
     @State private var pasted = ""
-    @State private var scopeIndex = 0
+    /// THE SCOPE AS SWITCHES (user: "scope as switches"). Admin is its own
+    /// switch because it is not a sum of the others (`VibenetScope.isAdmin`);
+    /// a new key starts at "Send anywhere", never at full control.
+    @State private var admin = false
+    @State private var bits: UInt16 = VibenetScope.sender
+    /// Bits an edited key holds that no switch shows (POLICY, reserved ones),
+    /// signed back unchanged — `VibenetScopeEdit`.
+    @State private var kept: UInt16 = 0
+    /// Read once on appear off the saved room: the account's admin keys other
+    /// than the one being changed, for the last-admin refusal.
+    @State private var otherAdmins = 0
+    @State private var isThisPhoneKey = false
     @State private var busy = false
     @State private var errorText: String?
     @State private var sentHash: String?
@@ -55,6 +71,7 @@ struct VibenetAuthorizeSheet: View {
         // type size. When the guess is short the button — the only thing this
         // sheet is for — is the part that goes under the screen edge.
         DSTray(title: editing == nil ? String(localized: "Authorize a key")
+                                      : replacing ? String(localized: "Replace this key")
                                       : String(localized: "Edit permissions"),
                height: trayHeight, ink: true, detents: [.height(trayHeight), .large]) {
             VStack(spacing: 0) {
@@ -95,10 +112,17 @@ struct VibenetAuthorizeSheet: View {
         }
         .onAppear {
             if let editing {
-                pasted = editing.actorId
-                if let match = VibenetScope.presets.firstIndex(where: { $0.raw == editing.scope.raw }) {
-                    scopeIndex = match
-                }
+                if !replacing { pasted = editing.actorId }
+                admin = editing.scope.isAdmin
+                bits = VibenetScopeEdit.bits(from: editing.scope)
+                kept = VibenetScopeEdit.kept(from: editing.scope)
+                let hex = "0x" + VibenetTransaction.hex(account)
+                let actors = VibenetRoomSource.card()?.items
+                    .first { $0.address.caseInsensitiveCompare(hex) == .orderedSame }?.actors ?? []
+                otherAdmins = actors.filter {
+                    $0.scope.isAdmin && $0.actorId.lowercased() != editing.actorId.lowercased()
+                }.count
+                isThisPhoneKey = VibenetThisPhone.isKey(editing.actorId, ours: VibenetThisPhone.actorID())
             }
         }
     }
@@ -110,7 +134,7 @@ struct VibenetAuthorizeSheet: View {
     /// drag away, and slack is a tray while a deficit hides something.
     private var trayHeight: CGFloat {
         switch phase {
-        case .form: 600
+        case .form: 700
         case .done: 340
         }
     }
@@ -163,6 +187,18 @@ struct VibenetAuthorizeSheet: View {
     // MARK: - Form
 
     private var parsedActor: (actorID: Data, authenticator: Data, isDelegate: Bool)? {
+        // EDITING THE SAME KEY re-authorizes it with its own actorId and the
+        // authenticator the chain already holds for it. The field shows that
+        // 32-byte id, which the paste reading below (a 64-byte key or a
+        // 20-byte address) never accepts — so until this branch, "Save" on
+        // Edit permissions could not arm at all.
+        if let editing, !replacing {
+            guard let id = VibenetTransaction.data(fromHex: editing.actorId), id.count == 32,
+                  let authenticator = VibenetTransaction.data(fromHex: editing.authenticator),
+                  authenticator.count == 20
+            else { return nil }
+            return (id, authenticator, editing.kind == .delegate)
+        }
         let hex = pasted.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "0x", with: "", options: [.anchored])
         guard let contracts = VibenetConfig.cached() else { return nil }
@@ -189,12 +225,35 @@ struct VibenetAuthorizeSheet: View {
         }
     }
 
-    private var canSubmit: Bool { !busy && parsedActor != nil }
+    private var act: VibenetScopeEdit.Act {
+        guard let editing else { return .add }
+        return replacing ? .replace(before: editing.scope.raw) : .edit(before: editing.scope.raw)
+    }
+
+    /// The scope the switches describe; nil when they describe none.
+    private var composed: UInt16? { VibenetScopeEdit.compose(admin: admin, bits: bits, kept: kept) }
+
+    private var refusal: VibenetScopeEdit.Refusal? {
+        VibenetScopeEdit.refusal(act, after: composed, otherAdmins: otherAdmins)
+    }
+
+    /// A replacement must be a DIFFERENT key: the same actorId would be
+    /// authorized and then revoked by the one transaction.
+    private var replacesWithItself: Bool {
+        guard replacing, let editing, let parsedActor else { return false }
+        return ("0x" + VibenetTransaction.hex(parsedActor.actorID)).lowercased()
+            == editing.actorId.lowercased()
+    }
+
+    private var canSubmit: Bool {
+        !busy && parsedActor != nil && refusal == nil && !replacesWithItself
+    }
 
     private var formBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                caption(String(localized: "Public key or address"))
+                caption(replacing ? String(localized: "The new key")
+                                  : String(localized: "Public key or address"))
                 TextField(String(localized: "Paste a P-256 key or an account address"),
                           text: $pasted, axis: .vertical)
                     .dsText(.body17)
@@ -204,7 +263,7 @@ struct VibenetAuthorizeSheet: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .lineLimit(1...3)
-                    .disabled(editing != nil)
+                    .disabled(editing != nil && !replacing)
                     .padding(.horizontal, DS.Space.s3)
                     .frame(minHeight: 44)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -218,40 +277,16 @@ struct VibenetAuthorizeSheet: View {
                         .dsText(.label12)
                         .foregroundStyle(DS.destructive)
                 }
+                if replacesWithItself {
+                    Text(String(localized: "That's the key being replaced."))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.destructive)
+                }
             }
 
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                caption(String(localized: "What it may do"))
-                Menu {
-                    ForEach(Array(VibenetScope.presets.enumerated()), id: \.offset) { index, preset in
-                        Button {
-                            DSHaptic.tap()
-                            scopeIndex = index
-                        } label: {
-                            if index == scopeIndex {
-                                Label(preset.name, systemImage: "checkmark")
-                            } else {
-                                Text(preset.name)
-                            }
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Text(VibenetScope.presets[scopeIndex].name)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                        Spacer()
-                        Image(systemName: "chevron.up.chevron.down")
-                            .dsGlyph(.caption)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(minHeight: 44)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .dsWell(cornerRadius: DS.Radius.control, recessed: true)
-                }
-                .dsHover()
-            }
+            scopeEditor
+
+            changePreview
 
             // The button LEFT this stack for the tray's own bottom edge — see
             // `pinnedAction`. The failure it can no longer state stays here,
@@ -262,6 +297,121 @@ struct VibenetAuthorizeSheet: View {
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    /// WHAT IT MAY DO, AS SWITCHES. Base's six presets stay as shortcuts that
+    /// set the switches (a preset lights when the switches match it); Admin
+    /// is a switch of its own and hides the rest, because full control is not
+    /// the four switches on — it also holds every bit this build can't name.
+    private var scopeEditor: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            caption(String(localized: "What it may do"))
+            ScrollView(.horizontal) {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(Array(VibenetScope.presets.enumerated()), id: \.offset) { _, preset in
+                        Button {
+                            DSHaptic.tap()
+                            withAnimation(DS.Motion.standard) {
+                                admin = preset.raw == 0
+                                if preset.raw != 0 { bits = preset.raw & VibenetScopeEdit.switchable }
+                            }
+                        } label: {
+                            Chip(text: preset.name, selected: composed == (preset.raw | (preset.raw == 0 ? 0 : kept)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            DSToggleRow(title: Text(String(localized: "Full control")),
+                        detail: Text(String(localized: "Every permission, including changing this account's keys.")),
+                        isOn: $admin.animation(DS.Motion.standard),
+                        tint: Self.mark)
+            if !admin {
+                ForEach(Array(Self.switches.enumerated()), id: \.offset) { _, entry in
+                    DSToggleRow(title: Text(entry.name), isOn: bitBinding(entry.bit), tint: Self.mark)
+                }
+                if composed == nil {
+                    Text(String(localized: "Turn on at least one, or choose Full control."))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// The switchable bits with their plain names, in the contract's order.
+    private static var switches: [(bit: UInt16, name: String)] {
+        VibenetScope.orderedPlainBits
+            .filter { VibenetScopeEdit.switchable & $0.0 != 0 }
+            .map { (bit: $0.0, name: $0.1) }
+    }
+
+    private func bitBinding(_ bit: UInt16) -> Binding<Bool> {
+        Binding(get: { bits & bit != 0 },
+                set: { on in bits = on ? bits | bit : bits & ~bit })
+    }
+
+    /// THE CHANGE, BEFORE IT IS SIGNED (user: "show change before signing").
+    /// One line in the permissions' own words — what the key could do, an
+    /// arrow, what it will — then the refusal or the warnings that apply.
+    @ViewBuilder
+    private var changePreview: some View {
+        if let after = composed {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                caption(String(localized: "The change"))
+                Text(changeLine(after: after))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let refusal, let sentence = refusalSentence(refusal) {
+                    Text(sentence)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                ForEach(VibenetScopeEdit.warnings(act, after: after, isThisPhone: isThisPhoneKey),
+                        id: \.self) { warning in
+                    Text(warningSentence(warning))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func changeLine(after: UInt16) -> String {
+        let now = VibenetScopeEdit.words(after)
+        switch act {
+        case .add:
+            return String(localized: "New key: \(now)")
+        case .edit(let before):
+            return "\(VibenetScopeEdit.words(before)) → \(now)"
+        case .replace(let before):
+            let old = editing.map { VibenetKeyIdentity.short($0.actorId) } ?? ""
+            return String(localized: "\(old) (\(VibenetScopeEdit.words(before))) → new key (\(now))")
+        }
+    }
+
+    private func refusalSentence(_ refusal: VibenetScopeEdit.Refusal) -> String? {
+        switch refusal {
+        // Said under the switches already.
+        case .noScope: nil
+        case .unchanged: String(localized: "Nothing changes yet.")
+        case .lastAdmin: String(localized: "This is the account's only full-control key. Without one, nobody could change this account again — give another key full control first.")
+        case .policyGate: String(localized: "This key is limited to one contract, and this sheet can't carry that limit over. Change it on Base's console.")
+        }
+    }
+
+    private func warningSentence(_ warning: VibenetScopeEdit.Warning) -> String {
+        switch warning {
+        case .thisPhoneLosesAdmin:
+            String(localized: "This phone won't be able to change this account's keys afterwards.")
+        case .grantsAdmin:
+            String(localized: "Full control can do anything with this account, including removing this phone's key.")
         }
     }
 
@@ -279,7 +429,8 @@ struct VibenetAuthorizeSheet: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "key.fill").dsGlyph(.caption, weight: .semibold)
-                    Text(editing == nil ? String(localized: "Authorize") : String(localized: "Save"))
+                    Text(editing == nil ? String(localized: "Authorize")
+                         : replacing ? String(localized: "Replace") : String(localized: "Save"))
                     if busy { DSSpinner(size: .mini) }
                 }
                 .dsText(.body17)
@@ -319,16 +470,26 @@ struct VibenetAuthorizeSheet: View {
     // MARK: - Act
 
     private func authorize() {
-        guard let (actorID, authenticator, _) = parsedActor else { return }
+        guard let (actorID, authenticator, _) = parsedActor, let scope = composed, refusal == nil
+        else { return }
+        let replaced = replacing ? editing.flatMap { VibenetTransaction.data(fromHex: $0.actorId) } : nil
+        if replacing, replaced == nil { return }
         errorText = nil
         busy = true
-        let scope = VibenetScope.presets[scopeIndex].raw
         Task {
             defer { busy = false }
             do {
-                let sent = try await VibenetSend.authorizeActor(
-                    on: account, newActorID: actorID, newAuthenticator: authenticator,
-                    scope: UInt16(scope), localEpoch: localEpoch, localSequence: localSequence)
+                let sent: VibenetSend.Sent
+                if let replaced {
+                    sent = try await VibenetSend.replaceActor(
+                        on: account, oldActorID: replaced, newActorID: actorID,
+                        newAuthenticator: authenticator, scope: scope,
+                        localEpoch: localEpoch, localSequence: localSequence)
+                } else {
+                    sent = try await VibenetSend.authorizeActor(
+                        on: account, newActorID: actorID, newAuthenticator: authenticator,
+                        scope: scope, localEpoch: localEpoch, localSequence: localSequence)
+                }
                 DSHaptic.success()
                 VibenetSend.landAuthorizeReceipt(
                     sent, newActorHex: "0x" + VibenetTransaction.hex(actorID), in: modelContext)

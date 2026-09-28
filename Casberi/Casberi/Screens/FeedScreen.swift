@@ -631,8 +631,10 @@ struct FeedScreen: View {
         /// `AuthorizeActor` is an upsert. `editing` is nil for a brand-new
         /// key; carrying the actor being edited otherwise, so this route
         /// never re-reads a value the caller already has on screen.
+        /// `replacing` with `editing`: a new key takes that key's place in one
+        /// transaction (`VibenetSend.replaceActor`).
         case vibenetAuthorize(account: Data, localEpoch: UInt32, localSequence: UInt32,
-                             editing: VibenetActor?)
+                             editing: VibenetActor?, replacing: Bool = false)
 
         var id: String {
             switch self {
@@ -670,8 +672,8 @@ struct FeedScreen: View {
             case .framesAccount(let a): "framesAccount:\(a.address)"
             case .framesSponsor(let r): "framesSponsor:\(r.id)"
             case .vibenetSend(let a): "vibenetSend:\(VibenetTransaction.hex(a))"
-            case .vibenetAuthorize(let account, _, _, let editing):
-                "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")"
+            case .vibenetAuthorize(let account, _, _, let editing, let replacing):
+                "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")\(replacing ? ":replace" : "")"
             }
         }
     }
@@ -4895,6 +4897,12 @@ struct FeedScreen: View {
                 feedSheet = .vibenetAuthorize(
                     account: address, localEpoch: seq?.localEpoch ?? 0,
                     localSequence: seq?.localSequence ?? 0, editing: editing)
+            }, onReplace: { replaced in
+                guard let address = VibenetTransaction.data(fromHex: item.address) else { return }
+                let seq = item.changeSequences
+                feedSheet = .vibenetAuthorize(
+                    account: address, localEpoch: seq?.localEpoch ?? 0,
+                    localSequence: seq?.localSequence ?? 0, editing: replaced, replacing: true)
             }, onRevoke: { revoking in
                 guard let address = VibenetTransaction.data(fromHex: item.address),
                       let actorID = VibenetTransaction.data(fromHex: revoking.actorId) else { return }
@@ -5182,9 +5190,9 @@ struct FeedScreen: View {
                     chrome.refreshRooms()   // a watch list changed (§655 amendment)
                 }
             }
-        case .vibenetAuthorize(let account, let epoch, let sequence, let editing):
+        case .vibenetAuthorize(let account, let epoch, let sequence, let editing, let replacing):
             VibenetAuthorizeSheet(account: account, localEpoch: epoch, localSequence: sequence,
-                                  editing: editing)
+                                  editing: editing, replacing: replacing)
         }
     }
 

@@ -89,7 +89,7 @@ WELL_ALLOWED = {
     "AgentChatView.swift": (1, "the agent room's entry field — the one thing §782 "
                                "leaves a well for, and the same shape the composer's "
                                "own draft field takes (prd §840)"),
-    "VibenetAuthorizeSheet.swift": (2, "two entry fields: the address and the scope picker"),
+    "VibenetAuthorizeSheet.swift": (1, "the key or address entry field (the scope picker became switches)"),
     "VibenetAccountSheet.swift": (1, "the note entry field"),
     "AddressBookViews.swift": (3, "the name entry field, the compact copy button's face, and an action tile's face"),
     "ConnectWalletRow.swift": (1, "the pairing URI, a monospaced value with its copy button"),

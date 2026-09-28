@@ -61887,3 +61887,17 @@ Chain 81410 (`*.frames.ethrex.xyz`) is the ethrex team's single-client net. `fra
 
 **Seen:** all six transactions mined; the demo's Home crown and Frames scope drawn on the simulator. **Not seen:** a passkey account's send — no simulator has a Secure Enclave — so it rests on the spec's opcodes and the measured deploy cost. **Not seen:** a sponsored send on this chain.
 
+
+## §963 — Vibenet says which accounts and key are this phone's, the scope is switches, the change is shown before it is signed, and a key can be replaced in one transaction (user: "it's hard to tell which account was created by me on my device vs one i follow / watch", "when i click permissions same, can't tell which key is for my account", "yes do proposal one", then "i also like proposal two scope as switches and show change before signing and rotate key … we need to do those too", 2026-09-28)
+
+**Which is yours.** The app keeps no record of which accounts it created, and that is not the fact that decides anything: what this phone can do is set by whether its key is an actor on the account — the test `signableVibenetAccounts` already gates Send and Authorize on. So the Accounts list splits **"On this phone"** from **"Watching"** (one "Yours" held both, §954), the account picker draws the same two groups as menu sections (`DSAccountSlot.group`; a room that sets none keeps a flat menu), and this phone's key is named **"This phone"** with the phone mark in the Permissions list, its crown, the account page, the key tray and the key sheet's title (`VibenetThisPhone`).
+
+**Amends §951.** "The account went from the line … the account menu says whose keys these are" held only with one account picked, and the Permissions list draws only on All, where the menu names nobody. With more than one account, each key's line ends on its account's name.
+
+**The scope is switches.** The six-preset menu (§534) becomes a Full control switch and four permission switches (Send anywhere, Pay own gas, Pay others' gas, Order its own sends); the presets stay as chips that set the switches. POLICY is still not offered (Subscriptions' own build), and an edited key keeps every bit the switches do not show. Scope zero is Admin (§463), so every switch off is refused rather than signed. A new key starts at Send anywhere, not at Full control.
+
+**The change is shown before it is signed.** One line in the permissions' own words — before, an arrow, after — then the refusal or warnings: an edit or replacement that leaves the account with no admin is refused (the revoke guard's reason, 2026-09-04); this phone losing its own admin, and a grant of full control, are said and allowed (`VibenetScopeEdit`).
+
+**Rotate is "Replace this key".** A new key takes an old one's place in ONE config change carrying authorize-then-revoke (`VibenetSend.replaceActor`), so the account never holds both or neither. `sendConfigChange` takes a list of changes; authorize and revoke pass one each.
+
+**Not seen.** No build ran in the session (no Swift toolchain), and none of these writes has been sent on chain: authorize, revoke and a two-change config transaction are all unmeasured end to end, and the session could not reach `api.vibes.base.org` to check that the reset chain names the signing contracts again (§656).

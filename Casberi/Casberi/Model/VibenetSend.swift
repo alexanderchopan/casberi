@@ -836,8 +836,9 @@ enum VibenetSend {
         // them twice would be two places to keep a refusal correct.
         let payload = VibenetAccountChanges.authorizeActorPayload(
             actorId: newActorID, authenticator: newAuthenticator, scope: scope, policyData: policyData)
-        return try await sendConfigChange(on: account, changeType: VibenetAccountChanges.authorizeActor,
-                                          payload: payload, localEpoch: localEpoch,
+        return try await sendConfigChange(on: account,
+                                          changes: [(VibenetAccountChanges.authorizeActor, payload)],
+                                          localEpoch: localEpoch,
                                           localSequence: localSequence, gasLimit: gasLimit,
                                           maxFeePerGas: maxFeePerGas,
                                           maxPriorityFeePerGas: maxPriorityFeePerGas)
@@ -875,14 +876,54 @@ enum VibenetSend {
                             gasLimit: UInt64 = 250_000,
                             maxFeePerGas: UInt64 = 0x3b9a_ca00,
                             maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
-        try await sendConfigChange(on: account, changeType: VibenetAccountChanges.revokeActor,
-                                   payload: VibenetAccountChanges.revokeActorPayload(actorId: actorID),
+        try await sendConfigChange(on: account,
+                                   changes: [(VibenetAccountChanges.revokeActor,
+                                              VibenetAccountChanges.revokeActorPayload(actorId: actorID))],
                                    localEpoch: localEpoch, localSequence: localSequence,
                                    gasLimit: gasLimit, maxFeePerGas: maxFeePerGas,
                                    maxPriorityFeePerGas: maxPriorityFeePerGas)
     }
 
-    /// The two-signature config-change path, shared by authorize and revoke.
+    /// **REPLACING A KEY IN ONE TRANSACTION** (user: "rotate key"): the new
+    /// key is authorized and the old one revoked by ONE config change carrying
+    /// both, so there is no moment where the account holds both keys or
+    /// neither, and one pair of Face ID prompts covers it.
+    ///
+    /// **Authorize first, then revoke**, in that order inside `changes`: if the
+    /// old key is the account's only admin and the new one is an admin, the
+    /// account still has an admin when the revoke applies. The admin
+    /// signature over the change is checked against the keys the account holds
+    /// BEFORE either change, so this phone may replace its own key.
+    ///
+    /// **UNMEASURED end to end**, as both halves are on their own
+    /// (`authorizeActor`, `revokeActor`): `changesDigest` has always taken a
+    /// list of change hashes, but no transaction carrying two has been sent.
+    /// The last-admin case is the SCREEN's to refuse (`VibenetScopeEdit`),
+    /// for `revokeActor`'s reason.
+    static func replaceActor(on account: Data,
+                             oldActorID: Data,
+                             newActorID: Data,
+                             newAuthenticator: Data,
+                             scope: UInt16,
+                             localEpoch: UInt32,
+                             localSequence: UInt32,
+                             gasLimit: UInt64 = 400_000,
+                             maxFeePerGas: UInt64 = 0x3b9a_ca00,
+                             maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
+        let add = VibenetAccountChanges.authorizeActorPayload(
+            actorId: newActorID, authenticator: newAuthenticator, scope: scope, policyData: Data())
+        let remove = VibenetAccountChanges.revokeActorPayload(actorId: oldActorID)
+        return try await sendConfigChange(on: account,
+                                          changes: [(VibenetAccountChanges.authorizeActor, add),
+                                                    (VibenetAccountChanges.revokeActor, remove)],
+                                          localEpoch: localEpoch, localSequence: localSequence,
+                                          gasLimit: gasLimit, maxFeePerGas: maxFeePerGas,
+                                          maxPriorityFeePerGas: maxPriorityFeePerGas)
+    }
+
+    /// The two-signature config-change path, shared by authorize, revoke and
+    /// replace. `changes` are applied in order; every one is covered by the
+    /// one admin signature over `changesDigest`.
     ///
     /// **A GENERALISATION, not a new path**: this is `authorizeActor`'s body
     /// with the payload and the change tag lifted into parameters, so a revoke
@@ -891,8 +932,7 @@ enum VibenetSend {
     /// two spellings of one signing sequence end up disagreeing about which
     /// digest the Keystore recomputes.
     private static func sendConfigChange(on account: Data,
-                                         changeType: UInt8,
-                                         payload: Data,
+                                         changes pending: [(type: UInt8, payload: Data)],
                                          localEpoch: UInt32,
                                          localSequence: UInt32,
                                          gasLimit: UInt64,
@@ -917,18 +957,22 @@ enum VibenetSend {
             throw Failure.noAccountStack
         }
 
-        let change = changeType == VibenetAccountChanges.revokeActor
-            ? VibenetTransaction.Change.revokeActor(payload)
-            : VibenetTransaction.Change.authorizeActor(payload)
-        let changeHash = VibenetAccountChanges.changeHash(
-            changeType: changeType, payload: payload)
+        guard !pending.isEmpty else { throw Failure.cannotCompose }
+        let changes = pending.map { change in
+            change.type == VibenetAccountChanges.revokeActor
+                ? VibenetTransaction.Change.revokeActor(change.payload)
+                : VibenetTransaction.Change.authorizeActor(change.payload)
+        }
+        let changeHashes = pending.map { change in
+            VibenetAccountChanges.changeHash(changeType: change.type, payload: change.payload)
+        }
         let sequenceWord = VibenetAccountChanges.localSequenceWord(epoch: localEpoch, sequence: localSequence)
 
         // Signature 1: THIS PHONE, as the account's admin, approving the
         // exact digest the Keystore will recompute and check.
         let configDigest = VibenetAccountChanges.changesDigest(
             account: account, chainID: VibenetSigner.chainID, sequence: sequenceWord,
-            changeHashes: [changeHash])
+            changeHashes: changeHashes)
         let configSig: Data
         do { configSig = try VibenetDeviceKey.sign(digest: configDigest) }
         catch { throw Failure.signingRefused }
@@ -940,7 +984,7 @@ enum VibenetSend {
         else { throw Failure.cannotCompose }
 
         let configChange = VibenetTransaction.ConfigChange(
-            sequence: sequenceWord, changes: [change], auth: configAuth)
+            sequence: sequenceWord, changes: changes, auth: configAuth)
 
         guard let nonceHex = await VibenetChain.call(
                 method: "eth_getTransactionCount",

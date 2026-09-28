@@ -68,6 +68,10 @@ struct VibenetKeySheet: View {
     /// all — `thisPhoneIsAdmin`'s own gate, so the door never opens onto a
     /// sheet that can only fail.
     var onEditScope: ((VibenetActor) -> Void)? = nil
+    /// REPLACE THIS KEY (user: "rotate key") — a new key takes this one's
+    /// place in one transaction (`VibenetSend.replaceActor`). Same admin gate
+    /// as `onEditScope`; nil where the presenter cannot send one.
+    var onReplace: ((VibenetActor) -> Void)? = nil
 
     /// **REVOKE THIS KEY (2026-09-04)** — the other half of "Rotate Keys, Keep
     /// Your Address", and the half that matters when a key is lost.
@@ -141,6 +145,7 @@ struct VibenetKeySheet: View {
         // because this estimate is a FLOOR and a tray in deficit hides the one
         // thing on the sheet that cannot be undone.
         if onRevoke != nil && thisPhoneIsAdmin { h += revocable ? 44 : 76 }
+        if onReplace != nil && thisPhoneIsAdmin { h += 44 }
         return min(660, h)
     }
 
@@ -341,6 +346,11 @@ struct VibenetKeySheet: View {
             if let onEditScope, thisPhoneIsAdmin {
                 door(String(localized: "Edit permissions"), symbol: "slider.horizontal.3") {
                     onEditScope(actor)
+                }
+            }
+            if let onReplace, thisPhoneIsAdmin {
+                door(String(localized: "Replace this key"), symbol: "arrow.triangle.2.circlepath") {
+                    onReplace(actor)
                 }
             }
         }
