@@ -41,7 +41,22 @@ enum Pinboard {
     /// unmatched-selection trap `MainSurface` documents where `feedLabels`
     /// used to live). The name stays `isPinnedRoom` at every call site: the
     /// sentinel changed, the seventy tests of it did not.
-    static let room = "Notes"
+    ///
+    /// **NOT the word the door draws.** §969 spelled the sentinel `"Notes"`,
+    /// and `"Notes"` is also a catalog CATEGORY (Apple Notes, Obsidian, Day
+    /// One, Apple Journal) — and, through `BridgeCatalog`'s vendor-prefix
+    /// alias, the SOURCE that resolves to the Apple Notes seat. So the tray's
+    /// Notes door sent a string `go(to:)` read as a folded category chip and
+    /// resolved to that category's venues (none present → nothing happened),
+    /// and `CategoryFold.foldAll` swallowed the room's own page into the
+    /// category's chip. The tray's You-row door and its Notes CATEGORY row
+    /// sent the very same string, so no guard downstream could tell them
+    /// apart; the sentinel had to change (2026-09-28, user: "the notes
+    /// button doesn't activate when tapping it in the tray"). The label the
+    /// door and the room draw is `String(localized: "Notes")`, spelled where
+    /// it is drawn; this string reaches no screen. `category-fold-selftest.sh`
+    /// holds it clear of every category name and every offer's alias.
+    static let room = "Your notes"
 
     static func isPinnedRoom(_ source: String) -> Bool { source == room }
 

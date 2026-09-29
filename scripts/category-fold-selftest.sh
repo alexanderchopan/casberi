@@ -250,6 +250,40 @@ if missing:
     sys.exit("✗ no dock glyph for %s — add a row to CategoryFold.glyphs (prd §662)." % ", ".join(missing))
 PY4
 
+# THE NOTES ROOM'S SENTINEL IS NOT A CATEGORY, AND NOT A SOURCE (2026-09-28,
+# user: "the notes button doesn't activate when tapping it in the tray").
+# `Pinboard.room` is what `FeedFilter.source` takes when the Notes room is
+# showing. §969 spelled it "Notes", and "Notes" is a catalog CATEGORY and —
+# through the vendor-prefix alias — the SOURCE that resolves to Apple Notes.
+# So `go(to:)` read the door's tap as a folded chip and resolved it to the
+# category's venues (none present → nothing happened), and `foldAll` folded
+# the room's own page into the category's chip. Held here against the REAL
+# catalog: the sentinel must equal no category name, no offer name, no
+# offer's short alias (the word after the vendor prefix) and no seatless
+# source, so no fold or landing can ever claim it.
+python3 - "Casberi/Casberi/Model/Pinboard.swift" "Casberi/Casberi/Model/BridgeCatalog.swift" <<'PY4B'
+import re, sys
+pin, catalog = (open(a).read() for a in sys.argv[1:3])
+m = re.search(r'static let room = "([^"]+)"', pin)
+assert m, "Pinboard.room literal not found"
+room = m.group(1)
+cats = set(re.findall(r'^\s*\("([^"]+)",\s*"[^"]+",\s*\[', catalog, re.M))
+assert "Wallet" in cats and "Notes" in cats, f"category table not parsed: {sorted(cats)}"
+offers = set(re.findall(r'Offer\(name:\s*"([^"]+)"', catalog))
+assert len(offers) > 50, f"offer table not parsed: {len(offers)}"
+aliases = {n.split(" ", 1)[1] for n in offers if " " in n}
+seatless = set(re.findall(r'^\s*"([^"]+)":\s*"[^"]+",\s*$', catalog[catalog.find("categoryBySeatlessSource"):], re.M))
+bad = []
+if room in cats: bad.append("a catalog category")
+if room in offers: bad.append("an offer's name")
+if room in aliases: bad.append("an offer's vendor-prefix alias (resolves to a seat)")
+if room in seatless: bad.append("a seatless source")
+if bad:
+    print(f"✗ Pinboard.room {room!r} is {', '.join(bad)} — the tray's Notes door would resolve as a folded chip and the pager would fold the room's page away")
+    sys.exit(1)
+print(f"  ✓ Pinboard.room {room!r} is clear of every category, offer, alias and seatless source")
+PY4B
+
 # THE CHIP IS ITS OWN SHAPE, whatever that shape is (design pass 2026-08-11).
 # Both of these read as decoration and are not: a `Circle()` in a capsule's
 # frame draws a ring through the MIDDLE of a wide chip and makes only its
