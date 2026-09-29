@@ -3948,7 +3948,12 @@ struct FeedScreen: View {
             // All feed still DECLINES rather than reaching past it (the NOTE
             // above): §763 ruled for rooms, and the river's cover is a claim
             // about recency that an older card under a newer row would break.
-            if coverDeclines(thing) {
+            //
+            // **THE NOTES ROOM NEVER DECLINES.** Its rows are anything you
+            // pinned, so a room left holding only a pinned token pulse had no
+            // cover, and the tiles rose to the top of the screen (§752's ban;
+            // user: "the buttons stay put, and pinned item in the card", prd §979).
+            if source != Pinboard.room, coverDeclines(thing) {
                 guard isRoom else { return nil }
                 continue
             }

@@ -194,11 +194,14 @@ grep -q 'if memo.lede != nil, source == "All",' "$FEED" \
 # `coverDeclines` since prd §756 — `standsAlone` minus the posts — and it must
 # stay a separate question from `standsAlone`, which the run layout still asks
 # for every row. Since prd §763 a ROOM skips a declining row and covers the next
-# one; the All feed still declines outright.
-grep -q 'if coverDeclines(thing) {' "$FEED" \
-  || { echo "✗ the cover no longer asks coverDeclines — a consent card or a token"; \
-       echo "  pulse would draw twice, in two anatomies (prd §723/§756)"; exit 1; }
-grep -A1 'if coverDeclines(thing) {' "$FEED" | grep -q 'guard isRoom else { return nil }' \
+# one; the All feed still declines outright. The Notes room never declines
+# (prd §979): its rows are whatever you pinned, and a room holding only a pinned
+# token pulse had no cover, so its tiles rose to the top of the screen.
+grep -q 'if source != Pinboard.room, coverDeclines(thing) {' "$FEED" \
+  || { echo "✗ the cover no longer asks coverDeclines outside the Notes room — a consent"; \
+       echo "  card or a token pulse would draw twice (prd §723/§756), or the Notes room"; \
+       echo "  declines its pinned pulse and its tiles rise to the top (prd §979)"; exit 1; }
+grep -A1 'if source != Pinboard.room, coverDeclines(thing) {' "$FEED" | grep -q 'guard isRoom else { return nil }' \
   || { echo "✗ the All feed's cover reaches past a declining row (prd §763 ruled for"; \
        echo "  rooms) — an older card would sit above a newer consent card"; exit 1; }
 _veto=$(awk '/private func coverDeclines\(/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/feed.nocomment")

@@ -62154,3 +62154,11 @@ Two strings joined the catalog with es/ja/ko/zh-Hans: "Add a photo" (the disc, V
 **Not built: folders.** §972 deleted the tile until folders exist; nothing here changes that. They need a ruling on where a folder is made, how a note enters one, and whether a pin can be filed.
 
 **Seen:** the Python audits (all green; `row-cost-audit.py` carries the menu's new call literal). **Not seen:** a build or a device — no Xcode in this session. First on the phone: the long press on a note row and on the cover, the dialog, the row leaving, and the glyph on a note and a voice note.
+
+## §979 — The Notes room covers whatever it holds, so its tiles never rise (user: "i deleted the note and now it went to move the buttons to the top but it shouldn't. it should have empty card and buttons stay put. and pinned item in the card", 2026-09-29)
+
+**What happened.** The room held one note and one pinned token. Deleting the note left the token, and a token pulse is one of the rows the cover declines (`coverDeclines`, §756: it has its own fat anatomy). With nothing coverable, `ledeThingID` returned nil; the list was not empty, so `standaloneLead` drew no empty well either. The tiles stood with nothing above them, at the top of the screen — §752's ban, and the one case §862's held slot did not cover.
+
+**Ruling.** In `Pinboard.room`, the cover never declines. The room's newest thing, whatever its kind, is the cover, and the row is lifted out of the list as every cover's is. An empty room keeps the empty well (§969). So the lead slot is always held and the tiles stay put. Every other room keeps §756/§763 unchanged.
+
+**Seen:** `feed-reading-selftest.sh`'s grep guards (updated to the new condition); the Python audits. **Not seen:** a build or a device — no Xcode in this session. First on the phone: the Notes room with only a pinned token, then with nothing.
