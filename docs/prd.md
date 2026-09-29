@@ -62120,3 +62120,13 @@ Two strings joined the catalog with es/ja/ko/zh-Hans: "Add a photo" (the disc, V
 **Not changed.** The category discs (Wallet, Work, …) stay glyphs on `fillFaint`: they are names, not tiles, and they sit in the name column. `YouFace` at the row's head is untouched. Contrast: white on `#FF2D87` is 3.4:1, above the 3:1 bar for a glyph, on both themes (the fill is fixed, §740).
 
 **Seen:** the tray on the iPhone 17 Pro simulator over the demo — five pink discs level with the Wallet row's marks, Home ringed on the All feed, and the Notes door landing in its room.
+
+## §976a — The You doors are black circles with pink glyphs, and the standing door fills pink (user: "mock up how they would look as black circles with pink glyphs or whatever so we can compare side by side", then "do C", 2026-09-28)
+
+**Amends §976.** Four treatments were drawn over a real screenshot of the dark tray, with real SF Symbols: A (§976's pink tiles, white glyphs, the tint ring on the standing door), B (black circles, pink glyphs, the tint ring), C (black circles, pink glyphs, the standing door a pink tile), D (the category discs' charcoal, pink glyphs, the standing door a pink tile). The user picked C.
+
+**Ruling.** Each door is a black circle at the source marks' 28pt with its glyph in `DS.brand` at `BridgeIcon`'s fallback scale. The standing door (Home on the All feed, Notes in its room) turns into §976's pink tile — brand fill, white glyph, the top sheen — and the change is a crossfade on `DS.Motion.standard`. The tint ring is gone from the doors: the fill says "you are here", and a blue ring on a pink tile was two selection marks on one control.
+
+**What C costs, stated.** On the dark tray a black circle's edge is faint (`#000` on the glass's ~`#141414`); the pink glyphs carry the row, and the one pink tile carries the selection. On the light tray the black circle is the heaviest shape in the panel. Neither was ruled against; both were visible in the mockup's dark half, and the light half was not drawn.
+
+**Seen:** the tray on the iPhone 17 Pro simulator over the demo, Home filled on the All feed, and the Notes door filling after landing in its room.
