@@ -278,11 +278,24 @@ struct RoomsTray: View {
         return bridges.bridges.contains { seats.contains($0.name) && $0.status == .attention }
     }
 
-    /// You: four doors, as bare glyph circles the way the source marks are
-    /// bare brand circles. Home fills when you are standing in it; the rest
-    /// are outlines. Manage's door is deleted (prd §958, user: "both of these
-    /// buttons lead to sort of the same place"): Connect opens Accounts, and
-    /// its `Connect | Manage` switcher is one tap from what Manage held.
+    /// You: five doors, drawn as APP TILES in the brand pink (prd §976,
+    /// user, 2026-09-28: "make the You buttons in the tray the same size as
+    /// the app tiles and lets color them … maybe they all should be pink
+    /// backgrounds"). They were glyphs on a faint disc, which read a size
+    /// smaller than the solid brand circles beside them on the next rows
+    /// even at the same 28pt — a tinted fill has no edge. Now each door is
+    /// `BridgeIcon`'s own fallback recipe (brand fill, white glyph, a whisper
+    /// of top sheen) in `DS.brand`: the row of the app's own doors wears the
+    /// app's own mark colour, the way every other row's marks wear their
+    /// brands. That is §740's reading of the hue — the app identifying
+    /// itself, never decorating somebody else's words — on the one row that
+    /// is entirely the app's. The standing door (Home on the All feed, Notes
+    /// in its room) wears the fill glyph variant and the SAME tint ring a
+    /// standing source mark wears, so "you are here" is one vocabulary down
+    /// the whole tray. Manage's door is deleted (prd §958, user: "both of
+    /// these buttons lead to sort of the same place"): Connect opens
+    /// Accounts, and its `Connect | Manage` switcher is one tap from what
+    /// Manage held.
     ///
     /// Notes is the second door, right after Home (prd §969): the room you
     /// build — the notes you write and everything you pin — behind a door
@@ -395,10 +408,36 @@ struct RoomsTray: View {
         .frame(width: Self.mark, height: Self.mark)
     }
 
+    /// A You door: a brand-pink tile the size of a source mark. The glyph
+    /// sits at `BridgeIcon`'s fallback scale (0.54) so a door and the app
+    /// tiles beside it are one drawing; the ring is the source marks' own.
+    private func doorTile(_ glyph: String, lit: Bool) -> some View {
+        Circle()
+            .fill(DS.brand)
+            .overlay(
+                Circle().fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
+                                             startPoint: .top, endPoint: .center))
+            )
+            .overlay(
+                Image(systemName: glyph)
+                    .font(.system(size: Self.mark * 0.54, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
+            )
+            .overlay {
+                if lit {
+                    Circle()
+                        .strokeBorder(DS.tint, lineWidth: 1.5)
+                        .padding(-2)
+                }
+            }
+            .frame(width: Self.mark, height: Self.mark)
+    }
+
     private func door(_ word: String, glyph: String, lit: Bool = false, index: Int,
                       action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            disc(glyph, lit: lit, broken: false)
+            doorTile(glyph, lit: lit)
         }
         .buttonStyle(PressSpring())
         .dsTapTarget(Circle())
