@@ -20,6 +20,15 @@ from pathlib import Path
 
 GATE = re.compile(r'\bif\b[^{\n]*#available\(iOS 27[^{\n]*\{')
 
+# Expressions Xcode 26's type checker gives up on ("unable to type-check this
+# expression in reasonable time") and Xcode 27's does not — measured on a
+# build of `main` itself (2026-09-29), so a CI-only rewrite to the same
+# meaning, never a change to the tree.
+REWRITES = [
+    ('chrome.pourHue = selectedWallet.map(WalletFace.tint)',
+     'chrome.pourHue = selectedWallet.map { WalletFace.tint(for: $0) }'),
+]
+
 
 def shim(src: str) -> tuple[str, int]:
     out, count, i = [], 0, 0
@@ -56,6 +65,10 @@ def main() -> int:
     for path in sorted(root.rglob('*.swift')):
         text = path.read_text()
         new, n = shim(text)
+        for before, after in REWRITES:
+            if before in new:
+                new = new.replace(before, after)
+                n += 1
         if n:
             path.write_text(new)
             print(f'shimmed {path} ({n})')
