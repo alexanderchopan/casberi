@@ -45,14 +45,18 @@ Console promotion, live re-export — happened in the session that added the
 field, which is the only way this does not drift. The 2026-08-01 incident was
 20 fields deep precisely because that loop was never closed once.
 
-## `CD_notePictures` — NOT YET DEPLOYED (2026-09-29, the note-pictures ruling)
+## `CD_notePictures` — Development only; Production NOT YET (2026-09-29, prd §987)
 
 A note's pictures after the first added `Thing.notePictures`. It is in the
-checked-in `.ckdb`; the Development import and the Console promotion have NOT
-run (the session that added it had no Xcode). Until Production carries it, a
-note with a second picture fails its export whole — its words included — and
-retries forever. Before the build carrying it ships: `xcrun cktool
-import-schema` to Development, promote in the Console, then
+checked-in `.ckdb`. **Development has it (2026-09-29):** export, insert
+`CD_notePictures BYTES QUERYABLE SORTABLE` directly above `CD_ocrAt`,
+`validate-schema`, `import-schema`, re-export — the re-export differs from the
+original export by that one line and nothing else.
+
+**Production does not have it yet.** The Console promotion waits until the
+feature has been tested. Until Production carries it, a note with a second
+picture fails its export whole — its words included — and retries forever, so
+promote before the build carrying it ships, then run
 `scripts/cloudkit-schema-audit.py --live production`. Rewrite this section
 when that lands.
 
