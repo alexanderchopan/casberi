@@ -1989,6 +1989,11 @@ harness "MIME self-test" "MIME self-test" "scripts/mailmime-selftest.sh" "the MI
 # old importer threw away.
 harness "Note sheet self-test" "note sheet self-test" "scripts/note-sheet-selftest.sh" "the note sheet self-test failed — run scripts/note-sheet-selftest.sh"
 
+# The Notes room's folders (prd §980): one folder per name whatever its case,
+# and a folder a row carries listed before the key-value mirror has landed —
+# both render as an ordinary folder list when wrong.
+harness "Note folders self-test" "note folders self-test" "scripts/note-folders-selftest.sh" "the note folders self-test failed — run scripts/note-folders-selftest.sh"
+
 # What a WORK thing sheet says HAPPENED (prd §364, 2026-08-12). Same class as
 # the social sheet above and the same reason: every failure renders as a
 # perfectly good-looking receipt. A dispute that reads "won" when it was lost,

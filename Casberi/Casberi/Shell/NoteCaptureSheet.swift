@@ -419,8 +419,9 @@ struct NoteCaptureSheet: View {
         guard !stopping else { return }
         stopping = true
         let capture = voice, context = modelContext, land = onLand, close = onClose
+        let folder = filingFolder
         Task { @MainActor in
-            if let thing = await Self.keepRecording(capture, in: context) { land(thing) }
+            if let thing = await Self.keepRecording(capture, in: context, folder: folder) { land(thing) }
             if closing { close() }
         }
     }
@@ -440,7 +441,8 @@ struct NoteCaptureSheet: View {
     ///
     /// Nothing heard and nothing recorded lands nothing.
     @MainActor
-    private static func keepRecording(_ voice: VoiceCapture, in context: ModelContext) async -> Thing? {
+    private static func keepRecording(_ voice: VoiceCapture, in context: ModelContext,
+                                      folder: String?) async -> Thing? {
         await voice.settle()
         guard let piece = voice.stop(keep: true) else { return nil }
         let words = piece.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -458,6 +460,7 @@ struct NoteCaptureSheet: View {
             source: NoteSheetSource.keptSource,
             sourceRef: piece.sourceRef)
         thing.audio = bytes
+        thing.folder = folder
         context.insert(thing)
         context.saveHonestly()
         SpotlightIndex.index([thing])
@@ -476,10 +479,18 @@ struct NoteCaptureSheet: View {
         defer { onClose() }
         guard let thing = keptThing() else { return }
         thing.previewImageData = picture?.bytes
+        thing.folder = filingFolder
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
         onLand(thing)
+    }
+
+    /// The folder a note made now is filed in: the one standing open in the
+    /// Notes room (prd §980), read when the note is KEPT — New tapped inside
+    /// a folder makes a note in it.
+    private var filingFolder: String? {
+        chrome.notesScope == .folders ? chrome.notesFolder : nil
     }
 
     /// The note the words make, or the note a picture alone makes (prd

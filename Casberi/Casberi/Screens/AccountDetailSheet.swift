@@ -460,6 +460,8 @@ struct AccountDetailSheet: View {
                               // that, turning sync on carried your names to a
                               // second device and not the wallets behind them.
                               WalletStoreSync.shared.syncNow()
+                              // The Notes room's folder list (prd §980).
+                              NoteFolderStore.shared.syncNow()
                           }
                       }))
             // The guard turned it off; say so where the toggle is, until they

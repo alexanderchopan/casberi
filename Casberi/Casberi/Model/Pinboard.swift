@@ -88,6 +88,15 @@ enum Pinboard {
 
     static func isPinned(_ thing: Thing) -> Bool { thing.pinnedAt != nil }
 
+    /// File a thing in a folder, or take it out with nil (prd §980). A model
+    /// write and nothing else, like `toggle`, so it is legal from the row's
+    /// menu. One folder at most: filing again MOVES it.
+    @MainActor
+    static func file(_ thing: Thing, in folder: String?) {
+        guard thing.isLive else { return }
+        thing.folder = folder
+    }
+
     /// Pin or unpin, and report the new state so the caller can word its own
     /// confirmation without re-reading the model.
     ///
@@ -106,22 +115,23 @@ enum Pinboard {
     }
 }
 
-/// The Notes room's tiles (prd §969, §972): All · Pinned · New. All is
+/// The Notes room's tiles (prd §969, §972, §980): All · Pinned · Folders ·
+/// New. All is
 /// lit by default and first, as in every room; New is LAST and never lights —
 /// it is a verb in the row, drawn in tint, and it raises the note sheet (the
 /// user weighed New first and All first: "notes should be default", and the
 /// default is whichever tile is lit, not whichever is first).
 ///
-/// **Folders is DELETED until folders exist (prd §972).** §969 drew the tile
-/// before the feature: it lit, and showed the same list as All — a control
-/// that did nothing, §83's dead control. A feature deleted from the surface
-/// is deleted from the model (§723), so the case went with the tile; folders,
-/// when built, bring it back with something to show.
+/// **Folders is back, with folders behind it (prd §980).** §972 deleted the
+/// tile because §969 drew it before the feature: it lit and showed the same
+/// list as All, §83's dead control. Now it lights onto the folder list
+/// (`NoteFolderName`), a folder opens in the room, and a row files from its
+/// long press.
 ///
 /// Foundation-only, like every scope enum, so a harness can compile it
 /// whole; the glyphs are `ScopeTileGlyphs.swift`'s.
 enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, pinned, new
+    case all, pinned, folders, new
 
     var id: String { rawValue }
 
@@ -129,6 +139,7 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:     return String(localized: "All")
         case .pinned:  return String(localized: "Pinned")
+        case .folders: return String(localized: "Folders")
         case .new:     return String(localized: "New")
         }
     }
@@ -138,6 +149,7 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:     return String(localized: "Your notes and everything you pinned")
         case .pinned:  return String(localized: "What you pinned")
+        case .folders: return String(localized: "What you filed")
         case .new:     return String(localized: "Write or record a note")
         }
     }

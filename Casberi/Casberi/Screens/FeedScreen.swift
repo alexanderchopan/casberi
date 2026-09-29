@@ -1694,6 +1694,11 @@ struct FeedScreen: View {
     @State private var confirming: (Verb, Thing)?
     /// The note a long press asked to delete, waiting on its confirmation.
     @State private var deletingNote: Thing?
+    /// The Notes room's folder name prompt, its field, and the folder whose
+    /// Delete is being confirmed (prd §980).
+    @State private var folderPrompt: FolderPrompt?
+    @State private var folderDraft = ""
+    @State private var deletingFolder: String?
     /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
     @State private var showTranslate = false
     @State private var translateText = ""
@@ -3069,12 +3074,18 @@ struct FeedScreen: View {
 
     /// The Notes room's tile (prd §969), gated on the room like the two
     /// above. Pinned narrows to what you pinned — a pinned note included,
-    /// which is what "this one on top" means here. New is a verb and never
-    /// stands. (Folders is deleted until folders exist, prd §972.)
+    /// which is what "this one on top" means here. Folders (prd §980) narrows
+    /// to what you filed: the open folder's rows, or every filed row under
+    /// the folder list, so the lead covers the newest thing you filed. New is
+    /// a verb and never stands.
     private func notesScopeAllows(_ thing: Thing) -> Bool {
         guard Pinboard.isPinnedRoom(source) else { return true }
         switch chrome.notesScope {
         case .pinned:              return Pinboard.isPinned(thing)
+        case .folders:
+            guard let filed = thing.folder else { return false }
+            guard let open = chrome.notesFolder else { return true }
+            return NoteFolderName.key(filed) == NoteFolderName.key(open)
         case .all, .new:           return true
         }
     }
@@ -3205,7 +3216,12 @@ struct FeedScreen: View {
             if picked.isVerb {
                 chrome.newNote += 1
             } else {
-                withAnimation(DS.Motion.standard) { chrome.notesScope = picked }
+                // Any pick closes an open folder — Folders tapped again is
+                // the way back to the folder list (prd §980).
+                withAnimation(DS.Motion.standard) {
+                    chrome.notesScope = picked
+                    chrome.notesFolder = nil
+                }
             }
         }
     }
@@ -3214,14 +3230,130 @@ struct FeedScreen: View {
     /// box, the tiles under it, then ONE plain list in `Pinboard.stamp`'s
     /// order — no day dividers (user: "apple notes also doesn't separate by
     /// days"). The room never has a head, so the tiles always stand here.
+    ///
+    /// Under the Folders tile (prd §980) the list is the FOLDERS — New folder
+    /// first, then each folder with its count — and the cover is the newest
+    /// thing filed anywhere. A folder opens in place: its name as a row that
+    /// leads back, then its rows, and New files what it makes there.
     @ViewBuilder
     private func notesSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let coverID = ledeThingID(in: [(Pinboard.room, visible)])
         let cover = coverThing(coverID, in: visible)
+        let folderList = chrome.notesScope == .folders && chrome.notesFolder == nil
+        // Nothing filed holds the lead's box empty over the folder list, as
+        // an empty room does (§979: the tiles never rise).
         standaloneLead(cover: cover, tiles: notesTiles, listEmpty: visible.isEmpty,
                        emptyWords: Text(emptyLine))
-        daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
-                   cover: coverID, headed: false)
+        if folderList {
+            noteFolderRows(visible)
+        } else {
+            if chrome.notesScope == .folders, let open = chrome.notesFolder {
+                openFolderRow(open)
+            }
+            daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
+                       cover: coverID, headed: false)
+        }
+    }
+
+    /// The folder list (prd §980): New folder, then every folder — the
+    /// stored ones and any a row carries — with how many rows it holds. A
+    /// folder's long press renames or deletes it; deleting unfiles its rows.
+    /// `filed` is this render's `visible`, which under the list is every
+    /// filed row, so the counts cost one pass and no fetch.
+    @ViewBuilder
+    private func noteFolderRows(_ filed: [Thing]) -> some View {
+        let names = NoteFolderStore.shared.list(with: filed)
+        let counts = NoteFolderName.counts(filed: filed.map { $0.isLive ? $0.folder : nil })
+        Section {
+            DSDoorRow(icon: "folder.badge.plus", label: "New folder") {
+                folderPrompt = .make(filing: nil)
+            }
+            .noteFolderRowChrome()
+            ForEach(names, id: \.self) { name in
+                DSPushRow(title: Text(verbatim: name),
+                          fact: Text(verbatim: "\(counts[NoteFolderName.key(name)] ?? 0)"),
+                          action: { openFolder(name) }) {
+                    Image(systemName: ScopeTileGlyph.folders)
+                        .dsGlyph(.caption, weight: .regular)
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(width: 18, alignment: .center)
+                        .accessibilityHidden(true)
+                }
+                .frame(minHeight: DS.Hit.min)
+                .contextMenu {
+                    Button {
+                        folderPrompt = .rename(name)
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        deletingFolder = name
+                    } label: {
+                        Label("Delete folder", systemImage: "trash")
+                    }
+                }
+                .noteFolderRowChrome()
+            }
+        }
+    }
+
+    /// The open folder's name, under the tiles: the tap leads back to the
+    /// folder list, as the lit Folders tile does.
+    private func openFolderRow(_ name: String) -> some View {
+        Section {
+            DSDoorRow(icon: "chevron.left", title: Text(verbatim: name)) {
+                withAnimation(DS.Motion.standard) { chrome.notesFolder = nil }
+            }
+            .accessibilityHint(Text("Back to folders"))
+            .noteFolderRowChrome()
+        }
+    }
+
+    private func openFolder(_ name: String) {
+        withAnimation(DS.Motion.standard) { chrome.notesFolder = name }
+    }
+
+    /// Make a folder from the name prompt, and file the row that asked, if
+    /// one did (the row menu's New folder…).
+    private func commitFolderPrompt(_ prompt: FolderPrompt, _ typed: String) {
+        let store = NoteFolderStore.shared
+        switch prompt {
+        case .make(let filing):
+            guard let name = store.add(typed) else { return }
+            if let filing, filing.isLive {
+                Pinboard.file(filing, in: name)
+                modelContext.saveHonestly()
+                chrome.flash(String(localized: "Moved to \(name)"))
+            } else {
+                openFolder(name)
+            }
+        case .rename(let old):
+            guard let name = store.rename(old, to: typed, in: modelContext) else { return }
+            modelContext.saveHonestly()
+            if let open = chrome.notesFolder,
+               NoteFolderName.key(open) == NoteFolderName.key(old) {
+                chrome.notesFolder = name
+            }
+        }
+        DSHaptic.tap()
+    }
+
+    /// Delete a folder, confirmed: its rows are unfiled and stay in All.
+    private func deleteFolder(_ name: String) {
+        NoteFolderStore.shared.remove(name, in: modelContext)
+        modelContext.saveHonestly()
+        DSHaptic.tap()
+        chrome.flash(String(localized: "Folder deleted"))
+    }
+
+    /// The row menu's Move to folder (prd §980): file, move, or unfile.
+    private func fileThing(_ thing: Thing, in folder: String?) {
+        guard thing.isLive else { return }
+        Pinboard.file(thing, in: folder)
+        modelContext.saveHonestly()
+        DSHaptic.tap()
+        chrome.flash(folder.map { String(localized: "Moved to \($0)") }
+                     ?? String(localized: "Removed from folder"))
     }
 
     /// The Pinterest room's follow scope (prd §819): every pin carries the
@@ -4135,6 +4267,11 @@ struct FeedScreen: View {
                 if case .single = row.kind { return row.id }
                 return nil
             }
+        }
+        // The Notes room's folder list draws the cover and no rows (prd
+        // §980), so only the cover is walkable there.
+        if Pinboard.isPinnedRoom(source), chrome.notesScope == .folders, chrome.notesFolder == nil {
+            return ledeThingID(in: [(Pinboard.room, visible)]).map { [$0.uuidString] } ?? []
         }
         return visible.map { $0.id.uuidString }
     }
@@ -6459,6 +6596,9 @@ struct FeedScreen: View {
                                    draft: $vibenetNameDraft,
                                    onSave: commitVibenetName))
         .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
+        .modifier(NoteFolderAlert(prompt: $folderPrompt, draft: $folderDraft,
+                                  onSave: commitFolderPrompt))
+        .modifier(NoteFolderDeleteDialog(folder: $deletingFolder, onDelete: deleteFolder))
     }
 
     /// The row menu's Delete (a note of yours only): raise the confirmation.
@@ -8684,7 +8824,8 @@ struct FeedScreen: View {
         // row, lifted out of the list, so without it the newest note had no
         // Delete and no Pin.
         .contextMenu {
-            RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote)
+            RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
+                        onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) })
         }
         .dsHover()
         .macHoverLift()
@@ -10674,7 +10815,8 @@ struct FeedScreen: View {
                 // to memoise it. A View's body is lazy — `RowVerbMenu` holds
                 // the thing and derives when the press raises it — so this is
                 // work that no longer runs, not a cache over it.
-                RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote)
+                RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
+                            onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) })
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
@@ -11274,6 +11416,10 @@ struct FeedScreen: View {
                 // pointer, so the Mac was told to perform a gesture it does
                 // not have.
                 return String(localized: "Nothing pinned. \(DS.secondaryGesture) anything to pin it.")
+            case .folders:
+                return chrome.notesFolder == nil
+                    ? String(localized: "\(DS.secondaryGesture) anything in All to move it into a folder.")
+                    : String(localized: "\(DS.secondaryGesture) anything in All to move it here.")
             case .all, .new:
                 return String(localized: "Write or record a note, or \(DS.secondaryGesture) anything to pin it here.")
             }
@@ -12043,6 +12189,78 @@ private struct NoteDeleteDialog: ViewModifier {
     }
 }
 
+/// What the Notes room's folder name prompt is for (prd §980): a new folder
+/// — filing the row whose menu asked, if one did — or a rename.
+private enum FolderPrompt {
+    case make(filing: Thing?)
+    case rename(String)
+}
+
+/// The folder name prompt. A MODIFIER for `VibenetNameAlert`'s reason.
+private struct NoteFolderAlert: ViewModifier {
+    @Binding var prompt: FolderPrompt?
+    @Binding var draft: String
+    let onSave: (FolderPrompt, String) -> Void
+
+    private var title: String {
+        if case .rename = prompt { return String(localized: "Rename folder") }
+        return String(localized: "New folder")
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .alert(title, isPresented: Binding(get: { prompt != nil },
+                                               set: { if !$0 { prompt = nil } })) {
+                TextField(String(localized: "Name"), text: $draft)
+                Button(String(localized: "Save")) {
+                    if let prompt { onSave(prompt, draft) }
+                    prompt = nil
+                }
+                Button(String(localized: "Cancel"), role: .cancel) { prompt = nil }
+            }
+            // The field opens on the folder's own name for a rename, empty
+            // for a new one.
+            .onChange(of: prompt == nil) { _, closed in
+                guard !closed else { return }
+                if case .rename(let name) = prompt { draft = name } else { draft = "" }
+            }
+    }
+}
+
+/// The confirmation for a folder's Delete: its rows stay, unfiled.
+private struct NoteFolderDeleteDialog: ViewModifier {
+    @Binding var folder: String?
+    let onDelete: (String) -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(
+            String(localized: "Delete this folder?"),
+            isPresented: Binding(get: { folder != nil },
+                                 set: { if !$0 { folder = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Delete folder"), role: .destructive) {
+                if let folder { onDelete(folder) }
+                folder = nil
+            }
+            Button(String(localized: "Cancel"), role: .cancel) { folder = nil }
+        } message: {
+            Text(String(localized: "What's in it stays in All."))
+        }
+    }
+}
+
+private extension View {
+    /// A folder row in the Notes room's list: in the rows' column, on
+    /// nothing, like every row (prd §749).
+    func noteFolderRowChrome() -> some View {
+        listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: 0, trailing: DSRoomChassis.inset))
+    }
+}
+
 private struct RowVerbMenu: View {
     let thing: Thing
     /// The room the row is drawn in — the `perfAccum` bracket only. The rooms
@@ -12055,6 +12273,11 @@ private struct RowVerbMenu: View {
     /// menu item's content is gone once it fires, and a delete reaches every
     /// device through iCloud, so it is never one slip away.
     var onDelete: ((Thing) -> Void)? = nil
+    /// Files the row in a folder, or unfiles it with nil (prd §980) — any
+    /// row in the Notes room, a pin as much as a note.
+    var onFile: ((Thing, String?) -> Void)? = nil
+    /// Asks for a new folder's name, then files the row in it.
+    var onNewFolder: ((Thing) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
@@ -12098,6 +12321,42 @@ private struct RowVerbMenu: View {
         }
         ThingShareLink(thing: thing) {
             Label("Share", systemImage: "square.and.arrow.up")
+        }
+        // Anything the Notes room holds files (user: "anything in the
+        // room"); one folder at most, so a pick MOVES it. Built when the
+        // press raises the menu (§661), so the store read is not per row.
+        if let onFile, Pinboard.inRoom(thing) {
+            let current = thing.folder
+            Menu {
+                ForEach(NoteFolderName.list(stored: NoteFolderStore.shared.names,
+                                            filed: [current]), id: \.self) { name in
+                    Button {
+                        onFile(thing, name)
+                    } label: {
+                        if current.map(NoteFolderName.key) == NoteFolderName.key(name) {
+                            Label(name, systemImage: "checkmark")
+                        } else {
+                            Text(verbatim: name)
+                        }
+                    }
+                }
+                if let onNewFolder {
+                    Button {
+                        onNewFolder(thing)
+                    } label: {
+                        Label("New folder…", systemImage: "folder.badge.plus")
+                    }
+                }
+                if current != nil {
+                    Button {
+                        onFile(thing, nil)
+                    } label: {
+                        Label("Remove from folder", systemImage: "folder.badge.minus")
+                    }
+                }
+            } label: {
+                Label("Move to folder", systemImage: "folder")
+            }
         }
         // Only a note of yours: a bridge's row would land again on its next
         // sweep, so deleting it here would be a control that does not hold.

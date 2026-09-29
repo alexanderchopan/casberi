@@ -1219,6 +1219,24 @@ final class Thing {
     /// pin is permanent to the person, only the column is permanent to iCloud.
     var pinnedAt: Date? = nil
 
+    // MARK: - Filed (2026-09-29)
+
+    /// The Notes room folder YOU filed this thing in (prd §980), by name —
+    /// a pin and a note alike, one folder at most.
+    ///
+    /// **Why not a tag:** `tags` is written by the bridges (`thing.tags = …`
+    /// on a reconcile, Apple Wallet's and others), so a folder carried there
+    /// would fall out of a pinned row on its next sync — `pinnedAt`'s reason
+    /// against `mark`, one field over. **Why the name and not an id:** the
+    /// folder list rides the key-value mirror and the row rides CloudKit, two
+    /// channels that land in either order; a name reads on a device that has
+    /// not heard of the folder yet, and an id would read as nothing.
+    ///
+    /// nil = not filed. Additive optional, so no migration stage — but a new
+    /// CloudKit field: it ships only once `CD_folder` is deployed to
+    /// Production (docs/cloudkit-deploy.md).
+    var folder: String? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,

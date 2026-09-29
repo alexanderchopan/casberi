@@ -62162,3 +62162,21 @@ Two strings joined the catalog with es/ja/ko/zh-Hans: "Add a photo" (the disc, V
 **Ruling.** In `Pinboard.room`, the cover never declines. The room's newest thing, whatever its kind, is the cover, and the row is lifted out of the list as every cover's is. An empty room keeps the empty well (§969). So the lead slot is always held and the tiles stay put. Every other room keeps §756/§763 unchanged.
 
 **Seen:** `feed-reading-selftest.sh`'s grep guards (updated to the new condition); the Python audits. **Not seen:** a build or a device — no Xcode in this session. First on the phone: the Notes room with only a pinned token, then with nothing.
+
+## §980 — Notes gets folders, and the Folders tile comes back with them (user: "where is add folder also? folders should be a button how do we solve this", then chose: the list in the room, anything in the room can be filed, one folder per item, 2026-09-29; supersedes §972's item 6)
+
+**Why the tile was gone.** §969 drew a Folders tile before folders existed; it lit and showed All's list, so §972 deleted it as a dead control (§83), and §978 named the three open questions. The user answered them.
+
+**Ruling.**
+
+1. **Four tiles: All · Pinned · Folders · New** (§969's row, restored). Folders lights like Pinned; New stays the verb at the end.
+2. **The folder list stands in the room**, under the tiles: `New folder` first (a door row, `folder.badge.plus`), then each folder with how many rows it holds, in Finder's order. The lead covers the newest thing filed anywhere; with nothing filed, the lead holds the empty well (§979 — the tiles never rise).
+3. **A folder opens in place.** Its name stands as a row under the tiles (`chevron.left`) that leads back to the list, as tapping the lit Folders tile does; any tile pick closes the folder. Its rows are the room's one plain list.
+4. **Anything in the room files, into one folder at most.** The row's long press (and the cover's) gains `Move to folder`: each folder (the current one checked), `New folder…`, and `Remove from folder` when filed. Filing again moves it. A pin files the same way as a note.
+5. **New files where you stand.** A note typed, pictured or spoken while a folder is open is kept in it (`NoteCaptureSheet.filingFolder`).
+6. **A folder's long press renames or deletes it.** Delete is confirmed and UNFILES — "What's in it stays in All." Renaming onto another folder's name merges the two.
+7. **Storage.** `Thing.folder: String?`, the folder's NAME, on the row — never a tag, because bridges rewrite `tags` on reconcile and a filed pin would fall out on its next sync (`pinnedAt`'s reason against `mark`). The name, not an id, so a row that lands through CloudKit before the folder list reads on its own. The folder LIST (which is what keeps an empty folder) is `NoteFolderStore`, mirrored through `KeyValueMirror` behind the same `icloud.sync` consent as the address book. The room lists the stored names union every name a row carries (`NoteFolderName.list`), one per case- and accent-folded key, so "recipes" typed later files into "Recipes".
+
+**CloudKit.** `CD_folder` is a new field: in `docs/cloudkit-schema.ckdb`, NOT yet imported to Development or promoted to Production. Until it is, a filed row on a Production-signed build fails its export (docs/cloudkit-deploy.md). Ship it with the build.
+
+**Seen:** the drift guards of the new `note-folders-selftest.sh` and the Python audits (all green; `row-cost-audit.py` updated to the row menu's current call, which build 691's label fix had moved). **Not seen:** a compile, the harness's Swift half, a simulator or a device — this session had no Xcode and no `swiftc`. First on the phone: the four tiles, New folder from the list and from a row's menu, filing a pin, a note kept inside an open folder, rename, delete.

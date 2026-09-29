@@ -22,6 +22,7 @@ DEFINE SCHEMA
         CD_entityName           STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_externalLink         STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_facts                BYTES QUERYABLE SORTABLE,
+        CD_folder               STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_grantedAt            TIMESTAMP QUERYABLE SORTABLE,
         CD_id                   STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_imageURLs            BYTES QUERYABLE SORTABLE,

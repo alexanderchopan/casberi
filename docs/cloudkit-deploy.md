@@ -45,6 +45,15 @@ Console promotion, live re-export — happened in the session that added the
 field, which is the only way this does not drift. The 2026-08-01 incident was
 20 fields deep precisely because that loop was never closed once.
 
+## `CD_folder` — NOT YET DEPLOYED (2026-09-29, prd §980)
+
+The Notes room's folders added `Thing.folder`. It is in the checked-in
+`.ckdb`; the Development import and the Console promotion have NOT run (the
+session that added it had no Xcode). Before the build carrying it ships:
+`xcrun cktool import-schema` to Development, promote in the Console, then
+`scripts/cloudkit-schema-audit.py --live production`. Rewrite this section
+when that lands.
+
 ## The drift is invisible — so it's checked, not remembered
 
 `scripts/cloudkit-schema-audit.py` runs in `verify.sh`'s static head and fails

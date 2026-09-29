@@ -513,6 +513,13 @@ final class ShellChrome {
     /// reason, and cleared on every source change like it.
     var notesScope: NotesScope = .all
 
+    /// The folder standing open under the Folders tile (prd §980), by name;
+    /// nil is the folder list. Only ever set while `notesScope == .folders`,
+    /// and cleared with it on every source change and every tile pick — the
+    /// Folders tile tapped again is the way back to the list. A note made
+    /// while a folder is open is filed in it.
+    var notesFolder: String? = nil
+
     /// The Notes room's New tile, pressed (prd §969) — a counter `RootShell`
     /// answers by raising the note sheet, the way `pinPulse` is felt. Bumped
     /// only; whoever raises the sheet reads it.
