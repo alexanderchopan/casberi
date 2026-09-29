@@ -179,7 +179,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-quickActionProbe YES` — fire the Daily Brief quick action's warm landing after launch (NSLogs `quickAction:` then `briefRequest:`). A pass is not evidence the quick action works: it cannot reach `SceneDelegate` delivery (prd §377).
 - `-chipStats "<source:n[,…]>"|clear` — seed the source strip's tap-learning counters (`Model/ChipMemory.swift`); every mount NSLogs `chipLabels:`.
 - `-openRoom "<seat name>"` — land in a source's room headlessly at mount (`RootShell.openRoomIfRequested`; NSLogs `openRoom:`). Pair with `-demoEnter YES` on a prior launch for a furnished room.
-- `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (or the Reminders room's `today`/`scheduled`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
+- `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (or the Reminders room's `today`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
 - `-connectReminders YES` — the real Reminders connect, seat included (relaunch to see it; `simctl privacy … grant reminders` first, `-demo.corpusAllowed NO` on a fresh install or the dev seed pours four) → prd §993
 - `-openThing "<title prefix>"` — open the newest thing whose title starts with the prefix (NSLogs `openThing:`). It runs at mount, before ingest hooks land anything, so land first and relaunch.
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first).

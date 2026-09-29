@@ -1,10 +1,15 @@
 import Foundation
 
-/// The Reminders room's tiles (prd §993): All · Today · Scheduled · New —
-/// Apple's own smart lists, so the room reads the way the list it mirrors
-/// does. New is a VERB, like the Notes room's: it never lights, and its tap
-/// opens the Reminders app, because a reminder is made there and never
-/// written inside Casberi (ruling 2026-07-25, SourceActions' 2026-07-13 rule).
+/// The Reminders room's tiles (prd §993, §997): All · Today · New. All is
+/// every open reminder; Today is what is due today or overdue. New is a
+/// VERB, like the Notes room's: it never lights, and its tap opens the
+/// Reminders app, because a reminder is made there and never written inside
+/// Casberi (ruling 2026-07-25, SourceActions' 2026-07-13 rule).
+///
+/// There is no Scheduled tile (§997, user: "isn't scheduled same as all?"). It
+/// was every open reminder with a date, drawn in the same list as All, so the
+/// two read as one list twice. Apple's Scheduled earns its place by grouping
+/// by date; this room does not.
 ///
 /// There is no Done tile. The ingest lands OPEN reminders and only marks one
 /// done when it had already landed it, so a Done list would be the fraction
@@ -13,7 +18,7 @@ import Foundation
 ///
 /// Foundation-only, like `NotesScope`, so a harness can compile it whole.
 enum RemindersScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, today, scheduled, new
+    case all, today, new
 
     var id: String { rawValue }
 
@@ -21,7 +26,6 @@ enum RemindersScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:       return String(localized: "All")
         case .today:     return String(localized: "Today")
-        case .scheduled: return String(localized: "Scheduled")
         case .new:       return String(localized: "New")
         }
     }
@@ -31,7 +35,6 @@ enum RemindersScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:       return String(localized: "Your open reminders")
         case .today:     return String(localized: "Due today or overdue")
-        case .scheduled: return String(localized: "Reminders with a date")
         case .new:       return String(localized: "Make a reminder in Reminders")
         }
     }
@@ -42,7 +45,6 @@ enum RemindersScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all, .new: return String(localized: "Nothing to do.")
         case .today:     return String(localized: "Nothing due today.")
-        case .scheduled: return String(localized: "Nothing scheduled.")
         }
     }
 
@@ -62,8 +64,6 @@ enum RemindersScope: String, CaseIterable, Identifiable, Hashable, Sendable {
                   let tomorrow = calendar.date(byAdding: .day, value: 1,
                                                to: calendar.startOfDay(for: now)) else { return false }
             return dueAt < tomorrow
-        case .scheduled:
-            return !done && dueAt != nil
         }
     }
 }

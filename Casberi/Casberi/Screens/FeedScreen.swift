@@ -10912,12 +10912,18 @@ struct FeedScreen: View {
         // group so it draws once. Done rows never cover.
         let open = visible.filter { $0.mark == .doing }
             + visible.filter { $0.mark == .todo || $0.mark == .none }
+        let isRemindersRoom = source == "Reminders"
+        // In the Reminders room the newest open reminder always covers, even
+        // one `ledeThingID` would decline (prd §997), so the lead is held.
         let reminderCover = coverThing(heroShown ? nil : ledeThingID(in: [("", open)]), in: visible)
-        if source == "Reminders" {
-            // The cover, then the tiles; over an empty scope, the lead box
-            // holds the checklist drawn empty (prd §993).
+            ?? (isRemindersRoom && !heroShown ? open.first : nil)
+        if isRemindersRoom {
+            // The cover, then the tiles; with nothing OPEN, the lead box holds
+            // the checklist drawn empty (prd §993). Open, not visible: a room
+            // of done reminders drew no cover and no well, and its tiles rose
+            // to the top of the screen (prd §997, §752).
             let scope = chrome.remindersScope
-            standaloneLead(cover: reminderCover, tiles: remindersTiles, listEmpty: visible.isEmpty,
+            standaloneLead(cover: reminderCover, tiles: remindersTiles, listEmpty: open.isEmpty,
                            emptyWords: Text(scope.summary),
                            emptyFigure: .checklist,
                            emptyHeadline: Text(scope.emptyHeadline))

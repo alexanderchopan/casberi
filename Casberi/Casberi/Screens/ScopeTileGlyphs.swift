@@ -107,10 +107,9 @@ enum ScopeTileGlyph {
     static let pinned       = "pin"
     static let folders      = "folder"
     static let new          = "plus"
-    /// The Reminders room's date scopes (prd §993), Apple's own smart lists.
+    /// The Reminders room's date scope (prd §993), Apple's own Today.
     /// Not `calendar`: that is the event kind's glyph and the Calendar seat's.
     static let today        = "sun.max"
-    static let scheduled    = "calendar.badge.clock"
     /// The Calendar room's spans (prd §994); Today is Reminders' `today`
     /// above. Month takes `calendar` in the room the symbol names: there it
     /// is the month, not the seat.
@@ -170,7 +169,6 @@ extension RemindersScope: DSTileScope {
         switch self {
         case .all:       return ScopeTileGlyph.all
         case .today:     return ScopeTileGlyph.today
-        case .scheduled: return ScopeTileGlyph.scheduled
         case .new:       return ScopeTileGlyph.new
         }
     }
