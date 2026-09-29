@@ -298,6 +298,9 @@ enum DemoSeedAll {
                               // GitLab's two families (prd §911), the Radicle reason.
                               "gitlab:issue:demo", "gitlab:mr:demo",
                               "radicle:issue:rad:zDEMO",
+                              // Logos (prd §988): the real `logos:lez:<id>:<hash>`
+                              // shape with a demo account id inside it.
+                              "logos:lez:DEMO",
                               // Walletbeat (prd §419) carries the REAL ref
                               // shapes for the same reason as Radicle above —
                               // the room head joins a watch to its stored card
@@ -4675,6 +4678,22 @@ enum DemoSeedAll {
                 t.tags = r.2
             }
         }
+        // Logos (prd §988) — the rows the block walk lands, in its own words:
+        // bare amounts (LEZ has no unit), the counterparty's short id after
+        // the seam. The ref carries a DEMO account id so teardown finds it.
+        let logos: [(String, [String], Double)] = [
+            ("Received 150 — from 5nQx…Kf2W", ["Received"], 0.5),
+            ("Sent 40 — to DumJ…hE51", ["Sent"], 2),
+            ("Created token ANTV", ["Created"], 4),
+        ]
+        out += logos.enumerated().map { i, r in
+            row(.link, r.0, source: "Logos", ref: "logos:lez:DEMO:\(i)",
+                days: r.2, hour: 13,
+                content: "https://explorer.testnet.lez.logos.co") { t in
+                t.authorHandle = "CbgR…Sr2r"
+                t.tags = r.1
+            }
+        }
         let posthog: [(String, Double)] = [
             ("signed_up crossed 1,000", 3), ("Annotation · shipped the panel", 5),
             ("answer_asked has gone quiet", 8),
@@ -5971,6 +5990,7 @@ enum DemoSeedAll {
         ("Trello", "Synced 40m ago", "Reads cards assigned to you."),
         ("Cursor", "Synced 1h ago", "Reads cloud agents that finished."),
         ("Radicle", "1 repo", "Reads patches and issues, keyless."),
+        ("Logos", "1 account", "Reads a public testnet account, keyless."),
         ("Walletbeat", "3 wallets", "Reads public wallet reviews, keyless."),
         ("ENS", "3 names followed", "Reads when a followed name expires, keyless."),
         ("L2BEAT", "3 chains", "Reads public layer-2 risk reviews, keyless."),

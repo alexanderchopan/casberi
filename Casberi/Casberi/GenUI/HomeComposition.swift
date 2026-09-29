@@ -133,6 +133,11 @@ enum HomeComposition {
             // this audit reads source text; so this entry covers the pair in
             // practice while the parser can see one of them (2026-09-01).
             "Faucet",                                     // Hegotá, vibenet
+            // Logos (prd §988). STATE, every one: what happened to a watched
+            // LEZ account, never what it is about. "Faucet" above already
+            // covers one; "Sent" is ruled here, which also covers `HegotaSend`'s.
+            "Received", "Sent", "Initialized", "Created", "Minted", "Burned",
+            "Private", "Program",
             "BNB Smart Chain",                            // wallet chain label
             // Radicle (prd §400). All five are STATE, not subject: they say
             // what happened to a patch or an issue, never what it is about.

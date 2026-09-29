@@ -546,6 +546,14 @@ enum BridgeCatalog {
         // page where they decide whether to connect.
         Offer(name: "Hegotá Frames", tagline: "Try Ethereum's new frame transactions", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 1)),
+        // Logos (prd §988, 2026-09-29) — the network Nomos/Codex/Waku became,
+        // whose desktop suite is Basecamp. Wallet group beside the devnets,
+        // because what it watches is an account on a TESTNET: the coins are
+        // test coins, never joined to the wallet total, and the network has
+        // been reset from genesis before. Keyless (the LEZ sequencer answers
+        // anyone), so it is a no-account seat in the Radicle grade.
+        Offer(name: "Logos", tagline: "Watch accounts on the Logos testnet", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 9, 29)),
         // The THIRD ethrex devnet (prd §593, 2026-09-04), and a chain of its
         // own — 8141, distinct genesis — not a re-host of Hegotá. A separate
         // seat on the same reasoning that split Frames from Hegotá: no chain
@@ -1167,7 +1175,7 @@ enum BridgeSetupMode {
         "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
         "Telegram", "Shopify", "Deals", "Stocktwits", "Hugging Face", "Radicle",
         "npm", "PyPI", "Altana", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames", "Hegotá UTXO",
-        "Base Vibenet", "ETH Validators", "Hegotá Privacy", "NerdWallet",
+        "Base Vibenet", "ETH Validators", "Hegotá Privacy", "NerdWallet", "Logos",
         // No key and no account — Apple's model, turned on (prd §833).
         "Apple Intelligence"]
 }

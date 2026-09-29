@@ -716,6 +716,15 @@ enum BridgeRefresh {
                 _ = await RadicleIngest.refresh(context: context)
             }
         }
+        // Logos (prd §988). A pass is one head read, one balance read per
+        // watched account, and the blocks since the cursor in pages of 200 —
+        // a few hundred a day away, capped at `LogosIngest.walkCap`.
+        if LogosStore.shared.connected {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await LogosIngest.refresh(context: context)
+            }
+        }
         // What became of the pull request a Cursor agent opened (2026-08-08,
         // prd §340). Its own line rather than a rider on the Cursor bridge,
         // because it spends the GITHUB token: it is gated on both seats being

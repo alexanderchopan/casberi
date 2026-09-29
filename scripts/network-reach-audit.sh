@@ -98,6 +98,10 @@ KNOWN_NON_REACH=(
   # those hosts ARE disclosed in NetworkReach (the "Radicle" entry names both
   # default seeds). The explorer is only ever a link written into a row.
   radicle.network
+  # The Logos LEZ explorer (prd §988) — where a Logos row opens on tap.
+  # NEVER fetched: the bridge reads the sequencer, which IS disclosed in
+  # NetworkReach (the "Logos" entry).
+  explorer.testnet.lez.logos.co
   # ether.fi's own app — where an unstake row's "claim" and a Cash row open on
   # tap. Never fetched: the reads are public RPC hosts, and those ARE disclosed
   # in NetworkReach (the "ether.fi" and "ether.fi Cash" entries).

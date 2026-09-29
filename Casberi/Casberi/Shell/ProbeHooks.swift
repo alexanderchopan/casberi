@@ -2685,6 +2685,89 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-logosRewind <block>` — move the walk's cursor back, so the next
+        // pass re-reads real history and LANDS it (prd §988). A watch is
+        // forward-only and LEZ is quiet, so without this the landing path
+        // could not be exercised on demand. Listed before `-logosWatch` so a
+        // single launch rewinds, then walks.
+        Hook(key: "logosRewind") { spec, _ in
+            guard let block = Int(spec) else { NSLog("logosRewind: REFUSED %@", spec); return }
+            LogosStore.shared.advance(to: block)
+            NSLog("logosRewind: cursor=%d", block)
+        },
+        // `-logosWatch "<id[,id]>"` — watch public LEZ accounts and sync
+        // (prd §988). A `Private/` id is refused by name, never watched.
+        Hook(key: "logosWatch") { spec, context in
+            Task { @MainActor in
+                for raw in spec.split(separator: ",") {
+                    let one = String(raw).trimmingCharacters(in: .whitespaces)
+                    NSLog("logosWatch: %@ | %@", one, "\(LogosStore.shared.add(one))")
+                }
+                let outcome = await LogosIngest.refresh(context: context)
+                NSLog("logosWatch: %@", outcome.map { "+\($0.added) skipped=\($0.skipped)" } ?? "FAILED")
+            }
+        },
+        // `-logosProbe YES|<from>-<to>` — what the seat reads, one NSLog per
+        // line. `YES` prints the head, the program ids, every watched
+        // account's balance and owner, the cursor, and the rows held. A
+        // RANGE decodes those blocks WHOLE, watched or not, and prints every
+        // transaction's program, accounts and decoded event — the only way to
+        // prove the Borsh reader against the live chain, since a quiet watch
+        // decodes nothing and an empty room has five causes (nothing watched,
+        // the sequencer unreachable, a reset, a quiet account, a layout that
+        // drifted) and only the last is a bug. A block that fails to decode
+        // prints `UNREADABLE`, which is the drift signal.
+        Hook(key: "logosProbe") { spec, context in
+            Task { @MainActor in
+                let store = LogosStore.shared
+                let head = await LogosIngest.head()
+                let programs = await LogosIngest.programIDs()
+                NSLog("logosProbe: head=%@ | cursor=%@ | programs=%@ | watching %d",
+                      head.map(String.init) ?? "UNREACHABLE",
+                      store.cursor.map(String.init) ?? "-",
+                      programs.keys.sorted().joined(separator: ","), store.accounts.count)
+                let range = spec.split(separator: "-").compactMap { Int($0) }
+                if range.count == 2 {
+                    guard let blocks = await LogosIngest.blocks(from: range[0], to: range[1]) else {
+                        NSLog("logosBlock| FETCH FAILED"); return
+                    }
+                    for raw in blocks {
+                        guard let block = LogosWire.block(raw) else {
+                            NSLog("logosBlock| UNREADABLE | %d bytes", raw.count); continue
+                        }
+                        NSLog("logosBlock| %d | %@ | %d txs", block.id,
+                              ISO8601DateFormatter().string(from: block.timestamp),
+                              block.transactions.count)
+                        for tx in block.transactions {
+                            let everyone = Set(tx.accounts.map { Data($0) })
+                            let events = LogosWire.events(tx, watched: everyone, programs: programs)
+                            NSLog("logosTx| %@ | program=%@ | accounts=%d | %@", tx.hashHex,
+                                  LogosWire.programName(tx.programID, in: programs) ?? "?",
+                                  tx.accounts.count,
+                                  events.map(\.title).joined(separator: " / "))
+                        }
+                    }
+                    return
+                }
+                for id in store.accounts {
+                    if let account = await LogosIngest.account(id) {
+                        NSLog("logosAccount| %@ | balance=%@ | nonce=%d | owner=%@", id,
+                              LogosWire.amount(account.balance), account.nonce,
+                              LogosWire.programName(account.programOwner, in: programs) ?? "none")
+                    } else {
+                        NSLog("logosAccount| %@ | UNREADABLE", id)
+                    }
+                }
+                let rows = (try? context.fetch(
+                    FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Logos" })
+                )) ?? []
+                for thing in rows.filter(\.isLive)
+                    .sorted(by: { $0.capturedAt > $1.capturedAt }).prefix(30) {
+                    NSLog("logosRow| %@ | ref=%@ | tags=%@", thing.title,
+                          thing.sourceRef ?? "-", thing.tags.joined(separator: ","))
+                }
+            }
+        },
         // `-stockWatch "<query[,query]>"` — resolve each on Stocktwits, watch
         // it, then sync the streams; NSLogs tickers + new posts (headless
         // bridge test).

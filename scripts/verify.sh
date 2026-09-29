@@ -2325,6 +2325,12 @@ harness "ENS pure-logic self-test" "ens self-test" "scripts/ens-selftest.sh" "th
 harness "ENS renewal encoding self-test" "ens renew self-test" "scripts/ens-renew-selftest.sh" "the ENS renewal encoding self-test failed — run scripts/ens-renew-selftest.sh"
 
 harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-selftest.sh" "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
+# Logos (prd §988). The only proof of the LEZ block reader: a watch is forward-only on a
+# quiet testnet, so the landing path runs only when somebody else moves coins. Pins the
+# v0.2 Borsh layout to five real blocks whose hashes the chain confirmed, and catches the
+# failures that render as a clean row — a u128 read backwards, a timestamp read as
+# seconds, a hash that opens nothing, the per-block clock landing a row a minute.
+harness "Logos pure-logic self-test" "logos self-test" "scripts/logos-selftest.sh" "the Logos logic self-test failed — run scripts/logos-selftest.sh"
 # Walletbeat (prd §419). Catches the silent wrong answer this seat is built around: a
 # coverage gate that stops firing draws a confident ratings bar for a wallet Walletbeat has
 # never examined, so the one nobody has looked at renders as the cleanest on the screen.

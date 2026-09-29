@@ -342,6 +342,12 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Radicle"),
                  purpose: "Reads the patches and issues of the repos you watch, from the seed node you name. Carries only the repo ids you asked for; there is no account and no key, so nothing identifies you — but the seed you pick does see which repos you ask about.",
                  hosts: ["rosa.radicle.network", "iris.radicle.network", "the seed you name"]),
+        // Logos (prd §988) — the LEZ testnet's sequencer, keyless JSON-RPC.
+        // The explorer is a link a row opens, never fetched.
+        Endpoint(service: "Logos",
+                 reach: .whenConnected(bridge: "Logos"),
+                 purpose: "Reads the balance and activity of the public LEZ accounts you watch, from the Logos testnet's sequencer. Carries only the account ids you asked about and the block numbers it reads; there is no account and no key.",
+                 hosts: ["testnet.lez.logos.co"]),
         // Base Vibenet (2026-08-23) — an experimental devnet whose contracts
         // are redeployed on no fixed schedule, so unlike every other entry
         // here the CONTRACT addresses this app calls aren't listed, only the

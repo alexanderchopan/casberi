@@ -56,6 +56,10 @@ enum BridgeRouter {
         case cardPointers
         case huggingFace
         case radicle
+        /// Logos (prd §988) — a watch list of LEZ accounts, its own
+        /// destination for vibenet's reason: riding `.token` would dismiss the
+        /// raised sheet the moment the first watched account registered it.
+        case logos
         /// Base's vibenet devnet — a WATCH LIST of addresses on
         /// screen with no single credential to paste, so it needs its own
         /// destination for the reason L2BEAT/Walletbeat do: riding `.token`
@@ -322,6 +326,7 @@ enum BridgeRouter {
             case .cardPointers:   "cardpointers"
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
+            case .logos:          "logos"
             case .vibenet:        VibenetIdentity.seatID
             case .hegota:         HegotaIdentity.seatID
             case .privacyDevnet:  PrivacyDevnetIdentity.seatID
@@ -451,6 +456,7 @@ enum BridgeRouter {
         Row(offer: "CardPointers", id: "cardpointers", destination: .cardPointers),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
+        Row(offer: "Logos",      id: "logos",      destination: .logos),
         Row(offer: "Base Vibenet", id: VibenetIdentity.seatID, destination: .vibenet),
         Row(offer: "Hegotá UTXO", id: HegotaIdentity.seatID, destination: .hegota),
         Row(offer: "Hegotá Privacy", id: PrivacyDevnetIdentity.seatID, destination: .privacyDevnet),
@@ -672,6 +678,7 @@ struct BridgeDestinationView: View {
         case .cardPointers:   CardPointersScreen()
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()
+        case .logos:          LogosScreen()
         case .vibenet:        VibenetScreen()
         case .hegota:         HegotaScreen()
         case .privacyDevnet:  PrivacyDevnetScreen()
