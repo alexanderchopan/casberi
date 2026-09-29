@@ -1904,7 +1904,8 @@ struct ThingSheetView: View {
                 }
                 SheetPartyHead(name: thing.source, day: thing.capturedAt, line: entryLine,
                                onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
-                    BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                    BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true,
+                               symbol: BridgeIcon.noteSymbol(for: thing))
                 }
                 if thing.kind != .voice {
                     let split = Self.entrySplit(NoteSheetSource.prose(for: thing).text)
@@ -1933,7 +1934,8 @@ struct ThingSheetView: View {
                 SheetPartyHead(name: thing.source, day: thing.capturedAt,
                                line: thing.kind.typeTag,
                                onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
-                    BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
+                    BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true,
+                               symbol: BridgeIcon.noteSymbol(for: thing))
                 }
                 Text(TitleSeam.name(thing.title))
                     .dsText(Self.titleRung(for: TitleSeam.name(thing.title)).style)

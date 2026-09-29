@@ -1692,6 +1692,8 @@ struct FeedScreen: View {
     }
 
     @State private var confirming: (Verb, Thing)?
+    /// The note a long press asked to delete, waiting on its confirmation.
+    @State private var deletingNote: Thing?
     /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
     @State private var showTranslate = false
     @State private var translateText = ""
@@ -6451,6 +6453,28 @@ struct FeedScreen: View {
         .modifier(VibenetNameAlert(address: $renamingVibenet,
                                    draft: $vibenetNameDraft,
                                    onSave: commitVibenetName))
+        .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
+    }
+
+    /// The row menu's Delete (a note of yours only): raise the confirmation.
+    private func askDeleteNote(_ thing: Thing) {
+        guard thing.isLive, Pinboard.isNote(thing) else { return }
+        deletingNote = thing
+    }
+
+    /// Delete a note of yours, confirmed. The store mirrors to iCloud, so the
+    /// note leaves every device; Spotlight forgets it, as the drop toast's
+    /// Undo does (`RootShell.undoCapture`).
+    private func deleteNote(_ thing: Thing) {
+        guard thing.isLive, Pinboard.isNote(thing) else { return }
+        let id = thing.id
+        withAnimation(DS.Motion.standard) {
+            modelContext.delete(thing)
+        }
+        modelContext.saveHonestly()
+        SpotlightIndex.remove(ids: [id])
+        DSHaptic.tap()
+        chrome.flash(String(localized: "Note deleted"))
     }
 
     /// Saves the name a vibenet account was just given (prd §669).
@@ -8651,6 +8675,12 @@ struct FeedScreen: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
+        // The row's long press, on the cover too: the cover IS the newest
+        // row, lifted out of the list, so without it the newest note had no
+        // Delete and no Pin.
+        .contextMenu {
+            RowVerbMenu(thing: thing, room: source, onDelete: askDeleteNote) { run($0, on: $1) }
+        }
         .dsHover()
         .macHoverLift()
         .id(thing.id.uuidString)
@@ -10639,7 +10669,7 @@ struct FeedScreen: View {
                 // to memoise it. A View's body is lazy — `RowVerbMenu` holds
                 // the thing and derives when the press raises it — so this is
                 // work that no longer runs, not a cache over it.
-                RowVerbMenu(thing: thing, room: source) { run($0, on: $1) }
+                RowVerbMenu(thing: thing, room: source, onDelete: askDeleteNote) { run($0, on: $1) }
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
@@ -11981,6 +12011,33 @@ private struct VibenetNameAlert: ViewModifier {
     }
 }
 
+/// The confirmation for a note's Delete. A MODIFIER for `VibenetNameAlert`'s
+/// reason: the screen's presentation chain is long enough already that a
+/// third dialog spelled inline risks the type-checker.
+private struct NoteDeleteDialog: ViewModifier {
+    @Binding var note: Thing?
+    let onDelete: (Thing) -> Void
+
+    func body(content: Content) -> some View {
+        // Guarded with `isLive` (the 2026-07-24 crash class): an iCloud
+        // delete from another device can remove the note while this is up.
+        content.confirmationDialog(
+            String(localized: "Delete this note?"),
+            isPresented: Binding(get: { note?.isLive == true },
+                                 set: { if !$0 { note = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Delete note"), role: .destructive) {
+                if let note, note.isLive { onDelete(note) }
+                note = nil
+            }
+            Button(String(localized: "Cancel"), role: .cancel) { note = nil }
+        } message: {
+            Text(String(localized: "It can't be recovered."))
+        }
+    }
+}
+
 private struct RowVerbMenu: View {
     let thing: Thing
     /// The room the row is drawn in — the `perfAccum` bracket only. The rooms
@@ -11988,6 +12045,11 @@ private struct RowVerbMenu: View {
     /// source room has it hydrated already.
     let room: String
     let run: (Verb, Thing) -> Void
+    /// Asks to delete a note of yours (user: "i don't see a way to delete a
+    /// note … long press to delete"). The screen raises the confirmation: a
+    /// menu item's content is gone once it fires, and a delete reaches every
+    /// device through iCloud, so it is never one slip away.
+    var onDelete: ((Thing) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
@@ -12031,6 +12093,15 @@ private struct RowVerbMenu: View {
         }
         ThingShareLink(thing: thing) {
             Label("Share", systemImage: "square.and.arrow.up")
+        }
+        // Only a note of yours: a bridge's row would land again on its next
+        // sweep, so deleting it here would be a control that does not hold.
+        if let onDelete, Pinboard.isNote(thing) {
+            Button(role: .destructive) {
+                onDelete(thing)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 }

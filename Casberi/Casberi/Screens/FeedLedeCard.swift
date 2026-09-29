@@ -469,7 +469,8 @@ struct FeedLedeCard: View {
             RemoteThumb(urlString: avatar, size: DS.Face.list,
                         fallback: thing.source, circular: true)
         } else {
-            BridgeIcon(name: thing.source, size: DS.Face.list, circular: true)
+            BridgeIcon(name: thing.source, size: DS.Face.list, circular: true,
+                       symbol: BridgeIcon.noteSymbol(for: thing))
         }
     }
 

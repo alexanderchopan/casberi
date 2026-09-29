@@ -62141,3 +62141,16 @@ Two strings joined the catalog with es/ja/ko/zh-Hans: "Add a photo" (the disc, V
 **What holds it.** `category-fold-selftest.sh` reads `RoomsTray.categories` and fails when it stops gating on `categoryVenues`.
 
 **Seen:** the self-test's text guard. **Not seen:** a build or a device — no Xcode in this session; the change is one filter over two published values the tray already reads.
+
+## §978 — A note of yours can be deleted from its long press, and it wears the note, not the person (user: "i'm in notes. i don't see a way to delete a note. They should be able to long press to delete, I guess. also there is a silhouette icon in the top left, but what is that for? should be the notes icon", 2026-09-29)
+
+**Ruling.**
+
+1. **Delete rides the row's long press, beside Pin and Share** — §969's deferred "Delete … ride the row's press menu", built. `RowVerbMenu` draws a destructive `Delete` only for `Pinboard.isNote` (a note or voice note under `You`). A pin from a seat keeps Unpin as its way out of the room: a seat's row deleted here would land again on the next sweep, a control that does not hold (§83).
+2. **It confirms.** The row menu is reads-only by rule, and this is the one write in it that cannot be undone and reaches every device through iCloud. `NoteDeleteDialog` asks "Delete this note?" with "It can't be recovered."; the confirmed delete removes the model, saves, and drops it from Spotlight (`RootShell.undoCapture`'s three steps), then flashes "Note deleted".
+3. **The cover gets the row's menu.** The room's newest thing stands as the cover (`ledeListRow`), lifted out of the list — so the newest note had no long press at all, and a room with one note had no way to delete it. The cover now carries the same `RowVerbMenu`, in every room: a cover is a bigger read of one row.
+4. **A note of yours leads with the note's glyph.** Notes land under `You`, whose mark is `person` — right for a link you shared, and a silhouette on every note row, the cover's eyebrow and the note's sheet. `BridgeIcon.noteSymbol(for:)` gives the kind's glyph instead — `note.text`, the tray's Notes door, for a note; `waveform` for a voice note — on the same brand fill. The mark stays (every room's rows and cover lead with a mark, §744), and in this room it is what tells a note from a pinned GitHub PR.
+
+**Not built: folders.** §972 deleted the tile until folders exist; nothing here changes that. They need a ruling on where a folder is made, how a note enters one, and whether a pin can be filed.
+
+**Seen:** the Python audits (all green; `row-cost-audit.py` carries the menu's new call literal). **Not seen:** a build or a device — no Xcode in this session. First on the phone: the long press on a note row and on the cover, the dialog, the row leaving, and the glyph on a note and a voice note.

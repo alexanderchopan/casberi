@@ -753,7 +753,8 @@ struct BandRow: View {
         case .screenshot, .photoData:
             PhotoWell(thing: thing, size: DS.Mark.row)
         case .glyph:
-            BridgeIcon(name: thing.source, size: DS.Mark.row)
+            BridgeIcon(name: thing.source, size: DS.Mark.row,
+                       symbol: BridgeIcon.noteSymbol(for: thing))
         }
     }
 

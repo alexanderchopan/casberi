@@ -47,6 +47,9 @@ struct BridgeIcon: View {
     /// contexts, where a square asset inside a round chip read as a square
     /// floating in a circle (report 2026-07-10).
     var circular: Bool = false
+    /// A glyph drawn on the brand fill in place of the seat's own mark —
+    /// `noteSymbol(for:)`'s answer for a note of yours, nil everywhere else.
+    var symbol: String? = nil
     /// **A ROW'S LEAD IS ROUND (user, 2026-09-26: "should all the tiles be
     /// circles instead of square so its cohesive with rest of app?").** The
     /// tray, the face, the avatars and the account silhouettes are circles,
@@ -78,8 +81,20 @@ struct BridgeIcon: View {
                  : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous))
     }
 
+    /// **A NOTE OF YOURS WEARS THE NOTE, NOT THE PERSON (user: "there is a
+    /// silhouette icon in the top left … should be the notes icon").** A note
+    /// lands under `You`, whose mark is `person` — right for a link you
+    /// shared, wrong in the Notes room, where every row and the cover led
+    /// with a silhouette. The kind's glyph instead: `note.text` (the tray's
+    /// Notes door) for a note, `waveform` for a voice note. A pinned thing
+    /// from a seat keeps its seat's mark, which is how the room tells a pin
+    /// from a note. Callers hold a live model.
+    static func noteSymbol(for thing: Thing) -> String? {
+        Pinboard.isNote(thing) ? thing.kind.symbol : nil
+    }
+
     var body: some View {
-        if let ui = BridgeIconArt.image(assetName) {
+        if symbol == nil, let ui = BridgeIconArt.image(assetName) {
             Image(uiImage: ui)
                 .resizable()
                 .scaledToFill()
@@ -107,7 +122,7 @@ struct BridgeIcon: View {
                     // 0.45 read as undersized for glyphs with more internal
                     // whitespace ("checklist", "photo") — several symbols
                     // looked lost in their badge (report 2026-07-09).
-                    Image(systemName: BridgeGlyph.symbol(for: name))
+                    Image(systemName: symbol ?? BridgeGlyph.symbol(for: name))
                         .font(.system(size: size * 0.54, weight: .semibold))
                         .foregroundStyle(BridgeGlyph.glyphTint(for: name) ?? .white)
                 )

@@ -86,7 +86,7 @@ CHECKS = [
     ),
     (
         "Casberi/Casberi/Screens/FeedScreen.swift",
-        "RowVerbMenu(thing: thing, room: source) { run($0, on: $1) }",
+        "RowVerbMenu(thing: thing, room: source, onDelete: askDeleteNote) { run($0, on: $1) }",
         # The builder is non-escaping, so anything between `.contextMenu {`
         # and its first closing brace runs per row per body build. The verbs
         # read `content` — unfetched in the All room — and run a detector.
@@ -353,7 +353,7 @@ def self_test():
         ("the row's verbs derive per row build again",
          "Casberi/Casberi/Screens/FeedScreen.swift",
          lambda t: t.replace(
-             "RowVerbMenu(thing: thing, room: source) { run($0, on: $1) }",
+             "RowVerbMenu(thing: thing, room: source, onDelete: askDeleteNote) { run($0, on: $1) }",
              "let verbs = VerbDerivation.verbs(for: thing)\n"
              "                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }")),
         ("the RSS roster goes back to a computed property",
