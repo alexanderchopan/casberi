@@ -328,6 +328,14 @@ struct CasberiApp: App {
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
                 .disabled(!supportsMultipleWindows)
+                // ⌥⌘N, a NOTE (the Mac-keys ruling, 2026-09-29): Apple
+                // Notes spends ⌘N on it, and here ⌘N is already the capture
+                // door and ⇧⌘N a window, so the note takes the third
+                // modifier. The same raise as the Notes room's New tile.
+                Button("New Note") {
+                    focusedChrome?.newNote += 1
+                }
+                .keyboardShortcut("n", modifiers: [.command, .option])
             }
             // NOTE (verified live, 2026-07-28): Mac Catalyst's default
             // document-menu scaffolding (Duplicate/Move/Rename/Export As —
@@ -353,7 +361,17 @@ struct CasberiApp: App {
             // magnifier does (§215): field focused, nothing running until
             // they type.
             CommandGroup(after: .pasteboard) {
-                Button("Find…") { focusedChrome?.openFind() }
+                // Standing in the Notes room, ⌘F finds IN Notes — its own
+                // filter, Apple Notes' ⌘F (the Mac-keys ruling) — and
+                // everywhere else it is the composer's Find, as before.
+                Button("Find…") {
+                    if Pinboard.isPinnedRoom(focusedScene?.filter.source ?? ""),
+                       focusedChrome?.notesFindShown == true {
+                        focusedChrome?.notesFind += 1
+                    } else {
+                        focusedChrome?.openFind()
+                    }
+                }
                 .keyboardShortcut("f", modifiers: .command)
             }
             CommandGroup(after: .toolbar) {

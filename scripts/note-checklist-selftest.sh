@@ -3,8 +3,9 @@
 # checklist, compiled WHOLE and UNMODIFIED:
 #
 #   Casberi/Casberi/Model/NoteSheet.swift     — taskLine, blocks(tasks:)
-#   Casberi/Casberi/Model/NoteChecklist.swift — stored, toggled, continued,
-#                                               toggleLastLine, plain
+#   Casberi/Casberi/Model/NoteChecklist.swift — stored, toggled, continuedAt,
+#                                               toggleLine, toggleLastLine, plain
+#   Casberi/Casberi/Model/NoteLinkTyping.swift — `[[` at the cursor
 #
 # Every failure here is a SILENT WRONG ANSWER: a tick that flips the wrong
 # item, a kept list whose empty circles land as empty boxes, Return that
@@ -12,7 +13,7 @@
 # the next sync, a title reading "- [ ] milk".
 #
 # The drift guards cover the wiring the pure files cannot prove: that the
-# sheet keeps the STORED form, that Return goes through `continued`, that a
+# sheet keeps the STORED form, that Return goes through `continuedAt`, that a
 # tick goes through `toggled` and only where `ticksTasks` allows it, and that
 # a lock clears everything derived from the words.
 #
@@ -28,6 +29,8 @@ VIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
 SOURCE="Casberi/Casberi/Model/NoteSheetSource.swift"
 LOCK="Casberi/Casberi/Model/NoteLock.swift"
 PREVIEW="Casberi/Casberi/Model/NotePreview.swift"
+TYPING="Casberi/Casberi/Model/NoteLinkTyping.swift"
+FIND="Casberi/Casberi/Model/NoteFind.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 
 fail=0
@@ -40,8 +43,16 @@ guard "the sheet keeps the stored form, never the circles" \
   'NoteChecklist\.stored\(draft\)' "$CAPTURE"
 guard "an edit opens a kept list as circles" \
   'draft = NoteChecklist\.editable\(note\.content\)' "$CAPTURE"
-guard "Return inside a list goes through continued" \
-  'NoteChecklist\.continued\(old: old, new: new\)' "$CAPTURE"
+guard "Return inside a list goes through continuedAt, at the cursor" \
+  'NoteChecklist\.continuedAt\(old: parts\.body, new: new,' "$CAPTURE"
+guard "the words field reports its cursor" \
+  'selection: \$bodySelection' "$CAPTURE"
+guard "the checklist key acts on the cursor's line" \
+  'NoteChecklist\.toggleLine\(words, at: cursor\)' "$CAPTURE"
+guard "the Notes room filters through NoteFind" \
+  'NoteFind\.matches\(title: thing\.title, content: thing\.content,' "$FEED"
+guard "a typed [[ completes through NoteLinkTyping" \
+  'NoteLinkTyping\.completed\(parts\.body, start: start, cursor: cursor, title: title\)' "$CAPTURE"
 guard "a tick goes through toggled" \
   'NoteChecklist\.toggled\(thing\.content, ordinal: ordinal\)' "$VIEW"
 guard "a tick is offered only where ticksTasks allows it" \
@@ -107,12 +118,57 @@ let o = NoteChecklist.editorMark
 check("the key on an empty draft starts an item", NoteChecklist.toggleLastLine("") == o)
 check("the key after words starts the next line as an item", NoteChecklist.toggleLastLine("Shop") == "Shop\n" + o)
 check("the key on an item takes the circle off", NoteChecklist.toggleLastLine("Shop\n\(o)milk") == "Shop\nmilk")
+func cont(_ old: String, _ new: String, hint: Int? = nil) -> (text: String, cursor: Int)? {
+    NoteChecklist.continuedAt(old: old, new: new, hint: hint)
+}
 check("Return after an item starts the next",
-      NoteChecklist.continued(old: "\(o)milk", new: "\(o)milk\n") == "\(o)milk\n\(o)")
+      cont("\(o)milk", "\(o)milk\n")?.text == "\(o)milk\n\(o)")
+check("and the cursor stands after the new circle",
+      cont("\(o)milk", "\(o)milk\n")?.cursor == "\(o)milk\n\(o)".count)
 check("Return on an empty item ends the list",
-      NoteChecklist.continued(old: "\(o)milk\n\(o)", new: "\(o)milk\n\(o)\n") == "\(o)milk\n")
-check("Return after prose is left alone", NoteChecklist.continued(old: "hi", new: "hi\n") == nil)
-check("a paste is left alone", NoteChecklist.continued(old: "\(o)a", new: "\(o)a\nb\n") == nil)
+      cont("\(o)milk\n\(o)", "\(o)milk\n\(o)\n")?.text == "\(o)milk\n")
+check("Return after prose is left alone", cont("hi", "hi\n") == nil)
+check("a paste is left alone", cont("\(o)a", "\(o)a\nb\n") == nil)
+
+print("Writing at the cursor (the note-editor ruling)")
+let mid = "\(o)milk\nlater"
+check("Return at the end of an item in the MIDDLE starts the next item",
+      cont(mid, "\(o)milk\n\nlater")?.text == "\(o)milk\n\(o)\nlater")
+check("Return inside an item splits it into two items",
+      cont("\(o)milk", "\(o)mi\nlk")?.text == "\(o)mi\n\(o)lk")
+check("Return on an empty item mid-list ends the list there",
+      cont("\(o)a\n\(o)\nb", "\(o)a\n\(o)\n\nb")?.text == "\(o)a\n\nb")
+check("the hint picks Return on the blank line under a list, not after its item",
+      cont("\(o)a\n\nb", "\(o)a\n\n\nb", hint: 4) == nil)
+check("with no hint, the end of the item above",
+      cont("\(o)a\n\nb", "\(o)a\n\n\nb")?.text == "\(o)a\n\(o)\n\nb")
+let three = "Shop\nmilk\neggs"
+check("the key turns the cursor's line into an item",
+      NoteChecklist.toggleLine(three, at: 7).text == "Shop\n\(o)milk\neggs")
+check("and moves the cursor with its words",
+      NoteChecklist.toggleLine(three, at: 7).cursor == 9)
+check("the key on an item takes that circle off, not the last line's",
+      NoteChecklist.toggleLine("\(o)a\n\(o)b", at: 1).text == "a\n\(o)b")
+check("the cursor never lands inside a removed circle",
+      NoteChecklist.toggleLine("\(o)a", at: 1).cursor == 0)
+check("the key on an empty text starts an item", NoteChecklist.toggleLine("", at: 0).text == o)
+check("the lit state reads the cursor's line",
+      NoteChecklist.isItem("\(o)a\nb", at: 1) && !NoteChecklist.isItem("\(o)a\nb", at: 4))
+
+print("A link typed at the cursor")
+let typed = "See [[Boo"
+check("an open [[ is a question", NoteLinkTyping.openQuery(in: typed, cursor: typed.count)! == (4, "Boo"))
+check("a closed link is not", NoteLinkTyping.openQuery(in: "See [[Book]] x", cursor: 14) == nil)
+check("a new line ends the question", NoteLinkTyping.openQuery(in: "[[a\nb", cursor: 5) == nil)
+check("one bracket is prose", NoteLinkTyping.openQuery(in: "a [b", cursor: 4) == nil)
+check("the cursor before the brackets asks nothing", NoteLinkTyping.openQuery(in: typed, cursor: 3) == nil)
+let done = NoteLinkTyping.completed(typed, start: 4, cursor: typed.count, title: "Book club")
+check("a pick writes the exact title in brackets", done.text == "See [[Book club]]")
+check("and the cursor stands after it", done.cursor == "See [[Book club]]".count)
+check("a ]] already there is taken, not doubled",
+      NoteLinkTyping.completed("[[Bo]] x", start: 0, cursor: 4, title: "Book").text == "[[Book]] x")
+check("the offer is the pool's order, filtered, three at most",
+      NoteLinkTyping.offers("b", in: ["Bread", "Apple", "Book", "Bike", "Boat"]) == ["Bread", "Book", "Bike"])
 check("kept, circles become boxes and empty items go",
       NoteChecklist.stored("Shop\n\(o)milk\n\(o)\n\(o)eggs") == "Shop\n- [ ] milk\n- [ ] eggs")
 check("a list's first item names the note without its box", NoteChecklist.plain("- [ ] milk") == "milk")
@@ -125,7 +181,7 @@ check("a kept list opens as circles, ticks kept",
 check("and keeps again exactly as it was",
       NoteChecklist.stored(NoteChecklist.editable(kept)) == kept)
 check("Return after a ticked item starts an open one",
-      NoteChecklist.continued(old: "\(d)eggs", new: "\(d)eggs\n") == "\(d)eggs\n\(o)")
+      cont("\(d)eggs", "\(d)eggs\n")?.text == "\(d)eggs\n\(o)")
 
 print("The room's second line (prd §983)")
 func pv(_ t: String, _ c: String, voice: Bool = false, locked: Bool = false) -> String? {
@@ -140,6 +196,18 @@ check("the title is never printed twice", pv("Trip", "Trip\nPack the charger") =
 check("a one-line note has no second line", pv("Just this", "Just this") == nil)
 check("a link reads as its thing", pv("Plan", "Plan\nFor [[Book club]] Friday") == "For Book club Friday")
 
+print("Find in Notes")
+func find(_ q: String, _ t: String, _ c: String = "", folder: String? = nil) -> Bool {
+    NoteFind.matches(title: t, content: c, folder: folder, query: q)
+}
+check("an empty query is no filter", find("   ", "anything"))
+check("a word in the title matches", find("grocer", "Groceries"))
+check("a word in the words matches", find("bread", "Groceries", "- [ ] bread"))
+check("a folder's name matches", find("work", "Plan", folder: "Work"))
+check("every word must match, in any order", find("bread shop", "Shop", "bread") && !find("bread car", "Shop", "bread"))
+check("case and accents fold", find("CAFE", "Café list"))
+check("a locked note is found by title only", !find("secret", "Locked note", ""))
+
 print("The room's cover reads a note of yours")
 check("the cover draws the list as circles, never the title or a box",
       NotePreview.body(title: "Groceries", content: "Groceries\n- [x] milk\n- [ ] bread\n\nSee you")
@@ -151,7 +219,7 @@ if failures > 0 { print("note-checklist-selftest: ✗ \(failures) assertion(s) f
 print("note-checklist-selftest: assertions pass")
 SWIFT
 
-if ! swiftc -Onone -o "$TMP/nc" "$SHEET" "$LIST" "$PREVIEW" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/nc" "$SHEET" "$LIST" "$PREVIEW" "$TYPING" "$FIND" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "note-checklist-selftest: ✗ did not compile"; cat "$TMP/build.log"; exit 1
 fi
 "$TMP/nc" || exit 1
@@ -163,9 +231,13 @@ mutate() {  # name, file, perl expression
   cp "$file" "$copy"
   perl -0pi -e "$expr" "$copy"
   if cmp -s "$file" "$copy"; then echo "  ✗ mutation did not apply: $name"; fail=1; return; fi
-  local a=$SHEET b=$LIST
-  [[ $file == $SHEET ]] && a=$copy || b=$copy
-  if swiftc -Onone -o "$TMP/mut" "$a" "$b" "$PREVIEW" "$TMP/main.swift" 2>/dev/null && "$TMP/mut" >/dev/null 2>&1; then
+  local a=$SHEET b=$LIST c=$TYPING
+  [[ $file == $SHEET ]] && a=$copy
+  [[ $file == $LIST ]] && b=$copy
+  [[ $file == $TYPING ]] && c=$copy
+  local f=$FIND
+  [[ $file == $FIND ]] && f=$copy
+  if swiftc -Onone -o "$TMP/mut" "$a" "$b" "$PREVIEW" "$c" "$f" "$TMP/main.swift" 2>/dev/null && "$TMP/mut" >/dev/null 2>&1; then
     echo "  ✗ SURVIVED: $name"; fail=1
   else
     echo "  ✓ caught: $name"
@@ -175,7 +247,12 @@ mutate() {  # name, file, perl expression
 echo "Mutations"
 mutate "a tick flips the first item, whatever was tapped" "$LIST" 's/if seen == ordinal \{/if true {/'
 mutate "kept circles stay circles" "$LIST" 's/lead \+ \(done \? doneMark : openMark\) \+ words/lead + editorMark + words/'
-mutate "Return on an empty item starts another" "$LIST" 's/if words\.isEmpty \{/if false {/'
+mutate "Return on an empty item starts another" "$LIST" 's/if words\.isEmpty && /if false && /'
+mutate "the hint is ignored" "$LIST" 's/let p = hint\.map \{ min\(max\(\$0, first\), last\) \} \?\? first/let p = first/'
+mutate "the key acts on the last line whatever the cursor" "$LIST" 's/let \(start, end\) = lineBounds\(text, at: at\)\n        let line = String\(chars\[start\.\.<end\]\)/let (start, end) = lineBounds(text, at: chars.count)\n        let line = String(chars[start..<end])/'
+mutate "a closing bracket does not end the question" "$TYPING" 's/if c == "\\n" \|\| c == "\]" \{ return nil \}/if c == "\\n" { return nil }/'
+mutate "one matching word is enough" "$FIND" 's/wanted\.allSatisfy/wanted.contains/'
+mutate "a ]] at the cursor is doubled" "$TYPING" 's/to \+= 2/to += 0/'
 mutate "items are never numbered past the first" "$SHEET" 's/ordinal \+= 1\n/\n/'
 mutate "an edit drops the ticks" "$LIST" 's/return lead \+ \(item\.done \? doneEditorMark : editorMark\)/return lead + editorMark/'
 mutate "the tasks flag is ignored" "$SHEET" 's/if tasks \|\| takesMarkers, let item/if takesMarkers, let item/'

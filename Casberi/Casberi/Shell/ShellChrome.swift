@@ -520,6 +520,17 @@ final class ShellChrome {
     /// while a folder is open is filed in it.
     var notesFolder: String? = nil
 
+    /// The words the Notes room is FILTERED by (the Find-in-Notes ruling):
+    /// a note's title, words or folder, every word typed. Cleared on every
+    /// source change with the scope, so a room never opens filtered.
+    var notesQuery = ""
+    /// ⌘F while standing in the Notes room — a counter the room answers by
+    /// focusing its filter, the way `newNote` is the New tile's tap.
+    var notesFind = 0
+    /// The room's filter is drawn — ⌘F lands on it only then, and is the
+    /// composer's Find otherwise, so the key never does nothing.
+    var notesFindShown = false
+
     /// The Notes room's New tile, pressed (prd §969) — a counter `RootShell`
     /// answers by raising the note sheet, the way `pinPulse` is felt. Bumped
     /// only; whoever raises the sheet reads it.

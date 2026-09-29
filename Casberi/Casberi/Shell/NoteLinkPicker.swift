@@ -81,22 +81,27 @@ struct NoteLinkPicker: View {
                 .scrollDismissesKeyboard(.interactively)
             }
         }
-        .onAppear {
-            var descriptor = FetchDescriptor<Thing>(
-                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-            descriptor.fetchLimit = Self.window
-            descriptor.propertiesToFetch = [\.title, \.source, \.capturedAt]
-            let things = (try? modelContext.fetch(descriptor)) ?? []
-            var seen = Set<String>()
-            pool = things.compactMap { thing in
-                guard thing.isLive, !NoteLock.isLocked(thing) else { return nil }
-                let title = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                // A title with a bracket cannot sit inside `[[…]]`, and the
-                // same title twice is one link.
-                guard title.count >= 2, !title.contains("]"), !title.contains("["),
-                      seen.insert(title.lowercased()).inserted else { return nil }
-                return Row(id: thing.id, title: title, source: thing.source)
-            }
+        .onAppear { pool = Self.pool(in: modelContext) }
+    }
+
+    /// What a link can name: the newest `window` things, live, unlocked, one
+    /// row per title, no title with a bracket (it cannot sit inside `[[…]]`).
+    /// Read once per open — by this picker, and by the note sheet the first
+    /// time `[[` is typed (`NoteLinkTyping`).
+    @MainActor
+    static func pool(in context: ModelContext) -> [Row] {
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = window
+        descriptor.propertiesToFetch = [\.title, \.source, \.capturedAt, \.sourceRef]
+        let things = (try? context.fetch(descriptor)) ?? []
+        var seen = Set<String>()
+        return things.compactMap { thing in
+            guard thing.isLive, !NoteLock.isLocked(thing) else { return nil }
+            let title = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard title.count >= 2, !title.contains("]"), !title.contains("["),
+                  seen.insert(title.lowercased()).inserted else { return nil }
+            return Row(id: thing.id, title: title, source: thing.source)
         }
     }
 }

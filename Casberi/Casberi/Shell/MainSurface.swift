@@ -2136,6 +2136,7 @@ struct MainSurface: View {
             // The Notes room opens on All too (prd §969).
             chrome.notesScope = .all
             chrome.notesFolder = nil
+            chrome.notesQuery = ""
             chrome.pinterestScope = nil
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a

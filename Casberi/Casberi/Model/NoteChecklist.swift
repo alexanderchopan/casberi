@@ -111,10 +111,9 @@ enum NoteChecklist {
         .joined(separator: "\n")
     }
 
-    /// The checklist key, pressed: the LAST line becomes an item, or stops
-    /// being one. The field is a `TextField`, which does not tell anyone
-    /// where its cursor is, and a jot is written top to bottom — so the key
-    /// acts where the writing is happening, at the end.
+    /// The checklist key, pressed with no cursor to read (the title focused,
+    /// or nothing): the LAST line becomes an item, or stops being one — a
+    /// jot is written top to bottom. With a cursor, `toggleLine(_:at:)`.
     static func toggleLastLine(_ draft: String) -> String {
         guard !draft.isEmpty else { return editorMark }
         var lines = draft.components(separatedBy: "\n")
@@ -130,29 +129,94 @@ enum NoteChecklist {
         return draft + "\n" + editorMark
     }
 
+    // MARK: - Where the cursor is (the note-editor ruling)
+
+    /// The line holding character `offset` (counted in `Character`s from the
+    /// start), as its start and end offsets. An offset past the end is the
+    /// last line; a negative one the first.
+    static func lineBounds(_ text: String, at offset: Int) -> (start: Int, end: Int) {
+        let chars = Array(text)
+        let at = min(max(offset, 0), chars.count)
+        var start = at
+        while start > 0, chars[start - 1] != "\n" { start -= 1 }
+        var end = at
+        while end < chars.count, chars[end] != "\n" { end += 1 }
+        return (start, end)
+    }
+
+    /// Whether the line under the cursor is an item — the key's lit state
+    /// once the field says where its cursor is.
+    static func isItem(_ text: String, at offset: Int) -> Bool {
+        let (start, end) = lineBounds(text, at: offset)
+        let line = String(Array(text)[start..<end])
+        return line.hasPrefix(editorMark) || line.hasPrefix(doneEditorMark)
+    }
+
+    /// The checklist key, pressed with the cursor at `offset`: THAT line
+    /// becomes an item, or stops being one, and the cursor keeps its place
+    /// in the words (two characters right when a circle went on, two left
+    /// when one came off, never inside the circle). An empty text starts an
+    /// item. This supersedes `toggleLastLine` wherever the field reports its
+    /// cursor; `toggleLastLine` stays for a field that does not.
+    static func toggleLine(_ text: String, at offset: Int) -> (text: String, cursor: Int) {
+        guard !text.isEmpty else { return (editorMark, editorMark.count) }
+        var chars = Array(text)
+        let at = min(max(offset, 0), chars.count)
+        let (start, end) = lineBounds(text, at: at)
+        let line = String(chars[start..<end])
+        let mark = editorMark.count
+        if line.hasPrefix(editorMark) || line.hasPrefix(doneEditorMark) {
+            chars.removeSubrange(start..<(start + mark))
+            return (String(chars), max(start, at - mark))
+        }
+        chars.insert(contentsOf: Array(editorMark), at: start)
+        return (String(chars), at + mark)
+    }
+
+    /// Return, inside a list, typed ANYWHERE in the words (§982's rule at
+    /// the end of the words, carried to the cursor), with where the cursor
+    /// lands.
+    ///
+    /// One newline inserted, nothing else changed — a paste, a deletion or
+    /// two characters at once is left exactly as it arrived (nil). The text
+    /// BEFORE the new line decides: an item with words (or with words after
+    /// the cursor, a split) starts the next line as an item; an empty item
+    /// with nothing after it ends the list, the newline and the circle both
+    /// gone, as in Apple Notes. Anything else is nil.
+    ///
+    /// A newline typed beside another newline could have been typed at any
+    /// place in that run — "○ a⏎" and "⏎" on the empty line under it make
+    /// the same text. `hint`, the cursor before the key, says which; with no
+    /// hint the earliest place is read, the end of the line above.
+    static func continuedAt(old: String, new: String, hint: Int? = nil) -> (text: String, cursor: Int)? {
+        let o = Array(old), n = Array(new)
+        guard n.count == o.count + 1 else { return nil }
+        var last = 0
+        while last < o.count, o[last] == n[last] { last += 1 }
+        guard n[last] == "\n", Array(n[(last + 1)...]) == Array(o[last...]) else { return nil }
+        var first = last
+        while first > 0, o[first - 1] == "\n" { first -= 1 }
+        let p = hint.map { min(max($0, first), last) } ?? first
+        // The line the Return was typed in, split at `p`.
+        let (start, end) = lineBounds(old, at: p)
+        let before = String(o[start..<p])
+        let after = String(o[p..<end])
+        guard before.hasPrefix(editorMark) || before.hasPrefix(doneEditorMark) else { return nil }
+        let words = before.dropFirst(editorMark.count).trimmingCharacters(in: .whitespaces)
+        if words.isEmpty && after.trimmingCharacters(in: .whitespaces).isEmpty {
+            // Return on an empty item: the item goes, and the line stays empty.
+            var kept = o
+            kept.replaceSubrange(start..<end, with: [])
+            return (String(kept), start)
+        }
+        var out = n
+        out.insert(contentsOf: Array(editorMark), at: p + 1)
+        return (String(out), p + 1 + editorMark.count)
+    }
+
     /// Whether the last line is an item — the key's lit state.
     static func endsInItem(_ draft: String) -> Bool {
         let last = draft.components(separatedBy: "\n").last ?? ""
         return last.hasPrefix(editorMark) || last.hasPrefix(doneEditorMark)
-    }
-
-    /// Return, inside a list: a new line after an item with words starts the
-    /// next item; a new line after an EMPTY item ends the list, as it does in
-    /// Apple Notes. Anything else — a paste, a deletion, a line typed in the
-    /// middle — is left exactly as it arrived. Returns nil when there is
-    /// nothing to change.
-    static func continued(old: String, new: String) -> String? {
-        guard new.count == old.count + 1, new.hasSuffix("\n"), new.hasPrefix(old) else { return nil }
-        let lines = old.components(separatedBy: "\n")
-        guard let last = lines.last,
-              last.hasPrefix(editorMark) || last.hasPrefix(doneEditorMark) else { return nil }
-        let words = last.dropFirst(editorMark.count).trimmingCharacters(in: .whitespaces)
-        if words.isEmpty {
-            // Return on an empty item: the item goes, and the line stays empty.
-            var kept = lines
-            kept[kept.count - 1] = ""
-            return kept.joined(separator: "\n")
-        }
-        return new + editorMark
     }
 }

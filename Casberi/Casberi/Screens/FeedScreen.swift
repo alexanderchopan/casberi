@@ -1696,6 +1696,9 @@ struct FeedScreen: View {
     @State private var deletingNote: Thing?
     /// Recently Deleted's tray (prd §985).
     @State private var trashOpen = false
+    /// The Notes room's filter has the keyboard (the Find-in-Notes ruling);
+    /// ⌘F in the room sets it through `chrome.notesFind`.
+    @FocusState private var notesFindFocused: Bool
     /// The Notes room's folder name prompt, its field, and the folder whose
     /// Delete is being confirmed (prd §980).
     @State private var folderPrompt: FolderPrompt?
@@ -3080,16 +3083,22 @@ struct FeedScreen: View {
     /// to what you filed: the open folder's rows, or every filed row under
     /// the folder list, so the lead covers the newest thing you filed. New is
     /// a verb and never stands.
+    ///
+    /// The room's filter (the Find-in-Notes ruling) narrows whatever the
+    /// tile leaves, everywhere but the folder list, which draws no filter.
     private func notesScopeAllows(_ thing: Thing) -> Bool {
         guard Pinboard.isPinnedRoom(source) else { return true }
+        let scoped: Bool
         switch chrome.notesScope {
-        case .pinned:              return Pinboard.isPinned(thing)
+        case .pinned:              scoped = Pinboard.isPinned(thing)
         case .folders:
             guard let filed = thing.folder else { return false }
             guard let open = chrome.notesFolder else { return true }
-            return NoteFolderName.key(filed) == NoteFolderName.key(open)
-        case .all, .new:           return true
+            scoped = NoteFolderName.key(filed) == NoteFolderName.key(open)
+        case .all, .new:           scoped = true
         }
+        return scoped && NoteFind.matches(title: thing.title, content: thing.content,
+                                          folder: thing.folder, query: chrome.notesQuery)
     }
 
     /// The kind tile in force in a kind-tile room (prd §815, §816),
@@ -3246,6 +3255,9 @@ struct FeedScreen: View {
         // an empty room does (§979: the tiles never rise).
         standaloneLead(cover: cover, tiles: notesTiles, listEmpty: visible.isEmpty,
                        emptyWords: Text(emptyLine))
+        if !folderList, !visible.isEmpty || !chrome.notesQuery.isEmpty {
+            notesFindRow
+        }
         if folderList {
             noteFolderRows(visible)
         } else {
@@ -3271,6 +3283,31 @@ struct FeedScreen: View {
                 daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
                            cover: coverID, headed: false)
             }
+        }
+    }
+
+    /// FIND IN NOTES (the Find-in-Notes ruling): a filter over the list,
+    /// under the tiles — in the content, never at the top edge (§752) — the
+    /// `.compact` slab every list filter in the app is. Drawn while the room
+    /// holds something to filter, or while a query is standing (so a query
+    /// that matched nothing can be cleared). ⌘F in the room lands here.
+    private var notesFindRow: some View {
+        Section {
+            DSSlabField(placeholder: String(localized: "Search notes"),
+                        text: Bindable(chrome).notesQuery, actionLabel: "",
+                        focus: $notesFindFocused,
+                        glyph: "magnifyingglass", clearable: true,
+                        size: .compact, submitLabel: .search,
+                        autocapitalization: .sentences, action: {
+                            notesFindFocused = false
+                        })
+                .onChange(of: chrome.notesFind) { _, _ in notesFindFocused = true }
+                .onAppear { chrome.notesFindShown = true }
+                .onDisappear { chrome.notesFindShown = false }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DS.Space.s2, trailing: DSRoomChassis.inset))
         }
     }
 
@@ -11492,6 +11529,11 @@ struct FeedScreen: View {
         // because unlike every other room nothing will ever arrive here on
         // its own.
         if Pinboard.isPinnedRoom(source) {
+            // A filter that matched nothing says so, in the words typed.
+            let query = chrome.notesQuery.trimmingCharacters(in: .whitespaces)
+            if !query.isEmpty {
+                return String(localized: "Nothing in Notes says “\(query)”.")
+            }
             switch chrome.notesScope {
             case .pinned:
                 // `DS.secondaryGesture`, not a literal (prd §607): pinning

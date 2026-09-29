@@ -116,6 +116,13 @@ struct NoteCaptureSheet: View {
     @State private var scanText: String?
     /// The link picker (prd §982).
     @State private var linkPickerOpen = false
+    /// Where the cursor stands in the words (the note-editor ruling): the
+    /// field reports it since iOS 18, so the checklist key acts on the line
+    /// being written and `[[` can offer a title at the cursor.
+    @State private var bodySelection: TextSelection?
+    /// What `[[` offers titles from — read once, the first time it is typed
+    /// (`NoteLinkPicker.pool`), never in a body.
+    @State private var linkPool: [String]?
     #if DEBUG
     /// The launch hooks have drafted their one note (see `onAppear`).
     private static var hooksSpent = false
@@ -141,7 +148,57 @@ struct NoteCaptureSheet: View {
     }
     private var bodyText: Binding<String> {
         Binding(get: { Self.split(draft).body },
-                set: { new in draft = Self.join(Self.split(draft).title, new) })
+                set: { new in
+                    let parts = Self.split(draft)
+                    // Return inside a list continues it, wherever the cursor
+                    // is; Return on an empty item ends it (prd §982, now at
+                    // the cursor).
+                    if let next = NoteChecklist.continuedAt(old: parts.body, new: new,
+                                                            hint: bodyCursor) {
+                        draft = Self.join(parts.title, next.text)
+                        placeCursor(next.cursor)
+                    } else {
+                        draft = Self.join(parts.title, new)
+                    }
+                })
+    }
+
+    /// The cursor in the words, counted in characters — nil while a range is
+    /// selected or the field has not said.
+    private var bodyCursor: Int? {
+        guard let selection = bodySelection,
+              case .selection(let range) = selection.indices, range.isEmpty else { return nil }
+        let body = Self.split(draft).body
+        let at = min(max(range.lowerBound, body.startIndex), body.endIndex)
+        return body.distance(from: body.startIndex, to: at)
+    }
+
+    /// Put the cursor at `offset` in the words. A turn later: the field
+    /// takes the new text first, and a selection set in the same update is
+    /// read against the old text and lost.
+    private func placeCursor(_ offset: Int) {
+        Task { @MainActor in
+            let body = Self.split(draft).body
+            let at = body.index(body.startIndex, offsetBy: min(max(offset, 0), body.count))
+            bodySelection = TextSelection(insertionPoint: at)
+        }
+    }
+
+    /// The open `[[` at the cursor, and what it offers (the note-editor
+    /// ruling). Nil when the cursor is not in one, or nothing matches.
+    private var linkOffer: (start: Int, titles: [String])? {
+        guard field == .body, let cursor = bodyCursor, let pool = linkPool,
+              let open = NoteLinkTyping.openQuery(in: Self.split(draft).body, cursor: cursor)
+        else { return nil }
+        let titles = NoteLinkTyping.offers(open.query, in: pool)
+        return titles.isEmpty ? nil : (open.start, titles)
+    }
+
+    /// Whether a `[[` is open at the cursor — the one read that loads the
+    /// pool, so the fetch waits until somebody types the brackets.
+    private var linkOpen: Bool {
+        guard let cursor = bodyCursor else { return false }
+        return NoteLinkTyping.openQuery(in: Self.split(draft).body, cursor: cursor) != nil
     }
     static func split(_ draft: String) -> (title: String, body: String) {
         guard let cut = draft.firstIndex(of: "\n") else { return (draft, "") }
@@ -239,6 +296,10 @@ struct NoteCaptureSheet: View {
             // Checklist, Attach, Link, Share — and the wide key beside it
             // carrying the one verb available (Record, Stop, Done, §971). It
             // stands over the keyboard, where Apple Notes keeps its tools.
+            if let offer = linkOffer {
+                linkOffers(offer)
+                    .transition(.opacity)
+            }
             toolBar
         }
         .background(DS.page.ignoresSafeArea())
@@ -246,6 +307,7 @@ struct NoteCaptureSheet: View {
         // eases with the rest of the sheet's changes (prd §973).
         .animation(reduceMotion ? nil : DS.Motion.standard, value: isRecording)
         .animation(reduceMotion ? nil : DS.Motion.standard, value: picture != nil)
+        .animation(reduceMotion ? nil : DS.Motion.standard, value: linkOffer?.titles)
         // The system picker (prd §974), the profile photo's own door.
         .photosPicker(isPresented: $pickerOpen, selection: $pickerItem, matching: .images)
         .onChange(of: pickerItem) { _, item in
@@ -273,9 +335,11 @@ struct NoteCaptureSheet: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        // Return inside a list continues it; Return on an empty item ends it.
-        .onChange(of: draft) { old, new in
-            if let next = NoteChecklist.continued(old: old, new: new) { draft = next }
+        // `[[` typed: read what a link can name, once.
+        .onChange(of: linkOpen) { _, open in
+            if open, linkPool == nil {
+                linkPool = NoteLinkPicker.pool(in: modelContext).map(\.title)
+            }
         }
         .sheet(isPresented: $linkPickerOpen) {
             NoteLinkPicker { title in insertLink(title) }
@@ -420,7 +484,8 @@ struct NoteCaptureSheet: View {
                     .submitLabel(.next)
                     // Return on the title goes to the words, as in Notes.
                     .onSubmit { field = .body }
-                TextField(String(localized: "Note"), text: bodyText, axis: .vertical)
+                TextField(String(localized: "Note"), text: bodyText,
+                          selection: $bodySelection, axis: .vertical)
                     .dsText(.reading17)
                     .foregroundStyle(DS.textPrimary)
                     .tint(DS.tint)
@@ -516,6 +581,8 @@ struct NoteCaptureSheet: View {
         }
         .buttonStyle(PressSpring())
         .disabled(!toolsLive)
+        // ⌘K, the Mac's key for a link.
+        .keyboardShortcut("k", modifiers: .command)
         .accessibilityLabel(Text("Link something"))
     }
 
@@ -534,29 +601,60 @@ struct NoteCaptureSheet: View {
     /// The CHECKLIST key (prd §982): the words' last line becomes an item,
     /// or stops being one — its glyph in the tint while the line being
     /// written is an item. It acts on the words under the title (§983).
+    ///
+    /// **At the cursor (the note-editor ruling).** With the words focused and
+    /// the cursor known, the key turns THAT line into an item or back, and
+    /// lights while it is one — Apple Notes' key. With no cursor (the title
+    /// focused, or nothing), it keeps §982's rule: the last line.
     private var checklistDisc: some View {
         let words = Self.split(draft).body
-        let lit = NoteChecklist.endsInItem(words)
+        let cursor = field == .body ? bodyCursor : nil
+        let lit = cursor.map { NoteChecklist.isItem(words, at: $0) } ?? NoteChecklist.endsInItem(words)
         return Button {
             DSHaptic.selection()
-            bodyText.wrappedValue = NoteChecklist.toggleLastLine(words)
+            if let cursor {
+                let next = NoteChecklist.toggleLine(words, at: cursor)
+                draft = Self.join(Self.split(draft).title, next.text)
+                placeCursor(next.cursor)
+            } else {
+                bodyText.wrappedValue = NoteChecklist.toggleLastLine(words)
+                placeCursor(Self.split(draft).body.count)
+            }
             field = .body
         } label: {
             barGlyph("checklist", lit: lit, live: toolsLive)
         }
         .buttonStyle(PressSpring())
         .disabled(!toolsLive)
+        // Apple Notes' key for a checklist, on a Mac or a keyboard.
+        .keyboardShortcut("l", modifiers: [.command, .shift])
         .accessibilityLabel(Text("Checklist"))
         .accessibilityAddTraits(lit ? [.isSelected] : [])
     }
 
     /// A picked link, written where the words end: `[[title]]`, with a space
     /// before it when the words need one — the title line on a blank page.
+    ///
+    /// With a cursor in the words, the link goes AT the cursor (the
+    /// note-editor ruling), a space before it when the character before needs
+    /// one.
     private func insertLink(_ title: String) {
         let link = "[[\(title)]]"
         let parts = Self.split(draft)
         if parts.title.isEmpty && parts.body.isEmpty {
             titleText.wrappedValue = link
+            field = .body
+            return
+        }
+        if let cursor = bodyCursor {
+            let chars = Array(parts.body)
+            let at = min(cursor, chars.count)
+            let before = at > 0 ? chars[at - 1] : "\n"
+            let spaced = (before == " " || before == "\n") ? link : " " + link
+            var out = chars
+            out.insert(contentsOf: Array(spaced), at: at)
+            draft = Self.join(parts.title, String(out))
+            placeCursor(at + spaced.count)
             field = .body
             return
         }
@@ -568,6 +666,52 @@ struct NoteCaptureSheet: View {
             bodyText.wrappedValue = words + " " + link
         }
         field = .body
+    }
+
+    /// What an open `[[` offers (the note-editor ruling): up to three titles
+    /// you keep, newest first, as rows over the bar — a tap completes the
+    /// link at the cursor, exactly as the Link key's picker writes it. The
+    /// rows stand on the bar's glass, the floating layer over the keyboard.
+    private func linkOffers(_ offer: (start: Int, titles: [String])) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(offer.titles, id: \.self) { title in
+                Button {
+                    DSHaptic.tap()
+                    completeLink(start: offer.start, title: title)
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Image(systemName: "link")
+                            .dsGlyph(.body, weight: .regular)
+                            .foregroundStyle(DS.textSecondary)
+                            .accessibilityHidden(true)
+                        Text(verbatim: title)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: DS.Hit.min)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .dsHover()
+                .accessibilityLabel(Text("Link \(title)"))
+            }
+        }
+        .dsGlass(cornerRadius: DS.Radius.widget)
+        .padding(.horizontal, DS.Space.s3)
+        .padding(.top, DS.Space.s2)
+    }
+
+    /// A title picked from the offer: `[[what was typed` becomes
+    /// `[[Exact title]]`, and the cursor stands after it.
+    private func completeLink(start: Int, title: String) {
+        guard let cursor = bodyCursor else { return }
+        let parts = Self.split(draft)
+        let next = NoteLinkTyping.completed(parts.body, start: start, cursor: cursor, title: title)
+        draft = Self.join(parts.title, next.text)
+        placeCursor(next.cursor)
     }
 
     /// The picked picture, pinned to the lead's height and clipped — never
