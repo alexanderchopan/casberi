@@ -3332,9 +3332,19 @@ struct FeedScreen: View {
             }
             // New folder LAST (prd §983), Apple Notes' place for it: the
             // list is what you have, and the verb that adds one follows it.
-            DSDoorRow(icon: "folder.badge.plus", label: "New folder") {
-                folderPrompt = .make(filing: nil)
+            // The folders' own anatomy (prd §986): the same 26pt mark column
+            // and gap, so its word starts where every folder's does — the
+            // sheet door's 18pt column put it 16pt left of them. A verb, so
+            // no chevron and no circle.
+            DSPushRow(title: Text("New folder"), opens: false,
+                      action: { folderPrompt = .make(filing: nil) }) {
+                Image(systemName: "folder.badge.plus")
+                    .font(.system(size: DS.Mark.row * 0.54, weight: .regular))
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(width: DS.Mark.row, height: DS.Mark.row)
+                    .accessibilityHidden(true)
             }
+            .frame(minHeight: DS.Hit.min)
             .noteFolderRowChrome()
         }
     }

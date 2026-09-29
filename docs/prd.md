@@ -62270,3 +62270,9 @@ A private iPhone 17 Pro simulator (iOS 27.0), a build of `main` at 6e843303, wal
 **Held by** `note-trash-selftest.sh` (new, in `verify.sh` beside the folders harness): the archive-before-delete order, the dialog's window, Delete everything, the launch purge and the missing-bytes guard as drift guards; the window's rounding (never "0 days" while recoverable), expiry at exactly thirty days, newest-first order and a lossless entry round trip as assertions; four mutations.
 
 **Seen** (a private iPhone 17 Pro simulator, iOS 27.0, fresh install): Pinned then Notes with two pins; no headers with the one pin as the cover; Delete's new dialog and toast; the archive's file on disk; the Recently deleted row with its count; the tray, its days and footnote; Recover returning the note under Notes and emptying the archive; an archived note surviving a relaunch; Delete now emptying it; New arriving empty after a hooked draft. **Not seen:** the Mac, a voice or locked note through the archive, and the thirty-day purge (asserted in the harness, not waited for). New strings reach the catalog on the next string sync.
+
+## §986 — New folder starts where the folders do (user: "the indents here need to be aligned 'new folder' should start same place 'recently' does", 2026-09-29)
+
+The Notes room's folder list drew its folders (and Recently deleted, §985) on the push-row anatomy — a 26pt mark column and `DS.Space.s3` — and New folder on the sheet door's (`DSDoorRow`: an 18pt column and `s2`), so its word started 16pt left of every folder's. New folder is now a `DSPushRow` with `opens: false`: the same column and gap, its `folder.badge.plus` in secondary ink at the folders' glyph size, no circle (it is a verb, not a folder) and no chevron (it opens a prompt, not a place).
+
+**Seen** (iPhone 17 Pro simulator, iOS 27.0): "Home" and "New folder" start at the same x, their glyphs centred in one column.
