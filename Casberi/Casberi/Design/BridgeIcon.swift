@@ -100,6 +100,20 @@ struct BridgeIcon: View {
                 .scaledToFill()
                 .frame(width: size, height: size)
                 .clipShape(shape)
+        } else if let symbol {
+            // A NOTE OF YOURS wears the tray's You door (user, 2026-09-29:
+            // "this should be black and pink like it is in the tray"; prd
+            // §976a): a black circle, the glyph in the brand pink, at the same
+            // fallback scale — the note's mark and the door to its room are
+            // one drawing.
+            shape
+                .fill(Color.black)
+                .frame(width: size, height: size)
+                .overlay(
+                    Image(systemName: symbol)
+                        .font(.system(size: size * 0.54, weight: .semibold))
+                        .foregroundStyle(DS.brand)
+                )
         } else {
             let brand = BridgeGlyph.color(for: name)
             // SOLID, like an app icon — the tint fill has now died three

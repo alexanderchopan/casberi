@@ -12282,6 +12282,7 @@ private struct RowVerbMenu: View {
     /// Asks for a new folder's name, then files the row in it.
     var onNewFolder: ((Thing) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         if thing.isLive { menu }
@@ -12359,6 +12360,16 @@ private struct RowVerbMenu: View {
                 }
             } label: {
                 Label("Move to folder", systemImage: "folder")
+            }
+        }
+        // Lock a note of yours (prd §982): the person's own write over their
+        // own note, reaching nothing outside the app and undone by Remove
+        // lock on its sheet — which is what makes it legal in this menu.
+        if NoteLock.canLock(thing) {
+            Button {
+                chrome.lockNote(thing, context: modelContext)
+            } label: {
+                Label("Lock", systemImage: "lock")
             }
         }
         // Only a note of yours: a bridge's row would land again on its next

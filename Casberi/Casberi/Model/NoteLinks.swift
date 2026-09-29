@@ -53,6 +53,36 @@ enum NoteLinks {
     }
 }
 
+extension NoteLinks {
+    /// A kept note's `[[links]]`, resolved against EVERYTHING you keep (prd
+    /// §982) — the note sheet's link key writes the exact title of a thing
+    /// you picked, from any source, so the vault's same-source rule would
+    /// resolve none of them. Newest match wins when two things share a
+    /// title, which is the one you most likely meant; the note never links
+    /// to itself. One title-equality fetch per target (a plain string
+    /// predicate, never `.contains`), each capped at one row, so a note with
+    /// three links costs three indexed reads.
+    @MainActor
+    static func resolveKept(_ targets: [String], from note: Thing,
+                            context: ModelContext) -> [Thing] {
+        var seen = Set<String>()
+        var out: [Thing] = []
+        let own = note.id
+        for target in targets {
+            let title = target.trimmingCharacters(in: .whitespaces)
+            guard !title.isEmpty, seen.insert(title.lowercased()).inserted else { continue }
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate<Thing> { $0.title == title && $0.id != own },
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            descriptor.fetchLimit = 1
+            if let match = (try? context.fetch(descriptor))?.first, match.isLive {
+                out.append(match)
+            }
+        }
+        return out
+    }
+}
+
 // The INVERSE graph — which landed notes link TO this one — shipped here
 // 2026-08-06 and retired 2026-08-08 (prd §340), superseded by
 // `ThingLinksSource.ties`/`ThingLinks.pointingAt`: the same wikilink read,

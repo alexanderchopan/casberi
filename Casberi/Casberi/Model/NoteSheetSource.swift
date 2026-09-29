@@ -212,8 +212,20 @@ enum NoteSheetSource {
                 // Only a vault-shaped bridge populates `Thing.wikilinks`, and
                 // only Obsidian's own syntax means anything to a reader —
                 // rendering `[[x]]` as a link anywhere else would invent a
-                // destination the corpus has no way to resolve.
-                thing.source == "Obsidian")
+                // destination the corpus has no way to resolve. A note kept
+                // HERE is the second (prd §982): its links were made by the
+                // note sheet's link key, to things the corpus holds, and
+                // resolve through `NoteLinks.resolveKept`.
+                thing.source == "Obsidian" || isKeptNote(thing))
+    }
+
+    /// Does this note's body carry checklist items a person can tick (prd
+    /// §982)? A written note kept here — the note sheet's checklist key is
+    /// the only thing that writes one, and the note is the person's own. A
+    /// vault's `- [ ]` draws as an item but is the vault's to tick, and a
+    /// locked note is read-only while it is open.
+    static func ticksTasks(_ thing: Thing) -> Bool {
+        isKeptNote(thing) && thing.kind == .note && !NoteLock.isLocked(thing)
     }
 
     /// The tags a note sheet shows: the person's own, never the kind tag the

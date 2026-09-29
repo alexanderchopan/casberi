@@ -45,6 +45,13 @@ struct NoteProse: View {
     /// the sheet always passes one — a tinted word that does nothing is the
     /// dead control the honesty law bans.
     var onWikilink: ((String) -> Void)?
+    /// Does the body carry checklist items (prd §982)? A note kept here, and
+    /// every markdown body (`- [ ]` is a task in every markdown reader).
+    var tasks: Bool = false
+    /// Tick or untick the item at this ordinal. nil draws the items as
+    /// facts — a vault's list is the vault's to tick, and a locked note's
+    /// words are read-only while it is open.
+    var onToggleTask: ((Int) -> Void)?
     /// The tier the body is set in (2026-08-20).
     ///
     /// `reading17` is this view's own ruling and stays the default: on a note
@@ -73,7 +80,7 @@ struct NoteProse: View {
     @State private var expanded = false
 
     private var blocks: [NoteSheet.Block] {
-        NoteSheet.blocks(text, markdown: markdown, headings: headings)
+        NoteSheet.blocks(text, markdown: markdown, headings: headings, tasks: tasks)
     }
 
     private var shown: [NoteSheet.Block] {
@@ -133,6 +140,9 @@ struct NoteProse: View {
             marked("•", prose(text))
         case .numbered(let index, let text):
             marked("\(index).", prose(text))
+        case .task(let done, let text, let ordinal):
+            NoteTaskRow(done: done, text: prose(text), tier: tier,
+                        onToggle: onToggleTask.map { toggle in { toggle(ordinal) } })
         case .quote(let text):
             // The rail is a 2pt shape marking a quoted block, not a divider:
             // the no-hairlines law is about DIVIDERS, and this divides nothing
@@ -198,6 +208,42 @@ struct NoteProse: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// A plain body with its `[[links]]` drawn as links and nothing else read
+    /// as markdown (prd §982). The target and alias split exactly as
+    /// `NoteSheet.markdownWithWikilinks` splits them, so a tap resolves the
+    /// same title the vault path would.
+    static func wikiRendered(_ text: String) -> AttributedString {
+        guard text.contains("[["),
+              let regex = try? NSRegularExpression(pattern: #"\[\[([^\]]+)\]\]"#)
+        else { return ProseLinks.rendered(text) }
+        let ns = text as NSString
+        var out = AttributedString()
+        var cursor = 0
+        for match in regex.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            out += ProseLinks.rendered(ns.substring(with: NSRange(location: cursor,
+                                                                   length: match.range.location - cursor)))
+            cursor = match.range.location + match.range.length
+            let inner = ns.substring(with: match.range(at: 1))
+            let target = inner.split(whereSeparator: { $0 == "|" || $0 == "#" })
+                .first.map(String.init)?.trimmingCharacters(in: .whitespaces) ?? ""
+            let alias = inner.contains("|")
+                ? inner.split(separator: "|", maxSplits: 1)[1].trimmingCharacters(in: .whitespaces)
+                : target
+            guard !target.isEmpty, !alias.isEmpty,
+                  let encoded = target.addingPercentEncoding(withAllowedCharacters: .alphanumerics),
+                  let url = URL(string: "\(NoteSheet.wikiScheme)://\(encoded)") else {
+                out += AttributedString(ns.substring(with: match.range))
+                continue
+            }
+            var link = AttributedString(alias)
+            link.link = url
+            link.foregroundColor = DS.tint
+            out += link
+        }
+        out += ProseLinks.rendered(ns.substring(from: cursor))
+        return out
+    }
+
     /// One block's words: wikilinks rewritten, then inline markdown, then the
     /// plain-URL linkifier the sheet has always run.
     ///
@@ -210,6 +256,10 @@ struct NoteProse: View {
         var body = text
         if wikilinks { body = NoteSheet.markdownWithWikilinks(body) }
         guard markdown else {
+            // A note kept here is not markdown, but its `[[links]]` are
+            // (prd §982): only those become links, and every other
+            // character stays exactly as it was typed.
+            if wikilinks { return Text(Self.wikiRendered(text)) }
             return Text(ProseLinks.rendered(body))
         }
         // A body is somebody's own writing and may hold anything; a parse that
@@ -659,5 +709,56 @@ struct WalkDoors: View {
             .dsGlyph(.caption)
             .foregroundStyle(DS.textTertiary)
             .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Checklist (prd §982)
+
+/// One checklist item: Apple Notes' circle, and the words beside it.
+///
+/// The whole line is the target, not only the circle — a 17pt circle is under
+/// the 44pt a finger needs, and a line of words is what somebody taps to say
+/// "done". Ticked, the circle fills in the tint and morphs (`dsSymbolSwap`),
+/// and the words step back to secondary ink with a strike, so a finished list
+/// reads finished at a glance. With no `onToggle` the item is a FACT — the
+/// same drawing, not a button — because a circle that takes a tap and does
+/// nothing is §83's dead control.
+struct NoteTaskRow: View {
+    let done: Bool
+    let text: Text
+    let tier: DSTextStyle
+    let onToggle: (() -> Void)?
+
+    var body: some View {
+        if let onToggle {
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { onToggle() }
+            } label: { line }
+                .buttonStyle(RowPress())
+                .dsHover()
+                .accessibilityAddTraits(done ? [.isSelected] : [])
+                .accessibilityValue(done ? Text("Done") : Text("Not done"))
+        } else {
+            line
+        }
+    }
+
+    private var line: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                .dsGlyph(.body, weight: .regular)
+                .foregroundStyle(done ? DS.tint : DS.textTertiary)
+                .dsSymbolSwap(done)
+                .accessibilityHidden(true)
+            text
+                .dsText(tier)
+                .strikethrough(done, color: DS.textTertiary)
+                .foregroundStyle(done ? DS.textSecondary : DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }

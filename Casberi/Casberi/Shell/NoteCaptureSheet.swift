@@ -63,6 +63,15 @@ import PhotosUI
 /// is the long press's verb, confirmed, and a cleared field is not a delete.
 /// The wide key never offers Record while editing, because a recording is a
 /// new note and this sheet is changing an old one.
+///
+/// **A checklist, a scan and a link (prd §982).** The band's checklist key
+/// turns the last line into an item (`○ `) or back, Return continues the
+/// list and Return on an empty item ends it (`NoteChecklist`); the note keeps
+/// items as `- [ ]`, which its sheet draws as circles you tick. The photo
+/// disc became the attach disc: Choose a photo, Scan a document (Apple's
+/// document camera — its first page is the picture, every page's words are
+/// kept with the note), and Link something you keep, which writes
+/// `[[its title]]` into the words.
 struct NoteCaptureSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
@@ -97,9 +106,18 @@ struct NoteCaptureSheet: View {
     /// The edited note's own picture has been read into the well. Until it
     /// has, a close keeps the stored picture rather than clearing it.
     @State private var editPictureRead = false
+    /// The document camera, and the words a scan read (prd §982) — kept with
+    /// the note under what was typed, never poured into the field, where a
+    /// page of receipt at the head rung would bury the sentence being written.
+    @State private var scanOpen = false
+    @State private var scanText: String?
+    /// The link picker (prd §982).
+    @State private var linkPickerOpen = false
 
+    /// Words to keep — with the checklist's bare circles taken out, so an
+    /// item with nothing after it is not a note (prd §982).
     private var hasDraft: Bool {
-        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !NoteChecklist.stored(draft).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     /// Something to keep: words, or a picture alone (prd §974).
     private var hasContent: Bool { hasDraft || picture != nil }
@@ -113,6 +131,7 @@ struct NoteCaptureSheet: View {
             return Text("No mic access. Allow Casberi in \(DS.settingsAppName)")
         }
         if isRecording { return Text("Stop, and it is kept in Notes") }
+        if scanText != nil { return Text("Kept in Notes with the words on the page") }
         return hasDraft
             ? Text("Kept in Notes · share it anywhere")
             : Text("Kept in Notes when you close this")
@@ -158,7 +177,7 @@ struct NoteCaptureSheet: View {
             // (prd §577 — the sentence being written is the subject of the
             // screen for as long as it is being written).
             ZStack(alignment: .topLeading) {
-                if !hasDraft {
+                if draft.isEmpty {
                     Text("Note")
                         .dsText(.heading34)
                         .foregroundStyle(DS.textTertiary)
@@ -216,6 +235,7 @@ struct NoteCaptureSheet: View {
                 // greyed, and does not open.
                 .disabled(!hasDraft)
                 .accessibilityLabel(Text("Share the note"))
+                checklistDisc
                 photoDisc
                 wideKey
             }
@@ -236,17 +256,46 @@ struct NoteCaptureSheet: View {
                 if let raw = try? await item.loadTransferable(type: Data.self),
                    let attached = await NotePicture.prepared(raw) {
                     picture = attached
+                    // A photo in place of a scanned page: the page's words
+                    // leave with it.
+                    scanText = nil
                 }
                 pickerItem = nil
             }
         }
         // A set picture can come off, not just be replaced — the profile
-        // photo's dialog, word for word.
+        // photo's dialog, word for word. A scan's words go with its page.
         .confirmationDialog("Your photo", isPresented: $pictureDialogOpen) {
             Button("Change photo") { DSHaptic.tap(); pickerOpen = true }
-            Button("Remove photo", role: .destructive) { DSHaptic.tap(); picture = nil }
+            if DocumentScan.isSupported {
+                Button("Scan a document") { DSHaptic.tap(); scanOpen = true }
+            }
+            Button("Remove photo", role: .destructive) {
+                DSHaptic.tap(); picture = nil; scanText = nil
+            }
             Button("Cancel", role: .cancel) {}
         }
+        // Return inside a list continues it; Return on an empty item ends it.
+        .onChange(of: draft) { old, new in
+            if let next = NoteChecklist.continued(old: old, new: new) { draft = next }
+        }
+        .sheet(isPresented: $linkPickerOpen) {
+            NoteLinkPicker { title in insertLink(title) }
+        }
+        #if !targetEnvironment(macCatalyst)
+        .fullScreenCover(isPresented: $scanOpen) {
+            DocumentScannerView(onScan: { scan in
+                scanOpen = false
+                Task { @MainActor in
+                    let read = await DocumentScan.read(scan)
+                    if let page = read.picture { picture = page }
+                    scanText = read.text
+                    if read.picture != nil { DSHaptic.success() }
+                }
+            }, onCancel: { scanOpen = false })
+            .ignoresSafeArea()
+        }
+        #endif
         .onAppear {
             // Held New (prd §970): recording when the sheet lands, keyboard
             // down. Consumed on read, so a later tap of New arrives typing,
@@ -259,7 +308,8 @@ struct NoteCaptureSheet: View {
                 chrome.noteToEdit = nil
                 if let note = Self.note(id, in: modelContext) {
                     editing = note
-                    draft = note.content
+                    // A kept list opens as circles (prd §982).
+                    draft = NoteChecklist.editable(note.content)
                     // The picture through the one off-main decode, never a
                     // bitmap made here (`row-cost-audit.py`).
                     Task { @MainActor in
@@ -285,6 +335,13 @@ struct NoteCaptureSheet: View {
             // for the screen sweep: the simulator's photo library needs a
             // hand to pick from, so the hook draws one and attaches it the
             // way the picker would.
+            // `-noteDraft "<text>"` — land with words already written (prd
+            // §982), `○ ` items included, because a simulator booted by
+            // `simctl` draws no keyboard to type them with.
+            if let words = UserDefaults.standard.string(forKey: "noteDraft"), !words.isEmpty {
+                NSLog("[Casberi] noteDraft: %d characters", words.count)
+                draft = words.replacingOccurrences(of: "\\n", with: "\n")
+            }
             if UserDefaults.standard.bool(forKey: "notePicture"),
                let drawn = NotePicture.drawnSample() {
                 NSLog("[Casberi] notePicture: attached %d bytes", drawn.bytes.count)
@@ -338,18 +395,40 @@ struct NoteCaptureSheet: View {
 
     // MARK: - The picture (prd §974)
 
-    /// The band's photo disc: the composer's disc anatomy in ink, live
-    /// whenever the note could take a picture. With one attached it raises
-    /// Change / Remove rather than a second picker over the first. Greyed
-    /// while recording, as Share is over nothing: a voice note is its audio,
-    /// and a disc that did nothing would be §83's dead control.
+    /// The band's ATTACH disc (prd §982, was §974's photo disc): the
+    /// composer's disc anatomy in ink, live whenever the note could take
+    /// something. It opens a menu — Choose a photo, Scan a document where the
+    /// device has a document camera, Link something you keep. With a picture
+    /// attached, Photo raises Change / Remove rather than a second picker over
+    /// the first. Greyed while recording, as Share is over nothing: a voice
+    /// note is its audio, and a disc that did nothing would be §83's dead
+    /// control.
     private var photoDisc: some View {
         let live = !isRecording && !stopping
-        return Button {
-            DSHaptic.tap()
-            if picture == nil { pickerOpen = true } else { pictureDialogOpen = true }
+        return Menu {
+            Button {
+                DSHaptic.tap()
+                if picture == nil { pickerOpen = true } else { pictureDialogOpen = true }
+            } label: {
+                Label(picture == nil ? "Choose a photo" : "Photo on this note",
+                      systemImage: "photo")
+            }
+            if DocumentScan.isSupported {
+                Button {
+                    DSHaptic.tap()
+                    scanOpen = true
+                } label: {
+                    Label("Scan a document", systemImage: "doc.viewfinder")
+                }
+            }
+            Button {
+                DSHaptic.tap()
+                linkPickerOpen = true
+            } label: {
+                Label("Link something", systemImage: "link")
+            }
         } label: {
-            Image(systemName: "photo")
+            Image(systemName: "paperclip")
                 .dsGlyph(.feature, weight: .regular)
                 .foregroundStyle(live ? DS.textPrimary : DS.textTertiary)
                 .frame(width: AgentDestinationKeys.side, height: AgentDestinationKeys.side)
@@ -358,9 +437,52 @@ struct NoteCaptureSheet: View {
                 .animation(DS.Motion.standard, value: live)
                 .dsHover()
         }
+        .menuStyle(.button)
         .buttonStyle(PressSpring())
         .disabled(!live)
-        .accessibilityLabel(picture == nil ? Text("Add a photo") : Text("Photo on this note"))
+        .accessibilityLabel(Text("Attach"))
+    }
+
+    /// The CHECKLIST key (prd §982): the last line becomes an item, or stops
+    /// being one — its glyph lit in the tint while the line being written is
+    /// an item.
+    /// Greyed while recording, like the attach disc.
+    private var checklistDisc: some View {
+        let live = !isRecording && !stopping
+        let lit = NoteChecklist.endsInItem(draft)
+        return Button {
+            DSHaptic.selection()
+            draft = NoteChecklist.toggleLastLine(draft)
+            focused = true
+        } label: {
+            Image(systemName: "checklist")
+                .dsGlyph(.feature, weight: .regular)
+                // Lit in the tint's INK, never its fill: beside Share's
+                // tint disc, a second filled disc read as a second verb.
+                .foregroundStyle(!live ? DS.textTertiary : lit ? DS.tint : DS.textPrimary)
+                .frame(width: AgentDestinationKeys.side, height: AgentDestinationKeys.side)
+                .background(DS.surfaceRaised, in: Circle())
+                .dsTapTarget(Circle())
+                .animation(DS.Motion.standard, value: lit)
+                .animation(DS.Motion.standard, value: live)
+                .dsHover()
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!live)
+        .accessibilityLabel(Text("Checklist"))
+        .accessibilityAddTraits(lit ? [.isSelected] : [])
+    }
+
+    /// A picked link, written where the words end: `[[title]]`, with a space
+    /// before it when the words need one.
+    private func insertLink(_ title: String) {
+        let link = "[[\(title)]]"
+        if draft.isEmpty || draft.hasSuffix(" ") || draft.hasSuffix("\n") || draft.hasSuffix(NoteChecklist.editorMark) {
+            draft += link
+        } else {
+            draft += " " + link
+        }
+        focused = true
     }
 
     /// The picked picture, pinned to the lead's height and clipped — never
@@ -531,6 +653,9 @@ struct NoteCaptureSheet: View {
         guard let thing = keptThing() else { return }
         thing.previewImageData = picture?.bytes
         thing.folder = filingFolder
+        // What the note links (prd §982), so the thing it names shows it
+        // under "Points at this".
+        thing.wikilinks = NoteLinks.extract(from: thing.content)
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
@@ -544,16 +669,21 @@ struct NoteCaptureSheet: View {
     private func saveEdit(_ note: Thing) {
         guard note.isLive else { return }
         let bytes = picture?.bytes ?? (editPictureRead ? nil : note.previewImageData)
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        // The checklist's circles back to `- [ ]`, and a scan's words under
+        // what was typed (prd §982) — the same body a new note keeps.
+        let scanned = scanText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let text = [NoteChecklist.stored(draft).trimmingCharacters(in: .whitespacesAndNewlines), scanned]
+            .filter { !$0.isEmpty }.joined(separator: "\n\n")
         guard !text.isEmpty || bytes != nil else { return }
         let sameWords = text == note.content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sameWords || bytes != note.previewImageData else { return }
         if text.isEmpty {
             note.title = String(localized: "Photo")
             note.content = ""
-        } else if let made = Capture.thing(from: draft) {
-            note.title = made.title
+        } else if let made = Capture.thing(from: text) {
+            note.title = Self.titled(made.title, body: text)
             note.content = made.content
+            note.wikilinks = NoteLinks.extract(from: made.content)
             for tag in made.tags where !note.tags.contains(tag) { note.tags.append(tag) }
         }
         if bytes != note.previewImageData {
@@ -589,17 +719,38 @@ struct NoteCaptureSheet: View {
     /// which is the lede a row needs and nothing the picture does not say.
     /// Nothing written and nothing attached keeps nothing.
     private func keptThing() -> Thing? {
-        if hasDraft, let thing = Capture.thing(from: draft) {
+        // The checklist's circles become `- [ ]` (prd §982), and a scan's
+        // words go under what was typed.
+        let words = NoteChecklist.stored(draft).trimmingCharacters(in: .whitespacesAndNewlines)
+        let scanned = scanText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let body = [words, scanned].filter { !$0.isEmpty }.joined(separator: "\n\n")
+        if !body.isEmpty, let thing = Capture.thing(from: body) {
             // A note is a note even when it holds a link: `Capture.thing`
             // turns a URL into a link thing for the paste chip's sake, and a
             // link thing would stand outside this room's membership
             // (`Pinboard.isNote`).
             thing.kind = .note
+            thing.title = Self.titled(thing.title, body: body)
             return thing
         }
         guard picture != nil else { return nil }
         return Thing(kind: .note, title: String(localized: "Photo"),
                      source: NoteSheetSource.keptSource)
+    }
+}
+
+extension NoteCaptureSheet {
+    /// The title a body makes (prd §982): a list's first item names the note
+    /// without its box, and a link in the first line names its thing, not
+    /// its brackets.
+    static func titled(_ title: String, body: String) -> String {
+        var out = title
+        let opening = body.components(separatedBy: "\n").first ?? ""
+        if NoteChecklist.task(opening) != nil {
+            out = IngestSupport.titleLine(NoteChecklist.plain(opening))
+        }
+        return out.replacingOccurrences(of: "[[", with: "")
+            .replacingOccurrences(of: "]]", with: "")
     }
 }
 

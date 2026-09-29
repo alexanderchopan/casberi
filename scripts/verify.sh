@@ -1988,6 +1988,7 @@ harness "MIME self-test" "MIME self-test" "scripts/mailmime-selftest.sh" "the MI
 # rank it, and the heal that is the only thing able to give back the words the
 # old importer threw away.
 harness "Note sheet self-test" "note sheet self-test" "scripts/note-sheet-selftest.sh" "the note sheet self-test failed — run scripts/note-sheet-selftest.sh"
+harness "Note checklist self-test" "note checklist self-test" "scripts/note-checklist-selftest.sh" "the note checklist self-test failed — run scripts/note-checklist-selftest.sh"
 
 # The Notes room's folders (prd §980): one folder per name whatever its case,
 # and a folder a row carries listed before the key-value mirror has landed —

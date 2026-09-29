@@ -64,6 +64,11 @@ ENTITLEMENT_DIRS = [
 # conscious "no automated screenshot of this screen exists", with the reason.
 # Adding one is a ruling; a NEW host must be swept or land here.
 KNOWN_UNSWEPT = {
+    "note": (
+        "raises the note sheet (prd §982's Quick Note door), the same layer "
+        "`-openNote YES` raises in the sweep; a link shot would photograph "
+        "that screen a second time."
+    ),
     "pair": (
         "needs a LIVE `wc:` pairing URI, minted by a dapp's relay session "
         "(prd §913). A made-up one fails in `SafePeer.pair` and flashes a "

@@ -175,6 +175,17 @@ struct ThingSheetView: View {
     /// otherwise leave a stale row that traps on read — `liveLinkedNotes`
     /// filters to `.isLive` at render time before anything reads through it.
     @State private var linkedNotes: [KeyedThing] = []
+    /// A locked note's words while this sheet has them open (prd §982) —
+    /// opened by device-owner authentication, held here only, never written
+    /// back. nil is the locked face.
+    @State private var openedLock: NoteLock.Sealed?
+    /// Why the last Open did not open, when it was not the person declining.
+    @State private var lockFailure: NoteLock.Failure?
+    /// The body after a tick (prd §982). The model write lands at once, but
+    /// the sheet's body does not observe `content` (measured: the circle
+    /// filled only on the next open), so the ticked text is held here and
+    /// drawn in its place.
+    @State private var tickedBody: String?
     /// WHAT POINTS AT THIS (2026-08-08, prd §340) — the incoming half, for any
     /// thing rather than only an Obsidian note: the notes that wikilink here,
     /// and the posts and notes whose own text carries this thing's link.
@@ -1293,6 +1304,10 @@ struct ThingSheetView: View {
             }
             if thing.source == "Obsidian", !thing.wikilinks.isEmpty {
                 linkedNotes = NoteLinks.resolve(thing.wikilinks, context: modelContext).keyed
+            } else if NoteSheetSource.isKeptNote(thing), !thing.wikilinks.isEmpty {
+                // A note kept here links anything you keep (prd §982).
+                linkedNotes = NoteLinks.resolveKept(thing.wikilinks, from: thing,
+                                                    context: modelContext).keyed
             }
             // What points AT this, for every thing rather than only a note
             // (prd §340). Its own fetches are scoped and skipped where they
@@ -1914,8 +1929,20 @@ struct ThingSheetView: View {
                     BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true,
                                symbol: BridgeIcon.noteSymbol(for: thing))
                 }
-                if thing.kind != .voice {
-                    let split = Self.entrySplit(NoteSheetSource.prose(for: thing).text)
+                if NoteLock.isLocked(thing) {
+                    lockedNote
+                } else if thing.kind != .voice {
+                    let body = tickedBody ?? NoteSheetSource.prose(for: thing).text
+                    // A list's first item stays an item (prd §982): lifted
+                    // into the title it would lose its circle and its tick.
+                    let opening = body.trimmingCharacters(in: .whitespacesAndNewlines)
+                        .components(separatedBy: "\n").first ?? ""
+                    let listFirst = NoteSheetSource.isKeptNote(thing)
+                        && NoteSheet.taskLine(opening) != nil
+                    let split: (first: String?, rest: String) = listFirst
+                        ? (nil, body.trimmingCharacters(in: .whitespacesAndNewlines))
+                        : Self.keptTitleLine(Self.entrySplit(body),
+                                             kept: NoteSheetSource.isKeptNote(thing))
                     // An entry's first line IS its title (why it had none:
                     // it would print twice) — so it leads, and the prose
                     // continues from the line after it.
@@ -1937,6 +1964,7 @@ struct ThingSheetView: View {
                 } else {
                     noteDial
                 }
+                keptNoteDoors
             case .note:
                 SheetPartyHead(name: thing.source, day: thing.capturedAt,
                                line: thing.kind.typeTag,
@@ -1995,6 +2023,99 @@ struct ThingSheetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// A LOCKED note (prd §982): the lock and one door to open it, or — once
+    /// opened — the words, read-only, and Remove lock. The sealed record says
+    /// "Locked note" and holds nothing else, so there is nothing here to hide:
+    /// the words exist on screen only after the device owner opened them.
+    @ViewBuilder private var lockedNote: some View {
+        if let opened = openedLock {
+            if let picture = opened.picture, let image = UIImage(data: picture) {
+                Color.clear
+                    .frame(height: DSRoomChassis.leadHeight)
+                    .frame(maxWidth: .infinity)
+                    .overlay { Image(uiImage: image).resizable().scaledToFill() }
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
+                    .accessibilityLabel(Text("Photo on this note"))
+            }
+            // The note's own title leads, as it does unlocked; a list's
+            // first item stays an item.
+            let listFirst = NoteSheet.taskLine(opened.content
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .components(separatedBy: "\n").first ?? "") != nil
+            let split: (first: String?, rest: String) = listFirst
+                ? (nil, opened.content) : Self.entrySplit(opened.content)
+            if let first = split.first {
+                Text(first)
+                    .dsText(Self.titleRung(for: first).style)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.top, DS.Space.s4)
+            }
+            if !split.rest.isEmpty {
+                NoteProse(text: split.rest, tasks: true)
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.top, DS.Space.s6)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Image(systemName: "lock.fill")
+                    .dsGlyph(.feature, weight: .regular)
+                    .foregroundStyle(DS.textTertiary)
+                    .accessibilityHidden(true)
+                DSFootnote(lockFailure == .noKey
+                    ? Text("This device doesn't have the key yet. It arrives with iCloud Keychain")
+                    : Text("Sealed with a key in your iCloud Keychain"))
+            }
+            .padding(.horizontal, DSRoomChassis.leadInset)
+            .padding(.top, DS.Space.s6)
+        }
+    }
+
+    /// The lock door a note of yours carries under its words (prd §982):
+    /// Open or Remove lock on a locked note, Lock on a written one — a verb
+    /// is a row (§746). Delete stays the row's long press (§978), confirmed.
+    @ViewBuilder private var keptNoteDoors: some View {
+        if NoteLock.isLocked(thing) || NoteLock.canLock(thing) {
+            VStack(alignment: .leading, spacing: 0) {
+                if NoteLock.isLocked(thing) {
+                    if let opened = openedLock {
+                        DSDoorRow(icon: "lock.open", label: "Remove lock") {
+                            DSHaptic.tap()
+                            NoteLock.unlock(thing, with: opened, context: modelContext)
+                            openedLock = nil
+                            chrome.flash(String(localized: "Lock removed"))
+                        }
+                    } else {
+                        DSDoorRow(icon: "lock.open", title: Text(NoteLock.unlockWord)) {
+                            DSHaptic.tap()
+                            Task { @MainActor in
+                                switch await NoteLock.open(thing) {
+                                case .success(let sealed):
+                                    lockFailure = nil
+                                    withAnimation(DS.Motion.standard) { openedLock = sealed }
+                                case .failure(let why):
+                                    lockFailure = why
+                                    if why != .auth { DSHaptic.failure() }
+                                }
+                            }
+                        }
+                    }
+                } else if NoteLock.canLock(thing) {
+                    DSDoorRow(icon: "lock", label: "Lock note") {
+                        chrome.lockNote(thing, context: modelContext)
+                    }
+                }
+            }
+            .padding(.horizontal, DSRoomChassis.leadInset)
+            .padding(.top, DS.Space.s6)
+        }
+    }
+
     /// The dial, under a note's head (prd §893).
     @ViewBuilder private var noteDial: some View {
         VerbDial(thing: thing, verbs: sheetVerbs,
@@ -2024,6 +2145,15 @@ struct ThingSheetView: View {
         let first = String(parts[0]).trimmingCharacters(in: CharacterSet(charactersIn: "# ").union(.whitespaces))
         let rest = parts.count > 1 ? String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines) : ""
         return (first.isEmpty ? nil : first, rest)
+    }
+
+    /// A kept note's title line names a linked thing, not its brackets (prd
+    /// §982); the link stays a door in "Links to" under the note.
+    static func keptTitleLine(_ split: (first: String?, rest: String),
+                              kept: Bool) -> (first: String?, rest: String) {
+        guard kept, let first = split.first else { return split }
+        return (first.replacingOccurrences(of: "[[", with: "")
+                    .replacingOccurrences(of: "]]", with: ""), split.rest)
     }
 
     /// The body without a first line that only restates the title.
@@ -2117,14 +2247,28 @@ struct ThingSheetView: View {
     @ViewBuilder
     private func noteProse(text: String?) -> some View {
         let prose = NoteSheetSource.prose(for: thing)
+        let kept = NoteSheetSource.isKeptNote(thing)
         return NoteProse(text: text ?? prose.text,
                   markdown: prose.markdown,
-                  wikilinks: prose.wikilinks) { target in
-            guard let match = NoteLinks.resolve([target], context: modelContext).first
-            else { return }
+                  wikilinks: prose.wikilinks,
+                  onWikilink: { target in
+            let match = kept
+                ? NoteLinks.resolveKept([target], from: thing, context: modelContext).first
+                : NoteLinks.resolve([target], context: modelContext).first
+            guard let match else { return }
             walkingToScope = .none
             walkingToNote = KeyedThing(match)
-        }
+        },
+                  tasks: kept || prose.markdown,
+                  onToggleTask: NoteSheetSource.ticksTasks(thing) ? { ordinal in
+            // The one write a kept note takes (prd §982): one marker flips,
+            // every word stays where it was.
+            guard thing.isLive else { return }
+            let next = NoteChecklist.toggled(thing.content, ordinal: ordinal)
+            thing.content = next
+            modelContext.saveHonestly()
+            tickedBody = next
+        } : nil)
     }
 
     /// Whether the face in the eyebrow is a DOOR. Only the three networks with

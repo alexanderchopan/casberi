@@ -29,6 +29,9 @@ struct CasberiWidgets: WidgetBundle {
         // widget returns with the flag.
         WalletWidget()
         ComposeControl()
+        // A QUICK NOTE from anywhere (prd §982): Control Center, the Lock
+        // Screen and the Action button, onto the note sheet.
+        NoteControl()
         // `BriefControl` — the Control Center button onto the daily brief —
         // is GONE with the ask (prd §697b). `ComposeControl` stays: it opens
         // the CAPTURE surface, which outlives the ask.
@@ -129,6 +132,36 @@ struct ComposeControl: ControlWidget {
         }
         .displayName("Save to Casberi")
         .description("Opens the composer from Control Center.")
+    }
+}
+
+/// A QUICK NOTE (prd §982) — Apple Notes' Quick Note, for Casberi: one press
+/// in Control Center, on the Lock Screen or on the Action button, and the note
+/// sheet is up with the keyboard. The same flag-and-activation door as
+/// `OpenComposerIntent` (`note.request`, drained by `RootShell` on
+/// activation), because a control's intent cannot reach the running shell
+/// directly and a cold launch has no shell yet.
+struct NewNoteIntent: AppIntent {
+    static let title: LocalizedStringResource = "New note"
+    static let description = IntentDescription("Opens a new note in Casberi.")
+    static let openAppWhenRun = true
+
+    func perform() async throws -> some IntentResult {
+        UserDefaults(suiteName: SharedStore.appGroup)?
+            .set(true, forKey: "note.request")
+        return .result()
+    }
+}
+
+struct NoteControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "casberi.note") {
+            ControlWidgetButton(action: NewNoteIntent()) {
+                Label("New note", systemImage: "square.and.pencil")
+            }
+        }
+        .displayName("Casberi note")
+        .description("Writes a new note from anywhere.")
     }
 }
 

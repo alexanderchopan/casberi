@@ -2215,6 +2215,12 @@ struct RootShell: View {
             group?.removeObject(forKey: "compose.request")
             composerOpen = true
         }
+        // A Quick Note (prd §982) — the note control or the Siri shortcut
+        // left a flag: raise the note sheet, the New tile's own door.
+        if group?.bool(forKey: "note.request") == true {
+            group?.removeObject(forKey: "note.request")
+            chrome.newNote += 1
+        }
         // The "Daily Brief" quick action (icon long-press / Mac Dock menu)
         // left a flag — this is the COLD-launch door for it, since a launch
         // receives the action long before this view exists. The warm door is
@@ -2801,6 +2807,10 @@ struct RootShell: View {
             // Settings, its own screen (prd §933; a section of Accounts from
             // §796 until then).
             sceneState.route.present(.settings)
+        // casberi://note — a new note (prd §982), the Quick Note's door by
+        // link: the New tile's own raise, wherever the shell stands.
+        case "note":
+            chrome.newNote += 1
         // casberi://brief — the agent, raised onto the brief (2026-07-25).
         // The hero widget carries the brief's own lede now, so its tap has to
         // land on the sentence it was showing; landing on the feed instead

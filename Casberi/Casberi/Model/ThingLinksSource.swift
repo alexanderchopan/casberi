@@ -32,7 +32,12 @@ enum ThingLinksSource {
     /// vault-shaped bridge joins the shelf by being named here, with no other
     /// change. Kept as a list rather than "any source" so the wikilink fetch
     /// stays a handful of source-scoped reads instead of a corpus walk.
-    static let wikilinkSources = ["Obsidian"]
+    ///
+    /// `You` joined with the note sheet's link key (prd §982): a note you
+    /// kept that links a thing is exactly "points at this". The fetch reads
+    /// every row under `You`, which holds your hand captures too; only rows
+    /// whose `wikilinks` are non-empty become nodes.
+    static let wikilinkSources = ["Obsidian", "You"]
 
     /// How far back the mention scan reads. The same bound
     /// `RootShell.toolSnapshot` uses for the agent, on purpose: two different

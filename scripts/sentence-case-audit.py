@@ -220,6 +220,9 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # Apple's biometric names: "Open with Optic ID" names the system's own
+    # prompt (prd §982), as "Face ID" and "Touch ID" do.
+    "Optic",
     # In-app surfaces a verb names as a place (prd §916): "Remove from
     # Addresses" walks to the Accounts screen's Addresses segment, the way
     # "Show in Receipts" names that screen — a destination, not a header.

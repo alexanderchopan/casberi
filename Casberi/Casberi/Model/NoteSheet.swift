@@ -245,6 +245,11 @@ enum NoteSheet {
         /// argument for extending this splitter instead of writing a second
         /// one next to it.
         case code(language: String?, text: String)
+        /// A checklist item (prd §982) — `- [ ] milk` / `- [x] milk`, read
+        /// only when the caller says the body takes tasks (a note you kept
+        /// here). `ordinal` counts items from 0 in reading order, so a tick
+        /// can find its own line (`NoteChecklist.toggled`).
+        case task(done: Bool, text: String, ordinal: Int)
 
         /// The characters this block will draw, for the fold's arithmetic.
         var length: Int {
@@ -254,6 +259,8 @@ enum NoteSheet {
             case .numbered(_, let t):
                 return t.count
             case .code(_, let t):
+                return t.count
+            case .task(_, let t, _):
                 return t.count
             }
         }
@@ -300,7 +307,15 @@ enum NoteSheet {
     /// asterisk — but its `<h2>`/`<h3>` are real structure, and the parse
     /// stores them as `# …` / `## …` lines. The flag lets a non-markdown body
     /// draw those as headings while every other marker stays literal.
-    static func blocks(_ text: String, markdown: Bool, headings: Bool = false) -> [Block] {
+    ///
+    /// **`tasks` admits CHECKLIST ITEMS and nothing else (prd §982).** A note
+    /// kept here is not markdown — its `*` is an asterisk — but a line the
+    /// note sheet's checklist key wrote as `- [ ] ` is unambiguously an item,
+    /// so the flag reads those while every other marker stays literal. A
+    /// markdown body reads them too: `- [ ]` is a task in every markdown
+    /// reader, and drawing it as a bullet reading "[ ] milk" was a defect.
+    static func blocks(_ text: String, markdown: Bool, headings: Bool = false,
+                       tasks: Bool = false) -> [Block] {
         let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return [] }
 
@@ -332,6 +347,7 @@ enum NoteSheet {
         // harness has ONE anchor for "markers are gated" rather than gating the
         // two blocks below under a bare `markdown` a mutation can't tell apart.
         let takesMarkers = markdown
+        var ordinal = 0
 
         for raw in body.components(separatedBy: .newlines) {
             if takesMarkers {
@@ -353,6 +369,11 @@ enum NoteSheet {
             // paragraph. See the type doc — this is deliberately OUTSIDE the
             // `markdown` gate.
             if line.isEmpty { flush(); continue }
+            if tasks || takesMarkers, let item = taskLine(line) {
+                flush(); out.append(.task(done: item.done, text: item.text, ordinal: ordinal))
+                ordinal += 1
+                continue
+            }
             if headings, !takesMarkers, let block = leader(line), case .heading = block {
                 flush(); out.append(block); continue
             }
@@ -374,6 +395,27 @@ enum NoteSheet {
         closeFence()
         flush()
         return out
+    }
+
+    /// One line's checklist item, or nil (prd §982): `- [ ]`, `* [ ]` or
+    /// `+ [ ]`, `x` or `X` for done, and words after it — an item with no
+    /// words is not an item. The one parser; `NoteChecklist` reads through it.
+    static func taskLine(_ line: String) -> (done: Bool, text: String)? {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard let bullet = trimmed.first, bullet == "-" || bullet == "*" || bullet == "+"
+        else { return nil }
+        let rest = trimmed.dropFirst()
+        guard rest.hasPrefix(" [") else { return nil }
+        let box = rest.dropFirst(2)
+        guard let mark = box.first, box.dropFirst().hasPrefix("]") else { return nil }
+        let done: Bool
+        switch mark {
+        case " ": done = false
+        case "x", "X": done = true
+        default: return nil
+        }
+        let text = box.dropFirst(2).trimmingCharacters(in: .whitespaces)
+        return text.isEmpty ? nil : (done, text)
     }
 
     /// One line's own block, or nil when it is ordinary prose.

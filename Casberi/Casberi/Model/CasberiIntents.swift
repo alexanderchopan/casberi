@@ -287,6 +287,22 @@ enum IntentCorpus {
     }
 }
 
+/// A new note (prd §982) — the app's half of the Quick Note. The widget
+/// extension declares the same intent for its Control Center control; both
+/// write `note.request` into the app group, which `RootShell` drains on
+/// activation by raising the note sheet.
+struct NewNoteIntent: AppIntent {
+    static let title: LocalizedStringResource = "New note"
+    static let description = IntentDescription("Opens a new note in Casberi.")
+    static let openAppWhenRun = true
+
+    func perform() async throws -> some IntentResult {
+        UserDefaults(suiteName: SharedStore.appGroup)?
+            .set(true, forKey: "note.request")
+        return .result()
+    }
+}
+
 struct CasberiShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -318,6 +334,17 @@ struct CasberiShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Search things",
             systemImageName: "magnifyingglass"
+        )
+        // A Quick Note by voice or the Action button (prd §982): the same
+        // flag the Control Center note control writes.
+        AppShortcut(
+            intent: NewNoteIntent(),
+            phrases: [
+                "New note in \(.applicationName)",
+                "Write a note in \(.applicationName)",
+            ],
+            shortTitle: "New note",
+            systemImageName: "square.and.pencil"
         )
         // **"Ask Casberi" IS NOT ADVERTISED (prd §697b, 2026-09-11).** The
         // ask is deprecated, and Siri and Spotlight offering a phrase for a

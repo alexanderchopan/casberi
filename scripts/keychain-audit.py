@@ -46,7 +46,15 @@ SYNC = re.compile(r"\bkSecAttrSynchronizable\b")
 # Files that add keychain items on someone else's behalf and are exempt with a
 # stated reason. Empty by design — an entry here is a conscious "this item may
 # survive a backup restore."
-KNOWN_EXEMPT: dict[str, str] = {}
+KNOWN_EXEMPT: dict[str, str] = {
+    # The locked-note key (prd §982, the user's ruling 2026-09-28): its whole
+    # job is to reach the person's other devices, so a locked note opens on
+    # each of them and survives a new phone — Apple Notes' own design. It is
+    # synchronizable through iCloud Keychain (end-to-end encrypted) and
+    # AfterFirstUnlock, because a synchronizable item cannot be ThisDeviceOnly.
+    # Opening a note is gated by device-owner authentication in the app.
+    "NoteLock.swift": "the locked-note key syncs through iCloud Keychain by ruling (prd §982)",
+}
 
 
 def strip_comments(text):
@@ -144,4 +152,5 @@ if problems:
     print("\nEvery SecItemAdd must set a kSecAttrAccessible…ThisDeviceOnly "
           "policy and name kSecAttrSynchronizable. See TokenVault.swift.")
     sys.exit(1)
-print("✓ keychain audit: every keychain write is device-only and non-syncing")
+print("✓ keychain audit: every keychain write is device-only and non-syncing"
+      + (f" ({len(KNOWN_EXEMPT)} reasoned exemption)" if KNOWN_EXEMPT else ""))
