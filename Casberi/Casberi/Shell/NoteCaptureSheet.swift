@@ -116,6 +116,10 @@ struct NoteCaptureSheet: View {
     @State private var scanText: String?
     /// The link picker (prd §982).
     @State private var linkPickerOpen = false
+    #if DEBUG
+    /// The launch hooks have drafted their one note (see `onAppear`).
+    private static var hooksSpent = false
+    #endif
 
     /// Words to keep — with the checklist's bare circles taken out, so an
     /// item with nothing after it is not a note (prd §982).
@@ -318,10 +322,12 @@ struct NoteCaptureSheet: View {
                 }
             }
             #if DEBUG
-            // The hooks draft a NEW note. A launch argument stays set for the
-            // whole process, so without this guard every Edit in a hooked
-            // launch opened on the hook's words and kept them over the note.
-            if editing == nil {
+            // The hooks draft the FIRST new note of the launch. A launch
+            // argument stays set for the whole process, so unguarded every
+            // Edit opened on the hook's words and kept them over the note,
+            // and every later New arrived pre-filled.
+            if editing == nil, !Self.hooksSpent {
+                Self.hooksSpent = true
                 // `-noteVoice YES` — land recording, for the screen sweep. The
                 // simulator has no microphone, so a pass shows the band and the
                 // Stop key, never a transcript.

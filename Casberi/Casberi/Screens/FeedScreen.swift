@@ -1694,6 +1694,8 @@ struct FeedScreen: View {
     @State private var confirming: (Verb, Thing)?
     /// The note a long press asked to delete, waiting on its confirmation.
     @State private var deletingNote: Thing?
+    /// Recently Deleted's tray (prd §985).
+    @State private var trashOpen = false
     /// The Notes room's folder name prompt, its field, and the folder whose
     /// Delete is being confirmed (prd §980).
     @State private var folderPrompt: FolderPrompt?
@@ -3252,14 +3254,19 @@ struct FeedScreen: View {
             }
             if chrome.notesScope == .all {
                 // PINNED LEADS (prd §983), under its name — Apple Notes'
-                // order. A named group, never a day (§969's "no day
-                // dividers" holds): the rest follow with no header.
+                // order. Named groups, never days (§969's "no day dividers"
+                // holds). The rest stand under "Notes" whenever a Pinned
+                // group is drawn (prd §985): headerless, one pin made every
+                // row under it read as pinned. A pin lifted out as the cover
+                // draws no group, so then the list needs no name either.
                 let pinned = visible.filter { $0.isLive && Pinboard.isPinned($0) }
                 let rest = visible.filter { $0.isLive && !Pinboard.isPinned($0) }
+                let pinnedDrawn = pinned.contains { $0.id != coverID }
                 daySection(String(localized: "Pinned"), pinned, nextEventID: nextEventID,
                            dated: false, cover: coverID)
-                daySection(Pinboard.room, rest, nextEventID: nextEventID, dated: false,
-                           cover: coverID, headed: false)
+                daySection(pinnedDrawn ? String(localized: "Notes") : Pinboard.room, rest,
+                           nextEventID: nextEventID, dated: false,
+                           cover: coverID, headed: pinnedDrawn)
             } else {
                 daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
                            cover: coverID, headed: false)
@@ -3303,6 +3310,24 @@ struct FeedScreen: View {
                         Label("Delete folder", systemImage: "trash")
                     }
                 }
+                .noteFolderRowChrome()
+            }
+            // RECENTLY DELETED (prd §985), after the folders as in Apple
+            // Notes, and only while it holds something: an empty one is a
+            // door onto nothing.
+            let trashed = NoteTrash.shared.entries.count
+            if trashed > 0 {
+                DSPushRow(title: Text("Recently deleted"),
+                          fact: Text(verbatim: "\(trashed)"),
+                          action: { trashOpen = true }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: DS.Mark.row * 0.54, weight: .semibold))
+                        .foregroundStyle(DS.brand)
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        .background(Color.black, in: Circle())
+                        .accessibilityHidden(true)
+                }
+                .frame(minHeight: DS.Hit.min)
                 .noteFolderRowChrome()
             }
             // New folder LAST (prd §983), Apple Notes' place for it: the
@@ -6621,6 +6646,8 @@ struct FeedScreen: View {
                                    draft: $vibenetNameDraft,
                                    onSave: commitVibenetName))
         .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
+        .modifier(NoteTrashSheet(open: $trashOpen, onRecover: recoverNote,
+                                 onErase: { NoteTrash.shared.erase($0) }))
         .modifier(NoteFolderAlert(prompt: $folderPrompt, draft: $folderDraft,
                                   onSave: commitFolderPrompt))
         .modifier(NoteFolderDeleteDialog(folder: $deletingFolder, onDelete: deleteFolder))
@@ -6634,9 +6661,16 @@ struct FeedScreen: View {
 
     /// Delete a note of yours, confirmed. The store mirrors to iCloud, so the
     /// note leaves every device; Spotlight forgets it, as the drop toast's
-    /// Undo does (`RootShell.undoCapture`).
+    /// Undo does (`RootShell.undoCapture`). It is archived FIRST, in Recently
+    /// Deleted on this device (prd §985), and a note the archive could not
+    /// write is not deleted: the dialog promised it could come back.
     private func deleteNote(_ thing: Thing) {
         guard thing.isLive, Pinboard.isNote(thing) else { return }
+        guard NoteTrash.shared.keep(thing) else {
+            DSHaptic.failure()
+            chrome.flash(String(localized: "Couldn't delete the note"), tone: .failure)
+            return
+        }
         let id = thing.id
         withAnimation(DS.Motion.standard) {
             modelContext.delete(thing)
@@ -6644,7 +6678,19 @@ struct FeedScreen: View {
         modelContext.saveHonestly()
         SpotlightIndex.remove(ids: [id])
         DSHaptic.tap()
-        chrome.flash(String(localized: "Note deleted"))
+        chrome.flash(String(localized: "Note deleted, recoverable for \(NoteTrashRules.keepDays) days"))
+    }
+
+    /// Recently Deleted's Recover (prd §985): the note back in the room,
+    /// in its folder and pin, on its own day.
+    private func recoverNote(_ entry: NoteTrashEntry) {
+        guard NoteTrash.shared.recover(entry, into: modelContext) != nil else {
+            DSHaptic.failure()
+            chrome.flash(String(localized: "Couldn't recover the note"), tone: .failure)
+            return
+        }
+        DSHaptic.success()
+        chrome.flash(String(localized: "Recovered"), tone: .success)
     }
 
     /// Saves the name a vibenet account was just given (prd §669).
@@ -12214,7 +12260,21 @@ private struct NoteDeleteDialog: ViewModifier {
             }
             Button(String(localized: "Cancel"), role: .cancel) { note = nil }
         } message: {
-            Text(String(localized: "It can't be recovered."))
+            Text(String(localized: "It stays in Recently deleted for \(NoteTrashRules.keepDays) days."))
+        }
+    }
+}
+
+/// Recently Deleted's tray (prd §985). A MODIFIER for `VibenetNameAlert`'s
+/// reason.
+private struct NoteTrashSheet: ViewModifier {
+    @Binding var open: Bool
+    let onRecover: (NoteTrashEntry) -> Void
+    let onErase: (NoteTrashEntry) -> Void
+
+    func body(content: Content) -> some View {
+        content.sheet(isPresented: $open) {
+            NoteTrashTray(onRecover: onRecover, onErase: onErase)
         }
     }
 }

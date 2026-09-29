@@ -1995,6 +1995,11 @@ harness "Note checklist self-test" "note checklist self-test" "scripts/note-chec
 # both render as an ordinary folder list when wrong.
 harness "Note folders self-test" "note folders self-test" "scripts/note-folders-selftest.sh" "the note folders self-test failed — run scripts/note-folders-selftest.sh"
 
+# Recently Deleted (prd §985): a note archived before it is deleted, a window
+# that never reads 0 while a note can come back, and Delete everything that
+# empties the archive — each a loss nobody sees until the note is needed.
+harness "Note trash self-test" "note trash self-test" "scripts/note-trash-selftest.sh" "the note trash self-test failed — run scripts/note-trash-selftest.sh"
+
 # What a WORK thing sheet says HAPPENED (prd §364, 2026-08-12). Same class as
 # the social sheet above and the same reason: every failure renders as a
 # perfectly good-looking receipt. A dispute that reads "won" when it was lost,

@@ -905,6 +905,8 @@ struct AccountDetailSheet: View {
         let voice = (try? FileManager.default.contentsOfDirectory(
             at: VoiceCapture.folder, includingPropertiesForKeys: nil)) ?? []
         for url in voice { try? FileManager.default.removeItem(at: url) }
+        // Recently Deleted's archive (prd §985) is the store's too.
+        NoteTrash.shared.eraseAll()
         ThemeStore.shared.backgroundPhoto = nil
         ProfileStore.shared.avatar = nil
         ProfileStore.shared.name = nil
