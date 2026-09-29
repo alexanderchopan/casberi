@@ -439,20 +439,20 @@ extension LogosWire {
             let n = amount(value)
             for (i, _) in mine {
                 out.append(i == 1
-                    ? Event(account: id(1), title: "Received \(n) tokens — from \(other(0))", tags: ["Received"])
-                    : Event(account: id(0), title: "Sent \(n) tokens — to \(other(1))", tags: ["Sent"]))
+                    ? Event(account: id(1), title: "Received \(n) tokens — from \(other(0))", tags: ["Received", "Token"])
+                    : Event(account: id(0), title: "Sent \(n) tokens — to \(other(1))", tags: ["Sent", "Token"]))
             }
         case ("token", 1?):
             let made = string(ins.dropFirst()).map { "Created token \($0.0)" } ?? "Created a token"
-            out = mine.map { Event(account: id($0.offset), title: made, tags: ["Created"]) }
+            out = mine.map { Event(account: id($0.offset), title: made, tags: ["Created", "Token"]) }
         case ("token", 5?):
             guard let value = u128(ins.dropFirst().prefix(4)) else { break }
             out = mine.map { Event(account: id($0.offset), title: "Minted \(amount(value)) tokens",
-                                   tags: ["Minted"]) }
+                                   tags: ["Minted", "Token"]) }
         case ("token", 4?):
             guard let value = u128(ins.dropFirst().prefix(4)) else { break }
             out = mine.map { Event(account: id($0.offset), title: "Burned \(amount(value)) tokens",
-                                   tags: ["Burned"]) }
+                                   tags: ["Burned", "Token"]) }
         case ("pinata", _):
             out = mine.map { Event(account: id($0.offset), title: "Faucet claim", tags: ["Faucet"]) }
         default:
@@ -467,3 +467,172 @@ extension LogosWire {
         return out
     }
 }
+
+// MARK: - Your node (prd §989)
+
+extension LogosWire {
+
+    /// A Logos blockchain node's own HTTP API, read keylessly. MEASURED in
+    /// source (logos-blockchain @11711d3): it serves `127.0.0.1:8080` by
+    /// default with NO auth layer — Basecamp's embedded node leaves
+    /// `http_addr` empty, which is that address — and the public testnet's
+    /// `401 Basic realm="Restricted API"` is a proxy in front, not the node.
+    ///
+    /// **Only GETs, and only these three.** The same API serves writes
+    /// (`/leader/claim`, `/pow/claim`, `/wallet/*`, `/mempool/add/tx`), which
+    /// is why a node reached over the network is an exposure the page names.
+    static let nodeInfoPath = "/cryptarchia/info"
+    static let nodePeersPath = "/network/info"
+    static let nodeVouchersPath = "/leader/claim/vouchers"
+
+    /// The address someone types: `host:port`, a bare host (port 8080, the
+    /// node's default), or a full `http(s)://` URL. Returns the base URL with
+    /// no trailing slash, or nil for anything that is not an address.
+    static func nodeBase(_ raw: String) -> String? {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        while text.hasSuffix("/") { text.removeLast() }
+        guard !text.isEmpty, !text.contains(" ") else { return nil }
+        if !text.lowercased().hasPrefix("http://") && !text.lowercased().hasPrefix("https://") {
+            text = "http://" + text
+        }
+        guard let url = URL(string: text), let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              let host = url.host, !host.isEmpty,
+              url.path.isEmpty || url.path == "/"
+        else { return nil }
+        // No port means the node's own default, 8080 — never the scheme's 80,
+        // which no node listens on.
+        let hostPart = host.contains(":") ? "[\(host)]" : host
+        return "\(scheme)://\(hostPart):\(url.port ?? 8080)"
+    }
+
+    /// What the page's ONE field means by what was typed: an account id, a
+    /// node, or neither. An id wins — a base58 id is also a valid bare host
+    /// name, so a mistyped id must never become a node at `<typo>:8080`. A node
+    /// needs a dot, a colon or `localhost` to be read as one.
+    enum Entry: Equatable { case account(String), privateAccount, node(String), invalid }
+
+    static func entry(_ raw: String) -> Entry {
+        if let id = parseAccountID(raw) {
+            return id.visibility == .privateAccount ? .privateAccount : .account(id.base58)
+        }
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard text.contains(".") || text.contains(":") || text.hasPrefix("localhost"),
+              let base = nodeBase(raw) else { return .invalid }
+        return .node(base)
+    }
+
+    /// Whether an address stays on this machine. Anything else reaches a node
+    /// over a network — the case the page warns about, because the node's API
+    /// answers writes as readily as reads.
+    static func isLoopback(_ base: String) -> Bool {
+        guard let host = URL(string: base)?.host?.lowercased() else { return false }
+        return host == "localhost" || host == "127.0.0.1" || host == "::1" || host.hasPrefix("127.")
+    }
+
+    /// What one read of the node says. `reachable == false` is a reading too:
+    /// a node that stopped answering is news, not an error to swallow.
+    struct NodeSnapshot: Codable, Equatable {
+        var reachable: Bool
+        /// `phase`: AwaitingGenesisTime | InitialBlockDownload |
+        /// ProlongedBootstrapPeriod | Following. Following is "in sync".
+        var phase: String?
+        var height: Int?
+        var tip: String?
+        var peers: Int?
+        /// Leader-reward vouchers the node's wallet holds, unclaimed, and what
+        /// they are worth together at the tip. nil when the read failed.
+        var vouchers: Int?
+        var claimable: Decimal?
+
+        var synced: Bool { reachable && phase == "Following" }
+        static let unreachable = NodeSnapshot(reachable: false)
+
+        /// What to keep after reading `self`: an unreachable reading keeps
+        /// everything `last` knew, marked unreachable, so the next reading is
+        /// measured against the node as it was, not against a blank.
+        func remembering(_ last: NodeSnapshot?) -> NodeSnapshot {
+            guard !reachable, var kept = last else { return self }
+            kept.reachable = false
+            return kept
+        }
+    }
+
+    /// `/cryptarchia/info`: `{cryptarchia_info: {lib, lib_slot, tip, slot,
+    /// height, state}, phase}`. Read nested, and flat as a fallback — the
+    /// docs' example and the source agree on nested today, and a flattening
+    /// would otherwise read as a node with no height.
+    static func nodeInfo(_ json: Any?) -> (phase: String?, height: Int?, tip: String?)? {
+        guard let obj = json as? [String: Any] else { return nil }
+        let info = obj["cryptarchia_info"] as? [String: Any] ?? obj
+        let height = (info["height"] as? NSNumber)?.intValue
+        let tip = info["tip"] as? String
+        guard height != nil || tip != nil else { return nil }
+        return (obj["phase"] as? String, height, tip)
+    }
+
+    /// `/network/info`: `n_peers`.
+    static func nodePeers(_ json: Any?) -> Int? {
+        ((json as? [String: Any])?["n_peers"] as? NSNumber)?.intValue
+    }
+
+    /// `/leader/claim/vouchers?tip=`: `{tip, vouchers: [{commitment,
+    /// nullifier}], reward_amount, total_claimable}`.
+    static func nodeVouchers(_ json: Any?) -> (count: Int, claimable: Decimal)? {
+        guard let obj = json as? [String: Any], let list = obj["vouchers"] as? [Any] else { return nil }
+        return (list.count, decimal(obj["total_claimable"]) ?? 0)
+    }
+
+    /// What changed between two readings, as rows. Nothing on FIRST sight
+    /// (`old == nil`): a node already synced when you started watching did not
+    /// just sync, and a voucher already waiting did not just arrive. Peer
+    /// counts and heights move every minute and are the roster's, never a row.
+    struct NodeEvent: Equatable {
+        let kind: String      // offline | back | synced | behind | vouchers
+        let title: String
+        let tags: [String]
+    }
+
+    /// `old` is the LAST-KNOWN state: a reading taken while the node was
+    /// down keeps the phase and vouchers from before (`remembering`), so a
+    /// node that comes back in sync, holding the vouchers it held, says only
+    /// that it is answering — measured against a stand-in node, the first cut
+    /// re-announced both as news.
+    static func nodeEvents(old: NodeSnapshot?, new: NodeSnapshot) -> [NodeEvent] {
+        guard let old else { return [] }
+        var out: [NodeEvent] = []
+        if old.reachable && !new.reachable {
+            return [NodeEvent(kind: "offline", title: "Your node stopped answering", tags: ["Node", "Offline"])]
+        }
+        guard new.reachable else { return [] }
+        if !old.reachable {
+            out.append(NodeEvent(kind: "back", title: "Your node is answering", tags: ["Node"]))
+        }
+        let wasSynced = old.phase == "Following"
+        if new.synced && !wasSynced {
+            let at = new.height.map { " — height \(amount(Decimal($0)))" } ?? ""
+            out.append(NodeEvent(kind: "synced", title: "Your node is in sync\(at)", tags: ["Node", "Synced"]))
+        } else if wasSynced && !new.synced {
+            out.append(NodeEvent(kind: "behind", title: "Your node fell behind", tags: ["Node", "Behind"]))
+        }
+        if let count = new.vouchers, count > (old.vouchers ?? 0), let worth = new.claimable, worth > 0 {
+            let noun = count == 1 ? "reward voucher" : "reward vouchers"
+            out.append(NodeEvent(kind: "vouchers",
+                                 title: "\(count) \(noun) ready — \(amount(worth)) claimable",
+                                 tags: ["Node", "Voucher"]))
+        }
+        return out
+    }
+
+    /// The roster's line for the node.
+    static func nodeLine(_ snap: NodeSnapshot?) -> String {
+        guard let snap else { return "Not read yet" }
+        guard snap.reachable else { return "Not answering" }
+        var parts: [String] = [snap.synced ? "In sync" : "Syncing"]
+        if let h = snap.height { parts.append("height \(amount(Decimal(h)))") }
+        if let p = snap.peers { parts.append(p == 1 ? "1 peer" : "\(p) peers") }
+        if let v = snap.vouchers, v > 0 { parts.append(v == 1 ? "1 voucher" : "\(v) vouchers") }
+        return parts.joined(separator: " · ")
+    }
+}
+

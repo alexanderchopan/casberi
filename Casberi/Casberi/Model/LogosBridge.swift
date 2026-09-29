@@ -33,6 +33,25 @@ final class LogosStore {
     private static let balancesKey = "logos.balances.v1"
     private static let cursorKey = "logos.cursor.v1"
     private static let readAtKey = "logos.readAt.v1"
+    private static let nodeKey = "logos.node.v1"
+    private static let nodeSnapshotKey = "logos.nodeSnapshot.v1"
+
+    /// Your own node's base URL (prd §989), or nil when none is watched.
+    private(set) var node: String? {
+        didSet { UserDefaults.standard.set(node, forKey: Self.nodeKey) }
+    }
+
+    /// The node's last reading — what the next one is diffed against, and the
+    /// roster's line. nil until the first read, which lands nothing.
+    private(set) var nodeSnapshot: LogosWire.NodeSnapshot? {
+        didSet {
+            if let data = nodeSnapshot.flatMap({ try? JSONEncoder().encode($0) }) {
+                UserDefaults.standard.set(data, forKey: Self.nodeSnapshotKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.nodeSnapshotKey)
+            }
+        }
+    }
 
     /// Watched public LEZ account ids, base58.
     private(set) var accounts: [String] {
@@ -74,9 +93,24 @@ final class LogosStore {
         } else { balances = [:] }
         cursor = UserDefaults.standard.object(forKey: Self.cursorKey) as? Int
         readAt = UserDefaults.standard.object(forKey: Self.readAtKey) as? Date
+        node = UserDefaults.standard.string(forKey: Self.nodeKey)
+        nodeSnapshot = UserDefaults.standard.data(forKey: Self.nodeSnapshotKey)
+            .flatMap { try? JSONDecoder().decode(LogosWire.NodeSnapshot.self, from: $0) }
     }
 
-    var connected: Bool { !accounts.isEmpty }
+    /// Watching an account OR a node connects the seat.
+    var connected: Bool { !accounts.isEmpty || node != nil }
+
+    /// Points the seat at a node. A different address starts a fresh history:
+    /// diffing one node's reading against another's would report every
+    /// difference between two machines as news.
+    func useNode(_ base: String?) {
+        guard base != node else { return }
+        node = base
+        nodeSnapshot = nil
+    }
+
+    func rememberNode(_ snap: LogosWire.NodeSnapshot) { nodeSnapshot = snap }
 
     func isWatching(_ raw: String) -> Bool {
         guard let id = LogosWire.watchableID(raw) else { return false }
@@ -121,6 +155,8 @@ final class LogosStore {
     }
 
     func disconnect() {
+        node = nil
+        nodeSnapshot = nil
         accounts = []
         balances = [:]
         cursor = nil
@@ -204,24 +240,85 @@ enum LogosIngest {
         running = true
         defer { running = false }
 
-        guard let tip = await head() else { return nil }
+        var outcome = Outcome(added: 0, skipped: 0)
+        var reached = false
+        if let base = store.node {
+            outcome.added += await readNode(base, context: context)
+            reached = true
+        }
+        guard !store.accounts.isEmpty else {
+            if outcome.added > 0 { context.saveHonestly() }
+            return outcome
+        }
+        guard let tip = await head() else {
+            if outcome.added > 0 { context.saveHonestly() }
+            return reached ? outcome : nil
+        }
 
         var read: [String: Decimal] = [:]
         for id in store.accounts {
             if let account = await account(id) { read[id] = account.balance }
         }
 
-        var outcome = Outcome(added: 0, skipped: 0)
         if let cursor = store.cursor, cursor > tip {
             store.resetDetected(head: tip)
         } else if let cursor = store.cursor, cursor < tip {
-            outcome = await walk(from: cursor + 1, to: tip, context: context)
+            let walked = await walk(from: cursor + 1, to: tip, context: context)
+            outcome.added += walked.added
+            outcome.skipped = walked.skipped
+            outcome.stalled = walked.stalled
         } else if store.cursor == nil {
             // First pass: forward-only, from here.
             store.advance(to: tip)
         }
         store.rememberBalances(read, at: .now)
         return outcome
+    }
+
+    // MARK: - Your node (prd §989)
+
+    /// One reading of the node: three GETs, never a write. The vouchers read
+    /// needs the tip the info read returned.
+    static func nodeReading(_ base: String) async -> LogosWire.NodeSnapshot {
+        guard let info = LogosWire.nodeInfo(
+            await IngestSupport.getJSON(base + LogosWire.nodeInfoPath, service: service))
+        else { return .unreachable }
+        var snap = LogosWire.NodeSnapshot(reachable: true, phase: info.phase,
+                                          height: info.height, tip: info.tip)
+        snap.peers = LogosWire.nodePeers(
+            await IngestSupport.getJSON(base + LogosWire.nodePeersPath, service: service))
+        if let tip = info.tip,
+           let v = LogosWire.nodeVouchers(await IngestSupport.getJSON(
+               base + LogosWire.nodeVouchersPath + "?tip=" + tip, service: service)) {
+            snap.vouchers = v.count
+            snap.claimable = v.claimable
+        }
+        return snap
+    }
+
+    /// Reads the node, lands what CHANGED since the last reading (nothing on
+    /// the first), and keeps the reading. Rows are stamped when observed —
+    /// a node's state carries no date of its own, so "now" is true to within
+    /// one refresh, and it is the only honest stamp there is.
+    @MainActor
+    static func readNode(_ base: String, context: ModelContext) async -> Int {
+        let store = LogosStore.shared
+        let snap = await nodeReading(base)
+        // The address changed while this read was in flight: drop it.
+        guard store.node == base else { return 0 }
+        let events = LogosWire.nodeEvents(old: store.nodeSnapshot, new: snap)
+        let now = Date()
+        for event in events {
+            let ref = "logos:node:\(event.kind):\(Int(now.timeIntervalSince1970))"
+            let thing = Thing(kind: .note, title: IngestSupport.titleLine(event.title),
+                              content: base, source: "Logos", capturedAt: now,
+                              tags: event.tags, sourceRef: ref)
+            thing.authorHandle = String(localized: "Your node")
+            context.insert(thing)
+            SpotlightIndex.index([thing])
+        }
+        store.rememberNode(snap.remembering(store.nodeSnapshot))
+        return events.count
     }
 
     @MainActor

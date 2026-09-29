@@ -933,16 +933,10 @@ struct FeedScreen: View {
         return String(localized: "\(HegotaFormat.crown(wei)) available")
     }
 
-    /// **REAL ACCOUNTS ON THIS CHAIN, so the picker is never empty** (user,
-    /// 2026-09-01: *"for send, we need other addresses to show, so we must get
-    /// some from the devnet as examples"*).
-    ///
-    /// A watch list is empty on every fresh install, and this chain is four
-    /// days old — so Send opened onto nothing to send TO, which is the dead
-    /// end §83 bans wearing a picker's clothes. The examples are the same
-    /// addresses the connect screen offers and they are MEASURED, not invented:
-    /// each has really transacted here (see `FramesExample`). Watched
-    /// addresses lead, because those are somebody's own choice.
+    /// **The addresses you watch, and only those** (prd §990, user: "remove
+    /// the suggested addresses data from the devnets"). The 2026-09-01 ruling's measured
+    /// examples filled an empty picker; they are deleted with the rest, and
+    /// the recipient field takes a pasted address as before.
     /// **WHO SENDS (prd §728d)** — the passkey account when the room is scoped
     /// to it on the face rail, this phone's key otherwise. The held line says
     /// which, so the sheet never sends as an account it did not name.
@@ -959,13 +953,12 @@ struct FeedScreen: View {
         let me = FramesKey.address()
         var seen = Set<String>()
         var out: [(address: String, name: String?)] = []
-        for address in FramesWatch.shared.addresses + FramesExample.all.map(\.address) {
+        for address in FramesWatch.shared.addresses {
             let key = address.lowercased()
             guard !seen.contains(key) else { continue }
             guard me == nil || address.caseInsensitiveCompare(me!) != .orderedSame else { continue }
             seen.insert(key)
-            out.append((address, FramesWatch.shared.name(for: address)
-                                 ?? FramesExample.all.first { $0.address == address }?.title))
+            out.append((address, FramesWatch.shared.name(for: address)))
         }
         return out
     }
@@ -987,24 +980,20 @@ struct FeedScreen: View {
 
     /// Who Ethrex Privacy can send to, watched addresses first.
     ///
-    /// The same shape as `framesSendCandidates` and for the same reason: a
-    /// watch list is empty on every fresh install, so the picker would open
-    /// onto nothing to send TO — the dead end §83 bans wearing a picker's
-    /// clothes. Both examples are MEASURED addresses that have really
-    /// transacted on 8141 (`PrivacyDevnetExample`), and this phone's own
-    /// account is excluded, since sending to yourself is the one destination
-    /// the picker should never suggest.
+    /// The same shape as `framesSendCandidates`: the addresses you watch (the
+    /// measured examples are deleted, prd §990), and never this phone's own
+    /// account, since sending to yourself is the one destination the picker
+    /// should never suggest.
     private var privacyDevnetSendCandidates: [(address: String, name: String?)] {
         let me = PrivacyDevnetKey.address()
         var seen = Set<String>()
         var out: [(address: String, name: String?)] = []
-        for address in PrivacyDevnetWatch.shared.addresses + PrivacyDevnetExample.recipients.map(\.address) {
+        for address in PrivacyDevnetWatch.shared.addresses {
             let key = address.lowercased()
             guard !seen.contains(key) else { continue }
             guard me == nil || address.caseInsensitiveCompare(me!) != .orderedSame else { continue }
             seen.insert(key)
-            out.append((address, PrivacyDevnetWatch.shared.name(for: address)
-                                 ?? PrivacyDevnetExample.all.first { $0.address == address }?.title))
+            out.append((address, PrivacyDevnetWatch.shared.name(for: address)))
         }
         return out
     }

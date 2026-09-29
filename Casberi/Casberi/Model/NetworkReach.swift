@@ -346,8 +346,11 @@ enum NetworkReach {
         // The explorer is a link a row opens, never fetched.
         Endpoint(service: "Logos",
                  reach: .whenConnected(bridge: "Logos"),
-                 purpose: "Reads the balance and activity of the public LEZ accounts you watch, from the Logos testnet's sequencer. Carries only the account ids you asked about and the block numbers it reads; there is no account and no key.",
-                 hosts: ["testnet.lez.logos.co"]),
+                 purpose: "Reads the balance and activity of the public LEZ accounts you watch, from the Logos testnet's sequencer, and your own node's sync state, peers and reward vouchers at the address you give it. Carries only the account ids you asked about and the block numbers it reads; there is no account and no key.",
+                 // The node's address is TYPED BY THE PERSON (prd §989), the
+                 // §289 case: every node request names this service to
+                 // `NetworkLedger`, so a self-chosen address is attributed.
+                 hosts: ["testnet.lez.logos.co", "the node address you give it"]),
         // Base Vibenet (2026-08-23) — an experimental devnet whose contracts
         // are redeployed on no fixed schedule, so unlike every other entry
         // here the CONTRACT addresses this app calls aren't listed, only the

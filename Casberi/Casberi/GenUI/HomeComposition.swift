@@ -138,6 +138,8 @@ enum HomeComposition {
             // covers one; "Sent" is ruled here, which also covers `HegotaSend`'s.
             "Received", "Sent", "Initialized", "Created", "Minted", "Burned",
             "Private", "Program",
+            // prd §989: a token row's kind, and your node's states.
+            "Token", "Node", "Offline", "Synced", "Behind", "Voucher",
             "BNB Smart Chain",                            // wallet chain label
             // Radicle (prd §400). All five are STATE, not subject: they say
             // what happened to a patch or an issue, never what it is about.

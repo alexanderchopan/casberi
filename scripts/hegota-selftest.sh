@@ -1594,12 +1594,13 @@ need HegotaRoomCard.swift.bare "head.hasRead" \
 # So the guard follows the ruling to its new mechanism rather than being
 # deleted, and it takes two assertions because either half alone can lose an
 # example.
-need HegotaScreen.swift.bare "examples: Self.examples" \
-  "the screen no longer hands its examples table to the accounts slab whole — a gated or filtered list loses half the room"
-need DevnetAccounts.swift.bare "ForEach(examples)" \
-  "the accounts slab no longer walks the examples it was handed — a taken example would vanish from the card"
-deny DevnetAccounts.swift.bare "examples.filter" \
-  "the accounts slab filters its examples again — a watched one disappears and the other half of the room goes with it"
+# AMENDED 2026-09-29 (prd §990, user: "i don't want them"): the examples are
+# deleted from all four devnet pages, so the guard that kept every one visible
+# becomes the guard that keeps the block gone.
+deny DevnetAccounts.swift.bare "Addresses worth watching" \
+  "the devnet pages suggest addresses to watch again — the user ruled them out (prd §990)"
+deny DevnetAccounts.swift.bare "ForEach(examples)" \
+  "the accounts slab walks an examples list again — the suggestions are deleted (prd §990)"
 
 # NO ROUTE ON A WATCH (prd §618, 2026-09-05). Hegotá, Frames and Privacy used
 # to land you in the room on the FIRST watch — the tap vibenet's 2026-08-28

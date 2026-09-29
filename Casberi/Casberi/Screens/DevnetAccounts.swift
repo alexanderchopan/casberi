@@ -78,34 +78,14 @@ extension HegotaWatch: DevnetWatchList {}
 extension FramesWatch: DevnetWatchList {}
 extension PrivacyDevnetWatch: DevnetWatchList {}
 
-// MARK: - An example account
-
-/// An address worth handing somebody, and the claim it makes about itself.
-///
-/// The claim is the whole reason these exist: every one of these chains is
-/// small enough that a random address shows nothing, so an example is only
-/// worth a row if it says what watching it will SHOW. "An address holding
-/// coins · Shows the vault's unspent pieces" is a row; a bare address is a
-/// fact you cannot act on.
-///
-/// **Each seat's list is MEASURED against its own chain and dated in the
-/// seat's own file**, never invented here — if a chain is reset these become
-/// ordinary addresses rather than broken ones, which is why the copy says
-/// what they showed rather than promising what they will.
-struct DevnetExample: Identifiable {
-    let address: String
-    let title: String
-    let detail: String
-    var id: String { address }
-}
-
 // MARK: - What is there right now
 
 /// The two facts a devnet node will state about any address for free —
 /// how many times it has sent, and what it holds — read once per row and
 /// shown UNDER the example's claim (prd §618, 2026-09-05).
 ///
-/// **Why a live line under a dated claim.** `DevnetExample`'s copy says what
+/// **Why a live line under a dated claim.** An example's copy (the examples
+/// are deleted, prd §990; the line now serves this phone's own row) said what
 /// an address SHOWED when it was measured, and the sentence under every one of
 /// these slabs says the chain may be reset without notice — so the claim is
 /// honest and can still be stale. This line is the part that cannot be: it is
@@ -312,8 +292,9 @@ struct DevnetAccountRow: View {
 
 // MARK: - The act block
 
-/// **Paste at the top, examples under it — the account page's act slot (prd
-/// §639, 2026-09-06).**
+/// **Paste at the top — the account page's act slot (prd §639, 2026-09-06).**
+/// The worked examples that stood under it are deleted (prd §990, user: "i
+/// don't want them").
 ///
 /// It was `DevnetAccountsSlab` and it was a card. The four devnet seats moved
 /// onto `AccountPage`, where the only filled element on the page is the input
@@ -341,10 +322,6 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
     /// slab is tinted: the colour says which row is actionable, and a card
     /// full of it says nothing.
     let tint: Color
-    /// Measured, dated in the seat's own file. May be empty — a chain with
-    /// nothing worth pointing at draws the field alone rather than an
-    /// apology.
-    var examples: [DevnetExample] = []
     /// This phone's signing address, on the seats that make a key. Nil where
     /// the seat is watch-only.
     var mine: String? = nil
@@ -433,25 +410,8 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
                                  isMine: true) { take(mine) }
             }
 
-            if !examples.isEmpty {
-                // The one head on the card. Its words carry the offer, so a
-                // row underneath never has to repeat it.
-                Text(String(localized: "Addresses worth watching"))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .padding(.top, DS.Space.s1)
-                ForEach(examples) { example in
-                    // The live line replaces the dated claim once it lands;
-                    // until then, and where the node cannot be reached, the
-                    // claim stands (it is written in the past tense for
-                    // exactly this — see `DevnetExample`).
-                    DevnetAccountRow(address: example.address,
-                                     title: example.title,
-                                     detail: fact(for: example.address) ?? example.detail,
-                                     watching: watch.isWatching(example.address),
-                                     tint: tint) { take(example.address) }
-                }
-            }
+            // No "Addresses worth watching" (user, 2026-09-29: "i don't want
+            // them"). The field is the only way in, on all four devnets.
         }
         .task { await peekRows() }
         .task(id: previewAddress) {
@@ -483,7 +443,7 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
     /// children; the `@State` write happens here, on the task's own actor.
     private func peekRows() async {
         guard let peek else { return }
-        let rows = (mine.map { [$0] } ?? []) + examples.map(\.address)
+        let rows = mine.map { [$0] } ?? []
         await withTaskGroup(of: (String, DevnetPeek?).self) { group in
             for address in rows where facts[address.lowercased()] == nil {
                 group.addTask { (address, await peek(address)) }

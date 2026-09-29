@@ -69,7 +69,6 @@ struct FramesScreen: View {
                 DevnetAccountsAct(
                     watch: watch,
                     tint: Self.mark,
-                    examples: Self.examples,
                     // Offered only once the key exists — making one is the
                     // room's act now, so this is never a door onto a first
                     // step that is somewhere else.
@@ -92,7 +91,12 @@ struct FramesScreen: View {
                     FramesBridge.registerBridge(store: store)
                     readRows()
                 })
-                DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice."), plain: true)
+                .padding(.top, DS.Space.s3)
+                // Flush with the lines around it, a group of its own (user: "the
+                // text all needs same indenting … or add spacing"). `DSSlabNote`
+                // insets itself inside an act; nothing else in this block does.
+                DSFootnote(prose: String(localized: "Test ETH has no value, and the network may be reset without notice."))
+                    .padding(.vertical, DS.Space.s3)
                 DevnetExplorerRow(url: FramesIdentity.explorer, plain: true)
             },
             keySheet: { EmptyView() }
@@ -116,33 +120,8 @@ struct FramesScreen: View {
         readRows()
     }
 
-    private static let examples = FramesExample.all
-
     // NO ROUTE ON A WATCH (prd §618) — the Activity row is the way on, and the
     // read reports here, on the page the person is still looking at.
-}
-
-/// The addresses worth offering, and there are only two worth offering.
-///
-/// **Measured 2026-09-01 across the chain's whole history**: 5 type-`0x06`
-/// transactions from 4 senders. These two are the only addresses that have
-/// sent more than one thing, so they are the only ones whose room has more
-/// than a single row in it. Everything else on this chain is a genesis
-/// fixture or an address the faucet paid once.
-///
-/// A namespace rather than a type of its own since 2026-09-04 — the row shape
-/// is `DevnetExample` now, shared with the three sibling devnets. The name
-/// survives because `FeedScreen` reads this table to title a frame
-/// transaction's counterparty.
-enum FramesExample {
-    static let all: [DevnetExample] = [
-        DevnetExample(address: "0x80cfe5da326d0ab7a1d2ffc61745c57885dc2e32",
-                      title: String(localized: "An address that sent twice"),
-                      detail: String(localized: "Two frame transactions")),
-        DevnetExample(address: "0x333ea8dfbb78bf478c52fd6e1a8aa659db873a0d",
-                      title: String(localized: "A two-frame transfer"),
-                      detail: String(localized: "A verify frame and a sender frame")),
-    ]
 }
 
 /// **A PASSKEY ACCOUNT (prd §728d)** — make one, see its address, delete its key.

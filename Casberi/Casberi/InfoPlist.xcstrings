@@ -355,6 +355,41 @@
         }
       }
     },
+    "NSLocalNetworkUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads your own Logos node at the address you give it, when that node is on your network."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee tu propio nodo de Logos en la dirección que le des, cuando ese nodo está en tu red."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は、指定されたアドレスにある自分の Logos ノードを、そのノードが同じネットワーク上にあるときに読み込みます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 입력한 주소에 있는 내 Logos 노드를, 그 노드가 같은 네트워크에 있을 때 읽어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当你的 Logos 节点在你的网络上时，Casberi 会在你提供的地址读取它。"
+          }
+        }
+      }
+    },
     "NSLocationWhenInUseUsageDescription": {
       "extractionState": "manual",
       "localizations": {

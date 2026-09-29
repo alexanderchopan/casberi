@@ -546,49 +546,6 @@ final class PrivacyDevnetWatch {
     func name(for address: String) -> String? { AddressBook.shared.name(for: address) }
 }
 
-/// Addresses worth watching when you have none of your own.
-///
-/// **This chain makes suggestions load-bearing rather than a nicety.** It holds
-/// 14 type-`0x6` transactions across ~15,000 blocks and only FOUR of them
-/// reference a root, so a pasted stranger's address shows a correct blank that
-/// reads exactly like a broken feature. Vibenet and Frames offer the same thing
-/// for the same reason.
-///
-/// **Declared ONCE and read by both the setup screen and the empty room.** Two
-/// copies of an address is how two screens end up suggesting different things,
-/// and the room is where somebody actually hits the wall — the setup screen is
-/// a place you pass through, the empty room is where you stand wondering what
-/// to do.
-///
-/// Both were read off `rpc1.privacy.ethrex.xyz` on 2026-09-04 by running the
-/// walk itself, and each is here for a DIFFERENT reading: only the first
-/// references a root, so it is the only way to see the Roots scope at all
-/// without waiting for somebody to use the chain.
-enum PrivacyDevnetSuggestions {
-    struct Entry: Identifiable, Sendable {
-        let address: String
-        let title: String
-        let detail: String
-        var id: String { address }
-    }
-
-    static let all: [Entry] = [
-        Entry(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
-              title: String(localized: "An address that used the pool"),
-              detail: String(localized: "Two one-time spend keys, and a proof against a recent snapshot")),
-        Entry(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
-              title: String(localized: "An address that sent early"),
-              detail: String(localized: "Frame transactions from the chain's first hour")),
-    ]
-
-    /// The ones not already watched — an offer to watch something you are
-    /// already watching is the dead control §83 bans.
-    @MainActor
-    static var unwatched: [Entry] {
-        all.filter { !PrivacyDevnetWatch.shared.isWatching($0.address) }
-    }
-}
-
 // MARK: - Bridge registration
 
 enum PrivacyDevnetBridge {

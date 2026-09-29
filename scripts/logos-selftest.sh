@@ -7,6 +7,7 @@
 #     — account(_:)                  (getAccount's measured shape, u128 via Decimal)
 #     — block(_:)                    (LEZ v0.2's Borsh layout, exact length or nil)
 #     — events(_:watched:programs:)  (what a transaction means for one account)
+#     — nodeBase / isLoopback / nodeEvents (your own node, prd §989)
 #
 # Foundation + CryptoKit only BY DESIGN, so it is compiled WHOLE AND UNMODIFIED
 # here. The fixtures are FIVE REAL TESTNET BLOCKS (fetched 2026-09-29 from
@@ -54,7 +55,9 @@ strip() { python3 -c "import re,sys; s=open(sys.argv[1]).read(); s=re.sub(r'/\*.
 guard_fail=0
 code="$(strip "$WIRE"; strip "$BRIDGE"; strip "$SCREEN")"
 # Conduct: read-only in the strongest grade — no credential, no write method.
-for banned in Authorization sendTransaction requeueCrossZoneDeadLetter; do
+# The node's API serves writes beside its reads; only the three GET paths may
+# appear (prd §989).
+for banned in Authorization sendTransaction requeueCrossZoneDeadLetter '"/leader/claim"' '/pow/claim' '/wallet/' '/mempool/add' 'postJSON(base'; do
   if print -r -- "$code" | grep -qF "$banned"; then
     echo "✗ conduct: $banned appears in the Logos seat — it is keyless and read-only"; guard_fail=1
   fi
@@ -63,7 +66,7 @@ done
 if print -r -- "$code" | grep -qE '"[^"]*LGO[^"]*"'; then
   echo "✗ a Logos string names LGO — LEZ amounts carry no unit"; guard_fail=1
 fi
-grep -q 'hosts: \["testnet.lez.logos.co"\]' "$REACH" || { echo "✗ the sequencer host is not declared in NetworkReach"; guard_fail=1; }
+grep -q 'hosts: \["testnet.lez.logos.co"' "$REACH" || { echo "✗ the sequencer host is not declared in NetworkReach"; guard_fail=1; }
 grep -q 'LogosIngest.refresh(context: context)' "$REFRESH" || { echo "✗ BridgeRefresh does not sweep Logos"; guard_fail=1; }
 grep -q 'destination: .logos' "$ROUTING" || { echo "✗ no routing row for Logos"; guard_fail=1; }
 grep -q 'Offer(name: "Logos"' "$CATALOG" || { echo "✗ no catalog offer for Logos"; guard_fail=1; }
@@ -192,6 +195,53 @@ let p = LogosWire.block(wrap(priv))?.transactions.first
 check(p?.kind == .privacyPreserving, "a privacy-preserving transaction decodes")
 check(p.map { LogosWire.events($0, watched: watched(CBGR), programs: programs).map(\.title) } == ["Private transaction"], "only its public side is named")
 
+print("your node — the address")
+check(LogosWire.nodeBase("127.0.0.1:8080") == "http://127.0.0.1:8080", "host:port")
+check(LogosWire.nodeBase("localhost") == "http://localhost:8080", "no port means the node's default, 8080")
+check(LogosWire.nodeBase("http://192.168.1.5") == "http://192.168.1.5:8080", "a scheme without a port still means 8080, never 80")
+check(LogosWire.nodeBase("https://node.example.com:9000/") == "https://node.example.com:9000", "a full URL keeps its port, loses its slash")
+check(LogosWire.nodeBase("http://x/path") == nil, "a path is refused — the node answers at its root")
+check(LogosWire.nodeBase("ftp://x") == nil && LogosWire.nodeBase("two words") == nil, "not an address")
+check(LogosWire.isLoopback("http://127.0.0.1:8080") && LogosWire.isLoopback("http://localhost:8080") && LogosWire.isLoopback("http://[::1]:8080"), "loopback in every spelling")
+check(!LogosWire.isLoopback("http://192.168.1.5:8080") && !LogosWire.isLoopback("http://10.0.0.2:8080"), "a network address is not loopback")
+
+print("your node — the reads (shapes from logos-blockchain @11711d3)")
+let info = LogosWire.nodeInfo(["cryptarchia_info": ["lib": "aa", "lib_slot": 10, "tip": "bb", "slot": 12, "height": 71763, "state": "Online"], "phase": "Following"] as [String: Any])
+check(info?.height == 71763 && info?.tip == "bb" && info?.phase == "Following", "cryptarchia/info, nested")
+check(LogosWire.nodeInfo(["height": 5, "tip": "cc"] as [String: Any])?.height == 5, "a flat reply still reads")
+check(LogosWire.nodeInfo(["code": 404, "message": "x"] as [String: Any]) == nil, "an error body is not a reading")
+check(LogosWire.nodePeers(["n_peers": 8, "n_connections": 9] as [String: Any]) == 8, "network/info peers")
+let v = LogosWire.nodeVouchers(["tip": "bb", "vouchers": [["commitment": "c1", "nullifier": "n1"], ["commitment": "c2", "nullifier": "n2"]], "reward_amount": 600, "total_claimable": 1200] as [String: Any])
+check(v?.count == 2 && v?.claimable == 1200, "leader/claim/vouchers")
+
+print("your node — what lands")
+let synced = LogosWire.NodeSnapshot(reachable: true, phase: "Following", height: 71763, tip: "bb", peers: 8, vouchers: 0, claimable: 0)
+let syncing = LogosWire.NodeSnapshot(reachable: true, phase: "InitialBlockDownload", height: 100, tip: "aa", peers: 3, vouchers: 0, claimable: 0)
+check(LogosWire.nodeEvents(old: nil, new: synced).isEmpty, "first sight lands nothing — a node already in sync did not just sync")
+check(LogosWire.nodeEvents(old: syncing, new: synced).map(\.title) == ["Your node is in sync — height 71,763"], "catching up lands once")
+check(LogosWire.nodeEvents(old: synced, new: syncing).map(\.title) == ["Your node fell behind"], "falling behind lands")
+check(LogosWire.nodeEvents(old: synced, new: .unreachable).map(\.title) == ["Your node stopped answering"], "going quiet lands")
+let downWhileSynced = synced.remembering(synced).remembering(nil)
+let keptDown = LogosWire.NodeSnapshot.unreachable.remembering(synced)
+check(downWhileSynced == synced && keptDown.phase == "Following" && !keptDown.reachable, "a reading while down keeps the last-known state, marked down")
+check(LogosWire.nodeEvents(old: keptDown, new: synced).map(\.title) == ["Your node is answering"], "coming back in sync says only that it is answering")
+var keptPaid = synced; keptPaid.vouchers = 2; keptPaid.claimable = 1200
+let paidDown = LogosWire.NodeSnapshot.unreachable.remembering(keptPaid)
+check(LogosWire.nodeEvents(old: paidDown, new: keptPaid).map(\.title) == ["Your node is answering"], "vouchers held before going down are not news on return")
+check(LogosWire.nodeEvents(old: .unreachable, new: synced).map(\.title) == ["Your node is answering", "Your node is in sync — height 71,763"], "first reachable reading after an unknown down: answering, and in sync")
+check(LogosWire.nodeEvents(old: keptDown, new: .unreachable).isEmpty, "still down is not news")
+var more = synced; more.peers = 30; more.height = 80000
+check(LogosWire.nodeEvents(old: synced, new: more).isEmpty, "peers and height moving are not rows")
+var paid = synced; paid.vouchers = 2; paid.claimable = 1200
+check(LogosWire.nodeEvents(old: synced, new: paid).map(\.title) == ["2 reward vouchers ready — 1,200 claimable"], "a new voucher lands with what it is worth")
+check(LogosWire.nodeEvents(old: paid, new: paid).isEmpty, "the same vouchers do not land twice")
+var claimed = paid; claimed.vouchers = 1; claimed.claimable = 600
+check(LogosWire.nodeEvents(old: paid, new: claimed).isEmpty, "claiming one is not news")
+var worthless = synced; worthless.vouchers = 1; worthless.claimable = 0
+check(LogosWire.nodeEvents(old: synced, new: worthless).isEmpty, "a voucher worth nothing yet (before its epoch) does not land")
+check(LogosWire.nodeLine(synced) == "In sync · height 71,763 · 8 peers", "the roster line")
+check(LogosWire.nodeLine(.unreachable) == "Not answering", "the roster line, unreachable")
+
 if failures > 0 { print("✗ \(failures) assertion(s) failed"); exit(1) }
 print("✓ all assertions passed")
 SWIFT
@@ -261,5 +311,21 @@ mutate "any length accepted as an id" \
 mutate "the token name not read" \
   'let made = string(ins.dropFirst()).map { "Created token \($0.0)" } ?? "Created a token"' \
   'let made = "Created a token"'
+
+mutate "the node's first reading lands rows" \
+  'guard let old else { return [] }' \
+  'let old = old ?? NodeSnapshot.unreachable'
+mutate "a voucher lands whenever any are held" \
+  'if let count = new.vouchers, count > (old.vouchers ?? 0),' \
+  'if let count = new.vouchers, count > 0,'
+mutate "no port means 80" \
+  'return "\(scheme)://\(hostPart):\(url.port ?? 8080)"' \
+  'return "\(scheme)://\(hostPart):\(url.port ?? 80)"'
+mutate "a down reading forgets what the node held" \
+  'guard !reachable, var kept = last else { return self }' \
+  'guard !reachable, var kept = Optional(self), last != nil else { return self }'
+mutate "a network address read as loopback" \
+  'host.hasPrefix("127.")' \
+  'host.hasPrefix("1")'
 
 echo "✓ Logos self-test passed"

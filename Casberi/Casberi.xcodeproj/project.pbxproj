@@ -706,6 +706,7 @@
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Casberi reads your own Logos node at the address you give it, when that node is on your network.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things.";
@@ -760,6 +761,7 @@
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Casberi reads your own Logos node at the address you give it, when that node is on your network.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things.";

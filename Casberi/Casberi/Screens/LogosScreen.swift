@@ -1,15 +1,22 @@
 import SwiftUI
 import SwiftData
 
-/// Logos, connected (prd §988). Paste a public LEZ account id and what it
-/// receives, sends and calls lands from then on, with its balance on the
-/// roster.
+/// Logos, connected (prd §988, §989). The devnet page's grammar (Frames,
+/// Hegotá, vibenet): ONE field, the watched roster, the one sentence about
+/// what test coins are, and the explorer's door.
 ///
-/// No account, no key: the LEZ sequencer answers anyone, so there is nothing
-/// to mint and nothing a leak could spend. A PRIVATE account is refused here
-/// by name, never watched — its state is encrypted to its owner, and the
-/// sequencer answers it as an empty public account, which a watch would draw
-/// as a confident zero.
+/// **One field takes both things Logos can watch** — a public LEZ account id
+/// or your own node's address — and tells them apart (`LogosWire.entry`), so
+/// the page keeps the template's single entry well (§708) instead of growing a
+/// second for the node.
+///
+/// **No balances on the roster.** Money lives in the room, as on every wallet
+/// and devnet page; the roster says which accounts and what arrived this week.
+///
+/// No key, no account: the LEZ sequencer answers anyone, and a node's read
+/// API has no auth layer. A PRIVATE id is refused by name — its state is
+/// encrypted to its owner and the sequencer answers it as an empty public
+/// account, which a watch would draw as a confident zero.
 struct LogosScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -21,6 +28,10 @@ struct LogosScreen: View {
     @FocusState private var fieldFocused: Bool
     @State private var sheet: AccountPageSheet?
     @State private var weekly: [String: (week: Int, new: Bool)] = [:]
+
+    /// The roster row's id for the node. Node refs are `logos:node:<kind>:…`,
+    /// so `countWeek`'s `:<id>:` match finds them by it.
+    private static let nodeRowID = "node"
 
     var body: some View {
         AccountPage(
@@ -34,7 +45,16 @@ struct LogosScreen: View {
             teardown: { LogosStore.shared.disconnect() },
             sheet: $sheet,
             act: { addBlock },
-            more: { EmptyView() },
+            more: {
+                // THE ONE GRAY SENTENCE (§748), the devnets' own: what changes
+                // what somebody would do is that nothing here is money and
+                // the network forgets. A node reached over a network takes the
+                // slot instead, because that exposure is the fact that
+                // matters more the moment it exists.
+                DSFootnote(prose: sentence)
+                    .padding(.vertical, DS.Space.s3)
+                DevnetExplorerRow(url: LogosIngest.explorer, plain: true)
+            },
             keySheet: { EmptyView() }
         )
         .onAppear {
@@ -44,28 +64,54 @@ struct LogosScreen: View {
         .onChange(of: logos.accounts) { _, _ in countWeek() }
     }
 
+    /// The page's one sentence: the exposure while a network node is set,
+    /// the devnets' test-coin line otherwise.
+    private var sentence: String {
+        if let node = logos.node, !LogosWire.isLoopback(node) {
+            return String(localized: "A node reached over a network answers anyone on it, writes included.")
+        }
+        return String(localized: "Test coins have no value, and the testnet may be reset without notice.")
+    }
+
     // MARK: - The roster
 
-    /// One row per watched account: its short id, and its balance where the
-    /// sequencer has answered — test coins, named as such by the symbol.
+    /// The accounts, then your node — the room's order, Accounts before Node.
     private var rows: [AccountPageShape.Row] {
+        accountRows + nodeRow
+    }
+
+    /// One row per watched account: its short id and what landed this week,
+    /// wearing its own face (prd §690) like a wallet row.
+    private var accountRows: [AccountPageShape.Row] {
         logos.accounts.map { id in
             // `AccountWeek` keys its counts lowercased; base58 is case-sensitive,
             // but two ids differing only in case are not a real collision here.
             let counted = weekly[id.lowercased()] ?? (week: 0, new: false)
-            let nouns = logos.balance(for: id)
-                .map { String(localized: "Balance \(LogosWire.amount($0))") }
-                ?? String(localized: "Transfers")
-            return AccountPageShape.Row(
+            var row = AccountPageShape.Row(
                 id: id, title: LogosWire.short(id),
-                subline: AccountPageShape.subline(nouns: nouns, weekCount: counted.week),
+                subline: AccountPageShape.subline(nouns: String(localized: "Activity"),
+                                                  weekCount: counted.week),
                 weekCount: counted.week, hasNew: counted.new,
                 isYou: false, avatarURL: nil)
+            row.faceAddress = id
+            return row
         }
     }
 
+    /// Your node, when one is watched: its sync state, height, peers and
+    /// vouchers, read on every pass.
+    private var nodeRow: [AccountPageShape.Row] {
+        guard logos.node != nil else { return [] }
+        let counted = weekly[Self.nodeRowID] ?? (week: 0, new: false)
+        return [AccountPageShape.Row(
+            id: Self.nodeRowID, title: String(localized: "Your node"),
+            subline: LogosWire.nodeLine(logos.nodeSnapshot),
+            weekCount: counted.week, hasNew: counted.new,
+            isYou: false, avatarURL: nil)]
+    }
+
     private func countWeek() {
-        let watched = logos.accounts
+        let watched = logos.accounts + (logos.node != nil ? [Self.nodeRowID] : [])
         weekly = AccountWeek.counts(source: "Logos", seatID: "logos",
                                     context: modelContext) { thing in
             guard let ref = thing.sourceRef else { return nil }
@@ -75,11 +121,20 @@ struct LogosScreen: View {
 
     @ViewBuilder private var addBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSSlabField(placeholder: String(localized: "LEZ account id"),
+            DSSlabField(placeholder: Self.placeholder,
                         text: $field,
                         actionLabel: String(localized: "Watch"),
+                        keyboard: .URL,
                         focus: $fieldFocused,
-                        isArmed: LogosWire.parseAccountID(field) != nil,
+                        isArmed: LogosWire.entry(field) != .invalid,
+                        // The paste FILLS the field, as on every devnet page;
+                        // the armed verb then does what it does for typing.
+                        paste: { pasted in
+                            field = pasted
+                            if LogosWire.entry(pasted) == .invalid {
+                                lastResult = .failed(Self.malformed)
+                            }
+                        },
                         action: watch)
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading the testnet…"),
@@ -87,23 +142,42 @@ struct LogosScreen: View {
         }
     }
 
+    /// On a Mac running Basecamp the node answers at its default, so the
+    /// field names it; on a phone a node is never local, so it does not.
+    private static var placeholder: String {
+        #if targetEnvironment(macCatalyst)
+        String(localized: "LEZ account id, or 127.0.0.1:8080")
+        #else
+        String(localized: "LEZ account id, or your node's address")
+        #endif
+    }
+
+    private static let malformed = String(localized: "That isn't an LEZ account id or a node address.")
+
     // MARK: - Actions
 
     private func watch() {
-        switch logos.add(field) {
+        switch LogosWire.entry(field) {
         case .invalid:
-            lastResult = .failed(String(localized: "That isn't an LEZ account id."))
+            lastResult = .failed(Self.malformed)
             return
         case .privateAccount:
             // Not a typo: a real account this door cannot read.
             lastResult = .says(String(localized: "A private account is readable only with its owner's consent."))
             return
-        case .alreadyWatching:
-            lastResult = .says(String(localized: "Already watching that account."))
-            field = ""
-            return
-        case .added:
-            break
+        case .node(let base):
+            guard base != logos.node else {
+                lastResult = .says(String(localized: "Already watching that node."))
+                field = ""
+                return
+            }
+            logos.useNode(base)
+        case .account(let id):
+            guard logos.add(id) == .added else {
+                lastResult = .says(String(localized: "Already watching that account."))
+                field = ""
+                return
+            }
         }
         field = ""
         fieldFocused = false
@@ -112,12 +186,20 @@ struct LogosScreen: View {
     }
 
     private func unwatch(_ id: String) {
-        logos.remove(id)
-        // Its rows leave with it (prd §286); every ref carries the id.
-        FollowPrune.remove(source: "Logos", context: modelContext) {
-            $0.sourceRef?.contains(":\(id):") == true
+        if id == Self.nodeRowID {
+            logos.useNode(nil)
+            FollowPrune.remove(source: "Logos", context: modelContext) {
+                $0.sourceRef?.hasPrefix("logos:node:") == true
+            }
+            lastResult = .says(String(localized: "Stopped watching your node."))
+        } else {
+            logos.remove(id)
+            // Its rows leave with it (prd §286); every ref carries the id.
+            FollowPrune.remove(source: "Logos", context: modelContext) {
+                $0.sourceRef?.contains(":\(id):") == true
+            }
+            lastResult = .says(String(localized: "Stopped watching \(LogosWire.short(id))."))
         }
-        lastResult = .says(String(localized: "Stopped watching \(LogosWire.short(id))."))
         DSHaptic.tap()
         countWeek()
         Task { await sync() }
@@ -147,10 +229,12 @@ struct LogosScreen: View {
                 store.registerConnected(
                     id: "logos", name: "Logos", proof: proof,
                     can: ["Reads the balance and activity of the public LEZ accounts you watch, on the Logos testnet.",
+                          "Reads your own node's sync state, peers and reward vouchers, at the address you give it.",
                           "Read-only — no key, and nothing it could send."])
             } else {
                 lastResult = .failed(String(localized: "Couldn't reach the Logos testnet — check your connection."))
             }
+            countWeek()
         } while syncPending && logos.connected
     }
 }

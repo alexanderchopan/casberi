@@ -2707,6 +2707,29 @@ enum ProbeHooks {
                 NSLog("logosWatch: %@", outcome.map { "+\($0.added) skipped=\($0.skipped)" } ?? "FAILED")
             }
         },
+        // `-logosNode "<address>"|forget` — watch your own node (prd §989),
+        // read it, and print the reading and what it landed. Run it twice to
+        // see a transition: the first read lands nothing by design. The
+        // simulator shares the Mac's loopback, so `127.0.0.1:8080` reaches a
+        // node (or a stand-in) running on this Mac.
+        Hook(key: "logosNode") { spec, context in
+            Task { @MainActor in
+                let store = LogosStore.shared
+                if spec == "forget" { store.useNode(nil); NSLog("logosNode: forgotten"); return }
+                guard let base = LogosWire.nodeBase(spec) else { NSLog("logosNode: REFUSED %@", spec); return }
+                store.useNode(base)
+                let before = store.nodeSnapshot
+                let added = await LogosIngest.readNode(base, context: context)
+                if added > 0 { context.saveHonestly() }
+                let snap = store.nodeSnapshot
+                NSLog("logosNode: %@ | loopback=%@ | first=%@ | reachable=%@ | phase=%@ | height=%@ | peers=%@ | vouchers=%@ | claimable=%@ | +%d | line=%@",
+                      base, LogosWire.isLoopback(base) ? "YES" : "NO", before == nil ? "YES" : "NO",
+                      snap?.reachable == true ? "YES" : "NO", snap?.phase ?? "-",
+                      snap?.height.map(String.init) ?? "-", snap?.peers.map(String.init) ?? "-",
+                      snap?.vouchers.map(String.init) ?? "-", snap?.claimable.map { "\($0)" } ?? "-",
+                      added, LogosWire.nodeLine(snap))
+            }
+        },
         // `-logosProbe YES|<from>-<to>` — what the seat reads, one NSLog per
         // line. `YES` prints the head, the program ids, every watched
         // account's balance and owner, the cursor, and the rows held. A
@@ -6945,8 +6968,7 @@ enum ProbeHooks {
                 NSLog("[Casberi] privacyRoot| refs=%d headSlot=%llu window=%llu",
                       refs.count, head, PrivacyDevnetRoots.windowSlots)
                 if refs.isEmpty {
-                    NSLog("[Casberi] privacyRoot| nothing to check — watch %@ first, which is the only measured address whose transactions reference a root",
-                          PrivacyDevnetExample.all.first?.address ?? "-")
+                    NSLog("[Casberi] privacyRoot| nothing to check — watch an address whose transactions reference a root first")
                     return
                 }
                 for r in refs {

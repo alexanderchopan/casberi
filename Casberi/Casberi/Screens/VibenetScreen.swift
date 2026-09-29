@@ -79,7 +79,6 @@ struct VibenetScreen: View {
                 DevnetAccountsAct(
                     watch: watch,
                     tint: Self.mark,
-                    examples: Self.examples,
                     peek: { await DevnetPeek.read($0, via: VibenetChain.call(method:params:)) },
                     reader: reader,
                     register: { VibenetBridge.registerBridge(store: store) },
@@ -95,7 +94,11 @@ struct VibenetScreen: View {
                     reader.kick()
                     readRows()
                 }, tint: Self.mark)
-                DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice."), plain: true)
+                // Flush with the lines around it, a group of its own (user: "the
+                // text all needs same indenting … or add spacing"). `DSSlabNote`
+                // insets itself inside an act; nothing else in this block does.
+                DSFootnote(prose: String(localized: "Test ETH has no value, and the network may be reset without notice."))
+                    .padding(.vertical, DS.Space.s3)
                 DevnetExplorerRow(url: VibenetExplorer.base, plain: true)
             },
             keySheet: { EmptyView() }
@@ -120,15 +123,4 @@ struct VibenetScreen: View {
         VibenetBridge.registerBridge(store: store)
         readRows()
     }
-
-    /// A fixed, always-available account to peek at — the fallback for when
-    /// live discovery cannot reach the chain at all, which otherwise leaves a
-    /// new user with nothing to tap. Watched exactly like any pasted or
-    /// discovered address; nothing about tapping it is different from typing
-    /// it in by hand.
-    private static let examples: [DevnetExample] = [
-        DevnetExample(address: "0x777804FDCc280c082Db9788EAE5BEca0Fc2BeD9b",
-                      title: String(localized: "An established account"),
-                      detail: String(localized: "Its keys and what they may do")),
-    ]
 }

@@ -5,16 +5,9 @@ import SwiftData
 /// (prd §593).
 ///
 /// **ON `AccountPage` SINCE §639 (2026-09-06)**, with its three siblings. What
-/// differs between the four devnet seats is the data: the mark, the measured
-/// examples and the claim each makes, the sentence. `DevnetAccounts.swift`
-/// carries the whole argument.
-///
-/// **The examples are load-bearing here in a way they are not on the siblings.**
-/// This chain holds 14 type-`0x6` transactions across ~14,000 blocks, and only
-/// FOUR of them reference a root. So a pasted stranger's address shows a
-/// correct blank that reads exactly like a broken feature, and the honest fix
-/// is to hand somebody an address that has something to show. Both below are
-/// real and were read off `rpc1.privacy.ethrex.xyz` on 2026-09-04.
+/// differs between the four devnet seats is the data: the mark and the
+/// sentence. `DevnetAccounts.swift` carries the whole argument. The measured
+/// example addresses are deleted (prd §990, user: "we don't want that").
 ///
 /// **THE SEAT MAKES A KEY AND SENDS SINCE §593c, AND THE ACTS ARE NOT HERE.**
 /// The acts live in the ROOM, on Home, because §594's line is that an act which
@@ -62,7 +55,6 @@ struct PrivacyDevnetScreen: View {
                 DevnetAccountsAct(
                     watch: watch,
                     tint: Self.mark,
-                    examples: PrivacyDevnetExample.all,
                     peek: { await DevnetPeek.read($0, via: PrivacyDevnetRPC.call(method:params:)) },
                     reader: reader,
                     register: { PrivacyDevnetBridge.registerBridge(store: store) },
@@ -103,36 +95,3 @@ struct PrivacyDevnetScreen: View {
     // read reports here.
 }
 
-/// **THE TWO ADDRESSES THAT HAVE SOMETHING TO SHOW (prd §593d).**
-///
-/// Lifted out of `PrivacyDevnetScreen` because three surfaces need them now —
-/// the account page's example rows, the send picker (which otherwise opens on
-/// nothing to send TO, the dead end §83 bans wearing a picker's clothes), and
-/// the ROOM'S OWN quiet state, which until §593d dead-ended somebody who
-/// pasted an address of their own into "Nothing on this chain from the address
-/// you watch, yet." with no next step anywhere on screen.
-///
-/// **Each is here for a DIFFERENT reading and both are MEASURED.** The pool
-/// participant is the only one of the two whose transactions reference a root,
-/// so watching it is the only way to see the Roots scope at all without waiting
-/// for somebody else to use the chain. Re-read off `rpc1.privacy.ethrex.xyz`
-/// on 2026-09-18 after the relaunch: the pool sends its own spends, and the
-/// faucet sent the chain's first transactions (block 66).
-enum PrivacyDevnetExample {
-    static let all: [DevnetExample] = [
-        DevnetExample(address: "0x8fdab78244c5fa43809d064fc93e6c0e5041971d",
-                      title: String(localized: "An address that used the pool"),
-                      detail: String(localized: "One-time spend keys, and a proof")),
-        DevnetExample(address: "0x189abc0be7003dd1238b7a404325b440c70e88e4",
-                      title: String(localized: "An address that sent early"),
-                      detail: String(localized: "The chain's first hour")),
-    ]
-
-    /// The examples a SEND may suggest. The pool participant is a contract
-    /// (it has code on 8141) that reverts a plain transfer, so a send to it
-    /// spent gas and moved nothing (measured 2026-09-28, status 0 on its
-    /// SENDER frame). Worth watching; not somewhere to send.
-    static let recipients: [DevnetExample] = all.filter {
-        $0.address != "0x8fdab78244c5fa43809d064fc93e6c0e5041971d"
-    }
-}

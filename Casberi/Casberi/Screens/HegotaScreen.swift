@@ -8,16 +8,9 @@ import SwiftData
 /// anatomy, and it is the chassis's now rather than four screens agreeing;
 /// what differs here is the data.
 ///
-/// **The worked examples are not decoration.** Measured on chain 2026-08-27:
-/// only 11 addresses own coins and only a handful have ever sent on a non-zero
-/// nonce — and, decisively, **no address does both**. A pasted address will
-/// most often show Home and Activity and nothing else, which is a correct blank
-/// that reads as a broken feature. So the page offers two, one for each half
-/// of the room, and says what each will show rather than presenting them as
-/// interchangeable. They survive the connect: they are the room's only two
-/// halves and nobody on this chain has both, so watching one and losing the
-/// other would leave you permanently unable to see half the room (reported
-/// from a device, 2026-08-27).
+/// **The worked examples are deleted** (prd §990, user: "we don't want
+/// that"). They were measured on 2026-08-27 as the only addresses showing each
+/// half of the room; the field is the only way in now.
 ///
 /// **THE FAUCET DOOR IS GONE (2026-09-04, §548's follow-up applied here).**
 /// It shipped as a `DSSlabDoor` reading "Get test ETH" — the same verb the
@@ -70,7 +63,6 @@ struct HegotaScreen: View {
                 DevnetAccountsAct(
                     watch: watch,
                     tint: Self.mark,
-                    examples: Self.examples,
                     // The key is MADE in the room (§553's Home tiles), never
                     // here — this row only offers to watch one that already
                     // exists, so it is never a second door onto a first act.
@@ -83,7 +75,11 @@ struct HegotaScreen: View {
                     onWatched: { _ in readRows() })
             },
             more: {
-                DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice."), plain: true)
+                // Flush with the lines around it, a group of its own (user: "the
+                // text all needs same indenting … or add spacing"). `DSSlabNote`
+                // insets itself inside an act; nothing else in this block does.
+                DSFootnote(prose: String(localized: "Test ETH has no value, and the network may be reset without notice."))
+                    .padding(.vertical, DS.Space.s3)
                 DevnetExplorerRow(url: HegotaIdentity.explorer, plain: true)
             },
             keySheet: { EmptyView() }
@@ -106,25 +102,6 @@ struct HegotaScreen: View {
         HegotaBridge.registerBridge(store: store)
         readRows()
     }
-
-    /// The two worked examples, measured rather than picked.
-    ///
-    /// **`0x8b54b456…` holds the most coins on the chain (7 unspent across 10
-    /// moves)** — seven discs is a real drawing where three is thin — and
-    /// **`0x8943545177…` is the only address that has sent on two different
-    /// non-zero nonce keys**, `0xbeef01` and `0x1234`, which is what makes its
-    /// Nonces scope show more than one row. Measured 2026-08-27; if the chain
-    /// moves on, these become ordinary addresses rather than broken ones, which
-    /// is why the copy says what they showed rather than promising what they
-    /// will.
-    private static let examples: [DevnetExample] = [
-        DevnetExample(address: "0x8b54b45663b4af65d51d7f98c20f533965e0a013",
-                      title: String(localized: "An address holding UTXOs"),
-                      detail: String(localized: "The vault's unspent pieces")),
-        DevnetExample(address: "0x8943545177806ed17b9f23f0a21ee5948ecaa776",
-                      title: String(localized: "An address sending in parallel"),
-                      detail: String(localized: "Two named nonce keys")),
-    ]
 
     // NO ROUTE ON A WATCH (prd §618, 2026-09-05). This screen used to land you
     // in the room on the first watch — the same tap that, on vibenet, the
