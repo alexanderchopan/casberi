@@ -24,14 +24,31 @@ enum NotePreview {
             let head = String(localized: "\(list.done) of \(list.total) done")
             return next.map { "\(head) · \(plain($0))" } ?? head
         }
+        return underTitle(title: title, content: content).first.map(plain)
+    }
+
+    /// What a note of yours reads on the Notes room's cover (§908's Notes
+    /// face): the lines under its title, a list's items as the circles its
+    /// sheet draws, a link as its title — never the title twice, never a
+    /// box's markdown. The caller draws nothing for a locked or voice note.
+    static func body(title: String, content: String) -> String {
+        underTitle(title: title, content: content).map { line in
+            guard let item = NoteChecklist.task(line) else { return plain(line) }
+            return (item.done ? NoteChecklist.doneEditorMark : NoteChecklist.editorMark)
+                + plain(item.text)
+        }
+        .joined(separator: "\n")
+    }
+
+    /// The note's non-empty lines after the one its title was made from.
+    private static func underTitle(title: String, content: String) -> [String] {
         let lines = content.components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
         let titleKey = plain(title).lowercased()
         // The first line is the title's own unless the title was cut from it.
-        let rest = lines.drop { plain($0).lowercased() == titleKey
-            || titleKey.hasSuffix("…") && plain($0).lowercased().hasPrefix(String(titleKey.dropLast())) }
-        return rest.first.map(plain)
+        return Array(lines.drop { plain($0).lowercased() == titleKey
+            || titleKey.hasSuffix("…") && plain($0).lowercased().hasPrefix(String(titleKey.dropLast())) })
     }
 
     /// A line's words, without the markers a note writes: a task's box and a

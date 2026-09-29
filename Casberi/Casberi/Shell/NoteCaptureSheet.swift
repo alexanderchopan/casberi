@@ -318,28 +318,33 @@ struct NoteCaptureSheet: View {
                 }
             }
             #if DEBUG
-            // `-noteVoice YES` — land recording, for the screen sweep. The
-            // simulator has no microphone, so a pass shows the band and the
-            // Stop key, never a transcript.
-            if UserDefaults.standard.bool(forKey: "noteVoice") {
-                NSLog("[Casberi] noteVoice: raised")
-                record = true
-            }
-            // `-notePicture YES` — land with a picture attached (prd §974),
-            // for the screen sweep: the simulator's photo library needs a
-            // hand to pick from, so the hook draws one and attaches it the
-            // way the picker would.
-            // `-noteDraft "<text>"` — land with words already written (prd
-            // §982), `○ ` items included, because a simulator booted by
-            // `simctl` draws no keyboard to type them with.
-            if let words = UserDefaults.standard.string(forKey: "noteDraft"), !words.isEmpty {
-                NSLog("[Casberi] noteDraft: %d characters", words.count)
-                draft = words.replacingOccurrences(of: "\\n", with: "\n")
-            }
-            if UserDefaults.standard.bool(forKey: "notePicture"),
-               let drawn = NotePicture.drawnSample() {
-                NSLog("[Casberi] notePicture: attached %d bytes", drawn.bytes.count)
-                picture = drawn
+            // The hooks draft a NEW note. A launch argument stays set for the
+            // whole process, so without this guard every Edit in a hooked
+            // launch opened on the hook's words and kept them over the note.
+            if editing == nil {
+                // `-noteVoice YES` — land recording, for the screen sweep. The
+                // simulator has no microphone, so a pass shows the band and the
+                // Stop key, never a transcript.
+                if UserDefaults.standard.bool(forKey: "noteVoice") {
+                    NSLog("[Casberi] noteVoice: raised")
+                    record = true
+                }
+                // `-notePicture YES` — land with a picture attached (prd §974),
+                // for the screen sweep: the simulator's photo library needs a
+                // hand to pick from, so the hook draws one and attaches it the
+                // way the picker would.
+                // `-noteDraft "<text>"` — land with words already written (prd
+                // §982), `○ ` items included, because a simulator booted by
+                // `simctl` draws no keyboard to type them with.
+                if let words = UserDefaults.standard.string(forKey: "noteDraft"), !words.isEmpty {
+                    NSLog("[Casberi] noteDraft: %d characters", words.count)
+                    draft = words.replacingOccurrences(of: "\\n", with: "\n")
+                }
+                if UserDefaults.standard.bool(forKey: "notePicture"),
+                   let drawn = NotePicture.drawnSample() {
+                    NSLog("[Casberi] notePicture: attached %d bytes", drawn.bytes.count)
+                    picture = drawn
+                }
             }
             #endif
             if record {

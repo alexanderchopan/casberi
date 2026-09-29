@@ -3026,6 +3026,7 @@ struct ThingSheetView: View {
     private func togglePin() {
         DSHaptic.tap()
         let pinned = Pinboard.toggle(thing)
+        modelContext.saveHonestly()
         chrome.pinPulse += 1
         // The confirmation says WHERE it went (prd §969): Pin is how anything
         // in the app gets into the Notes room.

@@ -5619,7 +5619,11 @@ struct FeedScreen: View {
         // an agent room with no conversation yet still has a Chat tile, which
         // is the whole way to give it one. Without it the room is replaced
         // before `keepsChromeWhenEmpty` is ever consulted.
-        if !roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil {
+        // The Notes room is never replaced either (prd §969, §979): its New
+        // tile is how an empty one stops being empty, and the generic state
+        // told a first-time writer to open the catalog instead.
+        if !roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil
+            && !Pinboard.isPinnedRoom(source) {
             Group { emptyState }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -5819,7 +5823,7 @@ struct FeedScreen: View {
         // just see a black screen"*. `LiveRoomSources`' own doc names this
         // exact shape twice — it is why Hegotá, Frames and the Privacy devnet
         // each have an arm above rather than a flag.
-        } else if roomHasContent || roomAgent != nil {
+        } else if roomHasContent || roomAgent != nil || Pinboard.isPinnedRoom(source) {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
@@ -5896,6 +5900,10 @@ struct FeedScreen: View {
             // (prd §959): the generic state would take that control with it,
             // and its one door leaves the room.
             || roomScopePicked
+            // The Notes room's tiles are its navigation and its one verb
+            // (prd §979, §980): an empty Pinned or Folders pick keeps them,
+            // and Folders keeps its New folder row under them.
+            || Pinboard.isPinnedRoom(source)
     }
 
     /// The day sections of a room that has rows, plus its closing line.
@@ -12339,6 +12347,9 @@ private struct RowVerbMenu: View {
         }
         Button {
             let pinned = Pinboard.toggle(thing)
+            // Saved now, as filing is: a pin left to autosave was lost when
+            // the app closed within seconds of it.
+            modelContext.saveHonestly()
             chrome.pinPulse += 1
             DSHaptic.tap()
             chrome.flash(pinned ? String(localized: "Pinned")

@@ -2163,10 +2163,10 @@ struct PhotoWell: View {
     }
 
     private func load() async {
-        guard image == nil, let ref = thing.sourceRef else { return }
+        guard image == nil else { return }
         // Sample things carry the bundled photo — the demo shows a real
         // image, never a gray well.
-        if ref.hasPrefix("sample:") {
+        if let ref = thing.sourceRef, ref.hasPrefix("sample:") {
             image = UIImage.demoSample(for: ref)
             return
         }
@@ -2190,6 +2190,11 @@ struct PhotoWell: View {
             }
             return
         }
+        // Only a Photos asset is left, and it is named by its reference. The
+        // stored bytes above are read first because a thing with NO reference
+        // can carry them: a note's picture (prd §974) drew the placeholder
+        // forever when this guard stood at the top.
+        guard let ref = thing.sourceRef else { return }
         let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
         guard let asset = assets.firstObject else { return }
@@ -3025,7 +3030,9 @@ struct RowPeek: View {
     @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(spacing: DS.Space.s2) {
-                BridgeIcon(name: thing.source, size: DS.Mark.badge)
+                // A note of yours wears the note, as its row does (prd §978).
+                BridgeIcon(name: thing.source, size: DS.Mark.badge,
+                           symbol: BridgeIcon.noteSymbol(for: thing))
                 Text(thing.source)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
@@ -3092,6 +3099,13 @@ struct RowPeek: View {
     /// stores that line as content's first line, and echoing it under the title
     /// is §398's own double-read defect arriving on a new surface.
     private var excerpt: String? {
+        // A note of yours reads as its cover does: circles, never a list's
+        // `- [ ]` markdown (prd §982).
+        if Pinboard.isNote(thing), thing.kind == .note {
+            guard !NoteLock.isLocked(thing) else { return nil }
+            let body = NotePreview.body(title: thing.title, content: thing.content)
+            return body.isEmpty ? nil : body
+        }
         let raw = thing.summary ?? thing.content
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }

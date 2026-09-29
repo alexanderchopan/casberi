@@ -140,6 +140,13 @@ check("the title is never printed twice", pv("Trip", "Trip\nPack the charger") =
 check("a one-line note has no second line", pv("Just this", "Just this") == nil)
 check("a link reads as its thing", pv("Plan", "Plan\nFor [[Book club]] Friday") == "For Book club Friday")
 
+print("The room's cover reads a note of yours")
+check("the cover draws the list as circles, never the title or a box",
+      NotePreview.body(title: "Groceries", content: "Groceries\n- [x] milk\n- [ ] bread\n\nSee you")
+          == "\(d)milk\n\(o)bread\nSee you")
+check("a one-line note has no body on its cover",
+      NotePreview.body(title: "Just this", content: "Just this").isEmpty)
+
 if failures > 0 { print("note-checklist-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }
 print("note-checklist-selftest: assertions pass")
 SWIFT

@@ -162,13 +162,20 @@ src = "\n".join("" if l.strip().startswith("//") else l
 # exclude a room from `emptyState` has to appear in the final `else if`, or
 # that room matches no arm at all.
 esc = "!roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil"
-body = "} else if roomHasContent || roomAgent != nil {"
+body = "} else if roomHasContent || roomAgent != nil"
 if esc not in src:
     print("  \u2717 the empty-state arm's shape changed — this guard is blind")
     sys.exit(1)
 if body not in src:
     print("  \u2717 roomAgent escapes the empty state but never reaches the "
           "room body — every arm falls through and the room is BLACK (\u00a7845)")
+    sys.exit(1)
+# The Notes room escapes too (its New tile is how an empty one fills), and
+# must enter the same arm or it draws nothing.
+if "&& !Pinboard.isPinnedRoom(source)" in src \
+        and body + " || Pinboard.isPinnedRoom(source) {" not in src:
+    print("  \u2717 the Notes room escapes the empty state but never reaches "
+          "the room body — it is BLACK (\u00a7845's class)")
     sys.exit(1)
 print("  \u2713 every room excluded from the empty state has an arm that draws it")
 ARMS

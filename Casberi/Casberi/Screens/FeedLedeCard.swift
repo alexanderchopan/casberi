@@ -95,12 +95,17 @@ struct FeedLedeCard: View {
         // cast, so the roll is never fetched twice.
         let rungs = bodyRungs
         let hasCast = rungs.contains { if case .cast = $0 { return true } else { return false } }
-        let category = BridgeCatalog.category(forSource: thing.source)
+        // A note written here is a Notes thing on its cover, though `You` is
+        // no catalog seat: the Notes room's cover drew a title over an empty
+        // box for every note of yours. Locked, it has no words to read (§982).
+        let ownNote = Pinboard.isNote(thing) && thing.kind == .note && !NoteLock.isLocked(thing)
+        let category = ownNote ? "Notes" : BridgeCatalog.category(forSource: thing.source)
         // The three batch-two facts (prd §908), each read only where its
         // category could use it — a note body is a string walk and a work
         // reading a table lookup, neither owed to a song.
         let stateWord = category == "Work" ? WorkStage.reading(workRow)?.statusWord : nil
-        let prose = category == "Notes" ? NoteSheetSource.body(for: thing).text : ""
+        let prose = ownNote ? NotePreview.body(title: thing.title, content: thing.content)
+            : category == "Notes" ? NoteSheetSource.body(for: thing).text : ""
         let face = FeedLedeFace.kind(isMoney: receipt != nil,
                                      hasArt: artURL != nil || thing.previewImageData != nil,
                                      hasClock: thing.dueAt != nil,
