@@ -481,7 +481,7 @@ else
   fail "a shapeWave bump without its shapeWaveAt stamp ($bumps bumps, $stamps stamps; the mount is one)"
 fi
 checkm "the row's verbs are derived when the menu rises, not when the row builds" \
-       "$FEED" '\.contextMenu \{\s*RowVerbMenu\(thing: thing, room: source\)' yes
+       "$FEED" '\.contextMenu \{\s*RowVerbMenu\(thing: thing, room: source[,)]' yes
 # Negative: `contextMenu(menuItems:)` is non-escaping, so anything between the
 # brace and its first closing brace runs per row per body build.
 checkm "nothing in the menu builder derives verbs inline" \
@@ -854,7 +854,7 @@ mutate "the entrance helper stops passing the stamp"  feed \
 mutate "a wave bump stops stamping its time"  feed \
   's/(shapeWave \+= 1)\n(\s*)shapeWaveAt = Date\.timeIntervalSinceReferenceDate/$1/' || mfails=$((mfails + 1))
 mutate "the menu derives its verbs per row build again"  feed \
-  's/RowVerbMenu\(thing: thing, room: source\) \{ run\(\$0, on: \$1\) \}/let verbs = VerbDerivation.verbs(for: thing)\n                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }/' || mfails=$((mfails + 1))
+  's/RowVerbMenu\(thing: thing, room: source, run: \{ run\(\$0, on: \$1\) \}/let verbs = VerbDerivation.verbs(for: thing)\n                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }/' || mfails=$((mfails + 1))
 
 # Section D (prd §600). Each of these builds green and renders a room that
 # looks entirely correct while making a false claim about it, or pays back the

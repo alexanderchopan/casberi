@@ -1141,6 +1141,10 @@ struct ThingSheetView: View {
             .padding(.bottom, DS.Space.s6)
         }
         .scrollIndicators(.hidden)
+        // A note of yours stands its three keys at the foot (prd §983).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if pagedNote { keptNoteBand }
+        }
         // THE SHEET FITS ITS CONTENT (prd §886). The two fixed heights left a
         // screenshot's sheet half empty: ~540pt of content is too tall for the
         // half detent and far short of the full one. The scroll view knows its
@@ -1929,6 +1933,13 @@ struct ThingSheetView: View {
                     BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true,
                                symbol: BridgeIcon.noteSymbol(for: thing))
                 }
+                // Where the note is filed, as a door (prd §983; §736: a row
+                // that names a place is a button).
+                if pagedNote, !NoteLock.isLocked(thing) {
+                    noteFolderLine
+                        .padding(.horizontal, DSRoomChassis.leadInset)
+                        .padding(.top, DS.Space.s2)
+                }
                 if NoteLock.isLocked(thing) {
                     lockedNote
                 } else if thing.kind != .voice {
@@ -1955,7 +1966,10 @@ struct ThingSheetView: View {
                             .padding(.horizontal, DSRoomChassis.leadInset)
                             .padding(.top, DS.Space.s4)
                     }
-                    noteDial
+                    // A note of yours has no dial (prd §983): its three keys
+                    // stand at the sheet's foot (`keptNoteBand`), and the
+                    // words start under the title.
+                    if !pagedNote { noteDial }
                     if !split.rest.isEmpty {
                         noteProse(text: split.rest)
                             .padding(.horizontal, DSRoomChassis.leadInset)
@@ -1964,7 +1978,6 @@ struct ThingSheetView: View {
                 } else {
                     noteDial
                 }
-                keptNoteDoors
             case .note:
                 SheetPartyHead(name: thing.source, day: thing.capturedAt,
                                line: thing.kind.typeTag,
@@ -2076,44 +2089,134 @@ struct ThingSheetView: View {
         }
     }
 
-    /// The lock door a note of yours carries under its words (prd §982):
-    /// Open or Remove lock on a locked note, Lock on a written one — a verb
-    /// is a row (§746). Delete stays the row's long press (§978), confirmed.
-    @ViewBuilder private var keptNoteDoors: some View {
-        if NoteLock.isLocked(thing) || NoteLock.canLock(thing) {
-            VStack(alignment: .leading, spacing: 0) {
-                if NoteLock.isLocked(thing) {
-                    if let opened = openedLock {
-                        DSDoorRow(icon: "lock.open", label: "Remove lock") {
-                            DSHaptic.tap()
-                            NoteLock.unlock(thing, with: opened, context: modelContext)
-                            openedLock = nil
-                            chrome.flash(String(localized: "Lock removed"))
-                        }
-                    } else {
-                        DSDoorRow(icon: "lock.open", title: Text(NoteLock.unlockWord)) {
-                            DSHaptic.tap()
-                            Task { @MainActor in
-                                switch await NoteLock.open(thing) {
-                                case .success(let sealed):
-                                    lockFailure = nil
-                                    withAnimation(DS.Motion.standard) { openedLock = sealed }
-                                case .failure(let why):
-                                    lockFailure = why
-                                    if why != .auth { DSHaptic.failure() }
-                                }
+    /// A written note of yours is a PAGE (prd §983): no dial, the words
+    /// under the title, and three keys at the sheet's foot. Copy and
+    /// Translate are the system's, on selected words; Pin, Move and Delete
+    /// are the room's long press. A voice note keeps its dial and player.
+    private var pagedNote: Bool {
+        NoteSheetSource.isKeptNote(thing) && thing.kind == .note
+    }
+
+    /// The note's three keys (prd §983) — the composer's foot: Share and Lock
+    /// as discs, Edit as the wide key. Locked, the one key opens it (Face ID,
+    /// Touch ID or the passcode), and once open it is Remove lock; nothing
+    /// sealed is shared or edited.
+    @ViewBuilder private var keptNoteBand: some View {
+        HStack(spacing: DS.Space.s3) {
+            if NoteLock.isLocked(thing) {
+                if let opened = openedLock {
+                    AgentWideKey(title: String(localized: "Remove lock"), glyph: "lock.open") {
+                        DSHaptic.tap()
+                        NoteLock.unlock(thing, with: opened, context: modelContext)
+                        openedLock = nil
+                        chrome.flash(String(localized: "Lock removed"))
+                    }
+                } else {
+                    AgentWideKey(title: NoteLock.unlockWord, glyph: "lock.open") {
+                        DSHaptic.tap()
+                        Task { @MainActor in
+                            switch await NoteLock.open(thing) {
+                            case .success(let sealed):
+                                lockFailure = nil
+                                withAnimation(DS.Motion.standard) { openedLock = sealed }
+                            case .failure(let why):
+                                lockFailure = why
+                                if why != .auth { DSHaptic.failure() }
                             }
                         }
                     }
-                } else if NoteLock.canLock(thing) {
-                    DSDoorRow(icon: "lock", label: "Lock note") {
-                        chrome.lockNote(thing, context: modelContext)
-                    }
+                }
+            } else {
+                ThingShareLink(thing: thing) {
+                    bandDisc("square.and.arrow.up")
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text("Share the note"))
+                Button {
+                    chrome.lockNote(thing, context: modelContext)
+                } label: {
+                    bandDisc("lock")
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text("Lock note"))
+                AgentWideKey(title: String(localized: "Edit"), glyph: "pencil") {
+                    DSHaptic.tap()
+                    let id = thing.id
+                    dismissWhenSettled { chrome.editNote(id) }
                 }
             }
-            .padding(.horizontal, DSRoomChassis.leadInset)
-            .padding(.top, DS.Space.s6)
         }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s3)
+        .padding(.bottom, DS.Space.s4)
+        .background(DS.inkGround.ignoresSafeArea(edges: .bottom))
+    }
+
+    /// One of the band's discs: the composer's disc anatomy (prd §973).
+    private func bandDisc(_ glyph: String) -> some View {
+        Image(systemName: glyph)
+            .dsGlyph(.feature, weight: .regular)
+            .foregroundStyle(DS.textPrimary)
+            .frame(width: AgentDestinationKeys.side, height: AgentDestinationKeys.side)
+            .background(DS.surfaceRaised, in: Circle())
+            .dsTapTarget(Circle())
+            .dsHover()
+    }
+
+    /// Where the note is filed — "in Work" — and the door to move it (prd
+    /// §983). The room's long press files too; this is the same move from
+    /// inside the note, because a place that is named is a button (§736).
+    /// Nothing filed and no folder yet draws nothing: there would be nowhere
+    /// to move it.
+    @ViewBuilder private var noteFolderLine: some View {
+        let current = thing.folder
+        let names = NoteFolderName.list(stored: NoteFolderStore.shared.names, filed: [current])
+        if current != nil || !names.isEmpty {
+            Menu {
+                ForEach(names, id: \.self) { name in
+                    Button {
+                        file(in: name)
+                    } label: {
+                        if current.map(NoteFolderName.key) == NoteFolderName.key(name) {
+                            Label(name, systemImage: "checkmark")
+                        } else {
+                            Text(verbatim: name)
+                        }
+                    }
+                }
+                if current != nil {
+                    Button {
+                        file(in: nil)
+                    } label: {
+                        Label("Remove from folder", systemImage: "folder.badge.minus")
+                    }
+                }
+            } label: {
+                HStack(spacing: DS.Space.s1) {
+                    Image(systemName: "folder")
+                        .dsGlyph(.caption, weight: .regular)
+                    Text(current.map { String(localized: "in \($0)") }
+                         ?? String(localized: "Add to a folder"))
+                        .dsText(.body17)
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(.tick, weight: .semibold)
+                }
+                .foregroundStyle(DS.tint)
+                .frame(minHeight: DS.Hit.min)
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel(Text(current.map { String(localized: "Folder: \($0). Move the note") }
+                                     ?? String(localized: "Add the note to a folder")))
+        }
+    }
+
+    private func file(in folder: String?) {
+        guard thing.isLive else { return }
+        Pinboard.file(thing, in: folder)
+        modelContext.saveHonestly()
+        DSHaptic.tap()
+        chrome.flash(folder.map { String(localized: "Moved to \($0)") }
+                     ?? String(localized: "Removed from folder"))
     }
 
     /// The dial, under a note's head (prd §893).

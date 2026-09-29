@@ -41,6 +41,10 @@ struct BandRow: View {
     /// edge — Apple Notes' and Messages' grammar. Nil everywhere else: a
     /// row's age went in §902, because the day header already says when.
     var stamp: Date? = nil
+    /// The Notes room's second line for a note of yours (prd §983): what it
+    /// says under its title (`NotePreview`), in place of the line a bridge's
+    /// row carries. Only the Notes room asks, and only for a note of yours.
+    var notePreview: Bool = false
     /// Where this row sits in its run, for the naming RIPPLE (prd §171,
     /// 2026-07-22): renaming a counterparty rewrites every landed transfer
     /// with that address, and the rewrite used to happen invisibly. Now each
@@ -630,8 +634,9 @@ struct BandRow: View {
         let seam = TitleSeam.split(titleText)
         DSFeedRow(name: imageOnly ? thing.source : seam.name,
                   emphasized: emphasized, done: done, ripple: rippleIndex,
-                  line: imageOnly ? nil : line(project: project, leader: leader,
-                                               qualifier: seam.line)) {
+                  line: imageOnly ? nil
+                      : notePreview ? previewLine
+                      : line(project: project, leader: leader, qualifier: seam.line)) {
             leaderView
                 .overlay(alignment: .bottomTrailing) {
                     if thing.isFlagged {
@@ -767,6 +772,14 @@ struct BandRow: View {
     /// lined "Calendar" said one fact twice and dropped the clock into the
     /// title to make room. A face, a publisher's icon or a link's picture does
     /// not name the network, so those rows keep the name.
+    /// What a note of yours says under its title (prd §983).
+    private var previewLine: Text? {
+        NotePreview.line(title: thing.title, content: thing.content,
+                         isVoice: thing.kind == .voice,
+                         isLocked: NoteLock.isLocked(thing))
+            .map { Text(verbatim: $0) }
+    }
+
     private func line(project: String?, leader: Leader, qualifier: String? = nil) -> Text? {
         // THE LINE NEVER NAMES THE SOURCE (prd §902 — user: "i don't even
         // want to say the name of the source b/c we have the icon"). §767 let

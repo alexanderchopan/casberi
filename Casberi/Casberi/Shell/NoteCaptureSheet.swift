@@ -83,7 +83,10 @@ struct NoteCaptureSheet: View {
     let onLand: (Thing) -> Void
 
     @State private var draft = ""
-    @FocusState private var focused: Bool
+    /// Which line has the keyboard (prd §983): the title, or the words
+    /// under it. Two fields over ONE `draft` — see `titleText`.
+    @FocusState private var field: NoteField?
+    private enum NoteField: Hashable { case title, body }
     /// The sheet's own mic (prd §971), never the composer's.
     @State private var voice = VoiceCapture()
     /// Stop was pressed and the recording is being kept (prd §972): the
@@ -121,6 +124,42 @@ struct NoteCaptureSheet: View {
     }
     /// Something to keep: words, or a picture alone (prd §974).
     private var hasContent: Bool { hasDraft || picture != nil }
+
+    /// THE PAGE'S TWO LINES (prd §983), over one `draft`. Apple Notes sets
+    /// the first line as the title and the rest as the note; a `TextField`
+    /// sets one style, so the page is two fields — the title on one line,
+    /// the words under it — and the draft is still one string, so keeping,
+    /// sharing, the checklist and editing read it exactly as before.
+    private var titleText: Binding<String> {
+        Binding(get: { Self.split(draft).title },
+                set: { new in draft = Self.join(new.replacingOccurrences(of: "\n", with: " "),
+                                                Self.split(draft).body) })
+    }
+    private var bodyText: Binding<String> {
+        Binding(get: { Self.split(draft).body },
+                set: { new in draft = Self.join(Self.split(draft).title, new) })
+    }
+    static func split(_ draft: String) -> (title: String, body: String) {
+        guard let cut = draft.firstIndex(of: "\n") else { return (draft, "") }
+        return (String(draft[..<cut]), String(draft[draft.index(after: cut)...]))
+    }
+    static func join(_ title: String, _ body: String) -> String {
+        body.isEmpty ? title : title + "\n" + body
+    }
+
+    /// The keyboard to the line being written: the title on a blank page,
+    /// else the words.
+    private func focusWords() {
+        field = draft.isEmpty ? .title : .body
+    }
+
+    /// "28 September 2026 at 9:14 PM" — when the note was written, over the
+    /// page, as Apple Notes dates it (prd §983). An edit keeps its own day.
+    private var dateLine: String {
+        let edited = editing.flatMap { $0.isLive ? $0.capturedAt : nil }
+        return (edited ?? openedAt).formatted(date: .long, time: .shortened)
+    }
+    @State private var openedAt = Date.now
     private var isRecording: Bool { voice.phase == .recording }
 
     /// The one explaining line (prd §748): what happens to the words, or,
@@ -132,9 +171,15 @@ struct NoteCaptureSheet: View {
         }
         if isRecording { return Text("Stop, and it is kept in Notes") }
         if scanText != nil { return Text("Kept in Notes with the words on the page") }
-        return hasDraft
-            ? Text("Kept in Notes · share it anywhere")
-            : Text("Kept in Notes when you close this")
+        return Text("Kept in Notes when you close this")
+    }
+
+    /// The page draws its footnote only when it says what nothing else on the
+    /// page does (prd §983, §748): the mic refused, a recording that keeps on
+    /// Stop, a scan's words kept unseen. A blank page says nothing — it is a
+    /// page.
+    private var footnoteShown: Bool {
+        voice.phase == .denied || isRecording || scanText != nil
     }
 
     var body: some View {
@@ -158,53 +203,27 @@ struct NoteCaptureSheet: View {
                 .accessibilityLabel(hasContent ? Text("Keep the note and go back") : Text("Back to your things"))
                 Spacer(minLength: 0)
             }
+            .overlay {
+                // The page's date (prd §983) — a fact, not a control.
+                Text(dateLine)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 56)
+            }
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s3)
 
-            Spacer(minLength: 0)
+            // THE PAGE (prd §983, superseding §969's heading-34 well): the
+            // picture, the title on one line, the words under it — no box,
+            // because the note is the page and not a card on it.
+            page
 
-            // THE PICTURE (prd §974): above the words, in the lead's well —
-            // the order the sheet under the note keeps (`NoteEntryPhoto`),
-            // so what you see here is what you will open.
-            if let picture {
-                pictureWell(picture)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.bottom, DS.Space.s3)
-                    .transition(.opacity)
+            if footnoteShown {
+                DSFootnote(footnote)
+                    .padding(.horizontal, DS.Space.s4 + DS.Space.s1)
+                    .padding(.bottom, DS.Space.s2)
             }
-
-            // THE WELL: the words at the head rung, as on the ask surface
-            // (prd §577 — the sentence being written is the subject of the
-            // screen for as long as it is being written).
-            ZStack(alignment: .topLeading) {
-                if draft.isEmpty {
-                    Text("Note")
-                        .dsText(.heading34)
-                        .foregroundStyle(DS.textTertiary)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.vertical, DS.Space.s4)
-                        .allowsHitTesting(false)
-                }
-                TextField("", text: $draft, axis: .vertical)
-                    .dsText(.heading34)
-                    .foregroundStyle(DS.textPrimary)
-                    .tint(DS.tint)
-                    .focused($focused)
-                    .lineLimit(1...8)
-                    .textFieldStyle(.plain)
-                    .submitLabel(.return)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s4)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.surfaceRaised,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .padding(.horizontal, DS.Space.s4)
-
-            // One explaining line (prd §748): what happens to the words.
-            DSFootnote(footnote)
-                .padding(.horizontal, DS.Space.s4 + DS.Space.s1)
-                .padding(.top, DS.Space.s3)
 
             // The live mic, the composer's own band (prd §970), which settles
             // in as recording starts (prd §973).
@@ -212,36 +231,11 @@ struct NoteCaptureSheet: View {
                 VoiceListeningBand(voice: voice, word: String(localized: "Recording"))
             }
 
-            // THE BAND: Share in the composer's tint disc, and the composer's
-            // wide slot carrying the one verb available (prd §971).
-            HStack(spacing: DS.Space.s3) {
-                ShareLink(item: draft) {
-                    Image(systemName: "square.and.arrow.up")
-                        .dsGlyph(.feature, weight: .regular)
-                        .foregroundStyle(hasDraft ? Color.white : DS.textTertiary)
-                        .frame(width: AgentDestinationKeys.side, height: AgentDestinationKeys.side)
-                        .background(hasDraft ? DS.tint : DS.surfaceRaised, in: Circle())
-                        .contentShape(Circle())
-                        // Waking, the app's way (prd §973): the fill crossfades
-                        // (§966) and the disc gives the armed pop the other
-                        // sheets give a button that comes alive with the
-                        // field's first character.
-                        .animation(DS.Motion.standard, value: hasDraft)
-                        .armedPop(hasDraft)
-                        .dsHover()
-                }
-                .buttonStyle(PressSpring())
-                // A share of nothing is §83's dead control: the disc stays,
-                // greyed, and does not open.
-                .disabled(!hasDraft)
-                .accessibilityLabel(Text("Share the note"))
-                checklistDisc
-                photoDisc
-                wideKey
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s4)
+            // THE BAR (prd §983): the page's four tools on one capsule —
+            // Checklist, Attach, Link, Share — and the wide key beside it
+            // carrying the one verb available (Record, Stop, Done, §971). It
+            // stands over the keyboard, where Apple Notes keeps its tools.
+            toolBar
         }
         .background(DS.page.ignoresSafeArea())
         // The band arriving and leaving moves the rows above it; that move
@@ -355,10 +349,10 @@ struct NoteCaptureSheet: View {
                 // field focused under a presented sheet raises no keyboard.
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(450))
-                    focused = true
+                    focusWords()
                 }
             } else {
-                focused = true
+                focusWords()
             }
         }
         // A call or an alarm took the microphone (prd §972): capture stopped,
@@ -395,17 +389,88 @@ struct NoteCaptureSheet: View {
 
     // MARK: - The picture (prd §974)
 
-    /// The band's ATTACH disc (prd §982, was §974's photo disc): the
-    /// composer's disc anatomy in ink, live whenever the note could take
-    /// something. It opens a menu — Choose a photo, Scan a document where the
-    /// device has a document camera, Link something you keep. With a picture
-    /// attached, Photo raises Change / Remove rather than a second picker over
-    /// the first. Greyed while recording, as Share is over nothing: a voice
-    /// note is its audio, and a disc that did nothing would be §83's dead
-    /// control.
+    /// The page (prd §983): the picture, the title, the words.
+    private var page: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                // THE PICTURE (prd §974): above the words, in the lead's
+                // well — the order the sheet under the note keeps.
+                if let picture {
+                    pictureWell(picture)
+                        .padding(.bottom, DS.Space.s1)
+                        .transition(.opacity)
+                }
+                TextField(String(localized: "Title"), text: titleText)
+                    .dsText(.heading34)
+                    .foregroundStyle(DS.textPrimary)
+                    .tint(DS.tint)
+                    .focused($field, equals: .title)
+                    .textFieldStyle(.plain)
+                    .submitLabel(.next)
+                    // Return on the title goes to the words, as in Notes.
+                    .onSubmit { field = .body }
+                TextField(String(localized: "Note"), text: bodyText, axis: .vertical)
+                    .dsText(.reading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .tint(DS.tint)
+                    .focused($field, equals: .body)
+                    .textFieldStyle(.plain)
+                    .submitLabel(.return)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, DSRoomChassis.leadInset)
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s6)
+        }
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    /// The bar (prd §983): four tools on a capsule and the wide key.
+    private var toolBar: some View {
+        HStack(spacing: DS.Space.s2) {
+            HStack(spacing: 0) {
+                checklistDisc
+                photoDisc
+                linkKey
+                shareKey
+            }
+            .padding(.horizontal, DS.Space.s1)
+            .frame(height: AgentDestinationKeys.side)
+            // The floating layer's glass (§8: glass on the floating layer
+            // only) — the bar floats over the keyboard, as Notes' does.
+            .dsGlass(cornerRadius: AgentDestinationKeys.side / 2)
+            wideKey
+        }
+        .padding(.horizontal, DS.Space.s3)
+        .padding(.top, DS.Space.s2)
+        .padding(.bottom, DS.Space.s3)
+    }
+
+    /// Whether the bar's tools take a hand: not while recording, and not
+    /// while Stop keeps — a voice note is its audio, and a key that did
+    /// nothing would be §83's dead control.
+    private var toolsLive: Bool { !isRecording && !stopping }
+
+    /// One of the bar's tools (prd §983): a glyph on the bar's capsule, the
+    /// 44pt target, ink when it acts, tertiary when it cannot, the tint when
+    /// it is on.
+    private func barGlyph(_ name: String, lit: Bool = false, live: Bool) -> some View {
+        Image(systemName: name)
+            .dsGlyph(.title, weight: .regular)
+            .foregroundStyle(!live ? DS.textTertiary : lit ? DS.tint : DS.textPrimary)
+            .frame(width: 48, height: AgentDestinationKeys.side)
+            .contentShape(Rectangle())
+            .animation(DS.Motion.standard, value: lit)
+            .animation(DS.Motion.standard, value: live)
+            .dsHover()
+    }
+
+    /// ATTACH (prd §983, was §982's attach disc): Choose a photo, and Scan a
+    /// document where the device has a document camera. Link has its own
+    /// key now. With a picture attached, Photo raises Change / Remove rather
+    /// than a second picker over the first.
     private var photoDisc: some View {
-        let live = !isRecording && !stopping
-        return Menu {
+        Menu {
             Button {
                 DSHaptic.tap()
                 if picture == nil { pickerOpen = true } else { pictureDialogOpen = true }
@@ -421,68 +486,77 @@ struct NoteCaptureSheet: View {
                     Label("Scan a document", systemImage: "doc.viewfinder")
                 }
             }
-            Button {
-                DSHaptic.tap()
-                linkPickerOpen = true
-            } label: {
-                Label("Link something", systemImage: "link")
-            }
         } label: {
-            Image(systemName: "paperclip")
-                .dsGlyph(.feature, weight: .regular)
-                .foregroundStyle(live ? DS.textPrimary : DS.textTertiary)
-                .frame(width: AgentDestinationKeys.side, height: AgentDestinationKeys.side)
-                .background(DS.surfaceRaised, in: Circle())
-                .dsTapTarget(Circle())
-                .animation(DS.Motion.standard, value: live)
-                .dsHover()
+            barGlyph("paperclip", live: toolsLive)
         }
         .menuStyle(.button)
         .buttonStyle(PressSpring())
-        .disabled(!live)
+        .disabled(!toolsLive)
         .accessibilityLabel(Text("Attach"))
     }
 
-    /// The CHECKLIST key (prd §982): the last line becomes an item, or stops
-    /// being one — its glyph lit in the tint while the line being written is
-    /// an item.
-    /// Greyed while recording, like the attach disc.
-    private var checklistDisc: some View {
-        let live = !isRecording && !stopping
-        let lit = NoteChecklist.endsInItem(draft)
-        return Button {
-            DSHaptic.selection()
-            draft = NoteChecklist.toggleLastLine(draft)
-            focused = true
+    /// LINK SOMETHING (prd §982), its own key since §983.
+    private var linkKey: some View {
+        Button {
+            DSHaptic.tap()
+            linkPickerOpen = true
         } label: {
-            Image(systemName: "checklist")
-                .dsGlyph(.feature, weight: .regular)
-                // Lit in the tint's INK, never its fill: beside Share's
-                // tint disc, a second filled disc read as a second verb.
-                .foregroundStyle(!live ? DS.textTertiary : lit ? DS.tint : DS.textPrimary)
-                .frame(width: AgentDestinationKeys.side, height: AgentDestinationKeys.side)
-                .background(DS.surfaceRaised, in: Circle())
-                .dsTapTarget(Circle())
-                .animation(DS.Motion.standard, value: lit)
-                .animation(DS.Motion.standard, value: live)
-                .dsHover()
+            barGlyph("link", live: toolsLive)
         }
         .buttonStyle(PressSpring())
-        .disabled(!live)
+        .disabled(!toolsLive)
+        .accessibilityLabel(Text("Link something"))
+    }
+
+    /// SHARE — the words to the system share sheet, where Apple Notes'
+    /// extension is the one real door into Notes (§969). Greyed with nothing
+    /// written: a share of nothing is §83's dead control.
+    private var shareKey: some View {
+        ShareLink(item: draft) {
+            barGlyph("square.and.arrow.up", live: hasDraft && toolsLive)
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!hasDraft || !toolsLive)
+        .accessibilityLabel(Text("Share the note"))
+    }
+
+    /// The CHECKLIST key (prd §982): the words' last line becomes an item,
+    /// or stops being one — its glyph in the tint while the line being
+    /// written is an item. It acts on the words under the title (§983).
+    private var checklistDisc: some View {
+        let words = Self.split(draft).body
+        let lit = NoteChecklist.endsInItem(words)
+        return Button {
+            DSHaptic.selection()
+            bodyText.wrappedValue = NoteChecklist.toggleLastLine(words)
+            field = .body
+        } label: {
+            barGlyph("checklist", lit: lit, live: toolsLive)
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!toolsLive)
         .accessibilityLabel(Text("Checklist"))
         .accessibilityAddTraits(lit ? [.isSelected] : [])
     }
 
     /// A picked link, written where the words end: `[[title]]`, with a space
-    /// before it when the words need one.
+    /// before it when the words need one — the title line on a blank page.
     private func insertLink(_ title: String) {
         let link = "[[\(title)]]"
-        if draft.isEmpty || draft.hasSuffix(" ") || draft.hasSuffix("\n") || draft.hasSuffix(NoteChecklist.editorMark) {
-            draft += link
-        } else {
-            draft += " " + link
+        let parts = Self.split(draft)
+        if parts.title.isEmpty && parts.body.isEmpty {
+            titleText.wrappedValue = link
+            field = .body
+            return
         }
-        focused = true
+        let words = parts.body
+        if words.isEmpty || words.hasSuffix(" ") || words.hasSuffix("\n")
+            || words.hasSuffix(NoteChecklist.editorMark) {
+            bodyText.wrappedValue = words + link
+        } else {
+            bodyText.wrappedValue = words + " " + link
+        }
+        field = .body
     }
 
     /// The picked picture, pinned to the lead's height and clipped — never
@@ -561,7 +635,7 @@ struct NoteCaptureSheet: View {
     /// the field stood, and a keyboard over a live mic is two ways to write
     /// at once. The permission asks arrive here, in context.
     private func startRecording() {
-        focused = false
+        field = nil
         let capture = voice
         Task { @MainActor in
             await capture.start()

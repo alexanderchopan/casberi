@@ -27,6 +27,8 @@ CAPTURE="Casberi/Casberi/Shell/NoteCaptureSheet.swift"
 VIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
 SOURCE="Casberi/Casberi/Model/NoteSheetSource.swift"
 LOCK="Casberi/Casberi/Model/NoteLock.swift"
+PREVIEW="Casberi/Casberi/Model/NotePreview.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 
 fail=0
 guard() {  # name, pattern, file
@@ -51,6 +53,11 @@ guard "a lock drops the vector made from the words" 'thing\.embedding = nil' "$L
 guard "a lock drops the detected phone number" 'thing\.detectedTel = nil' "$LOCK"
 guard "a lock drops the picture" 'thing\.previewImageData = nil' "$LOCK"
 guard "a lock re-indexes Spotlight with the sealed record" 'SpotlightIndex\.index\(\[thing\]\)' "$LOCK"
+guard "the Notes room asks a note of yours for its preview (prd §983)" \
+  'notePreview: Pinboard\.isPinnedRoom\(source\) && Pinboard\.isNote\(thing\)' "$FEED"
+guard "a note of yours draws no dial; its keys stand at the foot (prd §983)" \
+  'if !pagedNote \{ noteDial \}' "$VIEW"
+guard "the keys ride the sheet's foot" 'if pagedNote \{ keptNoteBand \}' "$VIEW"
 [[ $fail -eq 0 ]] || { echo "note-checklist-selftest: ✗ drift guard(s) failed"; exit 1; }
 
 TMP=$(mktemp -d)
@@ -120,11 +127,24 @@ check("and keeps again exactly as it was",
 check("Return after a ticked item starts an open one",
       NoteChecklist.continued(old: "\(d)eggs", new: "\(d)eggs\n") == "\(d)eggs\n\(o)")
 
+print("The room's second line (prd §983)")
+func pv(_ t: String, _ c: String, voice: Bool = false, locked: Bool = false) -> String? {
+    NotePreview.line(title: t, content: c, isVoice: voice, isLocked: locked)
+}
+check("a locked note says only that", pv("Locked note", "", locked: true) == "Locked")
+check("a voice note says it is one", pv("Idea", "the idea", voice: true) == "Voice note")
+check("a list says how far and what is next",
+      pv("Groceries", "Groceries\n- [x] milk\n- [ ] bread\n- [ ] eggs") == "1 of 3 done · bread")
+check("a finished list says it is done", pv("G", "- [x] a\n- [x] b") == "2 of 2 done")
+check("the title is never printed twice", pv("Trip", "Trip\nPack the charger") == "Pack the charger")
+check("a one-line note has no second line", pv("Just this", "Just this") == nil)
+check("a link reads as its thing", pv("Plan", "Plan\nFor [[Book club]] Friday") == "For Book club Friday")
+
 if failures > 0 { print("note-checklist-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }
 print("note-checklist-selftest: assertions pass")
 SWIFT
 
-if ! swiftc -Onone -o "$TMP/nc" "$SHEET" "$LIST" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/nc" "$SHEET" "$LIST" "$PREVIEW" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "note-checklist-selftest: ✗ did not compile"; cat "$TMP/build.log"; exit 1
 fi
 "$TMP/nc" || exit 1
@@ -138,7 +158,7 @@ mutate() {  # name, file, perl expression
   if cmp -s "$file" "$copy"; then echo "  ✗ mutation did not apply: $name"; fail=1; return; fi
   local a=$SHEET b=$LIST
   [[ $file == $SHEET ]] && a=$copy || b=$copy
-  if swiftc -Onone -o "$TMP/mut" "$a" "$b" "$TMP/main.swift" 2>/dev/null && "$TMP/mut" >/dev/null 2>&1; then
+  if swiftc -Onone -o "$TMP/mut" "$a" "$b" "$PREVIEW" "$TMP/main.swift" 2>/dev/null && "$TMP/mut" >/dev/null 2>&1; then
     echo "  ✗ SURVIVED: $name"; fail=1
   else
     echo "  ✓ caught: $name"

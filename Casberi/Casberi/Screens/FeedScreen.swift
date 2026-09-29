@@ -3250,8 +3250,20 @@ struct FeedScreen: View {
             if chrome.notesScope == .folders, let open = chrome.notesFolder {
                 openFolderRow(open)
             }
-            daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
-                       cover: coverID, headed: false)
+            if chrome.notesScope == .all {
+                // PINNED LEADS (prd §983), under its name — Apple Notes'
+                // order. A named group, never a day (§969's "no day
+                // dividers" holds): the rest follow with no header.
+                let pinned = visible.filter { $0.isLive && Pinboard.isPinned($0) }
+                let rest = visible.filter { $0.isLive && !Pinboard.isPinned($0) }
+                daySection(String(localized: "Pinned"), pinned, nextEventID: nextEventID,
+                           dated: false, cover: coverID)
+                daySection(Pinboard.room, rest, nextEventID: nextEventID, dated: false,
+                           cover: coverID, headed: false)
+            } else {
+                daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
+                           cover: coverID, headed: false)
+            }
         }
     }
 
@@ -3265,18 +3277,17 @@ struct FeedScreen: View {
         let names = NoteFolderStore.shared.list(with: filed)
         let counts = NoteFolderName.counts(filed: filed.map { $0.isLive ? $0.folder : nil })
         Section {
-            DSDoorRow(icon: "folder.badge.plus", label: "New folder") {
-                folderPrompt = .make(filing: nil)
-            }
-            .noteFolderRowChrome()
             ForEach(names, id: \.self) { name in
                 DSPushRow(title: Text(verbatim: name),
                           fact: Text(verbatim: "\(counts[NoteFolderName.key(name)] ?? 0)"),
                           action: { openFolder(name) }) {
+                    // The note's own mark (prd §983, §976a): a black
+                    // circle, the glyph in the brand pink.
                     Image(systemName: ScopeTileGlyph.folders)
-                        .dsGlyph(.caption, weight: .regular)
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(width: 18, alignment: .center)
+                        .font(.system(size: DS.Mark.row * 0.54, weight: .semibold))
+                        .foregroundStyle(DS.brand)
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        .background(Color.black, in: Circle())
                         .accessibilityHidden(true)
                 }
                 .frame(minHeight: DS.Hit.min)
@@ -3294,6 +3305,12 @@ struct FeedScreen: View {
                 }
                 .noteFolderRowChrome()
             }
+            // New folder LAST (prd §983), Apple Notes' place for it: the
+            // list is what you have, and the verb that adds one follows it.
+            DSDoorRow(icon: "folder.badge.plus", label: "New folder") {
+                folderPrompt = .make(filing: nil)
+            }
+            .noteFolderRowChrome()
         }
     }
 
@@ -11080,6 +11097,8 @@ struct FeedScreen: View {
                             // The Notes room has no day dividers, so the
                             // row carries its own time (prd §969).
                             stamp: Pinboard.isPinnedRoom(source) ? Pinboard.stamp(thing) : nil,
+                            // What a note of yours says (prd §983).
+                            notePreview: Pinboard.isPinnedRoom(source) && Pinboard.isNote(thing),
                             imageOnly: imageOnly,
                             wideArt: wideArt)
                 }
@@ -12289,7 +12308,12 @@ private struct RowVerbMenu: View {
     }
 
     @ViewBuilder private var menu: some View {
-        let verbs = perfAccum("rowVerbs[\(room)]") {
+        // A NOTE OF YOURS HOLDS FIVE (prd §983): Pin, Move to folder, Lock,
+        // Share, Delete — the note's own sheet keeps only Share, Lock and
+        // Edit, and Copy and Translate are the system's on selected words.
+        // Nothing to open in another app, so no Open in app either.
+        let note = Pinboard.isNote(thing)
+        let verbs = note ? [] : perfAccum("rowVerbs[\(room)]") {
             VerbDerivation.verbs(for: thing)
         }
         if let openVerb = verbs.first(where: {
@@ -12323,8 +12347,10 @@ private struct RowVerbMenu: View {
             Label(Pinboard.isPinned(thing) ? "Unpin" : "Pin",
                   systemImage: Pinboard.isPinned(thing) ? "pin.slash" : "pin")
         }
-        ThingShareLink(thing: thing) {
-            Label("Share", systemImage: "square.and.arrow.up")
+        if !note {
+            ThingShareLink(thing: thing) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
         }
         // Anything the Notes room holds files (user: "anything in the
         // room"); one folder at most, so a pick MOVES it. Built when the
@@ -12370,6 +12396,11 @@ private struct RowVerbMenu: View {
                 chrome.lockNote(thing, context: modelContext)
             } label: {
                 Label("Lock", systemImage: "lock")
+            }
+        }
+        if note {
+            ThingShareLink(thing: thing) {
+                Label("Share", systemImage: "square.and.arrow.up")
             }
         }
         // Only a note of yours: a bridge's row would land again on its next
