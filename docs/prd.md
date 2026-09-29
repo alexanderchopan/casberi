@@ -62381,3 +62381,22 @@ The held lead is gated on the seat being **connected** (`remindersHoldsLead`). A
 **Not changed.** The demo pour still seeds no Reminders rows (check K's `KNOWN_UNCONNECTED_LEGACY_SEAT`), so the furnished demo has no Reminders room. Todoist shares the room's shape and gets none of this.
 
 **Seen:** on an iPhone 17 simulator, connected with an empty Reminders store: All in dark and light, and Today in dark ("Nothing due today.", the Today tile lit). Also the dev seed's four reminders under All and under Today (Gym and Book dentist).
+
+## §994 — The Calendar room is a month grid over Today · Week · Month · New (user: "what fields do we get for apple calendar - all, day, week, month? would it be useful to have those as buttons, a calendar as the header and list below", "we need a 'new' too, so maybe not 'all'", "leave it as a monthly view only", then "build what you think is best", 2026-09-29)
+
+**What it did.** Apple's Calendar room had no tiles. It opened on the next event as §911's cover, then the week ahead by day, then "Show N past events". The ingest fetched seven days ahead, so there was no month to show.
+
+**Ruling.** The lead box (`DSRoomChassis.leadBox`, §760) draws one month grid, `Screens/CalendarMonthLead.swift`. Six weeks start from the first day of this week, so today is always in the first row. Under it are the tiles, **Today · Week · Month · New** (`Model/CalendarScope.swift`):
+- **The grid never changes with the pick** (user: "leave it as a monthly view only"). The pick lights its span instead: one cell for Today, a week's run for Week (it wraps into the next row), and the whole span for Month. The list under the tiles shows the same span. The box keeps its size (§904), and the tile shows what the list holds by what it lights.
+- **The spans roll from today.** The room holds nothing behind today (2026-07-29 re-ruling), so a calendar Week on a Saturday would be one day. Week is today plus six days, and Month runs to the same date next month.
+- **No All tile.** Month already covers everything the room holds.
+- **New is a verb.** It opens Calendar (`calshow://`), like Notes and Reminders (§969, §993). It replaces the "New event" compose row, which stood above the lead at the top of the screen (§752). It is not drawn on the Mac, where nothing answers `calshow:` (Verbs' 2026-08-14 gate). The gate is decided by platform, not by `HandOffState.installedSchemes`: that set is filled after the first frame and nothing observes it, so on the simulator the tile was missing until something redrew the room.
+- **The dots come from every occurrence.** The room still keeps one row per series (a daily meeting is one row, dated its next occurrence). The ingest therefore records every day an event covers (`CalendarBusyDays`, through `DefaultsWrite`, §721), and the grid dots those days. A weekly meeting marks every week it meets. The demo dots its own rows only and never the person's recorded days.
+- **Honest reach.** A day before today or past Month's span is drawn faint and never dotted, because nothing there is held.
+- **Today is marked in the day divider's pink** (§742), the one other place the room says "today".
+
+**The window grew to 35 days** (`ScheduleIngest.forwardWindow`, from 7). A month grid over a week of data would draw three empty weeks that are not empty (§83). The All feed drops future days, so the only other readers of the wider window are this room and Home's Coming up lane.
+
+Cal.com and Calendly share the `.calendar` shape and keep the agenda. New opens Apple's Calendar, and their bookings are not in the recorded days.
+
+`scripts/calendar-scope-selftest.sh` (in `verify.sh`) compiles `CalendarScope.swift` whole and checks the spans, the grid, the runs, the busy days, and that `forwardWindow` still reaches Month. Two mutations were run: a 7-day window and a 6-day Week. Both failed it. `-openSection today|week|month` lands on a tile with `-openRoom "Calendar"`. Seen on a private iPhone 17 Pro simulator, light and dark, all three spans.

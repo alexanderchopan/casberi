@@ -8,11 +8,15 @@ import SwiftData
 /// ends in proof — things land. Dedupe rides sourceRef.
 enum ScheduleIngest {
 
-    /// How far ahead calendar events are pulled. The window reaches a week
-    /// ahead so imminent events can surface as things (re-ruling 2026-07-14).
-    static let forwardWindow: TimeInterval = 7 * 86_400
+    /// How far ahead calendar events are pulled. A week from the 2026-07-14
+    /// re-ruling until the room's Month tile (prd §994): Month is today up to
+    /// the same date next month — at most 31 days — and a month grid over a
+    /// week of data would draw three empty weeks that are not empty (§83).
+    /// 35 days clears the longest month from any hour of today;
+    /// `calendar-scope-selftest.sh` holds the two to each other.
+    static let forwardWindow: TimeInterval = 35 * 86_400
 
-    /// Events from the start of today through a week ahead — the calendar shows
+    /// Events from the start of today through `forwardWindow` — the calendar shows
     /// what's AHEAD, not a record of what passed (re-ruling 2026-07-29,
     /// superseding the 2026-07-14 rolling ±7-day window that kept the past week
     /// "for the record"). Only events that haven't finished land; an event that
@@ -67,6 +71,7 @@ enum ScheduleIngest {
         let end = Date.now.addingTimeInterval(forwardWindow)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         let events = store.events(matching: predicate)
+        recordBusyDays(events, window: start..<end)
 
         // Collapse each series to the occurrence that best represents it. The
         // series key is the event id, falling back to `calendarItemIdentifier`
@@ -144,6 +149,21 @@ enum ScheduleIngest {
         context.saveHonestly()
         if !removedIDs.isEmpty { SpotlightIndex.remove(ids: removedIDs) }
         return added
+    }
+
+    /// Every day an event covers, for the grid's dots (prd §994) — read off
+    /// EVERY occurrence, before the series collapse below keeps one row each.
+    /// Through `DefaultsWrite`, never a bare `set` (prd §721).
+    @MainActor
+    private static func recordBusyDays(_ events: [EKEvent], window: Range<Date>) {
+        let spans = events.compactMap { event -> (start: Date, end: Date)? in
+            guard let start = event.startDate else { return nil }
+            return (start, event.endDate ?? start)
+        }
+        let days = CalendarBusyDays.days(of: spans, within: window, calendar: .current)
+        guard days != CalendarBusyDays.current else { return }
+        CalendarBusyDays.remember(days)
+        DefaultsWrite.set(CalendarBusyDays.encode(days), forKey: CalendarBusyDays.defaultsKey)
     }
 
     /// Reconciles against what EventKit still has — an event deleted

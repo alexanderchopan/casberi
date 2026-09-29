@@ -2138,6 +2138,8 @@ struct MainSurface: View {
             chrome.notesFolder = nil
             // And the Reminders room (prd §993).
             chrome.remindersScope = .all
+            // The Calendar room opens on Week (prd §994).
+            chrome.calendarScope = .week
             chrome.pinterestScope = nil
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a

@@ -1713,6 +1713,11 @@ harness "Feed-fold self-test" "feed-fold self-test" "scripts/feed-fold-selftest.
 # and that the room still draws THROUGH the window rather than around it.
 harness "Row-window self-test" "row-window self-test" "scripts/row-window-selftest.sh" "the row-window self-test failed — run scripts/row-window-selftest.sh"
 
+# The Calendar room's tiles and month grid (prd §994): the spans roll from
+# today, the grid holds all of Month, and the ingest fetches far enough for
+# Month to be true — a grid over a week of data would draw empty weeks.
+harness "Calendar-scope self-test" "calendar-scope self-test" "scripts/calendar-scope-selftest.sh" "the calendar-scope self-test failed — run scripts/calendar-scope-selftest.sh"
+
 # A refused Safe read is never an empty answer (prd §789). Safe's keyless quota
 # is one pool shared by every keyless caller, and when it ran dry every reader
 # folded the 429 into "nothing": the page said "Up to date", the ask said "No

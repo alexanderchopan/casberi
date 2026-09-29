@@ -111,6 +111,24 @@ enum ScopeTileGlyph {
     /// Not `calendar`: that is the event kind's glyph and the Calendar seat's.
     static let today        = "sun.max"
     static let scheduled    = "calendar.badge.clock"
+    /// The Calendar room's spans (prd §994); Today is Reminders' `today`
+    /// above. Month takes `calendar` in the room the symbol names: there it
+    /// is the month, not the seat.
+    static let week         = "calendar.day.timeline.left"
+    static let month        = "calendar"
+}
+
+/// The Calendar room's tiles (prd §994). New is the Notes room's plus: the
+/// same verb, so the same glyph.
+extension CalendarScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .today: return ScopeTileGlyph.today
+        case .week:  return ScopeTileGlyph.week
+        case .month: return ScopeTileGlyph.month
+        case .new:   return ScopeTileGlyph.new
+        }
+    }
 }
 
 /// The Notes room's tiles (prd §969). Conformed here for the reason every

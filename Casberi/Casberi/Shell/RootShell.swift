@@ -215,6 +215,8 @@ struct RootShell: View {
                 if let s = VibenetSection(rawValue: raw) { chrome.vibenetSection = s }
                 // The Reminders room's date tiles too (prd §993).
                 if let s = RemindersScope(rawValue: raw), !s.isVerb { chrome.remindersScope = s }
+                // The Calendar room's spans too (prd §994); New is a verb.
+                if let s = CalendarScope(rawValue: raw), !s.isVerb { chrome.calendarScope = s }
             }
         }
         #endif

@@ -5662,7 +5662,9 @@ struct FeedScreen: View {
             // What survives is COMPOSE, and only because it is a different
             // verb: "New event" / "New task" leaves for another app, which
             // the catalogue is not a door to. See `sourceComposeRow`.
-            if let bridge = activeSourceBridge, source != "Reminders",
+            // Calendar's compose is its New TILE since prd §994 — the row
+            // stood above the lead, at the top of the screen (§752).
+            if let bridge = activeSourceBridge, source != "Reminders", bridge.name != "Calendar",
                let action = SourceActions.action(forSource: bridge.name),
                case .openURL = action.run {
                 sourceComposeRow(action)
@@ -10541,6 +10543,103 @@ struct FeedScreen: View {
     @ViewBuilder
     private func calendarSections(_ visible: [Thing], nextEventID: UUID?,
                                   heroShown: Bool) -> some View {
+        if source == "Calendar", !heroShown {
+            calendarMonthSections(visible, nextEventID: nextEventID)
+        } else {
+            agendaSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+        }
+    }
+
+    /// THE CALENDAR ROOM (prd §994): the month grid in the lead box, the
+    /// tiles under it — Today · Week · Month · New — then the days the pick
+    /// spans, and the past behind its door as before. The grid replaces
+    /// §911's next-event cover: the next event is the first row under the
+    /// tiles, and the box says where the whole month stands.
+    ///
+    /// Apple's Calendar seat only. Cal.com and Calendly share the shape and
+    /// keep the agenda, because New opens Apple's Calendar and a grid of
+    /// their bookings would be dotted from a store they never write.
+    @ViewBuilder
+    private func calendarMonthSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        let scope = chrome.calendarScope
+        let cal = Self.groupingCalendar
+        let span = scope.span(now: .now, calendar: cal)
+        let split = agendaSplit(visible)
+        let pastCount = split.past.reduce(0) { $0 + $1.1.count }
+        let upcoming: [(String, [Thing])] = split.upcoming.compactMap { day in
+            let kept = day.1.filter { span?.contains($0.capturedAt) ?? true }
+            return kept.isEmpty ? nil : (day.0, kept)
+        }
+        Section {
+            CalendarMonthLead(scope: scope, busy: calendarBusyDays(visible))
+                .frame(maxWidth: .infinity,
+                       minHeight: DSRoomChassis.leadBox,
+                       maxHeight: DSRoomChassis.leadBox)
+                .dsRoomHeadBlock()
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DSRoomChassis.contentGap,
+                                          trailing: DSRoomChassis.inset))
+        }
+        Section {
+            calendarTiles
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DSRoomChassis.leadGap,
+                                          trailing: DSRoomChassis.inset))
+        }
+        groupedSections(upcoming, nextEventID: nextEventID)
+        if upcoming.isEmpty {
+            nothingAheadSection(scope.emptyLine)
+        }
+        if pastCount > 0 {
+            pastEventsToggle(count: pastCount)
+            if pastEventsExpanded {
+                groupedSections(split.past, nextEventID: nextEventID)
+            }
+        }
+    }
+
+    /// The grid's dots: every day Calendar holds an event on, as the ingest
+    /// last read it, joined with the days the room's own rows stand on — so a
+    /// room that has not refreshed since this shipped still dots its rows.
+    /// The demo's rows alone: the recorded days are the person's own calendar
+    /// and never stand under a demo.
+    private func calendarBusyDays(_ visible: [Thing]) -> Set<String> {
+        let cal = Self.groupingCalendar
+        guard let reach = CalendarScope.month.span(now: .now, calendar: cal) else { return [] }
+        let rows = visible.filter(\.isLive).map { (start: $0.capturedAt, end: $0.endAt ?? $0.capturedAt) }
+        let own = CalendarBusyDays.days(of: rows, within: reach, calendar: cal)
+        return DemoMode.isActive ? own : own.union(CalendarBusyDays.current)
+    }
+
+    /// The Calendar room's tiles (prd §994). New opens Calendar, where an
+    /// event is made — and is not drawn on the Mac, where nothing answers
+    /// `calshow:` (Verbs' 2026-08-14 gate, App Review 2.1(a)), because a tile
+    /// that opens nothing is §83's dead control. Decided by platform, not by
+    /// `HandOffState.installedSchemes`: that set is filled after the first
+    /// frame and nothing observes it, so the tile was missing on iOS until
+    /// something else redrew the room (measured on the simulator).
+    private var calendarTiles: DSScopeTiles<CalendarScope> {
+        let canOpen = !DS.isMac
+        return DSScopeTiles(sections: CalendarScope.allCases.filter { !$0.isVerb || canOpen },
+                            active: chrome.calendarScope,
+                            verbs: [.new]) { picked in
+            if picked.isVerb {
+                if let url = URL(string: "calshow://") { openExternal(url) }
+            } else {
+                withAnimation(DS.Motion.standard) { chrome.calendarScope = picked }
+            }
+        }
+    }
+
+    /// The agenda the Calendar shape drew before §994, and still draws for
+    /// Cal.com and Calendly, and under a head.
+    @ViewBuilder
+    private func agendaSections(_ visible: [Thing], nextEventID: UUID?,
+                                heroShown: Bool) -> some View {
         let split = agendaSplit(visible)
         let pastCount = split.past.reduce(0) { $0 + $1.1.count }
         // THE NEXT EVENT IS THE COVER (prd §911) — §908 drew it a date tile and
@@ -10557,7 +10656,7 @@ struct FeedScreen: View {
                         cover: heroShown ? nil : (nextAhead ?? ledeThingID(in: split.upcoming)))
         if split.upcoming.isEmpty {
             if heroShown {
-                nothingAheadSection
+                nothingAheadSection(String(localized: "Nothing coming up."))
             } else {
                 Section {
                     emptyLeadRow(headline: DSProse.text("Nothing coming up."),
@@ -10577,9 +10676,9 @@ struct FeedScreen: View {
     /// looking like a load that never finished. Not `filteredEmptyState` —
     /// nothing is filtered out and there IS a corpus here; the past sits one
     /// tap below.
-    private var nothingAheadSection: some View {
+    private func nothingAheadSection(_ line: String) -> some View {
         Section {
-            Text("Nothing coming up.")
+            Text(line)
                 .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
