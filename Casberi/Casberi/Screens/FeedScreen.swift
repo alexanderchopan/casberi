@@ -3383,6 +3383,11 @@ struct FeedScreen: View {
             }
             .frame(minHeight: DS.Hit.min)
             .noteFolderRowChrome()
+            // EXPORT NOTES (the note-export ruling): the way out, a verb in
+            // the verbs' anatomy, after the verb that adds.
+            NoteExportRow()
+                .frame(minHeight: DS.Hit.min)
+                .noteFolderRowChrome()
         }
     }
 

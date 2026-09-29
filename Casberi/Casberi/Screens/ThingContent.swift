@@ -817,6 +817,9 @@ struct ThingShareLink<Label: View>: View {
     let thing: Thing
     @ViewBuilder let label: () -> Label
     @State private var screenshotImage: UIImage?
+    /// A note of yours with pictures (the note-pictures ruling): every
+    /// picture, shared with the words as the message.
+    @State private var notePictures: [UIImage] = []
 
     private var shareText: String {
         thing.content.isEmpty ? thing.title : thing.content
@@ -834,7 +837,15 @@ struct ThingShareLink<Label: View>: View {
 
     @ViewBuilder private var liveBody: some View {
         Group {
-            if (thing.kind == .screenshot || thing.kind == .file), let screenshotImage {
+            if !notePictures.isEmpty {
+                // The whole note: its pictures, its words as the message.
+                ShareLink(items: notePictures.map { Image(uiImage: $0) },
+                          subject: Text(thing.title),
+                          message: thing.content.isEmpty ? nil : Text(thing.content),
+                          preview: { SharePreview(thing.title, image: $0) }) {
+                    label()
+                }
+            } else if (thing.kind == .screenshot || thing.kind == .file), let screenshotImage {
                 ShareLink(item: Image(uiImage: screenshotImage),
                           preview: SharePreview(thing.title, image: Image(uiImage: screenshotImage))) {
                     label()
@@ -845,7 +856,10 @@ struct ThingShareLink<Label: View>: View {
                 ShareLink(item: shareText, subject: Text(thing.title)) { label() }
             }
         }
-        .onAppear { loadScreenshotIfNeeded() }
+        .onAppear {
+            loadScreenshotIfNeeded()
+            loadNotePicturesIfNeeded()
+        }
     }
 
     /// Mirrors PhotoWell's loader (ShapedRows.swift) rather than reinventing
@@ -853,6 +867,20 @@ struct ThingShareLink<Label: View>: View {
     /// round trip), then the PHAsset — waiting past a network asset's
     /// degraded placeholder callback so Share never hands out a blurry
     /// stand-in (same fix as GenCover/PhotoWell).
+    /// A note of yours: its stored pictures (the first and the rest), read
+    /// off the main actor once.
+    private func loadNotePicturesIfNeeded() {
+        guard notePictures.isEmpty, NoteSheetSource.isKeptNote(thing), thing.kind == .note,
+              !NoteLock.isLocked(thing) else { return }
+        let stored = NotePictures.all(first: thing.previewImageData, rest: thing.notePictures)
+        guard !stored.isEmpty else { return }
+        Task { @MainActor in
+            notePictures = await Task.detached(priority: .userInitiated) {
+                stored.compactMap { UIImage(data: $0) }
+            }.value
+        }
+    }
+
     private func loadScreenshotIfNeeded() {
         guard thing.kind == .screenshot || thing.kind == .file, screenshotImage == nil,
               let ref = thing.sourceRef else { return }

@@ -32,6 +32,9 @@ struct CasberiWidgets: WidgetBundle {
         // A QUICK NOTE from anywhere (prd §982): Control Center, the Lock
         // Screen and the Action button, onto the note sheet.
         NoteControl()
+        // A note on the Home Screen, its list tickable there (the
+        // note-widget ruling, 2026-09-29).
+        NoteWidget()
         // `BriefControl` — the Control Center button onto the daily brief —
         // is GONE with the ask (prd §697b). `ComposeControl` stays: it opens
         // the CAPTURE surface, which outlives the ask.

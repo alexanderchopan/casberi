@@ -99,10 +99,22 @@ struct NoteCaptureSheet: View {
     /// The note's one picture (prd §974): the bytes the note will store and
     /// the bitmap the well draws, decoded once at pick time.
     @State private var picture: NotePicture?
+    /// The pictures after the first (the note-pictures ruling, amending
+    /// §974's one): drawn as a strip under the first, kept in
+    /// `Thing.notePictures`. The first stays `picture`, where every surface
+    /// already reads it.
+    @State private var morePictures: [NotePicture] = []
     @State private var pickerOpen = false
-    @State private var pickerItem: PhotosPickerItem?
+    @State private var pickerItems: [PhotosPickerItem] = []
+    /// The picker answers "Change photo" (the first is replaced) rather than
+    /// Choose photos (they are added).
+    @State private var pickerReplacesFirst = false
     /// Change or Remove, over a picture already attached.
     @State private var pictureDialogOpen = false
+    /// Remove, over one of the pictures after the first — its place.
+    @State private var removingMore: Int?
+    /// The camera (the note-pictures ruling): a photo taken now, added.
+    @State private var cameraOpen = false
     /// The note being edited (prd §981), or nil for a new one. Read once, on
     /// appear, from `chrome.noteToEdit`.
     @State private var editing: Thing?
@@ -135,6 +147,22 @@ struct NoteCaptureSheet: View {
     }
     /// Something to keep: words, or a picture alone (prd §974).
     private var hasContent: Bool { hasDraft || picture != nil }
+
+    /// How many more pictures the note takes (`NotePictures.limit`).
+    private var pictureRoom: Int {
+        NotePictures.room(after: (picture == nil ? 0 : 1) + morePictures.count)
+    }
+
+    /// Pictures added (the note-pictures ruling): the first empty place is
+    /// the well, the rest follow in the strip, up to the note's limit.
+    private func attach(_ added: [NotePicture]) {
+        var incoming = added[...]
+        if picture == nil, let first = incoming.popFirst() {
+            picture = first
+            scanText = nil
+        }
+        morePictures.append(contentsOf: incoming.prefix(pictureRoom))
+    }
 
     /// THE PAGE'S TWO LINES (prd §983), over one `draft`. Apple Notes sets
     /// the first line as the title and the rest as the note; a `TextField`
@@ -309,31 +337,58 @@ struct NoteCaptureSheet: View {
         .animation(reduceMotion ? nil : DS.Motion.standard, value: picture != nil)
         .animation(reduceMotion ? nil : DS.Motion.standard, value: linkOffer?.titles)
         // The system picker (prd §974), the profile photo's own door.
-        .photosPicker(isPresented: $pickerOpen, selection: $pickerItem, matching: .images)
-        .onChange(of: pickerItem) { _, item in
-            guard let item else { return }
+        .photosPicker(isPresented: $pickerOpen, selection: $pickerItems,
+                      maxSelectionCount: pickerReplacesFirst ? 1 : max(1, pictureRoom),
+                      matching: .images)
+        .onChange(of: pickerItems) { _, items in
+            guard !items.isEmpty else { return }
+            let replacing = pickerReplacesFirst
             Task { @MainActor in
-                if let raw = try? await item.loadTransferable(type: Data.self),
-                   let attached = await NotePicture.prepared(raw) {
-                    picture = attached
+                var attached: [NotePicture] = []
+                for item in items {
+                    if let raw = try? await item.loadTransferable(type: Data.self),
+                       let made = await NotePicture.prepared(raw) {
+                        attached.append(made)
+                    }
+                }
+                if replacing, let first = attached.first {
+                    picture = first
                     // A photo in place of a scanned page: the page's words
                     // leave with it.
                     scanText = nil
+                } else {
+                    attach(attached)
                 }
-                pickerItem = nil
+                pickerItems = []
+                pickerReplacesFirst = false
             }
         }
         // A set picture can come off, not just be replaced — the profile
         // photo's dialog, word for word. A scan's words go with its page.
         .confirmationDialog("Your photo", isPresented: $pictureDialogOpen) {
-            Button("Change photo") { DSHaptic.tap(); pickerOpen = true }
+            Button("Change photo") { DSHaptic.tap(); pickerReplacesFirst = true; pickerOpen = true }
             if DocumentScan.isSupported {
                 Button("Scan a document") { DSHaptic.tap(); scanOpen = true }
             }
             Button("Remove photo", role: .destructive) {
-                DSHaptic.tap(); picture = nil; scanText = nil
+                // The next picture, if any, becomes the first.
+                DSHaptic.tap()
+                picture = morePictures.isEmpty ? nil : morePictures.removeFirst()
+                scanText = nil
             }
             Button("Cancel", role: .cancel) {}
+        }
+        // One of the pictures after the first: it can only come off.
+        .confirmationDialog("Your photo", isPresented: Binding(
+            get: { removingMore != nil }, set: { if !$0 { removingMore = nil } })) {
+            Button("Remove photo", role: .destructive) {
+                DSHaptic.tap()
+                if let at = removingMore, morePictures.indices.contains(at) {
+                    morePictures.remove(at: at)
+                }
+                removingMore = nil
+            }
+            Button("Cancel", role: .cancel) { removingMore = nil }
         }
         // `[[` typed: read what a link can name, once.
         .onChange(of: linkOpen) { _, open in
@@ -345,6 +400,18 @@ struct NoteCaptureSheet: View {
             NoteLinkPicker { title in insertLink(title) }
         }
         #if !targetEnvironment(macCatalyst)
+        .fullScreenCover(isPresented: $cameraOpen) {
+            NoteCameraView(onTaken: { raw in
+                cameraOpen = false
+                Task { @MainActor in
+                    if let made = await NotePicture.prepared(raw) {
+                        attach([made])
+                        DSHaptic.success()
+                    }
+                }
+            }, onCancel: { cameraOpen = false })
+            .ignoresSafeArea()
+        }
         .fullScreenCover(isPresented: $scanOpen) {
             DocumentScannerView(onScan: { scan in
                 scanOpen = false
@@ -379,6 +446,11 @@ struct NoteCaptureSheet: View {
                            let pixels = await StoredPixels.prepared(for: note),
                            note.isLive, let bytes = note.previewImageData {
                             picture = NotePicture(bytes: bytes, image: pixels.image)
+                        }
+                        // The rest, decoded off the main actor.
+                        if note.isLive, morePictures.isEmpty {
+                            morePictures = await NotePicture.decoded(
+                                NotePictures.decode(note.notePictures))
                         }
                         editPictureRead = true
                     }
@@ -472,6 +544,11 @@ struct NoteCaptureSheet: View {
                 // well — the order the sheet under the note keeps.
                 if let picture {
                     pictureWell(picture)
+                        .padding(.bottom, morePictures.isEmpty ? DS.Space.s1 : 0)
+                        .transition(.opacity)
+                }
+                if !morePictures.isEmpty {
+                    morePicturesStrip
                         .padding(.bottom, DS.Space.s1)
                         .transition(.opacity)
                 }
@@ -547,12 +624,24 @@ struct NoteCaptureSheet: View {
     /// than a second picker over the first.
     private var photoDisc: some View {
         Menu {
+            // Choose photos ADDS (the note-pictures ruling), up to the
+            // note's limit; a full note offers no more.
             Button {
                 DSHaptic.tap()
-                if picture == nil { pickerOpen = true } else { pictureDialogOpen = true }
+                pickerReplacesFirst = false
+                pickerOpen = true
             } label: {
-                Label(picture == nil ? "Choose a photo" : "Photo on this note",
-                      systemImage: "photo")
+                Label("Choose photos", systemImage: "photo.on.rectangle")
+            }
+            .disabled(pictureRoom == 0)
+            if NoteCameraView.isAvailable {
+                Button {
+                    DSHaptic.tap()
+                    cameraOpen = true
+                } label: {
+                    Label("Take a photo", systemImage: "camera")
+                }
+                .disabled(pictureRoom == 0)
             }
             if DocumentScan.isSupported {
                 Button {
@@ -589,12 +678,35 @@ struct NoteCaptureSheet: View {
     /// SHARE — the words to the system share sheet, where Apple Notes'
     /// extension is the one real door into Notes (§969). Greyed with nothing
     /// written: a share of nothing is §83's dead control.
-    private var shareKey: some View {
-        ShareLink(item: draft) {
-            barGlyph("square.and.arrow.up", live: hasDraft && toolsLive)
+    ///
+    /// **The pictures go too (the note-pictures ruling, §974's "later
+    /// ruling if anyone reaches for it").** With a picture attached, the
+    /// share carries every picture and the words ride as its message — what
+    /// Messages, Mail and Notes' own extension take — so a note shared out is
+    /// the whole note. A note of pictures alone shares, too.
+    @ViewBuilder private var shareKey: some View {
+        let images = ([picture].compactMap { $0 } + morePictures).map { Image(uiImage: $0.image) }
+        let live = (hasDraft || !images.isEmpty) && toolsLive
+        Group {
+            if images.isEmpty {
+                ShareLink(item: draft) {
+                    barGlyph("square.and.arrow.up", live: live)
+                }
+                .buttonStyle(PressSpring())
+            } else {
+                let name = Self.split(draft).title
+                ShareLink(items: images,
+                          subject: Text(verbatim: name),
+                          message: hasDraft ? Text(verbatim: NoteChecklist.stored(draft)) : nil,
+                          preview: { image in
+                              SharePreview(name.isEmpty ? String(localized: "Photo") : name, image: image)
+                          }) {
+                    barGlyph("square.and.arrow.up", live: live)
+                }
+                .buttonStyle(PressSpring())
+            }
         }
-        .buttonStyle(PressSpring())
-        .disabled(!hasDraft || !toolsLive)
+        .disabled(!live)
         .accessibilityLabel(Text("Share the note"))
     }
 
@@ -712,6 +824,39 @@ struct NoteCaptureSheet: View {
         let next = NoteLinkTyping.completed(parts.body, start: start, cursor: cursor, title: title)
         draft = Self.join(parts.title, next.text)
         placeCursor(next.cursor)
+    }
+
+    /// The pictures after the first, as a strip under the well — each a tile
+    /// that presses and asks Remove, the well's own grammar at thumbnail
+    /// size.
+    private var morePicturesStrip: some View {
+        let side: CGFloat = 72
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(Array(morePictures.enumerated()), id: \.offset) { index, more in
+                    Button {
+                        DSHaptic.selection()
+                        removingMore = index
+                    } label: {
+                        Color.clear
+                            .frame(width: side, height: side)
+                            .overlay {
+                                Image(uiImage: more.image)
+                                    .resizable()
+                                    .scaledToFill()
+                            }
+                            .clipped()
+                            .clipShape(shape)
+                            .contentShape(shape)
+                            .dsHover()
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text("Photo \(index + 2) on this note"))
+                }
+            }
+        }
+        .scrollClipDisabled()
     }
 
     /// The picked picture, pinned to the lead's height and clipped — never
@@ -881,6 +1026,7 @@ struct NoteCaptureSheet: View {
         }
         guard let thing = keptThing() else { return }
         thing.previewImageData = picture?.bytes
+        thing.notePictures = NotePictures.encode(morePictures.map(\.bytes))
         thing.folder = filingFolder
         // What the note links (prd §982), so the thing it names shows it
         // under "Points at this".
@@ -898,6 +1044,9 @@ struct NoteCaptureSheet: View {
     private func saveEdit(_ note: Thing) {
         guard note.isLive else { return }
         let bytes = picture?.bytes ?? (editPictureRead ? nil : note.previewImageData)
+        // The pictures after the first, as they now stand — or, before the
+        // edit's read landed, as they were.
+        let more = editPictureRead ? NotePictures.encode(morePictures.map(\.bytes)) : note.notePictures
         // The checklist's circles back to `- [ ]`, and a scan's words under
         // what was typed (prd §982) — the same body a new note keeps.
         let scanned = scanText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -905,7 +1054,7 @@ struct NoteCaptureSheet: View {
             .filter { !$0.isEmpty }.joined(separator: "\n\n")
         guard !text.isEmpty || bytes != nil else { return }
         let sameWords = text == note.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !sameWords || bytes != note.previewImageData else { return }
+        guard !sameWords || bytes != note.previewImageData || more != note.notePictures else { return }
         if text.isEmpty {
             note.title = String(localized: "Photo")
             note.content = ""
@@ -919,6 +1068,7 @@ struct NoteCaptureSheet: View {
             note.previewImageData = bytes
             StoredPixels.forget(note.id)
         }
+        if more != note.notePictures { note.notePictures = more }
         modelContext.saveHonestly()
         SpotlightIndex.index([note])
         CorpusSignal.shared.bump()
@@ -989,6 +1139,15 @@ struct NotePicture: Equatable {
     let bytes: Data
     let image: UIImage
 
+    /// Stored pictures back into the well's bitmaps — the pictures after the
+    /// first, when an edit opens (already at the stored size, so a decode,
+    /// never a resize), off the main actor.
+    static func decoded(_ stored: [Data]) async -> [NotePicture] {
+        await Task.detached(priority: .userInitiated) {
+            stored.compactMap { bytes in UIImage(data: bytes).map { NotePicture(bytes: bytes, image: $0) } }
+        }.value
+    }
+
     /// The picker's bytes, brought to the app's ONE stored picture size —
     /// `ImportMedia.thumbnail(data:)`, the 480pt / q0.7 JPEG every other
     /// `previewImageData` writer makes — decoded off the main actor. A
@@ -1041,5 +1200,61 @@ struct NoteSheetHooks: ViewModifier {
                     noteOpen = true
                 }
             }
+    }
+}
+
+/// THE CAMERA for a note (the note-pictures ruling) — the system's own
+/// capture screen (`UIImagePickerController`), the one Apple Notes presents
+/// for Take Photo. Not on the Mac, which has no such screen for an app; the
+/// Attach menu draws no Take a photo there.
+struct NoteCameraView: UIViewControllerRepresentable {
+    let onTaken: (Data) -> Void
+    let onCancel: () -> Void
+
+    static var isAvailable: Bool {
+        #if targetEnvironment(macCatalyst)
+        return false
+        #else
+        return UIImagePickerController.isSourceTypeAvailable(.camera)
+        #endif
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        #if !targetEnvironment(macCatalyst)
+        picker.sourceType = .camera
+        #endif
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ controller: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(onTaken: onTaken, onCancel: onCancel) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onTaken: (Data) -> Void
+        let onCancel: () -> Void
+
+        init(onTaken: @escaping (Data) -> Void, onCancel: @escaping () -> Void) {
+            self.onTaken = onTaken
+            self.onCancel = onCancel
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            // The full photograph's bytes; `NotePicture.prepared` brings them
+            // to the stored size off the main actor.
+            if let image = info[.originalImage] as? UIImage,
+               let raw = image.jpegData(compressionQuality: 0.9) {
+                onTaken(raw)
+            } else {
+                onCancel()
+            }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            onCancel()
+        }
     }
 }

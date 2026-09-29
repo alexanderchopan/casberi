@@ -63,6 +63,9 @@ enum NoteLock {
         var picture: Data?
         var sourceRef: String?
         var wikilinks: [String]
+        /// The pictures after the first (the note-pictures ruling). Optional,
+        /// so a box sealed before it opens as it always did.
+        var pictures: Data? = nil
     }
 
     enum Failure: Error { case noKey, auth, corrupt }
@@ -80,13 +83,14 @@ enum NoteLock {
         guard canLock(thing), canAuthenticate, let key = Keys.current() else { return false }
         let sealed = Sealed(title: thing.title, content: thing.content,
                             picture: thing.previewImageData, sourceRef: thing.sourceRef,
-                            wikilinks: thing.wikilinks)
+                            wikilinks: thing.wikilinks, pictures: thing.notePictures)
         guard let plain = try? JSONEncoder().encode(sealed),
               let box = try? ChaChaPoly.seal(plain, using: key.key).combined else { return false }
         thing.audio = key.idBytes + box
         thing.title = String(localized: "Locked note")
         thing.content = ""
         thing.previewImageData = nil
+        thing.notePictures = nil
         thing.wikilinks = []
         // Everything DERIVED from the words goes with them: a phone number
         // the row could dial, the vector search matches on, the retrieval
@@ -139,6 +143,7 @@ enum NoteLock {
         thing.title = sealed.title
         thing.content = sealed.content
         thing.previewImageData = sealed.picture
+        thing.notePictures = sealed.pictures
         thing.wikilinks = sealed.wikilinks
         thing.sourceRef = sealed.sourceRef
         thing.audio = nil

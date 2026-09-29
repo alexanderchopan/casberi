@@ -32,6 +32,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SHEET="Casberi/Casberi/Model/NoteSheet.swift"
+TASK="Casberi/Shared/NoteTask.swift"
 SOURCE="Casberi/Casberi/Model/NoteSheetSource.swift"
 VIEWS="Casberi/Casberi/Screens/NoteSheetViews.swift"
 VIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
@@ -753,7 +754,7 @@ SWIFT
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 4.7x faster).
 # Re-probe before trusting it again after adding mutations.
-if ! swiftc -Onone -o "$TMP/ns-selftest" "$SHEET" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/ns-selftest" "$SHEET" "$TASK" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ harness failed to compile against the shipped source"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -784,7 +785,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$a"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$a" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$a" "$TASK" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

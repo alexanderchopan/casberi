@@ -762,3 +762,44 @@ struct NoteTaskRow: View {
         .contentShape(Rectangle())
     }
 }
+
+/// A note's pictures AFTER the first (the note-pictures ruling), under the
+/// well: thumbnails at one height, decoded once off the main actor into the
+/// view's own state (never a bitmap made in a body, `row-cost-audit.py`).
+/// Pictures, not controls — nothing here opens, so nothing looks like it
+/// does. Redacted with the rest of the sheet for the app-switcher snapshot.
+struct NoteMorePhotos: View {
+    let thing: Thing
+    @State private var images: [UIImage] = []
+    @Environment(\.redactionReasons) private var redaction
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(Array(images.enumerated()), id: \.offset) { _, image in
+                    Color.clear
+                        .frame(width: 96, height: 96)
+                        .overlay {
+                            if redaction.isEmpty {
+                                Image(uiImage: image).resizable().scaledToFill()
+                            } else {
+                                DS.fillFaint
+                            }
+                        }
+                        .clipped()
+                        .clipShape(shape)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .scrollClipDisabled()
+        .task(id: thing.id) {
+            guard thing.isLive else { return }
+            let stored = NotePictures.decode(thing.notePictures)
+            images = await Task.detached(priority: .userInitiated) {
+                stored.compactMap { UIImage(data: $0) }
+            }.value
+        }
+    }
+}

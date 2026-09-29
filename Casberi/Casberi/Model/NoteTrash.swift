@@ -40,17 +40,20 @@ final class NoteTrash {
         guard let folder, thing.isLive else { return false }
         let picture = thing.previewImageData
         let audio = thing.audio
+        let more = thing.notePictures
         let entry = NoteTrashEntry(
             id: thing.id, kind: thing.kind.rawValue, title: thing.title,
             content: thing.content, source: thing.source,
             createdAt: thing.createdAt, capturedAt: thing.capturedAt,
             tags: thing.tags, sourceRef: thing.sourceRef, folder: thing.folder,
             pinnedAt: thing.pinnedAt, wikilinks: thing.wikilinks,
-            deletedAt: .now, hasPicture: picture != nil, hasAudio: audio != nil)
+            deletedAt: .now, hasPicture: picture != nil, hasAudio: audio != nil,
+            hasMorePictures: more != nil)
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             if let picture { try picture.write(to: file(entry.id, "picture"), options: Self.writing) }
             if let audio { try audio.write(to: file(entry.id, "audio"), options: Self.writing) }
+            if let more { try more.write(to: file(entry.id, "pictures"), options: Self.writing) }
             try JSONEncoder().encode(entry).write(to: file(entry.id, "json"), options: Self.writing)
         } catch {
             removeFiles(entry.id)
@@ -67,6 +70,7 @@ final class NoteTrash {
         guard entries.contains(where: { $0.id == entry.id }) else { return nil }
         let picture = entry.hasPicture ? try? Data(contentsOf: file(entry.id, "picture")) : nil
         let audio = entry.hasAudio ? try? Data(contentsOf: file(entry.id, "audio")) : nil
+        let more = entry.hasMorePictures == true ? try? Data(contentsOf: file(entry.id, "pictures")) : nil
         // A voice note is its audio, and a locked note its sealed box (§982):
         // with the bytes gone there is nothing to put back.
         if entry.hasAudio && audio == nil { return nil }
@@ -80,6 +84,7 @@ final class NoteTrash {
         thing.wikilinks = entry.wikilinks
         thing.previewImageData = picture
         thing.audio = audio
+        thing.notePictures = more
         context.insert(thing)
         context.saveHonestly()
         SpotlightIndex.index([thing])
@@ -121,7 +126,7 @@ final class NoteTrash {
     }
 
     private func removeFiles(_ id: UUID) {
-        for ext in ["json", "picture", "audio"] {
+        for ext in ["json", "picture", "pictures", "audio"] {
             try? FileManager.default.removeItem(at: file(id, ext))
         }
     }

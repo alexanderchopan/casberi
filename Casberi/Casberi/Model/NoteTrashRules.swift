@@ -29,6 +29,9 @@ struct NoteTrashEntry: Codable, Identifiable, Equatable, Sendable {
     let deletedAt: Date
     let hasPicture: Bool
     let hasAudio: Bool
+    /// The pictures after the first were archived too (the note-pictures
+    /// ruling). Optional, so an entry written before it still reads.
+    var hasMorePictures: Bool? = nil
 }
 
 enum NoteTrashRules {

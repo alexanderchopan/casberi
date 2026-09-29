@@ -1,4 +1,5 @@
 import AppIntents
+import WidgetKit
 import SwiftData
 import SwiftUI
 
@@ -303,6 +304,41 @@ struct NewNoteIntent: AppIntent {
     }
 }
 
+/// ADD TO NOTE (the add-to-note ruling, 2026-09-29) — words into a note you
+/// already have, from Siri, Shortcuts and the Action button, without opening
+/// the app: "add milk to Groceries". A note ending in a list takes the words
+/// as the next item (`NoteTask.appended`). Only a written note of yours, never
+/// a locked one (`NoteEntity`'s rule).
+struct AddToNoteIntent: AppIntent {
+    static let title: LocalizedStringResource = "Add to note"
+    static let description = IntentDescription(
+        "Adds words to one of your notes in Casberi. A note that ends in a list takes them as the next item.")
+
+    @Parameter(title: "Text", inputOptions: String.IntentInputOptions(multiline: true))
+    var text: String
+
+    @Parameter(title: "Note")
+    var note: NoteEntity
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Add \(\.$text) to \(\.$note)")
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        // `extensionContainer()`, for `SaveThingIntent`'s reason: Siri can
+        // run this out of process while the app is open.
+        let context = ModelContext(try SharedStore.extensionContainer())
+        guard let kept = try NoteAppend.append(text, to: note.id, in: context) else {
+            return .result(dialog: "That note can't take words. It may be locked or gone.")
+        }
+        SpotlightIndex.index([kept])
+        WidgetCenter.shared.reloadTimelines(ofKind: NoteAppend.widgetKind)
+        // Spoken aloud, so through the credential tripwire (prd §277).
+        return .result(dialog: "Added to \(SecretScan.redacted(kept.title)).")
+    }
+}
+
 struct CasberiShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -345,6 +381,19 @@ struct CasberiShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "New note",
             systemImageName: "square.and.pencil"
+        )
+        // Words into a note you have (the add-to-note ruling). Siri asks
+        // which note and what to add; the phrase names neither, because an
+        // `AppShortcut` phrase can only name an `AppEnum` or a registered
+        // entity list, and your notes are neither.
+        AppShortcut(
+            intent: AddToNoteIntent(),
+            phrases: [
+                "Add to a note in \(.applicationName)",
+                "Add to my note in \(.applicationName)",
+            ],
+            shortTitle: "Add to note",
+            systemImageName: "text.append"
         )
         // **"Ask Casberi" IS NOT ADVERTISED (prd §697b, 2026-09-11).** The
         // ask is deprecated, and Siri and Spotlight offering a phrase for a

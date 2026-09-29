@@ -684,6 +684,14 @@ final class Thing {
     /// and for screenshots from before this field until the heal sweep
     /// reaches them.
     @Attribute(.externalStorage) var previewImageData: Data? = nil
+
+    /// A note's pictures AFTER the first (the note-pictures ruling,
+    /// 2026-09-29): `NotePictures`' binary list of stored-size JPEGs. The
+    /// first stays in `previewImageData`, where every surface already draws
+    /// it. Additive, so no schema stage (`ThingSchemaVersioning`); it is a
+    /// CloudKit field, and Production must carry `CD_notePictures` before a
+    /// build that writes it ships (docs/cloudkit-deploy.md).
+    @Attribute(.externalStorage) var notePictures: Data? = nil
     /// The onchain address a Wallet transaction came from — lets a row say
     /// which watched wallet it belongs to when more than one is watched
     /// (2026-07-09). Optional + default nil keeps CloudKit mirroring happy;

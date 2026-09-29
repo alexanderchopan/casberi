@@ -1926,6 +1926,13 @@ struct ThingSheetView: View {
                 if thing.previewImageData != nil {
                     NoteEntryPhoto(thing: thing) { zoomingPhoto = true }
                         .padding(.horizontal, DS.Space.s4)
+                        .padding(.bottom, thing.notePictures == nil ? DS.Space.s6 : DS.Space.s2)
+                }
+                // A note's pictures after the first (the note-pictures
+                // ruling), a strip under the well.
+                if thing.notePictures != nil {
+                    NoteMorePhotos(thing: thing)
+                        .padding(.horizontal, DS.Space.s4)
                         .padding(.bottom, DS.Space.s6)
                 }
                 SheetPartyHead(name: thing.source, day: thing.capturedAt, line: entryLine,

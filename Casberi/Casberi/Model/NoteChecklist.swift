@@ -42,31 +42,12 @@ enum NoteChecklist {
     /// ticked or unticked. Only the one character inside the brackets
     /// changes; an ordinal past the last task returns the text unchanged.
     static func toggled(_ text: String, ordinal: Int) -> String {
-        var lines = text.components(separatedBy: "\n")
-        var seen = 0
-        for i in lines.indices {
-            guard let found = task(lines[i]) else { continue }
-            if seen == ordinal {
-                let line = lines[i]
-                guard let open = line.firstIndex(of: "[") else { return text }
-                let inside = line.index(after: open)
-                lines[i].replaceSubrange(inside...inside, with: found.done ? " " : "x")
-                return lines.joined(separator: "\n")
-            }
-            seen += 1
-        }
-        return text
+        NoteTask.toggled(text, ordinal: ordinal)
     }
 
     /// How much of the list is done, or nil when the text holds no list.
     static func progress(_ text: String) -> (done: Int, total: Int)? {
-        var done = 0, total = 0
-        for line in text.components(separatedBy: "\n") {
-            guard let t = task(line) else { continue }
-            total += 1
-            if t.done { done += 1 }
-        }
-        return total == 0 ? nil : (done, total)
+        NoteTask.progress(text)
     }
 
     /// A line's words without its task marker — the title a list's first

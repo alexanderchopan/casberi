@@ -45,6 +45,17 @@ Console promotion, live re-export — happened in the session that added the
 field, which is the only way this does not drift. The 2026-08-01 incident was
 20 fields deep precisely because that loop was never closed once.
 
+## `CD_notePictures` — NOT YET DEPLOYED (2026-09-29, the note-pictures ruling)
+
+A note's pictures after the first added `Thing.notePictures`. It is in the
+checked-in `.ckdb`; the Development import and the Console promotion have NOT
+run (the session that added it had no Xcode). Until Production carries it, a
+note with a second picture fails its export whole — its words included — and
+retries forever. Before the build carrying it ships: `xcrun cktool
+import-schema` to Development, promote in the Console, then
+`scripts/cloudkit-schema-audit.py --live production`. Rewrite this section
+when that lands.
+
 ## `CD_folder` — deployed to both environments (2026-09-28, prd §980)
 
 The Notes room's folders added `Thing.folder` and updated

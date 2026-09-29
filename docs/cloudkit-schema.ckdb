@@ -32,6 +32,7 @@ DEFINE SCHEMA
         CD_mark                 BYTES QUERYABLE SORTABLE,
         CD_marketResolvedYes    INT64 QUERYABLE SORTABLE,
         CD_messageCount         INT64 QUERYABLE SORTABLE,
+        CD_notePictures         BYTES QUERYABLE SORTABLE,
         CD_ocrAt                TIMESTAMP QUERYABLE SORTABLE,
         CD_ocrTopics            BYTES QUERYABLE SORTABLE,
         CD_parent               BYTES QUERYABLE SORTABLE,

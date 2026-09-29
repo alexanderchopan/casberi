@@ -2309,6 +2309,9 @@ struct RootShell: View {
             UserDefaults(suiteName: SharedStore.appGroup)?
                 .set(Date.now.timeIntervalSince1970, forKey: "widget.lastSeen")
             WidgetCenter.shared.reloadTimelines(ofKind: "casberi.hero")
+            // The Note widget reads the store, so a note written or ticked
+            // in the app reaches it when the app leaves.
+            WidgetCenter.shared.reloadTimelines(ofKind: NoteAppend.widgetKind)
             // Give the model's memory back when we're not in use; the
             // next foreground reloads it.
             OnDeviceModel.teardown()

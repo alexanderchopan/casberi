@@ -149,31 +149,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi scans a document into a note, or a product's barcode so its item lands in your feed."
+            "value": "Casberi takes a photo or scans a document into a note, or scans a product's barcode so its item lands in your feed."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi escanea un documento en una nota, o el código de barras de un producto para que llegue a tu feed."
+            "value": "Casberi toma una foto o escanea un documento en una nota, o escanea el código de barras de un producto para que llegue a tu feed."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi は書類をスキャンしてメモに残したり、商品のバーコードをスキャンしてフィードに届けたりします。"
+            "value": "Casberi は写真を撮ったり書類をスキャンしたりしてメモに残し、商品のバーコードをスキャンしてフィードに届けます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi는 문서를 스캔해 메모에 담거나, 상품의 바코드를 스캔해 피드에 담아요."
+            "value": "Casberi는 사진을 찍거나 문서를 스캔해 메모에 담고, 상품의 바코드를 스캔해 피드에 담아요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi 会把文档扫描进笔记，或扫描商品条码，让它进入你的订阅流。"
+            "value": "Casberi 会拍照或把文档扫描进笔记，或扫描商品条码，让它进入你的订阅流。"
           }
         }
       }

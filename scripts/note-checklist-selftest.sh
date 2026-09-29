@@ -31,6 +31,9 @@ LOCK="Casberi/Casberi/Model/NoteLock.swift"
 PREVIEW="Casberi/Casberi/Model/NotePreview.swift"
 TYPING="Casberi/Casberi/Model/NoteLinkTyping.swift"
 FIND="Casberi/Casberi/Model/NoteFind.swift"
+TASK="Casberi/Shared/NoteTask.swift"
+EXPORT="Casberi/Casberi/Model/NoteExport.swift"
+PICS="Casberi/Shared/NotePictures.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 
 fail=0
@@ -60,6 +63,9 @@ guard "a tick is offered only where ticksTasks allows it" \
 guard "a vault's list is never ticked (ticksTasks is kept notes only)" \
   'isKeptNote\(thing\) && thing\.kind == \.note && !NoteLock\.isLocked\(thing\)' "$SOURCE"
 guard "a lock empties the words" 'thing\.content = ""' "$LOCK"
+guard "a lock seals the pictures after the first" 'thing\.notePictures = nil' "$LOCK"
+guard "Add to note knows a locked note by the lock's own mark" 'static let lockedRef = "notelock:v1"' "Casberi/Shared/NoteAppend.swift"
+guard "and the lock still spells its mark that way" 'static let refMark = "notelock:v1"' "$LOCK"
 guard "a lock drops the vector made from the words" 'thing\.embedding = nil' "$LOCK"
 guard "a lock drops the detected phone number" 'thing\.detectedTel = nil' "$LOCK"
 guard "a lock drops the picture" 'thing\.previewImageData = nil' "$LOCK"
@@ -196,6 +202,64 @@ check("the title is never printed twice", pv("Trip", "Trip\nPack the charger") =
 check("a one-line note has no second line", pv("Just this", "Just this") == nil)
 check("a link reads as its thing", pv("Plan", "Plan\nFor [[Book club]] Friday") == "For Book club Friday")
 
+print("Add to note (Shared/NoteTask)")
+check("a note that ends in a list takes each line as an item",
+      NoteTask.appended("Groceries\n- [ ] milk", "bread\n\neggs") == "Groceries\n- [ ] milk\n- [ ] bread\n- [ ] eggs")
+check("an item already spelled is not boxed twice",
+      NoteTask.appended("- [ ] a", "- [x] b") == "- [ ] a\n- [x] b")
+check("prose takes the words on a new line", NoteTask.appended("Plan\nFriday", "bring cake") == "Plan\nFriday\nbring cake")
+check("nothing to add changes nothing", NoteTask.appended("Plan", "  \n ") == "Plan")
+check("an empty note takes the words", NoteTask.appended("", "hello") == "hello")
+check("the widget's items read the same parser",
+      NoteTask.items("x\n- [ ] a\n- [x] b").map(\.text) == ["a", "b"])
+
+print("The Note widget's page (Shared/NoteTask)")
+let pg = NoteTask.page(title: "Groceries", content: "Groceries\n- [x] milk\n\nfor [[Book club]]\n- [ ] bread")
+check("the title's own line goes, blank lines go, links read as titles",
+      pg == [.item(done: true, text: "milk", ordinal: 0), .words("for Book club"),
+             .item(done: false, text: "bread", ordinal: 1)])
+check("a list's first item stays an item when it names the note",
+      NoteTask.page(title: "milk", content: "- [ ] milk\n- [ ] eggs").count == 2)
+check("a long first line cut into the title still goes",
+      NoteTask.page(title: "A very long first line…", content: "A very long first line that ran on\nnext") == [.words("next")])
+
+print("Export as Markdown")
+let day = Date(timeIntervalSince1970: 1_790_000_000)
+let ex = NoteExport.plan([
+    .init(title: "Groceries", content: "Groceries\n- [ ] milk", folder: "Home", created: day),
+    .init(title: "Groceries", content: "Groceries\nagain", folder: "home", created: day),
+    .init(title: "Secret", content: "", folder: nil, created: day, isLocked: true),
+    .init(title: "a/b: c?", content: "x", folder: nil, created: day, hasPicture: true, morePictures: 2),
+])
+check("a locked note is left out, and counted", ex.lockedLeftOut == 1)
+check("a folder is a directory, one whatever its case",
+      ex.files.filter { $0.path.first == "Home" }.count == 2 && !ex.files.contains { $0.path.first == "home" })
+check("two notes with one title in one folder get two names",
+      Set(ex.files.map { $0.path.joined(separator: "/") }).isSuperset(of: ["Home/Groceries.md", "Home/Groceries 2.md"]))
+check("a title is a safe file name", ex.files.contains { $0.path == ["a b c.md"] })
+check("every picture after the first is a file of its own, embedded in order",
+      ex.files.contains { $0.path == ["a b c 3.jpg"] && $0.body == .picture(note: 3, index: 2) }
+      && ex.files.contains { if case .markdown(let m) = $0.body { return m.contains("![[a b c.jpg]]\n![[a b c 2.jpg]]\n![[a b c 3.jpg]]") }; return false })
+
+print("A note's pictures (Shared/NotePictures)")
+let pics = [Data([1]), Data([2]), Data([3])]
+check("the pictures after the first round-trip", NotePictures.decode(NotePictures.encode(pics)) == pics)
+check("none is no field", NotePictures.encode([]) == nil)
+check("a field past the limit keeps the limit",
+      NotePictures.decode(NotePictures.encode(Array(repeating: Data([9]), count: 12))).count == NotePictures.limit - 1)
+check("a field that does not decode is no pictures", NotePictures.decode(Data([0, 1, 2])).isEmpty)
+check("all is the first, then the rest", NotePictures.all(first: Data([0]), rest: NotePictures.encode(pics)).count == 4)
+check("room counts down to zero", NotePictures.room(after: NotePictures.limit) == 0 && NotePictures.room(after: 99) == 0)
+check("the picture sits beside its note and is embedded",
+      ex.files.contains { $0.path == ["a b c.jpg"] && $0.body == .picture(note: 3) }
+      && ex.files.contains { if case .markdown(let m) = $0.body { return m.contains("![[a b c.jpg]]") }; return false })
+if case .markdown(let md)? = ex.files.first(where: { $0.path == ["Home", "Groceries.md"] })?.body {
+    check("the words keep their list, under a date", md.contains("created: ") && md.contains("- [ ] milk"))
+    check("no heading when the words open with the title", !md.contains("# Groceries"))
+} else { check("the first note has a file", false) }
+check("a note whose words do not open with its title gets it as a heading",
+      NoteExport.markdown(.init(title: "Photo", content: "", folder: nil, created: day), embeds: []).contains("# Photo"))
+
 print("Find in Notes")
 func find(_ q: String, _ t: String, _ c: String = "", folder: String? = nil) -> Bool {
     NoteFind.matches(title: t, content: c, folder: folder, query: q)
@@ -219,7 +283,7 @@ if failures > 0 { print("note-checklist-selftest: ✗ \(failures) assertion(s) f
 print("note-checklist-selftest: assertions pass")
 SWIFT
 
-if ! swiftc -Onone -o "$TMP/nc" "$SHEET" "$LIST" "$PREVIEW" "$TYPING" "$FIND" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/nc" "$SHEET" "$LIST" "$PREVIEW" "$TYPING" "$FIND" "$TASK" "$EXPORT" "$PICS" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "note-checklist-selftest: ✗ did not compile"; cat "$TMP/build.log"; exit 1
 fi
 "$TMP/nc" || exit 1
@@ -235,9 +299,12 @@ mutate() {  # name, file, perl expression
   [[ $file == $SHEET ]] && a=$copy
   [[ $file == $LIST ]] && b=$copy
   [[ $file == $TYPING ]] && c=$copy
-  local f=$FIND
+  local f=$FIND t=$TASK
   [[ $file == $FIND ]] && f=$copy
-  if swiftc -Onone -o "$TMP/mut" "$a" "$b" "$PREVIEW" "$c" "$f" "$TMP/main.swift" 2>/dev/null && "$TMP/mut" >/dev/null 2>&1; then
+  [[ $file == $TASK ]] && t=$copy
+  local e=$EXPORT
+  [[ $file == $EXPORT ]] && e=$copy
+  if swiftc -Onone -o "$TMP/mut" "$a" "$b" "$PREVIEW" "$c" "$f" "$t" "$e" "$PICS" "$TMP/main.swift" 2>/dev/null && "$TMP/mut" >/dev/null 2>&1; then
     echo "  ✗ SURVIVED: $name"; fail=1
   else
     echo "  ✓ caught: $name"
@@ -245,12 +312,14 @@ mutate() {  # name, file, perl expression
 }
 
 echo "Mutations"
-mutate "a tick flips the first item, whatever was tapped" "$LIST" 's/if seen == ordinal \{/if true {/'
+mutate "a tick flips the first item, whatever was tapped" "$TASK" 's/if seen == ordinal \{/if true {/'
 mutate "kept circles stay circles" "$LIST" 's/lead \+ \(done \? doneMark : openMark\) \+ words/lead + editorMark + words/'
 mutate "Return on an empty item starts another" "$LIST" 's/if words\.isEmpty && /if false && /'
 mutate "the hint is ignored" "$LIST" 's/let p = hint\.map \{ min\(max\(\$0, first\), last\) \} \?\? first/let p = first/'
 mutate "the key acts on the last line whatever the cursor" "$LIST" 's/let \(start, end\) = lineBounds\(text, at: at\)\n        let line = String\(chars\[start\.\.<end\]\)/let (start, end) = lineBounds(text, at: chars.count)\n        let line = String(chars[start..<end])/'
 mutate "a closing bracket does not end the question" "$TYPING" 's/if c == "\\n" \|\| c == "\]" \{ return nil \}/if c == "\\n" { return nil }/'
+mutate "a list's addition lands as prose" "$TASK" 's/if line\(lastLine\) != nil \{/if false {/'
+mutate "a locked note is exported" "$EXPORT" 's/if note\.isLocked \{ locked \+= 1; continue \}/if note.isLocked { locked += 1 }/'
 mutate "one matching word is enough" "$FIND" 's/wanted\.allSatisfy/wanted.contains/'
 mutate "a ]] at the cursor is doubled" "$TYPING" 's/to \+= 2/to += 0/'
 mutate "items are never numbered past the first" "$SHEET" 's/ordinal \+= 1\n/\n/'

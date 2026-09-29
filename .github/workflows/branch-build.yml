@@ -37,18 +37,14 @@ jobs:
           sudo xcode-select -s "$X"
           xcodebuild -version
 
-      # The runner has no Xcode 27 yet. The tree's iOS 27-only calls are
-      # behind `#available`, and all but FoundationModels' `Attachment`
-      # compile against the 26 SDK; on a 26 SDK the two image attachments are
-      # dropped from the CI copy (the prompt keeps its words), so the rest of
-      # the tree is still checked. Never committed — the runner's checkout only.
+      # The runner has no Xcode 27 yet (26.0–26.6, measured 2026-09-29), and
+      # `#available` guards the runtime, not the compiler. The shim turns each
+      # `if #available(iOS 27…)` block into `if false { fatalError() }` in THIS
+      # checkout only, so the rest of the tree is still compiled as written.
       - name: SDK shim
         run: |
           if ! xcodebuild -version | grep -q "Xcode 27"; then
-            for f in Casberi/Casberi/Model/ScreenshotFacts.swift Casberi/Casberi/Model/ScreenshotNaming.swift; do
-              sed -i '' '/Attachment(image)/d' "$f"
-              echo "shimmed $f"
-            done
+            python3 scripts/support/ci-sdk26-shim.py Casberi
           fi
 
       - name: Build

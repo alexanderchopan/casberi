@@ -399,23 +399,11 @@ enum NoteSheet {
 
     /// One line's checklist item, or nil (prd §982): `- [ ]`, `* [ ]` or
     /// `+ [ ]`, `x` or `X` for done, and words after it — an item with no
-    /// words is not an item. The one parser; `NoteChecklist` reads through it.
+    /// words is not an item. The one parser is `NoteTask.line` (Shared/, so
+    /// the widget and the intents read the same); `NoteChecklist` reads
+    /// through this.
     static func taskLine(_ line: String) -> (done: Bool, text: String)? {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        guard let bullet = trimmed.first, bullet == "-" || bullet == "*" || bullet == "+"
-        else { return nil }
-        let rest = trimmed.dropFirst()
-        guard rest.hasPrefix(" [") else { return nil }
-        let box = rest.dropFirst(2)
-        guard let mark = box.first, box.dropFirst().hasPrefix("]") else { return nil }
-        let done: Bool
-        switch mark {
-        case " ": done = false
-        case "x", "X": done = true
-        default: return nil
-        }
-        let text = box.dropFirst(2).trimmingCharacters(in: .whitespaces)
-        return text.isEmpty ? nil : (done, text)
+        NoteTask.line(line)
     }
 
     /// One line's own block, or nil when it is ordinary prose.
