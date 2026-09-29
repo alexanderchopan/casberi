@@ -8679,7 +8679,7 @@ struct FeedScreen: View {
         // row, lifted out of the list, so without it the newest note had no
         // Delete and no Pin.
         .contextMenu {
-            RowVerbMenu(thing: thing, room: source, onDelete: askDeleteNote) { run($0, on: $1) }
+            RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote)
         }
         .dsHover()
         .macHoverLift()
@@ -10669,7 +10669,7 @@ struct FeedScreen: View {
                 // to memoise it. A View's body is lazy — `RowVerbMenu` holds
                 // the thing and derives when the press raises it — so this is
                 // work that no longer runs, not a cache over it.
-                RowVerbMenu(thing: thing, room: source, onDelete: askDeleteNote) { run($0, on: $1) }
+                RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote)
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
