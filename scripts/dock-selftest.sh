@@ -762,11 +762,11 @@ for page in data notifications mcp diagnostics language dockOrder; do
 done
 
 
-# --- 12. THE SWIPE IS DEALT ON THE OTHER PAGE, AND THE COVER DRAWS NO GROUND (prd §898, §898c) --
-# The ground under a room swipe is the shell's own coat as the OTHER page —
-# white under the dark card, black under the light one, flat (`SwipeGround`,
+# --- 12. THE SWIPE IS DEALT ON THE CROWN'S COLOUR, AND THE COVER DRAWS NO GROUND (prd §898, §898c, §898e) --
+# The ground under a room swipe is the shell's own coat — the crown's
+# #1a1a1a under the dark card, black under the light one, flat (`SwipeGround`,
 # `DS.swipeTable`) — lit on the turn's ramp and gone at rest; the cover is
-# the next room's bare mark and name in the other page's ink and paints
+# the next room's bare mark and name in white ink and paints
 # nothing behind them. Drifts a build cannot see: the ground mounted inside
 # the pager (it stops at the status bar and the band — "you have black in
 # the background still"); the cover painting a page or a picture again,
@@ -804,11 +804,16 @@ awk '/static var swipeTable: Color\?/,/^    }/' "$TMP/tokens.nc" > "$TMP/ground.
 grep -q 'if vividBackground { return nil }' "$TMP/ground.nc" \
   || { echo "✗ swipeTable no longer stands down on a vivid page or a photo — the other"; \
        echo "  page is undefined over a picture (prd §898, §740's rule)."; fail=1; }
-grep -q 'Color.adaptive(dark: "#f2f2f7", light: "#000000")' "$TMP/ground.nc" \
-  || { echo "✗ swipeTable is not the OTHER page (Apple's white #f2f2f7 under dark, black"; \
-       echo "  under light) — a hue, a grey or bare #ffffff is back (prd §898c, §898d, §542)."; fail=1; }
-grep -q 'static let swipeTableInk = Color.adaptive(dark: "#000000", light: "#ffffff")' "$TMP/tokens.nc" \
-  || { echo "✗ swipeTableInk is not the other page's ink (prd §898c)."; fail=1; }
+grep -q 'Color.adaptive(dark: "#1a1a1a", light: "#000000")' "$TMP/ground.nc" \
+  || { echo "✗ swipeTable is not the crown's colour under dark (#1a1a1a) and black under"; \
+       echo "  light — a hue, a white or a third grey is back (prd §898c, §898e, §542)."; fail=1; }
+# #1a1a1a IS the crown: fillFaint's dark #ffffff1a over the black page. Move
+# the crown's fill and the table stops matching it (prd §898e).
+grep -q 'static let fillFaint  = Color.adaptive(dark: "#ffffff1a"' "$TMP/tokens.nc" \
+  || { echo "✗ fillFaint's dark value moved — the swipe table (#1a1a1a) was the crown's"; \
+       echo "  well made opaque; re-derive DS.swipeTable with it (prd §898e)."; fail=1; }
+grep -q 'static let swipeTableInk = Color.fixed("#ffffff")' "$TMP/tokens.nc" \
+  || { echo "✗ swipeTableInk is not white — both tables are dark since prd §898e."; fail=1; }
 [ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \
   || { echo "✗ RoomSnapshots.swift is back — a store with no reader (prd §723, §898)."; fail=1; }
 

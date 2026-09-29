@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swipe shadow, charcoal</title>
+<style>
+  :root { --page:#0b0b0c; --ink:#f2f2f7; --dim:#8e8e93; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--page); color:var(--ink);
+         font:14px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; padding:32px 16px 48px; }
+  h1 { font:600 22px/1.2 -apple-system, "SF Pro Display", system-ui; margin:0 0 6px; }
+  p.lede { color:var(--dim); margin:0 0 28px; max-width:760px; }
+  .row { display:flex; gap:22px; flex-wrap:wrap; justify-content:center; }
+  figure { margin:0; display:flex; flex-direction:column; align-items:center; gap:12px; }
+  figcaption { text-align:center; max-width:240px; }
+  figcaption b { display:block; font-size:15px; }
+  figcaption span { color:var(--dim); font-size:12.5px; }
+  .phone { width:240px; height:520px; border-radius:40px; overflow:hidden; position:relative;
+           background:#1a1a1a; box-shadow:0 0 0 1px #ffffff14; perspective:900px; }
+  .status { position:absolute; top:14px; left:26px; right:22px; display:flex; justify-content:space-between;
+            font:600 12px -apple-system, system-ui; color:#fff; opacity:.9; z-index:3; }
+  .card { position:absolute; top:52px; left:-128px; width:236px; height:440px; border-radius:30px;
+          background:#000; transform:rotateY(14deg); transform-origin:left center; overflow:hidden; }
+  .card::after { content:""; position:absolute; inset:0; border-radius:30px; padding:1px; pointer-events:none;
+          background:var(--rim);
+          -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite:xor; mask-composite:exclude; }
+  .s1 .card, .s3 .card { box-shadow:0 24px 40px #00000080; }
+  .s2 .card, .s4 .card { box-shadow:0 32px 64px #000000d9; }
+  .s1, .s2 { --rim:#ffffff38; }
+  .s3, .s4 { --rim:linear-gradient(180deg, #ffffff66 0%, #ffffff26 30%, #ffffff0f 100%); }
+  .well { position:absolute; left:10px; right:10px; top:28px; height:172px; border-radius:22px; background:#ffffff1a; padding:14px 16px;
+          color:#ebebf5c9; font-size:11px; }
+  .well div { margin-bottom:14px; } .well .n { text-align:right; color:#fff; }
+  .toast { position:absolute; left:0; right:10px; top:156px; height:82px; border-radius:0 0 22px 22px; background:#1c1c1e;
+           color:#fff; font:700 16px -apple-system, system-ui; padding:24px 16px; }
+  .thumb { position:absolute; left:130px; top:292px; width:40px; height:38px; border-radius:6px; background:#1c1c1e; }
+  .line { position:absolute; left:40px; right:12px; top:360px; color:#ebebf5c9; font-size:11px; white-space:nowrap; overflow:hidden; }
+  .seat { position:absolute; left:108px; bottom:14px; width:40px; height:40px; border-radius:50%; background:#1c1c1e;
+          display:grid; place-items:center; color:#ff2d87; font-size:20px; }
+  .cover { position:absolute; right:32px; top:232px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .mark { width:44px; height:44px; border-radius:50%; background:#48484a; display:grid; place-items:center; }
+  .mark i { width:18px; height:18px; border:2.5px solid #fff; border-radius:5px; }
+  .word { font:700 18px -apple-system, "SF Pro Display", system-ui; color:#fff; }
+  .notes { max-width:760px; margin:36px auto 0; color:var(--dim); font-size:13px; }
+  .notes li { margin-bottom:6px; } .notes b { color:var(--ink); }
+</style>
+</head>
+<body>
+<h1>Swipe shadow on the crown's charcoal</h1>
+<p class="lede">All four on #1a1a1a (B). Only the card's shadow and its edge change. Still one shadow and one edge per card, so it costs the same to draw.</p>
+<div class="row">
+  <figure>
+    <div class="phone s1">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>1 · Shipped</b><span>shadow 50% · r40 y24 · even rim 22%</span></figcaption>
+  </figure>
+  <figure>
+    <div class="phone s2">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>2 · Deeper pool</b><span>shadow 85% · r64 y32 · even rim 22%</span></figcaption>
+  </figure>
+  <figure>
+    <div class="phone s3">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>3 · Lit from above</b><span>shipped shadow · rim 40% at the top → 6% at the foot</span></figcaption>
+  </figure>
+  <figure>
+    <div class="phone s4">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>4 · Pool + lit rim</b><span>shadow 85% · r64 y32 · rim 40% → 6%</span></figcaption>
+  </figure>
+</div>
+<ul class="notes">
+  <li><b>1</b>: what ships. The shadow hardly shows and the even 22% edge does all the work.</li>
+  <li><b>2</b>: a darker, wider shadow. It reads as depth further from the card, but right at the edge it is still black on black.</li>
+  <li><b>3</b>: the edge catches light from above, bright on top and fading down the sides — the light §898b placed high on the table. The card's outline reads on dark without a heavier line.</li>
+  <li><b>4</b>: 3 plus the deeper shadow.</li>
+</ul>
+</body>
+</html>

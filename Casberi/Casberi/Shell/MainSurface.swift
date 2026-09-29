@@ -3262,9 +3262,20 @@ private struct PagerDrag<Content: View>: View {
             // cardness is untouched. A Shape rather than an `if`, so the page's
             // identity never changes when a drag begins.
             .clipShape(PageClip(lift: lift))
+            // The edge is LIT FROM ABOVE (prd §898e): bright at the top,
+            // fading down the sides. On the crown's charcoal a black shadow
+            // can only darken the ground a few levels, and darkest right
+            // against the black card, so the outline is the edge's job, not
+            // the shadow's. Still one stroke — the same cost as the even rim.
             .overlay {
                 RoundedRectangle(cornerRadius: 28 * lift, style: .continuous)
-                    .strokeBorder(.white.opacity(0.22 * lift), lineWidth: 1)
+                    .strokeBorder(
+                        LinearGradient(
+                            stops: [.init(color: .white.opacity(0.40 * lift), location: 0),
+                                    .init(color: .white.opacity(0.15 * lift), location: 0.3),
+                                    .init(color: .white.opacity(0.06 * lift), location: 1)],
+                            startPoint: .top, endPoint: .bottom),
+                        lineWidth: 1)
                     .allowsHitTesting(false)
             }
             .scaleEffect(1 - 0.05 * lift)
@@ -3284,11 +3295,12 @@ private struct PagerDrag<Content: View>: View {
             // at commit is the amount that ruling asked for, but nobody has
             // watched it arrive there.
             .rotationEffect(.degrees(heading * 4 * lift), anchor: .bottom)
-            // The shadow is WIDER since §898b and stays so under §898c: on
-            // the white table the shadow is the whole of the cardness (on the
-            // black one the lit edge is), so it is the one drawn at 40/24 and
-            // not §648's 28/10. One shadow, not two — a second full-screen
-            // shadow re-rasterised on every touch move is §651's cost.
+            // The shadow is WIDER since §898b and stays at 40/24: on the
+            // charcoal and black tables (§898e) the lit edge carries the
+            // cardness and the shadow the depth; a deeper one was boarded
+            // and read as black on black at the edge. One shadow, not two —
+            // a second full-screen shadow re-rasterised on every touch move
+            // is §651's cost.
             .shadow(color: .black.opacity(0.5 * lift), radius: 40, y: 24)
             .offset(x: x)
     }
@@ -3316,8 +3328,8 @@ private struct PagerDrag<Content: View>: View {
 /// (`PagerDrag`), so nothing double-exposes. Reads only the drag's own
 /// values, in a body of its own.
 ///
-/// The word is `DS.swipeTableInk` on the table (the other page's ink,
-/// §898c) and the page's own primary where the table stands down (a vivid
+/// The word is `DS.swipeTableInk` on the table (white on both tables,
+/// §898e) and the page's own primary where the table stands down (a vivid
 /// page or a photo, `DS.swipeTable == nil`).
 private struct PagerCover: View {
     @Environment(ShellChrome.self) private var chrome
@@ -3365,8 +3377,8 @@ private struct PagerCover: View {
 }
 
 /// The table under the swipe (prd §898, §898c): the shell's ground while a
-/// card is in the air, gone at rest — the OTHER page, flat (white under the
-/// dark card, black under the light one, `DS.swipeTable`). Rides
+/// card is in the air, gone at rest — flat (the crown's `#1a1a1a` under the
+/// dark card, §898e; black under the light one, `DS.swipeTable`). Rides
 /// `pageDragProgress` — the ramp the card's own cardness rides (§648), so
 /// the table is fully lit at the turn, holds through the flight (`deal`
 /// animates the progress to ±1) and fades back over the landing spring
@@ -3377,9 +3389,9 @@ private struct PagerCover: View {
 /// every touch move. Draws nothing on a vivid page or a photo.
 ///
 /// Flat on purpose: §898b's frosted sheet (`BrandSheet`, one rendered
-/// picture per window size) is deleted with the pink it was lit for. A white
-/// or black table is a surface already; the card's shadow and lit edge do
-/// the rest (§723: a feature off the surface is off the model).
+/// picture per window size) is deleted with the pink it was lit for. A
+/// charcoal or black table is a surface already; the card's shadow and lit
+/// edge do the rest (§723: a feature off the surface is off the model).
 private struct SwipeGround: View {
     @Environment(ShellChrome.self) private var chrome
 

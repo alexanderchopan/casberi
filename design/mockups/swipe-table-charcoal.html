@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swipe table, charcoal</title>
+<style>
+  :root { --page:#0b0b0c; --ink:#f2f2f7; --dim:#8e8e93; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--page); color:var(--ink);
+         font:14px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; padding:32px 16px 48px; }
+  h1 { font:600 22px/1.2 -apple-system, "SF Pro Display", system-ui; margin:0 0 6px; }
+  p.lede { color:var(--dim); margin:0 0 28px; max-width:760px; }
+  .row { display:flex; gap:22px; flex-wrap:wrap; justify-content:center; }
+  figure { margin:0; display:flex; flex-direction:column; align-items:center; gap:12px; }
+  figcaption { text-align:center; max-width:240px; }
+  figcaption b { display:block; font-size:15px; }
+  figcaption span { color:var(--dim); font-size:12.5px; }
+  .phone { width:240px; height:520px; border-radius:40px; overflow:hidden; position:relative;
+           background:var(--g); box-shadow:0 0 0 1px #ffffff14; perspective:900px; }
+  .status { position:absolute; top:14px; left:26px; right:22px; display:flex; justify-content:space-between;
+            font:600 12px -apple-system, system-ui; color:var(--t); opacity:.9; z-index:3; }
+  /* the card in flight: pushed left, turned on its vertical axis */
+  .card { position:absolute; top:52px; left:-128px; width:236px; height:440px; border-radius:30px;
+          background:#000; transform:rotateY(14deg); transform-origin:left center;
+          box-shadow:0 24px 40px #0000008c; overflow:hidden; }
+  .card::before { content:""; position:absolute; inset:0 0 auto 0; height:1px; background:#ffffff14; } /* pourInk edge */
+  .well { position:absolute; left:10px; right:10px; top:28px; height:172px; border-radius:22px; background:#ffffff1a; padding:14px 16px;
+          color:#ebebf5c9; font-size:11px; }
+  .well div { margin-bottom:14px; } .well .n { text-align:right; color:#fff; }
+  .toast { position:absolute; left:0; right:10px; top:156px; height:82px; border-radius:0 0 22px 22px; background:#1c1c1e;
+           color:#fff; font:700 16px -apple-system, system-ui; padding:24px 16px; }
+  .thumb { position:absolute; left:130px; top:292px; width:40px; height:38px; border-radius:6px; background:#1c1c1e; }
+  .line { position:absolute; left:40px; right:12px; top:360px; color:#ebebf5c9; font-size:11px; white-space:nowrap; overflow:hidden; }
+  .seat { position:absolute; left:108px; bottom:14px; width:40px; height:40px; border-radius:50%; background:#1c1c1e;
+          display:grid; place-items:center; color:#ff2d87; font-size:20px; }
+  /* the cover: the next room's mark and word on the table */
+  .cover { position:absolute; right:32px; top:232px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .mark { width:44px; height:44px; border-radius:50%; background:#48484a; display:grid; place-items:center; }
+  .mark i { width:18px; height:18px; border:2.5px solid #fff; border-radius:5px; }
+  .word { font:700 18px -apple-system, "SF Pro Display", system-ui; color:var(--t); }
+  .swatch { display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--g); vertical-align:-1px;
+            margin-right:5px; box-shadow:0 0 0 1px #ffffff26; }
+  .notes { max-width:760px; margin:36px auto 0; color:var(--dim); font-size:13px; }
+  .notes li { margin-bottom:6px; } .notes b { color:var(--ink); }
+  @media (max-width:560px){ .phone{ transform:scale(.9); } }
+</style>
+</head>
+<body>
+<h1>Swipe table — dark theme, charcoal options</h1>
+<p class="lede">Only the table and its ink change. The card, its shadow (40/24), the cover's mark and the dock seat are as shipped. A–E step from today's Apple white through the room-head crown's own colour to three lighter charcoals from the palette.</p>
+
+<div class="row">
+  <figure>
+    <div class="phone" style="--g:#f2f2f7; --t:#000">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>A · Shipped</b><span><span class="swatch" style="--g:#f2f2f7"></span>#f2f2f7 · black ink (§898d)</span></figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" style="--g:#1a1a1a; --t:#fff">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>B · The crown</b><span><span class="swatch" style="--g:#1a1a1a"></span>#1a1a1a · the room head's well (fillFaint on black) · white ink</span></figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" style="--g:#2c2c2e; --t:#fff">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>C · Charcoal</b><span><span class="swatch" style="--g:#2c2c2e"></span>#2c2c2e · gray100 · white ink</span></figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" style="--g:#3a3a3c; --t:#fff">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>D · Slate</b><span><span class="swatch" style="--g:#3a3a3c"></span>#3a3a3c · gray200 · white ink</span></figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" style="--g:#48484a; --t:#fff">
+      <div class="status"><span>6:48</span><span>● ● 26</span></div>
+      <div class="card"><div class="well"><div>the four aces</div><div>Atlanta Braves · MLB</div><div class="n">36%</div><div>Houston Astros · MLB</div></div><div class="toast">Focus mode enabled</div><div class="thumb"></div><div class="line">Expecting 1.59 EPS for $A…</div><div class="seat">✺</div></div>
+      <div class="cover"><div class="mark"><i></i></div><div class="word">Pinned</div></div>
+    </div>
+    <figcaption><b>E · Graphite</b><span><span class="swatch" style="--g:#48484a"></span>#48484a · gray300 · white ink</span></figcaption>
+  </figure>
+</div>
+
+<ul class="notes">
+  <li><b>B matches the crown exactly</b> — the table reads as the room head's well spread under the card, one colour the eye already knows. But the card is black on #1a1a1a (1.2:1), so its edge is carried by the lit top edge alone; the shadow disappears.</li>
+  <li><b>C is where the card lifts again</b> — enough ground for the shadow to show, still clearly charcoal, not grey-white.</li>
+  <li><b>D–E</b> start to read as grey, and the Pinned mark's own grey disc (#48484a) sinks into E.</li>
+  <li>Light theme is untouched in every option (black table under the white card).</li>
+</ul>
+</body>
+</html>

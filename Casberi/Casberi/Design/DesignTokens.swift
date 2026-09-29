@@ -394,21 +394,20 @@ enum DS {
         })
     }
 
-    /// **The table a swipe is dealt on is the OTHER PAGE (prd §898c, user:
-    /// "ok lets do L and M").** White under the dark card, black under the
-    /// light one, flat: no light, no frost, no hue. **The white is Apple's
-    /// (prd §898d, user: "the white is a bit bright" → "yes do P"):
-    /// `#f2f2f7`, the system grouped background, what iOS means by a white
-    /// page — a tenth less luminance than `#ffffff` and a cool cast, which
-    /// is what reads calm. The one system value the app borrows, and the
-    /// one exception to "nothing new enters the palette" below; `#f8f8f8`
-    /// (`surfaceRaised`) was the closed-palette alternative and dims half
-    /// as much. It does NOT fix a night flash — only the ramp can, and an
-    /// opacity cap on the ramp is grey by construction (§542).** A table under a card is
-    /// there for contrast with the card, and this is the most there is. Both
-    /// values are the app's own pages, so nothing new enters the palette and
-    /// no grey (§542). One rule, two values — themed by RULE, which §898's
-    /// "two tables" objection was not about.
+    /// **The table a swipe is dealt on (prd §898c, §898e).** Flat: no light,
+    /// no frost, no hue. **Under the dark card it is the CROWN's colour
+    /// (prd §898e, user: "white is too stark" → "we could do the color of our
+    /// room head crowns" → "b seems most within the same design system"):
+    /// `#1a1a1a` is `fillFaint`'s dark `#ffffff1a` over the black page, the
+    /// well every room's lead stands in, made opaque — so the table is a
+    /// colour the eye already knows from the card it is under, not a third
+    /// one.** A lighter charcoal (`gray100`, `#2c2c2e`) lifted the card more
+    /// and was declined as random: a grey that answers to nothing on screen.
+    /// Accepted with it: a black card on `#1a1a1a` is 1.2:1, so the card's
+    /// edge is its lit top (`pourInk`) and the shadow all but vanishes.
+    /// §898d's `#f2f2f7` read too stark. Under the light card the table stays
+    /// black, the other page (§898c). `dock-selftest.sh` holds `fillFaint`'s
+    /// dark value to `#ffffff1a` beside this one, so the two cannot drift.
     ///
     /// The pink is retired here, not deleted from the record: §898 dealt the
     /// swipe on the mark's hue in shadow (`#8c2451`), §898a stepped it to
@@ -423,14 +422,14 @@ enum DS {
     /// ground alone and the cover's word takes the page's ramp.
     static var swipeTable: Color? {
         if vividBackground { return nil }
-        return Color.adaptive(dark: "#f2f2f7", light: "#000000")
+        return Color.adaptive(dark: "#1a1a1a", light: "#000000")
     }
 
-    /// What is written on `swipeTable`: the room's mark and its name, in the
-    /// OTHER page's ink — black on the white table (19.6:1 on `#f2f2f7`),
-    /// white on the black one (21:1), never `textPrimary`, which is the
-    /// page's own ink and vanishes into the table.
-    static let swipeTableInk = Color.adaptive(dark: "#000000", light: "#ffffff")
+    /// What is written on `swipeTable`: the room's mark and its name. White
+    /// on both tables since §898e (the crown's `#1a1a1a` under the dark card,
+    /// 17.4:1; black under the light one, 21:1) — so it is `textPrimary` in
+    /// dark and the other page's ink in light, never the light page's black.
+    static let swipeTableInk = Color.fixed("#ffffff")
 
     // MARK: - Semantic state  — orange attention, red destructive, green confirm
 
