@@ -1013,6 +1013,34 @@
         }
       }
     },
+    "Casberi note": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nota de Casberi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberiノート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi 노트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi 笔记"
+          }
+        }
+      }
+    },
     "Checked %@": {
       "localizations": {
         "es": {
@@ -1345,6 +1373,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "需要你处理"
+          }
+        }
+      }
+    },
+    "New note": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nueva nota"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新規ノート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "새 노트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新建笔记"
           }
         }
       }
@@ -1827,6 +1883,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "打开 Casberi 的每日简报。"
+          }
+        }
+      }
+    },
+    "Opens a new note in Casberi.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre una nota nueva en Casberi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberiで新規ノートを開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi에서 새 노트를 엽니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在 Casberi 中打开新笔记。"
           }
         }
       }
@@ -2769,6 +2853,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "有什么新变化？"
+          }
+        }
+      }
+    },
+    "Writes a new note from anywhere.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Escribe una nota nueva desde cualquier lugar."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "どこからでも新規ノートを書けます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "어디서나 새 노트를 작성합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "随时随地写新笔记。"
           }
         }
       }

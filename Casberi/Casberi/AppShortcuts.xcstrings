@@ -30,6 +30,56 @@
         }
       }
     },
+    "New note in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "New note in ${applicationName}",
+              "Write a note in ${applicationName}"
+            ]
+          }
+        },
+        "es" : {
+          "stringSet" : {
+            "state" : "needs_review",
+            "values" : [
+              "Nueva nota en ${applicationName}",
+              "Escribir una nota en ${applicationName}"
+            ]
+          }
+        },
+        "ja" : {
+          "stringSet" : {
+            "state" : "needs_review",
+            "values" : [
+              "${applicationName}で新規ノート",
+              "${applicationName}でノートを書く"
+            ]
+          }
+        },
+        "ko" : {
+          "stringSet" : {
+            "state" : "needs_review",
+            "values" : [
+              "${applicationName}에서 새 노트",
+              "${applicationName}에서 노트 쓰기"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "needs_review",
+            "values" : [
+              "在 ${applicationName} 中新建笔记",
+              "在 ${applicationName} 中写笔记"
+            ]
+          }
+        }
+      }
+    },
     "Save to ${applicationName}" : {
       "extractionState" : "manual",
       "localizations" : {
