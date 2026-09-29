@@ -147,6 +147,7 @@ struct NoteWidgetView: View {
                     Text(text)
                         .dsText(.widgetSubline12)
                         .foregroundStyle(.white.opacity(done ? 0.5 : 0.9))
+                        // As the note's page draws a done item.
                         .strikethrough(done, color: .white.opacity(0.5))
                         .lineLimit(1)
                 }
