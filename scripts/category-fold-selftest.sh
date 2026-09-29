@@ -284,6 +284,23 @@ if bad:
 print(f"  ✓ Pinboard.room {room!r} is clear of every category, offer, alias and seatless source")
 PY4B
 
+# A CATEGORY ROW NEEDS A CONNECTED SEAT (prd §977, user: "it shouldn't be a
+# category unless someone connects their notes apps"). Build 688 drew a Notes
+# row with no marks: §975's collision folded the room into a category chip
+# whose venues were empty. The tray's `categories` must gate on
+# `categoryVenues`, so any label that folds without a seat draws no row.
+python3 - "Casberi/Casberi/Shell/RoomsTray.swift" <<'PY4C'
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r'private var categories: \[String\] \{(.*?)\n    \}', src, re.S)
+assert m, "RoomsTray.categories not found"
+body = m.group(1)
+if "categoryVenues" not in body or ".isEmpty" not in body:
+    print("✗ RoomsTray.categories draws a category with no connected seat — gate it on chrome.categoryVenues (prd §977)")
+    sys.exit(1)
+print("  ✓ the tray draws a category row only while it holds a connected seat")
+PY4C
+
 # THE CHIP IS ITS OWN SHAPE, whatever that shape is (design pass 2026-08-11).
 # Both of these read as decoration and are not: a `Circle()` in a capsule's
 # frame draws a ring through the MIDDLE of a wide chip and makes only its

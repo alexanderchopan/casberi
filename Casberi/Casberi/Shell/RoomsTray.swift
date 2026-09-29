@@ -244,8 +244,17 @@ struct RoomsTray: View {
 
     /// The categories on the dock, in the dock's own order (`CategoryOrder`,
     /// through the mirror `MainSurface` publishes for the Mac's ⌘1–9).
+    ///
+    /// A category is a row only while it holds a connected seat (prd §977,
+    /// user: "it shouldn't be a category unless someone connects their notes
+    /// apps"). Build 688 drew Notes with no marks: the Notes room's sentinel
+    /// was the category's own name, so the fold made a category chip out of
+    /// a room (§975). A row with no venues is that class, whatever string
+    /// caused it, and this gate holds it off the tray.
     private var categories: [String] {
-        chrome.chipOrder.filter { CategoryFold.isCategory($0) }
+        chrome.chipOrder.filter {
+            CategoryFold.isCategory($0) && !(chrome.categoryVenues[$0] ?? []).isEmpty
+        }
     }
 
     /// The category the room you are standing in belongs to.

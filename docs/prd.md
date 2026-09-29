@@ -346,6 +346,7 @@ marks chronological position within the pair.
 | §970 (the sheet dictates on its own: Stop puts the transcript in the field) | the note sheet's wide key ran `VoiceCapture` as a dictation — Stop landed the words in the field to read, and the audio was dropped | superseded by §971 — dictation is the keyboard's own mic key over the focused field, and the wide key RECORDS: Stop keeps a `.voice` thing under `You` and closes; the listening band, the hold on New and `-noteVoice` stand
 | §969 (Folders is a Notes tile) | the Notes room's tiles are All · Pinned · Folders · New, and Folders draws the folder list in place of the rows | superseded by §972 — folders were never built, so the tile lit and showed All's list; the case and its glyph are deleted until folders exist, and the tiles are All · Pinned · New |
 | §971 (a kept voice note keeps its file, and Stop reads the transcript at once) | Stop made a `.voice` thing under `You` carrying both the audio bytes and the loose file, from the partial transcript of that instant | amended by §972 — the file is deleted once its bytes are stored, Stop settles the recognizer for up to a second first, a call or a lock screen no longer strands the recording, and every voice note (the old "Voice" ones included) is under `You`
+| §976 (the You doors are pink app tiles, the standing door ringed) | all five You doors are brand-pink tiles with white glyphs, and the standing one wears the `DS.tint` ring | amended by §976a — each door is a black circle with a pink glyph, the standing door alone turns into the pink tile, and the ring is gone |
 
 ## 1. Thesis
 
@@ -62130,3 +62131,13 @@ Two strings joined the catalog with es/ja/ko/zh-Hans: "Add a photo" (the disc, V
 **What C costs, stated.** On the dark tray a black circle's edge is faint (`#000` on the glass's ~`#141414`); the pink glyphs carry the row, and the one pink tile carries the selection. On the light tray the black circle is the heaviest shape in the panel. Neither was ruled against; both were visible in the mockup's dark half, and the light half was not drawn.
 
 **Seen:** the tray on the iPhone 17 Pro simulator over the demo, Home filled on the All feed, and the Notes door filling after landing in its room.
+
+## §977 — A category is a tray row only while it holds a connected seat (user: "there is a notes category showing bc we added a notes feature but it shouldn't be a category unless someone connects their notes apps", 2026-09-29)
+
+**Ruling.** `RoomsTray.categories` draws a category row only when `chrome.categoryVenues` holds at least one seat for it. A real category always has one — the fold makes a category chip only from a landed or connected source that resolves to it — so the gate changes nothing for a connected seat and holds off any row the fold made from something else.
+
+**Why.** The report is a TestFlight screenshot of build 688: a Notes row with no marks under You. That build predates §975, whose sentinel `"Notes"` folded the Notes room into the Notes category's chip, whose venues were empty. §975 fixed the collision; this closes the class — a sentinel, an alias or a stale label that resolves to a category no longer draws an empty row in the tray.
+
+**What holds it.** `category-fold-selftest.sh` reads `RoomsTray.categories` and fails when it stops gating on `categoryVenues`.
+
+**Seen:** the self-test's text guard. **Not seen:** a build or a device — no Xcode in this session; the change is one filter over two published values the tray already reads.
