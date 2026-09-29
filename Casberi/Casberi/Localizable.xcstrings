@@ -57943,6 +57943,34 @@
         }
       }
     },
+    "Couldn't delete the note" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo eliminar la nota"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノートを削除できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노트를 삭제할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法删除笔记"
+          }
+        }
+      }
+    },
     "Couldn't find any of those tokens — try contract addresses." : {
       "localizations" : {
         "es" : {
@@ -61673,6 +61701,34 @@
         }
       }
     },
+    "Couldn't recover the note" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo recuperar la nota"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノートを復元できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노트를 복구할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法恢复笔记"
+          }
+        }
+      }
+    },
     "Couldn't refresh %@ just now — your saved token may need renewing." : {
       "localizations" : {
         "es" : {
@@ -63899,6 +63955,62 @@
         }
       }
     },
+    "Delete now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Eliminar ahora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금 삭제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "立即删除"
+          }
+        }
+      }
+    },
+    "Delete now can't be undone." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Eliminar ahora no se puede deshacer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ削除すると元に戻せません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금 삭제하면 되돌릴 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "立即删除后无法撤销。"
+          }
+        }
+      }
+    },
     "Delete the key" : {
       "localizations" : {
         "es" : {
@@ -64203,6 +64315,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "删除你的所有内容？"
+          }
+        }
+      }
+    },
+    "Deleted notes stay on %@ for %lld days, then they're gone." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Deleted notes stay on %1$@ for %2$lld days, then they're gone."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las notas eliminadas se quedan en %1$@ durante %2$lld días y luego desaparecen."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "削除したノートは%1$@に%2$lld日間残り、その後完全に消えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "삭제한 노트는 %1$@에 %2$lld일 동안 남아 있다가 사라집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "删除的笔记会在%1$@上保留 %2$lld 天，之后永久消失。"
           }
         }
       }
@@ -79478,6 +79624,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "对方付款后即发送，%@ 失效。"
+          }
+        }
+      }
+    },
+    "It stays in Recently deleted for %lld days." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se queda en Eliminadas recientemente durante %lld días."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "「最近削除した項目」に%lld日間残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 삭제된 항목에 %lld일 동안 남아 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它会在“最近删除”中保留 %lld 天。"
           }
         }
       }
@@ -96741,6 +96915,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "笔记已删除"
+          }
+        }
+      }
+    },
+    "Note deleted, recoverable for %lld days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nota eliminada, recuperable durante %lld días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノートを削除しました（%lld日間は復元できます）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노트를 삭제했습니다. %lld일 동안 복구할 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "笔记已删除，%lld 天内可恢复"
           }
         }
       }
@@ -117120,6 +117322,34 @@
         }
       }
     },
+    "Recently deleted" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Eliminadas recientemente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近削除した項目"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 삭제된 항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近删除"
+          }
+        }
+      }
+    },
     "Recently watched" : {
       "localizations" : {
         "es" : {
@@ -117368,6 +117598,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "录音"
+          }
+        }
+      }
+    },
+    "Recover" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recuperar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "恢复"
+          }
+        }
+      }
+    },
+    "Recover or delete now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recuperar o eliminar ahora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元するか今すぐ削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구하거나 지금 삭제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "恢复或立即删除"
+          }
+        }
+      }
+    },
+    "Recovered" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recuperada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已恢复"
           }
         }
       }
