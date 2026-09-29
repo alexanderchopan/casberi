@@ -62191,6 +62191,7 @@ Two strings joined the catalog with es/ja/ko/zh-Hans: "Add a photo" (the disc, V
 2. **Edit reopens the note sheet ON the note.** The thing sheet leaves and the shell raises `NoteCaptureSheet` with the note's words in the field and its picture in the well (`ShellChrome.editNote(_:)`, `noteToEdit` consumed on read). Closing it — Done, the chevron or the pull — writes onto the SAME thing: title and tags as a new note takes them (`Capture.thing`), the picture as it stands. Its day, folder, pin and id are untouched. Nothing changed saves nothing; a field emptied with no picture keeps the note as it was (deleting is the long press's confirmed verb). The toast says `Saved`.
 3. **No Record while editing.** A recording is a new voice note; the wide key says Done throughout an edit.
 4. **"That day" is not drawn for a note of yours.** The shelf stays for imported journal entries, whose day the feed has scrolled past. "On this date" (other years) stays for both.
-5. **Voice notes are not editable here.** Their record is the audio; the transcript edit is a separate ruling.
+5. **A note of yours says `Note · written 8:30 PM`**, not `Journal`; an imported entry keeps `Journal` (user: "yes do change it").
+6. **Voice notes are not editable here.** Their record is the audio; the transcript edit is a separate ruling.
 
 **Seen:** the drift guards in `note-sheet-selftest.sh`, `note-folders-selftest.sh` and `x-selftest.sh` still match their lines. **Not seen:** a compile, a simulator or a device — this session had no Xcode and no `swiftc`. First on the phone: the Edit disc on a note of yours, the keyboard rising once the thing sheet has left, a changed title in the row, a picture removed, and the shelf gone.

@@ -2005,7 +2005,10 @@ struct ThingSheetView: View {
 
     /// "Journal · written 9:00 PM" — what it is and when in the day (§893).
     private var entryLine: String {
-        let what = thing.kind == .voice ? String(localized: "Voice note") : String(localized: "Journal")
+        // A note you wrote is a Note, not a Journal entry (prd §981).
+        let what = thing.kind == .voice ? String(localized: "Voice note")
+            : thing.source == NoteSheetSource.keptSource ? String(localized: "Note")
+            : String(localized: "Journal")
         let clock = thing.capturedAt.formatted(date: .omitted, time: .shortened)
         let act = thing.kind == .voice ? String(localized: "recorded \(clock)")
                                        : String(localized: "written \(clock)")
