@@ -102,24 +102,42 @@ CUR="$(curl -fsS -H "Authorization: Bearer $T" "$API/appStoreVersions/$VER_ID/bu
   | jq_ "d=json.load(sys.stdin).get('data'); print(d['attributes']['version'] if d else 'none')")"
 echo "attached  build $CUR"
 
-STRANDED_SUB=""
+# When the build already matches there is nothing to swap, and steps 2–4 are
+# skipped — but that is NOT the same as nothing to do. Two shapes still need
+# step 5, and before either was handled every re-run reported "nothing to
+# swap" and walked away:
+#
+#   • STRANDED_SUB — a prior run's step 5 got the build attached and then died
+#     before finishing the resubmit, leaving an unsubmitted review submission.
+#   • UNSUBMITTED — the version carries the build but is in no submission at
+#     all: the state `--no-submit` leaves (PREPARE_FOR_SUBMISSION, measured
+#     2026-09-29, iOS 1.0.42 / build 697, submitted by hand because the re-run
+#     its own message told you to make exited here), or a cancel that settled
+#     to DEVELOPER_REJECTED. Only those two states: a version waiting or in
+#     review needs nothing, and a REJECTED one has an UNRESOLVED_ISSUES
+#     submission that a fresh create would collide with.
+STRANDED_SUB="" UNSUBMITTED=0
 if [ "$CUR" = "$BUILD" ]; then
   STRANDED_SUB="$(review_submission_id)"
-  if [ -z "$STRANDED_SUB" ]; then
-    echo "✓ already on build $BUILD — nothing to swap"
+  if [ -n "$STRANDED_SUB" ]; then
+    echo "  build matches, but found an unfinished review submission"
+    echo "  ($STRANDED_SUB) — it needs finishing, not leaving stuck."
+  else
+    case "$VER_STATE" in
+      PREPARE_FOR_SUBMISSION|DEVELOPER_REJECTED) UNSUBMITTED=1 ;;
+      *) echo "✓ already on build $BUILD — nothing to swap"; exit 0 ;;
+    esac
+    echo "  build matches, but the version is $VER_STATE and in no review"
+    echo "  submission — it still needs submitting."
+  fi
+  if [ "$NOSUB" = "1" ]; then
+    echo "— --no-submit: already on build $BUILD, leaving it unsubmitted —"
     exit 0
   fi
-  # The build already matches, so nothing above needs doing — but a prior
-  # run's step 5 (further down) got the build attached and then died before
-  # finishing the resubmit, leaving this. Left alone it sits forever: every
-  # future run of this command hits this same early branch and reports
-  # "nothing to swap" without ever looking at it.
-  echo "  build matches, but found an unfinished review submission"
-  echo "  ($STRANDED_SUB) — finishing it instead of leaving it stuck."
   [ "$DRY" = "1" ] && { echo "— dry run, nothing changed —"; exit 0; }
 fi
 
-if [ -z "$STRANDED_SUB" ]; then
+if [ -z "$STRANDED_SUB" ] && [ "$UNSUBMITTED" = "0" ]; then
   # ── 2 · the replacement build must exist and be usable ────────────────────
   BJSON="$(curl -fsS -H "Authorization: Bearer $T" \
     "$API/builds?filter%5Bapp%5D=$APP_ID&filter%5Bversion%5D=$BUILD&filter%5BpreReleaseVersion.platform%5D=$PLATFORM&limit=1")"
@@ -203,7 +221,7 @@ fi
 # on build $BUILD — nothing to swap" fires before this section is ever
 # reached, so the stranded submission would have sat there forever. That
 # early exit now checks for exactly this shape first (see STRANDED_SUB
-# above).
+# above), and for the version `--no-submit` leaves (UNSUBMITTED).
 #
 # So each call below CHECKS for the effect it's trying to have before
 # deciding a 409 means "try again" — a blind resend of a POST that actually
