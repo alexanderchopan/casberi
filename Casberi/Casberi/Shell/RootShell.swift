@@ -210,6 +210,7 @@ struct RootShell: View {
                 if let s = WalletSection(rawValue: raw) { chrome.walletSection = s }
                 if let s = HegotaSection(rawValue: raw) { chrome.hegotaSection = s }
                 if let s = FramesSection(rawValue: raw) { chrome.framesSection = s }
+                if let s = LogosSection(rawValue: raw) { chrome.logosSection = s }
                 if let s = PrivacyDevnetSection(rawValue: raw) { chrome.privacyDevnetSection = s }
                 if let s = VibenetSection(rawValue: raw) { chrome.vibenetSection = s }
             }

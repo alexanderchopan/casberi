@@ -72,6 +72,14 @@ grep -q 'destination: .logos' "$ROUTING" || { echo "✗ no routing row for Logos
 grep -q 'Offer(name: "Logos"' "$CATALOG" || { echo "✗ no catalog offer for Logos"; guard_fail=1; }
 # The cursor moves per BLOCK, after its rows are inserted — never per page.
 grep -q 'store.advance(to: block.id)' "$BRIDGE" || { echo "✗ the walk no longer advances per decoded block"; guard_fail=1; }
+# The room keeps the family's words and adds only Node (prd §991): a Holdings
+# or Permissions case would be a scope with nothing this network can fill.
+ROOM="Casberi/Casberi/Model/LogosRoom.swift"
+grep -q 'static let order: \[LogosSection\] = \[.home, .activity, .accounts, .node\]' "$ROOM" \
+  || { echo "✗ LogosSection's scopes moved — Home, Activity, Accounts, Node (prd §991)"; guard_fail=1; }
+if grep -qE '^\s*case (holdings|permissions|positions|nfts|risk)\b' "$ROOM"; then
+  echo "✗ LogosSection grew a scope LEZ cannot fill (prd §991)"; guard_fail=1
+fi
 (( guard_fail == 0 )) || exit 1
 echo "✓ drift guards"
 

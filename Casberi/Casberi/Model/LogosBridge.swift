@@ -34,6 +34,21 @@ final class LogosStore {
     private static let cursorKey = "logos.cursor.v1"
     private static let readAtKey = "logos.readAt.v1"
     private static let nodeKey = "logos.node.v1"
+    private static let ownersKey = "logos.owners.v1"
+
+    /// id → the owning program's readable name ("Transfers"), from the same
+    /// `getAccount` the balance comes from (prd §991) — the Accounts scope's
+    /// one line beyond the balance.
+    private(set) var owners: [String: String] {
+        didSet {
+            if let data = try? JSONEncoder().encode(owners) {
+                UserDefaults.standard.set(data, forKey: Self.ownersKey)
+            }
+        }
+    }
+
+    func owner(for id: String) -> String? { owners[id] }
+    func rememberOwners(_ read: [String: String]) { for (id, name) in read { owners[id] = name } }
     private static let nodeSnapshotKey = "logos.nodeSnapshot.v1"
 
     /// Your own node's base URL (prd §989), or nil when none is watched.
@@ -93,6 +108,10 @@ final class LogosStore {
         } else { balances = [:] }
         cursor = UserDefaults.standard.object(forKey: Self.cursorKey) as? Int
         readAt = UserDefaults.standard.object(forKey: Self.readAtKey) as? Date
+        if let data = UserDefaults.standard.data(forKey: Self.ownersKey),
+           let saved = try? JSONDecoder().decode([String: String].self, from: data) {
+            owners = saved
+        } else { owners = [:] }
         node = UserDefaults.standard.string(forKey: Self.nodeKey)
         nodeSnapshot = UserDefaults.standard.data(forKey: Self.nodeSnapshotKey)
             .flatMap { try? JSONDecoder().decode(LogosWire.NodeSnapshot.self, from: $0) }
@@ -133,6 +152,7 @@ final class LogosStore {
     func remove(_ id: String) {
         accounts.removeAll { $0 == id }
         balances.removeValue(forKey: id)
+        owners.removeValue(forKey: id)
         if accounts.isEmpty { cursor = nil }
     }
 
@@ -157,6 +177,7 @@ final class LogosStore {
     func disconnect() {
         node = nil
         nodeSnapshot = nil
+        owners = [:]
         accounts = []
         balances = [:]
         cursor = nil
@@ -256,9 +277,17 @@ enum LogosIngest {
         }
 
         var read: [String: Decimal] = [:]
+        var owned: [String: String] = [:]
+        let programs = await programIDs()
         for id in store.accounts {
-            if let account = await account(id) { read[id] = account.balance }
+            if let account = await account(id) {
+                read[id] = account.balance
+                if let name = LogosWire.programName(account.programOwner, in: programs) {
+                    owned[id] = LogosWire.programLabel(name)
+                }
+            }
         }
+        store.rememberOwners(owned)
 
         if let cursor = store.cursor, cursor > tip {
             store.resetDetected(head: tip)
@@ -272,6 +301,12 @@ enum LogosIngest {
             store.advance(to: tip)
         }
         store.rememberBalances(read, at: .now)
+        // The Home crown's line (prd §991): one sample per account per pass,
+        // the devnets' `RoomValueHistory`, so the line is what this phone saw
+        // rather than a reconstruction.
+        RoomValueHistory.note(room: LogosRoom.source, values: read.map {
+            (address: $0.key, value: NSDecimalNumber(decimal: $0.value).doubleValue)
+        })
         return outcome
     }
 

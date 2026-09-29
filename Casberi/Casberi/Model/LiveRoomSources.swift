@@ -39,8 +39,11 @@ enum LiveRoomSources {
     /// with their code (prd §638's third amendment). Their rows persist in a
     /// corpus that has them, but `Corpus.retiredSources` refuses those rows a
     /// room, so membership here could not reach them anyway.
+    /// Logos (prd §991) joins for the devnets' reason with one difference: it
+    /// DOES land rows, but a watch or a node with nothing landed yet is still
+    /// a room with a crown and tiles, never the corpus-shaped empty state.
     static let all: Set<String> = [HegotaIdentity.source, FramesIdentity.source,
-                                   PrivacyDevnetIdentity.source]
+                                   PrivacyDevnetIdentity.source, LogosRoom.source]
 
     /// **A KEYED AGENT EARNS ITS CHIP BY HOLDING A KEY (prd §842).**
     ///

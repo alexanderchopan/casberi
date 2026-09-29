@@ -450,6 +450,11 @@ final class ShellChrome {
     var framesSection: FramesSection?
     var framesSections: [FramesSection] = []
     var framesScope: String?
+    /// The Logos room's scope, its published scopes and its account pick
+    /// (prd §991) — the devnets' three, one seat over.
+    var logosSection: LogosSection?
+    var logosSections: [LogosSection] = []
+    var logosScope: String?
 
     /// The Ethrex Privacy room's scope strip and face-rail pick (prd §593).
     /// Held here rather than on the screen for §357's reason: the room is

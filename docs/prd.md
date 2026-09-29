@@ -62341,3 +62341,16 @@ Every devnet seat offered measured example addresses to watch: Frames (2), Hegot
 4. **Not touched, and asked separately:** vibenet's live discovery list (`VibenetDiscoverySection`). It reads recent accounts off the chain rather than shipping addresses, and the same reader finds this phone's own vibenet account.
 
 Seen on the simulator: the Frames page with the field, the passkey door, the one sentence and the explorer, and no suggestions.
+
+## §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (user: "for the logos room don't we want buttons on it to switch views", "i just want to make sure we stay aligned w/ the devnets and wallet and not create some new stuff unless we have to", "Accounts comes before nodes … b/c we alphebatize", 2026-09-29; builds what §989 ruled)
+
+The room is Frames' template on Logos' data: `DSRoomScopeChrome` with the crown, the scope tiles (Home first, then the alphabet, §936), the account deck, Actions and Readings. `LogosSection` is `FramesSection`'s shape, `LogosRoomFigure` draws each scope in `DSRoomSlot`, and `FeedScreen` routes the seat to it (`LiveRoomSources` membership, so a watch with nothing landed yet still gets the chrome).
+
+1. **Home:** `RoomHomeCrown` over the combined balance of the accounts in scope, with its line sampled on every pass through `RoomValueHistory` (the devnets' own). There is no unit (§988). The caption is "2 accounts · test coins", or one account's short id and owning program.
+2. **Accounts:** `RoomAccountsFaces`, picking the scope, as on every devnet.
+3. **Activity:** `RoomActivityChart` over the chain rows, and those rows under the tiles, narrowed to the picked account.
+4. **Node:** `DSFigureReading`, one number and one noun (§942): the height, "height · in sync · 8 peers", and the vouchers waiting. Your node's rows sit under the tiles. It is the one scope the family did not have, and the empty state says to give the Logos page your node's address.
+5. **Actions:** "Open the explorer", on the account's own page when one is picked. It is the seat's only honest act, because it holds no key (§988).
+6. **Absent, with their reasons written on `LogosSection`:** Holdings, Permissions, Positions, NFTs and Risk. A token lives in a separate holding account nothing maps an owner to, there is no approve or delegate, and nothing has a price. Holdings, Positions and NFTs wait on an indexer from the Logos team.
+
+Readings stay short so they never truncate: "In sync · 3 vouchers", not the roster's full line (seen truncated on the first build). Seen on a private iPhone 17 Pro simulator: all four scopes, over two watched testnet accounts and a stand-in node.

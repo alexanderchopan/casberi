@@ -4401,6 +4401,9 @@ struct FeedScreen: View {
             .onChange(of: privacyDevnetSectionPublication, initial: true) { _, now in
                 chrome.privacyDevnetSections = now
             }
+            .onChange(of: logosSectionPublication, initial: true) { _, now in
+                chrome.logosSections = now
+            }
             // Cleared on the way OUT, which the body-path writes never did:
             // every room evaluated those lines, so the list left behind was
             // whatever the last devnet visit put there. The list is also each
@@ -4411,6 +4414,7 @@ struct FeedScreen: View {
                 if source == HegotaIdentity.source { chrome.hegotaSections = [] }
                 if source == FramesIdentity.source { chrome.framesSections = [] }
                 if source == PrivacyDevnetIdentity.source { chrome.privacyDevnetSections = [] }
+                if source == LogosRoom.source { chrome.logosSections = [] }
             }
     }
 
@@ -4600,6 +4604,122 @@ struct FeedScreen: View {
             }
         }
         return out
+    }
+
+    // MARK: - Logos (prd §991)
+
+    /// The Logos room's rows for one scope: Activity is the chain's (narrowed
+    /// to the picked account), Node is your node's. Home and Accounts list
+    /// none — their figure and the Readings are the scope.
+    private func logosRows(_ rows: [Thing], section: LogosSection) -> [Thing] {
+        switch section {
+        case .activity:
+            return rows.filter { thing in
+                guard let account = LogosRoom.account(ofRef: thing.sourceRef) else { return false }
+                return chrome.logosScope == nil || chrome.logosScope == account
+            }
+        case .node:
+            return rows.filter { LogosRoom.isNodeRef($0.sourceRef) }
+        case .home, .accounts:
+            return []
+        }
+    }
+
+    /// The devnets' chrome, Logos' parts (prd §991). Every account feeds the
+    /// deck, never the scoped list, for Frames' reason: this is the control
+    /// that SETS the scope. The one act is the explorer — the seat holds no
+    /// key, so it has nothing to send and nothing to sign.
+    @ViewBuilder
+    private func logosScopeChromeSection(_ active: LogosSection, rows: [Thing]) -> some View {
+        let head = LogosRoom.compose(scope: chrome.logosScope)
+        let roster = LogosStore.shared.accounts
+        let chain = logosRows(rows, section: .activity)
+        let dates = chain.map(\.capturedAt)
+        Section {
+            DSRoomScopeChrome(
+                source: LogosRoom.source,
+                sections: chrome.logosSections,
+                active: active,
+                home: .home,
+                onPick: { chrome.logosSection = $0 },
+                accounts: logosAccountSlots(roster),
+                scope: chrome.logosScope,
+                onPickAccount: logosPickAccount,
+                reading: { logosReading($0, head: head, moves: chain.count, accounts: roster.count) },
+                crown: { slot in
+                    Group {
+                        if slot.isShowing(chrome.logosScope) {
+                            LogosRoomFigure(head: head, section: .home, activityDates: dates,
+                                            roster: roster, scope: chrome.logosScope,
+                                            onPickAccount: logosPickAccount)
+                        }
+                    }
+                },
+                figure: { scope in
+                    LogosRoomFigure(head: head, section: scope, activityDates: dates,
+                                    roster: roster, scope: chrome.logosScope,
+                                    onPickAccount: logosPickAccount)
+                },
+                acts: { slot in
+                    DevnetExplorerRow(url: slot.id.isEmpty
+                                        ? LogosIngest.explorer
+                                        : "\(LogosIngest.explorer)/account/\(slot.id)",
+                                      plain: true)
+                        .id(slot.id)
+                }
+            )
+            .listRowInsets(EdgeInsets(top: 0, leading: 0,
+                                      bottom: DSRoomChassis.contentGap, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    /// The Logos accounts as deck cards, "All" first — Frames' shape.
+    private func logosAccountSlots(_ roster: [String]) -> [DSAccountSlot] {
+        let store = LogosStore.shared
+        let all = DSAccountSlot(
+            id: "",
+            name: String(localized: "All accounts"),
+            sub: roster.isEmpty
+                ? String(localized: "Nothing watched on Logos yet")
+                : ListFormatter.localizedString(byJoining: roster.map(LogosWire.short)),
+            faces: roster.prefix(2).map { .wallet(address: $0) })
+        return [all] + roster.map { id in
+            DSAccountSlot(id: id, name: LogosWire.short(id),
+                          sub: store.balance(for: id).map { String(localized: "\(LogosWire.amount($0)) test coins") },
+                          faces: [.wallet(address: id)])
+        }
+    }
+
+    /// What each Logos scope holds, before you open it (prd §747).
+    private func logosReading(_ section: LogosSection, head: LogosRoom.Head,
+                              moves: Int, accounts: Int) -> String? {
+        switch section {
+        case .home:
+            return nil
+        case .activity:
+            return moves == 0 ? section.emptyHeadline
+                : (moves == 1 ? String(localized: "1 move") : String(localized: "\(moves) moves"))
+        case .accounts:
+            return accounts == 0 ? section.emptyHeadline
+                : (accounts == 1 ? String(localized: "1 account") : String(localized: "\(accounts) accounts"))
+        case .node:
+            // Short, so the reading never truncates: the state, and the
+            // vouchers when there are any. The figure carries the rest.
+            guard head.nodeWatched else { return section.emptyHeadline }
+            guard let snap = head.node else { return String(localized: "Not read yet") }
+            guard snap.reachable else { return String(localized: "Not answering") }
+            let state = snap.synced ? String(localized: "In sync") : String(localized: "Syncing")
+            guard let v = snap.vouchers, v > 0 else { return state }
+            return v == 1 ? String(localized: "\(state) · 1 voucher") : String(localized: "\(state) · \(v) vouchers")
+        }
+    }
+
+    func logosPickAccount(_ picked: String?) {
+        withAnimation(DS.Motion.standard) {
+            chrome.logosScope = (picked?.isEmpty ?? true) ? nil : picked
+        }
     }
 
     /// THE PRIVACY DEVNET'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
@@ -4849,6 +4969,11 @@ struct FeedScreen: View {
     private var framesSectionPublication: [FramesSection] {
         guard source == FramesIdentity.source else { return [] }
         return FramesRoomSource.sections()
+    }
+
+    private var logosSectionPublication: [LogosSection] {
+        guard source == LogosRoom.source else { return [] }
+        return LogosSection.present()
     }
 
     private var privacyDevnetSectionPublication: [PrivacyDevnetSection] {
@@ -5699,6 +5824,19 @@ struct FeedScreen: View {
             // back to the tiles' edge themselves (`DSDayHeader`).
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                       bottom: DS.Space.s4, trailing: DS.Space.s4))
+        } else if source == LogosRoom.source {
+            // **THE LOGOS ROOM (prd §991)** — a devnet-family room that DOES land
+            // rows. The chrome draws the crown, the tiles, Actions and the
+            // Readings on Home; off Home the scope's figure leads and the tiles
+            // sit under it. Activity and Node then list their own rows here,
+            // with no cover: the crown is the room's lead, not the newest row.
+            let logosSection = LogosSection.resolve(chrome.logosSection,
+                                                    present: chrome.logosSections)
+            logosScopeChromeSection(logosSection, rows: rows)
+            if logosSection == .activity || logosSection == .node {
+                let days = chronoGroups(logosRows(rows, section: logosSection))
+                groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
+            }
         } else if source == PrivacyDevnetIdentity.source {
             // **NO `if let`.** `compose` is non-Optional precisely so this arm
             // cannot be skipped: the seat is in `LiveRoomSources`, so falling
