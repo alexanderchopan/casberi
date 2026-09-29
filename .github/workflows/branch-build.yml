@@ -1,0 +1,52 @@
+# Compiles the app on a `claude/**` branch, for a session that has no Mac.
+#
+# A cloud session's container is Linux: no Xcode, no swiftc. Without this, a
+# branch written there reaches the Mac uncompiled. It is not `verify.sh` — no
+# simulator, no sweep, no harness — only the two compiles (iOS Simulator and
+# Mac Catalyst) that tell whether the tree builds. `verify.sh` on the Mac stays
+# the gate before a merge.
+name: Branch build
+
+on:
+  push:
+    branches: ['claude/**']
+  workflow_dispatch:
+
+concurrency:
+  group: branch-build-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        dest:
+          - 'generic/platform=iOS Simulator'
+          - 'generic/platform=macOS,variant=Mac Catalyst'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          X=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -1)
+          [[ -z "$X" ]] && X=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild -project Casberi/Casberi.xcodeproj -scheme Casberi \
+            -destination '${{ matrix.dest }}' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Errors
+        if: failure()
+        run: grep -E "error:" build.log | sort -u | head -80 || tail -80 build.log
