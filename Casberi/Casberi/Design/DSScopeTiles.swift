@@ -187,7 +187,16 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         if held == section { held = nil }
                     }
-                }
+                },
+            // **ONLY A TILE THAT HOLDS SOMETHING LISTENS FOR A HOLD
+            // (2026-09-28, user: "the categories aren't scrolling").** A
+            // long press on every tile of the strip took the finger from the
+            // horizontal scroll view, so the capsule on Accounts, Addresses,
+            // Settings and What this app reaches never scrolled and every
+            // tile past the sixth (Wallet, there) was out of reach. Only the
+            // Notes room's New carries a hold; `.subviews` keeps the tile's
+            // own Button live everywhere else.
+            including: (isVerb && hold != nil) ? .all : .subviews
         )
         // ARMING (prd §973): a finger still down past a tap's length morphs
         // the glyph; lifting early, or the hold landing, morphs it back.
