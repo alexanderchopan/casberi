@@ -2140,6 +2140,9 @@ struct MainSurface: View {
             chrome.remindersScope = .all
             // The Calendar room opens on Week (prd §994).
             chrome.calendarScope = .week
+            // The music rooms open on Activity (prd §995).
+            chrome.musicScope = .activity
+            chrome.musicGroup = nil
             chrome.pinterestScope = nil
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a

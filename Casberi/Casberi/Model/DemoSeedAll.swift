@@ -2720,14 +2720,18 @@ enum DemoSeedAll {
         // record would honestly wear the same picture twice — and the demo
         // may show no picture twice (prd §890). Pyramid Song and Unfinished
         // Sympathy replaced In Rainbows' and Mezzanine's second tracks.
-        let music: [(String, Double)] = [
-            ("Reckoner — Radiohead", 3), ("Pyramid Song — Radiohead", 7),
-            ("Teardrop — Massive Attack", 12), ("Unfinished Sympathy — Massive Attack", 22),
-            ("Svefn-g-englar — Sigur Rós", 30), ("Hoppípolla — Sigur Rós", 43),
+        // Each carries its album as `AppleMusicIngest.songFacts` stores it,
+        // so the room's Albums tile has something to list (prd §995).
+        let music: [(String, Double, String)] = [
+            ("Reckoner — Radiohead", 3, "In Rainbows"), ("Pyramid Song — Radiohead", 7, "Amnesiac"),
+            ("Teardrop — Massive Attack", 12, "Mezzanine"),
+            ("Unfinished Sympathy — Massive Attack", 22, "Blue Lines"),
+            ("Svefn-g-englar — Sigur Rós", 30, "Ágætis byrjun"), ("Hoppípolla — Sigur Rós", 43, "Takk..."),
         ]
         out += music.enumerated().map { i, m in
             row(.link, m.0, source: "Apple Music", ref: "demo:music:\(i)", days: m.1, hour: 8) { t in
                 t.previewImageURL = art("music-\(i)")
+                t.facts = [ThingFact("Album", m.2).encoded]
             }
         }
         // Spotify recently-played — the same "Song — Artist" shape as Apple

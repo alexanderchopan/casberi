@@ -50,7 +50,8 @@ protocol DSTileScope: DSSectionScope {
 /// list is short in most rooms, so the cost is a flick back up.
 struct DSScopeTiles<Scope: DSTileScope>: View {
 
-    /// Every scope, Home first, in the room's own order.
+    /// Every scope. The grid DRAWS them All/Home first, then A–Z, then the
+    /// verbs (`alphabetical`); the strip draws them as given.
     let sections: [Scope]
     let active: Scope
     var attention: Set<Scope> = []
@@ -130,11 +131,34 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                                      count: Self.columns),
                       alignment: .leading,
                       spacing: DS.Space.s2) {
-                ForEach(sections) { section in
+                ForEach(Self.alphabetical(sections, verbs: verbs)) { section in
                     tile(section)
                 }
             }
         }
+    }
+
+    /// **A ROOM'S TILES READ A–Z (user, 2026-09-29: "for music rooms all
+    /// tiles need to be alphabetical", then "that's a rule for any room").**
+    /// All and the wallet family's Home stay first (user: leads stay), a
+    /// verb (New) stays last because it is not a list, and everything
+    /// between sorts by the word the person reads, in their language. A lead
+    /// is known by its GLYPH: `room-kind-tiles-selftest.sh` holds every tile
+    /// glyph to one meaning, so `ScopeTileGlyph.all` and `.home` can only be
+    /// All and Home. Not "whatever is first": Calendar lists Today first and
+    /// opens on Week, and neither is a lead. The wallet family sorted this
+    /// way already (`DSRoomScopeChrome.ordered`, prd §950); here it is the
+    /// template's, so no room can forget it. The strip is exempt: it is a
+    /// directory's categories, which keep the dock's own order.
+    static func alphabetical(_ sections: [Scope], verbs: Set<Scope>) -> [Scope] {
+        let isLead: (Scope) -> Bool = {
+            $0.glyph == ScopeTileGlyph.all || $0.glyph == ScopeTileGlyph.home
+        }
+        let leads = sections.filter(isLead)
+        let tail = sections.filter { !isLead($0) && verbs.contains($0) }
+        let middle = sections.filter { !isLead($0) && !verbs.contains($0) }
+            .sorted { $0.label.localizedStandardCompare($1.label) == .orderedAscending }
+        return leads + middle + tail
     }
 
     @ViewBuilder

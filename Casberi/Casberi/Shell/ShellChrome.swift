@@ -524,6 +524,15 @@ final class ShellChrome {
     /// change like `notesScope`.
     var calendarScope: CalendarScope = .week
 
+    /// Which order the music rooms stand in (prd §995) — Activity, Albums,
+    /// Artists or Songs. Cleared on every source change like `notesScope`.
+    var musicScope: MusicScope = .activity
+
+    /// The album or artist standing open under its tile (prd §995), by
+    /// name; nil is the A–Z list of names. Cleared with `musicScope` and on
+    /// every tile pick, so the lit tile tapped again leads back.
+    var musicGroup: String? = nil
+
     /// The folder standing open under the Folders tile (prd §980), by name;
     /// nil is the folder list. Only ever set while `notesScope == .folders`,
     /// and cleared with it on every source change and every tile pick — the
