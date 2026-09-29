@@ -42,6 +42,10 @@ enum DSSkeleton {
         case grid
         /// The snapshot rings.
         case ring
+        /// A to-do list: an open check circle beside each line (the
+        /// Reminders room, prd §993). Reached by its caller, never a glyph —
+        /// no wallet-family scope is a list of to-dos.
+        case checklist
 
         init(glyph: String) {
             switch glyph {
@@ -223,6 +227,18 @@ struct DSSkeletonFigure: View {
                            endAngle: .degrees(-90 + 360 * trim), clockwise: false)
                 ctx.stroke(arc, with: .color(DSSkeleton.shape),
                            style: StrokeStyle(lineWidth: 14 * min(sx, sy), lineCap: .round))
+            }
+        case .checklist:
+            // Open circles, never a filled one: a checked circle would say
+            // something was done, and this says nothing is here.
+            for (i, w) in [190.0, 130, 230, 160, 100].enumerated() {
+                let y = 26 + CGFloat(i) * 52
+                let r = 11 * min(sx, sy)
+                let circle = Path(ellipseIn: CGRect(x: 14 * sx - r, y: y * sy - r,
+                                                    width: 2 * r, height: 2 * r))
+                ctx.stroke(circle, with: .color(DSSkeleton.accent), lineWidth: 2)
+                pill(40, y - 10, CGFloat(w))
+                pill(40, y + 6, 70, 7, DSSkeleton.track)
             }
         }
     }

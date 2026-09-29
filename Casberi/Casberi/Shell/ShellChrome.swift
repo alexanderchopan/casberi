@@ -525,6 +525,10 @@ final class ShellChrome {
     /// while a folder is open is filed in it.
     var notesFolder: String? = nil
 
+    /// Which of the Reminders room's tiles is standing (prd §993) — All,
+    /// Today or Scheduled; never New. Cleared on every source change.
+    var remindersScope: RemindersScope = .all
+
     /// The Notes room's New tile, pressed (prd §969) — a counter `RootShell`
     /// answers by raising the note sheet, the way `pinPulse` is felt. Bumped
     /// only; whoever raises the sheet reads it.

@@ -2403,6 +2403,10 @@ struct FeedScreen: View {
             : RoomKindTiles.Room(source: source).map {
                 RoomKindTiles.Census(room: $0, refs: base.map(\.sourceRef))
             }
+        // Read ONCE, here, not per row (prd §993): with no rows the per-row
+        // read never happens, the body observes nothing, and a tile picked
+        // over an empty list lit nothing and changed nothing.
+        let remindersPick = source == "Reminders" ? chrome.remindersScope : .all
         return base.filter { thing in
             // The pinned room's membership is decided entirely by the `@Query`
             // above (`pinnedAt != nil`), so there is no source to match against
@@ -2423,6 +2427,7 @@ struct FeedScreen: View {
                 && personScopeAllows(thing)
                 && githubScopeAllows(thing)
                 && notesScopeAllows(thing)
+                && remindersPick.allows(done: thing.mark == .done, dueAt: thing.dueAt)
                 // The kind tile (prd §815), which COMBINES with the GitHub
                 // face rail above rather than replacing it.
                 && (census.map {
@@ -3081,6 +3086,17 @@ struct FeedScreen: View {
         }
     }
 
+    /// **A CONNECTED REMINDERS ROOM WITH NOTHING IN IT HOLDS ITS LEAD (prd
+    /// §993).** Nothing open is a real state of a list — everything done — so
+    /// the room keeps its box and its tiles and says so, instead of being
+    /// replaced by the invitation written for a room that is not connected.
+    /// A seat that is paused or needs attention keeps `quietState`, whose
+    /// door is the fix: an empty box there would claim a list it cannot see.
+    private var remindersHoldsLead: Bool {
+        guard source == "Reminders" else { return false }
+        return bridges.bridges.first { $0.name == "Reminders" }?.status == .connected
+    }
+
     /// The kind tile in force in a kind-tile room (prd §815, §816),
     /// resolved: a pick whose kind is no longer offered is All. Before the
     /// room's first head computation there is no presence to resolve against,
@@ -3213,6 +3229,24 @@ struct FeedScreen: View {
                     chrome.notesScope = picked
                     chrome.notesFolder = nil
                 }
+            }
+        }
+    }
+
+    /// The Reminders room's tiles (prd §993): All · Today · Scheduled · New.
+    /// New leaves for the Reminders app, where a reminder is made (ruling
+    /// 2026-07-25), and is drawn only where that app answers its scheme — a
+    /// tile that opens nothing is a dead control (§83).
+    private var remindersTiles: DSScopeTiles<RemindersScope> {
+        let canOpen = HandOffState.answers("x-apple-reminderkit")
+        return DSScopeTiles(sections: RemindersScope.allCases.filter { !$0.isVerb || canOpen },
+                            active: chrome.remindersScope,
+                            attention: [],
+                            verbs: [.new]) { picked in
+            if picked.isVerb {
+                if let url = URL(string: "x-apple-reminderkit://") { openExternal(url) }
+            } else {
+                withAnimation(DS.Motion.standard) { chrome.remindersScope = picked }
             }
         }
     }
@@ -5628,7 +5662,7 @@ struct FeedScreen: View {
             // What survives is COMPOSE, and only because it is a different
             // verb: "New event" / "New task" leaves for another app, which
             // the catalogue is not a door to. See `sourceComposeRow`.
-            if let bridge = activeSourceBridge,
+            if let bridge = activeSourceBridge, source != "Reminders",
                let action = SourceActions.action(forSource: bridge.name),
                case .openURL = action.run {
                 sourceComposeRow(action)
@@ -5770,9 +5804,10 @@ struct FeedScreen: View {
         // before `keepsChromeWhenEmpty` is ever consulted.
         // The Notes room is never replaced either (prd §969, §979): its New
         // tile is how an empty one stops being empty, and the generic state
-        // told a first-time writer to open the catalog instead.
+        // told a first-time writer to open the catalog instead. Nor is a
+        // connected Reminders room (prd §993).
         if !roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil
-            && !Pinboard.isPinnedRoom(source) {
+            && !Pinboard.isPinnedRoom(source) && !remindersHoldsLead {
             Group { emptyState }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -5985,7 +6020,8 @@ struct FeedScreen: View {
         // just see a black screen"*. `LiveRoomSources`' own doc names this
         // exact shape twice — it is why Hegotá, Frames and the Privacy devnet
         // each have an arm above rather than a flag.
-        } else if roomHasContent || roomAgent != nil || Pinboard.isPinnedRoom(source) {
+        } else if roomHasContent || roomAgent != nil || Pinboard.isPinnedRoom(source)
+                    || remindersHoldsLead {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
@@ -6066,6 +6102,10 @@ struct FeedScreen: View {
             // (prd §979, §980): an empty Pinned or Folders pick keeps them,
             // and Folders keeps its New folder row under them.
             || Pinboard.isPinnedRoom(source)
+            // The Reminders room's tiles, for the kind tile's reason, and its
+            // empty list, which is a state of the list (prd §993).
+            || (source == "Reminders" && chrome.remindersScope != .all)
+            || remindersHoldsLead
     }
 
     /// The day sections of a room that has rows, plus its closing line.
@@ -7909,8 +7949,10 @@ struct FeedScreen: View {
     /// every row of its newest day declines the cover (§763) — keeps its lead
     /// unheld, because an empty state over a full list is the §83 lie. The
     /// honest fix for that case is a cover, not a skeleton.
-    private func emptyLeadRow(headline: Text, words: Text) -> some View {
-        DSEmptyState(headline: headline, words: words, scale: .list(rows: 3))
+    private func emptyLeadRow(headline: Text, words: Text,
+                              figure: DSSkeleton.Figure? = nil) -> some View {
+        DSEmptyState(headline: headline, words: words,
+                     scale: figure.map { .room($0) } ?? .list(rows: 3))
             .frame(maxWidth: .infinity,
                    minHeight: DSRoomChassis.leadBox,
                    maxHeight: DSRoomChassis.leadBox)
@@ -8140,7 +8182,11 @@ struct FeedScreen: View {
         menuFollows: Bool = false,
         // What the held lead says over an empty list; the kind tile's summary
         // unless the room has its own line (Notes, prd §969).
-        emptyWords: Text? = nil) -> some View {
+        emptyWords: Text? = nil,
+        // What the held lead draws and says instead of the skeleton rows and
+        // "Nothing here yet." — the Reminders room's checklist (prd §993).
+        emptyFigure: DSSkeleton.Figure? = nil,
+        emptyHeadline: Text? = nil) -> some View {
         let leadHeld = cover != nil || (tiles != nil && listEmpty)
         if let cover {
             Section {
@@ -8150,8 +8196,9 @@ struct FeedScreen: View {
             }
         } else if tiles != nil, listEmpty {
             Section {
-                emptyLeadRow(headline: DSProse.text("Nothing here yet."),
-                             words: emptyWords ?? Text(roomKindPick.summary))
+                emptyLeadRow(headline: emptyHeadline ?? DSProse.text("Nothing here yet."),
+                             words: emptyWords ?? Text(roomKindPick.summary),
+                             figure: emptyFigure)
             }
         }
         if let tiles {
@@ -10634,7 +10681,15 @@ struct FeedScreen: View {
         let open = visible.filter { $0.mark == .doing }
             + visible.filter { $0.mark == .todo || $0.mark == .none }
         let reminderCover = coverThing(heroShown ? nil : ledeThingID(in: [("", open)]), in: visible)
-        if let reminderCover { Section { ledeListRow(reminderCover) } }
+        if source == "Reminders" {
+            // The cover, then the tiles; over an empty scope, the lead box
+            // holds the checklist drawn empty (prd §993).
+            let scope = chrome.remindersScope
+            standaloneLead(cover: reminderCover, tiles: remindersTiles, listEmpty: visible.isEmpty,
+                           emptyWords: Text(scope.summary),
+                           emptyFigure: .checklist,
+                           emptyHeadline: Text(scope.emptyHeadline))
+        } else if let reminderCover { Section { ledeListRow(reminderCover) } }
         let doing = visible.filter { $0.mark == .doing && $0.id != reminderCover?.id }
         let todos = visible.filter { ($0.mark == .todo || $0.mark == .none) && $0.id != reminderCover?.id }
         let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)

@@ -62354,3 +62354,30 @@ The room is Frames' template on Logos' data: `DSRoomScopeChrome` with the crown,
 6. **Absent, with their reasons written on `LogosSection`:** Holdings, Permissions, Positions, NFTs and Risk. A token lives in a separate holding account nothing maps an owner to, there is no approve or delegate, and nothing has a price. Holdings, Positions and NFTs wait on an indexer from the Logos team.
 
 Readings stay short so they never truncate: "In sync · 3 vouchers", not the roster's full line (seen truncated on the first build). Seen on a private iPhone 17 Pro simulator: all four scopes, over two watched testnet accounts and a stand-in node.
+
+## §993 — The Reminders room holds its lead when empty, and scopes like Apple's lists (user: "i meant when empty should have an empty state card", then "ok thats good build it", 2026-09-29)
+
+**What it did.** A connected Reminders room with nothing open had no lead at all. It had no cover (no open reminder), no tiles, and `Corpus.hasSurfaced` false, so `roomBody` replaced the whole room with `quietState`: the invitation written for a room that is not connected.
+
+**Ruling.** The room keeps the fixed lead box (`DSRoomChassis.leadBox`, §760) over an empty list. The box draws a new `DSSkeleton.Figure.checklist`, which is five open circles beside line stubs and no filled circle, because a checked one would say something was done. Centred on it is one clause per scope (§799): "Nothing to do.", "Nothing due today.", "Nothing scheduled."
+
+Under the box are the room's tiles, **All · Today · Scheduled · New** (`Model/RemindersScope.swift`), which are Apple's own smart lists:
+- **Today** is Apple's Today: due before tomorrow, overdue included.
+- **Scheduled** is anything open with a date.
+- **New** is a verb, like the Notes room's. It never lights, and its tap opens the Reminders app. It is drawn only where `x-apple-reminderkit` answers (§83). It replaces the "New reminder" compose row for this room, so there are not two doors to one act.
+
+The held lead is gated on the seat being **connected** (`remindersHoldsLead`). A paused seat, or one that needs attention, keeps `quietState`, whose door is the fix. An empty box there would claim a list the app cannot see.
+
+**Still read-only.** Nothing here writes. The 2026-07-25 ruling (a reminder's done-state is mirrored, never set) and the 2026-09-24 decline of bridge write-backs both stand. A real EventKit write (New as a sheet, Complete) was offered and not taken.
+
+**No Done tile.** The ingest lands OPEN reminders and marks one done only if it had already landed it. A Done list would be the fraction this app happened to see finish, dressed as Apple's Completed.
+
+**Two defects paid on the way, both general:**
+- **A scope read only per row observes nothing over an empty list.** `liveVisible` read the pick inside `base.filter`, so with no rows the body never read `chrome.remindersScope`, and a tile picked over an empty room lit nothing. The pick is now read once before the filter. `notesScopeAllows` has the same shape and is not changed here.
+- **`HandOffState.installedSchemes` is a foreground snapshot that nothing observes**, so a room mounted before it read every scheme as absent and dropped the New tile for the whole visit. `HandOffState.answers(_:)` asks `canOpenURL` directly until the first snapshot lands.
+
+**Hooks.** `-connectReminders YES` runs the real connect through `BridgeConnect`, so the seat reads connected; relaunch to see it, and grant with `simctl privacy … grant reminders` first. `-openSection today|scheduled` lands a tile. Pass `-demo.corpusAllowed NO` on a fresh install, or the DEBUG dev seed pours four reminders.
+
+**Not changed.** The demo pour still seeds no Reminders rows (check K's `KNOWN_UNCONNECTED_LEGACY_SEAT`), so the furnished demo has no Reminders room. Todoist shares the room's shape and gets none of this.
+
+**Seen:** on an iPhone 17 simulator, connected with an empty Reminders store: All in dark and light, and Today in dark ("Nothing due today.", the Today tile lit). Also the dev seed's four reminders under All and under Today (Gym and Book dentist).

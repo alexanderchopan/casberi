@@ -107,6 +107,10 @@ enum ScopeTileGlyph {
     static let pinned       = "pin"
     static let folders      = "folder"
     static let new          = "plus"
+    /// The Reminders room's date scopes (prd §993), Apple's own smart lists.
+    /// Not `calendar`: that is the event kind's glyph and the Calendar seat's.
+    static let today        = "sun.max"
+    static let scheduled    = "calendar.badge.clock"
 }
 
 /// The Notes room's tiles (prd §969). Conformed here for the reason every
@@ -119,6 +123,19 @@ extension NotesScope: DSTileScope {
         case .pinned:  return ScopeTileGlyph.pinned
         case .folders: return ScopeTileGlyph.folders
         case .new:     return ScopeTileGlyph.new
+        }
+    }
+}
+
+/// The Reminders room's tiles (prd §993). New is the Notes room's plus: the
+/// same verb, so the same glyph.
+extension RemindersScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:       return ScopeTileGlyph.all
+        case .today:     return ScopeTileGlyph.today
+        case .scheduled: return ScopeTileGlyph.scheduled
+        case .new:       return ScopeTileGlyph.new
         }
     }
 }

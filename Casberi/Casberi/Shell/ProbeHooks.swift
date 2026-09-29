@@ -4795,6 +4795,19 @@ enum ProbeHooks {
                 NSLog("Photos probe: connected, %d in", n)
             }
         },
+        // `-connectReminders YES` runs the real Reminders connect through
+        // `BridgeConnect`, so the SEAT reads connected (prd §993's empty lead
+        // is gated on it). It writes a second `BridgeStore` to the saved
+        // seats, so relaunch to see it. Grant first with `simctl privacy
+        // <udid> grant reminders com.casberi.app`, or the ask blocks.
+        Hook(key: "connectReminders") { _, context in
+            guard let offer = BridgeCatalog.offer(forSource: "Reminders") else {
+                NSLog("Reminders probe: FAILED (no offer)"); return
+            }
+            BridgeConnect.connect(offer, store: BridgeStore(), context: context) { ok in
+                NSLog("Reminders probe: %@", ok ? "connected" : "FAILED (access denied)")
+            }
+        },
         // `-reingestPhotos YES` calls the bare re-scan BridgeRefresh now
         // uses (no permission request) — headless test that a photo added
         // AFTER connect is picked up on the next pass (report 2026-07-09).

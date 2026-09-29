@@ -213,6 +213,8 @@ struct RootShell: View {
                 if let s = LogosSection(rawValue: raw) { chrome.logosSection = s }
                 if let s = PrivacyDevnetSection(rawValue: raw) { chrome.privacyDevnetSection = s }
                 if let s = VibenetSection(rawValue: raw) { chrome.vibenetSection = s }
+                // The Reminders room's date tiles too (prd §993).
+                if let s = RemindersScope(rawValue: raw), !s.isVerb { chrome.remindersScope = s }
             }
         }
         #endif

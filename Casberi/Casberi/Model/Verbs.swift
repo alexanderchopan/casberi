@@ -848,7 +848,25 @@ enum HandOffState {
         lock.lock()
         _installedSchemes = schemes
         _connectedBridges = connected
+        _refreshed = true
         lock.unlock()
+    }
+
+    private static var _refreshed = false
+
+    /// Whether `scheme` opens an installed app, for a control drawn in a
+    /// body. `installedSchemes` is a snapshot taken on foreground and nothing
+    /// observes it, so a room mounted before that snapshot read every scheme
+    /// as absent and dropped its door for the whole visit (the Reminders
+    /// room's New tile, prd §993). Before the first snapshot this asks the
+    /// system directly — one `canOpenURL` for a listed scheme.
+    @MainActor static func answers(_ scheme: String) -> Bool {
+        lock.lock()
+        let refreshed = _refreshed, known = _installedSchemes.contains(scheme)
+        lock.unlock()
+        if refreshed { return known }
+        guard let url = URL(string: "\(scheme)://") else { return false }
+        return UIApplication.shared.canOpenURL(url)
     }
 }
 
