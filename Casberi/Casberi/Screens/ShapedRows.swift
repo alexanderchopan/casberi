@@ -480,6 +480,16 @@ struct BandRow: View {
             ? thing.capturedAt.formatted(date: .omitted, time: .shortened) : nil
     }
 
+    /// A voice note's LENGTH (prd §987), on the line where an event's clock
+    /// stands: the one fact the waveform lead cannot say, and the one you
+    /// want before pressing play. Off the stored span, so nothing decodes.
+    private var voiceLength: String? {
+        guard thing.kind == .voice,
+              let seconds = VoiceLength.seconds(from: thing.capturedAt, to: thing.endAt)
+        else { return nil }
+        return VoiceLength.label(seconds)
+    }
+
     private var titleText: String {
         if moneyAmount != nil, let amount = thing.transferAmount,
            let range = thing.title.range(of: " \(amount)") {
@@ -774,10 +784,15 @@ struct BandRow: View {
     /// not name the network, so those rows keep the name.
     /// What a note of yours says under its title (prd §983).
     private var previewLine: Text? {
-        NotePreview.line(title: thing.title, content: thing.content,
-                         isVoice: thing.kind == .voice,
-                         isLocked: NoteLock.isLocked(thing))
-            .map { Text(verbatim: $0) }
+        let words = NotePreview.line(title: thing.title, content: thing.content,
+                                     isVoice: thing.kind == .voice,
+                                     isLocked: NoteLock.isLocked(thing))
+        // A voice note's line carries its length after its kind (prd §987):
+        // "Voice note · 0:42".
+        if let words, let voiceLength {
+            return Text(verbatim: "\(words) · \(voiceLength)")
+        }
+        return words.map { Text(verbatim: $0) }
     }
 
     private func line(project: String?, leader: Leader, qualifier: String? = nil) -> Text? {
@@ -797,7 +812,8 @@ struct BandRow: View {
         // The qualifier leads the line (prd §915): what the title said after
         // its seam — the game, the board, the verb — in the line's own ink,
         // before the clock and the project.
-        let parts = [qualifier.map { Text(verbatim: $0) }, eventClock.map { Text($0) }, labelled]
+        let parts = [qualifier.map { Text(verbatim: $0) }, eventClock.map { Text($0) },
+                     voiceLength.map { Text(verbatim: $0).monospacedDigit() }, labelled]
             .compactMap { $0 }
         guard let first = parts.first else { return nil }
         return parts.dropFirst().reduce(first) { $0 + Text(verbatim: " · ") + $1 }

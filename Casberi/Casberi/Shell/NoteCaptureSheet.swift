@@ -715,9 +715,20 @@ struct NoteCaptureSheet: View {
             sourceRef: piece.sourceRef)
         thing.audio = bytes
         thing.folder = folder
+        // THE SPAN (prd §987): the note starts when the recording did and ends
+        // now, so its length is `endAt − capturedAt` — the pair an event uses
+        // for when it runs — and the row can say "0:42" with nothing decoded.
+        if let bytes, let length = VoiceTranscribe.length(of: bytes) {
+            let end = Date.now
+            thing.capturedAt = end.addingTimeInterval(-length)
+            thing.endAt = end
+        }
         context.insert(thing)
         context.saveHonestly()
         SpotlightIndex.index([thing])
+        // Its words, read back off the whole file with a time for each
+        // (prd §987) — after it lands, so Stop never waits on it.
+        Task { @MainActor in await VoiceHeal.settle(thing, in: context) }
         return thing
     }
 

@@ -5871,6 +5871,71 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-voiceNoteFile <path to audio>` keeps a voice note under `You`
+        // from a file, as Stop would with the mic's recording (prd §987): the
+        // simulator has no microphone, so this is how a sweep gets a note
+        // with real audio — a `say` recording — for the player's playhead,
+        // its seek, its speed and the timed words. The transcript starts
+        // empty; `VoiceHeal.settle` reads the file and writes it, which is
+        // the rewrite path under test. NSLogs `voiceNoteFile:` and then
+        // `voiceSettle:` with what the settle did.
+        Hook(key: "voiceNoteFile") { path, context in
+            guard let bytes = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                NSLog("[Casberi] voiceNoteFile: unreadable %@", path); return
+            }
+            let thing = Thing(kind: .voice, title: String(localized: "Voice note"), content: "",
+                              source: NoteSheetSource.keptSource, sourceRef: "voice:\(UUID().uuidString).m4a")
+            thing.audio = bytes
+            if let length = VoiceTranscribe.length(of: bytes) {
+                let end = Date.now
+                thing.capturedAt = end.addingTimeInterval(-length)
+                thing.endAt = end
+            }
+            context.insert(thing)
+            _ = context.saveHonestly()
+            NSLog("[Casberi] voiceNoteFile: kept %d bytes, length=%.1fs", bytes.count,
+                  VoiceLength.seconds(from: thing.capturedAt, to: thing.endAt) ?? -1)
+            // THE SIMULATOR HAS NO iOS 26 SPEECH MODEL (measured 2026-09-29:
+            // its install answers "unsupported configuration"). A
+            // `<path>.timeline.json` beside the audio — `VoiceTimeline`
+            // encoded on a Mac, off the same `build(runs:)` — stands in for
+            // the read, and goes through the same cache and the same
+            // `rewrite` the settle would. Says so in its log line.
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path + ".timeline.json")),
+               let timeline = try? JSONDecoder().decode(VoiceTimeline.self, from: data) {
+                VoiceTimeline.store(timeline, for: thing.id)
+                let rewritten = VoiceHeal.rewrite(thing, with: timeline.text)
+                _ = context.saveHonestly()
+                NSLog("[Casberi] voiceSettle: from sidecar timed=1 rewritten=%d words=%d title=%@",
+                      rewritten ? 1 : 0, timeline.words.count, thing.title)
+                return
+            }
+            Task { @MainActor in
+                let r = await VoiceHeal.settle(thing, in: context)
+                NSLog("[Casberi] voiceSettle: lengths=%d timed=%d rewritten=%d words=%d title=%@",
+                      r.lengths, r.timed, r.rewritten,
+                      VoiceTimeline.cached(for: thing.id)?.words.count ?? 0, thing.title)
+            }
+        },
+        // `-voiceHealProbe YES` runs the launch pass over every voice note of
+        // yours (prd §987) and NSLogs what it did, whether the iOS 26 model
+        // is here, and each note's length and word count.
+        Hook(key: "voiceHealProbe") { _, context in
+            Task { @MainActor in
+                let installed = await VoiceTranscribe.analyzerInstalled()
+                let r = await VoiceHeal.run(context: context)
+                NSLog("[Casberi] voiceHeal: analyzer=%@ lengths=%d timed=%d rewritten=%d",
+                      installed ? "installed" : "absent", r.lengths, r.timed, r.rewritten)
+                let source = NoteSheetSource.keptSource
+                let notes = ((try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == source }))) ?? []).filter { $0.kind == .voice }
+                for t in notes.prefix(12) {
+                    NSLog("[Casberi] voiceHealRow| length=%@ words=%d title=%@",
+                          VoiceLength.seconds(from: t.capturedAt, to: t.endAt).map { VoiceLength.label($0) } ?? "none",
+                          VoiceTimeline.cached(for: t.id)?.words.count ?? 0, t.title)
+                }
+            }
+        },
         // `-dropboxFolder <path>` points the Dropbox bridge at a folder
         // headlessly and syncs it — but only once the OAuth token is already
         // in the Keychain (PKCE needs a real browser hop, so unlike

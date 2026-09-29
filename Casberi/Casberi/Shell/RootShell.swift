@@ -561,6 +561,11 @@ struct RootShell: View {
                 // Voice notes under the retired "Voice" source converge onto
                 // `You` (prd §972), in the same every-launch shape.
                 SourceRename.sweepVoice(context: modelContext)
+                // Every voice note's length, and a few notes' words read back
+                // with their times (prd §987). Its own task: a read is seconds
+                // of on-device work, and nothing below waits on it.
+                let voiceContext = modelContext
+                Task { @MainActor in await VoiceHeal.run(context: voiceContext) }
                 #if DEBUG
                 // `[wall]` because these now yield: the figure is elapsed
                 // time across the suspensions, not main-actor time held, and

@@ -2283,6 +2283,7 @@ harness "World ID pure-logic self-test" "worldid self-test" "scripts/worldid-sel
 # timeless transfer passed through, a hex block or timestamp read as decimal, a
 # timed transfer rewritten from the cache, and `fetchAlchemy` bypassing the fill.
 harness "Transfer-times self-test" "transfer times self-test" "scripts/transfer-times-selftest.sh" "the transfer-times self-test failed — run scripts/transfer-times-selftest.sh"
+harness "Voice-timeline self-test" "voice timeline self-test" "scripts/voice-timeline-selftest.sh" "the voice-timeline self-test failed — run scripts/voice-timeline-selftest.sh"
 
 # The feed's day seam and the corpus floor (prd §866). Every failure here is
 # FELT and never seen, which is the one category the screen sweep, the demo

@@ -468,7 +468,7 @@ struct ThingContentView: View {
             }
         case .voice:
             VoiceContent(transcript: thing.content, sourceRef: thing.sourceRef,
-                         audio: thing.audio)
+                         audio: thing.audio, noteID: thing.id)
         case .file, .output:
             // A folder-picked image carries its own bytes (2026-07-27, the
             // Files heal pass) — lead with the picture, the same way a
@@ -1209,6 +1209,9 @@ private struct VoiceContent: View {
     /// is — it came from a walk of the folder moments ago, and re-statting it
     /// here would only add a disk read that can block on iCloud.
     var fileURL: URL? = nil
+    /// The note's id, which keys its word times (prd §987). Nil for a
+    /// folder's file, which has no words of its own.
+    var noteID: UUID? = nil
 
     @State private var player: AVAudioPlayer?
     @State private var playing = false
@@ -1219,6 +1222,16 @@ private struct VoiceContent: View {
     /// is the honest placeholder while this hasn't loaded, never invented
     /// peaks and valleys.
     @State private var envelope: [CGFloat]?
+    /// Where playback stands, in seconds (prd §987): polled while playing,
+    /// set by a seek, kept through a pause, back to zero at the end.
+    @State private var position: Double = 0
+    /// The recording's length, read off the file with the envelope.
+    @State private var length: Double?
+    /// When each word was said (prd §987), from the local cache the heal
+    /// writes. Drawn only over the words it times (`matches`).
+    @State private var timeline: VoiceTimeline?
+    /// One speed for every recording, remembered (prd §987).
+    @AppStorage("voice.playbackRate") private var rate: Double = 1
 
     private var audioURL: URL? {
         if let fileURL { return fileURL }
@@ -1227,6 +1240,11 @@ private struct VoiceContent: View {
     }
 
     private var hasAudio: Bool { audio != nil || audioURL != nil }
+
+    /// Has playback begun — playing now, or paused part way. Before it, the
+    /// strip and the words stand as they always did and the clock says the
+    /// length.
+    private var started: Bool { player != nil && (playing || position > 0) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -1249,36 +1267,165 @@ private struct VoiceContent: View {
                     .dsTooltip(playing ? String(localized: "Pause")
                                        : String(localized: "Play"))
                 }
-                HStack(spacing: 2) {
-                    ForEach(Array((envelope ?? Self.flatBars).enumerated()), id: \.offset) { _, h in
-                        Capsule().fill(DS.tint).frame(width: 3, height: h)
-                            .opacity(playing ? 1 : 0.7)
-                    }
+                strip
+                Spacer(minLength: DS.Space.s2)
+                if hasAudio {
+                    clock
+                    rateKey
                 }
-                Spacer()
             }
             if !transcript.isEmpty {
-                Text(ProseLinks.rendered(transcript))
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .lineLimit(8)
+                if let timeline, timeline.matches(transcript) {
+                    TimedTranscript(timeline: timeline,
+                                    current: started ? timeline.wordIndex(at: position) : nil,
+                                    playing: started) { i in
+                        seek(to: timeline.words[i].start)
+                    }
+                } else {
+                    // Every word, however long the note (prd §987): the
+                    // eight-line cut dropped the end of anything past a
+                    // minute, and a voice note's words are its only text.
+                    Text(ProseLinks.rendered(transcript))
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
             }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         .onDisappear { player?.stop() }
-        .task { envelope = await Self.readEnvelope(url: audioURL, data: audio) }
+        .task {
+            let read = await Self.readEnvelope(url: audioURL, data: audio)
+            envelope = read?.bars
+            length = read?.length
+            await loadTimeline()
+        }
+        // The playhead (prd §987): a twentieth of a second is below what a
+        // strip of 32 bars or a spoken word can show. Stops with playback.
+        .task(id: playing) {
+            guard playing else { return }
+            while !Task.isCancelled, let player {
+                guard player.isPlaying else {
+                    // Ended (the player rewinds to zero) or taken by a call
+                    // (it keeps its place); either way the key says Play.
+                    playing = false
+                    position = player.currentTime
+                    return
+                }
+                position = player.currentTime
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
     }
 
-    /// The flat placeholder — 15 bars, all the same height, drawn while the
+    // MARK: - The strip
+
+    /// Bars in the envelope — enough that a tap lands within a couple of
+    /// seconds of where it meant on a minute's note, few enough to fit
+    /// beside the clock on the narrowest phone.
+    nonisolated fileprivate static let barCount = 32
+    private static let barWidth: CGFloat = 3
+    private static let barGap: CGFloat = 2
+    private static var stripWidth: CGFloat {
+        CGFloat(barCount) * barWidth + CGFloat(barCount - 1) * barGap
+    }
+
+    /// The flat placeholder — every bar the same height, drawn while the
     /// real envelope hasn't loaded (or never will). Even, not shaped: it
     /// says "audio" without claiming to depict this recording's peaks.
-    private static let flatBars = [CGFloat](repeating: 10, count: 15)
+    private static let flatBars = [CGFloat](repeating: 10, count: barCount)
 
-    /// Peak amplitude per bar, read straight off the file's PCM samples — 15
-    /// bars, normalized so the loudest bar in THIS recording always reaches
-    /// full height (there's no absolute loudness to compare against, only
-    /// this clip's own shape).
-    private static func readEnvelope(url: URL?, data: Data?) async -> [CGFloat]? {
+    /// The waveform IS the scrubber (prd §987): the bars already played stand
+    /// full, the rest fade, and a tap on a bar seeks there. A tap, not a drag
+    /// — a drag inside the sheet's scroll would take the scroll from it
+    /// (CLAUDE.md's gotcha); VoiceOver adjusts it five seconds a swipe.
+    private var strip: some View {
+        let bars = envelope ?? Self.flatBars
+        let played = started ? (length.map { $0 > 0 ? position / $0 : 0 } ?? 0) : 0
+        return HStack(spacing: Self.barGap) {
+            ForEach(Array(bars.enumerated()), id: \.offset) { i, h in
+                Capsule().fill(DS.tint).frame(width: Self.barWidth, height: h)
+                    .opacity(!started ? 0.7
+                             : (Double(i) + 0.5) / Double(bars.count) <= played ? 1 : 0.3)
+            }
+        }
+        .frame(width: Self.stripWidth, height: 22)
+        .contentShape(Rectangle())
+        .onTapGesture(coordinateSpace: .local) { point in
+            guard hasAudio, let length, length > 0 else { return }
+            seek(to: Double(max(0, min(1, point.x / Self.stripWidth))) * length)
+        }
+        .accessibilityElement()
+        .accessibilityLabel(Text("Position"))
+        .accessibilityValue(Text(verbatim: "\(VoiceLength.label(position, rounding: .down)) / \(VoiceLength.label(length ?? 0))"))
+        .accessibilityAdjustableAction { direction in
+            let step = direction == .increment ? 5.0 : -5.0
+            seek(to: position + step)
+        }
+    }
+
+    /// The length before playing, the elapsed time once it has begun.
+    private var clock: some View {
+        Text(verbatim: started ? VoiceLength.label(position, rounding: .down)
+                               : VoiceLength.label(length ?? 0))
+            .dsText(.subhead12)
+            .monospacedDigit()
+            .foregroundStyle(DS.textSecondary)
+            .contentTransition(.numericText())
+            .opacity(length == nil && !started ? 0 : 1)
+    }
+
+    /// 1× · 1.5× · 2×, one tap to the next (prd §987). Ink while at 1×, the
+    /// tint when it is anything else — a state worth seeing (prd §767).
+    private var rateKey: some View {
+        Button {
+            rate = VoiceLength.next(after: rate)
+            if let player, player.enableRate { player.rate = Float(rate) }
+            DSHaptic.selection()
+        } label: {
+            Text(verbatim: VoiceLength.rateLabel(rate))
+                .dsText(.label12)
+                .monospacedDigit()
+                .foregroundStyle(rate == 1 ? DS.textSecondary : DS.tint)
+                .contentTransition(.numericText())
+                .frame(minWidth: 28)
+                .dsTapTarget()
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+        .animation(DS.Motion.standard, value: rate)
+        .accessibilityLabel(Text("Playback speed"))
+        .accessibilityValue(Text(verbatim: VoiceLength.rateLabel(rate)))
+        .dsTooltip(String(localized: "Playback speed"))
+    }
+
+    // MARK: - Reading
+
+    /// The note's word times off the local cache. A note kept a moment ago
+    /// is still being read (`VoiceHeal.settle`, a few seconds), so while the
+    /// iOS 26 model is here the sheet looks again once a second for half a
+    /// minute rather than opening on words that will never light.
+    private func loadTimeline() async {
+        // Not gated on the transcript: a note kept with no words heard live
+        // gets its words from this same read.
+        guard let noteID, hasAudio else { return }
+        for attempt in 0..<30 {
+            if let cached = await Task.detached(priority: .utility, operation: {
+                VoiceTimeline.cached(for: noteID)
+            }).value {
+                timeline = cached
+                return
+            }
+            if attempt == 0, !(await VoiceTranscribe.analyzerInstalled()) { return }
+            try? await Task.sleep(for: .seconds(1))
+            if Task.isCancelled { return }
+        }
+    }
+
+    /// Peak amplitude per bar, read straight off the file's PCM samples,
+    /// normalized so the loudest bar in THIS recording always reaches full
+    /// height (there's no absolute loudness to compare against, only this
+    /// clip's own shape) — and the length, off the same read.
+    private static func readEnvelope(url: URL?, data: Data?) async -> (bars: [CGFloat]?, length: Double)? {
         await Task.detached(priority: .utility) {
             var tempURL: URL?
             defer { tempURL.map { try? FileManager.default.removeItem(at: $0) } }
@@ -1296,16 +1443,17 @@ private struct VoiceContent: View {
             }
             guard let file = try? AVAudioFile(forReading: fileURL) else { return nil }
             let frameCount = AVAudioFrameCount(file.length)
+            let seconds = Double(file.length) / file.processingFormat.sampleRate
             guard frameCount > 0,
                   let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
                                                 frameCapacity: frameCount),
                   (try? file.read(into: buffer)) != nil,
                   let channelData = buffer.floatChannelData
-            else { return nil }
+            else { return (nil, seconds) }
             let channels = Int(buffer.format.channelCount)
             let frames = Int(buffer.frameLength)
-            let bars = 15
-            guard frames > 0, channels > 0 else { return nil }
+            let bars = barCount
+            guard frames > 0, channels > 0 else { return (nil, seconds) }
             let samplesPerBar = max(1, frames / bars)
             var peaks = [Float](repeating: 0, count: bars)
             for bar in 0..<bars {
@@ -1319,11 +1467,13 @@ private struct VoiceContent: View {
                 }
                 peaks[bar] = peak
             }
-            guard let maxPeak = peaks.max(), maxPeak > 0 else { return nil }
+            guard let maxPeak = peaks.max(), maxPeak > 0 else { return (nil, seconds) }
             // 6...22pt, the same range the old hardcoded bars drew in.
-            return peaks.map { 6 + CGFloat($0 / maxPeak) * 16 }
+            return (peaks.map { 6 + CGFloat($0 / maxPeak) * 16 }, seconds)
         }.value
     }
+
+    // MARK: - Transport
 
     private func toggle() {
         if playing {
@@ -1331,14 +1481,31 @@ private struct VoiceContent: View {
             playing = false
             return
         }
-        if player == nil {
-            if let audio {
-                player = try? AVAudioPlayer(data: audio)
-            } else if let url = audioURL {
-                player = try? AVAudioPlayer(contentsOf: url)
-            }
-            player?.prepareToPlay()
+        play()
+    }
+
+    /// The player, made on first use. `enableRate` must be set before
+    /// `prepareToPlay` or the speed key does nothing.
+    @discardableResult
+    private func preparedPlayer() -> AVAudioPlayer? {
+        if let player { return player }
+        let made: AVAudioPlayer?
+        if let audio {
+            made = try? AVAudioPlayer(data: audio)
+        } else if let url = audioURL {
+            made = try? AVAudioPlayer(contentsOf: url)
+        } else {
+            made = nil
         }
+        made?.enableRate = true
+        made?.prepareToPlay()
+        player = made
+        if length == nil, let made, made.duration > 0 { length = made.duration }
+        return made
+    }
+
+    private func play() {
+        guard let player = preparedPlayer() else { return }
         // THE SESSION MUST BE ACTIVATED, NOT MERELY CATEGORISED (2026-09-03,
         // reported: "it doesn't playback"). Setting `.playback` says what this
         // app INTENDS to do with audio; it does not take the route. And
@@ -1354,8 +1521,66 @@ private struct VoiceContent: View {
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.playback, mode: .spokenAudio)
         try? session.setActive(true)
-        player?.play()
-        playing = player?.isPlaying ?? false
+        player.rate = Float(rate)
+        player.play()
+        playing = player.isPlaying
+    }
+
+    /// Jump there and play from there — a bar, a word, or VoiceOver's step.
+    private func seek(to seconds: Double) {
+        guard let player = preparedPlayer(), player.duration > 0 else { return }
+        let target = max(0, min(seconds, player.duration - 0.05))
+        player.currentTime = target
+        position = target
+        DSHaptic.selection()
+        if !playing { play() }
+    }
+}
+
+/// The transcript, lit as it plays (prd §987): the words already said in the
+/// primary ink, the word being said in the tint, the rest secondary — and
+/// every word a link to its own moment, so a tap on a word seeks there.
+///
+/// ONE `Text` over one `AttributedString`, each word its own link run: the
+/// words wrap and select as prose does, a Mac cursor finds them, and the link
+/// is answered here (`openURL`) rather than leaving the app. A run's
+/// `foregroundColor` holds over the link's tint (measured before building).
+private struct TimedTranscript: View {
+    let timeline: VoiceTimeline
+    /// The word being said, or nil before playback begins.
+    let current: Int?
+    let playing: Bool
+    let seek: (Int) -> Void
+
+    private static let scheme = "casberi-voice-word"
+
+    var body: some View {
+        Text(attributed)
+            .dsText(.body17)
+            .environment(\.openURL, OpenURLAction { url in
+                guard url.scheme == Self.scheme,
+                      let i = Int(url.host() ?? ""), timeline.words.indices.contains(i)
+                else { return .systemAction }
+                seek(i)
+                return .handled
+            })
+    }
+
+    private var attributed: AttributedString {
+        var out = AttributedString()
+        for (i, word) in timeline.words.enumerated() {
+            var run = AttributedString(word.text)
+            run.link = URL(string: "\(Self.scheme)://\(i)")
+            run.foregroundColor = ink(i)
+            out += run
+        }
+        return out
+    }
+
+    private func ink(_ i: Int) -> Color {
+        guard playing, let current else { return DS.textSecondary }
+        if i < current { return DS.textPrimary }
+        return i == current ? DS.tint : DS.textSecondary
     }
 }
 

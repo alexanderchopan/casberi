@@ -427,7 +427,7 @@ struct FeedScreen: View {
         \.tags, \.provenance, \.sourceRef, \.previewImageURL, \.walletAddress,
         \.counterpartyAddress, \.transferDirection, \.transferAmount, \.transferVenue,
         \.transferCounterparty, \.securityFlag, \.spoofedSymbol, \.authorHandle,
-        \.authorAvatarURL, \.summary, \.dueAt, \.ocrAt, \.ocrTopics, \.topicsAt,
+        \.authorAvatarURL, \.summary, \.dueAt, \.endAt, \.ocrAt, \.ocrTopics, \.topicsAt,
         \.watchPriceUsd, \.starCount, \.repoLanguage, \.priceValue, \.priceCurrency,
         \.socialContext, \.channelName, \.likeCount, \.repostCount, \.replyCount,
         \.quote, \.parent, \.imageURLs, \.postAuthor, \.externalLink, \.wikilinks,
