@@ -11895,6 +11895,9 @@ struct FeedScreen: View {
             // sheet that can. The address card is a `FaceTarget` on
             // `ThingSheetView`, which is where this row's tap already goes.
             openThing(thing)
+        case .edit:
+            // A note of yours, reopened in the note sheet (prd §981).
+            chrome.editNote(thing.id)
         case .approve:
             // An MCP client asked to save a thing (PRD §34) — the approval
             // carries the payload; the tap is what commits it. Consent → write.

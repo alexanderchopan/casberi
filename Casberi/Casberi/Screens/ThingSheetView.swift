@@ -1208,9 +1208,16 @@ struct ThingSheetView: View {
                 // Only for an entry: a vault note's `capturedAt` is a file
                 // modification time, so "that day" would be the day you last
                 // touched the file, which is a fact about your editor.
-                if shape == .entry {
+                //
+                // Not for a note of YOURS (prd §981, user: "hide it for you
+                // notes"): its day is the day you wrote it, so the shelf
+                // repeated the All feed's own day. It stays for an imported
+                // journal, whose day is one the feed has long scrolled past.
+                if shape == .entry, thing.source != NoteSheetSource.keptSource {
                     sameDayThings = NoteSheetSource
                         .sameDay(as: thing, context: modelContext).keyed
+                }
+                if shape == .entry {
                     // THE SAME DATE, IN OTHER YEARS (prd §399) — the room's
                     // anniversary answers today's date; this answers the
                     // entry's, which is what a journal is opened for. Bounded:
@@ -3405,6 +3412,12 @@ struct ThingSheetView: View {
             // destination is now in front of the person.
             verbResult = nil
             openAddressCard(address)
+        case .edit:
+            // The note sheet is the shell's layer, under this sheet, so this
+            // one leaves and the editor rises in its place (prd §981).
+            verbResult = nil
+            let id = thing.id
+            dismissWhenSettled { chrome.editNote(id) }
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
             thing.mark = .done

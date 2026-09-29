@@ -62180,3 +62180,17 @@ Two strings joined the catalog with es/ja/ko/zh-Hans: "Add a photo" (the disc, V
 **CloudKit.** `CD_folder` is a new field: in `docs/cloudkit-schema.ckdb`, NOT yet imported to Development or promoted to Production. Until it is, a filed row on a Production-signed build fails its export (docs/cloudkit-deploy.md). Ship it with the build.
 
 **Seen:** the drift guards of the new `note-folders-selftest.sh` and the Python audits (all green; `row-cost-audit.py` updated to the row menu's current call, which build 691's label fix had moved). **Not seen:** a compile, the harness's Swift half, a simulator or a device — this session had no Xcode and no `swiftc`. First on the phone: the four tiles, New folder from the list and from a row's menu, filing a pin, a note kept inside an open folder, rename, delete.
+
+## §981 — A note of yours edits, and its sheet drops "That day" (user: "hide it for you notes. also how does one edit a note. that should be the button instead of reminders", 2026-09-29; supersedes §969's "never opened for editing again")
+
+**What was there.** A note kept under `You` could not be changed: §969 ruled the note sheet a capture path, "never an editor". The note's first disc was `Send to Reminders`, the hand-off every captured `.note` derives. Under the note, the "That day" shelf (§399) listed six other things from the day it was written — for a note written today, a copy of the All feed's own day.
+
+**Ruling.**
+
+1. **Edit replaces Reminders on a note of yours.** `VerbDerivation` gives a `.note` under `You` an `Edit` disc (`pencil`, `Verb.Action.edit`) in Reminders' seat. Any other captured `.note` keeps `Send to Reminders`; bulk imports still get neither.
+2. **Edit reopens the note sheet ON the note.** The thing sheet leaves and the shell raises `NoteCaptureSheet` with the note's words in the field and its picture in the well (`ShellChrome.editNote(_:)`, `noteToEdit` consumed on read). Closing it — Done, the chevron or the pull — writes onto the SAME thing: title and tags as a new note takes them (`Capture.thing`), the picture as it stands. Its day, folder, pin and id are untouched. Nothing changed saves nothing; a field emptied with no picture keeps the note as it was (deleting is the long press's confirmed verb). The toast says `Saved`.
+3. **No Record while editing.** A recording is a new voice note; the wide key says Done throughout an edit.
+4. **"That day" is not drawn for a note of yours.** The shelf stays for imported journal entries, whose day the feed has scrolled past. "On this date" (other years) stays for both.
+5. **Voice notes are not editable here.** Their record is the audio; the transcript edit is a separate ruling.
+
+**Seen:** the drift guards in `note-sheet-selftest.sh`, `note-folders-selftest.sh` and `x-selftest.sh` still match their lines. **Not seen:** a compile, a simulator or a device — this session had no Xcode and no `swiftc`. First on the phone: the Edit disc on a note of yours, the keyboard rising once the thing sheet has left, a changed title in the row, a picture removed, and the shelf gone.

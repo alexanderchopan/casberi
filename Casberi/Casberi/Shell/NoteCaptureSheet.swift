@@ -53,6 +53,16 @@ import PhotosUI
 /// note titled "Photo"; a picture is words' company, never a recording's —
 /// with one attached the wide key says Done, and while recording the disc
 /// is greyed, because a voice note is its audio.
+///
+/// **A note of yours EDITS (prd §981, superseding §969's "never opened for
+/// editing again").** The sheet's Edit disc (`Verb.Action.edit`) raises this
+/// sheet over the note it came from: its words in the field, its picture in
+/// the well. Closing it writes the change onto the SAME thing — its day, its
+/// folder, its pin and its id stay — so the row keeps its place and nothing
+/// lands twice. An edit emptied to nothing keeps the note as it was: deleting
+/// is the long press's verb, confirmed, and a cleared field is not a delete.
+/// The wide key never offers Record while editing, because a recording is a
+/// new note and this sheet is changing an old one.
 struct NoteCaptureSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
@@ -81,6 +91,12 @@ struct NoteCaptureSheet: View {
     @State private var pickerItem: PhotosPickerItem?
     /// Change or Remove, over a picture already attached.
     @State private var pictureDialogOpen = false
+    /// The note being edited (prd §981), or nil for a new one. Read once, on
+    /// appear, from `chrome.noteToEdit`.
+    @State private var editing: Thing?
+    /// The edited note's own picture has been read into the well. Until it
+    /// has, a close keeps the stored picture rather than clearing it.
+    @State private var editPictureRead = false
 
     private var hasDraft: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -237,6 +253,26 @@ struct NoteCaptureSheet: View {
             // as it should.
             var record = chrome.noteVoiceOnOpen
             chrome.noteVoiceOnOpen = false
+            // The Edit disc (prd §981): open ON the note, consumed on read so
+            // the next New arrives empty.
+            if let id = chrome.noteToEdit {
+                chrome.noteToEdit = nil
+                if let note = Self.note(id, in: modelContext) {
+                    editing = note
+                    draft = note.content
+                    // The picture through the one off-main decode, never a
+                    // bitmap made here (`row-cost-audit.py`).
+                    Task { @MainActor in
+                        if picture == nil,
+                           let pixels = await StoredPixels.prepared(for: note),
+                           note.isLive, let bytes = note.previewImageData {
+                            picture = NotePicture(bytes: bytes, image: pixels.image)
+                        }
+                        editPictureRead = true
+                    }
+                    record = false
+                }
+            }
             #if DEBUG
             // `-noteVoice YES` — land recording, for the screen sweep. The
             // simulator has no microphone, so a pass shows the band and the
@@ -255,7 +291,18 @@ struct NoteCaptureSheet: View {
                 picture = drawn
             }
             #endif
-            if record { startRecording() } else { focused = true }
+            if record {
+                startRecording()
+            } else if editing != nil {
+                // The thing sheet is still leaving when this lands, and a
+                // field focused under a presented sheet raises no keyboard.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    focused = true
+                }
+            } else {
+                focused = true
+            }
         }
         // A call or an alarm took the microphone (prd §972): capture stopped,
         // so keep what was recorded and close, rather than leave a clock
@@ -286,7 +333,7 @@ struct NoteCaptureSheet: View {
     private var keyVerb: KeyVerb {
         if stopping { return .keeping }
         if isRecording { return .stop }
-        return hasContent ? .done : .record
+        return hasContent || editing != nil ? .done : .record
     }
 
     // MARK: - The picture (prd §974)
@@ -477,6 +524,10 @@ struct NoteCaptureSheet: View {
         // are — dismiss keeps (§969).
         if isRecording { stopAndKeep(); return }
         defer { onClose() }
+        if let editing {
+            saveEdit(editing)
+            return
+        }
         guard let thing = keptThing() else { return }
         thing.previewImageData = picture?.bytes
         thing.folder = filingFolder
@@ -484,6 +535,46 @@ struct NoteCaptureSheet: View {
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
         onLand(thing)
+    }
+
+    /// Write the sheet onto the note it opened on (prd §981): the words the
+    /// way a new note takes them (`Capture.thing`'s title and tags), the
+    /// picture as it now stands. Its day, folder, pin and id are untouched.
+    /// Nothing changed saves nothing; nothing left keeps the note as it was.
+    private func saveEdit(_ note: Thing) {
+        guard note.isLive else { return }
+        let bytes = picture?.bytes ?? (editPictureRead ? nil : note.previewImageData)
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty || bytes != nil else { return }
+        let sameWords = text == note.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sameWords || bytes != note.previewImageData else { return }
+        if text.isEmpty {
+            note.title = String(localized: "Photo")
+            note.content = ""
+        } else if let made = Capture.thing(from: draft) {
+            note.title = made.title
+            note.content = made.content
+            for tag in made.tags where !note.tags.contains(tag) { note.tags.append(tag) }
+        }
+        if bytes != note.previewImageData {
+            note.previewImageData = bytes
+            StoredPixels.forget(note.id)
+        }
+        modelContext.saveHonestly()
+        SpotlightIndex.index([note])
+        CorpusSignal.shared.bump()
+        chrome.flash(String(localized: "Saved"), tone: .success)
+    }
+
+    /// The note an Edit disc named, if it is still here and still a note of
+    /// yours — a sync may have deleted it between the tap and the raise.
+    private static func note(_ id: UUID, in context: ModelContext) -> Thing? {
+        var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.id == id })
+        d.fetchLimit = 1
+        guard let found = ((try? context.fetch(d)) ?? []).live.first,
+              found.source == NoteSheetSource.keptSource, found.kind == .note
+        else { return nil }
+        return found
     }
 
     /// The folder a note made now is filed in: the one standing open in the

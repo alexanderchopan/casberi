@@ -23,6 +23,10 @@ struct Verb: Identifiable {
         /// row comes from is a screen Casberi draws, not a page anyone
         /// publishes.
         case openAddress(String)
+        /// Reopen a note of yours in the note sheet, its words and picture in
+        /// the field (prd §981). In-app, like `.openAddress`: the sheet is
+        /// the editor, and closing it keeps the change.
+        case edit
     }
     let label: String
     let icon: String
@@ -46,6 +50,7 @@ struct Verb: Identifiable {
         case .translate:      return "Translate"
         case .showInFiles:    return "Files"
         case .openAddress:    return "Wallet"
+        case .edit:           return "Edit"
         }
     }
     var id: String { label }
@@ -392,7 +397,14 @@ enum VerbDerivation {
                 out.append(Verb(label: "Open in Obsidian", icon: "book.closed",
                                 action: .openURL(vault)))
             }
-            if !Corpus.bulkImportSources.contains(thing.source) {
+            // A note you wrote EDITS (prd §981, user: "that should be the
+            // button instead of reminders"): the first disc reopens the note
+            // sheet with its words, and Reminders gives up its seat — a note
+            // of yours is yours to change, not to send away. Every other
+            // captured note keeps the hand-off.
+            if thing.source == NoteSheetSource.keptSource {
+                out.append(Verb(label: "Edit", icon: "pencil", action: .edit))
+            } else if !Corpus.bulkImportSources.contains(thing.source) {
                 out.append(Verb(label: "Send to Reminders", icon: "checklist",
                                 action: .addToReminders))
             }

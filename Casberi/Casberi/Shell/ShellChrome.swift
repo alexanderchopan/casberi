@@ -534,6 +534,15 @@ final class ShellChrome {
         noteVoiceOnOpen = true
         newNote += 1
     }
+    /// The note the sheet opens ON, for the Edit disc (prd §981): its id,
+    /// consumed on read by the sheet like `noteVoiceOnOpen`, so the next New
+    /// arrives empty.
+    var noteToEdit: UUID? = nil
+    func editNote(_ id: UUID) {
+        noteVoiceOnOpen = false
+        noteToEdit = id
+        newNote += 1
+    }
 
     /// A question asked from inside an agent's room, for `RootShell` to answer
     /// (prd §840). The room cannot call the ask path itself: `answerDocument`
