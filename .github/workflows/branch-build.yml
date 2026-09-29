@@ -47,7 +47,7 @@ jobs:
             python3 scripts/support/ci-sdk26-shim.py Casberi
           fi
 
-      # Xcode 26's solver gives up on FeedScreen's body chain that Xcode 27
+      # Xcode 26 on this runner takes past the solver's 600s timer on FeedScreen's body chain, which Xcode 27
       # type-checks ("unable to type-check this expression in reasonable
       # time" — `main` itself fails it here, 2026-09-29), so the CI build
       # raises the solver's limits. A CI setting, never the project's.
@@ -58,7 +58,7 @@ jobs:
             -destination '${{ matrix.dest }}' \
             -derivedDataPath "$RUNNER_TEMP/dd" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -solver-scope-threshold=100000000 -Xfrontend -solver-trail-threshold=1000000000' \
+            OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -solver-expression-time-threshold=3000 -Xfrontend -solver-scope-threshold=100000000 -Xfrontend -solver-trail-threshold=1000000000' \
             build 2>&1 | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
 
