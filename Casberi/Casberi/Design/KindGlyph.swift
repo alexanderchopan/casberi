@@ -414,6 +414,9 @@ enum BridgeGlyph {
         // its sender in the open. A fallback that only appears when an asset
         // failed to load has no business making that claim.
         case "hegotá privacy": return "character"
+        // Logos bundles the λ its team sent (`brand-logos`), so this is the
+        // same defensive fallback, and the same neutral letterform.
+        case "logos":     return "character"
         default:          return "app"
         }
     }
