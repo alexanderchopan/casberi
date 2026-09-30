@@ -64,26 +64,24 @@ struct RoomsTray: View {
     /// row is the target. Here the circle stands alone and is the button, so
     /// the eye sized it by the 28pt edge and never saw the 44pt target.
     static let mark: CGFloat = DS.Face.cell
-    /// The category's disc and the You face, at the head of each section:
-    /// the row circle, centred on the column the face and every room's row
-    /// icons share.
-    static let nameDisc: CGFloat = DS.Face.rowCircle
-    /// Where a section's NAME starts, from the disc's leading edge — and so
-    /// where its marks start (prd §1010, user: "don't have the icons
-    /// indented with the category icons. have the room tiles share indent
-    /// with the category names").
-    static let nameLead: CGFloat = nameDisc + DS.Space.s2
-    /// Five marks to a line (prd §1010: "this means we show five per row"),
-    /// spread from the name's edge to the tray's inset, so the air between
-    /// them is what the width leaves: ~31pt on a 402pt phone, ~29 on 393.
+    /// The name column: fixed, so every row's marks start on the same line
+    /// and a crowded category wraps inside its own column, never under the
+    /// name (user: "it looks bad there"). "Shopping" needs the 118.
+    static let nameColumn: CGFloat = 118
+    /// The name column's disc and the You face: the picker rung, so a
+    /// category's name reads as the head of its marks, not one of them.
+    static let nameDisc: CGFloat = DS.Face.list
+    /// Five marks to a line beside the name (prd §1011, user: "lets go w/
+    /// G"), SPREAD from the column's first edge to its last rather than
+    /// packed left in 44pt targets — packed, 40pt circles stood 4pt apart
+    /// (§1008, "touching each other too much"); spread, they stand ~8pt
+    /// apart on a 402pt phone and ~6 on 393, across and down alike.
     static let marksPerLine = 5
-    /// The air under a line of marks, before the next line.
-    static let lineAir: CGFloat = DS.Space.s4 + DS.Space.s1
-    /// The air between one section and the next. The name went ABOVE its
-    /// marks in §1010, so a section is a head and a grid rather than one
-    /// 44pt row, and it needs a gap to read as its own group; §955's
-    /// "no air between sections" was ruled for the side-by-side layout.
-    static let rowGap: CGFloat = DS.Space.s3
+    /// The air between one category and the next: what's left of a mark's
+    /// 44pt target around its 40pt circle, plus this, makes the 8pt the
+    /// marks keep inside a category — so a new category reads as the next
+    /// line, not a new block (§955's one pitch, kept).
+    static let rowGap: CGFloat = DS.Space.s1
     /// A grabber drag past this, down, collapses or closes; up, grows.
     static let detentDrag: CGFloat = 56
     /// The two detents, as shares of the screen: rest shows You and the first
@@ -362,7 +360,7 @@ struct RoomsTray: View {
     private var youRow: some View {
         let home = filter.source == "All" && route.path.isEmpty
         let notes = Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty
-        return VStack(alignment: .leading, spacing: DS.Space.s1) {
+        return HStack(alignment: .top, spacing: DS.Space.s3) {
             // The face the button wears — your photo or the octopus — never
             // the empty contact glyph.
             HStack(spacing: DS.Space.s2) {
@@ -372,9 +370,9 @@ struct RoomsTray: View {
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
             }
+            .frame(width: Self.nameColumn, alignment: .leading)
             .frame(minHeight: DS.Hit.min)
-            MarkGrid(columns: Self.marksPerLine, lead: Self.nameLead, mark: Self.mark,
-                     lineAir: Self.lineAir) {
+            MarkGrid(columns: Self.marksPerLine, mark: Self.mark) {
                 ForEach(Array(doors(home: home, notes: notes).enumerated()), id: \.offset) { index, door in
                     self.door(door, index: index)
                 }
@@ -408,7 +406,7 @@ struct RoomsTray: View {
                                           present: Set(chrome.categoryVenues[category] ?? []))
         let lit = standingCategory == category
         let needsYou = broken(present)
-        return VStack(alignment: .leading, spacing: DS.Space.s1) {
+        return HStack(alignment: .top, spacing: DS.Space.s3) {
             Button {
                 tapped { pick(category) }
             } label: {
@@ -422,8 +420,7 @@ struct RoomsTray: View {
                 ? Text("\(category), needs your attention")
                 : Text(category))
             .accessibilityAddTraits(lit ? .isSelected : [])
-            MarkGrid(columns: Self.marksPerLine, lead: Self.nameLead, mark: Self.mark,
-                     lineAir: Self.lineAir) {
+            MarkGrid(columns: Self.marksPerLine, mark: Self.mark) {
                 ForEach(Array(present.enumerated()), id: \.element) { slot, venue in
                     Button {
                         tapped { pick(venue, flying: true) }
@@ -452,8 +449,8 @@ struct RoomsTray: View {
 
     // MARK: - Pieces
 
-    /// A section's name: its glyph disc, then the word, on the 44pt floor
-    /// every control stands on, above the section's marks (§1010).
+    /// A row's name: its glyph disc, then the word, in the fixed column, on
+    /// the 44pt floor every control stands on.
     private func rowName(glyph: String, word: String, lit: Bool, broken: Bool,
                          hot: Bool = false) -> some View {
         HStack(spacing: DS.Space.s2) {
@@ -465,12 +462,13 @@ struct RoomsTray: View {
                 .foregroundStyle(lit ? DS.tint : DS.textPrimary)
                 .lineLimit(1)
         }
+        .frame(width: Self.nameColumn, alignment: .leading)
         .frame(minHeight: DS.Hit.min)
         .contentShape(Rectangle())
     }
 
-    /// A glyph in a circle at the row circle's rung, heading its section
-    /// (§1010). Tint says selected; the attention colour says a seat
+    /// A glyph in a circle at the name column's rung (§1011), on the same
+    /// 44pt line as the first of its marks. Tint says selected; the attention colour says a seat
     /// inside needs you (never the only channel: the row's label says it too).
     private func disc(_ glyph: String, lit: Bool, broken: Bool) -> some View {
         ZStack {
@@ -741,40 +739,43 @@ struct RoomPickFlight: View {
     }
 }
 
-/// The tray's marks, a fixed number to a line (prd §1010): the first mark's
-/// circle starts at `lead` (where the section's name starts) and the last
-/// one's ends at the trailing edge, so every line shares one pitch and the
-/// air between marks is whatever the width leaves. Each subview is a mark's
-/// TAP TARGET, larger than the circle it centres, so the edges are placed by
-/// the circle — what the eye aligns — not by the target.
+/// The tray's marks, a fixed number to a line (prd §1011): the first mark's
+/// circle starts at the column's leading edge and the last one's ends at the
+/// trailing edge, so every line shares one pitch and the air between marks
+/// is whatever the width leaves — the same air across and down. Each subview
+/// is a mark's TAP TARGET, larger than the circle it centres, so the edges
+/// are placed by the circle — what the eye aligns — not by the target. A
+/// line never steps less than the 44pt target, so targets never overlap.
 struct MarkGrid: Layout {
     let columns: Int
-    let lead: CGFloat
     let mark: CGFloat
-    let lineAir: CGFloat
 
     private func pitch(width: CGFloat) -> CGFloat {
-        max(mark, (width - lead - mark) / CGFloat(max(columns - 1, 1)))
+        max(mark, (width - mark) / CGFloat(max(columns - 1, 1)))
+    }
+
+    private func step(width: CGFloat) -> CGFloat {
+        max(DS.Hit.min, pitch(width: width))
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width ?? (lead + CGFloat(columns) * (mark + lineAir))
+        let width = proposal.width ?? CGFloat(columns) * DS.Hit.min
         guard !subviews.isEmpty else { return CGSize(width: width, height: 0) }
         let target = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? mark
         let lines = (subviews.count + columns - 1) / columns
-        let height = CGFloat(lines - 1) * (mark + lineAir) + target
+        let height = CGFloat(lines - 1) * step(width: width) + target
         return CGSize(width: width, height: height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews,
                        cache: inout ()) {
-        let step = pitch(width: bounds.width)
+        let across = pitch(width: bounds.width), down = step(width: bounds.width)
         for (i, view) in subviews.enumerated() {
             let size = view.sizeThatFits(.unspecified)
             let column = CGFloat(i % columns), line = CGFloat(i / columns)
             // Centre each target on its circle's centre.
-            let x = bounds.minX + lead + mark / 2 + column * step
-            let y = bounds.minY + size.height / 2 + line * (mark + lineAir)
+            let x = bounds.minX + mark / 2 + column * across
+            let y = bounds.minY + size.height / 2 + line * down
             view.place(at: CGPoint(x: x, y: y), anchor: .center, proposal: .unspecified)
         }
     }

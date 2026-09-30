@@ -359,6 +359,7 @@ marks chronological position within the pair.
 | §955 (the rooms tray's categories stand one pitch apart, no air between sections) | every category was one 44pt row, name beside its marks, with no gap between categories | amended by §1010 — each section is a name above a grid of its marks, and sections stand `s3` apart |
 | §1001 (the tray's marks stay on the row size) | the tray's marks stayed at `DS.Face.rowCircle` (28pt) for cohesion with the rows, and a larger mark was not to be re-proposed | superseded by §1008 — the user reopened it; the marks are `DS.Face.cell` (40pt) |
 | §1008 (the tray's marks draw to their targets, 36pt name discs) | 40pt marks five across beside a 118pt name column, 4pt apart, with 36pt name discs | amended by §1010 — the name stands above its marks, the marks start at the name's edge five to a line, and the name disc is 28pt |
+| §1010 (the tray's sections put the name above the marks) | each category's name stood on its own line above a grid of its marks, five a line from the name's edge, sections `s3` apart | amended by §1011 — the name stands beside its marks again in the 118pt column, and the five spread across the rest of the line |
 
 ## 1. Thesis
 
@@ -62630,3 +62631,13 @@ Logos shipped testnet v0.3 (roadmap.logos.co/testnets/v03-release) and RESET the
 **Cost.** Every section spends a head line, so fewer sections show before the tray scrolls; a crowded category takes the same number of lines (five a line either way).
 
 **Seen:** the furnished demo on the iPhone 17 Pro simulator in dark with `-openTray YES`: You's five doors on one line under "You", Wallet's accounts five a line under "Wallet", both starting at the name's first letter.
+
+## §1011 — The tray's names stand beside their marks again, and the five spread across the line (user: "with a sparse feed E2 looks worse", "with a busy feed it is probably better", then "lets go w/ G", 2026-09-30; amends §1010)
+
+**Why.** E2 spends a head line on every category. With a few accounts a category is a word on one line and one or two marks on the next, so a sparse tray reads as headings with little under them. Side by side, a category with one account is one line.
+
+**Boarded.** E2 (built, §1010) against G: D's layout — the name beside its marks in the 118pt column — at §1008's 40pt, with the five spread from the column's first edge to its last instead of packed left in 44pt targets.
+
+**Ruling.** Each category is one row again: the name column (`nameColumn`, 118pt; the disc and the You face at `DS.Face.list`, 36pt, centred on `rowLeadCentre`), then `MarkGrid` with five marks a line. The first circle starts at the grid's leading edge and the fifth ends at its trailing edge, so the air is what the width leaves — ~8pt on a 402pt phone, ~6 on 393 — and a line steps the same distance down, never less than the 44pt target. Categories stand `s1` apart, so the air between the last line of one and the first of the next matches the air inside one. Marks stay `DS.Face.cell` (40pt).
+
+**Seen:** the furnished demo on the iPhone 17 Pro simulator in dark with `-openTray YES`: You's five doors beside "You", Wallet's accounts five a line beside "Wallet" and wrapping inside the column, even air across and down.
