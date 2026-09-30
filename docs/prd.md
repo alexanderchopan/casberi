@@ -360,6 +360,10 @@ marks chronological position within the pair.
 | §1001 (the tray's marks stay on the row size) | the tray's marks stayed at `DS.Face.rowCircle` (28pt) for cohesion with the rows, and a larger mark was not to be re-proposed | superseded by §1008 — the user reopened it; the marks are `DS.Face.cell` (40pt) |
 | §1008 (the tray's marks draw to their targets, 36pt name discs) | 40pt marks five across beside a 118pt name column, 4pt apart, with 36pt name discs | amended by §1010 — the name stands above its marks, the marks start at the name's edge five to a line, and the name disc is 28pt |
 | §1010 (the tray's sections put the name above the marks) | each category's name stood on its own line above a grid of its marks, five a line from the name's edge, sections `s3` apart | amended by §1011 — the name stands beside its marks again in the 118pt column, and the five spread across the rest of the line |
+| §1008 (the tray's marks are `DS.Face.cell`, 40pt) | the tray's marks drew at 40pt inside their 44pt targets, a rung of their own | superseded by §1012 — the marks are the row circle (28pt) again, the same as the category disc, and `DS.Face.cell` is deleted |
+| §1011 (the tray's names beside their marks, five spread across the line) | 40pt marks ~8pt apart beside a 36pt name disc, the You row one of the rows | amended by §1012 — 28pt marks and a 28pt disc, ~23pt apart; the You doors are a labelled row across the top |
+| §976a (the You doors are black circles with pink glyphs at the marks' size) | each door a black 28pt circle among the rows | amended by §1012 — the doors stand in their own row at `DS.Face.shelf` (56pt), each with its word under it; the colours and the standing fill are unchanged |
+| §958 (Connect opens Accounts) | the door to the Accounts screen was worded "Connect" | amended by §1012 — the door is worded "Accounts", the screen it opens |
 
 ## 1. Thesis
 
@@ -62641,3 +62645,18 @@ Logos shipped testnet v0.3 (roadmap.logos.co/testnets/v03-release) and RESET the
 **Ruling.** Each category is one row again: the name column (`nameColumn`, 118pt; the disc and the You face at `DS.Face.list`, 36pt, centred on `rowLeadCentre`), then `MarkGrid` with five marks a line. The first circle starts at the grid's leading edge and the fifth ends at its trailing edge, so the air is what the width leaves — ~8pt on a 402pt phone, ~6 on 393 — and a line steps the same distance down, never less than the 44pt target. Categories stand `s1` apart, so the air between the last line of one and the first of the next matches the air inside one. Marks stay `DS.Face.cell` (40pt).
 
 **Seen:** the furnished demo on the iPhone 17 Pro simulator in dark with `-openTray YES`: You's five doors beside "You", Wallet's accounts five a line beside "Wallet" and wrapping inside the column, even air across and down.
+
+## §1012 — The tray's You doors are a labelled row across the top, and every mark is 28pt (user: "i just am not liking any of these … it looks weird that the app icons are bigger than the category icons … go back to the smaller versions and have more space between the rows a bit so they dont feel hard to tap", "give me 3 mockups of how apple would design this", "i think it needs to be 5 and 5", then "ok, i like 1", 2026-09-30; supersedes §1008, amends §1011, §976a and §958)
+
+**Why.** §1008 enlarged the marks to make them easy to tap, and the category discs beside them stayed smaller, so a row read as two sizes of the same thing. What makes a small mark easy to tap is the air around its target, not its size. The You doors are the app's own places, not accounts, and they are the only thing in the tray a person reaches every day, so they earn a row of their own with words.
+
+**Boarded.** Three takes at 28pt, five and five: (1) the share sheet's row of people — the doors labelled across the top, the categories as rows beneath; (2) plain rows — You an ordinary row; (3) shelves — one line per category, the rest scrolling sideways. An App Library take (a folder of four per category) was dropped: a folder holds four, not five, and its box is a plate (§782). The user picked 1.
+
+**Ruling.**
+- The You doors are one row spanning the tray between its insets, five equal columns, each door a `DS.Face.shelf` (56pt) circle over its word at `label12` (`textSecondary`, `textPrimary` on the standing door). §976a's colours and the standing fill stand. The whole column is the target.
+- The door to the Accounts screen is worded "Accounts": Connect is one half of that screen's switcher, and a verb in a row of places.
+- The order stays Home, Notes, Accounts, Addresses, Settings, not alphabetical: Home is where you return, Notes is the room you build, Settings sits last as it does across iOS. The categories are alphabetical because they are equals; the doors are not.
+- Every mark and every category disc is `DS.Face.rowCircle` (28pt). `DS.Face.cell` is deleted.
+- `MarkGrid` keeps five a line spread across the column, so the air is ~23pt on a 402pt phone (~21 on 393), the same across and down; categories stand `s2` apart, so the air between them matches.
+
+**Seen:** the furnished demo on the iPhone 17 Pro simulator in dark with `-openTray YES`: the five labelled doors across the top, Home filled pink; Wallet and Work beneath, 28pt marks five a line.

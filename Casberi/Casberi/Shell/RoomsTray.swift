@@ -57,31 +57,33 @@ struct RoomsTray: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    /// A mark's size: `DS.Face.cell`, the rung for a face that IS its own
-    /// tap target in a packed grid (prd §1008, supersedes §1001; user: "they
-    /// seem hard to touch like a user would have to squint"). It was
-    /// `rowCircle` (28), the rung for a face BESIDE a row's words where the
-    /// row is the target. Here the circle stands alone and is the button, so
-    /// the eye sized it by the 28pt edge and never saw the 44pt target.
-    static let mark: CGFloat = DS.Face.cell
+    /// A mark's size: the row circle, the same as the category disc beside
+    /// it (prd §1012, user: "it looks weird that the app icons are bigger
+    /// than the category icons … go back to the smaller versions and have
+    /// more space between the rows a bit so they dont feel hard to tap").
+    /// §1008's 40pt marks are undone; what makes them easy to tap now is the
+    /// air MarkGrid leaves around each 44pt target, not the circle's size.
+    static let mark: CGFloat = DS.Face.rowCircle
+    /// A You door: the shelf rung, because each one is its own labelled
+    /// target in a row of five (§1012, the share sheet's row of people).
+    static let doorSize: CGFloat = DS.Face.shelf
     /// The name column: fixed, so every row's marks start on the same line
     /// and a crowded category wraps inside its own column, never under the
     /// name (user: "it looks bad there"). "Shopping" needs the 118.
     static let nameColumn: CGFloat = 118
-    /// The name column's disc and the You face: the picker rung, so a
-    /// category's name reads as the head of its marks, not one of them.
-    static let nameDisc: CGFloat = DS.Face.list
-    /// Five marks to a line beside the name (prd §1011, user: "lets go w/
-    /// G"), SPREAD from the column's first edge to its last rather than
-    /// packed left in 44pt targets — packed, 40pt circles stood 4pt apart
-    /// (§1008, "touching each other too much"); spread, they stand ~8pt
-    /// apart on a 402pt phone and ~6 on 393, across and down alike.
+    /// The name column's disc: the row circle, the marks' own size (§1012),
+    /// so a category's glyph and its accounts read as one set of circles.
+    static let nameDisc: CGFloat = DS.Face.rowCircle
+    /// Five marks to a line beside the name (prd §1011; five and five with
+    /// You's doors, §1012: "i think it needs to be 5 and 5"), SPREAD from
+    /// the column's first edge to its last, so the 28pt circles stand ~23pt
+    /// apart on a 402pt phone and ~21 on 393, across and down alike.
     static let marksPerLine = 5
-    /// The air between one category and the next: what's left of a mark's
-    /// 44pt target around its 40pt circle, plus this, makes the 8pt the
-    /// marks keep inside a category — so a new category reads as the next
-    /// line, not a new block (§955's one pitch, kept).
-    static let rowGap: CGFloat = DS.Space.s1
+    /// The air between one category and the next: the 16pt a 44pt target
+    /// leaves around its 28pt circle, plus this, is the ~23pt the marks keep
+    /// inside a category — so a new category reads as the next line, not a
+    /// new block (§955's one pitch, kept).
+    static let rowGap: CGFloat = DS.Space.s2
     /// A grabber drag past this, down, collapses or closes; up, grows.
     static let detentDrag: CGFloat = 56
     /// The two detents, as shares of the screen: rest shows You and the first
@@ -357,27 +359,25 @@ struct RoomsTray: View {
     /// that is ALWAYS drawn, because a door that appears only once something
     /// is in the room (§961's Pinned) is a door nobody can find the first
     /// time. An empty room draws its empty state (§769), not nothing.
+    ///
+    /// **Since §1012 the doors are a labelled row across the top, the share
+    /// sheet's row of people** (user, choosing "1" of three: "how would apple
+    /// design this"). They are the app's own places, not accounts, so they
+    /// stand apart from the categories, larger, each with its word under it
+    /// — five destinations nobody should have to recognise by glyph alone.
+    /// The row spans the tray between its insets, one equal column a door.
     private var youRow: some View {
         let home = filter.source == "All" && route.path.isEmpty
         let notes = Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty
-        return HStack(alignment: .top, spacing: DS.Space.s3) {
-            // The face the button wears — your photo or the octopus — never
-            // the empty contact glyph.
-            HStack(spacing: DS.Space.s2) {
-                YouFace(size: Self.nameDisc)
-                Text(scrubWord(in: nil) ?? String(localized: "You"))
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-            }
-            .frame(width: Self.nameColumn, alignment: .leading)
-            .frame(minHeight: DS.Hit.min)
-            MarkGrid(columns: Self.marksPerLine, mark: Self.mark) {
-                ForEach(Array(doors(home: home, notes: notes).enumerated()), id: \.offset) { index, door in
-                    self.door(door, index: index)
-                }
+        return HStack(alignment: .top, spacing: 0) {
+            ForEach(Array(doors(home: home, notes: notes).enumerated()), id: \.offset) { index, door in
+                self.door(door, index: index)
             }
         }
+        // Symmetric in the tray: the list's leading pad centres the discs on
+        // the rows' column, which would push this row 11pt right of centre.
+        .padding(.leading, DSRoomChassis.inset - (DSRoomChassis.rowLeadCentre - Self.nameDisc / 2))
+        .padding(.bottom, DS.Space.s4)
     }
 
     /// The You row's doors, in order — one list, so a tap and a scrub
@@ -395,7 +395,9 @@ struct RoomsTray: View {
                  lit: home) { pick("All") },
             Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
                  lit: notes) { pick(Pinboard.room) },
-            Door(word: String(localized: "Connect"), glyph: "square.grid.2x2") { connect() },
+            // "Accounts", the screen it opens (§1012): Connect is one half of
+            // that screen's switcher, and a verb in a row of places.
+            Door(word: String(localized: "Accounts"), glyph: "square.grid.2x2") { connect() },
             Door(word: String(localized: "Addresses"), glyph: "at") { screen(.addresses) },
             Door(word: String(localized: "Settings"), glyph: "gearshape") { screen(.settings) },
         ]
@@ -483,9 +485,7 @@ struct RoomsTray: View {
     /// A You door (prd §976a): a BLACK circle with the glyph in the brand
     /// pink, and the standing door FILLS — the pink tile, white glyph and
     /// the top sheen `BridgeIcon` gives a seat with no art. Selection is the
-    /// fill, so the door needs no ring. The glyph sits at `BridgeIcon`'s
-    /// fallback scale (0.54), so a door and the app tiles beside it are one
-    /// drawing at one size.
+    /// fill, so the door needs no ring.
     private func doorTile(_ glyph: String, lit: Bool) -> some View {
         Circle()
             .fill(lit ? DS.brand : Color.black)
@@ -497,11 +497,11 @@ struct RoomsTray: View {
             }
             .overlay(
                 Image(systemName: glyph)
-                    .font(.system(size: Self.mark * 0.54, weight: .semibold))
+                    .font(.system(size: Self.doorSize * 0.43, weight: .semibold))
                     .foregroundStyle(lit ? Color.white : DS.brand)
                     .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
             )
-            .frame(width: Self.mark, height: Self.mark)
+            .frame(width: Self.doorSize, height: Self.doorSize)
             .animation(DS.Motion.standard, value: lit)
     }
 
@@ -509,11 +509,18 @@ struct RoomsTray: View {
         Button {
             tapped(door.act)
         } label: {
-            doorTile(door.glyph, lit: door.lit)
-                .modifier(Lifted(on: hot == .door(index), reduceMotion: reduceMotion))
+            VStack(spacing: DS.Space.s2) {
+                doorTile(door.glyph, lit: door.lit)
+                    .modifier(Lifted(on: hot == .door(index), reduceMotion: reduceMotion))
+                Text(door.word)
+                    .dsText(.label12)
+                    .foregroundStyle(door.lit ? DS.textPrimary : DS.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
-        .dsTapTarget(Circle())
         .accessibilityLabel(Text(door.word))
         .accessibilityAddTraits(door.lit ? .isSelected : [])
         .scrubFrame(.door(index), in: frames)
@@ -535,20 +542,11 @@ struct RoomsTray: View {
     // MARK: - Press and slide (§1002)
 
     /// What a row's name column says while the finger is on one of its
-    /// marks: the source's seat name in a category row (`present`), the
-    /// door's word in the You row (`nil`). Nil when the finger is elsewhere.
-    private func scrubWord(in present: [String]?) -> String? {
-        switch hot {
-        case .source(let venue)?:
-            guard let present, present.contains(venue) else { return nil }
-            return BridgeCatalog.seatName(forSource: venue)
-        case .door(let i)?:
-            guard present == nil else { return nil }
-            let all = doors()
-            return all.indices.contains(i) ? all[i].word : nil
-        default:
-            return nil
-        }
+    /// marks: the source's seat name in its category row. Nil when the
+    /// finger is elsewhere. A You door carries its own word (§1012).
+    private func scrubWord(in present: [String]) -> String? {
+        guard case .source(let venue)? = hot, present.contains(venue) else { return nil }
+        return BridgeCatalog.seatName(forSource: venue)
     }
 
     /// Hold, then slide. The hold arms it (scroll off, a lift tick); the
