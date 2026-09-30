@@ -646,6 +646,12 @@ def audit_text(path: str, raw: str, floor: int, label_names=None):
             e = brace_span(src, m.end() - 1)
         else:
             e = src.find(")", m.end()) + 1
+            # `.onTapGesture(coordinateSpace: .local) { point in … }` — the
+            # arguments, then a TRAILING closure: the view's own modifiers
+            # start after that closure, not after the `)`.
+            t = re.match(r"\s*\{", src[e:])
+            if t:
+                e = brace_span(src, e + t.end() - 1)
         chain = modifier_chain(src, e)
         enclosing = next((s for s in spans if s[0] < m.start() < s[1]), None)
         # TWO lookups with two different reaches, on purpose.
