@@ -1047,7 +1047,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         // The symbol charts at base but this window has no candles — say
         // so and step back rather than fake a curve or strand the card on
         // an empty selection.
-        note = "No \(range.label) prices here yet."
+        note = "No \(range.label) prices yet."
         noteRange = range
         // The DISPLAY steps back but the remembered preference stays — a
         // transient network failure at 7d must not permanently downgrade a

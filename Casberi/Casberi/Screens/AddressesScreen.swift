@@ -99,7 +99,7 @@ struct AddressesSection: View {
             }
             if contacts.isEmpty {
                 DSEmptyState(headline: DSProse.text("Nobody here yet"),
-                             words: Text("Nobody here yet. Follow an address, watch an account, or connect Contacts, and they land here."),
+                             words: Text("Follow an address, watch an account, or connect Contacts, and they land here."),
                              scale: .list(rows: 4))
                     .padding(.vertical, DS.Space.s4)
             } else if shown.isEmpty, resolved == nil {

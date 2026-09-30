@@ -138,7 +138,7 @@ struct WalletWatchField: View {
         .alert("Watching \(WalletStore.watchLimit) already", isPresented: $watchCapHit) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("Watching \(WalletStore.watchLimit) — the cap. Remove one first; its name stays in your book.")
+            Text("That's the cap. Remove one first; its name stays in your book.")
         }
     }
 

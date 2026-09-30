@@ -2401,7 +2401,7 @@ private struct TokenChartContent: View {
             // The settled state is a FACT, so a stamp (prd §746) — it wore a
             // full-width faint capsule. It keeps the slab's height, so watching
             // doesn't snap the layout, and it stays a label, not a control.
-            DSStamp(word: String(localized: "Watching \(watchedTitle)"),
+            DSStamp(word: String(localized: "Watching"),
                     weight: .good, glyph: "checkmark")
                 .frame(maxWidth: .infinity, minHeight: DSSlab.height)
         } else if let resolved {

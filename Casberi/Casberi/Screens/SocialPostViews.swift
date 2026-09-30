@@ -663,7 +663,7 @@ struct SocialProfileCard: View {
                     .foregroundStyle(DS.confirm)
                     .frame(width: 18, alignment: .center)
                     .accessibilityHidden(true)
-                Text("Watching @\(shown.shortHandle)")
+                Text("Watching")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                 Spacer(minLength: 0)
             }

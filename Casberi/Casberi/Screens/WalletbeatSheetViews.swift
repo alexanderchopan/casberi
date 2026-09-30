@@ -268,8 +268,8 @@ struct WalletbeatRevisionHead: View {
 			}
 
 			Text(revision.day.map {
-				String(localized: "Walletbeat's entry was revised \($0) · their judgment, not ours")
-			} ?? String(localized: "Walletbeat's own judgment, not ours"))
+				String(localized: "Revised \($0) · their judgment, not ours")
+			} ?? String(localized: "Their judgment, not ours"))
 				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 				.fixedSize(horizontal: false, vertical: true)

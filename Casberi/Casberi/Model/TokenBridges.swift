@@ -584,7 +584,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // with a perfectly good token, and without this that is
         // indistinguishable from a broken connection.
         case .wise:
-            String(localized: "Wise answered — no transfers in that window. Card spending isn't read: it lives in the balance statement, behind Wise's signed-approval step.")
+            String(localized: "Wise answered — no transfers in that window.")
         // A new team reads empty, and so does one whose only arrivals were
         // dust — which this seat drops on purpose, so the page says it did.
         case .splits:

@@ -1409,7 +1409,7 @@ struct VibenetRoom: Equatable, Codable {
     /// undeployed when the truth is that we could not look (§83).
     static func undeployedExplainer(_ item: VibenetAccountItem) -> String? {
         guard item.reached, !item.established else { return nil }
-        return String(localized: "The account deploys with its first transaction — until then there's nothing to read. We check on every refresh.")
+        return String(localized: "The account deploys with its first transaction. We check on every refresh.")
     }
 
     static func rowLine(_ item: VibenetAccountItem) -> String {

@@ -29,7 +29,7 @@ struct KindleImportScreen: View {
             act: {
                 ImportArchiveSection(
                     source: "Kindle",
-                    steps: ["Plug your Kindle into \(DS.device)\(DS.isMac ? "" : " (or a Mac)") with its cable.",
+                    steps: ["Plug your Kindle into \(DS.device)\(DS.isMac ? "" : " (or a Mac)").",
                             "Copy documents/My Clippings.txt to Files"],
                     pickTitle: "Choose My Clippings.txt",
                     pickIcon: "square.and.arrow.down",

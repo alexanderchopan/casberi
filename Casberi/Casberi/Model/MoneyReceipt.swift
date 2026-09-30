@@ -492,16 +492,10 @@ struct MoneyReceipt: Equatable {
         // inferred from the localized title.
         let cleared = f.tags.contains("Approved") || f.tags.contains("Cleared")
         let proof = f.tags.contains("Proof") || f.tags.contains("POI")
-        let screening = !cleared && !proof
         let parts = split(f.amount)
-        let sentence: String
-        if proof {
-            sentence = String(localized: "In since \(dayPhrase(f.capturedAt)). Privacy Pools has asked you for proof before it will clear.")
-        } else if cleared {
-            sentence = String(localized: "Cleared screening — this is yours to withdraw.")
-        } else {
-            sentence = String(localized: "In since \(dayPhrase(f.capturedAt)). Still being screened, so it isn't yours to withdraw yet.")
-        }
+        // The date alone: the stamp, the ladder and the commentary under the
+        // receipt each already say where screening stands.
+        let sentence = String(localized: "In since \(dayPhrase(f.capturedAt)).")
         return MoneyReceipt(
             subject: .asset(parts.unit ?? "ETH"),
             mine: f.walletAddress,

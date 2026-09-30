@@ -56,7 +56,7 @@ struct AppleIntelligenceScreen: View {
                 }
             } else {
                 DSSlabButton(title: "Turn on",
-                             detail: "Free — no key, no account",
+                             detail: "Free — no key",
                              systemImage: "apple.intelligence",
                              action: turnOn)
             }

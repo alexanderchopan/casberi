@@ -90,7 +90,7 @@ struct MuseSetupScreen: View {
             // Verb over address, the 2026-08-14 anatomy.
             // Unnumbered — the door did step one (ruling 2026-08-14).
             BridgeSetupCard(steps: ["Add a payment method under Billing",
-                                    "Meta shows the key once, then never again"],
+                                    "Meta shows the key only once"],
                             numbered: false) {
                 DSSlabButton(title: "Get your API key",
                              detail: "dev.meta.ai",

@@ -62509,3 +62509,24 @@ A pack's lead is the category's name over "$11.6T across 9", read from the same 
 **Under Reduce Motion** nothing lifts; the name column carries the pick alone.
 
 **Seen:** the iPhone 17 Pro simulator over the demo, a scripted touch path — the Wallet row's name read "Altana" with its mark lifted mid-slide; a release on the mark landed its room; a release over the demo pill left the tray open and the next tap on GitHub landed GitHub. The haptics are not observable on the simulator. `trayScrub:` NSLogs the target on release in DEBUG.
+
+## §1003 — The redundancy and wordiness sweep, the whole app (user: "do a redundancy sweep", then "and wordiness", 2026-09-29)
+
+Four read-only passes (shell and widgets, feed and sheets, accounts and setup, the wallet family) proposed about sixty cuts. Every one was checked against the surface it sits on before it landed. Fifty-four landed across thirty-eight files. The test was §451's: a line goes if another line on the same surface already says it, and a clause goes if the sentence reads the same without it. Lines that carry honesty, money, signing, a limit or a fix-it instruction stayed unless another line said the same thing.
+
+**What repeated.**
+- The Privacy Pools receipt sentence restated the stamp, the ladder and the commentary under it. It now says only "In since <day>."
+- A watched wallet with no label drew its short address as both title and subline. The subline is empty now, and `AccountRosterRow` draws no line for an empty subline.
+- A watched thing said "Watching @handle" or "Watching <token>" under the face and name that already say who. It now says "Watching" (§569's own argument for the bare verb).
+- Walletbeat's card and sheet named Walletbeat beside the footnote and eyebrow that already credit it. Hegotá's restart detail restated its headline. The key sheet's "Gone" stamp sat under "This phone's key is gone."
+- Two Safe and approval status lines said the same thing twice ("Executed — the transaction went through.").
+- Wise's empty proof repeated the card-spending note drawn right above it. The GitHub device code's sentence repeated its button. Apple Intelligence's and NerdWallet's "no account" repeated the header's mode line. Telegram's last step repeated the Choose folder pick.
+- VoiceOver read four empty states' headlines twice, because `words` opened with the headline: wallet history, the NFT picker note, Manage's "Nothing connected yet", and Addresses.
+
+**What was wordy.** Cloudflare's runway ("things you own", "nothing will renew it for you", "The next date is"), the notification footnote's "not a ping for every event", import removal, the Kindle and Muse steps, the kept-ask toasts, the note sheet's footnotes, the answer lines for tags and apps, Control Center's descriptions, and "Reset to the default order".
+
+**Declined, with reasons.** Catalog taglines that repeat the name ("Coinbase balances") would become identical adjacent rows ("Balances" four times). §521 ruled against that convergence. The Today widget's "Nothing due this week" title repeats its header's summary, but cutting it leaves the small tile nearly empty. That is a layout decision, not a copy one. The signing key's "no copy and no recovery phrase" is a safety line and stays emphatic. The person room's name and the reminder's due line depend on whether the nav title and the head's date draw on that surface, and neither was verified.
+
+**Guards amended, not deleted.** `money-receipt-selftest` now asserts the pools sentence gives the date and leaves the state to the stamp. `room-heads-selftest` reads "Retries" case-blind. `cloudflare-selftest` pins the new headline.
+
+**Seen:** the build is green on the iPhone 17 Pro simulator, and the Wallet page's watched rows draw over the demo with their address lines.

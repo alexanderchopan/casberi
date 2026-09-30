@@ -3218,8 +3218,8 @@ struct RootShell: View {
         case .list:
             let n = counts.count
             let line = n > 6
-                ? "\(n) tags — tap one to open it."
-                : String(localized: "You have \(n) tag — tap one to open it.")
+                ? "\(n) tags."
+                : String(localized: "You have \(n) tag.")
             // TagMap caps at 6 cells; hand it the biggest, "Label Count" each.
             let cells = counts.prefix(6).map { "\(tagMapLabel($0.tag)) \($0.count)" }
             return ["root = Stack([ins, map])",
@@ -3236,13 +3236,13 @@ struct RootShell: View {
     private func appsDoc(_ ask: AppsAsk.Intent) -> [String] {
         let seats = bridges.bridges
         let shelf = BridgeCatalog.offers.filter(\.connectable)
-        let emptyLine = "No apps connected yet — the catalog has \(shelf.count) ready to connect."
+        let emptyLine = "No apps connected yet — \(shelf.count) to connect."
         let line: String
         switch ask {
         case .count:
             line = seats.isEmpty
                 ? emptyLine
-                : "You've connected \(seats.count) of the \(shelf.count) apps in the catalog."
+                : "\(seats.count) of \(shelf.count) apps connected."
         case .connected:
             if seats.isEmpty {
                 line = emptyLine
@@ -4624,7 +4624,7 @@ struct RootShell: View {
         let shown = Array(hits.prefix(4))
         guard !shown.isEmpty else { return retrievalDoc(hits) }
         return ["root = Stack([ins, res])",
-                "ins = Insight(\"\(genSafe("Couldn't pull these into a summary — here's what's there."))\")"]
+                "ins = Insight(\"\(genSafe("Couldn't pull these into a summary."))\")"]
             + groundingLines(shown, title: "From your things")
     }
 

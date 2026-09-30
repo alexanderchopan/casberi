@@ -131,7 +131,7 @@ struct ComposeControl: ControlWidget {
             }
         }
         .displayName("Save to Casberi")
-        .description("Opens the composer from Control Center.")
+        .description("Opens the composer.")
     }
 }
 
@@ -194,6 +194,6 @@ struct BriefControl: ControlWidget {
             }
         }
         .displayName("Casberi brief")
-        .description("Opens your day from Control Center.")
+        .description("Opens your day.")
     }
 }

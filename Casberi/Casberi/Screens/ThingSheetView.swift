@@ -1361,7 +1361,7 @@ struct ThingSheetView: View {
             Button("Save") { nameCounterparty() }
             Button("Cancel", role: .cancel) { counterpartyTarget = nil }
         } message: {
-            Text("It rides every future transfer with this address. Blank clears it.")
+            Text("It rides every future transfer. Blank clears it.")
         }
         // Name anyone else a thing is from (prd §916 amendment — user: "any
         // address or whatever a person should be able to save easily"): the

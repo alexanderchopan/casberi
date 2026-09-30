@@ -6955,7 +6955,7 @@ struct FeedScreen: View {
             }
             Button(String(localized: "Cancel"), role: .cancel) { removingLastVibenet = nil }
         } message: {
-            Text(String(localized: "It's the only account you watch, so vibenet disconnects: the chip leaves the source strip, and the address leaves your Address book unless it's also a named account on another network."))
+            Text(String(localized: "Vibenet disconnects: its chip leaves the source strip, and the address leaves your Address book unless it's also a named account on another network."))
         }
         // The vibenet card's other long-press verb (prd §669). One alert for
         // every shape of that card — the roster row, the one-account detail
@@ -8211,7 +8211,7 @@ struct FeedScreen: View {
             // the one place either of them says so.
             Section {
                 emptyLeadRow(headline: DSProse.text("Nothing asked yet"),
-                             words: Text("Your conversations with \(source) appear here"))
+                             words: Text("Your conversations appear here"))
             }
         }
         if let agentTiles {

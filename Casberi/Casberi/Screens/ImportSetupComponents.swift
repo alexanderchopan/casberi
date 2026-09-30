@@ -345,7 +345,7 @@ struct ImportUpkeepSection: View {
         var parts: [String] = []
         if let staleness { parts.append(staleness) }
         if held > 0 {
-            parts.append(String(localized: "Removing takes out only what came from \(source). Everything else stays, and importing again brings it all back."))
+            parts.append(String(localized: "Removing takes out only what came from \(source); importing again brings it back."))
         }
         return parts.joined(separator: " ")
     }

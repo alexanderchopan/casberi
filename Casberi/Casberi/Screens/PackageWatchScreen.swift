@@ -120,9 +120,9 @@ struct PackageWatchScreen: View {
     private var note: String {
         switch registry {
         case .npm:
-            String(localized: "A name like react or @vercel/og, or any npm link. Each new version lands, and so does a deprecation.")
+            String(localized: "Like react or @vercel/og. Each new version lands, and so does a deprecation.")
         case .pypi:
-            String(localized: "A name like requests, or any PyPI link. Each new version lands, stamped with when it was published.")
+            String(localized: "Like requests. Each new version lands, stamped with when it was published.")
         }
     }
 

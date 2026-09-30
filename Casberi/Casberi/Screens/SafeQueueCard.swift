@@ -40,11 +40,11 @@ struct SafeQueueCard: View {
                 if check.conflicts > 0 { conflictNote }
             case .executed:
                 statusLine(icon: "checkmark.circle", tone: DS.confirm,
-                           text: "Executed — the transaction went through.")
+                           text: "Executed.")
                 if !check.roster.isEmpty { roster }
             case .replaced:
                 statusLine(icon: "arrow.triangle.2.circlepath", tone: DS.textTertiary,
-                           text: "Replaced — a different transaction executed at this position instead.")
+                           text: "Replaced — another transaction executed at this position.")
             }
             if let door = check.doorURL, let url = URL(string: door) {
                 DSDoorRow(icon: "arrow.up.right", label: "Open in Safe") { openURL(url) }

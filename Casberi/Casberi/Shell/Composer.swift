@@ -2391,8 +2391,8 @@ struct Composer: View {
                 Button {
                     DSHaptic.success()
                     KeptAskStore.shared.keep(kind, title: currentQuestion)
-                    chrome.flash(firstKeptAskDone ? String(localized: "Kept — it'll stay fresh.")
-                                                  : String(localized: "Kept — I'll keep it fresh."),
+                    chrome.flash(firstKeptAskDone ? String(localized: "It'll stay fresh.")
+                                                  : String(localized: "I'll keep it fresh."),
                                  tone: .success)
                     firstKeptAskDone = true
                     withAnimation(.spring(response: 0.22, dampingFraction: 0.6)) {
@@ -4164,7 +4164,7 @@ struct Composer: View {
                 if TodayBrief.matches(q), !docHasFallback(finalDoc),
                    !UserDefaults.standard.bool(forKey: "today.firstBriefShown") {
                     UserDefaults.standard.set(true, forKey: "today.firstBriefShown")
-                    chrome.flash(String(localized: "I'll have this ready every time you open."),
+                    chrome.flash(String(localized: "Ready every time you open."),
                                 tone: .success)
                 }
                 // A cheap deterministic ONE-LINER lands instantly (2026-07-22)

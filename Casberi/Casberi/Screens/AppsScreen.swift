@@ -871,13 +871,13 @@ struct AppsScreen: View {
                 // the seed opens a first run on Connect. One sentence, and the
                 // way out is the control the person just used.
                 DSEmptyState(headline: DSProse.text("Nothing connected yet"),
-                             words: Text("Nothing connected yet. Everything you can add is under Connect."))
+                             words: Text("Everything you can add is under Connect."))
                     .padding(.vertical, DS.Space.s4)
             } else if section == .all && ranked.isEmpty {
                 // Every app in the catalogue is connected (prd §812): Connect
                 // holds only what you have not added, so this is its honest end.
                 DSEmptyState(headline: DSProse.text("Everything is connected"),
-                             words: Text("Everything is connected."))
+                             words: Text(verbatim: ""))
                     .padding(.vertical, DS.Space.s4)
             } else if scope.name == nil {
                 flatCatalogList

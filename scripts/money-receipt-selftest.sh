@@ -474,7 +474,10 @@ do {
     check(screening.stamp == .screening, "a pending deposit is screening")
     // The money is not yours to move until screening clears.
     check(screening.finality == .open, "and the paper is NOT torn")
-    check(screening.sentence.contains("isn't yours to withdraw"), "the sentence says so plainly")
+    // The stamp, the ladder ("Clear to withdraw · not yet") and the commentary
+    // each say where screening stands, so the sentence carries only the date.
+    check(screening.sentence.hasPrefix("In since") && !screening.sentence.contains("withdraw"),
+          "the sentence gives the date and leaves the state to the stamp")
     check(screening.subject == .asset("ETH"), "the pool's asset is the subject")
     check(screening.hue == .shield, "and it pours the shield hue")
 

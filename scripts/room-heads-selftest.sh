@@ -181,7 +181,7 @@ check("a retry needs nothing from you and wears none",
 check("a missed dispute says Missed", StripeRoom.chip(item("a", days: -1)) == "Missed")
 check("an upcoming dispute says Needs you", StripeRoom.chip(item("a", days: 2)) == "Needs you")
 check("a retry explains itself as automatic",
-      StripeRoom.kindLine(item("a", days: 2, dispute: false)).contains("retries"))
+      StripeRoom.kindLine(item("a", days: 2, dispute: false)).lowercased().contains("retries"))
 
 print("")
 print("Stripe — the headline ranking")

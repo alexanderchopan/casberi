@@ -173,7 +173,7 @@ struct NoteCaptureSheet: View {
         if voice.phase == .denied {
             return Text("No mic access. Allow Casberi in \(DS.settingsAppName)")
         }
-        if isRecording { return Text("Stop, and it is kept in Notes") }
+        if isRecording { return Text("Kept in Notes when you stop") }
         if scanText != nil { return Text("Kept in Notes with the words on the page") }
         return Text("Kept in Notes when you close this")
     }

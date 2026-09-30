@@ -191,7 +191,7 @@ struct CloudflareRunway: Equatable, Sendable {
                 ? String(localized: "A zone of yours isn't being served, and \(rest)")
                 : String(localized: "\(stalled) of your zones aren't being served, and \(rest)")
         }
-        return String(localized: "\(dated) things you own come due in the next \(span) days")
+        return String(localized: "\(dated) things come due in the next \(span) days")
     }
 
     /// One item stated on its own — the headline when there is exactly one,
@@ -237,7 +237,7 @@ struct CloudflareRunway: Equatable, Sendable {
             return String(localized: "a certificate that should have renewed itself by now")
         case .registration:
             return autoRenews == false
-                ? String(localized: "a registration with auto-renew off — nothing will renew it for you")
+                ? String(localized: "a registration with auto-renew off")
                 : String(localized: "a registration set to renew automatically, which still fails on an expired card")
         case .token:
             return String(localized: "this connection's own token — when it lapses Casberi stops reading, and nothing else here will know why")
@@ -308,7 +308,7 @@ struct CloudflareRunway: Equatable, Sendable {
         case .token: what = String(localized: "this connection's token")
         case .zone: what = next.name
         }
-        return String(localized: "The next date is \(what), on \(when).")
+        return String(localized: "Next: \(what), \(when).")
     }
 
     /// Day and month, no year — the quiet state only ever names a date inside

@@ -173,14 +173,14 @@ struct HegotaKeySheet: View {
         case .destroyed:
             String(localized: "It was removed from this phone's keychain. Making a new one is safe \u{2014} nothing on a devnet is lost by it.")
         case .none:
-            String(localized: "This becomes an account on Hegot\u{00E1} that only this phone can sign for \u{2014} it sits beside the accounts you watch, but unlike those, you'll actually control this one: send test ETH from it, not just see what's in it.")
+            String(localized: "An account only this phone can sign for \u{2014} unlike the ones you watch, you can send test ETH from it.")
         }
     }
 
     private var headStamp: String? {
         switch presence {
         case .present:   String(localized: "Ready")
-        case .destroyed: String(localized: "Gone")
+        case .destroyed: nil
         case .none:      nil
         }
     }

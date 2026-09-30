@@ -161,7 +161,7 @@ struct StripeRoom: Equatable {
     /// a retry is something Stripe will do for you.
     static func kindLine(_ item: Item) -> String {
         item.dispute ? String(localized: "Evidence window")
-                     : String(localized: "Stripe retries automatically")
+                     : String(localized: "Retries automatically")
     }
 
     /// The chip, and only for the one fact that changes what you'd do today.

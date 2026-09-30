@@ -142,7 +142,7 @@ struct WalletScreen: View {
             AccountPageShape.Row(
                 id: AddressBook.key(for: w.address),
                 title: w.label.isEmpty ? w.short : w.label,
-                subline: w.short,
+                subline: w.label.isEmpty ? "" : w.short,
                 weekCount: 0, hasNew: false, isYou: false, avatarURL: nil,
                 faceAddress: w.address, watched: true)
         }

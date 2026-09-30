@@ -64,7 +64,7 @@ struct CategoryOrderSheet: View {
                 .onMove(perform: move)
             } footer: {
                 if CategoryOrder.isCustom {
-                    Button("Reset to the default order") { reset() }
+                    Button("Reset order") { reset() }
                         .dsText(.body17)
                         .foregroundStyle(DS.tint)
                         .frame(minHeight: 44)

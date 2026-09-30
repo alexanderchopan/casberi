@@ -109,7 +109,7 @@ struct WalletNFTPickerSheet: View {
         // API 400s there, so it is not a chain we looked at and found
         // nothing on, and listing it would claim a read we never made.
         DSEmptyState(headline: DSProse.text("Nothing to show yet"),
-                     words: Text(String(localized: "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood. Solana and HyperEVM NFTs can't be read yet.")),
+                     words: Text(String(localized: "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood.")),
                      // Honesty, not decoration: an empty picker must not read
                      // as "you hold none" for the chains nothing can read.
                      note: Text(String(localized: "Solana and HyperEVM NFTs can't be read yet.")))

@@ -54,7 +54,7 @@ struct ApprovalPrepareCard: View {
                     Image(systemName: "checkmark.circle")
                         .dsGlyph(.subhead, weight: .regular)
                         .foregroundStyle(DS.confirm)
-                    Text("No longer active — this approval has been revoked.")
+                    Text("This approval has been revoked.")
                         .dsText(.body17).foregroundStyle(DS.confirm)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -83,8 +83,8 @@ struct ApprovalPrepareCard: View {
         let cp = thing.counterpartyAddress ?? ""
         let spender = WalletIngest.knownLabel(for: cp) ?? WalletStore.shortAddress(cp)
         return check.forAll
-            ? String(localized: "Still active — \(spender) can still manage this collection")
-            : String(localized: "Still active — \(spender) can still spend this token")
+            ? String(localized: "Still active — \(spender) can manage this collection")
+            : String(localized: "Still active — \(spender) can spend this token")
     }
 
     private func feeRow(_ fee: String) -> some View {

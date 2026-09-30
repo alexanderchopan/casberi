@@ -166,8 +166,8 @@ struct WalletbeatRoom: Equatable {
 		}
 		if examined == room.total {
 			return room.total == 1
-				? String(localized: "Rated in depth — Walletbeat's own judgments, attribute by attribute.")
-				: String(localized: "All \(room.total) rated in depth — Walletbeat's own judgments, attribute by attribute.")
+				? String(localized: "Rated in depth, attribute by attribute.")
+				: String(localized: "All \(room.total) rated in depth, attribute by attribute.")
 		}
 		return String(localized: "\(examined) of \(room.total) rated in depth; the rest Walletbeat has barely examined.")
 	}

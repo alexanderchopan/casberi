@@ -1610,7 +1610,7 @@ struct HegotaChainNotice: View {
     /// is there now, which is a devnet's normal life and not a loss.
     private var detail: String {
         verdict == .restarted
-            ? String(localized: "Everything below is from the old chain — those blocks, balances and UTXOs don't exist on the new one. Nothing was spent; the chain was rebuilt from scratch.")
+            ? String(localized: "Everything below is from the old chain — those blocks, balances and UTXOs don't exist on the new one. Nothing was spent.")
             : String(localized: "A host answered for a different chain, so these readings can't be trusted. Nothing here was changed.")
     }
 }

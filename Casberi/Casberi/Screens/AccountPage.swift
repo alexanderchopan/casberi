@@ -750,9 +750,11 @@ struct AccountRosterRow: View {
                         DSStamp(word: String(localized: "You"), weight: .good)
                     }
                 }
-                Text(subline)
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
+                if !subline.isEmpty {
+                    Text(subline)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 0)
         }

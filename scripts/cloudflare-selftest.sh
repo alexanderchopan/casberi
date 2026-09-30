@@ -332,7 +332,7 @@ check("a row past its own span is clamped inside", Runway.position(days: 400, sp
 print("runway — the headline")
 check("many dated rows are counted and the window named",
       Runway.headline(items: [cert6, cert24, token28], span: 60)
-        == "3 things you own come due in the next 60 days")
+        == "3 things come due in the next 60 days")
 // A stalled zone has no date. Folding it into "come due in the next 60 days"
 // would say something false about the one row that is already true.
 check("a stalled zone is never counted as a deadline",

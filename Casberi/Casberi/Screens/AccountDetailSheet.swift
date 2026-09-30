@@ -641,7 +641,7 @@ struct AccountDetailSheet: View {
             }
             // The cadence and the exceptions, which no switch can say (§748).
             // The four named are `NotifyKind.standsAlone`, word for word.
-            DSFootnote("One digest per category each evening, not a ping for every event. A dispute, a deadline, a liquidation or a Safe signature comes at once.")
+            DSFootnote("One digest per category each evening. A dispute, a deadline, a liquidation or a Safe signature comes at once.")
         }
         .task { notifyAuthorized = await Notifications.authorized() }
     }

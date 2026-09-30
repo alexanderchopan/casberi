@@ -798,8 +798,7 @@ struct HandleSetupScreen: View {
                 steps: [
                     String(localized: "Open Telegram Desktop on a computer"),
                     String(localized: "Settings → Advanced → Export Telegram data"),
-                    String(localized: "Choose JSON as the format, then export"),
-                    String(localized: "Bring the unzipped folder here")
+                    String(localized: "Choose JSON as the format, then export")
                 ],
                 pickTitle: String(localized: "Choose folder"),
                 alreadyImported: importHeld > 0,
