@@ -366,6 +366,9 @@ marks chronological position within the pair.
 | §958 (Connect opens Accounts) | the door to the Accounts screen was worded "Connect" | amended by §1012 — the door is worded "Accounts", the screen it opens |
 | §1011 (the tray's names beside their marks, a 118pt name column) | each category one row, its name in a 118pt column beside five marks | superseded by §1013 — each category is a header above its marks, on five columns shared with the You doors |
 | §1012 (the You doors at `DS.Face.shelf`, every mark 28pt) | 56pt doors, 28pt marks and a 28pt category disc | amended by §1013 — every button is the face's 46pt, doors and marks alike; the category glyph is drawn bare in the header |
+| §932 (the rooms tray is Liquid Glass, not a plate) | the tray's panel was glass so the room read through it | superseded by §1014 — the panel is solid, the sheets' black (`DS.surfaceSheet`); glass lost the marks' contrast over a bright room and read as charcoal over a dark one |
+| §1013 (the tray is one grid on five equal columns) | the five columns were equal slices of the tray between its insets, and the You doors black | amended by §1014 — the first column centres on the face's axis (`rowLeadCentre`) and the fifth mirrors it; the doors fill with `DS.surfaceRaised` |
+| §976a (the You doors are black circles) | each non-standing door a black circle with a pink glyph | amended by §1014 — on the black tray the door fills with the room head's charcoal (`DS.surfaceRaised`), glyph and standing fill unchanged |
 
 ## 1. Thesis
 
@@ -62676,3 +62679,16 @@ Logos shipped testnet v0.3 (roadmap.logos.co/testnets/v03-release) and RESET the
 - Not added: badges and collapsing categories (user: "no badges, no collapsing").
 
 **Seen:** the furnished demo on the iPhone 17 Pro simulator in dark with `-openTray YES`: the five labelled doors at 46pt; Recent holding the Wallet room after a swipe landed there (`recentRooms: Wallet` in the log); "Wallet ›" with its bare glyph over five 46pt marks a line. A room opened by the `-openRoom` launch hook is not recorded, because the tray has not mounted when the hook lands.
+
+## §1014 — The tray is solid black, its doors the room head's charcoal, and its first column is the face's axis (user: "is the tray better as black instead of glass", "i want a background that is used in the app somewhere else", "with this charcoal it looks very close to the glass so we don't gain much", "i suggest going black", "ya that is what we should go with", then "we need the axis to align here … yes the face would cover one but so what?", 2026-09-30; supersedes §932's glass, amends §1013 and §976a)
+
+**Why.** With §1013 the tray is a dense wall of 46pt brand circles and grey headers. Glass let a bright room bleed through and cost them their contrast; over a dark room it already read as charcoal, so a charcoal panel bought nothing. Black is a colour the app already uses for every sheet (`DS.surfaceSheet`), and it is the one that looks different from glass. On black, the You doors' own black had no edge, so they take the colour the room heads stand in (`DS.surfaceRaised`) — two colours the app already has, and no third.
+
+**Boarded.** T1 (the header card's charcoal tray, black doors), T2 (charcoal tray, `gray100` doors) and T3 (sheet-black tray, charcoal doors). Glass was ruled out first for contrast. The user picked T3.
+
+**Ruling.**
+- The panel fills with `DS.surfaceSheet` at `DS.Radius.sheet`, never glass.
+- A You door that is not standing fills with `DS.surfaceRaised`; its pink glyph and the standing door's pink fill are §976a's, unchanged.
+- `MarkGrid` places the first column's centre at `axis` (`rowLeadCentre` less the tray's inset) and the last at the same distance from the trailing side, the rest evenly between, so the first column — Home, and every section's first mark — stands on the face's own axis. The face covers the lowest first-column mark while the tray is at rest; the tray scrolls, and that is accepted. Every header glyph sits in a `glyphSlot` centred on the same axis.
+
+**Seen:** the furnished demo on a second iPhone 17 Pro simulator (the first was shared with another session, which force-quit the app mid-shot), dark, `-openTray YES`: the black panel, charcoal doors with pink glyphs, Home filled pink; measured from the screenshot, Home's centre, Wallet's first mark and the face all stand at 44.7pt ±0.3.

@@ -25,9 +25,12 @@ import SwiftUI
 ///
 /// **The Apple pass (§932).** Two detents — it opens at rest, a grabber drag
 /// grows it, a drag down from grown collapses before it dismisses (the HIG's
-/// medium detent, and §394a's three outcomes). Liquid Glass, not a plate:
-/// this surface is nothing but controls, and the HIG's materials page puts
-/// controls on glass so the room reads through. A filled symbol says
+/// medium detent, and §394a's three outcomes). The panel is SOLID black, the
+/// sheets' `surfaceSheet` (prd §1014, supersedes §932's glass): a dense wall
+/// of brand circles and grey headers lost contrast over a bright room, and
+/// over a dark one glass already read as charcoal, so it bought nothing
+/// (user: "we agreed glass isn't working here for contrast", "i suggest
+/// going black"). A filled symbol says
 /// SELECTED and nothing else (the HIG's own reading of the fill variant), so
 /// the standing category and Home fill and tint, and the rest stay outline.
 /// The panel grows out of the face's corner on the dock's own spring, the
@@ -65,6 +68,14 @@ struct RoomsTray: View {
     /// Five columns across the tray (prd §1013: "5 and 5"), shared by the You
     /// doors and every section's marks, so the tray is one grid top to bottom.
     static let marksPerLine = 5
+    /// The first column's centre, from the tray's inset: the column the face
+    /// and every room's row icons centre on (`rowLeadCentre`, prd §1014,
+    /// user: "we need the axis to align here … so it is cohesive? yes the
+    /// face would cover one but so what?"). The fifth column mirrors it.
+    static let axis: CGFloat = DSRoomChassis.rowLeadCentre - DSRoomChassis.inset
+    /// A header glyph's slot, so every category's glyph centres on `axis`
+    /// whatever its own width.
+    static let glyphSlot: CGFloat = 24
     /// The air under a line of marks, before the next line.
     static let lineAir: CGFloat = DS.Space.s4 + DS.Space.s1
     /// The air above a section's header: more than `lineAir`, so the gap is
@@ -174,9 +185,8 @@ struct RoomsTray: View {
         let natural = contentHeight + Self.grabberHeight
         let rest = min(natural, screen.height * Self.restShare)
         let full = min(natural, screen.height * Self.grownShare)
-        // A header's glyph starts where its column's first mark starts.
-        let column = (screen.width - 2 * DSRoomChassis.inset) / CGFloat(Self.marksPerLine)
-        let headInset = max(0, (column - Self.mark) / 2)
+        // A header's glyph centres on the axis its first mark stands on.
+        let headInset = Self.axis - Self.glyphSlot / 2
         let recent = recentShown
         let height = grown ? full : rest
         return VStack(spacing: 0) {
@@ -222,10 +232,12 @@ struct RoomsTray: View {
             .frame(height: max(height - Self.grabberHeight, 1))
         }
         .frame(maxWidth: .infinity)
-        // The bottom corners sit below the edge: the panel is glass with one
-        // radius, and only its top corners are meant to be seen.
+        // The bottom corners sit below the edge: the panel is one radius, and
+        // only its top corners are meant to be seen. Solid, the sheets' black
+        // (§1014) — never glass, which lost the marks' contrast.
         .padding(.bottom, DS.Radius.sheet)
-        .dsGlass(cornerRadius: DS.Radius.sheet)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous))
         .offset(y: DS.Radius.sheet)
         .overlay(alignment: .topLeading) { closeDoor }
         .ignoresSafeArea(edges: .bottom)
@@ -379,7 +391,7 @@ struct RoomsTray: View {
     private var youRow: some View {
         let home = filter.source == "All" && route.path.isEmpty
         let notes = Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty
-        return HStack(alignment: .top, spacing: 0) {
+        return MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
             ForEach(Array(doors(home: home, notes: notes).enumerated()), id: \.offset) { index, door in
                 self.door(door, index: index)
             }
@@ -432,7 +444,7 @@ struct RoomsTray: View {
                 ? Text("\(category), needs your attention")
                 : Text(category))
             .accessibilityAddTraits(lit ? .isSelected : [])
-            MarkGrid(columns: Self.marksPerLine, lineAir: Self.lineAir) {
+            MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
                 ForEach(Array(present.enumerated()), id: \.element) { slot, venue in
                     markButton(venue, key: .source(venue))
                         .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
@@ -450,7 +462,7 @@ struct RoomsTray: View {
                    lit: false, broken: false, opens: false)
                 .padding(.leading, headInset)
                 .accessibilityAddTraits(.isHeader)
-            MarkGrid(columns: Self.marksPerLine, lineAir: Self.lineAir) {
+            MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
                 ForEach(Array(recent.enumerated()), id: \.element) { slot, venue in
                     markButton(venue, key: .recent(venue))
                         .modifier(Dealt(on: dealt, index: slot, reduceMotion: reduceMotion))
@@ -498,6 +510,7 @@ struct RoomsTray: View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: glyph)
                 .dsGlyph(.subhead, weight: .medium)
+                .frame(width: Self.glyphSlot)
                 .foregroundStyle(broken ? DS.attention : (lit ? DS.tint : DS.textSecondary))
                 .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
                 .modifier(Lifted(on: hot, reduceMotion: reduceMotion))
@@ -511,13 +524,15 @@ struct RoomsTray: View {
         .contentShape(Rectangle())
     }
 
-    /// A You door (prd §976a): a BLACK circle with the glyph in the brand
-    /// pink, and the standing door FILLS — the pink tile, white glyph and
+    /// A You door (prd §976a): a circle in the room head's charcoal
+    /// (`surfaceRaised`, §1014 — black on the black tray had no edge) with
+    /// the glyph in the brand pink, and the standing door FILLS — the pink
+    /// tile, white glyph and
     /// the top sheen `BridgeIcon` gives a seat with no art. Selection is the
     /// fill, so the door needs no ring.
     private func doorTile(_ glyph: String, lit: Bool) -> some View {
         Circle()
-            .fill(lit ? DS.brand : Color.black)
+            .fill(lit ? DS.brand : DS.surfaceRaised)
             .overlay {
                 if lit {
                     Circle().fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
@@ -546,7 +561,7 @@ struct RoomsTray: View {
                     .foregroundStyle(door.lit ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity)
+            .frame(minWidth: Self.mark)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
@@ -774,12 +789,15 @@ struct RoomPickFlight: View {
     }
 }
 
-/// The tray's marks, a fixed number to a line (prd §1013): each mark centred
-/// in one of `columns` equal columns across the width — the same columns the
-/// You doors stand in, so the tray is one grid. Each subview is a mark's TAP
-/// TARGET, placed by its centre; a line steps the target plus `lineAir`.
+/// The tray's marks, a fixed number to a line (prd §1013, §1014): the first
+/// column's centre stands `edge` in from the leading side and the last one's
+/// `edge` in from the trailing side, the rest spread evenly between — the You
+/// doors and every section share these columns, so the tray is one grid and
+/// its first column is the face's own axis. Each subview is placed by its
+/// centre; a line steps the tallest subview plus `lineAir`.
 struct MarkGrid: Layout {
     let columns: Int
+    let edge: CGFloat
     let lineAir: CGFloat
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -792,10 +810,10 @@ struct MarkGrid: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews,
                        cache: inout ()) {
-        let column = bounds.width / CGFloat(max(columns, 1))
+        let pitch = (bounds.width - 2 * edge) / CGFloat(max(columns - 1, 1))
         let target = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? DS.Hit.min
         for (i, view) in subviews.enumerated() {
-            let x = bounds.minX + (CGFloat(i % columns) + 0.5) * column
+            let x = bounds.minX + edge + CGFloat(i % columns) * pitch
             let y = bounds.minY + target / 2 + CGFloat(i / columns) * (target + lineAir)
             view.place(at: CGPoint(x: x, y: y), anchor: .center, proposal: .unspecified)
         }
