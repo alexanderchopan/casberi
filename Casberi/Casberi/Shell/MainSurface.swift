@@ -2147,6 +2147,9 @@ struct MainSurface: View {
             // The music rooms open on Activity (prd §995).
             chrome.musicScope = .activity
             chrome.musicGroup = nil
+            // And the mail rooms on All.
+            chrome.mailScope = .all
+            chrome.mailSender = nil
             // And the Tokens room's packs.
             chrome.tokensScope = .watchlist
             chrome.pinterestScope = nil

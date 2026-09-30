@@ -3389,7 +3389,7 @@ struct FeedScreen: View {
         let sections = MusicShelf.sections(groups) { $0.name }
         ForEach(sections, id: \.letter) { section in
             Section {
-                musicLetterHeader(section.letter)
+                letterHeader(section.letter)
                 ForEach(section.items, id: \.name) { group in
                     DSPushRow(title: Text(verbatim: group.name),
                               fact: Text(verbatim: "\(group.count)"),
@@ -3413,8 +3413,9 @@ struct FeedScreen: View {
     }
 
     /// A letter over a list of names — the day header's type on the primary
-    /// ramp, because a letter is not a time (prd §740).
-    private func musicLetterHeader(_ letter: String) -> some View {
+    /// ramp, because a letter is not a time (prd §740). The music and mail
+    /// rooms' A–Z lists.
+    private func letterHeader(_ letter: String) -> some View {
         Text(verbatim: letter)
             .dsText(.heading24)
             .foregroundStyle(DS.textPrimary)
@@ -3435,6 +3436,106 @@ struct FeedScreen: View {
                 withAnimation(DS.Motion.standard) { chrome.musicGroup = nil }
             }
             .accessibilityHint(scope == .albums ? Text("Back to albums") : Text("Back to artists"))
+            .noteFolderRowChrome()
+        }
+    }
+
+    // MARK: - The mail rooms (the music rooms' shape, prd §995)
+
+    /// All · From · Subject. A tile is an ORDER, never a filter (`MailScope`),
+    /// so every tile holds every mail. From stands only over at least one
+    /// sender (§83). Any pick closes an open sender — the lit tile tapped
+    /// again leads back.
+    private func mailTiles(_ live: [Thing]) -> DSScopeTiles<MailScope> {
+        let offered = MailScope.allCases.filter { scope in
+            scope != .from || live.contains { mailSenderKey($0) != nil }
+        }
+        return DSScopeTiles(sections: offered,
+                     active: offered.contains(chrome.mailScope) ? chrome.mailScope : .all,
+                     attention: []) { picked in
+            withAnimation(DS.Motion.standard) {
+                chrome.mailScope = picked
+                chrome.mailSender = nil
+            }
+        }
+    }
+
+    /// THE MAIL ROOMS (Gmail and iCloud Mail, one face): the newest mail as
+    /// the cover in the lead box, the tiles under it, then the tile's list.
+    /// All is the room as it was — what is waiting on you (prd §911), then
+    /// days, the cover lifted out. Subject is every mail A–Z by subject under
+    /// letter headers. From is an A–Z list of senders; one opens in place,
+    /// its name a row that leads back and its mail newest first under it.
+    /// The cover stays the newest mail under every tile, so the lead box and
+    /// the tiles never move (the fixed template).
+    @ViewBuilder
+    private func mailSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
+        let live = visible.filter(\.isLive)
+        // All's days read `visible`, as the room did before it had tiles.
+        let days = chronoGroups(visible)
+        let coverID = heroShown ? nil : ledeThingID(in: days)
+        let tiles = mailTiles(live)
+        standaloneLead(cover: coverThing(coverID, in: visible), tiles: tiles,
+                       listEmpty: live.isEmpty, emptyWords: Text(chrome.mailScope.summary))
+        // A pick whose tile is no longer offered stands as All.
+        switch tiles.active {
+        case .all:
+            if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
+            groupedSections(liftingCover(days, id: coverID), nextEventID: nextEventID,
+                            boundary: boundaryThingID(in: days))
+        case .subject:
+            let sections = MusicShelf.sections(live) { MailShelf.subjectKey($0.title) }
+            ForEach(sections, id: \.letter) { section in
+                daySection(section.letter, section.items, nextEventID: nextEventID, dated: false)
+            }
+        case .from:
+            let senders = MailShelf.senders(live.map { (ThingSheetView.mailSender($0), $0.authorEmail) })
+            if let open = chrome.mailSender, let sender = senders.first(where: { $0.key == open }) {
+                mailOpenSenderRow(sender.name)
+                daySection(sender.name, live.filter { mailSenderKey($0) == open },
+                           nextEventID: nextEventID, dated: false, headed: false)
+            } else {
+                mailSenderSections(senders)
+            }
+        }
+    }
+
+    /// The key a mail files under in From — its sender's address, else name.
+    private func mailSenderKey(_ thing: Thing) -> String? {
+        MailShelf.senderKey(name: ThingSheetView.mailSender(thing), address: thing.authorEmail)
+    }
+
+    /// Every sender A–Z under letter headers, each with how many mails.
+    @ViewBuilder
+    private func mailSenderSections(_ senders: [MailShelf.Sender]) -> some View {
+        let sections = MusicShelf.sections(senders) { $0.name }
+        ForEach(sections, id: \.letter) { section in
+            Section {
+                letterHeader(section.letter)
+                ForEach(section.items, id: \.key) { sender in
+                    DSPushRow(title: Text(verbatim: sender.name),
+                              fact: Text(verbatim: "\(sender.count)"),
+                              action: { withAnimation(DS.Motion.standard) { chrome.mailSender = sender.key } }) {
+                        EmptyView()
+                    }
+                    .frame(minHeight: DS.Hit.min)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                              bottom: 0, trailing: DSRoomChassis.rowInset))
+                }
+            }
+        }
+    }
+
+    /// The open sender's name, under the tiles: the tap leads back to the
+    /// list of senders, as the lit tile does.
+    private func mailOpenSenderRow(_ name: String) -> some View {
+        Section {
+            DSDoorRow(icon: "chevron.left", title: Text(verbatim: name)) {
+                withAnimation(DS.Motion.standard) { chrome.mailSender = nil }
+            }
+            .accessibilityHint(Text("Back to senders"))
             .noteFolderRowChrome()
         }
     }
@@ -7878,17 +7979,7 @@ struct FeedScreen: View {
         case .calendar:
             calendarSections(visible, nextEventID: nextEventID, heroShown: heroShown)
         case .gmail:
-            // The newest mail is the cover, and what is waiting on you stands
-            // under it (prd §911): the waiting section is a list section, and a
-            // room that led with it — or with nothing — was the one Life room
-            // with no lead. The cover is drawn by hand so the waiting section
-            // can stand between it and the days.
-            let days = chronoGroups(visible)
-            let mailCoverID = heroShown ? nil : ledeThingID(in: days)
-            if let mailCover = coverThing(mailCoverID, in: visible) { Section { ledeListRow(mailCover) } }
-            if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
-            groupedSections(liftingCover(days, id: mailCoverID), nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: days))
+            mailSections(visible, nextEventID: nextEventID, heroShown: heroShown)
         case .reminders:
             reminderSections(visible, nextEventID: nextEventID, heroShown: heroShown)
         case .music:

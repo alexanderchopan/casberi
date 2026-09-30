@@ -2006,6 +2006,11 @@ harness "Note folders self-test" "note folders self-test" "scripts/note-folders-
 # when wrong.
 harness "Music shelf self-test" "music shelf self-test" "scripts/music-shelf-selftest.sh" "the music shelf self-test failed — run scripts/music-shelf-selftest.sh"
 
+# The mail rooms' tiles, All · From · Subject (the music rooms' shape): a
+# reply filed with the mail it answers, one sender per address whatever the
+# name says. Each renders as an ordinary list when wrong.
+harness "Mail shelf self-test" "mail shelf self-test" "scripts/mail-shelf-selftest.sh" "the mail shelf self-test failed — run scripts/mail-shelf-selftest.sh"
+
 # Recently Deleted (prd §985): a note archived before it is deleted, a window
 # that never reads 0 while a note can come back, and Delete everything that
 # empties the archive — each a loss nobody sees until the note is needed.

@@ -533,6 +533,16 @@ final class ShellChrome {
     /// every tile pick, so the lit tile tapped again leads back.
     var musicGroup: String? = nil
 
+    /// Which order the mail rooms stand in — All, From or Subject (the music
+    /// rooms' shape, prd §995). Cleared on every source change like
+    /// `musicScope`.
+    var mailScope: MailScope = .all
+
+    /// The sender standing open under From, by `MailShelf.Sender.key`; nil is
+    /// the A–Z list of senders. Cleared with `mailScope` and on every tile
+    /// pick, so the lit tile tapped again leads back.
+    var mailSender: String? = nil
+
     /// The folder standing open under the Folders tile (prd §980), by name;
     /// nil is the folder list. Only ever set while `notesScope == .folders`,
     /// and cleared with it on every source change and every tile pick — the

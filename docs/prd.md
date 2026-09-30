@@ -62485,3 +62485,15 @@ A pack's lead is the category's name over "$11.6T across 9", read from the same 
 **Website, same session.** The Tokens cell and hero tile became Markets (`.ai-markets`), the Stocktwits cell, hero tile and docs chute tile are gone, `docs.html` and `llms.txt` say Markets, the static count reads 100+ over 109, and the cache-busters are bumped.
 
 **Seen** (a private iPhone 17 Pro simulator over the demo): the Work pack with live prices and caps (Amazon, Apple, Atlassian, Cloudflare, GitLab…) and Hugging Face at n/a; the capsule beside the seat; the Markets watchlist with DEGEN, ETH, SOL beside NVDA, TSLA, AAPL on live quotes; the old demo's Stocktwits rows swept on launch; "apple" on the page listing stocks.
+
+## §1001 — The mail rooms scope by All · From · Subject (user: "in the same way we sort apple music by artist song album can we do apple mail and google mail rooms where they have buttons that sort from all, from, subject and sent?", then "ok we don't need sent", 2026-09-30; extends §995)
+
+**The mail rooms (Gmail and iCloud Mail, one face, `.gmail`)** get §995's template: the newest mail as the cover in the lead box, then three tiles, then the tile's list. `MailScope` and `MailShelf` (`Model/MailShelf.swift`, Foundation-only, sharing `MusicShelf`'s letters and A–Z order) hold the rules; `FeedScreen.mailSections` draws them.
+
+1. **A tile is an ORDER, not a filter**, as in the music rooms. All is the room as it was: what is waiting on you (§911), then days, with the cover lifted out. Subject is every mail A–Z by subject under letter headers. From is an A–Z list of senders, each with how many mails it holds; a sender opens in place, its name as a row that leads back, then its mail newest first.
+2. **Subject sorts the way Mail does:** reply and forward prefixes come off ("Re: Fwd: Lease" files as Lease, beside the mail it answers), in English and the commonest others (AW, WG, SV, TR). A colon inside a subject stays.
+3. **A sender is an ADDRESS** when the row holds one (`authorEmail`, prd §916), else its folded name. Two people who share a display name are two senders; one person whose client spelt their name two ways is one, drawn with the name on their newest mail. An older row with no address files by the name in its "From …" line (`ThingSheetView.mailSender`). From stands only over at least one sender (§83).
+4. **Glyphs:** From is `person.crop.square` (`person` is You, `person.crop.circle` the contact kind), Subject is `textformat`. All is the dock's All.
+5. **Sent is not built** (user: "we don't need sent"). It would need a second IMAP mailbox read and a heal that keeps sent rows out of the inbox's presence check, because a sent ref under `mail:<id>:` would be deleted as missing from INBOX.
+
+The music rooms' letter header is now `letterHeader`, shared by both rooms. Harness: `mail-shelf-selftest.sh` (the tile order, sender names and keys, senders, subject keys, six mutations, and guards on the room's wiring). Not yet seen on a simulator: written in a cloud session with no Swift toolchain.

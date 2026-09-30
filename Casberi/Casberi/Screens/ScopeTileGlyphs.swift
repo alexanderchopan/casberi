@@ -120,6 +120,11 @@ enum ScopeTileGlyph {
     static let songs        = "music.note"
     static let albums       = "square.stack"
     static let artists      = "music.mic"
+    /// The mail rooms' orders (the music rooms' shape, prd §995). A sender is
+    /// a person on a card, not `person` (You) or `person.crop.circle` (the
+    /// contact kind); a subject is a line of type.
+    static let from         = "person.crop.square"
+    static let subject      = "textformat"
 }
 
 /// The Calendar room's tiles (prd §994). New is the Notes room's plus: the
@@ -145,6 +150,18 @@ extension MusicScope: DSTileScope {
         case .songs:    return ScopeTileGlyph.songs
         case .albums:   return ScopeTileGlyph.albums
         case .artists:  return ScopeTileGlyph.artists
+        }
+    }
+}
+
+/// The mail rooms' tiles. Conformed here for `NotesScope`'s reason:
+/// `MailScope` stays Foundation-only.
+extension MailScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:     return ScopeTileGlyph.all
+        case .from:    return ScopeTileGlyph.from
+        case .subject: return ScopeTileGlyph.subject
         }
     }
 }
