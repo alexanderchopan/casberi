@@ -254,16 +254,16 @@ grep -q 'dsText(fit.ledeRung)' "$TMP/lede.nocomment" \
   || { echo "✗ the cover's lede no longer takes the fit's rung (prd §905)"; exit 1; }
 grep -q 'rows: fit.castRows' "$TMP/lede.nocomment" \
   || { echo "✗ the cast shelf no longer takes the fit's rows (prd §905)"; exit 1; }
-grep -q 'tier == .large ? .heading40 : .heading24' "$TMP/lede.nocomment" \
-  || { echo "✗ the fit's statement rung is not the two-rung switch on the tier (prd §905, §762)"; exit 1; }
+grep -q 'tier == .large ? .heading28 : .heading24' "$TMP/lede.nocomment" \
+  || { echo "✗ the fit's statement rung is not the two-rung switch on the tier (prd §905, §762, §1006)"; exit 1; }
 grep -q 'tier == .regular ? 1 : 2' "$TMP/lede.nocomment" \
   || { echo "✗ the shelf's rows are not the tier's — mid and large both grow it (prd §905a)"; exit 1; }
-# `heading40` is the LADDER's rung and lives only in the tier switch. `body17`
+# `heading28` (was `heading40` until prd §1006) is the LADDER's rung and lives only in the tier switch. `body17`
 # is the app's body rung and the §907 faces draw it on their own terms (a
 # cast's caption, the media scrim's line), so it is not fenced here.
 # Outside the switch exactly ONE line spells it: WORK B's state word (prd §908),
 # a face's own statement at the large rung. A second is the ladder leaking.
-[ "$(grep -E 'heading40' "$TMP/lede.nocomment" | grep -vcE 'tier == ')" -eq 1 ] \
+[ "$(grep -E 'heading28' "$TMP/lede.nocomment" | grep -vcE 'tier == ')" -eq 1 ] \
   || { echo "✗ the large words rung is spelled outside the fit's tier switch more than the"; \
        echo "  one place §908 allows (the state word) — the ladder is leaking (prd §905)"; exit 1; }
 # The tiers are tried LARGE, then MID, then REGULAR, two spellings each for the

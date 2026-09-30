@@ -24,7 +24,7 @@ import SwiftUI
 /// `LetterHead` reads the same machine (2026-09-25).
 struct FeedDayDivider<Clause: View>: View {
     let label: String
-    var weight: Font.Weight = .bold
+    var weight: Font.Weight = .semibold
     /// Whether the label names a DATE (prd §740). "Since you left" names a
     /// span measured from you, not a day, so it wears the primary ink and the
     /// day names inside it keep the pink (prd §880) — `daySection`'s own
@@ -68,7 +68,7 @@ struct FeedDayDivider<Clause: View>: View {
 
     private var name: some View {
         Text(label)
-            .dsText(.heading24)
+            .dsText(.heading20)
             .fontWeight(weight)
             .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
     }

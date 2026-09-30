@@ -37,9 +37,10 @@ struct CalendarMonthLead: View {
         let runs = CalendarGrid.runs(days, span: scope.span(now: now, calendar: calendar))
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // The day dividers' rung (prd §999, user: "the month should be same
-            // size font as Today Thursday Friday dates").
+            // size font as Today Thursday Friday dates"), which is `heading20`
+            // since §1006.
             Text(CalendarGrid.title(days, calendar: calendar))
-                .dsText(.heading24)
+                .dsText(.heading20)
                 .foregroundStyle(DS.textPrimary)
                 .frame(height: Self.titleRow)
             VStack(spacing: 0) {

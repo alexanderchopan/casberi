@@ -8916,7 +8916,7 @@ struct FeedScreen: View {
                 // a name belongs. The whisper keeps its capsule and the
                 // Since-you-left group keeps its name.
                 FeedDayDivider(label: label,
-                               weight: coarse.contains(label) ? .semibold : .bold,
+                               weight: coarse.contains(label) ? .medium : .semibold,
                                dated: label != Self.momentLabel) {
                     EmptyView()
                 }
@@ -9084,7 +9084,7 @@ struct FeedScreen: View {
     /// name above it is the louder claim — so it is felt as it passes like
     /// every other seam in time (`FeedDayDivider`, §866).
     private func momentDayDivider(_ day: String) -> some View {
-        FeedDayDivider(label: day, weight: .semibold) { EmptyView() }
+        FeedDayDivider(label: day, weight: .medium) { EmptyView() }
             .padding(.leading, DSRoomChassis.rowInset)
             .padding(.top, DS.Space.s3)
             .padding(.bottom, DS.Space.s1)
@@ -12139,10 +12139,10 @@ struct FeedScreen: View {
                 if headed {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                         Text(label)
-                            .dsText(.heading24)
+                            .dsText(.heading20)
                             // The folded tail weighs less than today (prd §254) —
                             // see the twin in `bundledSections` for the reasoning.
-                            .fontWeight(coarse ? .semibold : .bold)
+                            .fontWeight(coarse ? .medium : .semibold)
                             // The day wears the brand hue (prd §740); a group
                             // named by something other than time keeps the
                             // primary ramp.

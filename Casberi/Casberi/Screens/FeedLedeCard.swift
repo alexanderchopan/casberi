@@ -721,7 +721,7 @@ struct FeedLedeCard: View {
     private func stateWordBlock(_ state: String, fit: Fit) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(verbatim: state)
-                .dsText(.heading40)
+                .dsText(.heading28)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -843,7 +843,9 @@ struct FeedLedeCard: View {
     /// The card's second line of words. `summary` only — it is the one field
     /// this app treats as DISPLAY copy (a Trello card's back, a Cursor run's
     /// summary). `content` can be a bare permalink and `enrichedText` is
-    /// retrieval-only by the 2026-07-15 ruling, so neither may be drawn.
+    /// retrieval-only by the 2026-07-15 ruling, so neither may be drawn —
+    /// except where the thing's sheet already draws them as its own words: a
+    /// chat's messages (§1005) and a note's body (§1006, `NoteSheetSource`).
     /// Withheld when it merely repeats the title.
     private var excerpt: String? {
         if let summary = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -853,10 +855,24 @@ struct FeedLedeCard: View {
         // A conversation's cover ends on its LATEST messages, the row's own
         // line (prd §1005): the transcript is stored oldest first, and a chat
         // carries no summary, so "Chat with Ada" stood over an empty well.
-        guard thing.kind == .chat else { return nil }
-        let messages = thing.content.split(separator: "\n").map(String.init)
-        return messages.isEmpty ? nil : messages.suffix(3).joined(separator: "\n")
+        if thing.kind == .chat {
+            let messages = thing.content.split(separator: "\n").map(String.init)
+            return messages.isEmpty ? nil : messages.suffix(3).joined(separator: "\n")
+        }
+        // **THE THING'S OWN WORDS, when it has no summary (prd §1006).** A note
+        // you wrote led with its title over a well of air and the word "Note",
+        // while its body sat one tap away. The words the sheet itself draws
+        // (`NoteSheetSource.body`, §645: never a model's) fill the box instead.
+        // Clipped before it reaches `Text`: the fit ladder measures up to twelve
+        // spellings, and a vault note can be 8,000 characters.
+        guard thing.kind == .note else { return nil }
+        let body = NoteSheetSource.body(for: thing).text
+        guard !body.isEmpty, body != thing.title else { return nil }
+        return String(body.prefix(Self.excerptCeiling))
     }
+
+    /// More than the largest spelling's six `body17` lines can draw.
+    private static let excerptCeiling = 600
 
     // MARK: - The body ladder (prd §772)
 
@@ -882,7 +898,9 @@ struct FeedLedeCard: View {
     /// words at `heading24`, the lede and the shelf grown. What grows is
     /// decided per tier, never as one switch.
     enum Tier: Hashable {
-        /// `heading40` words, `body17` lede, two face rows.
+        /// `heading28` words, `body17` lede, two face rows. It was
+        /// `heading40` until prd §1006: 40 heavy under a 34pt screen name
+        /// made the card, not the screen, the largest words on the page.
         case large
         /// `heading24` words, `body17` lede, two face rows.
         case mid
@@ -896,7 +914,7 @@ struct FeedLedeCard: View {
         let bodyLines: Int
 
         /// The words' rung — one of two, never a third (§762's ramp).
-        var statementRung: DSTextStyle { tier == .large ? .heading40 : .heading24 }
+        var statementRung: DSTextStyle { tier == .large ? .heading28 : .heading24 }
         /// The lede's rung.
         var ledeRung: DSTextStyle { tier == .regular ? .subhead12 : .body17 }
         /// How many rows of faces the cast shelf may take.

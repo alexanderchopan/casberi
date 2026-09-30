@@ -116,7 +116,7 @@ enum StripeRoomSource {
             return out
         }
         out.append("headline=\(StripeRoom.headline(room))")
-        out.append("note=\(StripeRoom.note(room, now: now))")
+        out.append("note=\(StripeRoom.note(room, now: now) ?? "none")")
         let span = StripeRoom.span(days: room.items.map(\.days))
         out.append("span=\(span) (\(StripeRoom.spanLabel(span: span)))")
         for item in room.items {

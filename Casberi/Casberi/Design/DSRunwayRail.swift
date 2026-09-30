@@ -14,6 +14,13 @@ import SwiftUI
 /// inside the rail instead of hanging off its end; each is centred by nesting
 /// it in a full-size frame rather than by a half-difference computed per shape.
 ///
+/// **A FILLED BAR, NEVER A THUMB (prd §1006).** The lead was a 15pt disc on a
+/// 2pt line — a slider's anatomy, so the one deadline that matters read as a
+/// control you could drag. The track is a 6pt bar now and the lead is the
+/// stretch of it from today to the deadline, in the room's hue: how much time
+/// is left, drawn as an amount. Every other mark is a tick across the bar,
+/// which reads as a date on an axis, not as a handle.
+///
 /// **Sized from data, so it arrives** (design-motion law) and stands still
 /// under Reduce Motion.
 ///
@@ -32,8 +39,8 @@ struct DSRunwayRail: View {
     struct Mark: Identifiable {
         let id: String
         let position: Double
-        /// The nearest one, drawn larger and in the room's own hue. Exactly one
-        /// mark should carry it.
+        /// The nearest one: the bar fills to it in the room's own hue. Exactly
+        /// one mark should carry it.
         var lead: Bool = false
 
         init(id: String, position: Double, lead: Bool = false) {
@@ -57,7 +64,13 @@ struct DSRunwayRail: View {
     /// these rails have their rows directly below and need no second door.
     var onPick: ((String) -> Void)? = nil
 
-    private static let dot: CGFloat = 11
+    /// The bar's thickness, and the lead's fill's.
+    private static let bar: CGFloat = 6
+    /// A later deadline's tick across the bar.
+    private static let tick: CGFloat = 14
+    /// The row the marks stand in. Named for the disc it once centred, and
+    /// still the unit placement is measured against, so every room's
+    /// `position` lands where it always did.
     private static let leadDot: CGFloat = 15
     private static let tickRoom: CGFloat = 18
     /// A finger's reach. `nearestMark`'s 22pt rule, widened a touch because
@@ -68,19 +81,23 @@ struct DSRunwayRail: View {
         GeometryReader { geo in
             let travel = max(geo.size.width - Self.leadDot, 1)
             ZStack(alignment: .topLeading) {
-                mark(Capsule(), width: geo.size.width, height: 2,
-                     fill: DS.fillLine, at: 0, travel: 0)
+                bar(width: geo.size.width, fill: DS.fillLine)
 
                 ForEach(Array(gridlines.enumerated()), id: \.offset) { _, at in
                     mark(Capsule(), width: 2, height: 8, fill: DS.fillStrong,
                          at: at, travel: travel)
                 }
 
-                ForEach(marks) { item in
-                    let size = item.lead ? Self.leadDot : Self.dot
-                    mark(Circle(), width: size, height: size,
-                         fill: item.lead ? leadFill : DS.fillStrong,
-                         at: item.position, travel: travel)
+                // Time left to the nearest deadline: the bar from today to it.
+                // An overdue lead sits at 0 and keeps a nub, never an empty bar.
+                if let lead = marks.first(where: \.lead) {
+                    bar(width: max(lead.position * travel + Self.leadDot / 2, Self.bar),
+                        fill: leadFill)
+                }
+
+                ForEach(marks.filter { !$0.lead }) { item in
+                    mark(Capsule(), width: 2, height: Self.tick,
+                         fill: DS.textTertiary, at: item.position, travel: travel)
                 }
             }
             .frame(height: Self.leadDot)
@@ -96,6 +113,14 @@ struct DSRunwayRail: View {
         .frame(height: DSRoomChassis.figureHeight + Self.tickRoom)
         .chartWipe(reduceMotion: reduceMotion)
         .accessibilityHidden(true)
+    }
+
+    /// The bar, or the lead's stretch of it, from the rail's leading edge.
+    private func bar(width: CGFloat, fill: Color) -> some View {
+        Capsule()
+            .fill(fill)
+            .frame(width: width, height: Self.bar)
+            .frame(height: Self.leadDot)
     }
 
     /// One thing on the axis, centred on the track at `position`.

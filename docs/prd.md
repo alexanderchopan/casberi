@@ -62561,3 +62561,19 @@ An audit board (six demo screens and a string sweep) named where the app still r
 **Found, not fixed.** On a freshly created iOS 27 simulator, `Notifications.cancelRetiredWhisper` blocks the main thread forever in a synchronous XPC reply from the notification service (sampled), so nothing after it at activation runs. Filed as its own task.
 
 **Seen** (a private iPhone 17 Pro iOS 26.5 simulator over a clean pour): Home, Wallet, GitHub and Telegram with the pill above each title; the wallet line filling its box under "Overview"; GitHub subject-first with no pictures; Telegram's broadcasts as headlines and "Chat with Ada" ending on Ada's last three messages; Readwise with one cover per book.
+
+## §1006 — The polish pass: the screen's name leads, the day steps down, a deadline is a bar (user: "do 1, 2, 3, 8" over the "What Apple would polish" canvas, 2026-09-29)
+
+**1 · The screen's name is the largest words on the page.** The lead's large tier set its statement at `heading40` (40 heavy) under a 34pt screen name (`heading34`), so on every room the card outranked the screen. It takes the new `heading28` (28 bold, `.title1`) and WORK B's state word with it; `heading24` stays the mid and regular tiers' rung. §762 retired a `heading28` that was 40 under a second name; this one is a different size.
+
+**2 · A note leads with its own words.** A note with no summary stood its title over a well of air. Its excerpt is now the body its sheet draws (`NoteSheetSource.body`, §645), clipped at 600 characters because the fit ladder measures twelve spellings. It sits beside §1005's chat excerpt; §1005 had already deleted the lone type tag ("Note", "Link") from the tags rung, and its filter is the one kept.
+
+**3 · The day steps down.** Every day header — the All feed's divider, a room's day, the Wallet's and every devnet's `DSDayHeader`, and the Calendar month title that §999 ties to them — takes the new `heading20` (20 semibold, `.title3`), still in `DS.brandInk`. A card-name rung over one row outweighed the row. The folded tail keeps its lighter weight one step down (§254: medium under semibold).
+
+**8 · A deadline is a bar, never a thumb.** `DSRunwayRail` drew a 15pt disc on a 2pt line: a slider's anatomy, so the deadline read as a control. It is a 6pt bar; the stretch from today to the nearest deadline fills in the room's hue, and every later deadline is a tick across it. Stripe, Polar, Dodo Payments and Cloudflare share it; placement (`position`) is unchanged, so each room's selftest still asserts the arithmetic it ships with. And Stripe's note says nothing under a deadline when the balance is unread: "Balance not read yet" was status standing where a fact belongs. Unread still never renders as a number.
+
+**Not done, and why.** 4 (one accent: brand pink as the only tint) and 7 (fitted wallet chart, the total in full) touch standing rulings and wait for the user; 5, 6 and 9 were not asked for.
+
+**Guards amended, not deleted.** `feed-reading-selftest.sh` pins the tier switch at `heading28` and fences that rung outside it; `room-heads-selftest.sh` asserts the unread note is nil, twice.
+
+**Seen:** built green on an iPhone 17 Pro simulator; the Stripe room draws the filled bar with no thumb and no unread line, GitHub's lead stands at 28 under a 34pt name, and every day header is 20. The note excerpt was not seen on screen — no demo room leads with a words-face note.

@@ -238,12 +238,29 @@ extension DSTextStyle {
     /// only caller; a room has no title and takes nothing from here.
     static let heading34 = DSTextStyle(size: 34, weight: .bold, tracking: 0, lineHeight: 41, relative: .largeTitle)
 
+    // ============================================================ 28 · LEAD
+    /// A room lead's statement when it has room to grow (prd §1006): the
+    /// large tier of `FeedLedeCard`'s fit ladder. It was `heading40`, so the
+    /// card set its words above the screen's own name (`heading34`) and the
+    /// page's hierarchy inverted on every room. Under the screen's name, over
+    /// a section's (`heading24`). `heading28` was retired by §762 as a second
+    /// name for 40; this is a different size, so the name is free again.
+    static let heading28 = DSTextStyle(size: 28, weight: .bold, tracking: 0, lineHeight: 34, relative: .title1)
+
     // ============================================================= 24 · TITLE
     /// A card's name.
     static let heading24 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
     /// A stat card's figure — the same rung, because a card's number and a
     /// card's name are peers.
     static let stat24 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
+
+    // ============================================================== 20 · DAY
+    /// The day over a run of rows, in the brand ink (prd §740, §1006). It was
+    /// `heading24`, a card's name, so a day over one row outweighed the row;
+    /// Apple sets a section over a list a step under the list's title rung.
+    /// Every day header, the Calendar room's month title (§999) and the
+    /// folded tail's lighter weight (§254) ride it.
+    static let heading20 = DSTextStyle(size: 20, weight: .semibold, tracking: 0, lineHeight: 25, relative: .title3)
 
     // ============================================================== 17 · BODY
     /// Emphasis at the body size — a heading inside running text, a sheet's

@@ -1456,7 +1456,7 @@ extension FeedScreen {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     // The day wears the brand hue, as every day header in
                     // the feed does (prd §740); this was the one in primary.
-                    Text(label).dsText(.heading24).foregroundStyle(DS.brandInk)
+                    Text(label).dsText(.heading20).foregroundStyle(DS.brandInk)
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4)

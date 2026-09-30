@@ -11,7 +11,7 @@ struct DSDayHeader: View {
 
     var body: some View {
         Text(word)
-            .dsText(.heading24)
+            .dsText(.heading20)
             .foregroundStyle(DS.brandInk)
             .frame(maxWidth: .infinity, alignment: .leading)
             // The list's rows stand in the Wallet's row column; the day is

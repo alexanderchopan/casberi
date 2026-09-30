@@ -212,10 +212,10 @@ print("")
 print("Stripe — the note never repeats the headline")
 check("when a deadline leads, the note carries the money",
       StripeRoom.note(room(items: [item("a", days: 4)])) == "£2,140.00 available")
-// Unread is not zero, and must never render as a number.
-check("an unread balance says so rather than showing zero",
-      StripeRoom.note(room(available: nil, asOf: nil, items: [item("a", days: 4)]))
-        == "Balance not read yet")
+// Unread is not zero, and must never render as a number — and under a
+// deadline it says nothing at all (prd §1006).
+check("an unread balance under a deadline says nothing, never zero",
+      StripeRoom.note(room(available: nil, asOf: nil, items: [item("a", days: 4)])) == nil)
 check("when money leads, the note carries what's still moving",
       StripeRoom.note(room(pending: "$310.00")) == "$310.00 pending")
 check("a quiet account with nothing pending says nothing needs you",
@@ -250,9 +250,8 @@ check("a read zero balance is stated as a fact, not an apology",
 check("a read zero balance with a deadline doesn't apologise either",
       StripeRoom.note(room(available: nil, pending: "$1,200.00", items: [item("a", days: 1)]))
         == "$1,200.00 pending")
-check("an UNREAD balance does apologise",
-      StripeRoom.note(room(available: nil, asOf: nil, items: [item("a", days: 1)]))
-        == "Balance not read yet")
+check("an UNREAD balance stays silent rather than apologising (prd §1006)",
+      StripeRoom.note(room(available: nil, asOf: nil, items: [item("a", days: 1)])) == nil)
 check("a full set of drawn rows says nothing",
       StripeRoom.coverageNote(room(items: [item("a", days: 1)])) == nil)
 check("undrawn deadlines are counted, never swallowed",

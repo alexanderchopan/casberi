@@ -206,15 +206,18 @@ struct StripeRoom: Equatable {
 
     /// The line under it. Never a restatement of the headline: when money
     /// leads, this carries what's in flight; when a deadline leads, it carries
-    /// the money, so one glance always gets both.
-    static func note(_ room: StripeRoom, now: Date = .now) -> String {
+    /// the money, so one glance always gets both. An UNREAD balance under a
+    /// deadline says nothing (prd §1006): "Balance not read yet" stood under
+    /// the one line that mattered, a status line where a fact belongs. Unread
+    /// still never renders as a number, and the quiet card still speaks.
+    static func note(_ room: StripeRoom, now: Date = .now) -> String? {
         if room.lead != nil || room.stopped {
             if let available = room.available {
                 return String(localized: "\(available) available")
             }
-            // Only an unread balance apologises. A read balance of zero is a
+            // An unread balance is silent here; a read balance of zero is a
             // fact, and says what's still moving instead.
-            guard room.balanceRead else { return String(localized: "Balance not read yet") }
+            guard room.balanceRead else { return nil }
             return inFlight(room) ?? String(localized: "Nothing available right now")
         }
         // Money leads — say what's still moving.
