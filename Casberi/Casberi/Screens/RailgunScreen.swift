@@ -84,7 +84,7 @@ struct RailgunScreen: View {
             }
         }
         BridgeSyncStatusRows(syncing: syncing,
-                             syncingLine: String(localized: "Reading the pool's doors…"),
+                             syncingLine: String(localized: "Reading the pool…"),
                              proof: lastResult)
         DSSlabNote(text: hasWallets
             ? String(localized: "On automatically — both doors land as they happen.")

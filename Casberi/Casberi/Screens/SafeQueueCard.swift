@@ -697,9 +697,9 @@ struct SafeSignBlock: View {
         case .hashMismatch, .serviceHashMismatch, .requesterHashMismatch:
             return String(localized: "The Safe's own hash for this transaction doesn't match what Casberi worked out. Don't sign this anywhere until you know why.")
         case .signerNotDeployed:
-            return String(localized: "This Safe names this phone's vault-chip key, but its signer contract isn't deployed yet. Run createSigner on Safe's passkey factory from your other wallet first.")
+            return String(localized: "This phone's key isn't set up on the Safe yet. Finish it from your other wallet first.")
         case .signatureNotAccepted:
-            return String(localized: "Safe's passkey factory didn't accept the signature this phone made, so Casberi threw it away.")
+            return String(localized: "The Safe didn't accept this phone's signature.")
         }
     }
 

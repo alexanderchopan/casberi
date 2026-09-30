@@ -464,7 +464,7 @@ private struct RocketMoneyLoginWKWebView: UIViewRepresentable {
                 guard haveBearer || (signedInLongEnough && !header.isEmpty) else {
                     if !self.announcedSignIn,
                        Date().timeIntervalSince(self.startedAt) > Self.absoluteBound {
-                        self.fail(String(localized: "Casberi couldn't read a session from Rocket Money. If you're signed in, this is the probe's problem, not yours — tap Try again."))
+                        self.fail(String(localized: "Casberi couldn't read a session from Rocket Money. If you're signed in, nothing is wrong with your account — tap Try again."))
                     }
                     return
                 }

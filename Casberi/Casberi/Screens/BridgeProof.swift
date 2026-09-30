@@ -33,7 +33,7 @@ import SwiftUI
 /// "\(n) new", "\(n) in", "\(n) landed…", "Connected", "Connected.",
 /// "Connected — 1 app", "Connected to \(name)" — and thirty-six distinct lines
 /// for "reading". The reading lines STAY free text and that is not an
-/// oversight: "Reading the pool's doors…" is the one moment a bridge says what
+/// oversight: "Reading the pool…" is the one moment a bridge says what
 /// it is actually doing, and it differs because the work differs. The
 /// OUTCOMES are the same four events everywhere, so they are cases.
 ///

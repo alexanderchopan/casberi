@@ -449,7 +449,7 @@ struct SafeScreen: View {
                         DSPasteboard.copy(address)
                         chrome.flash(String(localized: "Address copied"))
                     }
-                    Text("From your other wallet: run createSigner on Safe's passkey factory for this key, then add this address as an owner — or swap it in for the plain key.")
+                    Text("From your other wallet, add this phone as an owner of the Safe.")
                         .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

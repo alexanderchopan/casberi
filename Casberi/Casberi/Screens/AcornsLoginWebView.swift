@@ -334,7 +334,7 @@ private struct AcornsLoginWKWebView: UIViewRepresentable {
                     } else if Date().timeIntervalSince(self.startedAt) > Self.absoluteBound {
                         // The watchdog: signed in or not, this view has waited
                         // long enough to say something rather than spin.
-                        self.fail(String(localized: "Casberi couldn't read a session from Acorns. If you're signed in, this is the probe's problem, not yours — tap Try again."))
+                        self.fail(String(localized: "Casberi couldn't read a session from Acorns. If you're signed in, nothing is wrong with your account — tap Try again."))
                     }
                     return
                 }
