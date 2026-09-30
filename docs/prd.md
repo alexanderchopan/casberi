@@ -356,6 +356,9 @@ marks chronological position within the pair.
 | §994 (the Calendar room's tiles; the month title at `heading17`) | the tiles drew in the order given, and the month title stood at `heading17` | amended by §999 — a room whose scopes are spans of time declares `readsInTime` and keeps Today · Week · Month · New; the month title is `heading24`, the day dividers' rung |
 | §995 (every room's tiles read A–Z) | every room's tiles sorted A–Z, Calendar's included (Month · Today · Week · New) | amended by §999 — a scope enum of spans of time (`readsInTime`) keeps its given order; every other room still reads A–Z |
 | §919 (the demo pill floats over the room's lead and the well absorbs it, `DSDemoMark.leadClearance`) | nothing on the page moves; the lead's words step down inside the well | amended by §1005 — since §930 put the room's title first, the room reserves the pill's band above its title (`screenClearance`) and `leadClearance` is deleted |
+| §955 (the rooms tray's categories stand one pitch apart, no air between sections) | every category was one 44pt row, name beside its marks, with no gap between categories | amended by §1010 — each section is a name above a grid of its marks, and sections stand `s3` apart |
+| §1001 (the tray's marks stay on the row size) | the tray's marks stayed at `DS.Face.rowCircle` (28pt) for cohesion with the rows, and a larger mark was not to be re-proposed | superseded by §1008 — the user reopened it; the marks are `DS.Face.cell` (40pt) |
+| §1008 (the tray's marks draw to their targets, 36pt name discs) | 40pt marks five across beside a 118pt name column, 4pt apart, with 36pt name discs | amended by §1010 — the name stands above its marks, the marks start at the name's edge five to a line, and the name disc is 28pt |
 
 ## 1. Thesis
 
