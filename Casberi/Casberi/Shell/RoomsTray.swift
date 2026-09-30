@@ -41,6 +41,14 @@ import SwiftUI
 /// `go(to:)` inside `MainSurface`; this view stands above the stack and takes
 /// the same hop every other room-to-room door takes, so a category label
 /// resolves through `CategoryFold.landing` exactly as a chip tap did.
+///
+/// **Press and slide (prd §1002).** Hold anywhere in the roster for
+/// `scrubArm`, then slide: the door, category or source under the finger
+/// lifts with a selection tick, its row's name column says what it is, and
+/// letting go lands there — the dock's press-and-slide (§621), brought into
+/// the tray that replaced the strip. Letting go over nothing picks nothing.
+/// The scroll is off while a scrub is armed, and a hold released without
+/// moving is left to the Button under it, so a slow tap still taps.
 struct RoomsTray: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
@@ -53,7 +61,9 @@ struct RoomsTray: View {
     /// and a crowded category wraps inside its own column, never under the
     /// name (user: "it looks bad there").
     static let nameColumn: CGFloat = 118
-    /// A mark's size — the row circle, on the face ramp.
+    /// A mark's size — the row circle, on the face ramp. It stays the size of
+    /// every list's lead even though a larger tray looked better (prd §1001):
+    /// cohesion first, and never the FAB's size.
     static let mark: CGFloat = DS.Face.rowCircle
     /// The air between marks' TAP AREAS and between wrapped lines: none.
     /// Five across on a 402pt phone (user: "is there anyway we can get five
@@ -89,7 +99,22 @@ struct RoomsTray: View {
     @State private var grown = false
     @State private var dealt = false
     @State private var bounceTick = 0
-    @State private var markFrames: [String: CGRect] = [:]
+    /// Where every pickable thing stands, in window space: the flight's
+    /// start and the scrub's hit test. Layout, not state — a reference the
+    /// body never observes, so a scroll's frame writes re-render nothing.
+    @State private var frames = TrayFrames()
+    /// The thing under a scrubbing finger, and whether a scrub is armed.
+    @State private var hot: ScrubTarget?
+    @State private var scrubbing = false
+    /// A scrub that moved owns its release: the Button the finger started on
+    /// must not also fire when it lifts there.
+    @State private var swallowTap = false
+
+    /// How long a hold arms the scrub — the chart scrub's clock is 0.15, but
+    /// here a hold that short would steal every slow tap on a mark.
+    static let scrubArm: Double = 0.3
+    /// How far a mark lifts under the finger.
+    static let hotScale: CGFloat = 1.2
 
     private var liftMotion: Animation { reduceMotion ? DS.Motion.glide : DS.Motion.folder }
 
@@ -124,6 +149,9 @@ struct RoomsTray: View {
             // Motion they are simply there.
             grown = false
             drag = 0
+            hot = nil
+            scrubbing = false
+            swallowTap = false
             if reduceMotion {
                 dealt = up
             } else {
@@ -167,8 +195,19 @@ struct RoomsTray: View {
                             .onChange(of: g.size.height) { _, h in contentHeight = h }
                     }
                 }
+                .simultaneousGesture(scrub)
             }
             .scrollIndicators(.hidden)
+            .scrollDisabled(scrubbing)
+            // The visible window: a row scrolled out of it keeps its last
+            // frame, and a finger over the grabber must not pick it.
+            .background {
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { frames.viewport = g.frame(in: .global) }
+                        .onChange(of: g.frame(in: .global)) { _, f in frames.viewport = f }
+                }
+            }
             .frame(height: max(height - Self.grabberHeight, 1))
         }
         .frame(maxWidth: .infinity)
@@ -316,7 +355,7 @@ struct RoomsTray: View {
             // the empty contact glyph.
             HStack(spacing: DS.Space.s3) {
                 YouFace(size: Self.mark)
-                Text(String(localized: "You"))
+                Text(scrubWord(in: nil) ?? String(localized: "You"))
                     .dsText(.heading17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
@@ -324,15 +363,32 @@ struct RoomsTray: View {
             .frame(width: Self.nameColumn, alignment: .leading)
             .frame(minHeight: DS.Hit.min)
             FlowLayout(spacing: Self.markGap) {
-                door(String(localized: "Home"), glyph: home ? "house.fill" : "house",
-                     lit: home, index: 0) { pick("All") }
-                door(String(localized: "Notes"), glyph: notes ? "note.text" : "note",
-                     lit: notes, index: 1) { pick(Pinboard.room) }
-                door(String(localized: "Connect"), glyph: "square.grid.2x2", index: 2) { connect() }
-                door(String(localized: "Addresses"), glyph: "at", index: 3) { screen(.addresses) }
-                door(String(localized: "Settings"), glyph: "gearshape", index: 4) { screen(.settings) }
+                ForEach(Array(doors(home: home, notes: notes).enumerated()), id: \.offset) { index, door in
+                    self.door(door, index: index)
+                }
             }
         }
+    }
+
+    /// The You row's doors, in order — one list, so a tap and a scrub
+    /// release run the same act.
+    private struct Door {
+        let word: String
+        let glyph: String
+        var lit = false
+        let act: () -> Void
+    }
+
+    private func doors(home: Bool = false, notes: Bool = false) -> [Door] {
+        [
+            Door(word: String(localized: "Home"), glyph: home ? "house.fill" : "house",
+                 lit: home) { pick("All") },
+            Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
+                 lit: notes) { pick(Pinboard.room) },
+            Door(word: String(localized: "Connect"), glyph: "square.grid.2x2") { connect() },
+            Door(word: String(localized: "Addresses"), glyph: "at") { screen(.addresses) },
+            Door(word: String(localized: "Settings"), glyph: "gearshape") { screen(.settings) },
+        ]
     }
 
     private func categoryRow(_ category: String, index: Int) -> some View {
@@ -342,12 +398,14 @@ struct RoomsTray: View {
         let needsYou = broken(present)
         return HStack(alignment: .top, spacing: DS.Space.s3) {
             Button {
-                pick(category)
+                tapped { pick(category) }
             } label: {
-                rowName(glyph: glyph(for: category, lit: lit), word: category,
-                        lit: lit, broken: needsYou)
+                rowName(glyph: glyph(for: category, lit: lit),
+                        word: scrubWord(in: present) ?? category,
+                        lit: lit, broken: needsYou, hot: hot == .category(category))
             }
             .buttonStyle(PressSpring())
+            .scrubFrame(.category(category), in: frames)
             .accessibilityLabel(needsYou
                 ? Text("\(category), needs your attention")
                 : Text(category))
@@ -355,9 +413,10 @@ struct RoomsTray: View {
             FlowLayout(spacing: Self.markGap) {
                 ForEach(Array(present.enumerated()), id: \.element) { slot, venue in
                     Button {
-                        pick(venue, flying: true)
+                        tapped { pick(venue, flying: true) }
                     } label: {
                         BridgeIcon(name: venue, size: Self.mark, circular: true)
+                            .modifier(Lifted(on: hot == .source(venue), reduceMotion: reduceMotion))
                             .overlay {
                                 if filter.source == venue {
                                     Circle()
@@ -370,14 +429,8 @@ struct RoomsTray: View {
                     .dsTapTarget(Circle())
                     .accessibilityLabel(Text(BridgeCatalog.seatName(forSource: venue)))
                     .accessibilityAddTraits(filter.source == venue ? .isSelected : [])
-                    // Where this mark stands, for the flight it starts.
-                    .background {
-                        GeometryReader { g in
-                            Color.clear
-                                .onAppear { markFrames[venue] = g.frame(in: .global) }
-                                .onChange(of: g.frame(in: .global)) { _, f in markFrames[venue] = f }
-                        }
-                    }
+                    // Where this mark stands, for the flight and the scrub.
+                    .scrubFrame(.source(venue), in: frames)
                     .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
                 }
             }
@@ -388,10 +441,12 @@ struct RoomsTray: View {
 
     /// A row's name: its glyph disc, then the word, in the fixed column, on
     /// the 44pt floor every control stands on.
-    private func rowName(glyph: String, word: String, lit: Bool, broken: Bool) -> some View {
+    private func rowName(glyph: String, word: String, lit: Bool, broken: Bool,
+                         hot: Bool = false) -> some View {
         HStack(spacing: DS.Space.s3) {
             disc(glyph, lit: lit, broken: broken)
                 .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
+                .modifier(Lifted(on: hot, reduceMotion: reduceMotion))
             Text(word)
                 .dsText(.heading17)
                 .foregroundStyle(lit ? DS.tint : DS.textPrimary)
@@ -439,16 +494,108 @@ struct RoomsTray: View {
             .animation(DS.Motion.standard, value: lit)
     }
 
-    private func door(_ word: String, glyph: String, lit: Bool = false, index: Int,
-                      action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            doorTile(glyph, lit: lit)
+    private func door(_ door: Door, index: Int) -> some View {
+        Button {
+            tapped(door.act)
+        } label: {
+            doorTile(door.glyph, lit: door.lit)
+                .modifier(Lifted(on: hot == .door(index), reduceMotion: reduceMotion))
         }
         .buttonStyle(PressSpring())
         .dsTapTarget(Circle())
-        .accessibilityLabel(Text(word))
-        .accessibilityAddTraits(lit ? .isSelected : [])
+        .accessibilityLabel(Text(door.word))
+        .accessibilityAddTraits(door.lit ? .isSelected : [])
+        .scrubFrame(.door(index), in: frames)
         .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
+    }
+
+    /// The thing under a scrubbing finger lifts; under Reduce Motion it does
+    /// not move, and the name column carries the pick alone.
+    private struct Lifted: ViewModifier {
+        let on: Bool
+        let reduceMotion: Bool
+        func body(content: Content) -> some View {
+            content
+                .scaleEffect(on && !reduceMotion ? RoomsTray.hotScale : 1)
+                .animation(DS.Motion.press, value: on)
+        }
+    }
+
+    // MARK: - Press and slide (§1002)
+
+    /// What a row's name column says while the finger is on one of its
+    /// marks: the source's seat name in a category row (`present`), the
+    /// door's word in the You row (`nil`). Nil when the finger is elsewhere.
+    private func scrubWord(in present: [String]?) -> String? {
+        switch hot {
+        case .source(let venue)?:
+            guard let present, present.contains(venue) else { return nil }
+            return BridgeCatalog.seatName(forSource: venue)
+        case .door(let i)?:
+            guard present == nil else { return nil }
+            let all = doors()
+            return all.indices.contains(i) ? all[i].word : nil
+        default:
+            return nil
+        }
+    }
+
+    /// Hold, then slide. The hold arms it (scroll off, a lift tick); the
+    /// first move takes the release from the Button underneath; each new
+    /// thing under the finger ticks; letting go lands on it.
+    private var scrub: some Gesture {
+        LongPressGesture(minimumDuration: Self.scrubArm)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .global))
+            .onChanged { value in
+                guard case .second(true, let drag) = value else { return }
+                if !scrubbing {
+                    scrubbing = true
+                    DSHaptic.lift()
+                }
+                guard let point = drag?.location else { return }
+                swallowTap = true
+                let target = frames.target(at: point)
+                if target != hot {
+                    hot = target
+                    if target != nil { DSHaptic.selection() }
+                }
+            }
+            .onEnded { _ in
+                let target = hot
+                hot = nil
+                scrubbing = false
+                #if DEBUG
+                NSLog("trayScrub: %@", target.map { "\($0)" } ?? "none")
+                #endif
+                if let target {
+                    perform(target)
+                } else if swallowTap {
+                    // Let go over nothing: nothing is picked, and the next
+                    // tap is a tap again.
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        swallowTap = false
+                    }
+                }
+            }
+    }
+
+    private func perform(_ target: ScrubTarget) {
+        switch target {
+        case .door(let i):
+            let all = doors()
+            if all.indices.contains(i) { all[i].act() }
+        case .category(let category):
+            pick(category)
+        case .source(let venue):
+            pick(venue, flying: true)
+        }
+    }
+
+    /// A Button's act, unless a scrub already answered this release.
+    private func tapped(_ act: () -> Void) {
+        guard !swallowTap else { return }
+        act()
     }
 
     /// One mark's arrival in the cascade: fades and grows in, one step after
@@ -474,7 +621,7 @@ struct RoomsTray: View {
     /// A source mark also FLIES to the room's head as the tray drops (§932).
     private func pick(_ target: String, flying: Bool = false) {
         DSHaptic.selection()
-        if flying, !reduceMotion, let from = markFrames[target], from != .zero {
+        if flying, !reduceMotion, let from = frames.map[.source(target)], from != .zero {
             chrome.roomPick = ShellChrome.RoomPick(source: target, from: from)
         }
         close()
@@ -501,6 +648,43 @@ struct RoomsTray: View {
     private func close() {
         drag = 0
         withAnimation(liftMotion) { chrome.roomsTray = false }
+    }
+}
+
+/// A pickable thing in the tray: a You door by position, a category by its
+/// label, a source by its seat.
+enum ScrubTarget: Hashable {
+    case door(Int)
+    case category(String)
+    case source(String)
+}
+
+/// The tray's layout, in window space (§1002). A class held in `@State` and
+/// never observed, so writing a frame on every scroll step re-renders
+/// nothing — `ShellChrome.pagerFrame`'s rule, layout is not state.
+final class TrayFrames {
+    var map: [ScrubTarget: CGRect] = [:]
+    var viewport: CGRect = .zero
+
+    /// The thing whose 44pt target holds the point, inside the visible
+    /// window only.
+    func target(at point: CGPoint) -> ScrubTarget? {
+        guard viewport == .zero || viewport.contains(point) else { return nil }
+        return map.first { $0.value.contains(point) }?.key
+    }
+}
+
+private extension View {
+    /// Record where a pickable thing stands, and forget it when it goes.
+    func scrubFrame(_ target: ScrubTarget, in frames: TrayFrames) -> some View {
+        background {
+            GeometryReader { g in
+                Color.clear
+                    .onAppear { frames.map[target] = g.frame(in: .global) }
+                    .onChange(of: g.frame(in: .global)) { _, f in frames.map[target] = f }
+                    .onDisappear { frames.map[target] = nil }
+            }
+        }
     }
 }
 

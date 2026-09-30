@@ -62487,3 +62487,25 @@ A pack's lead is the category's name over "$11.6T across 9", read from the same 
 **Website, same session.** The Tokens cell and hero tile became Markets (`.ai-markets`), the Stocktwits cell, hero tile and docs chute tile are gone, `docs.html` and `llms.txt` say Markets, the static count reads 100+ over 109, and the cache-busters are bumped.
 
 **Seen** (a private iPhone 17 Pro simulator over the demo): the Work pack with live prices and caps (Amazon, Apple, Atlassian, Cloudflare, GitLab…) and Hugging Face at n/a; the capsule beside the seat; the Markets watchlist with DEGEN, ETH, SOL beside NVDA, TSLA, AAPL on live quotes; the old demo's Stocktwits rows swept on launch; "apple" on the page listing stocks.
+
+## §1001 — The tray's marks stay on the row size (user: "i think the tray would look better with them larger but it wouldn't be cohesive and that is more important", 2026-09-29)
+
+**Asked:** the tray's tiles (`RoomsTray.mark`, `DS.Face.rowCircle`, 28pt) are smaller than the FAB (`DSDock.agentSize`, 46pt) — should they match? Measured: they already match every list's lead (`DSFeedRow.leadSize`, a 26pt seat whose circles draw at 28); only the FAB is larger, because it is a lone control floored by the 44pt touch target, while a tray row's whole width is the target.
+
+**Considered and declined:** `DS.Face.list` (36pt), the rung the ramp names for "a picker you tap through", which the tray arguably is. The user judged the larger tray better-looking and declined it anyway.
+
+**Ruling.** The tray's marks stay at `DS.Face.rowCircle`, the same size as a row's lead anywhere in the app. Cohesion with the rows outranks a better-looking tray on its own. Do not re-propose a larger tray mark, and do not size it to the FAB.
+
+## §1002 — Press and slide in the rooms tray (user: "lets do 2, i'm worried 3 would be buggy", 2026-09-29)
+
+**Asked:** what would add surprise and delight to the tray. Four were offered — a dot on a mark whose source landed something since you last looked, press-and-slide, a long-press peek of a room's newest thing, and a one-time welcome for a newly connected source. The user picked press-and-slide and declined the peek as likely buggy (a peek is a second presentation over a layer that already stands in `RootShell`'s stack, §394).
+
+**Ruling.** Hold anywhere in the roster for `RoomsTray.scrubArm` (0.3s) and slide: the door, category or source under the finger lifts (`hotScale`, 1.2, on `DS.Motion.press`) with a selection tick, and its row's name column says what it is — a source's seat name in its category's column, a door's word in place of "You". Letting go lands there through the same acts a tap runs (`pick`, `connect`, `screen`), the flight included. Letting go over nothing picks nothing and leaves the tray open. The arm is a `DSHaptic.lift`.
+
+**The three rules the gesture keeps.** (1) The scroll is off while a scrub is armed (`.scrollDisabled`), so a slide never scrolls the roster out from under the finger. (2) A hold released without moving is the Button's: the scrub only takes the release once the finger has moved (`swallowTap`), so a slow tap still taps. (3) Frames are layout, not state: `TrayFrames` is a reference held in `@State` and never observed, so a scroll's frame writes re-render nothing — the flight's `markFrames` dictionary, which re-rendered the tray on every scroll step, moved into it. A row scrolled out of the visible window cannot be picked (`viewport`).
+
+**0.3s, not the chart scrub's 0.15:** here the hold sits on buttons, and at 0.15 a slow tap on a mark would arm a scrub instead.
+
+**Under Reduce Motion** nothing lifts; the name column carries the pick alone.
+
+**Seen:** the iPhone 17 Pro simulator over the demo, a scripted touch path — the Wallet row's name read "Altana" with its mark lifted mid-slide; a release on the mark landed its room; a release over the demo pill left the tray open and the next tap on GitHub landed GitHub. The haptics are not observable on the simulator. `trayScrub:` NSLogs the target on release in DEBUG.
