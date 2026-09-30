@@ -205,6 +205,11 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "carries no unique constraint, so this set IS the constraint (check C "
         "of `demo-selftest.py` exists because a partial one landed four "
         "duplicate pairs once).",
+    ("Model/DemoSeedAll.swift", "refreshLanded"):
+        "Brings every landed demo row up to the current table (prd §1005), so "
+        "it must see every row a ref could have landed on — the same "
+        "unconstrained `sourceRef` as `seed`. It runs once per table version, "
+        "in the demo only, where the store is demo-owned.",
     ("Model/DemoSeedAll.swift", "clear"):
         "Teardown, and it removes BY NAME rather than wholesale — which means "
         "it has to see every row to decide which ones are the demo's.",
