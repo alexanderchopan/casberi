@@ -62617,3 +62617,13 @@ Logos shipped testnet v0.3 (roadmap.logos.co/testnets/v03-release) and RESET the
 **Ruling.** `AvatarDoor(mark:)` draws `CasberiMark` while `AvatarChip.lit` (the tray is up) and `YouFace` otherwise. The swap is a scale-and-fade on `DS.Motion.standard`, a fade alone under Reduce Motion. The You row keeps your face, because that row is about you. With no photo set nothing changes: both were already the octopus.
 
 **Seen:** a photo written to `profile.avatar` on the iPhone 17 Pro simulator, dark: the photo on the button with the tray down, the octopus on the button and the photo in the You row with it up (`-openTray YES`). The test photo was deleted after.
+
+## §1010 — The tray's sections put the name above the marks, five to a line from the name's edge (user: "for the tray lets do E but don't ahve the icons indented with the category icons. have the room tiles share indent with the ategory names. this means we show five per row", "mock that up for me before you do it", then "yes lets do e2", 2026-09-30; amends §1008 and §955)
+
+**Why.** §1008's 40pt marks in 44pt targets stood 4pt apart (user: "those are touching each other too much"). The side name column cost 130pt of a 402pt tray, so five targets had 233pt and no air to spare. Boarded: D (36pt in the same grid, 8pt apart), E (the name above its marks, six across from the disc's column), F (the name above, five across at 44pt), and E2 (E with the marks starting at the name's edge, five across). The user picked E2.
+
+**Ruling.** Each section is a head and a grid. The head is the category's disc (`DS.Face.rowCircle`, 28pt, centred on `rowLeadCentre` as before) and its word, a 44pt button; the You head wears `YouFace` at the same size. Under it, `MarkGrid` lays out `marksPerLine` (5) marks per line: the first circle starts where the name starts (`nameLead`, the disc plus `s2`) and the fifth ends at the tray's inset, so the air across is what the width leaves — about 31pt on a 402pt phone, 29 on 393 — and 20pt (`lineAir`) under each line. Marks stay `DS.Face.cell` (40pt) inside their 44pt targets, placed by the circle, not the target. Sections stand `s3` apart: §955's "no air between sections" was for the side-by-side rows, and a head-over-grid needs a gap to read as its own group. The name column (`nameColumn`) and `markGap` are deleted.
+
+**Cost.** Every section spends a head line, so fewer sections show before the tray scrolls; a crowded category takes the same number of lines (five a line either way).
+
+**Seen:** the furnished demo on the iPhone 17 Pro simulator in dark with `-openTray YES`: You's five doors on one line under "You", Wallet's accounts five a line under "Wallet", both starting at the name's first letter.
