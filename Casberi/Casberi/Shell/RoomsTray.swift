@@ -61,18 +61,24 @@ struct RoomsTray: View {
     /// and a crowded category wraps inside its own column, never under the
     /// name (user: "it looks bad there").
     static let nameColumn: CGFloat = 118
-    /// A mark's size — the row circle, on the face ramp. It stays the size of
-    /// every list's lead even though a larger tray looked better (prd §1001):
-    /// cohesion first, and never the FAB's size.
-    static let mark: CGFloat = DS.Face.rowCircle
+    /// A mark's size: `DS.Face.cell`, the rung for a face that IS its own
+    /// tap target in a packed grid (prd §1008, supersedes §1001; user: "they
+    /// seem hard to touch like a user would have to squint"). It was
+    /// `rowCircle` (28), the rung for a face BESIDE a row's words where the
+    /// row is the target. Here the circle stands alone and is the button, so
+    /// the eye sized it by the 28pt edge and never saw the 44pt target.
+    static let mark: CGFloat = DS.Face.cell
+    /// The name column's disc and the You face: the picker rung, so a
+    /// category's name reads as the head of its marks, not one of them.
+    static let nameDisc: CGFloat = DS.Face.list
     /// The air between marks' TAP AREAS and between wrapped lines: none.
     /// Five across on a 402pt phone (user: "is there anyway we can get five
     /// tiles on a line so the you section is all on one line?"): 402 − 2 × 16
     /// inset − 118 name − 12 = 240 for the marks, five 44pt targets take 220,
     /// and a 4pt gap (236) wrapped the fifth on rounding. The circles draw at
-    /// 28pt inside their targets, so the eye sees 16pt of air between them,
-    /// the same across and down. The name column stays 118 — "Shopping" needs
-    /// it.
+    /// 40pt inside their targets (§1008), so the eye sees 4pt of air between
+    /// them, the same across and down, and five still fit on a 393pt phone
+    /// (224pt for 220). The name column stays 118 — "Shopping" needs it.
     static let markGap: CGFloat = 0
     /// The air between one category and the next: none. Every row stands on
     /// the 44pt floor, so a category starts where a wrapped line of marks
@@ -144,6 +150,16 @@ struct RoomsTray: View {
         }
         .allowsHitTesting(chrome.roomsTray)
         .animation(liftMotion, value: chrome.roomsTray)
+        #if DEBUG
+        // `-openTray YES`: raise the tray at mount, no tap (prd §1008), so a
+        // screenshot of it does not depend on a simulator tap landing.
+        .task {
+            guard UserDefaults.standard.bool(forKey: "openTray") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            NSLog("[Casberi] openTray: raised")
+            withAnimation(liftMotion) { chrome.roomsTray = true }
+        }
+        #endif
         .onChange(of: chrome.roomsTray) { _, up in
             // Deal the marks in once the panel has landed; under Reduce
             // Motion they are simply there.
@@ -181,7 +197,7 @@ struct RoomsTray: View {
                 // room's row icons share (user, 2026-09-26: "should we move
                 // the categories or their icons inset more so it is also
                 // aligned w/ the fab and row icons on main pages").
-                .padding(.leading, DSRoomChassis.rowLeadCentre - Self.mark / 2)
+                .padding(.leading, DSRoomChassis.rowLeadCentre - Self.nameDisc / 2)
                 .padding(.trailing, DSRoomChassis.inset)
                 .padding(.top, DS.Space.s3)
                 // The face rides ABOVE this tray (it is the way out), so the
@@ -353,8 +369,8 @@ struct RoomsTray: View {
         return HStack(alignment: .top, spacing: DS.Space.s3) {
             // The face the button wears — your photo or the octopus — never
             // the empty contact glyph.
-            HStack(spacing: DS.Space.s3) {
-                YouFace(size: Self.mark)
+            HStack(spacing: DS.Space.s2) {
+                YouFace(size: Self.nameDisc)
                 Text(scrubWord(in: nil) ?? String(localized: "You"))
                     .dsText(.heading17)
                     .foregroundStyle(DS.textPrimary)
@@ -443,7 +459,7 @@ struct RoomsTray: View {
     /// the 44pt floor every control stands on.
     private func rowName(glyph: String, word: String, lit: Bool, broken: Bool,
                          hot: Bool = false) -> some View {
-        HStack(spacing: DS.Space.s3) {
+        HStack(spacing: DS.Space.s2) {
             disc(glyph, lit: lit, broken: broken)
                 .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
                 .modifier(Lifted(on: hot, reduceMotion: reduceMotion))
@@ -456,8 +472,8 @@ struct RoomsTray: View {
         .frame(minHeight: DS.Hit.min)
     }
 
-    /// A glyph in a circle, the size of a mark, so a door and a source share
-    /// one row height. Tint says selected; the attention colour says a seat
+    /// A glyph in a circle at the name column's rung (§1008), inside the
+    /// same 44pt row as the marks beside it. Tint says selected; the attention colour says a seat
     /// inside needs you (never the only channel: the row's label says it too).
     private func disc(_ glyph: String, lit: Bool, broken: Bool) -> some View {
         ZStack {
@@ -466,7 +482,7 @@ struct RoomsTray: View {
                 .dsGlyph(.subhead, weight: .medium)
                 .foregroundStyle(broken ? DS.attention : (lit ? DS.tint : DS.textPrimary))
         }
-        .frame(width: Self.mark, height: Self.mark)
+        .frame(width: Self.nameDisc, height: Self.nameDisc)
     }
 
     /// A You door (prd §976a): a BLACK circle with the glyph in the brand
@@ -708,8 +724,9 @@ struct RoomPickFlight: View {
                 ? start
                 : CGPoint(x: target.minX - origin.x + DS.Face.rowCircle / 2,
                           y: target.midY - origin.y)
-            BridgeIcon(name: pick.source, size: DS.Face.rowCircle, circular: true)
-                .scaleEffect(flown ? 0.6 : 1)
+            // Lifts at the tray mark's size and lands at the head's (§1008).
+            BridgeIcon(name: pick.source, size: RoomsTray.mark, circular: true)
+                .scaleEffect(flown ? 0.6 * DS.Face.rowCircle / RoomsTray.mark : 1)
                 .opacity(flown ? 0 : 1)
                 .position(flown ? end : start)
                 .onAppear {

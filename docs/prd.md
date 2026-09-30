@@ -62595,3 +62595,17 @@ Logos shipped testnet v0.3 (roadmap.logos.co/testnets/v03-release) and RESET the
 **Guards.** `logos-selftest.sh` is rebuilt on v0.3: block 2 of the reset chain is the real fixture, and the transfer, private and fee-exempt transactions are SYNTHESIZED from the v0.3 source, because none has run yet — re-measure them against the first real one. New mutations: the producer's key not skipped, any program read as the native token, the node's own transactions not skipped.
 
 **Seen:** built green on an iPhone 17 Pro simulator (iOS 26.5); `-logosProbe 1-6` decoded every block and named the genesis's one signed call "Used a program"; watching `CbgR…Sr2r` drew 10,000,000,000,000 on the room's Home. Mac Catalyst was not built. No real transfer has been seen landing, because none exists on the new chain yet.
+
+## §1008 — The tray's marks draw to their targets: 40pt faces five across, 36pt name discs (user: "the tray icons are small … hard to touch like a user would have to squint and it's not engaging like to make a user want to touch them like instagram stories or apple messages", then "ok lets build A", 2026-09-30; supersedes §1001)
+
+**Why §1001 is reopened.** The user reopened it. The cohesion argument for 28pt held that the tray's marks match every list's lead, but the ramp itself separates the two cases: `DS.Face.rowCircle` is a face BESIDE a row's words where the whole row is the target, and a face that is itself the target is floored by 44 (`shelf`). A tray mark stands alone, unlabelled, and is the button, so the eye sized it by its 28pt edge and never saw the 44pt target around it. Compliant, and still read as small.
+
+**Boarded.** Four artboards over the tray's real geometry: today; A, the marks drawn to the target in the same grid; B, a stories rail of 56pt named faces per category; C, a Messages-style list of 32pt marks with names. The user picked A.
+
+**Ruling.** `RoomsTray.mark` is `DS.Face.cell`, a new rung (40pt): a face that is its own tap target, packed in a grid. It sits inside the unchanged 44pt targets with `markGap` still 0, so neighbours stand 4pt apart across and down, and five still fit on a 393pt phone (224pt for 220). The name column's disc and the You face take `DS.Face.list` (36pt, `RoomsTray.nameDisc`), centred on `rowLeadCentre` as before, with `s2` to the word so "Shopping" keeps its 118pt column. The pick flight lifts at the mark's size and lands at the head's 28pt. 44pt drawn, as boarded, does not fit five across in the real column (229pt on a 402pt phone), so the rung is 40.
+
+**The octopus.** Asked whether the face should turn into the octopus, or the You row's silhouette be replaced by it: both already wear `YouFace`, which is the person's photo or the octopus, never the contact glyph (2026-09-26). The silhouette was only in the mockups.
+
+**Added:** `-openTray YES` (DEBUG) raises the tray at mount, so a screenshot of it does not depend on a simulator tap landing.
+
+**Seen:** the furnished demo on the iPhone 17 Pro simulator in dark, tray raised by `-openTray`: the You row and Wallet five across, Work wrapping in its own column, the octopus on the face and the You row.

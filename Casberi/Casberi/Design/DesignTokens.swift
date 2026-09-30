@@ -660,6 +660,12 @@ enum DS {
         /// A list or picker you tap through — bigger than a feed row because
         /// choosing between people is the screen's whole job.
         static let list: CGFloat = 36
+        /// A face that IS its own tap target, packed in a grid of them — the
+        /// rooms tray's marks (prd §1008). It draws nearly to the 44pt target,
+        /// so the edge the eye sizes a button by is the target's own; the 4pt
+        /// left over is the air between neighbours. `shelf` is a face with
+        /// room around it; this is the rung for five across a column.
+        static let cell: CGFloat = 40
         /// A horizontal face shelf, a profile head, a sheet's stage.
         ///
         /// **This tier is why one universal size cannot work.** A face here is
