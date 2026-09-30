@@ -3092,9 +3092,12 @@ struct FeedScreen: View {
     /// replaced by the invitation written for a room that is not connected.
     /// A seat that is paused or needs attention keeps `quietState`, whose
     /// door is the fix: an empty box there would claim a list it cannot see.
-    private var remindersHoldsLead: Bool {
-        guard source == "Reminders" else { return false }
-        return bridges.bridges.first { $0.name == "Reminders" }?.status == .connected
+    ///
+    /// Calendar joins by the same rule (prd §998): a quiet month is a real
+    /// state of a calendar, and its month grid is the lead.
+    private var connectedHoldsLead: Bool {
+        guard LiveRoomSources.keepsEmptyRoom.contains(source) else { return false }
+        return bridges.bridges.first { $0.name == source }?.status == .connected
     }
 
     /// The kind tile in force in a kind-tile room (prd §815, §816),
@@ -5948,7 +5951,7 @@ struct FeedScreen: View {
         // told a first-time writer to open the catalog instead. Nor is a
         // connected Reminders room (prd §993).
         if !roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil
-            && !Pinboard.isPinnedRoom(source) && !remindersHoldsLead {
+            && !Pinboard.isPinnedRoom(source) && !connectedHoldsLead {
             Group { emptyState }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -6162,7 +6165,7 @@ struct FeedScreen: View {
         // exact shape twice — it is why Hegotá, Frames and the Privacy devnet
         // each have an arm above rather than a flag.
         } else if roomHasContent || roomAgent != nil || Pinboard.isPinnedRoom(source)
-                    || remindersHoldsLead {
+                    || connectedHoldsLead {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
@@ -6246,7 +6249,7 @@ struct FeedScreen: View {
             // The Reminders room's tiles, for the kind tile's reason, and its
             // empty list, which is a state of the list (prd §993).
             || (source == "Reminders" && chrome.remindersScope != .all)
-            || remindersHoldsLead
+            || connectedHoldsLead
     }
 
     /// The day sections of a room that has rows, plus its closing line.

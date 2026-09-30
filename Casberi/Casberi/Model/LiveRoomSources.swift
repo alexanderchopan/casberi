@@ -70,6 +70,20 @@ enum LiveRoomSources {
         AgentProvider.allCases.contains { $0.agent == source }
     }
 
+    /// **A CONNECTED SEAT WHOSE EMPTY ROOM IS A REAL STATE KEEPS ITS ROOM
+    /// (prd §998).** Calendar lands only what is ahead and prunes what passed,
+    /// and Reminders only what is open, so a quiet month or a finished list
+    /// holds zero rows — and the corpus walk gave the seat no room at all
+    /// while Manage said Connected (user: *"apple calendar isn't showing in my
+    /// app"*, then *"we want there always to be a room head and a room"*).
+    /// Both rooms already draw their lead over nothing (§993, §994); this is
+    /// the dock's half, so the room can be reached.
+    ///
+    /// SEPARATE from `all` for the keyed agents' reason: these rooms land
+    /// rows, they just have none now. Read by the dock's connected-seat door
+    /// and by `FeedScreen.connectedHoldsLead`.
+    static let keepsEmptyRoom: Set<String> = ["Calendar", "Reminders"]
+
     /// **The prediction venues, and ONLY them — now EMPTY, and kept.**
     ///
     /// Kalshi and Polymarket, its only two members, were deleted on 2026-09-06.

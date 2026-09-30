@@ -1050,7 +1050,10 @@ struct MainSurface: View {
     /// bridges, not the corpus — and it's what lets a chip appear the moment you
     /// come back from connecting rather than waiting for the next foreground.
     private var liveRoomChipCount: Int {
-        store.bridges.filter { $0.status == .connected && LiveRoomSources.has($0.name) }.count
+        store.bridges.filter {
+            $0.status == .connected
+                && (LiveRoomSources.has($0.name) || LiveRoomSources.keepsEmptyRoom.contains($0.name))
+        }.count
     }
 
     private var chipLabels: [String] {
@@ -1451,7 +1454,8 @@ struct MainSurface: View {
         // waiting for the first conversation meant waiting for a door that
         // only exists inside the room you could not reach.
         for bridge in store.bridges where bridge.status == .connected
-            && (LiveRoomSources.has(bridge.name) || LiveRoomSources.keyedAgent(bridge.name))
+            && (LiveRoomSources.has(bridge.name) || LiveRoomSources.keyedAgent(bridge.name)
+                || LiveRoomSources.keepsEmptyRoom.contains(bridge.name))
             && Corpus.earnsRoom(bridge.name)
             && seen.insert(bridge.name).inserted {
             ordered.append(bridge.name)

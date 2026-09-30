@@ -62426,3 +62426,15 @@ Cal.com and Calendly share the `.calendar` shape and keep the agenda. New opens 
 **Ruling.** The well is held whenever nothing is OPEN (`listEmpty: open.isEmpty`), so a room of finished reminders says "Nothing to do." over the tiles, which is true. The newest open reminder always covers, even one `ledeThingID` would decline, so the tiles are always under the lead.
 
 **Seen:** on the iPhone 17 simulator, the empty room and the dev seed's populated room, All and Today, each with three tiles. **Not seen:** a room holding only done reminders. No hook makes one, and the fix for it is the `open.isEmpty` gate.
+
+## §998 — A connected Calendar or Reminders keeps its room with nothing in it (user: "apple calendar isn't showing in my app is that just b/c i don't have any events scheduled this month?", "it's showing connected in Manage", then "we want there always to be a room head and a room", 2026-09-29)
+
+§993 and §994 made both rooms draw their lead over an empty list, but neither could be REACHED empty: the dock earns a room by a landed row (`ChipWalker`, `MainSurface.newestPerSource`), and Calendar lands only what is ahead while Reminders lands only what is open. A quiet month, or a finished list, therefore had no room, no head and no tile in the tray, while Manage said Connected.
+
+**The ruling: a connected Calendar or Reminders seat earns its room by the connection, the way a keyed agent does (§842).** `LiveRoomSources.keepsEmptyRoom` names the two; the dock's connected-seat door in `MainSurface.assembleChips` admits them, and `liveRoomChipCount` counts them so connecting one re-walks the strip at once. It is a set separate from `all` for §842's reason: these rooms land rows, they just have none now.
+
+In the room, `FeedScreen.remindersHoldsLead` becomes `connectedHoldsLead` and reads the same set, so Calendar's month grid and tiles stand over an empty agenda exactly as Reminders' box does. Connected only: a paused seat, or one that needs attention, keeps `quietState` and its fix-it door.
+
+Not every sync seat: Gmail with no mail or Photos with no photos is not a state worth a room, which is why this is a named set and not "every connected bridge" (`LiveRoomSources`' own doc).
+
+**Seen:** the Calendar room on the iPhone 17 Pro simulator over the demo: the month grid leads, Week standing, New at the end of the tiles.
