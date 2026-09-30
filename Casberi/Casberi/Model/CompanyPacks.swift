@@ -230,6 +230,9 @@ final class CompanyQuotes {
 
     /// Reads every listing in the pack that is not fresh, concurrently.
     func load(_ companies: [CompanyPacks.Company]) async {
+        // The demo reaches nothing (verify's "Demo reaches nothing"): a demo
+        // company row draws without a quote rather than asking Nasdaq.
+        if DemoMode.isActive { return }
         let stale = companies.map(\.listing).filter { listing in
             guard let key = listing.key, !inFlight.contains(key) else { return false }
             guard let q = quotes[key] else { return true }
