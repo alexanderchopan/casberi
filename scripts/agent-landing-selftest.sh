@@ -173,7 +173,7 @@ if body not in src:
 # The Notes room escapes too (its New tile is how an empty one fills), and
 # must enter the same arm or it draws nothing.
 if "&& !Pinboard.isPinnedRoom(source)" in src \
-        and body + " || Pinboard.isPinnedRoom(source) {" not in src:
+        and body + " || Pinboard.isPinnedRoom(source)" not in src:
     print("  \u2717 the Notes room escapes the empty state but never reaches "
           "the room body — it is BLACK (\u00a7845's class)")
     sys.exit(1)

@@ -98,8 +98,9 @@ grep -q 'FeedFreshness.forget' "$STRIPPED" \
   || note "stopFollowing no longer forgets the feed's HTTP record — a reconnect gets a 304 for a body it no longer holds"
 
 # --- guard 7: the honesty sentence stays, and stays true --------------------
-grep -qi 'no sign-in' "$SCREEN_STRIPPED" \
-  || note "the screen no longer says there is no sign-in — the seat's name invites the opposite reading"
+# §1003 cut "No sign-in"; the sentence that stays is the money half.
+grep -qi 'nothing here reads your money' "$SCREEN_STRIPPED" \
+  || note "the screen no longer says nothing here reads your money — the seat's name invites the opposite reading"
 grep -qE 'TokenVault|WKWebView|Authorization|bearer' "$STRIPPED" "$SCREEN_STRIPPED" \
   && note "the seat gained a credential — then 'No sign-in, and nothing here reads your money' is a lie (§83)"
 

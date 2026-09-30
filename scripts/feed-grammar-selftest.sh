@@ -124,7 +124,9 @@ guards() {
   # A fold never shows money.
   local bundle strip
   bundle=$(awk '/^struct BundleRow/{p=1} /^enum FoldName/{p=0} p' <<< "$R")
-  strip=$(awk '/^struct StripRow/{p=1} /^\/\/ MARK: - All/{p=0} p' <<< "$R")
+  # Ends at the next top-level declaration: `strip_comments` deletes the
+  # `// MARK:` line, and a slice ending there ran to the end of the file.
+  strip=$(awk '/^struct StripRow/{p=1; print; next} p && /^(struct|enum|class|final class|extension) /{p=0} p' <<< "$R")
   grep -q -- 'DSFeedRow(name: FoldName.of(lead' <<< "$bundle" \
     || echo "BundleRow no longer names itself by its newest member through FoldName"
   grep -q -- 'DSFeedRow(name: FoldName.of(lead' <<< "$strip" \
@@ -144,7 +146,7 @@ guards() {
 
   # Blue is for what you tap. The age itself left the row in prd §902; the one
   # that stays is an alarm-class arrival's, in the state's red.
-  grep -q -- 'LiveTimeText(date: thing.capturedAt, color: DS.destructive)' <<< "$R" \
+  grep -q -- 'LiveTimeText(date: thing.capturedAt, color: DS.destructiveInk)' <<< "$R" \
     || echo "an alarm-class arrival no longer keeps its age in red (prd §902)"
   grep -q -- 'timeInk(' <<< "$R" \
     && echo "a time ink ladder is back — the age left every ordinary row in prd §902"
@@ -220,7 +222,7 @@ mutate() {  # label, file-var, perl expression
   echo "  ✓ caught: $label"
 }
 mutate "the alarm's age back in the tint" rows \
-  's/LiveTimeText\(date: thing\.capturedAt, color: DS\.destructive\)/LiveTimeText(date: thing.capturedAt, color: DS.tint)/'
+  's/LiveTimeText\(date: thing\.capturedAt, color: DS\.destructiveInk\)/LiveTimeText(date: thing.capturedAt, color: DS.tint)/'
 mutate "a fold draws its newest figure" rows \
   's/(struct BundleRow.*?\} trailing: \{\n\s*)EmptyView\(\)/$1Text("\$1").dsText(.price17)/s'
 mutate "a fold counts its members again (prd §902)" rows \
