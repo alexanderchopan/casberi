@@ -57,33 +57,20 @@ struct RoomsTray: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    /// A mark's size: the row circle, the same as the category disc beside
-    /// it (prd §1012, user: "it looks weird that the app icons are bigger
-    /// than the category icons … go back to the smaller versions and have
-    /// more space between the rows a bit so they dont feel hard to tap").
-    /// §1008's 40pt marks are undone; what makes them easy to tap now is the
-    /// air MarkGrid leaves around each 44pt target, not the circle's size.
-    static let mark: CGFloat = DS.Face.rowCircle
-    /// A You door: the shelf rung, because each one is its own labelled
-    /// target in a row of five (§1012, the share sheet's row of people).
-    static let doorSize: CGFloat = DS.Face.shelf
-    /// The name column: fixed, so every row's marks start on the same line
-    /// and a crowded category wraps inside its own column, never under the
-    /// name (user: "it looks bad there"). "Shopping" needs the 118.
-    static let nameColumn: CGFloat = 118
-    /// The name column's disc: the row circle, the marks' own size (§1012),
-    /// so a category's glyph and its accounts read as one set of circles.
-    static let nameDisc: CGFloat = DS.Face.rowCircle
-    /// Five marks to a line beside the name (prd §1011; five and five with
-    /// You's doors, §1012: "i think it needs to be 5 and 5"), SPREAD from
-    /// the column's first edge to its last, so the 28pt circles stand ~23pt
-    /// apart on a 402pt phone and ~21 on 393, across and down alike.
+    /// Every button in the tray is the FACE's size (prd §1013, user: "we
+    /// should just use that size or the size of the fab and the You tiles,
+    /// not something else in between", then "lets go with h with all the
+    /// buttons at 46"): the five You doors and every account mark.
+    static let mark: CGFloat = DSDock.agentSize(minimized: false)
+    /// Five columns across the tray (prd §1013: "5 and 5"), shared by the You
+    /// doors and every section's marks, so the tray is one grid top to bottom.
     static let marksPerLine = 5
-    /// The air between one category and the next: the 16pt a 44pt target
-    /// leaves around its 28pt circle, plus this, is the ~23pt the marks keep
-    /// inside a category — so a new category reads as the next line, not a
-    /// new block (§955's one pitch, kept).
-    static let rowGap: CGFloat = DS.Space.s2
+    /// The air under a line of marks, before the next line.
+    static let lineAir: CGFloat = DS.Space.s4 + DS.Space.s1
+    /// The air above a section's header: more than `lineAir`, so the gap is
+    /// what divides one category from the next — no line, no card (§782,
+    /// user: "you decide the optimal spacing").
+    static let sectionGap: CGFloat = DS.Space.s6
     /// A grabber drag past this, down, collapses or closes; up, grows.
     static let detentDrag: CGFloat = 56
     /// The two detents, as shares of the screen: rest shows You and the first
@@ -97,6 +84,8 @@ struct RoomsTray: View {
     static let dealStep: Double = 0.02
 
     @State private var drag: CGFloat = 0
+    /// Recent's seats, read when the tray rises — never from a body (§628).
+    @State private var recent: [String] = []
     @State private var contentHeight: CGFloat = 0
     @State private var grown = false
     @State private var dealt = false
@@ -134,7 +123,7 @@ struct RoomsTray: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("Close rooms"))
                     .transition(.opacity)
-                    panel(screen: geo.size.height)
+                    panel(screen: geo.size)
                         .offset(y: max(0, drag))
                         // Out of the face's corner and back into it (§932).
                         .transition(reduceMotion
@@ -156,7 +145,13 @@ struct RoomsTray: View {
             withAnimation(liftMotion) { chrome.roomsTray = true }
         }
         #endif
+        // Every room landed in, from anywhere, is the newest on Recent — a
+        // connected seat only, never a category, All or the notes room.
+        .onChange(of: filter.source) { _, source in
+            if connectedSeats.contains(source) { RecentRooms.record(source) }
+        }
         .onChange(of: chrome.roomsTray) { _, up in
+            if up { recent = RecentRooms.list }
             // Deal the marks in once the panel has landed; under Reduce
             // Motion they are simply there.
             grown = false
@@ -175,26 +170,30 @@ struct RoomsTray: View {
 
     // MARK: - The panel
 
-    private func panel(screen: CGFloat) -> some View {
+    private func panel(screen: CGSize) -> some View {
         let natural = contentHeight + Self.grabberHeight
-        let rest = min(natural, screen * Self.restShare)
-        let full = min(natural, screen * Self.grownShare)
+        let rest = min(natural, screen.height * Self.restShare)
+        let full = min(natural, screen.height * Self.grownShare)
+        // A header's glyph starts where its column's first mark starts.
+        let column = (screen.width - 2 * DSRoomChassis.inset) / CGFloat(Self.marksPerLine)
+        let headInset = max(0, (column - Self.mark) / 2)
+        let recent = recentShown
         let height = grown ? full : rest
         return VStack(spacing: 0) {
             grabber
             ScrollView {
-                VStack(alignment: .leading, spacing: Self.rowGap) {
+                VStack(alignment: .leading, spacing: Self.sectionGap) {
                     youRow
+                    if !recent.isEmpty {
+                        recentSection(recent, headInset: headInset)
+                    }
                     ForEach(Array(categories.enumerated()), id: \.element) { index, category in
-                        categoryRow(category, index: index)
+                        categoryRow(category, index: index, headInset: headInset)
                     }
                 }
-                // The row discs centre on the column the face and every
-                // room's row icons share (user, 2026-09-26: "should we move
-                // the categories or their icons inset more so it is also
-                // aligned w/ the fab and row icons on main pages").
-                .padding(.leading, DSRoomChassis.rowLeadCentre - Self.nameDisc / 2)
-                .padding(.trailing, DSRoomChassis.inset)
+                // One grid across the tray between its insets (§1013): the
+                // You doors and every section's marks share five columns.
+                .padding(.horizontal, DSRoomChassis.inset)
                 .padding(.top, DS.Space.s3)
                 // The face rides ABOVE this tray (it is the way out), so the
                 // last row ends before its column — the same clearance every
@@ -308,6 +307,17 @@ struct RoomsTray: View {
         }
     }
 
+    /// Every connected seat the tray draws in a category.
+    private var connectedSeats: Set<String> {
+        Set(chrome.categoryVenues.values.joined())
+    }
+
+    /// Recent, as drawn: seats still connected, at most one line.
+    private var recentShown: [String] {
+        let seats = connectedSeats
+        return Array(recent.filter { seats.contains($0) }.prefix(Self.marksPerLine))
+    }
+
     /// The category the room you are standing in belongs to.
     private var standingCategory: String? {
         let label = CategoryFold.chipLabel(for: filter.source, folded: chrome.chipOrder)
@@ -374,10 +384,6 @@ struct RoomsTray: View {
                 self.door(door, index: index)
             }
         }
-        // Symmetric in the tray: the list's leading pad centres the discs on
-        // the rows' column, which would push this row 11pt right of centre.
-        .padding(.leading, DSRoomChassis.inset - (DSRoomChassis.rowLeadCentre - Self.nameDisc / 2))
-        .padding(.bottom, DS.Space.s4)
     }
 
     /// The You row's doors, in order — one list, so a tap and a scrub
@@ -403,83 +409,106 @@ struct RoomsTray: View {
         ]
     }
 
-    private func categoryRow(_ category: String, index: Int) -> some View {
+    /// A category: its header above, its marks under it on the tray's five
+    /// columns (prd §1013). The header opens the category's room.
+    private func categoryRow(_ category: String, index: Int, headInset: CGFloat) -> some View {
         let present = CategoryFold.scopes(category: category,
                                           present: Set(chrome.categoryVenues[category] ?? []))
         let lit = standingCategory == category
         let needsYou = broken(present)
-        return HStack(alignment: .top, spacing: DS.Space.s3) {
+        return VStack(alignment: .leading, spacing: 0) {
             Button {
                 tapped { pick(category) }
             } label: {
-                rowName(glyph: glyph(for: category, lit: lit),
-                        word: scrubWord(in: present) ?? category,
-                        lit: lit, broken: needsYou, hot: hot == .category(category))
+                header(glyph: glyph(for: category, lit: lit),
+                       word: scrubWord(in: present) ?? category,
+                       lit: lit, broken: needsYou, opens: true,
+                       hot: hot == .category(category))
             }
-            .buttonStyle(PressSpring())
+            .buttonStyle(RowPress())
+            .padding(.leading, headInset)
             .scrubFrame(.category(category), in: frames)
             .accessibilityLabel(needsYou
                 ? Text("\(category), needs your attention")
                 : Text(category))
             .accessibilityAddTraits(lit ? .isSelected : [])
-            MarkGrid(columns: Self.marksPerLine, mark: Self.mark) {
+            MarkGrid(columns: Self.marksPerLine, lineAir: Self.lineAir) {
                 ForEach(Array(present.enumerated()), id: \.element) { slot, venue in
-                    Button {
-                        tapped { pick(venue, flying: true) }
-                    } label: {
-                        BridgeIcon(name: venue, size: Self.mark, circular: true)
-                            .modifier(Lifted(on: hot == .source(venue), reduceMotion: reduceMotion))
-                            .overlay {
-                                if filter.source == venue {
-                                    Circle()
-                                        .strokeBorder(DS.tint, lineWidth: 1.5)
-                                        .padding(-2)
-                                }
-                            }
-                    }
-                    .buttonStyle(PressSpring())
-                    .dsTapTarget(Circle())
-                    .accessibilityLabel(Text(BridgeCatalog.seatName(forSource: venue)))
-                    .accessibilityAddTraits(filter.source == venue ? .isSelected : [])
-                    // Where this mark stands, for the flight and the scrub.
-                    .scrubFrame(.source(venue), in: frames)
-                    .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
+                    markButton(venue, key: .source(venue))
+                        .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
                 }
             }
         }
     }
 
+    /// Recent (prd §1013): the rooms you opened last, newest first, on one
+    /// line. Not a room, so its header opens nothing. Drawn only once there
+    /// is something in it — a section of nothing is not a section.
+    private func recentSection(_ recent: [String], headInset: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header(glyph: "clock", word: scrubWord(in: recent, recent: true) ?? String(localized: "Recent"),
+                   lit: false, broken: false, opens: false)
+                .padding(.leading, headInset)
+                .accessibilityAddTraits(.isHeader)
+            MarkGrid(columns: Self.marksPerLine, lineAir: Self.lineAir) {
+                ForEach(Array(recent.enumerated()), id: \.element) { slot, venue in
+                    markButton(venue, key: .recent(venue))
+                        .modifier(Dealt(on: dealt, index: slot, reduceMotion: reduceMotion))
+                }
+            }
+        }
+    }
+
+    /// One account's mark: tap lands in its room, and the mark flies to the
+    /// room's head (§932). `key` tells a Recent mark from the same seat's
+    /// mark in its category, so the scrub and the flight find the one touched.
+    private func markButton(_ venue: String, key: ScrubTarget) -> some View {
+        Button {
+            tapped { pick(venue, flying: true, from: key) }
+        } label: {
+            BridgeIcon(name: venue, size: Self.mark, circular: true)
+                .modifier(Lifted(on: hot == key, reduceMotion: reduceMotion))
+                .overlay {
+                    if filter.source == venue {
+                        Circle()
+                            .strokeBorder(DS.tint, lineWidth: 1.5)
+                            .padding(-2)
+                    }
+                }
+        }
+        .buttonStyle(PressSpring())
+        .dsTapTarget(Circle())
+        .accessibilityLabel(Text(BridgeCatalog.seatName(forSource: venue)))
+        .accessibilityAddTraits(filter.source == venue ? .isSelected : [])
+        // Where this mark stands, for the flight and the scrub.
+        .scrubFrame(key, in: frames)
+    }
+
     // MARK: - Pieces
 
-    /// A row's name: its glyph disc, then the word, in the fixed column, on
-    /// the 44pt floor every control stands on.
-    private func rowName(glyph: String, word: String, lit: Bool, broken: Bool,
-                         hot: Bool = false) -> some View {
+    /// A section's header (prd §1013): the category's glyph bare, the way
+    /// the dock draws it — no disc (user: "use plain not disc for the header
+    /// icons just like we have in our docks") — then the word and, for a
+    /// room, the chevron. It labels its marks, so it sits in the secondary
+    /// ink and steps back; a pill or a card here would be a third pill and a
+    /// plate (§746, §782). Tint says selected; the attention colour says a
+    /// seat inside needs you (the label says it too).
+    private func header(glyph: String, word: String, lit: Bool, broken: Bool,
+                        opens: Bool, hot: Bool = false) -> some View {
         HStack(spacing: DS.Space.s2) {
-            disc(glyph, lit: lit, broken: broken)
+            Image(systemName: glyph)
+                .dsGlyph(.subhead, weight: .medium)
+                .foregroundStyle(broken ? DS.attention : (lit ? DS.tint : DS.textSecondary))
                 .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
                 .modifier(Lifted(on: hot, reduceMotion: reduceMotion))
             Text(word)
                 .dsText(.heading17)
-                .foregroundStyle(lit ? DS.tint : DS.textPrimary)
+                .foregroundStyle(lit ? DS.tint : DS.textSecondary)
                 .lineLimit(1)
+            if opens { DSChevron() }
         }
-        .frame(width: Self.nameColumn, alignment: .leading)
         .frame(minHeight: DS.Hit.min)
         .contentShape(Rectangle())
-    }
-
-    /// A glyph in a circle at the name column's rung (§1011), on the same
-    /// 44pt line as the first of its marks. Tint says selected; the attention colour says a seat
-    /// inside needs you (never the only channel: the row's label says it too).
-    private func disc(_ glyph: String, lit: Bool, broken: Bool) -> some View {
-        ZStack {
-            Circle().fill(lit ? DS.tintDim : DS.fillFaint)
-            Image(systemName: glyph)
-                .dsGlyph(.subhead, weight: .medium)
-                .foregroundStyle(broken ? DS.attention : (lit ? DS.tint : DS.textPrimary))
-        }
-        .frame(width: Self.nameDisc, height: Self.nameDisc)
     }
 
     /// A You door (prd §976a): a BLACK circle with the glyph in the brand
@@ -497,11 +526,11 @@ struct RoomsTray: View {
             }
             .overlay(
                 Image(systemName: glyph)
-                    .font(.system(size: Self.doorSize * 0.43, weight: .semibold))
+                    .font(.system(size: Self.mark * 0.43, weight: .semibold))
                     .foregroundStyle(lit ? Color.white : DS.brand)
                     .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
             )
-            .frame(width: Self.doorSize, height: Self.doorSize)
+            .frame(width: Self.mark, height: Self.mark)
             .animation(DS.Motion.standard, value: lit)
     }
 
@@ -544,9 +573,14 @@ struct RoomsTray: View {
     /// What a row's name column says while the finger is on one of its
     /// marks: the source's seat name in its category row. Nil when the
     /// finger is elsewhere. A You door carries its own word (§1012).
-    private func scrubWord(in present: [String]) -> String? {
-        guard case .source(let venue)? = hot, present.contains(venue) else { return nil }
-        return BridgeCatalog.seatName(forSource: venue)
+    private func scrubWord(in present: [String], recent: Bool = false) -> String? {
+        switch hot {
+        case .source(let venue)? where !recent && present.contains(venue),
+             .recent(let venue)? where recent:
+            return BridgeCatalog.seatName(forSource: venue)
+        default:
+            return nil
+        }
     }
 
     /// Hold, then slide. The hold arms it (scroll off, a lift tick); the
@@ -597,7 +631,9 @@ struct RoomsTray: View {
         case .category(let category):
             pick(category)
         case .source(let venue):
-            pick(venue, flying: true)
+            pick(venue, flying: true, from: .source(venue))
+        case .recent(let venue):
+            pick(venue, flying: true, from: .recent(venue))
         }
     }
 
@@ -628,9 +664,9 @@ struct RoomsTray: View {
     /// Land in a room. A category label resolves through `CategoryFold.landing`
     /// inside `MainSurface`'s `sourceRequest` handler, the way a chip tap did.
     /// A source mark also FLIES to the room's head as the tray drops (§932).
-    private func pick(_ target: String, flying: Bool = false) {
+    private func pick(_ target: String, flying: Bool = false, from key: ScrubTarget? = nil) {
         DSHaptic.selection()
-        if flying, !reduceMotion, let from = frames.map[.source(target)], from != .zero {
+        if flying, !reduceMotion, let key, let from = frames.map[key], from != .zero {
             chrome.roomPick = ShellChrome.RoomPick(source: target, from: from)
         }
         close()
@@ -661,11 +697,12 @@ struct RoomsTray: View {
 }
 
 /// A pickable thing in the tray: a You door by position, a category by its
-/// label, a source by its seat.
+/// label, a source by its seat — in its category, or on the Recent line.
 enum ScrubTarget: Hashable {
     case door(Int)
     case category(String)
     case source(String)
+    case recent(String)
 }
 
 /// The tray's layout, in window space (§1002). A class held in `@State` and
@@ -737,43 +774,29 @@ struct RoomPickFlight: View {
     }
 }
 
-/// The tray's marks, a fixed number to a line (prd §1011): the first mark's
-/// circle starts at the column's leading edge and the last one's ends at the
-/// trailing edge, so every line shares one pitch and the air between marks
-/// is whatever the width leaves — the same air across and down. Each subview
-/// is a mark's TAP TARGET, larger than the circle it centres, so the edges
-/// are placed by the circle — what the eye aligns — not by the target. A
-/// line never steps less than the 44pt target, so targets never overlap.
+/// The tray's marks, a fixed number to a line (prd §1013): each mark centred
+/// in one of `columns` equal columns across the width — the same columns the
+/// You doors stand in, so the tray is one grid. Each subview is a mark's TAP
+/// TARGET, placed by its centre; a line steps the target plus `lineAir`.
 struct MarkGrid: Layout {
     let columns: Int
-    let mark: CGFloat
-
-    private func pitch(width: CGFloat) -> CGFloat {
-        max(mark, (width - mark) / CGFloat(max(columns - 1, 1)))
-    }
-
-    private func step(width: CGFloat) -> CGFloat {
-        max(DS.Hit.min, pitch(width: width))
-    }
+    let lineAir: CGFloat
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? CGFloat(columns) * DS.Hit.min
         guard !subviews.isEmpty else { return CGSize(width: width, height: 0) }
-        let target = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? mark
+        let target = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? DS.Hit.min
         let lines = (subviews.count + columns - 1) / columns
-        let height = CGFloat(lines - 1) * step(width: width) + target
-        return CGSize(width: width, height: height)
+        return CGSize(width: width, height: CGFloat(lines) * target + CGFloat(lines - 1) * lineAir)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews,
                        cache: inout ()) {
-        let across = pitch(width: bounds.width), down = step(width: bounds.width)
+        let column = bounds.width / CGFloat(max(columns, 1))
+        let target = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? DS.Hit.min
         for (i, view) in subviews.enumerated() {
-            let size = view.sizeThatFits(.unspecified)
-            let column = CGFloat(i % columns), line = CGFloat(i / columns)
-            // Centre each target on its circle's centre.
-            let x = bounds.minX + mark / 2 + column * across
-            let y = bounds.minY + size.height / 2 + line * down
+            let x = bounds.minX + (CGFloat(i % columns) + 0.5) * column
+            let y = bounds.minY + target / 2 + CGFloat(i / columns) * (target + lineAir)
             view.place(at: CGPoint(x: x, y: y), anchor: .center, proposal: .unspecified)
         }
     }

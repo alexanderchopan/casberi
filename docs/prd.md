@@ -364,6 +364,8 @@ marks chronological position within the pair.
 | §1011 (the tray's names beside their marks, five spread across the line) | 40pt marks ~8pt apart beside a 36pt name disc, the You row one of the rows | amended by §1012 — 28pt marks and a 28pt disc, ~23pt apart; the You doors are a labelled row across the top |
 | §976a (the You doors are black circles with pink glyphs at the marks' size) | each door a black 28pt circle among the rows | amended by §1012 — the doors stand in their own row at `DS.Face.shelf` (56pt), each with its word under it; the colours and the standing fill are unchanged |
 | §958 (Connect opens Accounts) | the door to the Accounts screen was worded "Connect" | amended by §1012 — the door is worded "Accounts", the screen it opens |
+| §1011 (the tray's names beside their marks, a 118pt name column) | each category one row, its name in a 118pt column beside five marks | superseded by §1013 — each category is a header above its marks, on five columns shared with the You doors |
+| §1012 (the You doors at `DS.Face.shelf`, every mark 28pt) | 56pt doors, 28pt marks and a 28pt category disc | amended by §1013 — every button is the face's 46pt, doors and marks alike; the category glyph is drawn bare in the header |
 
 ## 1. Thesis
 
@@ -62660,3 +62662,17 @@ Logos shipped testnet v0.3 (roadmap.logos.co/testnets/v03-release) and RESET the
 - `MarkGrid` keeps five a line spread across the column, so the air is ~23pt on a 402pt phone (~21 on 393), the same across and down; categories stand `s2` apart, so the air between them matches.
 
 **Seen:** the furnished demo on the iPhone 17 Pro simulator in dark with `-openTray YES`: the five labelled doors across the top, Home filled pink; Wallet and Work beneath, 28pt marks five a line.
+
+## §1013 — The tray is one grid: headers above, every button the face's size, and a Recent line (user: "do you think apple would have the icons in a second column like we do or would they be underneath the category names", "mock it up", "I think we need the category icon", "we should just use that size or the size of the fab and the You tiles, not something else in between", "lets go with h with all the buttons at 46", "use plain not disc for the header icons just like we have in our docks", "you decide the optimal spacing", 2026-09-30; supersedes §1011, amends §1012)
+
+**Why.** A name column beside a grid is a form's layout — a label and its value — and it took 130pt from every line. Where Apple groups icons (Photos, Files, the App Library, a Home Screen folder) the title stands above and the content runs underneath. E2 (§1010) looked heavy on a sparse tray because its header was a 44pt row with a disc and a 17pt word; a small header costs a line of text, not a row.
+
+**Ruling.**
+- **One grid.** The You doors and every section's marks stand in the same five equal columns across the tray between its insets (`MarkGrid`, `marksPerLine`), so five and five line up top to bottom.
+- **Two sizes.** Every button is the face's 46pt (`DSDock.agentSize(minimized: false)`): the doors and every account mark. The header's glyph is text-sized. Nothing stands at a size in between.
+- **Headers.** A category's header is its dock glyph drawn bare — no disc, the way the dock draws it — then its word at `heading17` in `textSecondary` and a `DSChevron`; it opens the category's room. Its glyph starts at the first mark's edge. Tint and the attention colour carry as before.
+- **Space divides, nothing else.** `sectionGap` (`s6`, 24pt) above each header against `lineAir` (20pt) between lines inside a section. No hairline, card or pill: §782's plates, the no-hairline rule, and §746's two pills — a filled pill would read as a Chip, a choice, and shout over the marks it labels.
+- **Recent** (`Model/RecentRooms.swift`): the five rooms last landed in, newest first, recorded whenever `FeedFilter.source` lands on a connected seat — never a category, All or the notes room — kept on this device, written through `DefaultsWrite` (§721), read when the tray rises, never in a body (§628). It draws only seats still connected, and not at all until it holds one. Its header is `clock` and opens nothing. A Recent mark scrubs and flies as its own target (`ScrubTarget.recent`), apart from the same seat's mark in its category.
+- Not added: badges and collapsing categories (user: "no badges, no collapsing").
+
+**Seen:** the furnished demo on the iPhone 17 Pro simulator in dark with `-openTray YES`: the five labelled doors at 46pt; Recent holding the Wallet room after a swipe landed there (`recentRooms: Wallet` in the log); "Wallet ›" with its bare glyph over five 46pt marks a line. A room opened by the `-openRoom` launch hook is not recorded, because the tray has not mounted when the hook lands.
