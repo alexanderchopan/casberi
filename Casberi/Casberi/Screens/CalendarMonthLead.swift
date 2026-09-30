@@ -24,7 +24,7 @@ struct CalendarMonthLead: View {
 
     /// The line the title takes, and the weekday letters' row, out of the
     /// box; the six weeks share what is left.
-    private static let titleRow: CGFloat = 24
+    private static let titleRow: CGFloat = 30
     private static let weekdayRow: CGFloat = 16
 
     @MainActor private var rowHeight: CGFloat {
@@ -36,8 +36,10 @@ struct CalendarMonthLead: View {
         let days = CalendarGrid.days(now: now, calendar: calendar)
         let runs = CalendarGrid.runs(days, span: scope.span(now: now, calendar: calendar))
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // The day dividers' rung (prd §999, user: "the month should be same
+            // size font as Today Thursday Friday dates").
             Text(CalendarGrid.title(days, calendar: calendar))
-                .dsText(.heading17)
+                .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
                 .frame(height: Self.titleRow)
             VStack(spacing: 0) {

@@ -62438,3 +62438,13 @@ In the room, `FeedScreen.remindersHoldsLead` becomes `connectedHoldsLead` and re
 Not every sync seat: Gmail with no mail or Photos with no photos is not a state worth a room, which is why this is a named set and not "every connected bridge" (`LiveRoomSources`' own doc).
 
 **Seen:** the Calendar room on the iPhone 17 Pro simulator over the demo: the month grid leads, Week standing, New at the end of the tiles.
+
+## §999 — The Calendar room's tiles read in time, and its month title stands at the day dividers' size (user: "the tile order needs to be today week month new", "the month should be same size font as Today Thursday Friday dates … it looks random right now", 2026-09-29; amends §994 and §995)
+
+**Spans of time read in time.** §995 made every room's tiles read A–Z, which put Calendar's tiles in the order Month · Today · Week, an order that means nothing. A scope enum that names spans of time now declares `readsInTime` (`DSTileScope`, default false), and `DSScopeTiles.alphabetical` keeps such a room's scopes in the order they are given: Today · Week · Month, then New. Every other room still reads A–Z.
+
+**The month title is `heading24`, the day dividers' rung,** rather than `heading17`, which read as a label from another card. It starts at the dividers' left edge. The title row grows 24 → 30pt, and the six weeks share what is left of the box, which stays one fixed size (§904).
+
+**Month's glyph is `tablecells`, not `calendar`.** `calendar` is the dock's Life glyph, and `room-kind-tiles-selftest.sh` fails when one glyph carries two meanings. It had been failing since §994 landed.
+
+**Seen:** the Calendar room on the iPhone 17 Pro simulator over the demo: "September – October" at the size of "Today" below it, the tiles Today · Week · Month · New with Week standing.

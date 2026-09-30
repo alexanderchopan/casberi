@@ -9,6 +9,13 @@ protocol DSTileScope: DSSectionScope {
     /// (`ScopeTileGlyph`), so a scope called Activity wears the same glyph in
     /// every room.
     var glyph: String { get }
+    /// True when the scopes are SPANS OF TIME, which read in time, never A–Z
+    /// (prd §999): Calendar's Today · Week · Month.
+    static var readsInTime: Bool { get }
+}
+
+extension DSTileScope {
+    static var readsInTime: Bool { false }
 }
 
 /// THE SCOPES AS TILES — under the head on Home and under the figure in every
@@ -140,6 +147,9 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
 
     /// **A ROOM'S TILES READ A–Z (user, 2026-09-29: "for music rooms all
     /// tiles need to be alphabetical", then "that's a rule for any room").**
+    /// Spans of time are the one exception (`readsInTime`, prd §999, user:
+    /// "the tile order needs to be today week month new"): Month · Today ·
+    /// Week is alphabetical and reads as nothing.
     /// All and the wallet family's Home stay first (user: leads stay), a
     /// verb (New) stays last because it is not a list, and everything
     /// between sorts by the word the person reads, in their language. A lead
@@ -157,8 +167,9 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         let leads = sections.filter(isLead)
         let tail = sections.filter { !isLead($0) && verbs.contains($0) }
         let middle = sections.filter { !isLead($0) && !verbs.contains($0) }
-            .sorted { $0.label.localizedStandardCompare($1.label) == .orderedAscending }
-        return leads + middle + tail
+        guard !Scope.readsInTime else { return leads + middle + tail }
+        return leads + middle.sorted { $0.label.localizedStandardCompare($1.label) == .orderedAscending }
+            + tail
     }
 
     @ViewBuilder
