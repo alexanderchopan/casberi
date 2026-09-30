@@ -64,7 +64,7 @@ struct RoomsTray: View {
     /// should just use that size or the size of the fab and the You tiles,
     /// not something else in between", then "lets go with h with all the
     /// buttons at 46"): the five You doors and every account mark.
-    static let mark: CGFloat = DSDock.agentSize(minimized: false)
+    static let mark: CGFloat = DS.Face.seat
     /// Five columns across the tray (prd §1013: "5 and 5"), shared by the You
     /// doors and every section's marks, so the tray is one grid top to bottom.
     static let marksPerLine = 5

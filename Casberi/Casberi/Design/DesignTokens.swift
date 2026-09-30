@@ -668,6 +668,12 @@ enum DS {
         /// three times the height of the words it belongs to and outshout them.
         /// One value would either break every row or break every tap.
         static let shelf: CGFloat = 56
+        /// The face's own seat — the dock's face button at rest — and every
+        /// button in the rooms tray, which stands at the face's size so the
+        /// tray has two sizes and nothing between (prd §1013). It equals
+        /// `DSDock.agentSize(minimized: false)`, which `dock-selftest.sh` pins
+        /// as a literal beside the chips' size.
+        static let seat: CGFloat = 46
         /// A sheet whose whole SUBJECT is the identity — the address card
         /// (prd §435, 2026-08-21). One rung above `shelf` because a shelf face
         /// is one of several and this one is alone on the screen with its own
