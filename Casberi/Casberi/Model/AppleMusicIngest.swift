@@ -119,8 +119,12 @@ enum AppleMusicIngest {
         // popular song; field report 2026-07-12: "Daddy Your Rose" wore
         // Nirvana's cover).
         var titleForRef: [String: String] = [:]
+        // When each ref was played — the order the capped search below spends
+        // its budget in, newest first.
+        var playedAt: [String: Date] = [:]
         for song in response.items {
             let ref = sourceRef(song)
+            playedAt[ref] = song.lastPlayedDate ?? .now
             if let art = artURL(song) { artByRef[ref] = art }
             if let url = song.url { urlByRef[ref] = url.absoluteString }
             if artByRef[ref] == nil || urlByRef[ref] == nil {
@@ -134,10 +138,12 @@ enum AppleMusicIngest {
             // out of the recent window still has).
             termForRef[ref] = thing.title.replacingOccurrences(of: " — ", with: " ")
             titleForRef[ref] = TitleSeam.name(thing.title)
+            if playedAt[ref] == nil { playedAt[ref] = thing.capturedAt }
         }
         for (ref, thing) in contentlessStored where termForRef[ref] == nil {
             termForRef[ref] = thing.title.replacingOccurrences(of: " — ", with: " ")
             titleForRef[ref] = TitleSeam.name(thing.title)
+            if playedAt[ref] == nil { playedAt[ref] = thing.capturedAt }
         }
 
         // Pass 1 — catalog id lookup: resolves plays that came from the
@@ -175,7 +181,17 @@ enum AppleMusicIngest {
         // alone couldn't rebuild them). One request per still-unresolved ref,
         // capped so a large backlog can't stall a foreground refresh; the
         // rest heal on later passes.
-        let searchable = termForRef.filter { artByRef[$0.key] == nil || urlByRef[$0.key] == nil }
+        //
+        // NEWEST FIRST (2026-09-30, user: the All feed's cover drew "The Bay"
+        // with no album art). `termForRef` is a Dictionary, and `prefix(25)`
+        // on it took 25 refs in hash order — so once more than 25 stored rows
+        // stood artless (library tracks no catalog title matches, which stay
+        // artless forever by design), a song played two minutes ago could lose
+        // its search to them on every pass. The newest play is the one the
+        // cover and the top row draw, so it spends the budget first.
+        let searchable = termForRef
+            .filter { artByRef[$0.key] == nil || urlByRef[$0.key] == nil }
+            .sorted { (playedAt[$0.key] ?? .distantPast) > (playedAt[$1.key] ?? .distantPast) }
         var healedBySearch = 0
         for (ref, term) in searchable.prefix(25) {
             var search = MusicCatalogSearchRequest(term: term, types: [Song.self])
