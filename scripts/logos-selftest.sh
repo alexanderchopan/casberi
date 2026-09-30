@@ -4,28 +4,32 @@
 #
 #   Casberi/Casberi/Model/LogosWire.swift
 #     — parseAccountID / watchableID (base58, the Public/Private prefix)
-#     — account(_:)                  (getAccount's measured shape, u128 via Decimal)
-#     — block(_:)                    (LEZ v0.2's Borsh layout, exact length or nil)
-#     — events(_:watched:programs:)  (what a transaction means for one account)
+#     — balance(_:)                  (getAccountBalance, u128 via Decimal)
+#     — block(_:)                    (LEZ v0.3's Borsh layout, exact length or nil)
+#     — events(_:watched:)           (what a transaction means for one account)
 #     — nodeBase / isLoopback / nodeEvents (your own node, prd §989)
 #
 # Foundation + CryptoKit only BY DESIGN, so it is compiled WHOLE AND UNMODIFIED
-# here. The fixtures are FIVE REAL TESTNET BLOCKS (fetched 2026-09-29 from
-# testnet.lez.logos.co's getBlockRange), and every transaction hash asserted
-# below was confirmed on chain with getTransaction, which resolved each to its
-# own block.
+# here. The testnet was RESET onto LEZ v0.3 on 2026-09-30 (prd §1007) and the
+# v0.2 reader refused every block of it. The real fixture is block 2 of the new
+# chain (every block 1…281 decodes to its exact length; its hash resolves with
+# getTransaction). No user transaction has run on the reset chain yet, so the
+# transfer and private transactions are SYNTHESIZED from LEZ's own v0.3.0
+# source (lez/common/src/block.rs, lee/state_machine) — re-measure them
+# against the first real one.
 #
 # WHY A HARNESS. Nothing here can send on LEZ, and a watch is forward-only on a
 # quiet testnet, so the landing path runs only when somebody else happens to
 # move coins. Every failure below renders as a perfectly good-looking row:
 #
-#   • a u128 read most-significant-word first — "Received 40" becomes
-#     "Received 3,169,126,500,570,573,503,741,758,013,440";
+#   • a u128 read most-significant-byte first — "Received 40" becomes
+#     "Received 53,169,119,831,396,634,916,152,282,411,213,783,040";
 #   • the timestamp read as seconds — every row lands in the year 58,660;
 #   • the hash taken WITH the variant tag — every row opens a transaction the
 #     explorer has never heard of;
 #   • sender and recipient swapped — you "received" what you sent;
-#   • the per-block clock transaction not skipped — a row a minute, forever;
+#   • the node's own per-block transactions not skipped — a row a block, forever;
+#   • the producer's key not skipped — every v0.3 block refused;
 #   • a trailing byte tolerated — a drifted layout read as garbage amounts;
 #   • a Private/ id watched — the sequencer answers it as an empty PUBLIC
 #     account, drawn as a confident zero.
@@ -92,19 +96,10 @@ func check(_ ok: Bool, _ what: String) {
 }
 func block(_ b64: String) -> LogosWire.Block? { LogosWire.block(Data(base64Encoded: b64)!) }
 
-let programs = LogosWire.programIDs([
-    "amm": [1765802831,3731187220,2062982807,1520762763,307650957,4265115253,384461553,795532917],
-    "authenticated_transfer": [583309054,2344528779,3806558405,2890696795,2257354672,3978764116,2273929063,1518858078],
-    "pinata": [2062635772,3904239712,2833328350,20714435,436307236,2247732790,2681611470,2354246644],
-    "token": [1047643340,4291649067,2093396023,4016657193,3904308476,481382041,2987082047,2603530278],
-] as [String: Any])
 func watched(_ ids: String...) -> Set<Data> { Set(ids.map { Data(LogosWire.base58Decode($0)!) }) }
 
 let CBGR = "CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r"
 let DUMJ = "DumJ4LCBnHE9jUu2yxPfqdL14g3v756Gzby6LuT9hE51"
-let FEWL = "FeWL8ksL4tihgujJhEsNnMiFfDsQarZdTXMEV2QnwCV7"
-let SEVEN = "7EfpF91bkSb6sJ9xFFjq5G37BXHLSaACBAqYusoWQ3iT"
-let DEF = "5LT5kqKjToJb6DqMtXoba8SzEELnJRoMz8mDUKzvvKxa"
 let HOLD = "6hCX9ScBrjoE7FabbRfxV4YpGGFbR8CkxYkuW95QNXjp"
 
 print("account ids")
@@ -120,88 +115,80 @@ check(LogosWire.base58Encode(LogosWire.base58Decode(DUMJ)!) == DUMJ, "base58 rou
 check(LogosWire.base58Encode([0, 0, 1]) == "112", "leading zero bytes keep their 1s")
 check(LogosWire.short(CBGR) == "CbgR…Sr2r", "the short form")
 
-print("getAccount")
-let measured: [String: Any] = ["program_owner": [2062635772,3904239712,2833328350,20714435,436307236,2247732790,2681611470,2354246644],
-                               "balance": 1481100, "data": [3, 58], "nonce": 0]
-let acct = LogosWire.account(measured)
-check(acct?.balance == 1481100, "the measured balance reads")
-check(acct.flatMap { LogosWire.programName($0.programOwner, in: programs) } == "pinata", "its owner resolves to the faucet program")
-check(LogosWire.account(["balance": 1] as [String: Any]) == nil, "an account without an owner is refused")
+print("getAccountBalance (v0.3)")
+check(LogosWire.balance(1481100) == 1481100, "a bare number is the balance")
+check(LogosWire.balance(["nonce": 0, "data": ["shards": [:]]] as [String: Any]) == nil, "getAccount's v0.3 shape is not a balance")
 check(LogosWire.decimal("340282366920938463463374607431768211455")?.description == "340282366920938463463374607431768211455", "u128::MAX survives as a string")
 check(LogosWire.result(["jsonrpc": "2.0", "error": ["code": -32602]] as [String: Any]) == nil, "an error reply has no result")
 
-print("block 25894 — a native transfer")
-let b1 = block("JmUAAAAAAACIopHL4LZ+cue0/tsb6PVZWjP83LjJPwroy8tt/iawvHn1NLuEyMRvkSr7tQL7W1PvKhjtDv8KkkMCuWVgGhdDdY0H3qABAADn2X7t9XzZQlVKGN5E41JrwJJQvxGX2LyiFCePS9qotZb9vL3h2oMGWdgYGS4gETNTTD4Ikf3gahIULdqS+hHQAgAAAAD+lsQii6u+i8V44+JbiEyssH+MhlQfJ+1nZ4mHXu+HWgIAAACsUt75pBCUuNs4XJHL3PtZ1rImHmzK+/GUyH25XeO997/Qh1eJRbipQ0AExnnmIl8ZNPXr8nuW++xabvIWe548AQAAABoAAAAAAAAAAAAAAAAAAAAFAAAAAAAAACgAAAAAAAAAAAAAAAAAAAABAAAA72KV2QlWDKv5zFbPccdD+eXVP20RScRN2M+PnmwEZY7nen3uo8tF3VGxovKyab3FcwtKwbZd/BxC3HVRp2XUIGqkw2Vpm4nZY++FpZhouWErYAH5B1C0lwZipid2My6BADGfvAVNdyB8uuwLMenMgT7KC0DTENcRLsSg/mQ5XGH8AwAAAC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDAxL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMTAvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MAAAAAACAAAAdY0H3qABAAAAAAAAAg==")
-check(b1?.id == 25894, "the block id")
-check(b1?.timestamp.timeIntervalSince1970 == 1790431432.053, "the millisecond timestamp, as seconds")
-let transfer = b1?.transactions.first { $0.programID.first != LogosWire.clockProgramWord }
-check(transfer?.hashHex == "80e9990e63bc679dfab183aff254f0fe35148948e1312e074c987c7144ef80f4", "the hash matches the chain's")
-check(transfer?.signers == 1, "one signer")
-let both = transfer.map { LogosWire.events($0, watched: watched(CBGR, DUMJ), programs: programs) } ?? []
-check(both.map(\.title) == ["Sent 40 — to DumJ…hE51", "Received 40 — from CbgR…Sr2r"], "sent and received, each from its own side")
-check(both.map(\.account) == [CBGR, DUMJ], "each event names the account it is for")
-let one = transfer.map { LogosWire.events($0, watched: watched(DUMJ), programs: programs) } ?? []
-check(one.map(\.title) == ["Received 40 — from CbgR…Sr2r"], "the recipient alone sees only the receipt")
-check(one.first?.tags == ["Received"], "tagged as state")
-let none = transfer.map { LogosWire.events($0, watched: watched(HOLD), programs: programs) } ?? [LogosWire.Event(account: "", title: "", tags: [])]
-check(none.isEmpty, "an unwatched transaction lands nothing")
+print("block 2 — the v0.3 testnet, live (2026-09-30)")
+let b2 = block("AgAAAAAAAAA4uwzzSJPklA8P971eY2jZRvRoXYiE/R6z9nTJwVp3Cm0uosxtzORJF4kAcRVBZ2JCYL23Y6JDcP7s8GMQ8AkWdwvM8qABAAAsS7XK+hFm8Wd4NJK5r0htkxeEuo0B8vO91+o5waxd8Sv2daKtZu0lV2LmDTMemRsCDOcz3WrcpMy+/geFW7DZzGE60Go9Rd1bNaFPxh3/REgg/1UU2QZnaQtb/9OGahsCAAAAABW9oLWl1jKV9JM0dmo9GnrN6Ke2Gs7SrX4zTFVzRD3yBAAAAFhiQRCrAUaxIeOhkkuWtUBSNVbiS9XHwH5Sq/pf66+LFb2gtaXWMpX0kzR2aj0aes3op7YaztKtfjNMVXNEPfJ/Gl6dyYFrnVVFr9xtSHsT1KLGj+K6Ox0VNgCzlaW4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAciTqtuAvizfYQbFjvriwFHCkLnOHXszPzXIYK+GxO1wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+xkEVTgqEdIUHwDA6JP3Zaeok41C2GZ2lyzEWVvHukAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwDAAAAL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMDEZWKD8YjKnx+berhrNjWxCoyy+ABMV1RwYL+5F4LAynC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDEwGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MBlYoPxiMqfH5t6uGs2NbEKjLL4AExXVHBgv7kXgsDKcAAAAABAAAAB3C8zyoAEAAAIAAAAAAAAAAAAAAAAC")
+check(b2?.id == 2, "the block id")
+check(b2?.timestamp.timeIntervalSince1970 == 1790779853.687, "the millisecond timestamp, as seconds")
+check(b2?.transactions.count == 2, "the node's two per-block transactions")
+check(b2?.transactions.last?.hashHex == "f50ad68c6a4d2434415837e05246bb03258ec566900e7f0f36668a3802cd1411", "the hash matches the chain's (getTransaction)")
+let system = b2?.transactions ?? []
+check(system.allSatisfy { $0.signers == 0 && !$0.paysFee }, "both are unsigned and fee-exempt")
+check(system.allSatisfy { LogosWire.events($0, watched: Set($0.accounts.map { Data($0) })).isEmpty },
+      "the node's own transactions land nothing even when their accounts are watched")
 
-print("the clock")
-let clock = b1?.transactions.first { $0.programID.first == LogosWire.clockProgramWord }
-check(clock != nil, "every block carries the clock transaction")
-let everyone = Set((clock?.accounts ?? []).map { Data($0) })
-check(clock.map { LogosWire.events($0, watched: everyone, programs: programs) }?.isEmpty == true, "the clock lands nothing even when its accounts are watched")
-let quiet = block("SHEAAAAAAACcj7jS1RSC4jVT8WqGZiR5fQ4JcjhupRv6Xo+uBunI1VBEewJQai2pb0uCZWFfRKjIxOz5iPjVH3ywa10u0gehguUq6aABAACHQ3/5ix+KfwGkkQyyOrh40zR8IMmmu18VQcr9DduqetrqlPbEWpAXugxbmoogmknrkd2J73HHtwdxFN48Nsa6AQAAAAAxn7wFTXcgfLrsCzHpzIE+ygtA0xDXES7EoP5kOVxh/AMAAAAvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDAwMS9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDEwL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwNTAAAAAAAgAAAILlKumgAQAAAAAAAAI=")
-check(quiet?.transactions.count == 1, "a quiet block decodes to the clock alone")
-
-print("block 152 — a token transfer")
-let b2 = block("mAAAAAAAAADw5qtQ05o9ezB/IsxtmFZhg4N6XXGwtveu+1f5YQbebVEO4bXDDc7UpWtqGP62UT9PNgbq7WxuCc7OTfppG3tj6uLCgaABAAC2RgqrqlYV875GnM26R17vBzKRxWYzNTsbDy7GOBPghekwBBBP0w/OF5W6Q32e3GszRR80EtW5fb7spSYPaiDrAgAAAADMxHE+K17N/zewxnwpU2nv/AS36JlOsRw/QQuyJrgumwIAAADZn0Uzo6ytQv1QuWbJsPi8+T08O46JRLTuNgd7Godhylymj1CweRiZyVBVFdg7X4544MROZWUb5mLncSI3/rhUAQAAAAEAAAAAAAAAAAAAAAAAAAAFAAAAAAAAAEBCDwAAAAAAAAAAAAAAAAABAAAAA3n9LqTcKMJUgtwQ3gqeCsFpIJPbsfaY5DtRWaFz914Cp98rEhulV2xyicNQdbCvTKcqkc1BVabjAV0j1MLfFIOL35nGQixwm2xHdUHAKOyQ8fGbq/5/ub4LNgG9lzmCADGfvAVNdyB8uuwLMenMgT7KC0DTENcRLsSg/mQ5XGH8AwAAAC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDAxL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMTAvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MAAAAAACAAAA6uLCgaABAAAAAAAAAg==")
-let tok = b2?.transactions.first { $0.programID.first != LogosWire.clockProgramWord }
-check(tok?.hashHex == "a4adb5c918fcdda5dff0162bb82458630bc062be54e62461e94cda1f8125f2db", "the hash matches the chain's")
-check(tok.map { LogosWire.events($0, watched: watched(FEWL, SEVEN), programs: programs).map(\.title) } ==
-      ["Sent 1,000,000 tokens — to 7Efp…Q3iT", "Received 1,000,000 tokens — from FeWL…wCV7"], "token amounts, both sides")
-
-print("block 26043 — a token created")
-let b3 = block("u2UAAAAAAADKqVtck8u2hKyTm/ufqZsTfljZZJ90jNh87moeQmiGha2QKvNfDwoHMpdhdboBfA1BGu/puqxC5w2ocut9QoXCR1iQ3qABAAD97SGOHDZZx3grv5qDS2+ZT6BNrJyeBUwB7SNObsx9TCU9Hgg+VFXwHwAwTYfe9o1y5NXVPFpTOWGkzv4K9tTKAgAAAADMxHE+K17N/zewxnwpU2nv/AS36JlOsRw/QQuyJrgumwIAAABAakYqYue7iOP6KpdR/6EChg4XEDEjCQhyHJ7hqV+cV1SWsUJV8Vcf0EHqqJU6ARd7hH4qpLSsu56WoPHvP/SjAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAEAAAAEAAAAQU5UVkBCDwAAAAAAAAAAAAAAAAACAAAAalq9/E/0S4X+itHrz/PgbLsEHdbCBERCiXVsB+1fywYIzrH18R2qdsFisUaiGRHSFO2nt5rXdwUaaBzopAkPJWe8wJjZS97F/VF6uDV7sEyZtgUVtXZblbqlPYdxL6CGjj3zXi+LTTSJe5m5lKd+F03TIP/K7mcal0iwv4fwBUbQzOshOUZuY/EEvey8WymqfnRMn+Y49hJZjgQZpgDe32X5F4k14u1AiMQC5G+p3BoDUqtwoJzWTz9nFvaqtMETADGfvAVNdyB8uuwLMenMgT7KC0DTENcRLsSg/mQ5XGH8AwAAAC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDAxL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMTAvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MAAAAAACAAAAR1iQ3qABAAAAAAAAAg==")
-let made = b3?.transactions.first { $0.programID.first != LogosWire.clockProgramWord }
-check(made.map { LogosWire.events($0, watched: watched(DEF), programs: programs).map(\.title) } == ["Created token ANTV"], "the token's name is read out of the instruction")
-
-print("block 27220 — a mint")
-let b4 = block("VGoAAAAAAAD9l6U1TRmZmyFkZvm0ibfd3iqEQLU3EMwy5Xrtj6kgQCGzs9dSNZDyfsizuOQNPPIO6y6hOPhvyip8zNpUBFaB6NrI4qABAABeMKNAXZ3BkNHXJ18td+vntsgjv1jnloOAXNoiDEyXFEUT68N1g9uXmhlEcNx88uBWTzw9U9k4uhp/uXqe3BwhAgAAAADMxHE+K17N/zewxnwpU2nv/AS36JlOsRw/QQuyJrgumwIAAABAakYqYue7iOP6KpdR/6EChg4XEDEjCQhyHJ7hqV+cV1SWsUJV8Vcf0EHqqJU6ARd7hH4qpLSsu56WoPHvP/SjAQAAAAEAAAAAAAAAAAAAAAAAAAAFAAAABQAAAICEHgAAAAAAAAAAAAAAAAABAAAApLJRD8FQCBi4EiTNxSzLM1VeW0P/ddnJ7NqaictypH1h2CkKL1ly7bXrD0ZNpgckM6ZlAVzZANf4ImBQ0noT0me8wJjZS97F/VF6uDV7sEyZtgUVtXZblbqlPYdxL6CGADGfvAVNdyB8uuwLMenMgT7KC0DTENcRLsSg/mQ5XGH8AwAAAC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDAxL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMTAvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MAAAAAACAAAA6NrI4qABAAAAAAAAAg==")
-let mint = b4?.transactions.first { $0.programID.first != LogosWire.clockProgramWord }
-check(mint?.hashHex == "58f2f92b1fc4f2b7fa2014f3c61db6845b3defc32acc2340153383accce2d3cf", "the hash matches the chain's")
-check(mint.map { LogosWire.events($0, watched: watched(HOLD), programs: programs).map(\.title) } == ["Minted 2,000,000 tokens"], "the minted amount")
-
-print("amounts")
-check(LogosWire.u128([40, 0, 0, 0]) == 40, "u128: least-significant word FIRST")
-check(LogosWire.amount(LogosWire.u128([0, 0, 1, 0])!) == "18,446,744,073,709,551,616", "u128: the third word is 2^64")
-check(!LogosWire.amount(1_000).contains("LGO"), "no unit is invented")
-check(LogosWire.string([4, 1448365633])?.0 == "ANTV", "a risc0 String unpacks four bytes to a word")
-
-print("exact length")
-var raw = Data(base64Encoded: "JmUAAAAAAACIopHL4LZ+cue0/tsb6PVZWjP83LjJPwroy8tt/iawvHn1NLuEyMRvkSr7tQL7W1PvKhjtDv8KkkMCuWVgGhdDdY0H3qABAADn2X7t9XzZQlVKGN5E41JrwJJQvxGX2LyiFCePS9qotZb9vL3h2oMGWdgYGS4gETNTTD4Ikf3gahIULdqS+hHQAgAAAAD+lsQii6u+i8V44+JbiEyssH+MhlQfJ+1nZ4mHXu+HWgIAAACsUt75pBCUuNs4XJHL3PtZ1rImHmzK+/GUyH25XeO997/Qh1eJRbipQ0AExnnmIl8ZNPXr8nuW++xabvIWe548AQAAABoAAAAAAAAAAAAAAAAAAAAFAAAAAAAAACgAAAAAAAAAAAAAAAAAAAABAAAA72KV2QlWDKv5zFbPccdD+eXVP20RScRN2M+PnmwEZY7nen3uo8tF3VGxovKyab3FcwtKwbZd/BxC3HVRp2XUIGqkw2Vpm4nZY++FpZhouWErYAH5B1C0lwZipid2My6BADGfvAVNdyB8uuwLMenMgT7KC0DTENcRLsSg/mQ5XGH8AwAAAC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDAxL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMTAvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MAAAAAACAAAAdY0H3qABAAAAAAAAAg==")!
-check(LogosWire.block(raw.dropLast(1)) == nil, "a truncated block is refused")
-raw.append(0)
-check(LogosWire.block(raw) == nil, "a block with a trailing byte is refused")
-
-print("synthetic kinds")
+print("synthetic v0.3 transactions (none has run on the reset chain yet)")
 func le32(_ v: UInt32) -> [UInt8] { withUnsafeBytes(of: v.littleEndian, Array.init) }
 func le64(_ v: UInt64) -> [UInt8] { withUnsafeBytes(of: v.littleEndian, Array.init) }
+func u128(_ v: UInt64) -> [UInt8] { le64(v) + le64(0) }
 func wrap(_ tx: [UInt8]) -> Data {
     Data(le64(7) + [UInt8](repeating: 1, count: 64) + le64(1_790_000_000_000)
+         + [UInt8](repeating: 3, count: 32)                              // producer
          + [UInt8](repeating: 2, count: 64) + le32(1) + tx + [0])
 }
-let deploy = LogosWire.block(wrap([2] + le32(3) + [9, 9, 9]))
-check(deploy?.transactions.first?.kind == .programDeployment, "a program deployment decodes")
-let who = LogosWire.base58Decode(CBGR)!
-var priv: [UInt8] = [1] + le32(1) + who + [UInt8](repeating: 0, count: 32) + [UInt8](repeating: 0, count: 16) + le32(2) + [5, 5] + [UInt8](repeating: 0, count: 16)
+let native = [UInt8](repeating: 0, count: 32)
+let from = LogosWire.base58Decode(CBGR)!, to = LogosWire.base58Decode(DUMJ)!
+func publicTx(program: [UInt8], accounts: [[UInt8]], instruction: [UInt8], fee: Bool, signers: Int) -> [UInt8] {
+    var t: [UInt8] = [0] + program + le32(UInt32(accounts.count))
+    for a in accounts { t += a + native }                                // (account, shard's program)
+    t += le32(1) + u128(4)                                               // nonces
+    t += le32(UInt32(instruction.count)) + instruction
+    t += fee ? [1] + from + le64(10_000) + le64(1) + u128(500) : [0]
+    t += le32(UInt32(signers)) + [UInt8](repeating: 9, count: 96 * signers)
+    return t
+}
+let send = publicTx(program: native, accounts: [from, to], instruction: [0] + u128(40), fee: true, signers: 1)
+let transfer = LogosWire.block(wrap(send))?.transactions.first
+check(transfer?.paysFee == true && transfer?.signers == 1, "a signed, fee-paying transfer decodes")
+let both = transfer.map { LogosWire.events($0, watched: watched(CBGR, DUMJ)) } ?? []
+check(both.map(\.title) == ["Sent 40 — to DumJ…hE51", "Received 40 — from CbgR…Sr2r"], "sent and received, each from its own side")
+check(both.map(\.account) == [CBGR, DUMJ], "each event names the account it is for")
+let one = transfer.map { LogosWire.events($0, watched: watched(DUMJ)) } ?? []
+check(one.map(\.title) == ["Received 40 — from CbgR…Sr2r"], "the recipient alone sees only the receipt")
+check(one.first?.tags == ["Received"], "tagged as state")
+let none = transfer.map { LogosWire.events($0, watched: watched(HOLD)) } ?? [LogosWire.Event(account: "", title: "", tags: [])]
+check(none.isEmpty, "an unwatched transaction lands nothing")
+let big = LogosWire.block(wrap(publicTx(program: native, accounts: [from, to], instruction: [0] + le64(0) + le64(1), fee: true, signers: 1)))?.transactions.first
+check(big.map { LogosWire.events($0, watched: watched(DUMJ)).map(\.title) } == ["Received 18,446,744,073,709,551,616 — from CbgR…Sr2r"], "u128: least-significant byte FIRST (the ninth byte is 2^64)")
+let other = LogosWire.block(wrap(publicTx(program: [UInt8](repeating: 7, count: 32), accounts: [from, to], instruction: [0] + u128(40), fee: true, signers: 1)))?.transactions.first
+check(other.map { LogosWire.events($0, watched: watched(CBGR)).map(\.title) } == ["Used a program"], "another program's call is said, never read as an amount")
+let twice = LogosWire.block(wrap(publicTx(program: [UInt8](repeating: 7, count: 32), accounts: [from, from, to], instruction: [], fee: true, signers: 1)))?.transactions.first
+check(twice?.accounts.count == 2, "an account selected for two shards is one party")
+let deposit = LogosWire.block(wrap(publicTx(program: native, accounts: [from, to], instruction: [0] + u128(40), fee: false, signers: 0)))?.transactions.first
+check(deposit.map { LogosWire.events($0, watched: watched(DUMJ)) }?.isEmpty == true, "an unsigned, fee-exempt transaction is the node's own")
+
+var priv: [UInt8] = [1] + le32(1) + from + le32(1) + native + native + le32(2) + [5, 5]   // one public action, one effect
 priv += le32(0)                                                                  // nonces
 priv += le32(1) + [UInt8](repeating: 3, count: 96) + le32(2) + [1, 2] + le32(1) + [7] + [4]   // one private action
 priv += [0] + [1] + le64(5) + [0] + [0]                                          // validity windows
+priv += le32(2) + [0] + [UInt8](repeating: 6, count: 64) + [1] + [UInt8](repeating: 6, count: 32)  // image claims
 priv += le32(0) + le32(3) + [8, 8, 8]                                            // witness: no sigs, a proof
 let p = LogosWire.block(wrap(priv))?.transactions.first
 check(p?.kind == .privacyPreserving, "a privacy-preserving transaction decodes")
-check(p.map { LogosWire.events($0, watched: watched(CBGR), programs: programs).map(\.title) } == ["Private transaction"], "only its public side is named")
+check(p.map { LogosWire.events($0, watched: watched(CBGR)).map(\.title) } == ["Private transaction"], "only its public side is named")
+check(LogosWire.block(wrap([2] + le32(3) + [9, 9, 9])) == nil, "v0.2's deployment variant is refused, not guessed at")
+
+print("exact length")
+var raw = Data(base64Encoded: "AgAAAAAAAAA4uwzzSJPklA8P971eY2jZRvRoXYiE/R6z9nTJwVp3Cm0uosxtzORJF4kAcRVBZ2JCYL23Y6JDcP7s8GMQ8AkWdwvM8qABAAAsS7XK+hFm8Wd4NJK5r0htkxeEuo0B8vO91+o5waxd8Sv2daKtZu0lV2LmDTMemRsCDOcz3WrcpMy+/geFW7DZzGE60Go9Rd1bNaFPxh3/REgg/1UU2QZnaQtb/9OGahsCAAAAABW9oLWl1jKV9JM0dmo9GnrN6Ke2Gs7SrX4zTFVzRD3yBAAAAFhiQRCrAUaxIeOhkkuWtUBSNVbiS9XHwH5Sq/pf66+LFb2gtaXWMpX0kzR2aj0aes3op7YaztKtfjNMVXNEPfJ/Gl6dyYFrnVVFr9xtSHsT1KLGj+K6Ox0VNgCzlaW4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAciTqtuAvizfYQbFjvriwFHCkLnOHXszPzXIYK+GxO1wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+xkEVTgqEdIUHwDA6JP3Zaeok41C2GZ2lyzEWVvHukAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwDAAAAL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMDEZWKD8YjKnx+berhrNjWxCoyy+ABMV1RwYL+5F4LAynC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDEwGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MBlYoPxiMqfH5t6uGs2NbEKjLL4AExXVHBgv7kXgsDKcAAAAABAAAAB3C8zyoAEAAAIAAAAAAAAAAAAAAAAC")!
+check(LogosWire.block(raw.dropLast(1)) == nil, "a truncated block is refused")
+raw.append(0)
+check(LogosWire.block(raw) == nil, "a block with a trailing byte is refused")
+check(!LogosWire.amount(1_000).contains("LGO"), "no unit is invented")
 
 print("your node — the address")
 check(LogosWire.nodeBase("127.0.0.1:8080") == "http://127.0.0.1:8080", "host:port")
@@ -291,8 +278,8 @@ PY
 }
 
 mutate "u128 read most-significant first" \
-  'for word in w.reversed() { value = value * 4_294_967_296 + Decimal(word) }' \
-  'for word in w { value = value * 4_294_967_296 + Decimal(word) }'
+  'for byte in b.reversed() { value = value * 256 + Decimal(byte) }' \
+  'for byte in b { value = value * 256 + Decimal(byte) }'
 mutate "the timestamp read as seconds" \
   'Date(timeIntervalSince1970: Double(ms) / 1000)' \
   'Date(timeIntervalSince1970: Double(ms))'
@@ -300,15 +287,21 @@ mutate "the hash taken with the variant tag" \
   'let start = r.offset' \
   'let start = r.offset - 1'
 mutate "a trailing byte tolerated" \
-  'guard r.u8() != nil, r.atEnd else { return nil }' \
-  'guard r.u8() != nil else { return nil }'
-mutate "the clock not skipped" \
-  'if tx.programID.first == clockProgramWord { return [] }' \
-  'if tx.programID.isEmpty { return [] }'
+  'guard let status = r.u8(), status < 3, r.atEnd else { return nil }' \
+  'guard let status = r.u8(), status < 3 else { return nil }'
+mutate "the node's own transactions not skipped" \
+  'if tx.signers == 0 && !tx.paysFee { return [] }' \
+  'if tx.signers < 0 && !tx.paysFee { return [] }'
+mutate "the producer's key not skipped" \
+  'let ms = r.u64(), r.skip(32 + 64),' \
+  'let ms = r.u64(), r.skip(64),'
+mutate "any program read as the native token" \
+  'if tx.program == nativeProgram, tx.accounts.count == 2,' \
+  'if tx.accounts.count == 2,'
 mutate "sender and recipient swapped" \
-  '                out.append(i == 1
+  'i == 1
                     ? Event(account: id(1), title: "Received' \
-  '                out.append(i == 0
+  'i == 0
                     ? Event(account: id(1), title: "Received'
 mutate "a private id made watchable" \
   'guard let id = parseAccountID(raw), id.visibility != .privateAccount else { return nil }' \
@@ -316,9 +309,6 @@ mutate "a private id made watchable" \
 mutate "any length accepted as an id" \
   'guard let bytes = base58Decode(text), bytes.count == 32 else { return nil }' \
   'guard let bytes = base58Decode(text), bytes.count > 0 else { return nil }'
-mutate "the token name not read" \
-  'let made = string(ins.dropFirst()).map { "Created token \($0.0)" } ?? "Created a token"' \
-  'let made = "Created a token"'
 
 mutate "the node's first reading lands rows" \
   'guard let old else { return [] }' \

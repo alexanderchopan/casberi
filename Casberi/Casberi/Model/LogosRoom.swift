@@ -85,9 +85,6 @@ enum LogosRoom {
     struct Account: Identifiable, Equatable {
         let id: String
         let balance: Decimal?
-        /// The owning program's name as a person reads it ("Transfers"), when
-        /// the sequencer has answered.
-        let owner: String?
     }
 
     struct Head: Equatable {
@@ -114,8 +111,7 @@ enum LogosRoom {
     static func compose(scope: String?) -> Head {
         let store = LogosStore.shared
         let ids = scope.map { id in store.accounts.filter { $0 == id } } ?? store.accounts
-        let accounts = ids.map { Account(id: $0, balance: store.balance(for: $0),
-                                         owner: store.owner(for: $0)) }
+        let accounts = ids.map { Account(id: $0, balance: store.balance(for: $0)) }
         let known = accounts.compactMap(\.balance)
         let total: Decimal? = known.isEmpty ? nil : known.reduce(0, +)
         return Head(accounts: accounts, total: total,

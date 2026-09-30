@@ -120,32 +120,18 @@ enum LogosWire {
         return obj["result"]
     }
 
-    /// `getAccount`'s result. Measured 2026-09-29:
-    /// `{"program_owner":[8 × u32],"balance":1481100,"data":[…],"nonce":0}`.
+    /// `getAccountBalance`'s result: the native balance, a bare number.
+    /// Measured 2026-09-30 on LEZ v0.3. `getAccount` no longer carries a
+    /// balance or an owning program: a v0.3 account is `{nonce, data:
+    /// {shards}}`, one shard per program that keeps data on it, the native
+    /// balance among them — so the balance is asked for by name, and the
+    /// v0.2 "owner" line has nothing left to read (prd §1007).
+    ///
     /// `balance` is a u128 on the wire, which JSON carries as a number; it is
     /// read through `Decimal` rather than `Int`, because a u128 is wider than
     /// anything `JSONSerialization` hands back as an integer (the `FramesMoney`
     /// lesson: wei wider than `UInt64` returned nil).
-    struct Account: Equatable {
-        let balance: Decimal
-        let nonce: Int
-        /// The eight u32 words of the owning program's id, as the node sends
-        /// them. All-zero is the node's answer for an account nobody has
-        /// initialised — which is also what every unknown id returns.
-        let programOwner: [UInt32]
-        var isUninitialised: Bool { programOwner.allSatisfy { $0 == 0 } && nonce == 0 && balance == 0 }
-    }
-
-    static func account(_ result: Any?) -> Account? {
-        guard let obj = result as? [String: Any],
-              let balance = decimal(obj["balance"]),
-              let owner = obj["program_owner"] as? [Any]
-        else { return nil }
-        let words = owner.compactMap { ($0 as? NSNumber).map { UInt32(truncating: $0) } }
-        guard words.count == 8 else { return nil }
-        let nonce = (obj["nonce"] as? NSNumber)?.intValue ?? 0
-        return Account(balance: balance, nonce: nonce, programOwner: words)
-    }
+    static func balance(_ result: Any?) -> Decimal? { decimal(result) }
 
     /// A u128 carried as a JSON number or a decimal string, never through a
     /// `Double` (which rounds past 2^53).
@@ -158,53 +144,22 @@ enum LogosWire {
         default: return nil
         }
     }
-
-    /// `getProgramIds`' result: name → the eight-word id. Pinned to the
-    /// running LEZ revision, which is why it is READ, never shipped: a
-    /// testnet reset or an upgrade changes every id (measured names today:
-    /// amm, authenticated_transfer, pinata, privacy_preserving_circuit, token).
-    static func programIDs(_ result: Any?) -> [String: [UInt32]] {
-        guard let obj = result as? [String: Any] else { return [:] }
-        var out: [String: [UInt32]] = [:]
-        for (name, value) in obj {
-            guard let arr = value as? [Any] else { continue }
-            let words = arr.compactMap { ($0 as? NSNumber).map { UInt32(truncating: $0) } }
-            if words.count == 8 { out[name] = words }
-        }
-        return out
-    }
-
-    /// The program an account belongs to, by name, when the id is known.
-    static func programName(_ owner: [UInt32], in ids: [String: [UInt32]]) -> String? {
-        ids.first { $0.value == owner }?.key
-    }
-
-    /// The name a person reads for a program id. Measured names, spelled out;
-    /// an unknown one keeps its own name with the underscores opened up.
-    static func programLabel(_ name: String) -> String {
-        switch name {
-        case "authenticated_transfer": return "Transfers"
-        case "token": return "Tokens"
-        case "pinata": return "Faucet"
-        case "amm": return "AMM"
-        case "privacy_preserving_circuit": return "Private transfers"
-        default: return name.replacingOccurrences(of: "_", with: " ")
-        }
-    }
 }
 
-// MARK: - Blocks (v0.2 layout)
+// MARK: - Blocks (v0.3 layout)
 
 extension LogosWire {
 
-    /// A block, as far as a watch needs it. Layout MEASURED 2026-09-29 against
-    /// the live testnet, which runs LEZ's v0.2.x format (tags v0.2.2–v0.2.4
-    /// are byte-identical; `main` and v0.3.0-rc1 are NOT — v0.3 adds a
-    /// `producer` to the header and reshapes the message). Every testnet
-    /// block 1…30,320 decodes with this reader to its exact length:
+    /// A block, as far as a watch needs it. Layout read from LEZ's own source
+    /// at tag v0.3.0 (`lez/common/src/block.rs`, `lee/state_machine`) and
+    /// MEASURED 2026-09-30 against the live testnet, which was reset onto
+    /// v0.3 that day: every block 1…281 decodes with this reader to its exact
+    /// length. v0.2's reader refused every one of them — v0.3 put the
+    /// producer's key in the header, named programs by ACCOUNT id, carried
+    /// instructions as bytes and added a fee to the message (prd §1007):
     ///
     ///     block_id u64 | prev_hash [32] | hash [32] | timestamp u64 ms (@72)
-    ///     | signature [64] | Vec<LeeTransaction> | bedrock_status u8
+    ///     | producer [32] | signature [64] | Vec<LeeTransaction> | bedrock_status u8
     ///
     /// **Exact length or nil.** A reader that stops early on a drifted layout
     /// reads garbage as a valid block — a wrong amount on a real row — so a
@@ -217,25 +172,32 @@ extension LogosWire {
     }
 
     struct Transaction {
-        enum Kind { case publicCall, privacyPreserving, programDeployment }
+        enum Kind { case publicCall, privacyPreserving }
         let kind: Kind
-        /// SHA-256 of the transaction's bytes WITHOUT the variant tag —
-        /// verified live for all three kinds against `getTransaction`.
+        /// SHA-256 of the transaction's bytes WITHOUT the variant tag — the
+        /// node's own `hash()` is SHA-256 over the transaction's Borsh, and
+        /// the variant tag belongs to the enum around it.
         let hashHex: String
-        /// `[u32; 8]`; empty for a private or deployment transaction.
-        let programID: [UInt32]
-        /// Public: the message's account ids, in instruction order. Private:
-        /// the public accounts whose post-state it carries.
+        /// The program's ACCOUNT id, 32 bytes; empty for a private
+        /// transaction. The native token is all zeros.
+        let program: [UInt8]
+        /// Public: the shard selectors' account ids, in instruction order,
+        /// each once. Private: the public accounts whose state it changed.
         let accounts: [[UInt8]]
-        /// risc0-serde words; empty unless public.
-        let instruction: [UInt32]
+        /// The instruction's Borsh bytes; empty unless public.
+        let instruction: [UInt8]
         let signers: Int
+        /// Public only: whether the message declared a fee. A transaction
+        /// with no signer and no fee is the node's own (the per-block clock
+        /// and its companion, genesis deposits) — "fee-exempt (system)" in
+        /// LEZ's words.
+        let paysFee: Bool
     }
 
     static func block(_ data: Data) -> Block? {
         var r = Reader(Array(data))
         guard let id = r.u64(), r.skip(64),
-              let ms = r.u64(), r.skip(64),
+              let ms = r.u64(), r.skip(32 + 64),                  // producer, signature
               let count = r.u32(), count < 100_000
         else { return nil }
         var txs: [Transaction] = []
@@ -243,7 +205,7 @@ extension LogosWire {
             guard let tx = transaction(&r) else { return nil }
             txs.append(tx)
         }
-        guard r.u8() != nil, r.atEnd else { return nil }
+        guard let status = r.u8(), status < 3, r.atEnd else { return nil }
         return Block(id: Int(id), timestamp: Date(timeIntervalSince1970: Double(ms) / 1000),
                      transactions: txs)
     }
@@ -252,47 +214,61 @@ extension LogosWire {
         guard let tag = r.u8() else { return nil }
         let start = r.offset
         let kind: Transaction.Kind
-        var program: [UInt32] = []
+        var program: [UInt8] = []
         var accounts: [[UInt8]] = []
-        var instruction: [UInt32] = []
+        var instruction: [UInt8] = []
         var signers = 0
+        var paysFee = false
         switch tag {
         case 0:
             kind = .publicCall
-            guard let p = r.words(8),
-                  let a = r.vec({ $0.bytes(32) }),
+            guard let p = r.bytes(32),
+                  let selectors = r.vec({ (r: inout Reader) -> [UInt8]? in  // (account, shard's program)
+                      guard let id = r.bytes(32), r.skip(32) else { return nil }
+                      return id
+                  }),
                   r.vec({ $0.skip(16) ? () : nil }) != nil,        // nonces, u128 each
-                  let n = r.u32(), let i = r.words(Int(n)),
+                  let n = r.u32(), let i = r.bytes(Int(n)),
+                  let fee = r.option({ $0.skip(32 + 8 + 8 + 16) ? () : nil }),  // payer, gas, tip, max
                   let s = r.vec({ $0.skip(96) ? () : nil })       // (sig 64, pk 32)
             else { return nil }
-            program = p; accounts = a; instruction = i; signers = s.count
+            program = p; instruction = i; signers = s.count; paysFee = fee != nil
+            for id in selectors where !accounts.contains(id) { accounts.append(id) }
         case 1:
             kind = .privacyPreserving
-            guard let a = r.vec({ (r: inout Reader) -> [UInt8]? in
-                      guard let id = r.bytes(32), r.skip(32),          // owner [u32; 8]
-                            r.skip(16), r.blob(), r.skip(16)           // balance, data, nonce
+            guard let a = r.vec({ (r: inout Reader) -> [UInt8]? in  // public actions
+                      guard let id = r.bytes(32),
+                            r.vec({ (r: inout Reader) -> Void? in   // effects
+                                guard r.skip(64), r.blob() else { return nil }
+                                return ()
+                            }) != nil
                       else { return nil }
                       return id
                   }),
                   r.vec({ $0.skip(16) ? () : nil }) != nil,        // nonces
-                  r.vec({ (r: inout Reader) -> Void? in                             // private actions
+                  r.vec({ (r: inout Reader) -> Void? in             // private actions
                       guard r.skip(96), r.blob(), r.blob(), r.skip(1) else { return nil }
                       return ()
                   }) != nil,
-                  r.optionU64(), r.optionU64(), r.optionU64(), r.optionU64(),
-                  let s = r.vec({ $0.skip(96) ? () : nil }), r.blob()
+                  r.option({ $0.u64() }) != nil, r.option({ $0.u64() }) != nil,   // block window
+                  r.option({ $0.u64() }) != nil, r.option({ $0.u64() }) != nil,   // time window
+                  r.vec({ (r: inout Reader) -> Void? in             // program image claims
+                      switch r.u8() {
+                      case 0?: return r.skip(64) ? () : nil         // disclosed: account, image
+                      case 1?: return r.skip(32) ? () : nil         // undisclosed: root
+                      default: return nil
+                      }
+                  }) != nil,
+                  let s = r.vec({ $0.skip(96) ? () : nil }), r.blob()  // signers, proof
             else { return nil }
             accounts = a; signers = s.count
-        case 2:
-            kind = .programDeployment
-            guard r.blob() else { return nil }
         default:
             return nil
         }
         let body = r.slice(from: start)
         let hash = SHA256.hash(data: body).map { String(format: "%02x", $0) }.joined()
-        return Transaction(kind: kind, hashHex: hash, programID: program,
-                           accounts: accounts, instruction: instruction, signers: signers)
+        return Transaction(kind: kind, hashHex: hash, program: program, accounts: accounts,
+                           instruction: instruction, signers: signers, paysFee: paysFee)
     }
 
     /// Borsh, little-endian: a Vec or String is a u32 count then its items;
@@ -319,21 +295,18 @@ extension LogosWire {
         mutating func u64() -> UInt64? {
             bytes(8).map { $0.reversed().reduce(0) { $0 << 8 | UInt64($1) } }
         }
-        mutating func words(_ n: Int) -> [UInt32]? {
-            guard n >= 0, n < 1_000_000 else { return nil }
-            var out: [UInt32] = []
-            out.reserveCapacity(n)
-            for _ in 0..<n { guard let w = u32() else { return nil }; out.append(w) }
-            return out
-        }
         /// A `Vec<u8>` read past, length-checked.
         mutating func blob() -> Bool {
             guard let n = u32() else { return false }
             return skip(Int(n))
         }
-        mutating func optionU64() -> Bool {
-            guard let flag = u8() else { return false }
-            switch flag { case 0: return true; case 1: return skip(8); default: return false }
+        /// `.some(nil)` is a Borsh `None`; nil is a malformed option.
+        mutating func option<T>(_ item: (inout Reader) -> T?) -> T?? {
+            switch u8() {
+            case 0?: return .some(nil)
+            case 1?: return item(&self).map { .some($0) }
+            default: return nil
+            }
         }
         mutating func vec<T>(_ item: (inout Reader) -> T?) -> [T]? {
             guard let n = u32(), n < 1_000_000 else { return nil }
@@ -356,32 +329,15 @@ extension LogosWire {
         let tags: [String]
     }
 
-    /// The per-block clock transaction's program (first word). Not listed by
-    /// `getProgramIds`, signed by nobody, touching three ASCII-named system
-    /// accounts, in every block — skipped before anything else.
-    static let clockProgramWord: UInt32 = 96_247_601
+    /// The native token's program account: all zeros (`NATIVE_TOKEN_PROGRAM_ID`).
+    static let nativeProgram = [UInt8](repeating: 0, count: 32)
 
-    /// A u128 in risc0-serde words: four u32, least-significant FIRST
-    /// (measured: block 25894's transfer is `[0, 40, 0, 0, 0]`).
-    static func u128(_ w: ArraySlice<UInt32>) -> Decimal? {
-        guard w.count == 4 else { return nil }
+    /// A u128 in Borsh: sixteen bytes, least-significant FIRST.
+    static func u128(_ b: ArraySlice<UInt8>) -> Decimal? {
+        guard b.count == 16 else { return nil }
         var value = Decimal(0)
-        for word in w.reversed() { value = value * 4_294_967_296 + Decimal(word) }
+        for byte in b.reversed() { value = value * 256 + Decimal(byte) }
         return value
-    }
-
-    /// A risc0-serde String: its byte length, then the bytes packed four to a
-    /// word, little-endian, zero-padded. Returns the string and the words used.
-    static func string(_ w: ArraySlice<UInt32>) -> (String, Int)? {
-        guard let n = w.first.map(Int.init), n <= 256 else { return nil }
-        let wordsUsed = (n + 3) / 4
-        guard w.count >= 1 + wordsUsed else { return nil }
-        var bytes: [UInt8] = []
-        for word in w.dropFirst().prefix(wordsUsed) {
-            for k in 0..<4 { bytes.append(UInt8((word >> (8 * UInt32(k))) & 0xff)) }
-        }
-        guard let s = String(bytes: bytes.prefix(n), encoding: .utf8) else { return nil }
-        return (s, 1 + wordsUsed)
     }
 
     /// A native or token amount. **No unit, on purpose**: measured, LEZ has
@@ -400,71 +356,41 @@ extension LogosWire {
     /// Every event `tx` makes for the accounts in `watched`. Titles follow
     /// the house seam (` — `, `TitleSeam`), and every tag is STATE, never
     /// subject (HomeComposition's mechanical list carries them).
-    static func events(_ tx: Transaction, watched: Set<Data>,
-                       programs: [String: [UInt32]]) -> [Event] {
+    ///
+    /// Only the NATIVE transfer is named with its amount. v0.3 names every
+    /// other program by an account id `getProgramIds` does not map to (it
+    /// answers image ids), and no token transfer has run on the new chain to
+    /// read one against — so anything else is "Used a program", never a
+    /// guessed amount (prd §1007).
+    static func events(_ tx: Transaction, watched: Set<Data>) -> [Event] {
         let mine = tx.accounts.enumerated().filter { watched.contains(Data($0.element)) }
         guard !mine.isEmpty else { return [] }
         func id(_ i: Int) -> String { base58Encode(tx.accounts[i]) }
         func other(_ i: Int) -> String { short(id(i)) }
 
-        switch tx.kind {
-        case .programDeployment:
-            return []
-        case .privacyPreserving:
+        if tx.kind == .privacyPreserving {
             // Only the PUBLIC side is visible: which account's state it
             // changed, never who paid whom or how much.
             return mine.map { Event(account: id($0.offset), title: "Private transaction",
                                     tags: ["Private"]) }
-        case .publicCall:
-            break
         }
-        if tx.programID.first == clockProgramWord { return [] }
-        let name = programName(tx.programID, in: programs)
-        let ins = tx.instruction[...]
-        var out: [Event] = []
+        // The node's own transactions: the clock and its companion in every
+        // block, touching system accounts, signed by nobody and paying nothing.
+        if tx.signers == 0 && !tx.paysFee { return [] }
 
-        switch (name, ins.first) {
-        case ("authenticated_transfer", 0?) where tx.accounts.count == 2:
-            guard let value = u128(ins.dropFirst().prefix(4)) else { break }
+        let ins = tx.instruction[...]
+        // `native_token::Instruction::Transfer { amount }`: variant 0, a u128.
+        if tx.program == nativeProgram, tx.accounts.count == 2,
+           ins.count == 17, ins.first == 0, let value = u128(ins.dropFirst()) {
             let n = amount(value)
-            for (i, _) in mine {
-                out.append(i == 1
+            return mine.map { i, _ in
+                i == 1
                     ? Event(account: id(1), title: "Received \(n) — from \(other(0))", tags: ["Received"])
-                    : Event(account: id(0), title: "Sent \(n) — to \(other(1))", tags: ["Sent"]))
+                    : Event(account: id(0), title: "Sent \(n) — to \(other(1))", tags: ["Sent"])
             }
-        case ("authenticated_transfer", 1?):
-            out = mine.map { Event(account: id($0.offset), title: "Account initialized", tags: ["Initialized"]) }
-        case ("token", 0?) where tx.accounts.count == 2:
-            guard let value = u128(ins.dropFirst().prefix(4)) else { break }
-            let n = amount(value)
-            for (i, _) in mine {
-                out.append(i == 1
-                    ? Event(account: id(1), title: "Received \(n) tokens — from \(other(0))", tags: ["Received", "Token"])
-                    : Event(account: id(0), title: "Sent \(n) tokens — to \(other(1))", tags: ["Sent", "Token"]))
-            }
-        case ("token", 1?):
-            let made = string(ins.dropFirst()).map { "Created token \($0.0)" } ?? "Created a token"
-            out = mine.map { Event(account: id($0.offset), title: made, tags: ["Created", "Token"]) }
-        case ("token", 5?):
-            guard let value = u128(ins.dropFirst().prefix(4)) else { break }
-            out = mine.map { Event(account: id($0.offset), title: "Minted \(amount(value)) tokens",
-                                   tags: ["Minted", "Token"]) }
-        case ("token", 4?):
-            guard let value = u128(ins.dropFirst().prefix(4)) else { break }
-            out = mine.map { Event(account: id($0.offset), title: "Burned \(amount(value)) tokens",
-                                   tags: ["Burned", "Token"]) }
-        case ("pinata", _):
-            out = mine.map { Event(account: id($0.offset), title: "Faucet claim", tags: ["Faucet"]) }
-        default:
-            break
         }
-        if out.isEmpty {
-            // Anything else a watched account took part in: named by its
-            // program, never guessed at.
-            let label = name.map(programLabel) ?? "a program"
-            out = mine.map { Event(account: id($0.offset), title: "Used \(label)", tags: ["Program"]) }
-        }
-        return out
+        // Anything else a watched account took part in: said, never guessed at.
+        return mine.map { Event(account: id($0.offset), title: "Used a program", tags: ["Program"]) }
     }
 }
 

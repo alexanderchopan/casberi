@@ -91,7 +91,7 @@ struct LogosRoomFigure: View {
 
     private var caption: String {
         if head.accounts.count == 1, let one = head.accounts.first {
-            return [LogosWire.short(one.id), one.owner].compactMap { $0 }.joined(separator: " · ")
+            return LogosWire.short(one.id)
         }
         return String(localized: "\(head.accounts.count) accounts · test coins")
     }

@@ -17,8 +17,9 @@ import SwiftData
 /// from when this phone happened to see it. Nothing before the watch began
 /// is claimed, because nothing here can see it.
 ///
-/// **Test coins, never money.** LEZ is a testnet (v0.1.x, mainnet planned for
-/// 2027) that has been reset from genesis (last on 2026-08-05). Its balances
+/// **Test coins, never money.** LEZ is a testnet (v0.3 since its reset on
+/// 2026-09-30, prd §1007; mainnet planned for 2027) that is reset from
+/// genesis when it upgrades. Its balances
 /// never join the wallet total, and a reset is detected — the stored cursor
 /// is past the node's head — rather than read as every account emptying.
 ///
@@ -34,21 +35,6 @@ final class LogosStore {
     private static let cursorKey = "logos.cursor.v1"
     private static let readAtKey = "logos.readAt.v1"
     private static let nodeKey = "logos.node.v1"
-    private static let ownersKey = "logos.owners.v1"
-
-    /// id → the owning program's readable name ("Transfers"), from the same
-    /// `getAccount` the balance comes from (prd §991) — the Accounts scope's
-    /// one line beyond the balance.
-    private(set) var owners: [String: String] {
-        didSet {
-            if let data = try? JSONEncoder().encode(owners) {
-                UserDefaults.standard.set(data, forKey: Self.ownersKey)
-            }
-        }
-    }
-
-    func owner(for id: String) -> String? { owners[id] }
-    func rememberOwners(_ read: [String: String]) { for (id, name) in read { owners[id] = name } }
     private static let nodeSnapshotKey = "logos.nodeSnapshot.v1"
 
     /// Your own node's base URL (prd §989), or nil when none is watched.
@@ -92,7 +78,9 @@ final class LogosStore {
         }
     }
 
-    /// When the balances were last read — the roster's staleness stamp.
+    /// When EVERY watched balance was last read — the roster's staleness
+    /// stamp. A pass that could not read one leaves it where it was, so a
+    /// stored figure is never drawn as fresher than it is (prd §825, §1007).
     private(set) var readAt: Date? {
         didSet { UserDefaults.standard.set(readAt, forKey: Self.readAtKey) }
     }
@@ -108,10 +96,8 @@ final class LogosStore {
         } else { balances = [:] }
         cursor = UserDefaults.standard.object(forKey: Self.cursorKey) as? Int
         readAt = UserDefaults.standard.object(forKey: Self.readAtKey) as? Date
-        if let data = UserDefaults.standard.data(forKey: Self.ownersKey),
-           let saved = try? JSONDecoder().decode([String: String].self, from: data) {
-            owners = saved
-        } else { owners = [:] }
+        // v0.2 kept each account's owning program; v0.3 accounts have none.
+        UserDefaults.standard.removeObject(forKey: "logos.owners.v1")
         node = UserDefaults.standard.string(forKey: Self.nodeKey)
         nodeSnapshot = UserDefaults.standard.data(forKey: Self.nodeSnapshotKey)
             .flatMap { try? JSONDecoder().decode(LogosWire.NodeSnapshot.self, from: $0) }
@@ -152,7 +138,6 @@ final class LogosStore {
     func remove(_ id: String) {
         accounts.removeAll { $0 == id }
         balances.removeValue(forKey: id)
-        owners.removeValue(forKey: id)
         if accounts.isEmpty { cursor = nil }
     }
 
@@ -160,7 +145,7 @@ final class LogosStore {
 
     func rememberBalances(_ read: [String: Decimal], at date: Date) {
         for (id, value) in read { balances[id] = "\(value)" }
-        readAt = date
+        if !accounts.isEmpty, accounts.allSatisfy({ read[$0] != nil }) { readAt = date }
     }
 
     func advance(to block: Int) { cursor = block }
@@ -172,12 +157,12 @@ final class LogosStore {
     func resetDetected(head: Int) {
         cursor = head
         balances = [:]
+        readAt = nil
     }
 
     func disconnect() {
         node = nil
         nodeSnapshot = nil
-        owners = [:]
         accounts = []
         balances = [:]
         cursor = nil
@@ -229,12 +214,8 @@ enum LogosIngest {
         (await call("getLastBlockId", []) as? NSNumber)?.intValue
     }
 
-    static func account(_ id: String) async -> LogosWire.Account? {
-        LogosWire.account(await call("getAccount", [id]))
-    }
-
-    static func programIDs() async -> [String: [UInt32]] {
-        LogosWire.programIDs(await call("getProgramIds", []))
+    static func balance(_ id: String) async -> Decimal? {
+        LogosWire.balance(await call("getAccountBalance", [id]))
     }
 
     /// Raw blocks, base64 Borsh, `[from, to]` inclusive.
@@ -248,7 +229,7 @@ enum LogosIngest {
     /// `skipped`: blocks jumped past the `walkCap`. `stalled`: a block that
     /// would not decode stopped the walk at it — the cursor stays put, so
     /// nothing is skipped, and the page can say activity is paused (the
-    /// testnet moving to LEZ v0.3's layout is the expected cause).
+    /// testnet moving past LEZ v0.3's layout is the expected cause).
     struct Outcome { var added: Int; var skipped: Int; var stalled = false }
 
     /// Reads every watched account's balance, walks the blocks since the
@@ -277,17 +258,9 @@ enum LogosIngest {
         }
 
         var read: [String: Decimal] = [:]
-        var owned: [String: String] = [:]
-        let programs = await programIDs()
         for id in store.accounts {
-            if let account = await account(id) {
-                read[id] = account.balance
-                if let name = LogosWire.programName(account.programOwner, in: programs) {
-                    owned[id] = LogosWire.programLabel(name)
-                }
-            }
+            if let balance = await balance(id) { read[id] = balance }
         }
-        store.rememberOwners(owned)
 
         if let cursor = store.cursor, cursor > tip {
             store.resetDetected(head: tip)
@@ -366,7 +339,6 @@ enum LogosIngest {
             from = tip - walkCap + 1
         }
         let watched = Set(store.accounts.compactMap(LogosWire.base58Decode).map { Data($0) })
-        let programs = await programIDs()
         var existing = IngestSupport.existingSourceRefs(context, source: "Logos")
         var added = 0
         var at = from
@@ -387,7 +359,7 @@ enum LogosIngest {
                     break walking
                 }
                 for tx in block.transactions {
-                    for event in LogosWire.events(tx, watched: watched, programs: programs) {
+                    for event in LogosWire.events(tx, watched: watched) {
                         let ref = "logos:lez:\(event.account):\(tx.hashHex)"
                         guard !existing.contains(ref) else { continue }
                         land(event, tx: tx, block: block, ref: ref, context: context)

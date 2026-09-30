@@ -2731,24 +2731,23 @@ enum ProbeHooks {
             }
         },
         // `-logosProbe YES|<from>-<to>` — what the seat reads, one NSLog per
-        // line. `YES` prints the head, the program ids, every watched
-        // account's balance and owner, the cursor, and the rows held. A
-        // RANGE decodes those blocks WHOLE, watched or not, and prints every
-        // transaction's program, accounts and decoded event — the only way to
-        // prove the Borsh reader against the live chain, since a quiet watch
-        // decodes nothing and an empty room has five causes (nothing watched,
-        // the sequencer unreachable, a reset, a quiet account, a layout that
-        // drifted) and only the last is a bug. A block that fails to decode
-        // prints `UNREADABLE`, which is the drift signal.
+        // line. `YES` prints the head, every watched account's balance, the
+        // cursor, and the rows held. A RANGE decodes those blocks WHOLE,
+        // watched or not, and prints every transaction's program, accounts
+        // and decoded event — the only way to prove the Borsh reader against
+        // the live chain, since a quiet watch decodes nothing and an empty
+        // room has five causes (nothing watched, the sequencer unreachable, a
+        // reset, a quiet account, a layout that drifted) and only the last is
+        // a bug. A block that fails to decode prints `UNREADABLE`, which is
+        // the drift signal (it was, for every block, on the v0.3 reset —
+        // prd §1007).
         Hook(key: "logosProbe") { spec, context in
             Task { @MainActor in
                 let store = LogosStore.shared
                 let head = await LogosIngest.head()
-                let programs = await LogosIngest.programIDs()
-                NSLog("logosProbe: head=%@ | cursor=%@ | programs=%@ | watching %d",
+                NSLog("logosProbe: head=%@ | cursor=%@ | watching %d",
                       head.map(String.init) ?? "UNREACHABLE",
-                      store.cursor.map(String.init) ?? "-",
-                      programs.keys.sorted().joined(separator: ","), store.accounts.count)
+                      store.cursor.map(String.init) ?? "-", store.accounts.count)
                 let range = spec.split(separator: "-").compactMap { Int($0) }
                 if range.count == 2 {
                     guard let blocks = await LogosIngest.blocks(from: range[0], to: range[1]) else {
@@ -2763,20 +2762,18 @@ enum ProbeHooks {
                               block.transactions.count)
                         for tx in block.transactions {
                             let everyone = Set(tx.accounts.map { Data($0) })
-                            let events = LogosWire.events(tx, watched: everyone, programs: programs)
-                            NSLog("logosTx| %@ | program=%@ | accounts=%d | %@", tx.hashHex,
-                                  LogosWire.programName(tx.programID, in: programs) ?? "?",
-                                  tx.accounts.count,
+                            let events = LogosWire.events(tx, watched: everyone)
+                            NSLog("logosTx| %@ | program=%@ | accounts=%d | signers=%d | %@", tx.hashHex,
+                                  tx.program.isEmpty ? "private" : LogosWire.short(LogosWire.base58Encode(tx.program)),
+                                  tx.accounts.count, tx.signers,
                                   events.map(\.title).joined(separator: " / "))
                         }
                     }
                     return
                 }
                 for id in store.accounts {
-                    if let account = await LogosIngest.account(id) {
-                        NSLog("logosAccount| %@ | balance=%@ | nonce=%d | owner=%@", id,
-                              LogosWire.amount(account.balance), account.nonce,
-                              LogosWire.programName(account.programOwner, in: programs) ?? "none")
+                    if let balance = await LogosIngest.balance(id) {
+                        NSLog("logosAccount| %@ | balance=%@", id, LogosWire.amount(balance))
                     } else {
                         NSLog("logosAccount| %@ | UNREADABLE", id)
                     }
