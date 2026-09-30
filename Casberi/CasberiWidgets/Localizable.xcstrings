@@ -1943,6 +1943,34 @@
         }
       }
     },
+    "Opens the composer.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre el compositor."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "作成画面を開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "작성 창을 엽니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开输入框。"
+          }
+        }
+      }
+    },
     "Opens your day from Control Center.": {
       "localizations": {
         "es": {
@@ -1967,6 +1995,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "从控制中心打开你的一天。"
+          }
+        }
+      }
+    },
+    "Opens your day.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre tu día."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日の予定を開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘 하루를 엽니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开你的今天。"
           }
         }
       }
