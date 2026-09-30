@@ -36,9 +36,12 @@ enum TokensAsk {
     @MainActor
     static func watched(_ context: ModelContext) -> [Thing] {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
-            $0.source == "Tokens"
+            $0.source == "Markets"
         })
-        return (try? context.fetch(descriptor)) ?? []
+        // Tokens only: Markets also holds watched stocks (prd §1000), which
+        // carry no pulse, so counting them here made a stocks-only watchlist
+        // answer "couldn't read your prices" every time.
+        return ((try? context.fetch(descriptor)) ?? []).filter(TokenWatch.isWatchedToken)
     }
 
     struct Move {
@@ -136,8 +139,13 @@ enum TokensAsk {
     /// tail; the whole title when the format doesn't match. Companion to
     /// `symbol(of:)` (2026-07-17, the fat feed row) so the separator lives in
     /// this file only, never re-split at a call site.
+    ///
+    /// Both seams: titles have been written `"Name — $SYM"` since §915, and a
+    /// row landed before it still reads `"Name · $SYM"`. Splitting on the old
+    /// one alone drew every watched row's whole title as its name.
     static func name(of title: String) -> String {
-        guard let sep = title.range(of: " · $", options: .backwards) else { return title }
+        guard let sep = title.range(of: " — $", options: .backwards)
+                ?? title.range(of: " · $", options: .backwards) else { return title }
         return String(title[..<sep.lowerBound])
     }
 }

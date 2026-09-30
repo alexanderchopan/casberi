@@ -62,7 +62,7 @@ struct TokenQuickSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 DSSheetHead(disc: {
-                    BridgeIcon(name: "Tokens", size: DS.Face.shelf, circular: true)
+                    BridgeIcon(name: TokenWatch.source, size: DS.Face.shelf, circular: true)
                 },
                             lead: String(localized: "Token · held in a watched wallet"),
                             title: headerTitle)

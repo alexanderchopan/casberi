@@ -95,7 +95,7 @@ enum ThingChart {
         // every real route has already failed to match, so a genuine
         // Tokens row with a real Dexscreener content URL always takes the
         // `.token` branch above and never this one.
-        if thing.source == "Tokens",
+        if TokenWatch.isWatchedToken(thing),
            let ref = thing.sourceRef,
            TokenPulse.shared.pulse(for: thing) != nil {
             return .watchedPulse(ref: ref)
@@ -2341,7 +2341,7 @@ private struct TokenChartContent: View {
     /// The watch-time anchor — only when the record really carries one
     /// (tokens watched before the field stay anchorless, honestly).
     private var since: (price: Double, date: Date)? {
-        guard thing.source == "Tokens", let p = thing.watchPriceUsd, p > 0
+        guard TokenWatch.isWatchedToken(thing), let p = thing.watchPriceUsd, p > 0
         else { return nil }
         return (p, thing.capturedAt)
     }
@@ -2349,7 +2349,7 @@ private struct TokenChartContent: View {
     /// This IS the watchlist's own thing — the row below already says so via
     /// its "since you watched" anchor, so a second Watch verb would be a
     /// dead control on the one place it can never apply.
-    private var offersWatch: Bool { thing.source != "Tokens" }
+    private var offersWatch: Bool { thing.source != TokenWatch.source }
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -2532,7 +2532,7 @@ private struct StockChartContent: View {
 
     /// The watch-time anchor — only when the record really carries one.
     private var since: (price: Double, date: Date)? {
-        guard thing.source == "Stocktwits", let p = thing.watchPriceUsd, p > 0
+        guard thing.source == TokenWatch.source, let p = thing.watchPriceUsd, p > 0
         else { return nil }
         return (p, thing.capturedAt)
     }

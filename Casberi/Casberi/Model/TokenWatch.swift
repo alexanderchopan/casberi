@@ -13,6 +13,17 @@ import SwiftData
 /// account.
 enum TokenWatch {
 
+    /// The seat's name and its rows' source: "Markets" since 2026-09-29, when
+    /// the watched stocks joined the tokens (`StockWatch`). Every reader of
+    /// the source asks here.
+    static let source = "Markets"
+
+    /// A watched TOKEN in Markets — not a stock watched beside it. The token
+    /// sheet's anchors, chart and holdings lookups ask this, never the source.
+    static func isWatchedToken(_ thing: Thing) -> Bool {
+        thing.source == source && !(thing.sourceRef ?? "").hasPrefix(StockWatch.refPrefix)
+    }
+
     struct Resolved: Identifiable {
         let chain: String
         let address: String
@@ -123,12 +134,12 @@ enum TokenWatch {
     @discardableResult
     static func add(_ token: Resolved, context: ModelContext) -> Thing? {
         let ref = "tokens:\(token.chain):\(token.address.lowercased())"
-        guard !IngestSupport.hasSourceRef(context, source: "Tokens", ref: ref) else { return nil }
+        guard !IngestSupport.hasSourceRef(context, source: source, ref: ref) else { return nil }
         let thing = Thing(
             kind: .link,
             title: TitleSeam.join(token.name, "$\(token.symbol)"),
             content: "https://dexscreener.com/\(token.chain)/\(token.address)",
-            source: "Tokens",
+            source: source,
             capturedAt: .now,
             tags: ["Watchlist"],
             sourceRef: ref
@@ -213,21 +224,23 @@ enum TokenWatch {
         return IngestSupport.tokenLogoURL(attrs["image_url"])
     }
 
-    /// Registers (or refreshes) the Tokens bridge with the live watched
-    /// count — one registrar for every door that can watch a token (the
-    /// setup screen, and a tapped holdings cell's quick sheet).
+    /// Registers (or refreshes) the Markets seat with the live watched count —
+    /// tokens and stocks — one registrar for every door that can watch one
+    /// (the setup screen, a tapped holdings cell's quick sheet, the launch
+    /// sweep that moved the stock watches in).
     @MainActor
     static func registerBridge(store: BridgeStore, context: ModelContext) {
+        let source = Self.source
         let count = (try? context.fetchCount(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Tokens" }))) ?? 0
-        let proof = String(localized: "\(count) token watched")
-        if let existing = store.bridges.first(where: { $0.name == "Tokens" }) {
+            predicate: #Predicate { $0.source == source }))) ?? 0
+        let proof = String(localized: "\(count) watched")
+        if let existing = store.bridges.first(where: { $0.id == "tokens" }) {
             store.reconnect(existing.id, proof: proof)
         } else {
             store.bridges.append(BridgeApp(
-                id: "tokens", name: "Tokens", status: .connected,
+                id: "tokens", name: source, status: .connected,
                 statusLine: proof,
-                can: ["Watches the tokens you add.", "Read-only — public price data only."]
+                can: ["Watches the stocks and tokens you add.", "Read-only — public price data only."]
             ))
             // No haptic here — every caller already fires its own on the
             // watch that triggered this (first-ever) registration; buzzing

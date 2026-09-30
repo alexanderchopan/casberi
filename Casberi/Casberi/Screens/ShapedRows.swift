@@ -557,7 +557,7 @@ struct BandRow: View {
             // Twitch frame (stream ended, `live` false) falls through to the
             // glyph — never a stale frame masquerading as a live one.
             return .thumb(image, perishable: thing.source == "Twitch",
-                          circular: thing.source == "Tokens")
+                          circular: thing.source == TokenWatch.source)
         } else if thing.kind == .screenshot, thing.sourceRef != nil {
             return .screenshot
         } else if thing.previewImageData != nil {
@@ -2924,7 +2924,7 @@ struct WatchlistLede: View {
                 Text("24h")
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             } else {
-                Text("^[\(watched) token](inflect: true) watched")
+                Text("\(watched) watched")
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
         }
@@ -3127,5 +3127,95 @@ struct RowPeek: View {
         guard !text.isEmpty else { return nil }
         guard let below = IngestSupport.bodyBelowTitle(text, title: thing.title) else { return nil }
         return below
+    }
+}
+
+
+// MARK: - Markets — a company in a pack, a watched stock (2026-09-29)
+
+/// A company in a pack (`CompanyPacks`): the TokenRow anatomy with the company
+/// in the name's place — its first account's mark leads, "MSFT · $3.8T cap"
+/// is the line, the price and its day change stand where the time would. A
+/// company with no listing says n/a where the price would be and nothing
+/// else (user, 2026-09-29: "we don't need to force fit something there").
+/// Before a read lands the row shows the ticker alone — never a price it has
+/// not read.
+struct CompanyRow: View {
+    let company: CompanyPacks.Company
+    let quote: CompanyQuote?
+    /// The company's own logo, where the row has one (a watched stock).
+    var imageURL: String? = nil
+
+    var body: some View {
+        DSFeedRow(name: company.name, line: DSFeed.line(vitals)) {
+            if let imageURL, !imageURL.isEmpty {
+                RemoteThumb(urlString: imageURL, size: DS.Face.rowCircle,
+                            fallback: TokenWatch.source, circular: true)
+            } else {
+                BridgeIcon(name: company.seats.first ?? company.name, size: DS.Mark.row)
+            }
+        } trailing: {
+            if company.listing == .unlisted {
+                Text(verbatim: "n/a")
+                    .dsText(.price17)
+                    .foregroundStyle(DS.textTertiary)
+            } else if let quote {
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(TokenChartStyle.priceText(quote.price))
+                        .dsText(.price17)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    if let change = quote.change {
+                        TokenDeltaPill(change: change, label: "", compact: true, solid: true)
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(spoken))
+    }
+
+    private var vitals: String? {
+        guard let ticker = company.listing.ticker else { return nil }
+        guard let cap = quote?.marketCap else { return ticker }
+        return "\(ticker) · \(MoneyFormat.compactUSD(cap)) cap"
+    }
+
+    private var spoken: String {
+        guard company.listing != .unlisted else {
+            return String(localized: "\(company.name), not available")
+        }
+        return [company.name, vitals,
+                quote.map { TokenChartStyle.priceText($0.price) },
+                quote?.change.map(TokenChartStyle.changeText)]
+            .compactMap(\.self).joined(separator: ", ")
+    }
+}
+
+/// A pack's lead: the category's name over what its listed companies are
+/// worth together, from the same quotes the rows wear so the two cannot
+/// disagree. Before any read it counts the companies instead (§83).
+struct CompanyPackLede: View {
+    let name: String
+    let companies: [CompanyPacks.Company]
+    let quotes: CompanyQuotes
+
+    var body: some View {
+        let caps = companies.compactMap { quotes.quote($0.listing)?.marketCap }
+        HStack(spacing: DS.Space.s2) {
+            Text(verbatim: name)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: 0)
+            if caps.isEmpty {
+                Text("^[\(companies.count) company](inflect: true)")
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            } else {
+                Text("\(MoneyFormat.compactUSD(caps.reduce(0, +))) across \(caps.count)")
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
     }
 }

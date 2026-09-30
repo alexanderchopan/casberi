@@ -2147,6 +2147,8 @@ struct MainSurface: View {
             // The music rooms open on Activity (prd §995).
             chrome.musicScope = .activity
             chrome.musicGroup = nil
+            // And the Tokens room's packs.
+            chrome.tokensScope = .watchlist
             chrome.pinterestScope = nil
             // Dies with the room like the person scope above, NOT spanning
             // its category the way the wallet scope deliberately does: a

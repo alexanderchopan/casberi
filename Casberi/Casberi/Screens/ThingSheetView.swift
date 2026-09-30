@@ -3559,7 +3559,7 @@ struct ThingSheetView: View {
             keptBefore = KeyedThing(earlier)
         }
 
-        guard thing.source == "Tokens" else { return }
+        guard TokenWatch.isWatchedToken(thing) else { return }
         let mentions = tokenMentions(in: all)
         guard !mentions.isEmpty else { return }
 
@@ -3577,7 +3577,7 @@ struct ThingSheetView: View {
     /// matches, a name like "Sol" would false-hit half the corpus). Other
     /// watchlist rows are excluded: they're the watchlist, not context.
     private func tokenMentions(in all: [Thing]) -> [Thing] {
-        guard thing.source == "Tokens" else { return [] }
+        guard TokenWatch.isWatchedToken(thing) else { return [] }
         let symbol = TokensAsk.symbol(of: thing.title)
         let name = thing.title.components(separatedBy: " · $").first ?? ""
         var patterns: [String] = []
@@ -3592,7 +3592,7 @@ struct ThingSheetView: View {
                                                    options: [.caseInsensitive])
         else { return [] }
         return Array(all.filter { other in
-            guard other.id != thing.id, other.source != "Tokens" else { return false }
+            guard other.id != thing.id, other.source != TokenWatch.source else { return false }
             let text = "\(other.title) \(other.content)"
             return regex.firstMatch(in: text, options: [],
                                     range: NSRange(text.startIndex..., in: text)) != nil

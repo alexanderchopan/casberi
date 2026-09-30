@@ -111,7 +111,7 @@ grep -q 'ThingChart.kind(for: thing) != nil' "$SHEET" \
 # allowed and documented; making it the only path is not.
 grep -q 'thing.authorHandle = token.symbol' "Casberi/Casberi/Model/TokenWatch.swift" \
   || { echo "✗ a watched token no longer stamps its symbol — the object would have to parse prose"; exit 1; }
-grep -q 'thing.authorHandle = stock.symbol' "Casberi/Casberi/Model/StocktwitsBridge.swift" \
+grep -q 'thing.authorHandle = stock.symbol' "Casberi/Casberi/Model/StockWatch.swift" \
   || { echo "✗ a watched stock no longer stamps its symbol"; exit 1; }
 
 # The chip label is NOT the persistence key. Collapsing them orphans every

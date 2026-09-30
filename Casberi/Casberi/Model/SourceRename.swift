@@ -154,7 +154,52 @@ enum SourceRename {
     private static let seatNames: [String: String] = [
         HegotaIdentity.seatID: HegotaIdentity.source,
         PrivacyDevnetIdentity.seatID: PrivacyDevnetIdentity.source,
+        // Tokens became Markets (2026-09-29); the id stayed "tokens".
+        "tokens": TokenWatch.source,
     ]
+
+    /// Stocktwits' WATCHED TICKERS converge onto Markets (2026-09-29), at
+    /// EVERY launch, for `sweepVoice`'s reason. The watches move — a row keyed
+    /// `stocktwits:sym:` — and keep that ref, the stock namespace `StockWatch`
+    /// still writes. The traders' takes are DELETED (user: drop them): a take
+    /// is a mirror of a ticker you watch, and §286 already ruled that such a
+    /// mirror goes when its follow stops explaining it. Left under the retired
+    /// source they would also make this count non-zero forever, so every
+    /// launch would pay a fetch.
+    ///
+    /// NOT `Corpus.renamedSources`: that table moves every row of a source,
+    /// and here half of them must not follow.
+    @MainActor
+    @discardableResult
+    static func sweepStockWatches(context: ModelContext, store: BridgeStore) -> Int {
+        // The seat records first, and on EVERY launch: `BridgeStore` is local
+        // and does not mirror, so a device whose rows another device already
+        // moved finds nothing below to sweep and would otherwise keep a
+        // phantom Stocktwits seat and never register Markets. Both calls are
+        // in-memory and return at once when there is nothing to change.
+        if store.bridges.contains(where: { $0.id == "stocktwits" }) {
+            store.remove("stocktwits")
+            TokenWatch.registerBridge(store: store, context: context)
+        }
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Stocktwits" })
+        guard let count = try? context.fetchCount(descriptor), count > 0 else { return 0 }
+        var moved = 0
+        var dropped: [Thing] = []
+        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+            if (thing.sourceRef ?? "").hasPrefix(StockWatch.refPrefix) {
+                thing.source = TokenWatch.source
+                moved += 1
+            } else {
+                dropped.append(thing)
+            }
+        }
+        SpotlightIndex.remove(ids: dropped.map(\.id))
+        for thing in dropped { context.delete(thing) }
+        if moved > 0 || !dropped.isEmpty { _ = context.saveHonestly() }
+        // The watches it held keep Markets connected.
+        if moved > 0 { TokenWatch.registerBridge(store: store, context: context) }
+        return moved
+    }
 
     /// Voice notes converge onto `You` (prd §972), at EVERY launch.
     ///

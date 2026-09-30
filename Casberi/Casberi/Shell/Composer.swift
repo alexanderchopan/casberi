@@ -1180,7 +1180,7 @@ struct Composer: View {
             if src == "Wallet", !WalletStore.shared.addresses.isEmpty {
                 out.append(AskOption(kind: "wallet", title: "How's my wallet?",
                                      glyph: "wallet.bifold"))
-            } else if src == "Tokens" {
+            } else if src == TokenWatch.source {
                 out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
                                      glyph: "chart.line.uptrend.xyaxis"))
             } else {
@@ -1263,7 +1263,7 @@ struct Composer: View {
         // The watchlist chip (2026-07-14): watched tokens are the corpus' one
         // LIVE number — teach that the composer reads them. Gated on the same
         // things TokensAsk answers from, so the chip always answers.
-        if scan.sourcesSeen.contains("Tokens"),
+        if scan.sourcesSeen.contains(TokenWatch.source),
            !out.contains(where: { $0.kind == "watchlist" }) {
             out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
                                  glyph: "chart.line.uptrend.xyaxis"))

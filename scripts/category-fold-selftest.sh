@@ -1215,7 +1215,7 @@ if wallet_groups is None:
     sys.exit("✗ BridgeCatalog.categories has no Wallet category")
 if "NFTs" in wallet_groups:
     sys.exit('✗ Wallet spans the "NFTs" group again — it left with the OpenSea seat (prd §638, second amendment)')
-for name in ("Tokens", "L2BEAT"):
+for name in ("Markets", "L2BEAT"):
     if not re.search(r'name:\s*"%s".*?group:\s*"Wallet"' % name, src, re.S):
         sys.exit(f'✗ "{name}" is no longer a Wallet-group offer (prd §638 moved it there)')
 # The seven retired seats are RETIRED: named in `Corpus.retiredSources` and
@@ -1232,10 +1232,11 @@ offered = set(re.findall(r'Offer\(name:\s*"([^"]+)"', src))
 back = sorted(set(retired) & offered)
 if back:
     sys.exit(f"✗ retired source(s) offered in the catalog again: {back} — a seat you can connect and never open (prd §638)")
-# Seven: the six that went with the category (Stocktwits came back under Wallet
+# Eight: the six that went with the category (Stocktwits came back under Wallet
 # the same day, §638's amendment) plus OpenSea, which went the other way — it
-# survived §638 by a day and left with its second amendment.
-for name in ("Kalshi", "Polymarket", "GeckoTerminal", "Circle x402", "1Claw", "Open Food Facts", "OpenSea"):
+# survived §638 by a day and left with its second amendment — and Stocktwits
+# after all, 2026-09-29, when its watched stocks moved into Markets.
+for name in ("Kalshi", "Polymarket", "GeckoTerminal", "Circle x402", "1Claw", "Open Food Facts", "OpenSea", "Stocktwits"):
     if name not in retired:
         sys.exit(f'✗ "{name}" is no longer in Corpus.retiredSources — its rows would earn a chip and a room for a seat the catalog does not offer')
 print(f"  ✓ real catalog: {len(entries)} categories, every one names ≥1 real offer; no Markets; {len(retired)} retired seats offered nowhere")

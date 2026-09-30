@@ -59,7 +59,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 8
+    static let version = 9
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -350,9 +350,9 @@ enum DemoSeedAll {
                               // with them for one commit and came back under
                               // Wallet the same day; its rows are seeded
                               // again below.)
-                              // Stocktwits watches join the REAL namespace —
-                              // `StocktwitsScreen` builds its watchlist by
-                              // filtering on that exact prefix, so a "demo:"
+                              // Stock watches join the REAL namespace —
+                              // `StockWatch.watchedSymbols` reads Markets'
+                              // stocks by that exact prefix, so a "demo:"
                               // ref would land rows the setup screen cannot
                               // see. EXACT refs, never the bare prefix, for
                               // the PostHog reason above: a real watch on one
@@ -637,7 +637,7 @@ enum DemoSeedAll {
     /// grades a year wall below everything, and a demo that fought that ruling
     /// would be showing a panel the app doesn't actually build.)
     static let demoVisits: [String: Int] = [
-        "Photos": 9, "X": 8, "Stocktwits": 7, "Obsidian": 6, "Linear": 6,
+        "Photos": 9, "X": 8, "Markets": 7, "Obsidian": 6, "Linear": 6,
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
         "Farcaster": 4, "Apple Wallet": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5,
@@ -3218,23 +3218,10 @@ enum DemoSeedAll {
     /// its second amendment.
     private static func watchesAndShops() -> [Thing] {
         var out: [Thing] = []
-        let mood: [(String, String, String, Double)] = [
-            ("NVDA looks extended here", "NVDA", "Bearish", 1),
-            ("Adding on any dip", "NVDA", "Bullish", 1.2),
-            ("Earnings setup is clean", "AAPL", "Bullish", 2),
-            ("Not touching this until it bases", "AAPL", "Bearish", 2.4),
-            ("Volume finally showing up", "AAPL", "Bullish", 4),
-            ("Sideways for weeks now", "TSLA", "", 5),
-            ("Watching the 200d", "TSLA", "", 7),
-            ("This is the long-term hold", "NVDA", "Bullish", 9),
-        ]
-        // The WATCHED TICKERS (2026-08-12). Stocktwits' primary rows are the
-        // watches themselves — `StockWatch.watch` lands one `.link`
-        // thing per symbol, titled `"\(company) — $\(TICKER)"` (the seam, §915), and
-        // `StocktwitsScreen` builds its whole watchlist by filtering on that
-        // ref prefix. The demo seeded only the POSTS, so the room was a wall
-        // of chat with nothing being watched, and the setup screen's
-        // watchlist was empty on a "connected" bridge.
+        // The WATCHED TICKERS (2026-08-12), in Markets beside the tokens since
+        // 2026-09-29. `StockWatch.add` lands one `.link` thing per symbol,
+        // titled `"\(company) — $\(TICKER)"` (the seam, §915). The traders'
+        // takes this seeded went with the Stocktwits seat.
         //
         // Real refs, spelled through `StockWatch`s own builder — and listed in
         // `refPrefixes` as EXACT refs rather than the bare
@@ -3246,7 +3233,7 @@ enum DemoSeedAll {
             ("Tesla Inc", "TSLA", 246.90, 11),
         ]
         out += tickers.map { t in
-            row(.link, "\(t.company) — $\(t.symbol)", source: "Stocktwits",
+            row(.link, "\(t.company) — $\(t.symbol)", source: TokenWatch.source,
                 ref: StockWatch.symbolRef(t.symbol), days: t.days, hour: 10,
                 tags: [t.symbol]) { thing in
                 thing.watchPriceUsd = t.watchedAt
@@ -3254,15 +3241,6 @@ enum DemoSeedAll {
                 // (2026-08-17) — without it every watched stock wore the
                 // source glyph and the watchlist read as one repeated icon.
                 thing.previewImageURL = "sample:coin-\(t.symbol.lowercased())"
-            }
-        }
-        out += mood.enumerated().map { i, m in
-            row(.chat, m.0, source: "Stocktwits", ref: "demo:stocktwits:\(i)",
-                days: m.3, hour: 15, content: "$\(m.1) · \(m.0)",
-                tags: m.2.isEmpty ? [m.1] : [m.1, m.2]) { t in
-                t.authorHandle = "@trader\(i % 3)"
-                t.authorAvatarURL = avatarArt("trader\(i % 3)")
-                t.postText = m.0
             }
         }
         // No dexscreener content URL on any row here (P4, 2026-08-07) — this
@@ -3290,7 +3268,7 @@ enum DemoSeedAll {
         // the real bridge stamps `previewImageURL`, and without it the row
         // and the watchlist roster both fall back to the Tokens source glyph.
         out += tokenSeeds.enumerated().map { i, t in
-            row(.link, "\(t.name) — $\(t.symbol)", source: "Tokens", ref: "demo:token:\(i)",
+            row(.link, "\(t.name) — $\(t.symbol)", source: TokenWatch.source, ref: "demo:token:\(i)",
                 days: t.dayOffset, hour: 12) { thing in
                 thing.watchPriceUsd = t.price
                 thing.previewImageURL = "sample:token-\(t.symbol.lowercased())"
@@ -5903,10 +5881,6 @@ enum DemoSeedAll {
         ("Farcaster", "2 accounts", "Follows accounts, no sign-in."),
         ("Bluesky", "1 account", "Follows accounts, no sign-in."),
         ("Nostr", "1 relay", "Reads the relays you name."),
-        // A Wallet seat since 2026-09-06 (§638's amendment) — retired with
-        // the Markets seats for one commit, back the same day because a
-        // stock is not the crypto that ruling was about.
-        ("Stocktwits", "3 tickers", "Watches tickers you add."),
         // GeckoTerminal, Open Food Facts, Circle x402, Kalshi, Polymarket,
         // 1Claw and OpenSea were seats here until 2026-09-06 (prd §638 and
         // its second amendment) — the Markets category is deleted, and a

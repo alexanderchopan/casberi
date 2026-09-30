@@ -1,12 +1,12 @@
 import SwiftUI
 import SwiftData
 
-/// Tokens, connected (renamed from Dexscreener, 2026-07-13 — the chart itself
-/// blends GeckoTerminal/Alchemy/Dexscreener, so one vendor's name overclaimed).
-/// Paste a token (address, symbol, or link); it resolves through public
-/// search and joins your watchlist as a thing whose sheet draws its live
-/// price chart. Read-only public price data — no wallet, no account, no
-/// trading.
+/// Markets, connected (Dexscreener until 2026-07-13, Tokens until 2026-09-29,
+/// when Stocktwits' watched stocks moved in). Type a company, a ticker, a
+/// token or paste an address; one field searches stocks (Stocktwits' symbol
+/// search) and tokens (Dexscreener) at once, and a watch joins the one
+/// watchlist as a thing whose sheet draws its live price chart. Read-only
+/// public price data — no wallet, no account, no trading.
 struct TokenWatchScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -24,12 +24,20 @@ struct TokenWatchScreen: View {
     /// would give, "already on your watchlist" included. Cleared on watch
     /// and on emptying.
     @State private var hits: [TokenWatch.Resolved] = []
+    /// The stocks matching what's typed, beside the tokens — the same field
+    /// finds both.
+    @State private var stockHits: [StockWatch.Resolved] = []
 
     /// What the search rows actually show — already-watched tokens are in
     /// the watchlist below, so they drop out here for display only.
     private var displayHits: [TokenWatch.Resolved] {
         let refs = Set(watched.compactMap(\.sourceRef))
-        return hits.filter { !refs.contains("tokens:\($0.id)") }
+        return hits.filter { !refs.contains("tokens:\($0.id)") }.prefix(3).map { $0 }
+    }
+
+    private var displayStockHits: [StockWatch.Resolved] {
+        let refs = Set(watched.compactMap(\.sourceRef))
+        return stockHits.filter { !refs.contains(StockWatch.symbolRef($0.symbol)) }.prefix(3).map { $0 }
     }
 
     /// The token whose chart sheet is open — a tapped coin on the roster
@@ -43,11 +51,11 @@ struct TokenWatchScreen: View {
         // `.live` at the boundary (build 177's lesson) — `apply` reads
         // `sourceRef` off every element of this @State-held array.
         TokenWatchOrder.shared.apply(watched.live, sourceRef: \.sourceRef,
-                                      change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
+                                      change24h: FeedScreen.watchChange)
     }
 
     private func loadWatched() {
-        watched = recentBridgeThings(source: "Tokens", context: modelContext)
+        watched = recentBridgeThings(source: TokenWatch.source, context: modelContext)
     }
 
     /// The page's one presentation (`AccountPage.sheet`).
@@ -55,8 +63,8 @@ struct TokenWatchScreen: View {
 
     var body: some View {
         AccountPage(
-            name: "Tokens", seatID: "tokens", source: "Tokens",
-            state: AccountPageState.of(name: "Tokens", seatID: "tokens",
+            name: TokenWatch.source, seatID: "tokens", source: TokenWatch.source,
+            state: AccountPageState.of(name: TokenWatch.source, seatID: "tokens",
                                        connected: !watched.isEmpty, store: store),
             mode: .noAccount,
             rows: rows,
@@ -81,12 +89,26 @@ struct TokenWatchScreen: View {
             // feed's rows do — refreshed here too (prd §185) so the manager
             // is live on open, not whenever the feed last looked.
             Task { await TokenPulse.shared.refresh(context: modelContext) }
+            // …and the stocks' quotes, the ones their room rows read.
+            let stocks = watched.live.compactMap { thing in
+                StockWatch.symbol(of: thing).map {
+                    CompanyPacks.Company(name: thing.title, listing: .stock($0), seats: [])
+                }
+            }
+            Task { await CompanyQuotes.shared.load(stocks) }
         }
         // The debounced token search.
         .task(id: queryField) {
             let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let found = await debouncedSearch(q, fetch: { await TokenWatch.search(q) }) {
-                hits = found
+            // One debounce, both searches: the pair rides as a one-element
+            // array because the shared debounce speaks arrays.
+            if let found = await debouncedSearch(q, fetch: {
+                async let tokens = TokenWatch.search(q)
+                async let stocks = StockWatch.search(q)
+                return [await (tokens, stocks)]
+            }) {
+                hits = found.first?.0 ?? []
+                stockHits = found.first?.1 ?? []
             }
         }
     }
@@ -104,11 +126,9 @@ struct TokenWatchScreen: View {
     private var rows: [AccountPageShape.Row] {
         orderedWatched.filter(\.isLive).map { thing in
             let pulse = TokenPulse.shared.pulse(for: thing)
-            let price = pulse?.closes.last.map { TokenChartStyle.priceText($0) }
-            // `pulse.map`, not `pulse?.change24h.map` — inside an optional
-            // chain `change24h` is already a plain Double, so the chain's own
-            // `?.` is what makes this compile.
-            let change = pulse.map { TokenChartStyle.changeText($0.change24h) }
+            let quote = StockWatch.symbol(of: thing).flatMap { CompanyQuotes.shared.quote(.stock($0)) }
+            let price = (pulse?.closes.last ?? quote?.price).map { TokenChartStyle.priceText($0) }
+            let change = (pulse?.change24h ?? quote?.change).map { TokenChartStyle.changeText($0) }
             let line = [price, change].compactMap { $0 }.joined(separator: " · ")
             return AccountPageShape.Row(
                 id: thing.id.uuidString,
@@ -150,19 +170,26 @@ struct TokenWatchScreen: View {
 
     @ViewBuilder private var addBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-        DSSlabField(placeholder: String(localized: "Name, symbol, address, or link"),
+        DSSlabField(placeholder: String(localized: "Company, ticker, token, or address"),
                     text: $queryField, actionLabel: String(localized: "Watch"),
                     focus: $fieldFocused, action: watch)
+        ForEach(displayStockHits) { stock in
+            BridgeSearchResultRow(
+                imageURL: nil, fallbackIcon: TokenWatch.source,
+                title: "\(stock.title) · $\(stock.symbol)",
+                subtitle: stock.exchange,
+                action: { watchStock(stock) })
+        }
         ForEach(displayHits) { token in
             BridgeSearchResultRow(
-                imageURL: token.imageURL, fallbackIcon: "Tokens",
+                imageURL: token.imageURL, fallbackIcon: TokenWatch.source,
                 title: "\(token.name) · $\(token.symbol)",
                 subtitle: token.priceUsd.map { "\(token.chain.capitalized) · $\($0)" }
                     ?? token.chain.capitalized,
                 action: { watchHit(token) })
         }
         BridgeSyncStatusRows(syncing: working,
-                             syncingLine: String(localized: "Finding the token…"),
+                             syncingLine: String(localized: "Finding it…"),
                              proof: result)
         // Commas still build a watchlist in one go — that trick moved to
         // the placeholder's own example rather than a paragraph (§190).
@@ -264,21 +291,25 @@ struct TokenWatchScreen: View {
             return
         }
         // The debounced search already ran this exact query — its top hit
-        // IS what a fresh resolve() would return, so reuse it rather than
+        // IS what a fresh resolve would return, so reuse it rather than
         // repeating the network round-trip.
-        if let top = hits.first {
-            add(top)
-            return
+        switch Self.pick(raw, stocks: stockHits, tokens: hits) {
+        case .stock(let stock): addStock(stock); return
+        case .token(let token): add(token); return
+        case nil: break
         }
         working = true
         Task {
-            let token = await TokenWatch.resolve(raw)
+            async let tokens = TokenWatch.search(raw, limit: 1)
+            async let stocks = StockWatch.search(raw, limit: 1)
+            let pick = Self.pick(raw, stocks: await stocks, tokens: await tokens)
             working = false
-            guard let token else {
-                result = .failed(String(localized: "Couldn't find that token — try its contract address."))
-                return
+            switch pick {
+            case .stock(let stock): addStock(stock)
+            case .token(let token): add(token)
+            case nil:
+                result = .failed(String(localized: "Couldn't find that — try a ticker or a contract address."))
             }
-            add(token)
         }
     }
 
@@ -291,21 +322,27 @@ struct TokenWatchScreen: View {
             var watchedCount = 0
             var failed: [String] = []
             for q in queries {
-                if let token = await TokenWatch.resolve(q) {
+                async let tokens = TokenWatch.search(q, limit: 1)
+                async let stocks = StockWatch.search(q, limit: 1)
+                switch Self.pick(q, stocks: await stocks, tokens: await tokens) {
+                case .stock(let stock):
+                    if StockWatch.add(stock, context: modelContext) != nil { watchedCount += 1 }
+                case .token(let token):
                     if TokenWatch.add(token, context: modelContext) != nil { watchedCount += 1 }
-                } else {
+                case nil:
                     failed.append(q)
                 }
             }
             working = false
             queryField = ""
             hits = []
+            stockHits = []
             loadWatched()
             register()
             if watchedCount == 0 {
-                result = .failed(String(localized: "Couldn't find any of those tokens — try contract addresses."))
+                result = .failed(String(localized: "Couldn't find any of those — try tickers or contract addresses."))
             } else if failed.isEmpty {
-                result = .says(String(localized: "Watching \(watchedCount) tokens"))
+                result = .says(String(localized: "Watching \(watchedCount)"))
                 DSHaptic.success()
             } else {
                 // Mixed outcome is a FAILURE, and the type now says so where a
@@ -331,11 +368,54 @@ struct TokenWatchScreen: View {
             DSHaptic.success()
             queryField = ""
             hits = []
+            stockHits = []
             loadWatched()
             register()
         } else {
             result = .says(String(localized: "\(token.name) is already on your watchlist."))
         }
+    }
+
+    private func watchStock(_ stock: StockWatch.Resolved) {
+        guard !working else { return }
+        DSHaptic.tap()
+        addStock(stock)
+    }
+
+    private func addStock(_ stock: StockWatch.Resolved) {
+        if let thing = StockWatch.add(stock, context: modelContext) {
+            result = .says(String(localized: "Watching \(thing.title)"))
+            DSHaptic.success()
+            queryField = ""
+            hits = []
+            stockHits = []
+            loadWatched()
+            register()
+        } else {
+            result = .says(String(localized: "\(stock.title) is already on your watchlist."))
+        }
+    }
+
+    private enum Pick {
+        case stock(StockWatch.Resolved)
+        case token(TokenWatch.Resolved)
+    }
+
+    /// Which of the two searches a typed watch means, in order: a stock whose
+    /// TICKER is exactly what was typed ("NET", "AAPL" — a DEX always has
+    /// some token squatting on a famous ticker); a token whose SYMBOL is
+    /// ("DEGEN"); a stock whose company name starts with it ("Cloudflare",
+    /// "apple"); then the top token, as before stocks joined; then the top
+    /// stock.
+    private static func pick(_ raw: String, stocks: [StockWatch.Resolved],
+                             tokens: [TokenWatch.Resolved]) -> Pick? {
+        let typed = raw.trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "$")).uppercased()
+        if let s = stocks.first(where: { $0.symbol.uppercased() == typed }) { return .stock(s) }
+        if let t = tokens.first(where: { $0.symbol.uppercased() == typed }) { return .token(t) }
+        if let s = stocks.first(where: { $0.title.uppercased().hasPrefix(typed) }) { return .stock(s) }
+        if let t = tokens.first { return .token(t) }
+        return stocks.first.map(Pick.stock)
     }
 
     private func register() {

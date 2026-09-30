@@ -465,10 +465,10 @@ struct BridgeApp: Identifiable, Codable {
         // truncated duplicate of something the rail already says better.
         .init(id: "wallet", name: "Wallet", status: .connected, statusLine: "Synced just now",
               can: ["Reads your wallet's activity.", "Read-only — never trades or moves funds."]),
-        // Token-watching, powered by public price data (Dexscreener search,
-        // GeckoTerminal/Alchemy candles). Read-only — no wallet, no keys, no trading.
-        .init(id: "tokens", name: "Tokens", status: .connected, statusLine: "2 tokens watched",
-              can: ["Watches the tokens you add.", "Read-only — public price data only."]),
+        // Markets: stock and token watching on public price data. Read-only —
+        // no wallet, no keys, no trading.
+        .init(id: "tokens", name: "Markets", status: .connected, statusLine: "6 watched",
+              can: ["Watches the stocks and tokens you add.", "Read-only — public price data only."]),
     ]
         // Every other room the demo corpus furnishes (2026-08-07). Seats and
         // things are seeded together or the Apps catalog contradicts the feed:

@@ -3664,13 +3664,14 @@ else
     exit 1
   fi
   xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
-  # Walk the rooms most likely to reach: the token room (the prediction books,
+  # Walk the rooms most likely to reach: the Markets room (its stock quotes
+  # and company packs read on open; before it, the prediction books,
   # whose per-view fetch started this, left the catalog on 2026-09-06 — prd
   # §638 — and the drops room went with the OpenSea seat the same day, under
   # that ruling's second amendment; a retired seat earns no room to walk), and
   # a thing sheet (the page scrape). Each is a separate launch, because the
   # reach we are hunting is one a ROOM makes when it opens.
-  for room in Tokens; do
+  for room in Markets; do
     xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES \
       -deeplink "casberi://feed/source/$room" >/dev/null 2>&1 || true
     sleep 4

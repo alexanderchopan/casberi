@@ -132,7 +132,7 @@ enum EthValidatorRead {
     }
 
     /// Registers (or clears) the ETH Validators seat with the live watched
-    /// count — mirrors `StockWatch.registerBridge`.
+    /// count — mirrors `TokenWatch.registerBridge`.
     @MainActor
     static func registerBridge(store: BridgeStore) {
         let count = EthValidatorStore.shared.watched.count

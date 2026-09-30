@@ -29,7 +29,6 @@ enum BridgeRouter {
         case altana
         case exchange(ExchangeBridge.Venue)
         case ethValidators
-        case stocktwits
         /// ENS (prd §534) — keyless with a FOLLOW list on screen, Walletbeat's
         /// exact reason: as `.token` it would inherit `finishesOnConnect ==
         /// true` and the raised sheet would dismiss itself the moment the first
@@ -319,7 +318,6 @@ enum BridgeRouter {
             // so the Row above and this can't drift apart.
             case .exchange(let venue): venue.rawValue
             case .ethValidators:  "ethvalidators"
-            case .stocktwits:     "stocktwits"
             case .ens:            "ens"
             case .walletbeat:     "walletbeat"
             case .l2beat:         "l2beat"
@@ -411,7 +409,7 @@ enum BridgeRouter {
     /// `TokenBridge.allCases`, so their eight setup screens need no rows here.
     private static let rows: [Row] = [
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
-        Row(offer: "Tokens",    id: "tokens", destination: .tokens),
+        Row(offer: "Markets",   id: "tokens", destination: .tokens),
         Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
         Row(offer: "Railgun", id: "railgun", destination: .railgun),
@@ -449,7 +447,6 @@ enum BridgeRouter {
         Row(offer: "Binance",   id: "binance",  destination: .exchange(.binance)),
         Row(offer: "Gemini Exchange", id: "geminiExchange", destination: .exchange(.geminiExchange)),
         Row(offer: "ETH Validators", id: "ethvalidators", destination: .ethValidators),
-        Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "ENS",        id: "ens",        destination: .ens),
         Row(offer: "Walletbeat", id: "walletbeat", destination: .walletbeat),
         Row(offer: "L2BEAT",     id: "l2beat",     destination: .l2beat),
@@ -671,7 +668,6 @@ struct BridgeDestinationView: View {
         case .safe:           SafeScreen()
         case .altana:         AltanaScreen()
         case .ethValidators:  EthValidatorScreen()
-        case .stocktwits:     StocktwitsScreen()
         case .ens:            ENSScreen()
         case .walletbeat:     WalletbeatScreen()
         case .l2beat:         L2beatScreen()

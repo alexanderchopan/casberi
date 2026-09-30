@@ -41,7 +41,6 @@ enum FeedInsight {
 
     static func distribution(source: String, things: [Thing]) -> Distribution? {
         switch source {
-        case "Stocktwits": return stocktwitsMood(things)
         case "Linear":     return linearWorkload(things)
         case "Privacy Pools": return shieldedReview(things)
         default: return nil
@@ -131,36 +130,6 @@ enum FeedInsight {
         return Distribution(title: "Where your work sits",
                             subtitle: "\(total) \(total == 1 ? "issue" : "issues")",
                             segments: segments)
-    }
-
-    /// The declared mood of the posters on your tickers — Stocktwits stores each
-    /// author's own Bullish / Bearish call as a tag. Neutral is the rest. It's
-    /// the crowd's stated stance, never a prediction of ours.
-    ///
-    /// POSTS ONLY (2026-08-12). `StockWatch.watch` lands the watch itself as
-    /// a `.link` thing in this same room — the watch IS the thing, no
-    /// separate store — and counting those tallied each watched TICKER as a
-    /// neutral POST: the subtitle over-reported ("11 posts" for 8), and every
-    /// watch dragged the neutral segment up, so a room whose posters were
-    /// evenly split read as mostly undecided. Wrong in the real app for
-    /// anyone with a watchlist, and invisible until the demo grew one.
-    private static func stocktwitsMood(_ things: [Thing]) -> Distribution? {
-        var bull = 0, bear = 0, neutral = 0
-        for thing in things where thing.kind == .chat {
-            if thing.tags.contains("Bullish") { bull += 1 }
-            else if thing.tags.contains("Bearish") { bear += 1 }
-            else { neutral += 1 }
-        }
-        let total = bull + bear + neutral
-        // Needs a real split to mean anything — an all-neutral feed says nothing.
-        guard total >= 4, (bull + bear) >= 2 else { return nil }
-        let segments = [
-            Segment(label: "Bullish", count: bull, tone: .positive),
-            Segment(label: "Bearish", count: bear, tone: .negative),
-            Segment(label: "Neutral", count: neutral, tone: .neutral),
-        ].filter { $0.count > 0 }
-        return Distribution(title: "The mood on your tickers",
-                            subtitle: "\(total) \(total == 1 ? "post" : "posts")", segments: segments)
     }
 
     // MARK: Topic map (OCR treemap)

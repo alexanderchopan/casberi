@@ -179,7 +179,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-quickActionProbe YES` — fire the Daily Brief quick action's warm landing after launch (NSLogs `quickAction:` then `briefRequest:`). A pass is not evidence the quick action works: it cannot reach `SceneDelegate` delivery (prd §377).
 - `-chipStats "<source:n[,…]>"|clear` — seed the source strip's tap-learning counters (`Model/ChipMemory.swift`); every mount NSLogs `chipLabels:`.
 - `-openRoom "<seat name>"` — land in a source's room headlessly at mount (`RootShell.openRoomIfRequested`; NSLogs `openRoom:`). Pair with `-demoEnter YES` on a prior launch for a furnished room.
-- `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (or the Reminders room's `today`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
+- `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (or the Reminders room's `today`, or a Markets company pack by its category name, `Work`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
 - `-connectReminders YES` — the real Reminders connect, seat included (relaunch to see it; `simctl privacy … grant reminders` first, `-demo.corpusAllowed NO` on a fresh install or the dev seed pours four) → prd §993
 - `-openThing "<title prefix>"` — open the newest thing whose title starts with the prefix (NSLogs `openThing:`). It runs at mount, before ingest hooks land anything, so land first and relaunch.
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first).
@@ -392,7 +392,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-rocketLoginProbe YES` — open Rocket Money's sign-in headlessly (with `-openSetup "Rocket Money"`) and NSLog what the page drew; the site walls anything 450px wide or narrower, so the view pins a 520px desktop viewport → docs/hooks/bridges.md · prd §781
 - **Apple Intelligence is a seat (prd §833): Apple's model on Private Cloud Compute answers the composer, one tap in the Agents catalogue, no key.** → docs/hooks/system.md · prd §833
 - `-logosWatch "<id[,id]>"` `-logosProbe YES|<from>-<to>` `-logosRewind <block>` `-logosNode "<address>"|forget` — Logos: watch public LEZ accounts, keyless, forward from the watch; a range decodes blocks WHOLE, a rewind re-walks real history (a quiet testnet otherwise lands nothing); your own node is read at the address you give, three GETs, rows only on change → docs/hooks/bridges.md · prd §988 · §989
-- `-stockWatch` — resolves each query on Stocktwits (keyless symbol search), watches the top match, and syncs → docs/hooks/bridges.md
+- `-stockWatch` — resolves each query on Stocktwits' keyless symbol search and watches the top match in Markets (the Stocktwits seat is retired, its takes dropped) → docs/hooks/bridges.md
+- **Markets is ONE app (prd §1000): the Tokens seat renamed, Stocktwits' watched stocks moved in by `SourceRename.sweepStockWatches` (takes deleted, seat retired), and every catalogue category is a company pack (`CompanyPacks`) — Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted, never a valuation**
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://thing/<id>`, `casberi://person/<Bluesky|Farcaster>/<handle>`, `casberi://ask?q=<question>` (the widgets' door, prd §382), `casberi://frames/sponsor?r=` (a payment request, prd §728c).
 

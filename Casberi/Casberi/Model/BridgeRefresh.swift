@@ -753,10 +753,6 @@ enum BridgeRefresh {
                 _ = await PackageIngest.refresh(registry, context: context)
             }
         }
-        // Stocktwits — the watch lives in the corpus (the thing IS the
-        // watch); the seat gates the foreground poll so a person who never
-        // connected it doesn't pay the watched-tickers fetch every
-        // foreground, and a disconnected seat stays disconnected.
         // Instagram imports nothing on a foreground — it has no live read at
         // all (prd §245). What it does have is unfinished local work: the
         // topic terms behind the room's "What you write about" map, lifted off
@@ -870,12 +866,6 @@ enum BridgeRefresh {
                 }
             }
         }
-        if connected("stocktwits") {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await StocktwitsIngest.refresh(context: context)
-            }
-        }
         if connected("walletbeat") {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
@@ -883,7 +873,7 @@ enum BridgeRefresh {
             }
         }
         // ENS (prd §534) — the watch lives in the corpus (the thing IS the
-        // follow), the seat gates the foreground poll the Stocktwits way: a
+        // follow), the seat gates the foreground poll: a
         // person who never connected it pays nothing, and a disconnected seat
         // stays disconnected.
         if connected("ens") {

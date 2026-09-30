@@ -150,7 +150,7 @@ final class HomeInsightStore {
     /// a "Noticed a connection" line is about. Not a manufactured connection —
     /// just better evidence.
     private static func window(from things: [Thing]) -> [Thing] {
-        Array(things.lazy.filter { $0.source != "Wallet" && $0.source != "Tokens" }
+        Array(things.lazy.filter { $0.source != "Wallet" && $0.source != TokenWatch.source }
             .prefix(windowSize))
     }
 

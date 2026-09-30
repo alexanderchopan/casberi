@@ -137,6 +137,11 @@ enum Corpus {
         // survived the category's deletion by a day, then went for the same
         // reason the other six did.
         "OpenSea",
+        // Stocktwits joined them 2026-09-29: its watched tickers moved into
+        // Markets (`SourceRename.sweepStockWatches`) and its traders' takes
+        // stopped landing (user: "combine it as part of tokens and call that
+        // app 'markets'", the takes dropped).
+        "Stocktwits",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now
@@ -218,8 +223,12 @@ enum Corpus {
         // chart stopped being one vendor's (commit a2618a2, 2026-07-13). That
         // commit moved the ref prefix in the same breath, which is why this
         // entry has one and the two above do not.
-        "Dexscreener": Rename(current: "Tokens",
+        "Dexscreener": Rename(current: "Markets",
                               refPrefix: .init(old: "dexscreener:", current: "tokens:")),
+        // 2026-09-29 — Tokens took in Stocktwits' watched stocks and became
+        // "Markets". The NAME only: token rows stay keyed `tokens:`, and the
+        // Dexscreener entry above points here in one hop.
+        "Tokens": Rename(current: "Markets"),
     ]
 
     /// A renamed seat: what it answers to now, and — when the rename moved the

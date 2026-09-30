@@ -283,10 +283,18 @@ enum NetworkReach {
                          // Both are Safe's own.
                          "safe-client.safe.global", "api.safe.global",
                          "api.hyperliquid.xyz"]),
-        Endpoint(service: "Tokens",
-                 reach: .whenConnected(bridge: "Tokens"),
-                 purpose: "Fetches the public price history of a token you watch to draw its chart on \(DS.device). Carries only the token — nothing about you.",
-                 hosts: ["api.dexscreener.com", "api.geckoterminal.com"]),
+        // Markets (2026-09-29) is the Tokens seat with Stocktwits' watched
+        // stocks folded in, so it carries both seats' hosts. Yahoo's two chart
+        // hosts are built at runtime (`StockChart` tries
+        // `"https://\(host).finance.yahoo.com/…"` with query1 then query2), so
+        // neither is a literal the audit could read without this line.
+        Endpoint(service: "Markets",
+                 reach: .whenConnected(bridge: "Markets"),
+                 purpose: "Fetches the public price history of a token or stock you watch to draw its chart on \(DS.device), and finds a company's ticker through Stocktwits' public symbol search. When you open a company pack, reads the public price and market cap of the companies and coins behind that category's accounts — Nasdaq's quote for a stock, CoinPaprika's for a coin. Carries only the ticker — nothing about you, and never a portfolio.",
+                 hosts: ["api.dexscreener.com", "api.geckoterminal.com",
+                         "api.stocktwits.com",
+                         "query1.finance.yahoo.com", "query2.finance.yahoo.com",
+                         "api.nasdaq.com", "api.coinpaprika.com"]),
         // The thumbnail CDN is listed beside the API because a Daily Paper row
         // draws its cover image, and an image loaded into a row is a real
         // reach even though `NetworkLedger` doesn't record it (its own stated
@@ -481,7 +489,7 @@ enum NetworkReach {
                  purpose: "Reads your ether.fi Cash card spending and credit position off Optimism's public chain, for the wallets you watch — the amount and the moment, which is all the chain carries.",
                  hosts: ["optimism.gateway.tenderly.co", "mainnet.optimism.io"]),
         Endpoint(service: "Exchange rates",
-                 reach: .whenConnected(bridge: "Tokens"),
+                 reach: .whenConnected(bridge: "Markets"),
                  purpose: "Fetches public reference prices to show token and wallet values in your currency. Carries only the pair being priced.",
                  hosts: ["api.coinbase.com", "api.kraken.com"]),
         // Binance/Gemini's own hosts, separate from the pricing entry above —
@@ -595,19 +603,6 @@ enum NetworkReach {
                  purpose: "Looks up mentions of you across Slack. Search-only user token — can't post, read files, or browse channels.",
                  hosts: ["slack.com"]),
 
-        // MARK: Markets
-
-        // Yahoo's two chart hosts joined 2026-08-03, the same runtime-built
-        // blind spot as the Alchemy row above: `StockChart` tries
-        // `"https://\(host).finance.yahoo.com/…"` with host = query1 then
-        // query2, so neither was ever a literal the audit could read. It is
-        // the curve behind a watched ticker's chart — keyless, and it carries
-        // the ticker alone.
-        Endpoint(service: "Stocktwits",
-                 reach: .whenConnected(bridge: "Stocktwits"),
-                 purpose: "Fetches the posts and price of the tickers you watch, and each ticker's public price history from Yahoo Finance to draw its chart on \(DS.device). Public data — a watched ticker never sees your portfolio.",
-                 hosts: ["api.stocktwits.com",
-                         "query1.finance.yahoo.com", "query2.finance.yahoo.com"]),
         Endpoint(service: "ENS",
                  reach: .whenConnected(bridge: "ENS"),
                  purpose: "Reads the registrar's own public record for the names you follow — when a name expires, and whether it's been renewed or released. Public data, read-only: nothing here registers or renews.",

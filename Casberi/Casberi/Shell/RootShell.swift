@@ -217,6 +217,8 @@ struct RootShell: View {
                 if let s = RemindersScope(rawValue: raw), !s.isVerb { chrome.remindersScope = s }
                 // The Calendar room's spans too (prd §994); New is a verb.
                 if let s = CalendarScope(rawValue: raw), !s.isVerb { chrome.calendarScope = s }
+                // And a Tokens company pack, by its category name ("Work").
+                if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
             }
         }
         #endif
@@ -566,6 +568,8 @@ struct RootShell: View {
                 // Voice notes under the retired "Voice" source converge onto
                 // `You` (prd §972), in the same every-launch shape.
                 SourceRename.sweepVoice(context: modelContext)
+                // Stocktwits' watched tickers into Markets (2026-09-29).
+                SourceRename.sweepStockWatches(context: modelContext, store: bridges)
                 // Every voice note's length, and a few notes' words read back
                 // with their times (prd §987). Its own task: a read is seconds
                 // of on-device work, and nothing below waits on it.

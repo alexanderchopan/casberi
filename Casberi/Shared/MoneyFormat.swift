@@ -23,6 +23,9 @@ enum MoneyFormat {
     /// three it is the difference between $1,200 and $1,900.
     static func compactUSD(_ usd: Double) -> String {
         let v = abs(usd)
+        // A company pack prices Apple and Microsoft (2026-09-29); "$4807.3B" reads
+        // as a typo.
+        if v >= 1_000_000_000_000 { return String(format: "$%.1fT", usd / 1_000_000_000_000) }
         if v >= 1_000_000_000 { return String(format: "$%.1fB", usd / 1_000_000_000) }
         if v >= 1_000_000     { return String(format: "$%.1fM", usd / 1_000_000) }
         if v >= 10_000        { return String(format: "$%.0fK", usd / 1_000) }

@@ -2791,9 +2791,8 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-stockWatch "<query[,query]>"` — resolve each on Stocktwits, watch
-        // it, then sync the streams; NSLogs tickers + new posts (headless
-        // bridge test).
+        // `-stockWatch "<query[,query]>"` — resolve each through Stocktwits'
+        // symbol search and watch it in Markets; NSLogs the tickers.
         Hook(key: "stockWatch") { spec, context in
             Task { @MainActor in
                 var symbols: [String] = []
@@ -2803,10 +2802,8 @@ enum ProbeHooks {
                     _ = StockWatch.add(hit, context: context)
                     symbols.append(hit.symbol)
                 }
-                let n = await StocktwitsIngest.refresh(context: context)
-                NSLog("Stocktwits probe: watching %@ — %@ new posts",
-                      symbols.isEmpty ? "NOTHING (resolve failed)" : symbols.joined(separator: ","),
-                      n.map(String.init) ?? "FAILED")
+                NSLog("stockWatch probe: watching %@",
+                      symbols.isEmpty ? "NOTHING (resolve failed)" : symbols.joined(separator: ","))
             }
         },
         // `-stockChartProbe <ticker>` — fetch the Yahoo v8 curve on-device and

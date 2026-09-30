@@ -544,6 +544,11 @@ final class ShellChrome {
     /// Today or Scheduled; never New. Cleared on every source change.
     var remindersScope: RemindersScope = .all
 
+    /// Which of the Tokens room's tiles is standing — the Watchlist, or one
+    /// catalogue category's company pack (`CompanyPacks`). Cleared on every
+    /// source change.
+    var tokensScope: TokensScope = .watchlist
+
     /// The Notes room's New tile, pressed (prd §969) — a counter `RootShell`
     /// answers by raising the note sheet, the way `pinPulse` is felt. Bumped
     /// only; whoever raises the sheet reads it.

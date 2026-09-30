@@ -135,7 +135,7 @@ check(!FeedFold.ambient([post("a"), shot()]), "one thing you made keeps the fold
 check(!FeedFold.bundleable(shot()), "a screenshot never collapses into a sentence")
 check(!FeedFold.bundleable(Thing(kind: .voice, source: "You")), "a voice note never does")
 check(!FeedFold.bundleable(Thing(kind: .approval, source: "Wallet")), "an approval never does")
-check(!FeedFold.bundleable(Thing(kind: .link, source: "Tokens")), "a watched token never does")
+check(!FeedFold.bundleable(Thing(kind: .link, source: "Markets")), "a watched token never does")
 check(!FeedFold.bundleable(Thing(kind: .link, source: "Bitrefill")), "a Bitrefill order never does")
 check(!FeedFold.bundleable(Thing(kind: .link, source: "1Claw")), "a 1Claw grant never does")
 check(FeedFold.bundleable(Thing(kind: .transaction, source: "Wallet")),

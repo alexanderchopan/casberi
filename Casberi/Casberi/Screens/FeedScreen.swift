@@ -2309,7 +2309,7 @@ struct FeedScreen: View {
             // podcast art, which is §219's own decay arriving as designed
             // rather than a new behaviour.
             case _ where MediaShape.isMediaFeed(source): self = .media
-            case "Tokens":              self = .tokens
+            case "Markets":             self = .tokens
             case "Bitrefill":           self = .bitrefill
             default:                    self = .plain
             }
@@ -6512,6 +6512,10 @@ struct FeedScreen: View {
         }
         .animation(DS.Motion.standard, value: listRevision(rows))   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
+        // The Tokens room's tiles — Watchlist and the company packs — on the
+        // phone's bottom line beside the seat, the Addresses control.
+        .dsScopeDock(sections: shape == .tokens ? TokensScope.all : [],
+                     active: chrome.tokensScope, clearance: 0) { pickTokensScope($0) }
         // Width buys COLUMNS in a picture room and LINE LENGTH everywhere else
         // (2026-08-17). The 700pt reading cap is right for prose and wrong for
         // a grid: a Mac window at 1120 drew the same three-across grid it draws
@@ -7997,8 +8001,15 @@ struct FeedScreen: View {
             groupedSections(repos, nextEventID: nextEventID,
                             boundary: boundaryThingID(in: repos), dated: false)
         case .tokens:
-            watchlistLedeSection(visible)
-            watchlistSection(visible, nextEventID: nextEventID)
+            // The Watchlist, or a catalogue category's company pack
+            // (`CompanyPacks`), picked on the tiles.
+            if chrome.tokensScope.category == nil {
+                watchlistLedeSection(visible)
+                tokensInlineTiles
+                watchlistSection(visible, nextEventID: nextEventID)
+            } else {
+                companyPackSections(chrome.tokensScope)
+            }
         case .bookmarks:
             // A reading list is doors, not reads (2026-07-21). Its newest save
             // is the room's cover (prd §732), replacing the pile-count lede.
@@ -8435,17 +8446,71 @@ struct FeedScreen: View {
     @ViewBuilder
     private func watchlistLedeSection(_ visible: [Thing]) -> some View {
         let live = visible.live
-        let pulses = live.compactMap { TokenPulse.shared.pulse(for: $0) }
+        // Stocks answer from the same quotes their rows wear (`StockWatchRow`).
+        let changes = live.compactMap { Self.watchChange($0) }
         if !live.isEmpty {
             // Flat (exactly 0) is neither up nor down — "2 up" for two
             // stablecoins would claim a gain that didn't happen (honesty).
             // With no pulse cached yet the lede says how many are watched
             // and no 24h claim at all (§83).
             ledeSection(WatchlistLede(
-                up: pulses.filter { $0.change24h > 0 }.count,
-                down: pulses.filter { $0.change24h < 0 }.count,
-                watched: live.count, read: !pulses.isEmpty))
+                up: changes.filter { $0 > 0 }.count,
+                down: changes.filter { $0 < 0 }.count,
+                watched: live.count, read: !changes.isEmpty))
         }
+    }
+
+    /// A company pack (`CompanyPacks`): the category's lead, then one row per
+    /// company behind its accounts, A to Z. The quotes are read when the pack
+    /// opens and held ten minutes; nothing here is a `Thing`, so a row opens
+    /// nothing — it is a fact, not a door.
+    @ViewBuilder
+    private func companyPackSections(_ scope: TokensScope) -> some View {
+        let pack = scope.pack
+        let quotes = CompanyQuotes.shared
+        ledeSection(CompanyPackLede(name: scope.label, companies: pack, quotes: quotes)
+            .task(id: scope.id) { await quotes.load(pack) })
+        tokensInlineTiles
+        Section {
+            ForEach(pack) { company in
+                CompanyRow(company: company, quote: quotes.quote(company.listing))
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                         bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    /// The Tokens room's tiles where the rail stands (iPad, Mac); on the phone
+    /// they ride the glass capsule beside the seat (`dsScopeDock`, the
+    /// Addresses and What-this-app-reaches control) and nothing stands here.
+    @ViewBuilder
+    private var tokensInlineTiles: some View {
+        if !DSScopeDock<TokensScope>.atBottom(roomSizeClass) {
+            Section {
+                DSScopeTiles(sections: TokensScope.all, active: chrome.tokensScope,
+                             strip: true) { pickTokensScope($0) }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.leadGap,
+                                              trailing: DSRoomChassis.inset))
+            }
+        }
+    }
+
+    private func pickTokensScope(_ picked: TokensScope) {
+        withAnimation(DS.Motion.standard) { chrome.tokensScope = picked }
+    }
+
+    /// A watched row's day change, token or stock — what the Markets lede
+    /// counts and the watchlist's movers order sorts by.
+    @MainActor
+    static func watchChange(_ thing: Thing) -> Double? {
+        if let pulse = TokenPulse.shared.pulse(for: thing) { return pulse.change24h }
+        guard let symbol = StockWatch.symbol(of: thing) else { return nil }
+        return CompanyQuotes.shared.quote(.stock(symbol))?.change
     }
 
     /// Bitrefill's lede: the account at a glance — the balance its API last
@@ -8476,7 +8541,7 @@ struct FeedScreen: View {
     private func watchlistSection(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let ordered = TokenWatchOrder.shared.apply(
             visible, sourceRef: \.sourceRef,
-            change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
+            change24h: Self.watchChange)
         // One flat run: pulsed tokens wear the fat TokenRow and stand alone
         // (standsAlone), so merging only ever joins the still-unpulsed rows.
         let positions = cardRunPositions(count: ordered.count,
@@ -11077,6 +11142,7 @@ struct FeedScreen: View {
         }
         if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
         if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
+        if StockWatch.symbol(of: thing) != nil { return true }             // its twin for a stock
         return false
     }
 
@@ -11548,6 +11614,18 @@ struct FeedScreen: View {
                 // plain band + timestamp — never a faked price.
                 if let pulse = TokenPulse.shared.pulse(for: thing) {
                     TokenRow(thing: thing, pulse: pulse)
+                } else if let symbol = StockWatch.symbol(of: thing) {
+                    // A stock watched in Markets: a pack's row, on Nasdaq's
+                    // quote (`CompanyQuotes`), read when the row appears and
+                    // held ten minutes. Values only — the leaf holds no
+                    // `Thing`, so it needs no liveness guard of its own.
+                    let company = CompanyPacks.Company(name: TokensAsk.name(of: thing.title),
+                                                       listing: .stock(symbol),
+                                                       seats: [TokenWatch.source])
+                    CompanyRow(company: company,
+                               quote: CompanyQuotes.shared.quote(company.listing),
+                               imageURL: thing.previewImageURL)
+                        .task(id: symbol) { await CompanyQuotes.shared.load([company]) }
                 } else if thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true {
                     // An app wallet (prd §803e): its own logo, when it was last
                     // used, and what it holds — in the room and in All alike.
@@ -11810,12 +11888,6 @@ struct FeedScreen: View {
                 guard let resolved = await TokenWatch.resolve("ETH") else { return }
                 TokenWatch.add(resolved, context: modelContext)
                 TokenWatch.registerBridge(store: bridges, context: modelContext)
-            }
-        } else if source == "Stocktwits" {
-            tryItButton(label: "Watch $AAPL") {
-                guard let resolved = await StockWatch.resolve("AAPL") else { return }
-                StockWatch.add(resolved, context: modelContext)
-                StockWatch.registerBridge(store: bridges, context: modelContext)
             }
         } else if source == "RSS" {
             tryItButton(label: "Follow NASA's feed") {

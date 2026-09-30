@@ -1015,7 +1015,7 @@ def check_g_catalog_offers_have_demo_seats(files_text):
         check("G · seatTable found", False, True)
         return
     legacy = {"Gmail", "Calendar", "ChatGPT", "Reminders", "Photos",
-              "Claude", "Wallet", "Tokens"}
+              "Claude", "Wallet", "Markets"}
     demo_seat_catalog_names = {KNOWN_CATALOG_ALIAS.get(n, n) for n in names} | legacy
     connectable = extract_connectable_catalog_offers(files_text["BridgeCatalog"])
     exempt = KNOWN_BYOK_PROVIDER | KNOWN_BALANCE_ONLY | KNOWN_CHIPLESS_CAPTURE | KNOWN_SEARCH_ONLY
@@ -1029,7 +1029,7 @@ def check_g_catalog_offers_have_demo_seats(files_text):
 # The eight legacy seats check G can only test by NAME, since they live in
 # `BridgeApp.demo` rather than in `seatTable`.
 LEGACY_DEMO_SEATS = {"Gmail", "Calendar", "ChatGPT", "Reminders", "Photos",
-                     "Claude", "Wallet", "Tokens"}
+                     "Claude", "Wallet", "Markets"}
 
 # A legacy seat that is allowed to read as not-connected — and it may only
 # stay here while the demo seeds NO rows for it. Reminders is the one: the

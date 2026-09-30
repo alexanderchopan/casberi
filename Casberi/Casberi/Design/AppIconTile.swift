@@ -84,7 +84,7 @@ extension DS {
         case "polymarket":          return Color.fixed("#1652f0")   // their official blue (the site's own mask-icon color, matching the bundled mark)
         case "opensea":             return Color.fixed("#2081e2")   // OpenSea's marine blue
         case "geckoterminal":       return Color.fixed("#7556f6")   // the gecko's purple (sampled from the bundled icon)
-        case "tokens":              return Color.fixed("#0b0b0b")   // ink — the mark is a green chart on black (user ruling 2026-07-17; the near-zero saturation makes washHue nil, so the token sheet is pure ink ON PURPOSE — a gold/green wash fought the chart's own red)
+        case "markets":              return Color.fixed("#0b0b0b")   // ink — the mark is a green chart on black (user ruling 2026-07-17; the near-zero saturation makes washHue nil, so the token sheet is pure ink ON PURPOSE — a gold/green wash fought the chart's own red)
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
         case "bankr":               return Color.fixed("#a78bfa")   // the terminal's lavender field (sampled from the bundled icon)
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink

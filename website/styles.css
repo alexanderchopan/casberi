@@ -107,8 +107,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai.tilefull { background: none; overflow: hidden; }
 .ai.tilefull img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .ai-claude    { background: #d97757; font-size: 18px; }
-.ai-tokens    { background: #0b0b0b; }
-.ai-stocktwits { background: #008fff; }
+.ai-markets   { background: #0b0b0b; }
 /* Read-only exchange seats (prd 163). Coinbase's downloaded app icon carried
    a baked-in gloss/bevel highlight around its rounded corners (a third-party
    render, not an official flat asset) — visible as a stray light edge once

@@ -51,7 +51,7 @@ ROLL_DIRS = ["Casberi/Casberi/Screens", "Casberi/Casberi/Design",
 # so a new species cannot land without being named here.
 FEED_ROWS = {
     "BandRow": ROWS, "ReadingRow": ROWS, "ExcerptRow": ROWS, "MediaRow": ROWS,
-    "MusicRow": ROWS, "TokenRow": ROWS, "BundleRow": ROWS, "StripRow": ROWS,
+    "MusicRow": ROWS, "TokenRow": ROWS, "CompanyRow": ROWS, "BundleRow": ROWS, "StripRow": ROWS,
     "PostCard": ROWS, "SocialThreadCard": ROWS, "AppReviewRow": ROWS,
     "TakeawayCard": ROWS,
     "CursorRow": "Casberi/Casberi/Screens/CursorRow.swift",

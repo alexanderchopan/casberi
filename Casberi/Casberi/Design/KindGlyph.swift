@@ -111,7 +111,7 @@ enum BridgeGlyph {
         switch Corpus.canonicalSource(name).lowercased() {
         // DS.confirm's dark value — re-typed fixed because the mark must not
         // shift per scheme; keep in step if the confirm green is ever tuned.
-        case "tokens": return Color.fixed("#30d158")
+        case "markets": return Color.fixed("#30d158")
         // Hyperliquid's mark is mint on near-black, the Tokens shape exactly:
         // the tile is dark in both modes, so the signal has to come from the
         // glyph. Icon-sampled from the bundled mark.
@@ -255,7 +255,7 @@ enum BridgeGlyph {
         case "kalshi":    return "percent"
         case "opensea":   return "sailboat.fill"
         case "geckoterminal": return "flame.fill"
-        case "tokens":    return "chart.line.uptrend.xyaxis"
+        case "markets":    return "chart.line.uptrend.xyaxis"
         case "venice":    return "wand.and.stars"
         case "bankr":     return "brain.head.profile"
         case "voice":     return "waveform"

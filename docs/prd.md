@@ -62448,3 +62448,40 @@ Not every sync seat: Gmail with no mail or Photos with no photos is not a state 
 **Month's glyph is `tablecells`, not `calendar`.** `calendar` is the dock's Life glyph, and `room-kind-tiles-selftest.sh` fails when one glyph carries two meanings. It had been failing since §994 landed.
 
 **Seen:** the Calendar room on the iPhone 17 Pro simulator over the demo: "September – October" at the size of "Today" below it, the tiles Today · Week · Month · New with Week standing.
+## §1000 — Markets: Tokens and Stocktwits are one app, and every catalogue category is a company pack (user: "for our token feature could we have a starter pack kind of list that is the stock price and mcap of the company or crypto token so like stripe vercel … probably should be a native feature somehow not just a starter pack", "for private companies and companies that don't have a stock we can jsut have n/a", "starterpacks are all and same categories as our app catalogue", "it would live in the token tile", "the nav bar would be same component that connect manage and addreses and data has", then "we have stocktwits as a separate room … we should just combine it as part of tokens and call that app 'markets'", 2026-09-29)
+
+**One app, Markets.** The Tokens seat is renamed **Markets** (tagline "Track any stock or token") and takes in Stocktwits' watched stocks. Its id stays `tokens`. `Corpus.renamedSources` carries `"Tokens" → "Markets"`, and the Dexscreener entry now points at Markets in one hop. `SourceRename.sweepStockWatches` runs at every launch, in §647's shape, and does three things:
+- it moves every row keyed `stocktwits:sym:` to Markets, keeping the ref, which is still the stock namespace `StockWatch` writes;
+- it deletes the traders' takes (user: drop them, and §286 already ruled that a follow's mirror goes with the follow);
+- it removes the retired seat's record.
+
+Stocktwits joins `Corpus.retiredSources`. `StocktwitsScreen`, `StocktwitsIngest`, the room's mood figure and its demo takes are deleted. `StockWatch` (the symbol search and the watch) lives on in `Model/StockWatch.swift`. It skips `CRYPTO` symbols, because coins are the token half. The management page is one field ("Company, ticker, token, or address") that searches both. A typed watch picks:
+1. an exact ticker;
+2. otherwise an exact token symbol;
+3. otherwise a company name that starts with the words;
+4. otherwise the top token;
+5. otherwise the top stock.
+
+**Company packs (`Model/CompanyPacks.swift`).** A pack is a catalogue category, and its members are the makers of that category's accounts:
+- GitHub and npm are Microsoft, Slack is Salesforce, AWS and Twitch are Amazon, Muse and Instagram are Meta.
+- Gnosis Pay is GNO, NEAR AI is NEAR, Venice is VVV.
+- One row per company, A to Z. It is derived from `BridgeCatalog.offers`, never curated beside it.
+
+A company with no listing reads **n/a** and nothing else: no valuation, no estimate. Wise is listed only in London, which neither feed reads, so it is n/a too. Quotes are keyless and read when a pack opens, then held ten minutes (`CompanyQuotes`):
+- **Stocks:** Nasdaq's public quote API for price, day change and market cap. It answers an app-shaped User-Agent and hangs on curl's.
+- **Coins:** CoinPaprika's ticker. Dexscreener's "cap" for a native coin is its wrapped supply (WBNB, not BNB), and CoinGecko's keyless API returned 403 from here.
+- A zero cap is dropped, never drawn as $0.
+
+Every ticker and id was read live on 2026-09-29. `MoneyFormat.compactUSD` gains a trillions rung ("$4.8T", not "$4807.3B").
+
+**The room.** Tiles are Watchlist, then each pack A to Z, with the dock's category glyphs. On the phone they ride the glass capsule beside the seat (`dsScopeDock`, the Addresses and What-this-app-reaches control). It gains a `clearance` parameter because a room's page reaches the safe area where a pushed screen stops at its seat clearance. On iPad and Mac they sit as an inline strip under the lead.
+
+A pack's lead is the category's name over "$11.6T across 9", read from the same quotes the rows wear. A pack row is `CompanyRow` (TokenRow's anatomy, `ShapedRows.swift`) and opens nothing, because it is a fact, not a door. A watched stock in the Watchlist is the same row over its own thing. The lede's up and down counts and "Movers first" read tokens and stocks through `FeedScreen.watchChange`. `-openSection Work` (with `-openRoom Markets`) lands a pack.
+
+**Fixed on the way.** `TokensAsk.name(of:)` split only on " · $". Titles have used the " — " seam since §915, so every watched row drew its whole title as its name. It now takes both.
+
+**Reach.** Markets declares Dexscreener, GeckoTerminal, Stocktwits' symbol search, Yahoo's two chart hosts, `api.nasdaq.com` and `api.coinpaprika.com`. The Stocktwits endpoint is gone. `verify.sh`'s reach walk opens Markets.
+
+**Website, same session.** The Tokens cell and hero tile became Markets (`.ai-markets`), the Stocktwits cell, hero tile and docs chute tile are gone, `docs.html` and `llms.txt` say Markets, the static count reads 100+ over 109, and the cache-busters are bumped.
+
+**Seen** (a private iPhone 17 Pro simulator over the demo): the Work pack with live prices and caps (Amazon, Apple, Atlassian, Cloudflare, GitLab…) and Hugging Face at n/a; the capsule beside the seat; the Markets watchlist with DEGEN, ETH, SOL beside NVDA, TSLA, AAPL on live quotes; the old demo's Stocktwits rows swept on launch; "apple" on the page listing stocks.

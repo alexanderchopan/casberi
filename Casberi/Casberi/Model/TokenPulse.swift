@@ -45,7 +45,7 @@ final class TokenPulse {
     /// and never reaches the pulse fallback at all. This only lights up the
     /// demo, where there is no network and the pulse IS the chart.
     func pulse(for thing: Thing) -> Pulse? {
-        guard thing.source == "Tokens" || thing.source == "GeckoTerminal",
+        guard thing.source == "Markets" || thing.source == "GeckoTerminal",
               let ref = thing.sourceRef else { return nil }
         return pulses[ref]
     }
@@ -142,7 +142,7 @@ final class TokenPulse {
         defer { refreshing = false }
 
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
-            $0.source == "Tokens"
+            $0.source == "Markets"
         })
         var stale: [(ref: String, chain: String, address: String)] = []
         for thing in (try? context.fetch(descriptor)) ?? [] {

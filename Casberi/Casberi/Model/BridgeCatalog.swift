@@ -301,16 +301,14 @@ enum BridgeCatalog {
         // the same day by the ruling's second amendment. Their code was
         // deleted by its third; their rows stay, and nothing in the strip
         // draws them (`Corpus.retiredSources`).
-        Offer(name: "Tokens",      tagline: "Track any token",                       group: "Wallet",    connectable: true,
-              needsSetup: true),
-        // STOCKTWITS CAME BACK THE SAME DAY, under WALLET (user ruling
-        // 2026-09-06, §638's amendment). It was retired with the Markets
-        // seats for one commit, and the ruling that deleted Markets is the
-        // reason it returns: the category went because of "crypto bullshit",
-        // and a stock is not crypto — it is the same kind of thing a Token
-        // watch is, money you hold or nearly do, read from public price
-        // data. Same seat, same copy, same keyless read; only the group moved.
-        Offer(name: "Stocktwits",  tagline: "Watch any stock",                      group: "Wallet",    connectable: true,
+        // MARKETS (2026-09-29, user: "we have stocktwits as a separate room
+        // … we should just combine it as part of tokens and call that app
+        // 'markets'"). The Tokens seat took in Stocktwits' watched stocks and
+        // was renamed; Stocktwits is retired and its traders' takes are gone.
+        // One watchlist of stocks and tokens, and a company pack per
+        // catalogue category (`CompanyPacks`). An offer, never a category:
+        // the Markets CATEGORY stays deleted (prd §638).
+        Offer(name: "Markets",     tagline: "Track any stock or token",              group: "Wallet",    connectable: true,
               needsSetup: true),
         // Wallet, not Markets (2026-07-25, prd §210 — amending the 2026-07-17
         // ruling below, kept for the record). A Peer fill is the person's OWN
@@ -1171,9 +1169,9 @@ enum BridgeSetupMode {
         "Gnosis Pay", "MetaMask Card", "ether.fi"]
 
     /// A handle, an address, a feed URL — public reads, no key.
-    static let noAccountSeats: Set<String> = ["Wallet", "Tokens", "Reddit", "YouTube",
+    static let noAccountSeats: Set<String> = ["Wallet", "Markets", "Reddit", "YouTube",
         "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
-        "Telegram", "Shopify", "Deals", "Stocktwits", "Hugging Face", "Radicle",
+        "Telegram", "Shopify", "Deals", "Hugging Face", "Radicle",
         "npm", "PyPI", "Altana", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames", "Hegotá UTXO",
         "Base Vibenet", "ETH Validators", "Hegotá Privacy", "NerdWallet", "Logos",
         // No key and no account — Apple's model, turned on (prd §833).

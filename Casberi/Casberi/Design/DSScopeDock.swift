@@ -23,6 +23,10 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
     let sections: [Scope]
     let active: Scope
     var attention: Set<Scope> = []
+    /// How far the content's bottom stands above the safe area's: a pushed
+    /// screen stops at its seat clearance, a room's page (the Tokens packs)
+    /// reaches the safe area itself, so it passes 0.
+    var clearance: CGFloat = DSDock.seatClearance
     let onPick: (Scope) -> Void
 
     @Environment(ShellChrome.self) private var chrome
@@ -53,7 +57,7 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
                     // The overlay rides the screen, whose bottom is the TOP
                     // of the pushed screen's seat clearance; the seat is
                     // measured from the safe area's bottom, under it.
-                    .offset(y: DSDock.seatClearance - bottomInset)
+                    .offset(y: clearance - bottomInset)
                     .transition(.opacity)
             }
         }
@@ -73,8 +77,10 @@ extension View {
     /// search in progress, a list with nothing to scope).
     func dsScopeDock<Scope: DSTileScope>(sections: [Scope], active: Scope,
                                          attention: Set<Scope> = [],
+                                         clearance: CGFloat = DSDock.seatClearance,
                                          onPick: @escaping (Scope) -> Void) -> some View {
         modifier(DSScopeDock(sections: sections, active: active,
-                             attention: attention, onPick: onPick))
+                             attention: attention, clearance: clearance,
+                             onPick: onPick))
     }
 }

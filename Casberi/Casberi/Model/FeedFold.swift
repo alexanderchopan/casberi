@@ -125,7 +125,7 @@ enum FeedFold {
             // Watched tokens stay out: each row wears its own sparkline
             // (TokenPulse), so collapsing 3+ into "Tokens · N things" silently
             // drops every one of them.
-            && t.source != "Tokens"
+            && t.source != "Markets"
             // And Bitrefill orders: each wears the product's own artwork and a
             // "name · $value" title (prd §103). Deliberate purchases, low
             // volume — not machine bulk — so a gift-card spree stays legible
