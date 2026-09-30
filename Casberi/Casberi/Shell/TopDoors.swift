@@ -69,7 +69,7 @@ struct AvatarChip: View {
                         .modifier(DoorBounce(trigger: avatarBounce))
                         .transition(.opacity)
                 } else {
-                    AvatarDoor()
+                    AvatarDoor(mark: lit)
                         .modifier(DoorBounce(trigger: avatarBounce))
                         .modifier(DoorSpin(trigger: refreshSpin, tension: pullTension))
                 }
@@ -169,8 +169,32 @@ private struct DoorBounce: ViewModifier {
 /// (§796; it was Settings' until then). Sized up alongside the Apps door
 /// (2026-07-09): the doors earned presence in the bar, not a whisper, and
 /// this one keeps that size now that it stands alone (§798).
+///
+/// **While the rooms tray is up it is the OCTOPUS, photo or not (prd §1009,
+/// user: "so that when a user is using the tray they don't see two versions
+/// of their own photo / avatar … i think [the FAB turning] is better").** The
+/// tray's You row wears your face, so a photo on the button above it drew
+/// you twice. The button is the way out while the tray is up, and the app's
+/// own mark says that; the row keeps the face because the row is about you.
 struct AvatarDoor: View {
-    var body: some View { YouFace(size: 32) }
+    /// The tray is up (`AvatarChip.lit`): draw the mark, not the face.
+    var mark: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let swap: AnyTransition = reduceMotion
+            ? .opacity
+            : .scale(scale: 0.6).combined(with: .opacity)
+        ZStack {
+            if mark {
+                CasberiMark(size: 32).frame(width: 32, height: 32)
+                    .transition(swap)
+            } else {
+                YouFace(size: 32).transition(swap)
+            }
+        }
+        .animation(DS.Motion.standard, value: mark)
+    }
 }
 
 /// **YOU: YOUR PHOTO, OR THE OCTOPUS (user, 2026-09-26: "should we make the

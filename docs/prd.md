@@ -62609,3 +62609,11 @@ Logos shipped testnet v0.3 (roadmap.logos.co/testnets/v03-release) and RESET the
 **Added:** `-openTray YES` (DEBUG) raises the tray at mount, so a screenshot of it does not depend on a simulator tap landing.
 
 **Seen:** the furnished demo on the iPhone 17 Pro simulator in dark, tray raised by `-openTray`: the You row and Wallet five across, Work wrapping in its own column, the octopus on the face and the You row.
+
+## §1009 — While the tray is up the face is the octopus, photo or not (user: "I want the face to turn into the octopus even when a photo is set so that when a user is using the tray they don't see two versions of their own photo / avatar … i think [the FAB] is better", 2026-09-30; amends §1008's octopus note)
+
+**Why.** The tray's You row wears `YouFace` — your photo, or the octopus with none set. With a photo set, the button above the tray wore it too, so the tray drew you twice. While the tray is up the button is the way out, not you, and the app's own mark says that.
+
+**Ruling.** `AvatarDoor(mark:)` draws `CasberiMark` while `AvatarChip.lit` (the tray is up) and `YouFace` otherwise. The swap is a scale-and-fade on `DS.Motion.standard`, a fade alone under Reduce Motion. The You row keeps your face, because that row is about you. With no photo set nothing changes: both were already the octopus.
+
+**Seen:** a photo written to `profile.avatar` on the iPhone 17 Pro simulator, dark: the photo on the button with the tray down, the octopus on the button and the photo in the You row with it up (`-openTray YES`). The test photo was deleted after.
