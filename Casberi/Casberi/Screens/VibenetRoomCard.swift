@@ -1999,7 +1999,7 @@ struct VibenetRoomCard: View {
     @ViewBuilder
     private func permissionRow(_ key: VibenetTrayKey, ours: String?) -> some View {
         let power = key.actor.scope.isAdmin
-            ? Text(Self.adminLabel).foregroundColor(DS.destructive)
+            ? Text(Self.adminLabel).foregroundColor(DS.destructiveInk)
             : Text(key.actor.scope.grantedPlainLabels.joined(separator: " · "))
         // **WHOSE KEY, ON WHICH ACCOUNT** (user: "can't tell which key is for
         // my account"). This phone's key is named "This phone" and wears the

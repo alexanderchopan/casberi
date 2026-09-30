@@ -121,7 +121,7 @@ struct SplitsScreen: View {
             if let failed = standing.failedReads, failed > 0 {
                 Text(failed == 1 ? "1 account couldn't be read, so it's not in the total"
                                  : "\(failed) accounts couldn't be read, so they're not in the total")
-                    .dsText(.subhead12).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
             }
             if standing.unread > 0 {
                 Text("\(standing.unread) more accounts not read")
@@ -131,7 +131,7 @@ struct SplitsScreen: View {
             // names, rather than reported as synced.
             ForEach(standing.unreadable, id: \.self) { line in
                 Text(verbatim: line)
-                    .dsText(.subhead12).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
             }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading Splits…"),

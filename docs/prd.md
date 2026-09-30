@@ -62530,3 +62530,13 @@ Four read-only passes (shell and widgets, feed and sheets, accounts and setup, t
 **Guards amended, not deleted.** `money-receipt-selftest` now asserts the pools sentence gives the date and leaves the state to the stamp. `room-heads-selftest` reads "Retries" case-blind. `cloudflare-selftest` pins the new headline.
 
 **Seen:** the build is green on the iPhone 17 Pro simulator, and the Wallet page's watched rows draw over the demo with their address lines.
+
+## §1004 — A status word takes the INK, never the hue (the HIG sweep; user: "fix 1", 2026-09-29)
+
+**The finding.** `DS.attention`, `DS.confirm` and `DS.destructive` are Apple's vivid system hues. On the light page system orange and green measure 2.2:1 and red 3.6:1 as text, under the HIG's 4.5:1. 155 status words were drawn in them ("Live", "Under review", "3 not on the list", every error line, the red door rows, the Safe and Frames verdicts, the big money figures), readable only by someone who had turned on Increase Contrast. Dark mode already passed (6.2:1 and up).
+
+**The ruling.** A word takes `DS.attentionInk` / `DS.confirmInk` / `DS.destructiveInk`: in light mode the Increase Contrast value always (`#9b5a00`, `#1f7936`, `#c62e25`: 5.5:1 on white, 4.5:1 on `surfaceWell`), in dark the hue unchanged, under Increase Contrast exactly the hue's own contrast value. No new colour enters the palette. A glyph, a dot, a fill, a stroke or a chart mark keeps the hue: it answers to 3:1 for non-text, and the brightness is what makes it read as a signal. Where one tone feeds both (a stamp's glyph and word, a status line), the word wins and the glyph follows the ink; where a property feeds shapes and one label (`WorkStageView.tint`, `RoomFrameStyle.hue`), the label gets an `ink` twin and the shapes keep the hue.
+
+**Held by** `scripts/status-ink-audit.py` (8 mutations): a `Text`/`Label`/`DSProse.text`/`.dsText` chain whose colour argument names a bare hue, directly or in a conditional, fails. It cannot follow a hue through a property or a parameter; those sites were classified by hand and each names its ink.
+
+**Seen:** the reach screen's "3 not on the list" on the iPhone 17 Pro simulator in light mode, dark amber beside the bright `?` tiles.

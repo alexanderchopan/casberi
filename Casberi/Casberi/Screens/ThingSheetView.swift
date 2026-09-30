@@ -2623,7 +2623,7 @@ struct ThingSheetView: View {
                 .dsGlyph(.subhead)
                 .foregroundStyle(DS.destructive)
             Text(text)
-                .dsText(.body17).foregroundStyle(DS.destructive)
+                .dsText(.body17).foregroundStyle(DS.destructiveInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -3241,7 +3241,7 @@ struct ThingSheetView: View {
         if let verbResult {
             Text(verbResult)
                 .dsText(.subhead12)
-                .foregroundStyle(verbResultIsError ? DS.attention : DS.confirm)
+                .foregroundStyle(verbResultIsError ? DS.attentionInk : DS.confirmInk)
                 // The line ARRIVES rather than blinking into place. The `.id`
                 // is what makes that true for the second one as well: without
                 // it "Pinned" → "Unpinned" reuses the same `Text`, `SettleIn`

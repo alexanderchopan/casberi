@@ -103,7 +103,7 @@ struct PrivyAppHead: View {
                                 Text(verbatim: (mask ?? PrivyHomeFeed.usd(usd)))
                                     .dsText(.price17)
                                     .monospacedDigit()
-                                    .foregroundStyle(line.received ? DS.confirm : DS.textPrimary)
+                                    .foregroundStyle(line.received ? DS.confirmInk : DS.textPrimary)
                             }
                         }
                     }

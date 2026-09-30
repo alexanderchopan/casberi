@@ -127,7 +127,7 @@ struct MomentSheetBlock: View {
             } else if isReminder {
                 Text(dueLine)
                     .dsText(.heading24)
-                    .foregroundStyle(overdue ? DS.destructive : DS.textPrimary)
+                    .foregroundStyle(overdue ? DS.destructiveInk : DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, DSRoomChassis.leadInset)
             } else {

@@ -252,7 +252,7 @@ struct SafeScreen: View {
                 // point: the previous behaviour was a Sign button that
                 // failed with the same words a cancelled prompt gives.
                 DSProse.text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap the old address out of the Safe.")
-                    .dsText(.subhead12).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
                 DSSlabDoor(title: String(localized: "Make a new key"),
                            systemImage: "signature") {
@@ -302,7 +302,7 @@ struct SafeScreen: View {
                 Button { confirmDeleteSigner = true } label: {
                     Text("Delete this phone's key")
                         .dsText(.body17)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())
                 }
@@ -321,7 +321,7 @@ struct SafeScreen: View {
             }
             if let signerError {
                 Text(verbatim: signerError)
-                    .dsText(.subhead12).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .frame(maxWidth: .infinity)
                     .settleIn()
             }
@@ -419,7 +419,7 @@ struct SafeScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if enclavePresence == .destroyed {
                 DSProse.text("This phone's vault-chip key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap its signer address out of the Safe.")
-                    .dsText(.subhead12).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
                 DSSlabDoor(title: String(localized: "Make a new vault-chip key"), systemImage: "cpu") {
                     SafeEnclaveKey.delete()
@@ -456,7 +456,7 @@ struct SafeScreen: View {
                 Button { confirmDeleteEnclave = true } label: {
                     Text("Delete the vault-chip key")
                         .dsText(.body17)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())
                 }
@@ -513,7 +513,7 @@ struct SafeScreen: View {
                 ForEach(SafePeer.state.sessions) { session in
                     DSPushRow(title: Text(verbatim: session.name),
                               subtitle: Text(verbatim: String(localized: "paired · until \(session.expires.formatted(.relative(presentation: .named)))")),
-                              fact: Text("Disconnect"), factTone: DS.destructive, opens: false) {
+                              fact: Text("Disconnect"), factTone: DS.destructiveInk, opens: false) {
                         confirmDisconnect = session
                     }
                 }
@@ -571,7 +571,7 @@ struct SafeScreen: View {
                                           ?? WalletStore.shortAddress(guardStanding.wallet)),
                               subtitle: Text(verbatim: guardLine(guardStanding)),
                               fact: Text("Forget"), factTone: DS.textTertiary,
-                              subtitleTone: guardStanding.isLoneGuardian ? DS.destructive : DS.textTertiary,
+                              subtitleTone: guardStanding.isLoneGuardian ? DS.destructiveInk : DS.textTertiary,
                               opens: false) {
                         confirmForgetGuard = GuardianLedger.Entry(chainId: guardStanding.chainId,
                                                                   module: guardStanding.module,

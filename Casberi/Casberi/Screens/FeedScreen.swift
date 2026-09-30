@@ -11501,7 +11501,7 @@ struct FeedScreen: View {
                         Text(FeedLedeFace.dueLine(due))
                             .dsText(.subhead12)
                             .foregroundStyle(FeedLedeFace.isOverdue(due)
-                                             ? DS.attention : DS.textTertiary)
+                                             ? DS.attentionInk : DS.textTertiary)
                     }
                 }
             case .music:     MusicRow(thing: thing)

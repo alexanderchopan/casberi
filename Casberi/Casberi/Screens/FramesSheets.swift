@@ -222,7 +222,7 @@ struct FramesMoveSheet: View {
             ForEach(Array(tokenLines.enumerated()), id: \.offset) { _, token in
                 Text(token.signedLine)
                     .dsText(.stat24)
-                    .foregroundStyle(token.raw > 0 ? DS.confirm : DS.textPrimary)
+                    .foregroundStyle(token.raw > 0 ? DS.confirmInk : DS.textPrimary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
             }
         }
@@ -235,7 +235,7 @@ struct FramesMoveSheet: View {
                 // same rung the Wallet crown and Hegotá's receipts wear, so a
                 // devnet figure can never outsize a real one.
                 .dsText(.price40)
-                .foregroundStyle(delta > 0 ? DS.confirm : DS.textPrimary)
+                .foregroundStyle(delta > 0 ? DS.confirmInk : DS.textPrimary)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
         } else {
             // **NOT A ZERO.** An unread delta and a transaction that moved
@@ -751,7 +751,7 @@ struct FramesFrameSheet: View {
                 // already says a VERIFY frame authorises.
                 if !execution && !payment {
                     Text(String(localized: "Approves neither, so the transaction has no payer."))
-                        .dsText(.subhead12).foregroundStyle(DS.destructive)
+                        .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
                     DSFootnote(prose: String(localized: "Spent inside this transaction — nothing to revoke."))
@@ -828,7 +828,7 @@ struct FramesFrameSheet: View {
             // The one sentence here somebody would ACT on, so it names both
             // budgets: this chain's receipt cannot tell them apart (prd §962).
             Text(String(localized: "It used its whole execution budget and failed. This chain doesn't say whether execution or state ran out."))
-                .dsText(.subhead12).foregroundStyle(DS.destructive)
+                .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -848,7 +848,7 @@ struct FramesFrameSheet: View {
                  tone: DS.textSecondary)
         case .some(false):
             note(String(localized: "Reports success — the money did not move."),
-                 tone: DS.destructive)
+                 tone: DS.destructiveInk)
         case .none:
             if row.outcome == nil {
                 note(String(localized: "Its receipt couldn't be read."),

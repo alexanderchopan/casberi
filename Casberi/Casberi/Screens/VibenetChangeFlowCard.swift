@@ -111,7 +111,7 @@ struct VibenetChangeFlowCard: View {
                     Spacer(minLength: 0)
                     Text("\(flow.total(kind))")
                         .dsText(.label12)
-                        .foregroundStyle(kind.isAlarming ? DS.attention : DS.textSecondary)
+                        .foregroundStyle(kind.isAlarming ? DS.attentionInk : DS.textSecondary)
                         .monospacedDigit()
                 }
                 .frame(width: labelColumn - DS.Space.s2, alignment: .leading)

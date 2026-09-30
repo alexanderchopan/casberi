@@ -276,10 +276,10 @@ struct HegotaRoomFigure: View {
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             } else if head.everythingUnreached {
                 DSProse.text("Couldn't reach the chain — nothing below is current.")
-                    .dsText(.subhead12).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
             } else if head.partial {
                 DSProse.text("\(String(head.watched - head.reached)) of \(String(head.watched)) couldn't be read")
-                    .dsText(.subhead12).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
             }
             if let account = primary, case let series = HegotaRoom.valueSamples(account),
                series.count >= 2 {
@@ -459,7 +459,7 @@ struct HegotaRoomFigure: View {
             // would be a different number, and §555's log tag exists precisely
             // to promise that these two are exact.
             .minimumScaleFactor(0.45)
-            .foregroundStyle(has ? (incoming ? DS.confirm : DS.textPrimary)
+            .foregroundStyle(has ? (incoming ? DS.confirmInk : DS.textPrimary)
                                  : DS.textTertiary)
         let caption = sideQualifier(band, incoming: incoming, scale: scale)
         HStack(alignment: .lastTextBaseline, spacing: DS.Space.s1) {
@@ -1366,6 +1366,9 @@ enum HegotaModeStyle {
     static func hue(_ mode: HegotaFrame.Mode) -> Color {
         RoomFrameStyle.hue(mode.label)
     }
+    static func ink(_ mode: HegotaFrame.Mode) -> Color {
+        RoomFrameStyle.ink(mode.label)
+    }
 
     /// The step's mark, for a sheet head's disc.
     ///
@@ -1577,7 +1580,7 @@ struct HegotaChainNotice: View {
         if verdict == .restarted || verdict == .differentChain {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text(headline)
-                    .dsText(.subhead12).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                 Text(detail)
                     .dsText(.label12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -2448,7 +2451,7 @@ struct HegotaMoveSheet: View {
                 // same rung, so the two now MATCH rather than merely not
                 // clashing, which is the stronger version of the same rule.
                 .dsText(.price40)
-                .foregroundStyle(move.incoming ? DS.confirm : DS.textPrimary)
+                .foregroundStyle(move.incoming ? DS.confirmInk : DS.textPrimary)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
         }
     }
@@ -2849,7 +2852,7 @@ struct HegotaFrameSheet: View {
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                     Text(frame.mode.label)
                         .dsText(.body17)
-                        .foregroundStyle(HegotaModeStyle.hue(frame.mode))
+                        .foregroundStyle(HegotaModeStyle.ink(frame.mode))
                 }
                 if !back {
                     DSChevron()
@@ -3271,7 +3274,7 @@ struct HegotaAccountSheet: View {
             addressLine.padding(.top, DS.Space.s3)
             if !account.reached {
                 Text(String(localized: "Nothing below is current."))
-                    .dsText(.body17).foregroundStyle(DS.attention)
+                    .dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }

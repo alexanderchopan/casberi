@@ -111,7 +111,7 @@ struct WalletPerpsCard: View {
             let pct = Int((proximity * 100).rounded())
             out = out + quiet(" · ")
                 + Text(String(localized: "\(pct)% from liquidation"))
-                    .foregroundStyle(position.isNearLiquidation ? DS.destructive : DS.textTertiary)
+                    .foregroundStyle(position.isNearLiquidation ? DS.destructiveInk : DS.textTertiary)
         }
         if let label = position.accountLabel, !label.isEmpty {
             out = out + quiet(" · \(label)")

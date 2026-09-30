@@ -51,7 +51,7 @@ struct DSFigureReading: View {
         let base = Text(caption).foregroundStyle(DS.textSecondary)
         guard let alarm, !alarm.isEmpty else { return base }
         return base + Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
-            + Text(alarm).foregroundStyle(DS.destructive)
+            + Text(alarm).foregroundStyle(DS.destructiveInk)
     }
 }
 
@@ -108,7 +108,7 @@ struct DSBarList: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 Text(bar.value)
-                    .foregroundStyle(bar.alarm ? DS.destructive : DS.textSecondary)
+                    .foregroundStyle(bar.alarm ? DS.destructiveInk : DS.textSecondary)
                     .monospacedDigit()
                     .lineLimit(1)
             }

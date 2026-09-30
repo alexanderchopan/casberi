@@ -267,7 +267,7 @@ struct AccountDetailSheet: View {
     private func dangerLabel(_ title: String) -> some View {
         Text(title)
             .dsText(.body17)
-            .foregroundStyle(DS.destructive)
+            .foregroundStyle(DS.destructiveInk)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
     }
@@ -439,7 +439,7 @@ struct AccountDetailSheet: View {
             // old badge's tone carried).
             toggleRow("iCloud sync", syncStatusLine,
                       subtitleTone: icloudSync && syncHasLiveError
-                          ? DS.destructive : DS.textTertiary,
+                          ? DS.destructiveInk : DS.textTertiary,
                       isOn: Binding(get: { icloudSync }, set: {
                           icloudSync = $0
                           DSHaptic.tap()
@@ -469,12 +469,12 @@ struct AccountDetailSheet: View {
             // the toggle's own POSITION, which is the first thing read here.
             if !icloudSync, SharedStore.syncDisabledByGuard {
                 Text(CloudSyncReading.guardNotice(deviceName: DS.device))
-                    .dsText(.subhead12).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if icloudSync, syncHasLiveError, let detail = CloudSyncStatus.lastError {
                 Text(detail)
-                    .dsText(.subhead12).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
             // ADP nudge — only meaningful while sync is ON (with sync off
@@ -561,7 +561,7 @@ struct AccountDetailSheet: View {
     /// failure, and the map behind this door already draws it in attention.
     private var reachTone: Color {
         guard let reach else { return DS.textTertiary }
-        return reach.clean ? DS.confirm : DS.attention
+        return reach.clean ? DS.confirmInk : DS.attentionInk
     }
 
     /// A row that opens the reach screen — the shape kept in one place. Badge-less since the Statement pass — the title is the

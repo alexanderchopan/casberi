@@ -46,8 +46,8 @@ struct DiagnosticsScreen: View {
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                     Text(line)
                         .dsText(.mono17)
-                        .foregroundStyle(line.hasPrefix("FAIL") ? DS.attention
-                                         : line.hasPrefix("OK") ? DS.confirm : DS.textPrimary)
+                        .foregroundStyle(line.hasPrefix("FAIL") ? DS.attentionInk
+                                         : line.hasPrefix("OK") ? DS.confirmInk : DS.textPrimary)
                         .dsListRow()
                         .listRowSeparator(.hidden)
                         .textSelection(.enabled)

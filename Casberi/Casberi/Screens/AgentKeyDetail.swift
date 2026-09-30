@@ -56,7 +56,7 @@ struct AgentModelRow: View {
                     }
                 } else if readable == false {
                     DSProse.text("Couldn't read \(provider.company)'s model list — keeping \(provider.defaultModel).")
-                        .dsText(.subhead12).foregroundStyle(DS.attention)
+                        .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if models.isEmpty {
                     // A verb, so a row (prd §746).
@@ -501,7 +501,7 @@ struct MCPServerRow: View {
                 }
                 if let error {
                     Text(error)
-                        .dsText(.subhead12).foregroundStyle(DS.attention)
+                        .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if running {

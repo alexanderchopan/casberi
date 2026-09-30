@@ -225,7 +225,7 @@ struct AgentGrantView: View {
                         // The grant's state ("Expires in 3 days"): weight carries
                         // the fact, at medium (§764).
                         .fontWeight(.medium)
-                        .foregroundStyle(grant.urgent ? DS.attention : DS.textSecondary)
+                        .foregroundStyle(grant.urgent ? DS.attentionInk : DS.textSecondary)
                 }
                 .padding(.bottom, DS.Space.s2)
             }
@@ -295,7 +295,7 @@ struct AgentGrantView: View {
                 if let expires = grant.expires {
                     Text("Expires \(expires.formatted(.dateTime.day().month(.abbreviated)))")
                         .dsText(.label12)
-                        .foregroundStyle(grant.urgent ? DS.attention : DS.textTertiary)
+                        .foregroundStyle(grant.urgent ? DS.attentionInk : DS.textTertiary)
                 }
             }
         }

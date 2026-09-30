@@ -1407,7 +1407,7 @@ struct WalletLendingCard: View {
             + quiet(" · ")
         if let health {
             out = out + Text(String(localized: "Health \(WalletIngest.format(health))"))
-                .foregroundStyle(atRisk ? DS.destructive : DS.textTertiary)
+                .foregroundStyle(atRisk ? DS.destructiveInk : DS.textTertiary)
         } else {
             out = out + quiet(String(localized: "No debt"))
         }

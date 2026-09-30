@@ -367,7 +367,7 @@ private struct UpkeepGround: ViewModifier {
         if plain {
             content
                 .buttonStyle(.plain)
-                .foregroundStyle(DS.destructive)
+                .foregroundStyle(DS.destructiveInk)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
         } else {

@@ -279,7 +279,7 @@ struct NetworkReachScreen: View {
                         confirmForget = true
                     } label: {
                         Text("Forget these receipts")
-                            .dsText(.body17).foregroundStyle(DS.destructive)
+                            .dsText(.body17).foregroundStyle(DS.destructiveInk)
                     }
                     .dsListRow()
                 }

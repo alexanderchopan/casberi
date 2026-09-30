@@ -108,7 +108,7 @@ struct L2beatMilestoneHead: View {
 			if let project, project.underReview {
 				DSSpecRow(label: Text(String(localized: "Assessment")),
 						  value: Text(String(localized: "Under review")),
-						  tint: DS.attention, weight: .semibold, lineLimit: nil)
+						  tint: DS.attentionInk, weight: .semibold, lineLimit: nil)
 			}
 		}
 		.padding(DS.Space.s4)

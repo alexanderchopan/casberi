@@ -137,7 +137,7 @@ struct WalletbeatDirectoryScreen: View {
 					if openIncidents.contains(entry.id) {
 						Text(String(localized: "Unresolved incident"))
 							.dsText(.label12)
-							.foregroundStyle(DS.attention)
+							.foregroundStyle(DS.attentionInk)
 					}
 					Text(WalletbeatCopy.coverage(counts))
 						.dsText(.label12)

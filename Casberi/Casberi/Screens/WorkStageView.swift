@@ -74,7 +74,7 @@ struct WorkStageView: View {
             Text(verbatim: detail ?? reading.statusWord ?? "")
                 .dsText(.body17)
                 .fontWeight(.medium)
-                .foregroundStyle(tint)
+                .foregroundStyle(ink)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -84,9 +84,20 @@ struct WorkStageView: View {
     /// status still sits UNDER the headline in the reading order.
     private var tint: Color {
         switch reading.tone {
-        case .failed:  DS.destructive
-        case .waiting: DS.attention
-        case .landed:  DS.confirm
+        case .failed:  DS.destructiveInk
+        case .waiting: DS.attentionInk
+        case .landed:  DS.confirmInk
+        case .neutral: DS.textSecondary
+        }
+    }
+
+    /// The status WORD's colour: `tint`'s ink twin (the HIG sweep,
+    /// 2026-09-29). The dots keep the hue; a word in it is 2.2:1 on white.
+    private var ink: Color {
+        switch reading.tone {
+        case .failed:  DS.destructiveInk
+        case .waiting: DS.attentionInk
+        case .landed:  DS.confirmInk
         case .neutral: DS.textSecondary
         }
     }
@@ -144,7 +155,7 @@ struct WorkStageView: View {
         Text(verbatim: (moneyIncoming ? "+" : "−") + (moneyText ?? ""))
             .dsText(.price40)
             .monospacedDigit()
-            .foregroundStyle(moneyIncoming ? DS.confirm : DS.textPrimary)
+            .foregroundStyle(moneyIncoming ? DS.confirmInk : DS.textPrimary)
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .truncationMode(.tail)
@@ -188,7 +199,7 @@ struct WorkStageView: View {
                 .accessibilityHidden(true)
             Text(verbatim: dueSentence(due))
                 .dsText(.body17)
-                .foregroundStyle(DS.attention)
+                .foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

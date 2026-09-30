@@ -39,7 +39,7 @@ struct SafeQueueCard: View {
                 if !check.roster.isEmpty { roster }
                 if check.conflicts > 0 { conflictNote }
             case .executed:
-                statusLine(icon: "checkmark.circle", tone: DS.confirm,
+                statusLine(icon: "checkmark.circle", tone: DS.confirmInk,
                            text: "Executed.")
                 if !check.roster.isEmpty { roster }
             case .replaced:
@@ -281,7 +281,7 @@ struct SafeSignatureDisc: View {
                 Text(verbatim: required > 0 ? "\(have)/\(required)" : "\(have)")
                     .dsText(.label12)
                     .monospacedDigit()
-                    .foregroundStyle(met ? DS.confirm : DS.textPrimary)
+                    .foregroundStyle(met ? DS.confirmInk : DS.textPrimary)
             }
         }
         .frame(width: scaled, height: scaled)
@@ -414,7 +414,7 @@ struct SafeSignBlock: View {
                 }
             case .keyDestroyed:
                 DSProse.text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen.")
-                    .dsText(.subhead12).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             case .done:
                 HStack(spacing: DS.Space.s2) {
@@ -469,7 +469,7 @@ struct SafeSignBlock: View {
                      ? String(localized: "This is the fix — the Safe gets an owner to spare.")
                      : String(localized: "This Safe needs every owner it has. If this phone goes, it can't be signed for again — or repaired."))
                     .dsText(.subhead12)
-                    .foregroundStyle(ready.addsASpareOwner ? DS.confirm : DS.destructive)
+                    .foregroundStyle(ready.addsASpareOwner ? DS.confirmInk : DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
             // THE HERO VERB (prd §559) — the highest-stakes single act in the
@@ -547,7 +547,7 @@ struct SafeSignBlock: View {
             if described.lines.count > Self.batchDrawCap {
                 let hidden = described.lines.count - Self.batchDrawCap
                 DSProse.text("\(hidden) more values aren't shown here. Open it in your Safe app before signing.")
-                    .dsText(.subhead12).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let owner = described.owner {
@@ -580,7 +580,7 @@ struct SafeSignBlock: View {
                     Text(verbatim: hidden == 1
                          ? String(localized: "1 more call isn't shown here. Open it in your Safe app before signing.")
                          : String(localized: "\(hidden) more calls aren't shown here. Open them in your Safe app before signing."))
-                        .dsText(.subhead12).foregroundStyle(DS.attention)
+                        .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -605,13 +605,13 @@ struct SafeSignBlock: View {
                     // it can rewrite owners and threshold whatever else the
                     // batch appears to do.
                     Text("Runs code as the Safe itself — it can change the owners.")
-                        .dsText(.subhead12).foregroundStyle(DS.destructive)
+                        .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(verbatim: sentence(for: call.reading, to: call.to,
                                         value: call.value, hash: ready.safeTxHash))
                     .dsText(.subhead12)
-                    .foregroundStyle(call.reading.isFullyReadable ? DS.textSecondary : DS.attention)
+                    .foregroundStyle(call.reading.isFullyReadable ? DS.textSecondary : DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

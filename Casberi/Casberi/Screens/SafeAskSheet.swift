@@ -253,7 +253,7 @@ struct SafeStatementBlock: View {
             }
         case .unreadable(let why):
             Text(verbatim: why)
-                .dsText(.subhead12).foregroundStyle(DS.attention)
+                .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -270,8 +270,8 @@ struct SafeStatementBlock: View {
 
     private func refusalTone(_ refusal: SafeStatementSigner.Refusal) -> Color {
         switch refusal {
-        case .hashMismatch, .requesterHashMismatch, .messageMismatch, .signatureNotAccepted: return DS.destructive
-        case .unreadable: return DS.attention
+        case .hashMismatch, .requesterHashMismatch, .messageMismatch, .signatureNotAccepted: return DS.destructiveInk
+        case .unreadable: return DS.attentionInk
         default: return DS.textTertiary
         }
     }
@@ -418,7 +418,7 @@ struct SafeRecoveryBlock: View {
                      String(localized: "\(ready.guardianThreshold) of \(ready.guardianCount) needed, this phone one of them"))
             if let pending = ready.pending {
                 Text(verbatim: String(localized: "A recovery is already scheduled with \(pending.approvals) approvals, executable \(Date(timeIntervalSince1970: TimeInterval(pending.executableAt)).formatted(.relative(presentation: .named)))."))
-                    .dsText(.subhead12).foregroundStyle(DS.attention)
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
             SafeSignVerb(verb: String(localized: "Approve"), signing: signing) {
@@ -453,7 +453,7 @@ struct SafeRecoveryBlock: View {
 
     private func refusalTone(_ refusal: SafeRecoverySigner.Refusal) -> Color {
         switch refusal {
-        case .hashMismatch, .requesterHashMismatch, .notARecoveryModule, .moduleNotEnabled: return DS.destructive
+        case .hashMismatch, .requesterHashMismatch, .notARecoveryModule, .moduleNotEnabled: return DS.destructiveInk
         default: return DS.textTertiary
         }
     }

@@ -103,7 +103,7 @@ struct WalletRiskStrip: View {
                 let room = Int((min(max(pressed.headroom, 0), 1) * 100).rounded())
                 return DSFigureReading(number: "\(room)%",
                                        caption: String(localized: "\(pressed.label) · room before liquidation"),
-                                       numberInk: pressed.atRisk ? DS.destructive : DS.textPrimary)
+                                       numberInk: pressed.atRisk ? DS.destructiveInk : DS.textPrimary)
             }
             // **THE NUMBER IS WHAT NEEDS YOU (prd §947)**: how many are at
             // risk, or how many are leveraged when none is.

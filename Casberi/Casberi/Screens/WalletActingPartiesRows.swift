@@ -71,7 +71,7 @@ struct WalletActingPartiesRows: View {
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 (Text(holder.power.short)
-                    .foregroundStyle(holder.power.isUnbounded ? DS.destructive : DS.textTertiary)
+                    .foregroundStyle(holder.power.isUnbounded ? DS.destructiveInk : DS.textTertiary)
                  + Text(" · \(detail(holder))").foregroundStyle(DS.textTertiary))
                     .dsText(.subhead12)
                     .lineLimit(1)

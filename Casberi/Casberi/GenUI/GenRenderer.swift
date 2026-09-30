@@ -1717,7 +1717,7 @@ struct LiveStreamHero: View {
                         // never claim liveness the card doesn't have.
                         Circle().fill(DS.confirm).frame(width: 7, height: 7)
                             .breathing()
-                        Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
+                        Text("Live").dsText(.label12).foregroundStyle(DS.confirmInk)
                     }
                     // The streamer is the object, the game the qualifier
                     // (`TitleSeam`): the name at size, the game on the line.
@@ -3561,7 +3561,7 @@ private struct GenTxRow: View {
             tokenMark
             Text(el.str(0))
                 .dsText(.subhead12)
-                .foregroundStyle(el.str(0) == "Received" ? DS.confirm : DS.textSecondary)
+                .foregroundStyle(el.str(0) == "Received" ? DS.confirmInk : DS.textSecondary)
                 .frame(width: 70, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 Text(el.str(1)).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
@@ -4474,7 +4474,7 @@ struct GenFrontPage: View {
                                 Text(parts.value)
                                     .dsText(.heading40)
                                     .foregroundStyle(!qualifier.isEmpty && header.str(2) == "attention"
-                                                     ? DS.attention : DS.textPrimary)
+                                                     ? DS.attentionInk : DS.textPrimary)
                                     .monospacedDigit()
                                     .lineLimit(1).minimumScaleFactor(0.7)
                                 if !parts.unit.isEmpty {
@@ -5285,7 +5285,7 @@ private struct GenDayLede: View {
     /// tone, never parsed out of the figure.
     private func toneInk(_ tone: String) -> Color {
         switch tone {
-        case "attention": return DS.attention
+        case "attention": return DS.attentionInk
         case "up":        return TokenChartStyle.accent(change: 1, scheme: scheme)
         case "down":      return TokenChartStyle.accent(change: -1, scheme: scheme)
         default:          return DS.textSecondary

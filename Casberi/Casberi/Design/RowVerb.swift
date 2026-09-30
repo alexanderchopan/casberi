@@ -51,7 +51,7 @@ enum RowVerb {
         switch self {
         case .connect, .watch, .allow, .signIn, .addKey, .importFile: DS.tint
         case .automatic: DS.textSecondary
-        case .fix:       DS.attention
+        case .fix:       DS.attentionInk
         case .soon:      DS.textTertiary
         }
     }

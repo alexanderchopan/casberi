@@ -209,7 +209,7 @@ struct HegotaKeySheet: View {
             if let keyFailure {
                 Text(keyFailure)
                     .dsText(.label12)
-                    .foregroundStyle(DS.destructive)
+                    .foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -302,7 +302,7 @@ struct HegotaKeySheet: View {
                         Text(String(localized: "Remove this key"))
                     }
                     .dsText(.label12)
-                    .foregroundStyle(DS.destructive)
+                    .foregroundStyle(DS.destructiveInk)
                 }
                 .buttonStyle(PressSpring())
                 .dsHover()

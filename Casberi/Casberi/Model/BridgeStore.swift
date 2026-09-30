@@ -398,8 +398,8 @@ struct BridgeApp: Identifiable, Codable {
         var rank: Int { switch self { case .attention: 0; case .connected: 1; case .paused: 2 } }
         var color: Color {
             switch self {
-            case .connected: DS.confirm
-            case .attention: DS.attention
+            case .connected: DS.confirmInk
+            case .attention: DS.attentionInk
             case .paused:    DS.textTertiary
             }
         }

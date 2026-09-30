@@ -304,7 +304,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     private var stateTone: Color {
         switch state {
         case .reading:           DS.tint
-        case .needsReconnecting: DS.attention
+        case .needsReconnecting: DS.attentionInk
         case .notConnected, .paused: DS.textTertiary
         }
     }

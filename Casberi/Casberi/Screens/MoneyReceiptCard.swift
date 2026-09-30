@@ -222,8 +222,8 @@ struct MoneyReceiptCard: View {
         switch tone {
         // Green on a gain is colour as STATE. A send stays primary: spending
         // isn't a loss state, and red would editorialize.
-        case .gain:  return DS.confirm
-        case .warn:  return DS.attention
+        case .gain:  return DS.confirmInk
+        case .warn:  return DS.attentionInk
         case .plain: return DS.textPrimary
         }
     }

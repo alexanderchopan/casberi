@@ -452,6 +452,27 @@ enum DS {
                      : Color.adaptive(dark: "#30d158", light: "#34c759")
     }
 
+    /// **The three as WORDS (the HIG sweep, 2026-09-29).** The hues above
+    /// are right for a glyph or a fill and wrong for a word: on the light
+    /// page system orange and green measure 2.2:1 and red 3.6:1, under the
+    /// HIG's 4.5:1 — and 157 status words ("Live", "Under review", every
+    /// error line) were drawn in them, readable only by someone who had
+    /// turned on Increase Contrast. So a word takes the ink: in light it is
+    /// the Increase Contrast value always (5.5:1 on white, 4.5:1 on the
+    /// `surfaceWell`), in dark it is the hue unchanged (6.2:1 and up), and
+    /// under Increase Contrast it is exactly the hue's own contrast value.
+    /// No new colour enters the palette. A glyph or a fill keeps the hue;
+    /// `status-ink-audit.py` fails a `Text` or `dsText` chain that doesn't.
+    static var attentionInk: Color {
+        moreContrast ? attention : Color.adaptive(dark: "#ff9f0a", light: "#9b5a00")
+    }
+    static var destructiveInk: Color {
+        moreContrast ? destructive : Color.adaptive(dark: "#ff453a", light: "#c62e25")
+    }
+    static var confirmInk: Color {
+        moreContrast ? confirm : Color.adaptive(dark: "#30d158", light: "#1f7936")
+    }
+
     // MARK: - Glass & overlays  — liquid glass, brief §8 / shell spec
 
     static let glassBg     = Color.adaptive(dark: "#1c1c1e8c", light: "#f9f9f9b8")

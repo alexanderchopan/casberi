@@ -873,7 +873,7 @@ extension PrivacyDevnetRoomCard {
             Spacer(minLength: 0)
             Text(PrivacyDevnetName.of(account.address))
                 .dsText(.body17)
-                .foregroundStyle(mine ? DS.attention : DS.textPrimary)
+                .foregroundStyle(mine ? DS.attentionInk : DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.7)
         }
         .padding(DS.Space.s3)
@@ -1123,7 +1123,7 @@ extension PrivacyDevnetRoomCard {
         case .live(let left):
             return Text(String(localized: "\(PrivacyDevnetRoots.approximate(slots: left)) left"))
         case .aged:
-            return Text(String(localized: "Gone")).foregroundColor(DS.destructive)
+            return Text(String(localized: "Gone")).foregroundColor(DS.destructiveInk)
         case .ahead:
             // The head is behind the reference — a lagging node, not freshness.
             return Text(String(localized: "Waiting for the chain to catch up"))

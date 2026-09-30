@@ -655,7 +655,7 @@ struct DevnetAdvancedSheet: View {
                 // a Face ID — the sheet's whole reason for validating early.
                 if let why = draft.refusal(now: UInt64(Date().timeIntervalSince1970)) {
                     Text(why)
-                        .dsText(.label12).foregroundStyle(DS.destructive)
+                        .dsText(.label12).foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -1141,7 +1141,7 @@ struct DevnetSendSheet: View {
             if let errorText {
                 Text(errorText)
                     .dsText(.label12)
-                    .foregroundStyle(DS.destructive)
+                    .foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, DS.Space.s2)
@@ -1337,7 +1337,7 @@ struct DevnetSendSheet: View {
                 if let errorText {
                     Text(errorText)
                         .dsText(.label12)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.bottom, DS.Space.s2)

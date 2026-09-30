@@ -100,7 +100,7 @@ struct WalletbeatIncidentHead: View {
 				DSSpecRow(label: Text(String(localized: "Funds at risk")),
 						  value: Text(funds ? String(localized: "Yes, by Walletbeat's reading")
 											: String(localized: "No, by Walletbeat's reading")),
-						  tint: funds ? DS.attention : DS.textPrimary,
+						  tint: funds ? DS.attentionInk : DS.textPrimary,
 						  weight: .semibold, lineLimit: nil)
 			}
 			if let updated = facts.updatedAt, updated > facts.publishedAt {

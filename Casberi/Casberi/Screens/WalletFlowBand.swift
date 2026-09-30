@@ -221,7 +221,7 @@ struct WalletFlowBand: View {
             if net > 0 {
                 Text("Kept +\(WalletValue.money(net))")
                     .dsText(.label12)
-                    .foregroundStyle(DS.confirm)
+                    .foregroundStyle(DS.confirmInk)
             } else {
                 Text("Down −\(WalletValue.money(-net))")
                     .dsText(.label12)

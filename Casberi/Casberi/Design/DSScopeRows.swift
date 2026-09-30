@@ -77,7 +77,7 @@ struct DSScopeRows<Scope: DSTileScope>: View {
         let wants = attention.contains(section)
         DSPushRow(title: Text(section.label),
                   fact: reading(section).map { Text($0) },
-                  tint: wants ? DS.attention : DS.textPrimary,
+                  tint: wants ? DS.attentionInk : DS.textPrimary,
                   action: { onPick(section) }) {
             // **THE TILE'S GLYPH LEADS THE ROW** (prd §752b, user: "the list
             // items for the sections should also share the glyph so

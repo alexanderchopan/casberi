@@ -53,7 +53,7 @@ struct CursorRow: View {
     /// The outcome in its attention ink, then the pull request, as one `Text`.
     private var quietLine: Text? {
         var parts: [Text] = []
-        if let outcome { parts.append(Text(outcome).foregroundStyle(DS.attention)) }
+        if let outcome { parts.append(Text(outcome).foregroundStyle(DS.attentionInk)) }
         if let pullRequest { parts.append(Text(pullRequest)) }
         guard let first = parts.first else { return nil }
         return parts.dropFirst().reduce(first) { $0 + Text(verbatim: " · ") + $1 }

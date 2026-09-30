@@ -672,7 +672,7 @@ struct BandRow: View {
                         .dsText(.price17)
                         .monospacedDigit()
                         .foregroundStyle(money.received && !thing.hasSecurityFlag("symbol")
-                                         ? DS.confirm : DS.textPrimary)
+                                         ? DS.confirmInk : DS.textPrimary)
                         .lineLimit(1)
                 } else if let figure = titleFigure {
                     Text(figure)
@@ -695,7 +695,7 @@ struct BandRow: View {
                     // alarm-class arrival's, in the state's own red: a
                     // dispute or a deadline that landed since you left is a
                     // fact the row may not drop (§83).
-                    LiveTimeText(date: thing.capturedAt, color: DS.destructive)
+                    LiveTimeText(date: thing.capturedAt, color: DS.destructiveInk)
                 } else if let stamp {
                     // The Notes room's clock (prd §969) — the room has no day
                     // header to say when, so the row does, in the line's ink.
@@ -2913,12 +2913,12 @@ struct WatchlistLede: View {
             if up > 0 {
                 Text("\(up) up")
                     .dsText(.subhead12)
-                    .foregroundStyle(DS.confirm)
+                    .foregroundStyle(DS.confirmInk)
             }
             if down > 0 {
                 Text("\(down) down")
                     .dsText(.subhead12)
-                    .foregroundStyle(DS.destructive)
+                    .foregroundStyle(DS.destructiveInk)
             }
             if read {
                 Text("24h")

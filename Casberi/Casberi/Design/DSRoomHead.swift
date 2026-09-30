@@ -388,7 +388,7 @@ extension DSRoomChassis {
             switch line.tone {
             case .note: return DS.textSecondary
             case .quiet: return DS.textTertiary
-            case .alert: return DS.attention
+            case .alert: return DS.attentionInk
             }
         }
     }
@@ -565,7 +565,7 @@ extension DSRoomChassis {
                               if let flag {
                                   Text(verbatim: flag)
                                       .dsText(.label12)
-                                      .foregroundStyle(DS.attention)
+                                      .foregroundStyle(DS.attentionInk)
                               }
                               trailing
                           }

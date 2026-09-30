@@ -356,7 +356,7 @@ struct VibenetCreateSheet: View {
             if let createFailure {
                 Text(createFailure)
                     .dsText(.label12)
-                    .foregroundStyle(DS.destructive)
+                    .foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 DSFootnote(prose: String(localized: "Test money on an experimental network."),
@@ -376,7 +376,7 @@ struct VibenetCreateSheet: View {
         if refusal == .noKey, let keyFailure {
             Text(keyFailure)
                 .dsText(.label12)
-                .foregroundStyle(DS.destructive)
+                .foregroundStyle(DS.destructiveInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

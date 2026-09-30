@@ -2018,12 +2018,12 @@ private struct MomentStub: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text(overdue ? String(localized: "Overdue") : clockLine)
                     .dsText(.stat24)
-                    .foregroundStyle(overdue ? DS.destructive : DS.textPrimary)
+                    .foregroundStyle(overdue ? DS.destructiveInk : DS.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text(relativeLine)
                     .dsText(.subhead12)
-                    .foregroundStyle(overdue ? DS.destructive : DS.textSecondary)
+                    .foregroundStyle(overdue ? DS.destructiveInk : DS.textSecondary)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
@@ -2036,10 +2036,10 @@ private struct MomentStub: View {
         VStack(spacing: 0) {
             Text(start.formatted(.dateTime.weekday(.abbreviated)))
                 .dsText(.label12)
-                .foregroundStyle(overdue ? DS.destructive : DS.tint)
+                .foregroundStyle(overdue ? DS.destructiveInk : DS.tint)
             Text(start.formatted(.dateTime.day()))
                 .dsText(.stat24)
-                .foregroundStyle(overdue ? DS.destructive : DS.textPrimary)
+                .foregroundStyle(overdue ? DS.destructiveInk : DS.textPrimary)
             Text(start.formatted(.dateTime.month(.abbreviated)))
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
@@ -2806,7 +2806,7 @@ struct GitHubStarContent: View {
                     Text(delta > 0 ? "+\(Self.compact(delta)) since you starred"
                                    : "since you starred")
                         .dsText(.label12)
-                        .foregroundStyle(delta > 0 ? DS.confirm : DS.textTertiary)
+                        .foregroundStyle(delta > 0 ? DS.confirmInk : DS.textTertiary)
                 } else {
                     Text("\(Self.compact(since.stars)) when you starred")
                         .dsText(.subhead12).foregroundStyle(DS.textTertiary).monospacedDigit()

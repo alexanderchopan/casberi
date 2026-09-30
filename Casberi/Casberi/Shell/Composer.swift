@@ -3174,7 +3174,7 @@ struct Composer: View {
         // detail. It keeps the tertiary ramp everywhere else — the badge is
         // furniture — and takes the warning ink only when a check actually RAN
         // and disagreed, never when one could not run.
-        .foregroundStyle(verification?.isMismatch == true ? DS.destructive : DS.textTertiary)
+        .foregroundStyle(verification?.isMismatch == true ? DS.destructiveInk : DS.textTertiary)
         .padding(.horizontal, DS.Space.s4)
     }
 

@@ -599,7 +599,7 @@ extension FeedScreen {
                                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                                     .lineLimit(1)
                                 (Text(entry.detail)
-                                    .foregroundStyle(entry.atRisk ? DS.destructive : DS.textTertiary)
+                                    .foregroundStyle(entry.atRisk ? DS.destructiveInk : DS.textTertiary)
                                  + Text(market.isEmpty ? "" : " · \(market)")
                                     .foregroundStyle(DS.textTertiary))
                                     .dsText(.subhead12)

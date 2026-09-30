@@ -196,7 +196,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                     .dsText(.dockCaption10)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? Color.white : wants ? DS.attention : isVerb ? DS.tint : DS.textPrimary)
+                    .foregroundStyle(isOn ? Color.white : wants ? DS.attentionInk : isVerb ? DS.tint : DS.textPrimary)
             }
             .foregroundStyle(isOn ? Color.white : isVerb ? DS.tint : DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)

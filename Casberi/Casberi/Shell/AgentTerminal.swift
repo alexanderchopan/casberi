@@ -374,7 +374,7 @@ struct AgentProseAnswer: View {
                 if !parts.lead.isEmpty {
                     Text(parts.lead)
                         .dsText(.heading24)
-                        .foregroundStyle(attention ? DS.attention : DS.textPrimary)
+                        .foregroundStyle(attention ? DS.attentionInk : DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if !parts.rest.isEmpty {

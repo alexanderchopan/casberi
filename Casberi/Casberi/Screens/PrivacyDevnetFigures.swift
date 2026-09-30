@@ -472,7 +472,7 @@ struct PrivacyDevnetSetRings: View {
                 if let ordinal = set.ordinal {
                     Text(ordinal)
                         .dsText(.heading17)
-                        .foregroundStyle(gone ? DS.destructive : DS.tint)
+                        .foregroundStyle(gone ? DS.destructiveInk : DS.tint)
                 } else {
                     Image(systemName: "clock.fill")
                         .dsGlyph(.subhead)
@@ -483,7 +483,7 @@ struct PrivacyDevnetSetRings: View {
             .padding(4)
             Text(gone ? String(localized: "gone") : Self.left(fraction))
                 .dsText(.label12)
-                .foregroundStyle(gone || leaving ? DS.destructive : DS.textSecondary)
+                .foregroundStyle(gone || leaving ? DS.destructiveInk : DS.textSecondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
         }

@@ -597,6 +597,17 @@ step "Lead-cycle audit"
 "$ROOT/scripts/lead-cycle-audit.py" || fail "a row lead turns to something other than its dock category's glyph, or does not turn back — see the output above"
 print -P "%F{green}✓ lead-cycle audit%f"
 
+# A STATUS WORD TAKES THE INK, NEVER THE HUE (the HIG sweep, 2026-09-29).
+# `DS.attention`/`confirm`/`destructive` are 2.2:1 and 3.6:1 on the light page,
+# so 157 words were readable only under Increase Contrast; they moved to the
+# `*Ink` rungs. A glyph or fill keeps the hue. Invisible to a build and to a
+# screenshot sweep: the word draws, in the right colour, too faint to read.
+step "Status-ink audit"
+"$ROOT/scripts/status-ink-audit.py" --self-test >/dev/null \
+  || fail "the status-ink audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/status-ink-audit.py" || fail "a status word is drawn in the vivid hue, not its ink — see the output above"
+print -P "%F{green}✓ status-ink audit%f"
+
 # AN ACCOUNT MARKED `mine` LANDS ITS OWN REPLIES (2026-09-17). §239's inbound
 # half — who replied to you, who liked your posts — reads through
 # `SocialInbound.ownRecentPosts`, which walks YOUR posts out of the corpus. So

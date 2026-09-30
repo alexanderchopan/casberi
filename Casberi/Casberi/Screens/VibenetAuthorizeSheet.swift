@@ -277,12 +277,12 @@ struct VibenetAuthorizeSheet: View {
                 } else if !pasted.isEmpty {
                     Text(String(localized: "That's neither a 64-byte public key nor a 20-byte address."))
                         .dsText(.label12)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                 }
                 if replacesWithItself {
                     Text(String(localized: "That's the key being replaced."))
                         .dsText(.label12)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                 }
             }
 
@@ -296,7 +296,7 @@ struct VibenetAuthorizeSheet: View {
             if let errorText {
                 Text(errorText)
                     .dsText(.label12)
-                    .foregroundStyle(DS.destructive)
+                    .foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -337,7 +337,7 @@ struct VibenetAuthorizeSheet: View {
                 if composed == nil {
                     Text(String(localized: "Turn on at least one, or choose Admin."))
                         .dsText(.label12)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -371,7 +371,7 @@ struct VibenetAuthorizeSheet: View {
                 if let refusal, let sentence = refusalSentence(refusal) {
                     Text(sentence)
                         .dsText(.label12)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 ForEach(VibenetScopeEdit.warnings(act, after: after, isThisPhone: isThisPhoneKey),

@@ -181,7 +181,7 @@ private struct WalletHistoryRow: View {
                 if let money = moneyAmount {
                     Text(money.text)
                         .dsText(.price17)
-                        .foregroundStyle(money.received ? DS.confirm : DS.textPrimary)
+                        .foregroundStyle(money.received ? DS.confirmInk : DS.textPrimary)
                         .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
                 }
                 Text(shortTime(thing.capturedAt))

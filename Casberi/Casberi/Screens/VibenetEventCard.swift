@@ -263,7 +263,7 @@ struct VibenetEventCard: View {
         if let happenedAt {
             Text(happenedAt.formatted(.dateTime.day().month().hour().minute()))
                 .dsText(.label12)
-                .foregroundStyle(facts.kind == .locked ? DS.attention : DS.textTertiary)
+                .foregroundStyle(facts.kind == .locked ? DS.attentionInk : DS.textTertiary)
                 .lineLimit(1)
                 .padding(.bottom, 2)
         }

@@ -178,7 +178,7 @@ struct SafeRoomCard: View {
         // `isExecutable`, NOT `isReady` (2026-09-07, prd §652). A threshold met
         // behind two earlier transactions is fully signed and cannot be sent.
         // Green is reserved for the state somebody can act on.
-        entry.awaitsYou ? DS.tint : entry.isExecutable ? DS.confirm : DS.textSecondary
+        entry.awaitsYou ? DS.tint : entry.isExecutable ? DS.confirmInk : DS.textSecondary
     }
 
     /// Spelled out rather than read off the row: the disc carries the met/unmet

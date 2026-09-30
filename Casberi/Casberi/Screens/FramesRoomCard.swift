@@ -708,7 +708,7 @@ struct FramesRoomList: View {
                     Text(FramesChainWatch.pendingLine(state: item.state, deadline: item.deadline,
                                                       now: tick.date))
                         .dsText(.subhead12)
-                        .foregroundStyle(item.state.isFinal ? DS.destructive : DS.textTertiary)
+                        .foregroundStyle(item.state.isFinal ? DS.destructiveInk : DS.textTertiary)
                 }
                 Spacer(minLength: 0)
                 if !item.state.isFinal { DSSpinner(size: .mini) }
@@ -836,7 +836,7 @@ struct FramesMoveRow: View {
         // row, so printing it is a word that separates nothing — while its
         // absence makes the rows that DO say something impossible to miss.
         if verdict.isTrouble {
-            add(Text(verdict.word).foregroundColor(DS.destructive))
+            add(Text(verdict.word).foregroundColor(DS.destructiveInk))
         }
         // **HOW IT WAS BUILT, as a qualifier rather than the row's name
         // (prd §687).** A plain transfer says nothing here — this chain

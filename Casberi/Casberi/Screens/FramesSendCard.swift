@@ -85,7 +85,7 @@ struct FramesSendCard: View {
                 if let createError {
                     Text(createError)
                         .dsText(.label12)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, DSRoomChassis.inset)
                         .padding(.bottom, DS.Space.s3)
@@ -104,7 +104,7 @@ struct FramesSendCard: View {
             if let createError {
                 Text(createError)
                     .dsText(.label12)
-                    .foregroundStyle(DS.destructive)
+                    .foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, DSRoomChassis.inset)
                     .padding(.bottom, DS.Space.s3)
@@ -165,7 +165,7 @@ struct FramesSendCard: View {
             if let createError {
                 Text(createError)
                     .dsText(.label12)
-                    .foregroundStyle(DS.destructive)
+                    .foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, DSRoomChassis.inset)
                     .padding(.bottom, DS.Space.s3)

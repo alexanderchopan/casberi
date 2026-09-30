@@ -131,7 +131,7 @@ struct L2beatRiskCard: View {
 				if project.underReview {
 					Text(String(localized: "Under review"))
 						.dsText(.label12)
-						.foregroundStyle(DS.attention)
+						.foregroundStyle(DS.attentionInk)
 				}
 				Spacer(minLength: 0)
 			}

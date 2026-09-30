@@ -318,7 +318,7 @@ struct BridgeSyncStatusRows: View {
                     }
                 }
                 .dsText(.body17)
-                .foregroundStyle(failed ? DS.attention : DS.confirm)
+                .foregroundStyle(failed ? DS.attentionInk : DS.confirmInk)
             }
             .padding(.leading, accountAct ? DSActRow.inset : 0)
             .padding(.vertical, accountAct ? DS.Space.s2 : 0)

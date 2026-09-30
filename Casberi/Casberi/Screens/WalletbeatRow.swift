@@ -136,7 +136,7 @@ struct WalletbeatNewsRow: View {
 					if open {
 						Text(String(localized: "Unresolved"))
 							.dsText(.label12)
-							.foregroundStyle(DS.attention)
+							.foregroundStyle(DS.attentionInk)
 					}
 					ForEach(tags, id: \.self) { tag in
 						Text(tag)

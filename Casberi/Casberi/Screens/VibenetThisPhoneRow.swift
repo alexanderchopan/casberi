@@ -74,7 +74,7 @@ struct VibenetThisPhoneRow: View {
                     if let failure {
                         Text(failure)
                             .dsText(.label12)
-                            .foregroundStyle(DS.destructive)
+                            .foregroundStyle(DS.destructiveInk)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }

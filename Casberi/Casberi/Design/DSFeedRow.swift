@@ -180,7 +180,7 @@ struct DSFeedLive: View {
     var body: some View {
         // The word alone (prd §784): a green dot beside a green "Live" said
         // it twice.
-        Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
+        Text("Live").dsText(.label12).foregroundStyle(DS.confirmInk)
     }
 }
 

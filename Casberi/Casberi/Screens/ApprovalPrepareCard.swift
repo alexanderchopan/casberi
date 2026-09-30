@@ -55,7 +55,7 @@ struct ApprovalPrepareCard: View {
                         .dsGlyph(.subhead, weight: .regular)
                         .foregroundStyle(DS.confirm)
                     Text("This approval has been revoked.")
-                        .dsText(.body17).foregroundStyle(DS.confirm)
+                        .dsText(.body17).foregroundStyle(DS.confirmInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

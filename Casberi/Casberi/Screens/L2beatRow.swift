@@ -141,7 +141,7 @@ struct L2beatNewsRow: View {
 					if isIncident {
 						Text(String(localized: "Incident"))
 							.dsText(.label12)
-							.foregroundStyle(DS.attention)
+							.foregroundStyle(DS.attentionInk)
 					}
 					ForEach(tags, id: \.self) { tag in
 						Text(tag)

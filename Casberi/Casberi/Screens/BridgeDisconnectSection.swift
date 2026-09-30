@@ -119,7 +119,7 @@ private struct DisconnectGround: ViewModifier {
         if plain {
             content
                 .buttonStyle(.plain)
-                .foregroundStyle(DS.destructive)
+                .foregroundStyle(DS.destructiveInk)
                 .frame(minHeight: 56)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)

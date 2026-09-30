@@ -60,8 +60,8 @@ struct PurchaseStageView: View {
                 .dsText(headDrawn ? .price64 : .price40)
                 .monospacedDigit()
                 .foregroundStyle(reading.state?.tone == .good && reading.archetype == .receipt
-                                 ? DS.confirm
-                                 : reading.archetype == .alarm ? DS.attention : DS.textPrimary)
+                                 ? DS.confirmInk
+                                 : reading.archetype == .alarm ? DS.attentionInk : DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .truncationMode(.tail)

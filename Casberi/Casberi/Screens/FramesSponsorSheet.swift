@@ -157,13 +157,13 @@ struct FramesSponsorSheet: View {
     @ViewBuilder private var verb: some View {
         if let refusal {
             Text(FramesSponsor.sentence(refusal))
-                .dsText(.body17).foregroundStyle(DS.destructive)
+                .dsText(.body17).foregroundStyle(DS.destructiveInk)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let errorText {
                     Text(errorText)
-                        .dsText(.label12).foregroundStyle(DS.destructive)
+                        .dsText(.label12).foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 DSActVerb(title: String(localized: "Pay for it"),

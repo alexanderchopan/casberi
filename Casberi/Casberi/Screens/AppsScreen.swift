@@ -1183,8 +1183,8 @@ struct AppsScreen: View {
     /// connected and still green.
     private func sublineColor(_ entry: Ranked) -> Color {
         switch entry.tier {
-        case 0:  DS.attention
-        case 2:  entry.bridge?.status.color ?? DS.confirm
+        case 0:  DS.attentionInk
+        case 2:  entry.bridge?.status.color ?? DS.confirmInk
         default: DS.textTertiary
         }
     }

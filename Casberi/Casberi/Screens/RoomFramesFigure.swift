@@ -128,6 +128,16 @@ enum RoomFrameStyle {
         default: return DS.textTertiary
         }
     }
+    /// A step's NAME in words — `hue`'s ink twin (the HIG sweep, 2026-09-29).
+    /// Send's green and Check's amber are 2.2:1 as text on the light page;
+    /// every shape keeps `hue`.
+    static func ink(_ modeName: String) -> Color {
+        switch modeName {
+        case String(localized: "Send"):  return DS.confirmInk
+        case String(localized: "Check"): return DS.attentionInk
+        default: return hue(modeName)
+        }
+    }
 }
 
 /// ONE TRANSACTION'S STEPS, IN ORDER — widths by what each cost, fill by what

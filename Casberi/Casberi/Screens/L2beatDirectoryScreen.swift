@@ -253,12 +253,12 @@ struct L2beatDirectoryScreen: View {
 					if let incident {
 						Text(incident.text)
 							.dsText(.label12)
-							.foregroundStyle(incident.recent ? DS.attention : DS.textTertiary)
+							.foregroundStyle(incident.recent ? DS.attentionInk : DS.textTertiary)
 					}
 					if project.underReview {
 						Text(String(localized: "Under review"))
 							.dsText(.label12)
-							.foregroundStyle(DS.attention)
+							.foregroundStyle(DS.attentionInk)
 					}
 					L2beatStageChip(stage: project.stage, compact: true)
 					// WHICH question L2BEAT leads with — never the tally this line used to

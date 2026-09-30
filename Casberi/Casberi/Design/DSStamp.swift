@@ -94,9 +94,9 @@ struct DSStamp: View {
 
     private var ink: Color {
         switch weight {
-        case .good:     return DS.confirm
-        case .waiting:  return DS.attention
-        case .urgent:   return DS.attention
+        case .good:     return DS.confirmInk
+        case .waiting:  return DS.attentionInk
+        case .urgent:   return DS.attentionInk
         case .quiet:    return DS.textTertiary
         case .shielded: return DS.receiptPour(.shield)
         }

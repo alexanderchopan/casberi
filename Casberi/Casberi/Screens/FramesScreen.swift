@@ -196,7 +196,7 @@ struct FramesPasskeyRow: View {
             }
             if let errorText {
                 Text(errorText)
-                    .dsText(.label12).foregroundStyle(DS.destructive)
+                    .dsText(.label12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

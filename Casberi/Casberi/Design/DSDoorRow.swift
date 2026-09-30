@@ -68,7 +68,7 @@ struct DSDoorRowLabel: View {
     let title: Text
     var role: ButtonRole? = nil
 
-    private var ink: Color { role == .destructive ? DS.destructive : DS.textPrimary }
+    private var ink: Color { role == .destructive ? DS.destructiveInk : DS.textPrimary }
 
     var body: some View {
         HStack(spacing: DS.Space.s2) {

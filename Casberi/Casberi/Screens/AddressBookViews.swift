@@ -489,7 +489,7 @@ struct CopyAddressButton: View {
                 case .inline:
                     Text(copied ? "Copied" : "Copy")
                         .dsText(.subhead12)
-                        .foregroundStyle(copied ? DS.confirm : tint)
+                        .foregroundStyle(copied ? DS.confirmInk : tint)
                         // A bare word is as tall as its text — floored.
                         .dsTapTarget()
                 case .compact:
@@ -1793,10 +1793,10 @@ struct AddressCard: View {
                         .foregroundStyle(DS.destructive)
                     Text("Another address looks just like this one")
                         .dsText(.heading17)
-                        .foregroundStyle(DS.destructive)
+                        .foregroundStyle(DS.destructiveInk)
                 }
                 Text(partingLine(mine, twins: twins.count))
-                    .dsText(.subhead12).foregroundStyle(DS.destructive)
+                    .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     diffRow(String(localized: "This one"), current.address, mine)
@@ -1853,7 +1853,7 @@ struct AddressCard: View {
             return Text(verbatim: segment.text).foregroundStyle(DS.textTertiary)
         case .pivot:
             return Text(verbatim: segment.text)
-                .foregroundStyle(DS.destructive)
+                .foregroundStyle(DS.destructiveInk)
                 // The one character that parts them: a fact, so it takes the
                 // medium weight as well as the ink (§764).
                 .fontWeight(.medium)
@@ -2058,7 +2058,7 @@ struct AddressCard: View {
     private func standingContent(_ standing: AddressSpine.Standing) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Standing · now")
-                .dsText(.label12).foregroundStyle(DS.attention)
+                .dsText(.label12).foregroundStyle(DS.attentionInk)
             if let figure = standing.figure {
                 Text(figure)
                     .dsText(.stat24).foregroundStyle(DS.textPrimary)
