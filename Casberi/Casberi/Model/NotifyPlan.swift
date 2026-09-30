@@ -1208,7 +1208,7 @@ enum NotifyDigest {
         "Shopify", "Reddit", "YouTube", "Spotify", "Strava", "Garmin",
         "Todoist", "Pinterest", "Day One", "Duolingo",
         "Farcaster", "Telegram", "Bluesky", "Instagram", "Snapchat", "TikTok", "X",
-        "Steam", "Dropbox", "Twitch", "Substack", "Stocktwits",
+        "Steam", "Dropbox", "Twitch", "Substack",
     ]
 
     /// The id every slot's requests share a prefix with. The category and the

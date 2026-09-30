@@ -101,7 +101,23 @@ guard "the digest still schedules for a future slot (a trigger, not a fire-now)"
 # The daily whisper was cut (prd §706) — a pending one from an older install
 # must be pulled, or it fires once more with a tap that lands nowhere.
 guard "a retired install's pending whisper is pulled by id" \
-      'removePendingNotificationRequests\(withIdentifiers: \["whisper\.next"\]\)' "$NOTIFY"
+      'removePending\(\["whisper\.next"\]\)' "$NOTIFY"
+# `removePendingNotificationRequests` and `setNotificationCategories` return
+# void but are a SYNCHRONOUS XPC round-trip to the daemon; on main one hung a
+# fresh iOS 27 simulator's launch for good (2026-09-29). Each may be called only
+# on the line right after `daemon.async {` — a serial GCD queue, because a
+# cooperative-pool thread parked for good by a dead daemon starves every task.
+sync_on_main=$(grep -rn --include='*.swift' -E '\.(removePendingNotificationRequests|setNotificationCategories)\(' Casberi/ \
+  | grep -vE '^[^:]+:[0-9]+: *(///|//|\*)' \
+  | while IFS= read -r hit; do
+      f=${hit%%:*}; rest=${hit#*:}; n=${rest%%:*}
+      sed -n "$((n-1))p" "$f" | grep -q 'daemon\.async {' || print -r -- "$f:$n"
+    done)
+if [[ -z "$sync_on_main" ]]; then
+  printf '  ✓ the daemon'"'"'s synchronous calls run on the daemon queue, never on main\n'
+else
+  printf '  ✗ DRIFT: a synchronous notification-daemon call outside daemon.async: %s\n' "$sync_on_main"; fail=1
+fi
 guard "the attachment ladder falls to the source mark before nothing" \
       'brandAsset\(source\)' "$NOTIFY"
 # Asset names here are plain ASCII, so a source with an accent in it ("Ethrex

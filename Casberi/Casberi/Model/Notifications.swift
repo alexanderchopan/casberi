@@ -305,9 +305,10 @@ enum Notifications {
         if let old = previous.slot, old > now {
             let kept: Set<String> = old == next.slot ? Set(next.queue.map(\.category)) : []
             let gone = Set(previous.queue.map(\.category)).subtracting(kept)
-            center.removePendingNotificationRequests(
-                withIdentifiers: gone.map { digestRequestID(old, $0) }
-                    + [NotifyDigest.requestPrefix + String(Int(old.timeIntervalSince1970))])
+            // Off main (see `removePending`). The ids it pulls are disjoint
+            // from every id added below, so the order the two land in is moot.
+            removePending(gone.map { digestRequestID(old, $0) }
+                + [NotifyDigest.requestPrefix + String(Int(old.timeIntervalSince1970))])
         }
         guard let slot = next.slot else { return }
 
@@ -739,8 +740,32 @@ enum Notifications {
     /// still fire once after the update — with a tap that lands nowhere. Pulled
     /// once per launch; cheap, and idempotent when there is nothing to pull.
     static func cancelRetiredWhisper() {
-        UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: ["whisper.next"])
+        removePending(["whisper.next"])
+    }
+
+    // MARK: - The daemon, off main
+
+    /// `removePendingNotificationRequests` and `setNotificationCategories`
+    /// return nothing and read as fire-and-forget, but each is a SYNCHRONOUS
+    /// XPC round-trip to the notification daemon. Measured 2026-09-29 on a
+    /// fresh iOS 27.0 simulator: the whisper pull above held the main thread
+    /// in `xpc_connection_send_message_with_reply_sync` for good, across
+    /// relaunches and a reboot, so the app never drew a usable frame. A daemon
+    /// that answers slowly on a phone is a watchdog kill the same way. Neither
+    /// call has a caller waiting on its effect, so both go to `daemon`.
+    ///
+    /// A serial GCD queue, never `Task.detached`: a second sample showed
+    /// the call still parked off main, seconds later, and a parked thread from the
+    /// cooperative pool is one of a handful. One per foreground would starve
+    /// every `async` task in the app after a few; one serial queue parks one
+    /// thread, outside the pool, however many times it is asked.
+    nonisolated private static let daemon = DispatchQueue(label: "com.casberi.notify.daemon", qos: .utility)
+
+    nonisolated static func removePending(_ ids: [String]) {
+        guard !ids.isEmpty else { return }
+        daemon.async {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
     }
 
     // MARK: - Routing a tap
@@ -758,11 +783,15 @@ enum Notifications {
     /// NotificationContent extension. No actions: every row in the card is
     /// already a door to its own thing, and a button repeating one would be
     /// the same door twice (§736).
-    static func registerCategories() {
-        UNUserNotificationCenter.current().setNotificationCategories([
-            UNNotificationCategory(identifier: NotifyCard.category, actions: [],
-                                   intentIdentifiers: [], options: [])
-        ])
+    /// On `daemon` for the reason `removePending` gives: it is called from
+    /// `didFinishLaunching`, where a stalled daemon would hold the launch.
+    nonisolated static func registerCategories() {
+        daemon.async {
+            UNUserNotificationCenter.current().setNotificationCategories([
+                UNNotificationCategory(identifier: NotifyCard.category, actions: [],
+                                       intentIdentifiers: [], options: [])
+            ])
+        }
     }
 
     /// Read-and-clear, for `RootShell`'s foreground pass.
