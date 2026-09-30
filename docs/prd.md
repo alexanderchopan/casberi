@@ -353,6 +353,8 @@ marks chronological position within the pair.
 | §971 item 6 (a misheard transcript stands as the title) | the live transcript was the note's words and its title for good; the audio was the record | amended by §987 — on a note's first read on a device, the iOS 26 analyzer's reading of the whole file replaces the live words (never with fewer than half as many), and the title follows when it was made from them |
 | §898d (the dark theme's swipe table is Apple's white `#f2f2f7`, black ink) | a white table under the dark card | amended by §898e — the crown's `#1a1a1a` (`fillFaint` on black, opaque) with white ink, and the card's rim lit from above (40% → 6%) in place of the even 22% |
 | §993 (the Reminders room's tiles are All · Today · Scheduled · New; the lead is held only over an empty list) | Scheduled scoped to open reminders with a date, and a room of done reminders drew no lead, so its tiles stood at the top | amended by §997 — Scheduled is deleted (All · Today · New), and the lead is held whenever nothing is open |
+| §994 (the Calendar room's tiles; the month title at `heading17`) | the tiles drew in the order given, and the month title stood at `heading17` | amended by §999 — a room whose scopes are spans of time declares `readsInTime` and keeps Today · Week · Month · New; the month title is `heading24`, the day dividers' rung |
+| §995 (every room's tiles read A–Z) | every room's tiles sorted A–Z, Calendar's included (Month · Today · Week · New) | amended by §999 — a scope enum of spans of time (`readsInTime`) keeps its given order; every other room still reads A–Z |
 
 ## 1. Thesis
 
