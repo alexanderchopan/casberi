@@ -5,8 +5,8 @@ import SwiftData
 /// raises: the card, drawn at width so the person sees exactly what goes
 /// out, then the doors as rows (§746: a verb is a row). Messages and Mail
 /// open the system composer with the card attached and the link in the
-/// body; `Share…` is the system sheet with the card first and the link
-/// second.
+/// body; `Share…` is the system sheet with the card and the link as two
+/// items (`ShareCardPart`), so a target keeps both.
 ///
 /// Rows the device cannot honour are not drawn (§83): the simulator and a
 /// Mac with no Messages account have no Messages row; there is always
@@ -100,8 +100,9 @@ struct ShareTray: View {
                         DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
                     }
                     if let image {
-                        ShareLink(item: ShareCardItem(image: image, link: model?.link, title: shareTitle),
-                                  preview: SharePreview(shareTitle, image: Image(uiImage: image))) {
+                        ShareLink(items: ShareCardPart.items(image: image, link: model?.link, title: shareTitle),
+                                  subject: Text(shareTitle),
+                                  preview: { _ in SharePreview(shareTitle, image: Image(uiImage: image)) }) {
                             DSDoorRowLabel(icon: "square.and.arrow.up", title: Text("Share…"))
                         }
                         .buttonStyle(RowPress())

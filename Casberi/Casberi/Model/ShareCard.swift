@@ -190,26 +190,44 @@ enum ShareCard {
     }
 }
 
-/// What the share sheet is handed: the card first, so Messages, Mail and a
-/// post get the picture; the thing's link second, so a target that takes
-/// links (Notes, a browser) gets the link.
-struct ShareCardItem: Transferable {
-    let image: UIImage
-    let link: URL?
-    let title: String
+/// What the share sheet is handed: the card, then the thing's link as an
+/// item of its own. One item carrying both as representations gave every
+/// target ONE of them — Messages, Mail and a post took the picture and
+/// dropped the link, so an RSS article went out as a card with no way to
+/// the article. Two items, and each target takes all it can.
+///
+/// A thing with no link offers its title as the card's text representation
+/// instead — never the app's own site in place of a link the thing does not
+/// have (§83).
+enum ShareCardPart: Transferable {
+    case card(UIImage, words: String?)
+    case link(URL)
+
+    /// The items for one card: the card, then the link when there is one.
+    static func items(image: UIImage, link: URL?, title: String) -> [ShareCardPart] {
+        guard let link else { return [.card(image, words: title)] }
+        return [.card(image, words: nil), .link(link)]
+    }
 
     static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(exportedContentType: .png) { item in
-            item.image.pngData() ?? Data()
+        DataRepresentation(exportedContentType: .png) { part in
+            guard case .card(let image, _) = part else { return Data() }
+            return image.pngData() ?? Data()
         }
-        // A thing with no link offers its title as text instead — never the
-        // app's own site in place of a link the thing does not have (§83).
-        // No force unwrap: `exportingCondition` does not stop the proxy
-        // closure from being CALLED (measured: a nil link trapped at the
-        // first tap), it only stops its result from being exported.
-        ProxyRepresentation { item in item.link ?? URL(string: "about:blank")! }
-            .exportingCondition { $0.link != nil }
-        ProxyRepresentation { item in item.title }
-            .exportingCondition { $0.link == nil }
+        .exportingCondition { if case .card = $0 { true } else { false } }
+        // No force unwrap on the part's own value: `exportingCondition` does
+        // not stop the proxy closure from being CALLED (measured: a nil link
+        // trapped at the first tap), it only stops its result from being
+        // exported.
+        ProxyRepresentation { part in
+            guard case .link(let url) = part else { return URL(string: "about:blank")! }
+            return url
+        }
+        .exportingCondition { if case .link = $0 { true } else { false } }
+        ProxyRepresentation { part in
+            guard case .card(_, let words?) = part else { return "" }
+            return words
+        }
+        .exportingCondition { if case .card(_, _?) = $0 { true } else { false } }
     }
 }

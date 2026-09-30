@@ -142,9 +142,10 @@ model-written text, ever (§645).
 
 **Files.** `Model/ShareCard.swift` (`ShareCard.Model`, pure, built on main
 from a live `Thing`; `ShareCard.render(_:traits:) -> UIImage`),
-`Design/ShareCardView.swift` (the drawing), a `Transferable` with a PNG
-`DataRepresentation` first and a `ProxyRepresentation` of the thing's URL
-second, so a target that takes a link gets the link.
+`Design/ShareCardView.swift` (the drawing), and `ShareCardPart`, a
+`Transferable` handed to the sheet as TWO items: the card (a PNG), then the
+thing's URL. One item with both as representations gave each target one of
+them, and Messages took the picture and dropped the link.
 
 ---
 
