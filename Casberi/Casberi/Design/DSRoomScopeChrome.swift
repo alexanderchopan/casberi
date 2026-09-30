@@ -160,7 +160,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
                 }
                 if !rest.isEmpty {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        WalletSectionLabel(title: String(localized: "Readings"))
+                        WalletSectionLabel(title: String(localized: "Overview"))
                         DSScopeRows(sections: rest, attention: attention,
                                     reading: reading, onPick: onPick)
                     }

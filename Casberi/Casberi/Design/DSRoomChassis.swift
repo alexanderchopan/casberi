@@ -86,12 +86,11 @@ enum DSRoomChassis {
     static let leadHeight: CGFloat = visualSlot + 2 * DS.Space.s2
 
     /// **THE BOX INSIDE THE WELL — what every lead's content is sized to
-    /// (prd §919).** `leadHeight` less the well's own `s4` above and below,
-    /// less what the demo's pill takes at the top (`DSDemoMark.leadClearance`:
-    /// the well absorbs the mark so the page does not move). It was spelled
-    /// `leadHeight - 2 * DS.Space.s4` at ten sites; one spelling, so the
-    /// demo cannot clip one of them.
-    @MainActor static var leadBox: CGFloat { leadHeight - 2 * DS.Space.s4 - DSDemoMark.leadClearance }
+    /// (prd §919).** `leadHeight` less the well's own `s4` above and below.
+    /// It was spelled `leadHeight - 2 * DS.Space.s4` at ten sites; one
+    /// spelling. (The demo pill's share left it in §1005: the room reserves
+    /// the pill's band above its title now, so the well keeps all of itself.)
+    @MainActor static var leadBox: CGFloat { leadHeight - 2 * DS.Space.s4 }
 
     // **THE THREE GAPS WERE TIGHTENED ONE RUNG (prd §495, user: "should we
     // move the silouhette rail and the toggle rail higher on both vibenet and

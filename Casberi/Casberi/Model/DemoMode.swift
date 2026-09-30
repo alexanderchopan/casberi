@@ -215,6 +215,8 @@ enum DemoMode {
 
     /// Set while the rows have been promised but not yet poured.
     private static let pendingKey = "demo.mode.pourPending"
+    /// The `DemoSeedAll.version` this demo's rows last matched (prd §1005).
+    private static let tableKey = "demo.mode.tableVersion"
 
     /// Rows per beat, and the beat. Together these spend ~1.8s on a ~400-row
     /// seed. Small enough that each step is well inside a frame's budget;
@@ -344,6 +346,8 @@ enum DemoMode {
             try? await Task.sleep(for: pourBeat)
         }
         ScratchDefaults.standard.set(false, forKey: pendingKey)
+        // A fresh pour IS the current table (prd §1005).
+        ScratchDefaults.standard.set(DemoSeedAll.version, forKey: tableKey)
         // "While I was away?" answers over what landed after the last close.
         // `AppVisit.seedDemo` stamps that close three hours back, and the
         // seed's rows sit at fixed hours of fixed days — so at most times of
@@ -418,6 +422,14 @@ enum DemoMode {
         guard !pouring else { return }
         restamping = true
         defer { restamping = false }
+
+        // A demo poured under an older table draws what the table says NOW
+        // (prd §1005) — once per table version, before the dates move.
+        if ScratchDefaults.standard.integer(forKey: tableKey) != DemoSeedAll.version {
+            let moved = DemoSeedAll.refreshLanded(context)
+            ScratchDefaults.standard.set(DemoSeedAll.version, forKey: tableKey)
+            if moved > 0 { NSLog("[Casberi] demo| refreshed %d rows to table v%d", moved, DemoSeedAll.version) }
+        }
 
         var newest = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])

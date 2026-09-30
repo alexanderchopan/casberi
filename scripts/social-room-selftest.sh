@@ -342,11 +342,12 @@ check("our own note about the import is never a post",
 
 print("")
 print("Telegram — live and import under one source")
-check("a channel broadcast is drawn whole",
+check("a channel broadcast's words are its headline (§1005)",
       kind(Row(source: "Telegram", kind: "note", arrivedLive: true, hasPostText: true))
+        == .band)
+check("a broadcast that is a picture is drawn whole",
+      kind(Row(source: "Telegram", kind: "note", arrivedLive: true, hasPreviewImage: true))
         == .post(whole: true))
-check("a broadcast with no words is still the broadcast",
-      kind(Row(source: "Telegram", kind: "note", arrivedLive: true)) == .post(whole: true))
 // A saved message is usually a bare link you sent yourself.
 check("a saved message with words reads as a saved link",
       kind(Row(source: "Telegram", kind: "link", hasPostText: true)) == .reading)
@@ -414,8 +415,9 @@ check("a reading row does not", !Kind.reading.standsAlone)
 // were false in the shipped app while the row drew a card.
 check("an Instagram post card stands alone",
       SocialRoom.standsAlone(Row(source: "Instagram", kind: "note", hasPostText: true)))
-check("a Telegram channel post stands alone",
-      SocialRoom.standsAlone(Row(source: "Telegram", kind: "note", arrivedLive: true)))
+check("a Telegram channel picture stands alone",
+      SocialRoom.standsAlone(Row(source: "Telegram", kind: "note", arrivedLive: true,
+                                 hasPreviewImage: true)))
 check("an X post still does",
       SocialRoom.standsAlone(Row(source: "X", kind: "note")))
 check("a Nostr post does now",
@@ -534,8 +536,12 @@ mutate "an account record is drawn as a post" \
   'if row.tags.contains("Access") && row.tags.contains("nope") { return .band }'
 # A channel's broadcast demoted to a saved link.
 mutate "a Telegram broadcast is not recognised as live" \
-  'if row.arrivedLive { return .post(whole: true) }' \
+  'if row.arrivedLive { return row.hasPreviewImage ? .post(whole: true) : .band }' \
   'if row.hasPreviewImage { return .post(whole: true) }'
+# §1005: a broadcast's words drawn as a card again, the channel's name leading.
+mutate "a Telegram broadcast's words are drawn under the channel's name" \
+  'if row.arrivedLive { return row.hasPreviewImage ? .post(whole: true) : .band }' \
+  'if row.arrivedLive { return .post(whole: true) }'
 # A saved message with words losing them, and one with none claiming some.
 mutate "the Telegram saved-message fork is inverted" \
   'return row.hasPostText ? .reading : .band' \

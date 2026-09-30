@@ -314,11 +314,16 @@ struct TokenChartPlot: View {
                                        // Without Colour — `TokenChartStyle.lineDash`.
                                        dash: TokenChartStyle.lineDash(
                                            change: chart.change, differentiate: noColor)))
-            AreaMark(x: .value("t", Double(i)), y: .value("price", close))
-                .interpolationMethod(chart.coarse ? .linear : .catmullRom)
-                .foregroundStyle(LinearGradient(
-                    colors: [accent.opacity(fill), accent.opacity(0)],
-                    startPoint: .top, endPoint: .bottom))
+            // No area at all when there is no fill (prd §1005): an AreaMark
+            // runs down to zero, so even a CLEAR one widened the automatic
+            // domain and pinned a $31K line to the top tenth of its box.
+            if fill > 0 {
+                AreaMark(x: .value("t", Double(i)), y: .value("price", close))
+                    .interpolationMethod(chart.coarse ? .linear : .catmullRom)
+                    .foregroundStyle(LinearGradient(
+                        colors: [accent.opacity(fill), accent.opacity(0)],
+                        startPoint: .top, endPoint: .bottom))
+            }
             if chart.coarse {
                 PointMark(x: .value("t", Double(i)), y: .value("price", close))
                     .symbolSize(28)

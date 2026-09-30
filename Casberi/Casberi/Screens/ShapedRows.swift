@@ -2306,6 +2306,13 @@ struct ExcerptRow: View {
         if !text.contains(where: \.isWhitespace), Capture.detectURL(in: text) != nil {
             return nil
         }
+        // A chat's transcript is stored oldest first, so its line is the
+        // conversation's END — the latest messages, not the first of the last
+        // sixty the importer kept (prd §1005).
+        if thing.kind == .chat {
+            let messages = text.split(separator: "\n").map(String.init)
+            return messages.suffix(lines).joined(separator: "\n")
+        }
         return IngestSupport.bodyBelowTitle(text, title: thing.title)
     }
 

@@ -59,7 +59,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 9
+    static let version = 10
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -595,7 +595,51 @@ enum DemoSeedAll {
             context.insert(thing)
         }
         context.saveHonestly()
+        refreshLanded(context)
         seedBridgeState()
+    }
+
+    /// Bring every landed demo row's DRAWN fields up to the current table
+    /// (prd §1005). Returns how many rows moved.
+    ///
+    /// `seed` and the pour both skip a ref already in the store — correctly,
+    /// or a second run files a second copy — so a row poured before a table
+    /// change kept what it was poured with for as long as the person stayed
+    /// in the demo. That is how §890's one-picture-per-row fix never reached
+    /// a store poured before it: GitHub issues still wore football stadiums,
+    /// Telegram's grid still held two, and §915's subject-first titles still
+    /// read "Mentioned you · casberi/app · seed…". Only what a row DRAWS is
+    /// copied; dates stay the restamp's, and read and pin state stay yours.
+    @MainActor
+    @discardableResult
+    static func refreshLanded(_ context: ModelContext) -> Int {
+        var fresh: [String: Thing] = [:]
+        for thing in rooms() {
+            if let ref = thing.sourceRef, fresh[ref] == nil { fresh[ref] = thing }
+        }
+        let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        var moved = 0
+        for thing in all {
+            guard let ref = thing.sourceRef, let now = fresh[ref] else { continue }
+            var changed = false
+            func take<V: Equatable>(_ path: ReferenceWritableKeyPath<Thing, V>) {
+                if thing[keyPath: path] != now[keyPath: path] {
+                    thing[keyPath: path] = now[keyPath: path]
+                    changed = true
+                }
+            }
+            take(\.title)
+            take(\.content)
+            take(\.summary)
+            take(\.postText)
+            take(\.authorHandle)
+            take(\.previewImageURL)
+            take(\.imageURLs)
+            take(\.previewImageData)
+            if changed { moved += 1 }
+        }
+        if moved > 0 { context.saveHonestly() }
+        return moved
     }
 
     /// Remove everything this seeder owns — things and the state it planted.
@@ -2488,14 +2532,23 @@ enum DemoSeedAll {
 
         // And conversations, one thing each, ranked by `messageCount` exactly
         // as Snapchat's are.
-        let chats: [(String, Int, Double)] = [
-            ("Ada", 6_310, 0.8), ("Climbing crew", 2_480, 2.6),
-            ("Mum", 1_140, 6.0), ("Flat admin", 305, 19.0),
+        // `content` is the transcript in the importer's own shape — "Speaker:
+        // text", oldest first — so the row's line is the latest message
+        // (prd §1005). It said "Messages with Ada." under "Chat with Ada".
+        let chats: [(String, Int, Double, String)] = [
+            ("Ada", 6_310, 0.8,
+             "Ada: Are we still on for Saturday?\nYou: Yes, 10am at the wall.\nAda: Perfect. I'll bring the rope."),
+            ("Climbing crew", 2_480, 2.6,
+             "Sam: The wall's shut Thursday for a reset.\nJo: Friday at 7 then?\nYou: Friday works for me."),
+            ("Mum", 1_140, 6.0,
+             "Mum: Did the parcel arrive?\nYou: It came this morning, thank you!\nMum: Good. Call me Sunday."),
+            ("Flat admin", 305, 19.0,
+             "Priya: October's rent is paid.\nYou: Thanks. The boiler service is booked for the 14th."),
         ]
         out += chats.enumerated().map { i, c in
             row(.chat, "Chat with \(c.0)", source: "Telegram",
                 ref: "telegram:chat:demo-\(700 + i)", days: c.2, hour: 20,
-                content: "Messages with \(c.0).", tags: ["Conversation"]) { t in
+                content: c.3, tags: ["Conversation"]) { t in
                 t.authorHandle = c.0
                 t.messageCount = c.1
             }
@@ -2586,9 +2639,12 @@ enum DemoSeedAll {
             row(.note, h.1, source: "Readwise", ref: "demo:readwise:\(i)", days: h.2, hour: 8,
                 content: h.0) { t in
                 // The book's cover, which the real bridge stamps from the
-                // book `cover` field (2026-08-12) — keyed off the title so
-                // the two highlights from one book share one spine.
-                t.previewImageURL = bookCover(h.0)
+                // book `cover` field (2026-08-12). On the book's NEWEST
+                // highlight only (prd §1005, user: no picture repeats anywhere
+                // in the demo) — two rows sharing one spine read as a stock
+                // image cycled, not as one book.
+                let newest = highlights.firstIndex { $0.0 == h.0 } == i
+                t.previewImageURL = newest ? bookCover(h.0) : nil
                 // The note you wrote under the highlight (2026-08-17).
                 // `TokenBridges` stamps Readwise's `note` onto `summary` as
                 // display copy; without it the demo's highlights were quotes

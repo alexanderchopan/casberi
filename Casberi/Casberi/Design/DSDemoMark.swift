@@ -11,12 +11,10 @@ import SwiftUI
 /// real app takes away from the demo. Mocked on the real rooms, an overlay has
 /// nowhere to float: every room opens on the box (§906) and the lead's
 /// statement starts at the well's top, so every overlay landed on the one
-/// sentence a room exists to say. So the well ABSORBS it. The pill draws over
-/// the lead; the lead's words step down inside their fixed height
-/// (`leadClearance`, taken out of `DSRoomChassis.leadBox` and given back as
-/// top air by `dsRoomHeadBlock`); the page below is untouched. A pushed
-/// screen has no well, so it RESERVES the same band (`screenClearance`, one
-/// line at `MainSurface`'s resolver beside `dsSeatClearance`).
+/// sentence a room exists to say. §919 had the well ABSORB it; since §930 put
+/// the room's title first, every screen RESERVES the band instead
+/// (`screenClearance`: a room above its title row, a pushed screen at
+/// `MainSurface`'s resolver beside `dsSeatClearance`) — prd §1005.
 ///
 /// **Blue, not glass (user, with four fills mocked on the real rooms).** Glass
 /// read as status and a real person walked past it (§864's own diagnosis).
@@ -38,15 +36,7 @@ enum DSDemoMark {
     /// not a marketing capture (`DemoCapture`, the one door, §864).
     static var marking: Bool { DemoMode.isActive && !DemoCapture.hidesMarking }
 
-    /// What a room's lead gives up INSIDE its well. The well stands at the
-    /// screen's top (`dsRoomHeadPlacement` puts 0 or `s2` above it) and pads
-    /// its words `s4`; the pill's foot is `pillTop + pillHeight` below the
-    /// same edge. Spelled from the 0 case so a scoped head clears too.
-    static var leadClearance: CGFloat {
-        marking ? pillTop + pillHeight + gap - DS.Space.s4 : 0
-    }
-
-    /// What a pushed screen reserves at its top edge, having no well.
+    /// The band a screen reserves at its top edge while the pill is up.
     static var screenClearance: CGFloat {
         marking ? pillTop + pillHeight + gap : 0
     }

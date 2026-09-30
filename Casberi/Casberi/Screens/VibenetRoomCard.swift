@@ -1479,7 +1479,7 @@ struct VibenetRoomCard: View {
                                height: DSRoomChassis.crownLine(box: DSRoomChassis.visualSlot,
                                                                chrome: 78),
                                pulses: false,
-                               lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true,
+                               lineWidth: 2.6, fillOpacity: 0, endpointDot: true,
                                // THE SCRUB (prd §501) — Wallet's own handler,
                                // on Wallet's own plot. The cursor and the
                                // gesture are the plot's; this room only says

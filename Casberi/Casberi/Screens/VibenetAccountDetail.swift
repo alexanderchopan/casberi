@@ -318,7 +318,7 @@ struct VibenetAccountDetail: View {
                                        // (prd §475) — it was 90 here, so the
                                        // same curve changed size on the way in.
                                        height: 120, pulses: false,
-                                       lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
+                                       lineWidth: 2.6, fillOpacity: 0, endpointDot: true)
                             .padding(.top, DS.Space.s3)
                         rangeStrip
                     }

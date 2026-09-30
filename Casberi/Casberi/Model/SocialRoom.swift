@@ -232,9 +232,12 @@ enum SocialRoom {
         // THE ONE ROOM THAT IS LIVE AND IMPORT AT ONCE (§456).
         case "Telegram":
             if row.kind == "chat" { return .excerpt(lines: 2) }
-            // A channel's broadcast is written to be read, and the words are
-            // the whole row — X's ruling, for the same reason.
-            if row.arrivedLive { return .post(whole: true) }
+            // A channel's broadcast: its words are the HEADLINE and the channel
+            // is the byline (prd §1005, user). As a post card the channel's name
+            // led and the news sat under it as body text — a source name
+            // standing where the thing's own title goes. A broadcast that IS a
+            // picture keeps the card, which is the shape that draws it.
+            if row.arrivedLive { return row.hasPreviewImage ? .post(whole: true) : .band }
             // A saved message is usually a bare link you sent yourself, so it
             // reads as one. With no words and nothing live, all the row
             // honestly carries is a date.

@@ -22,11 +22,11 @@ import UIKit
 @MainActor
 struct DemoPictureTests {
 
-    /// Pictures that SHOULD repeat, because they name one thing that recurs:
-    /// a book's cover on each of its highlights (keyed by book on purpose,
-    /// `DemoSeedAll.bookCover`), a token's mark on each row about that token.
+    /// Marks that SHOULD repeat, because they are a brand's identity rather
+    /// than a picture: a token's mark on each row about that token. A book's
+    /// cover is a picture, and rides one highlight per book (prd §1005).
     /// Faces never reach these fields — they ride `authorAvatarURL`.
-    private static let keyedByThing = ["sample:cover-", "sample:token-", "sample:coin-"]
+    private static let keyedByThing = ["sample:token-", "sample:coin-"]
 
     /// Every picture a row draws: its `sample:` URLs, and its stored bytes.
     /// A screenshot or a file draws its own `sourceRef` in the sheet.

@@ -327,8 +327,14 @@ struct WalletBalanceHeadline: View {
                 // screen: a wallet's transactions sat behind ten standing
                 // cards, and the fix is a shorter hero rather than a folded
                 // room (Options A and B, both declined).
+                //
+                // NO FILL (prd §1005, user). The gradient wash was the audit's
+                // plainest chart tell, and its area — running to zero — held
+                // the line in the top tenth of the box, which is the "solid
+                // slab" 2026-07-21 measured, at every height. The line alone
+                // now takes the box's height for its own range.
                 TokenChartPlot(chart: chart, accent: accent, height: chartHeight, pulses: false,
-                               lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true,
+                               lineWidth: 2.6, fillOpacity: 0, endpointDot: true,
                                marks: marks,
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
                                // Wait out the draw-on below, then land (§171).

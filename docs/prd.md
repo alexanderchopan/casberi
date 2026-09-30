@@ -355,6 +355,7 @@ marks chronological position within the pair.
 | §993 (the Reminders room's tiles are All · Today · Scheduled · New; the lead is held only over an empty list) | Scheduled scoped to open reminders with a date, and a room of done reminders drew no lead, so its tiles stood at the top | amended by §997 — Scheduled is deleted (All · Today · New), and the lead is held whenever nothing is open |
 | §994 (the Calendar room's tiles; the month title at `heading17`) | the tiles drew in the order given, and the month title stood at `heading17` | amended by §999 — a room whose scopes are spans of time declares `readsInTime` and keeps Today · Week · Month · New; the month title is `heading24`, the day dividers' rung |
 | §995 (every room's tiles read A–Z) | every room's tiles sorted A–Z, Calendar's included (Month · Today · Week · New) | amended by §999 — a scope enum of spans of time (`readsInTime`) keeps its given order; every other room still reads A–Z |
+| §919 (the demo pill floats over the room's lead and the well absorbs it, `DSDemoMark.leadClearance`) | nothing on the page moves; the lead's words step down inside the well | amended by §1005 — since §930 put the room's title first, the room reserves the pill's band above its title (`screenClearance`) and `leadClearance` is deleted |
 
 ## 1. Thesis
 
@@ -62540,3 +62541,23 @@ Four read-only passes (shell and widgets, feed and sheets, accounts and setup, t
 **Held by** `scripts/status-ink-audit.py` (8 mutations): a `Text`/`Label`/`DSProse.text`/`.dsText` chain whose colour argument names a bare hue, directly or in a conditional, fails. It cannot follow a hue through a property or a parameter; those sites were classified by hand and each names its ink.
 
 **Seen:** the reach screen's "3 not on the list" on the iPhone 17 Pro simulator in light mode, dark amber beside the bright `?` tiles.
+
+## §1005 — The vibecoded audit, first pass: the demo, the wallet crown, Settings (user: "on the demo all feed do 1, 2, 3 … and make sure we don't have repeating pictures anywhere", 2026-09-29)
+
+An audit board (six demo screens and a string sweep) named where the app still read as generated. The user picked items; this is what shipped and what the audit got wrong.
+
+**Shipped.**
+- **Diagnostics is pre-release only.** The row shows on DEBUG and TestFlight builds (`Model/BuildChannel.swift`: the App Store's sandbox receipt names a TestFlight install) and nowhere in an App Store build, where it was a developer's log one row above Language. The sheet itself is unchanged.
+- **The wallet crown draws a line, not a wash.** The three wallet-family crowns pass `fillOpacity: 0`, and `TokenChartPlot` emits no `AreaMark` at a zero fill: an area runs to zero, so even a clear one widened the automatic domain and held a $31K line in the top tenth of its box. The line now takes the box's height for its own range. Reverses the 2026-08-16 fill (0.16 → 0.24) by date.
+- **"Readings" is "Overview"** (`DSRoomScopeChrome`). "Data" was offered and declined: Settings already has a Data row meaning your stored things.
+- **The demo pill reserves its band above the room's title.** Amends §919: §930 put `DSScreenHead` first in every room, so the pill sat on the room's name and over the well's top edge (§946 recorded it as found, not fixed). The title row takes `DSDemoMark.screenClearance` on top; `leadClearance` is deleted, and `DSRoomChassis.leadBox` is `leadHeight - 2 * s4` again.
+- **A lead's tags are the person's subjects.** `FeedLedeCard`'s tags rung drops the kind's type tag and `HomeComposition.mechanicalTags`, so "Note  Node  Voucher" and a lone "Link" no longer print.
+- **Telegram.** A live channel broadcast is a `.band`: its words are the headline and the channel is the byline (a broadcast that IS a picture keeps the post card). A chat's row and its lead end on the transcript's latest messages (the transcript is stored oldest first). The demo's four chats carry transcripts instead of "Messages with Ada."
+- **No picture repeats in the demo.** A book's cover rides its newest highlight only; `DemoPictureTests` no longer exempts covers (token and coin marks stay exempt as identity, like faces).
+- **A demo poured under an older seed is refreshed.** `DemoSeedAll.refreshLanded` copies what a landed demo row DRAWS (title, content, summary, post text, author, pictures) from the current table, keyed by `sourceRef`; dates stay the restamp's, read and pin state stay yours. It runs once per `DemoSeedAll.version` (now 10) from `DemoMode.restampIfStale`, and a fresh pour stamps the version. Measured on a store poured before §890: 173 rows refreshed, and the GitHub room's football photographs and verb-first titles went with them.
+
+**What the audit got wrong.** The screens were captured on a simulator whose store held a Logos probe's leftover rows and a pre-§890 demo. The Logos blank mark (current builds draw `brand-logos`), the doubled "Claimed from the faucet" (no such row exists in the demo), the stadium photos on GitHub and Telegram, and the verb-first GitHub titles were all stale data, not current code: the refresh above is what fixes them for anyone still in an old demo. Risk's orange tile is a real warning (§611 lights it only past a protocol's alert threshold), not decoration, and was left alone.
+
+**Found, not fixed.** On a freshly created iOS 27 simulator, `Notifications.cancelRetiredWhisper` blocks the main thread forever in a synchronous XPC reply from the notification service (sampled), so nothing after it at activation runs. Filed as its own task.
+
+**Seen** (a private iPhone 17 Pro iOS 26.5 simulator over a clean pour): Home, Wallet, GitHub and Telegram with the pill above each title; the wallet line filling its box under "Overview"; GitHub subject-first with no pictures; Telegram's broadcasts as headlines and "Chat with Ada" ending on Ada's last three messages; Readwise with one cover per book.

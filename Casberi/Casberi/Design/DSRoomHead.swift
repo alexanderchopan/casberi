@@ -769,11 +769,6 @@ extension View {
     /// room at once because every lead's layout is this one definition: its
     /// edge is `DSRoomChassis.inset` from the screen, the words stand `s3`
     /// inside it at `leadInset`, the rows' column.
-    ///
-    /// **And the demo's pill is absorbed here (prd §919).** The mark floats
-    /// over the well's top; the words step down by `DSDemoMark.leadClearance`
-    /// — which `DSRoomChassis.leadBox` has already taken out of the content's
-    /// height — so the well keeps `leadHeight` and nothing under it moves.
     func dsRoomHeadBlock() -> some View {
         modifier(DSRoomHeadWell())
     }
@@ -798,7 +793,7 @@ struct DSRoomHeadWell: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, DS.Space.s3)
-            .padding(.top, DS.Space.s4 + DSDemoMark.leadClearance)
+            .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .dsWell(cornerRadius: DS.Radius.widget)

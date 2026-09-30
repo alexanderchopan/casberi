@@ -846,9 +846,16 @@ struct FeedLedeCard: View {
     /// retrieval-only by the 2026-07-15 ruling, so neither may be drawn.
     /// Withheld when it merely repeats the title.
     private var excerpt: String? {
-        guard let summary = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !summary.isEmpty, summary != thing.title else { return nil }
-        return summary
+        if let summary = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !summary.isEmpty, summary != thing.title {
+            return summary
+        }
+        // A conversation's cover ends on its LATEST messages, the row's own
+        // line (prd §1005): the transcript is stored oldest first, and a chat
+        // carries no summary, so "Chat with Ada" stood over an empty well.
+        guard thing.kind == .chat else { return nil }
+        let messages = thing.content.split(separator: "\n").map(String.init)
+        return messages.isEmpty ? nil : messages.suffix(3).joined(separator: "\n")
     }
 
     // MARK: - The body ladder (prd §772)
@@ -962,7 +969,14 @@ struct FeedLedeCard: View {
         if let excerpt { out.append(.excerpt(excerpt)) }
         let facts = thing.factList
         if !facts.isEmpty { out.append(.facts(facts)) }
-        let tags = thing.tags.filter { !$0.isEmpty }
+        // What it is FILED UNDER — the person's subjects, never the kind's own
+        // type tag or a bridge's row labels (prd §1005). "Note  Node  Voucher"
+        // and a lone "Link" were the model printing through: a type the lead
+        // already shows, and labels `HomeComposition` already keeps out.
+        let tags = thing.tags.filter {
+            !$0.isEmpty && ThingKind.from(typeTag: $0) == nil
+                && !HomeComposition.mechanicalTags.contains($0)
+        }
         if !tags.isEmpty { out.append(.tags(tags)) }
         return out
     }
