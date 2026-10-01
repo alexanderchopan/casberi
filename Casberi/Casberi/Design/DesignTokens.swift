@@ -660,14 +660,18 @@ enum DS {
         /// A list or picker you tap through — bigger than a feed row because
         /// choosing between people is the screen's whole job.
         static let list: CGFloat = 36
-        /// A horizontal face shelf, a profile head, a sheet's stage.
+        /// A horizontal face shelf, a profile head, a sheet's stage — every
+        /// circle that stands on its own, at the face button's size (prd
+        /// §1016, user: "it would look cohesive when you are scrolling"). It
+        /// was 56; the app's standalone circles are now ONE size, `seat`,
+        /// and only a circle beside a row's words is smaller (`row`).
         ///
         /// **This tier is why one universal size cannot work.** A face here is
         /// itself the tap target, so it is floored by the 44pt minimum touch
         /// target; a face at `row` sits beside 13pt text and at 44+ would stand
         /// three times the height of the words it belongs to and outshout them.
         /// One value would either break every row or break every tap.
-        static let shelf: CGFloat = 56
+        static let shelf: CGFloat = seat
         /// The face's own seat — the dock's face button at rest — and every
         /// button in the rooms tray, which stands at the face's size so the
         /// tray has two sizes and nothing between (prd §1013). It equals

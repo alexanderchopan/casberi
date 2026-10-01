@@ -107,7 +107,7 @@ def constant(text: str, name: str):
     raw = m.group(1)
     scale = {"DS.Space.s1": 4, "DS.Space.s2": 8, "DS.Space.s3": 12,
              "DS.Space.s4": 15, "DS.Space.s6": 24, "DS.Space.s8": 32,
-             "DS.Hit.min": 44, "DS.Face.profile": 76, "DS.Face.shelf": 56}
+             "DS.Hit.min": 44, "DS.Face.profile": 76, "DS.Face.shelf": 46}
     if raw in scale:
         return scale[raw]
     try:
