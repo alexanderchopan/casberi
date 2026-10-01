@@ -234,6 +234,30 @@ extension LogosWire {
                      transactions: txs)
     }
 
+    /// A block's header alone (prd §1035): its id, its own hash and its
+    /// time — what reset detection needs, read without decoding the body, so
+    /// a body layout the reader cannot follow never hides a reset.
+    struct Header: Equatable {
+        let id: Int
+        let hashHex: String
+        let timestamp: Date
+    }
+
+    static func header(_ data: Data) -> Header? {
+        var r = Reader(Array(data))
+        guard let id = r.u64(), r.skip(32), let hash = r.bytes(32), let ms = r.u64() else { return nil }
+        return Header(id: Int(id), hashHex: hash.map { String(format: "%02x", $0) }.joined(),
+                      timestamp: Date(timeIntervalSince1970: Double(ms) / 1000))
+    }
+
+    /// Whether the transaction is the network's own (prd §1035): signed by
+    /// nobody and paying no fee — the per-block clock and its companion,
+    /// genesis deposits. An account one of these touches is a NETWORK
+    /// account, not anybody's wallet.
+    static func isSystem(_ tx: Transaction) -> Bool {
+        tx.kind == .publicCall && tx.signers == 0 && !tx.paysFee
+    }
+
     private static func transaction(_ r: inout Reader) -> Transaction? {
         guard let tag = r.u8() else { return nil }
         let start = r.offset
@@ -400,7 +424,7 @@ extension LogosWire {
         }
         // The node's own transactions: the clock and its companion in every
         // block, touching system accounts, signed by nobody and paying nothing.
-        if tx.signers == 0 && !tx.paysFee { return [] }
+        if isSystem(tx) { return [] }
 
         let ins = tx.instruction[...]
         // `native_token::Instruction::Transfer { amount }`: variant 0, a u128.
@@ -415,6 +439,26 @@ extension LogosWire {
         }
         // Anything else a watched account took part in: said, never guessed at.
         return mine.map { Event(account: id($0.offset), title: "Used a program", tags: ["Program"]) }
+    }
+}
+
+// MARK: - Resets (prd §1035)
+
+extension LogosWire {
+
+    /// How long after a reset the page names it. Past a month an empty
+    /// account is somebody's quiet account, not the reset's.
+    static let resetNoticeWindow: TimeInterval = 30 * 24 * 3600
+
+    /// Whether to say the testnet was reset: the current chain began within
+    /// `resetNoticeWindow`, and a watched account reads exactly zero — the
+    /// one thing a reset does to an account, and the confusion it caused
+    /// (2026-10-01: three ids from the Logos team, all empty, no word why).
+    /// An unread balance is not a zero.
+    static func showsResetNote(chainStart: Date?, now: Date, balances: [Decimal?]) -> Bool {
+        guard let chainStart, now.timeIntervalSince(chainStart) < resetNoticeWindow,
+              now >= chainStart else { return false }
+        return balances.contains { $0 == 0 }
     }
 }
 

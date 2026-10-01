@@ -5,6 +5,7 @@
 #   Casberi/Casberi/Model/LogosWire.swift
 #     — parseAccountID / watchableID (base58, the Public/Private prefix)
 #     — clean / entry / hexKey / isXOnlyKey / accountID (what a paste is, prd §1034)
+#     — header / isSystem / showsResetNote (resets and network accounts, prd §1035)
 #     — balance(_:)                  (getAccountBalance, u128 via Decimal)
 #     — block(_:)                    (LEZ v0.3's Borsh layout, exact length or nil)
 #     — events(_:watched:)           (what a transaction means for one account)
@@ -130,6 +131,16 @@ check(LogosWire.base58Encode(LogosWire.base58Decode(DUMJ)!) == DUMJ, "base58 rou
 check(LogosWire.base58Encode([0, 0, 1]) == "112", "leading zero bytes keep their 1s")
 check(LogosWire.short(CBGR) == "CbgR…Sr2r", "the short form")
 
+print("a reset, said (prd §1035)")
+let reset = Date(timeIntervalSince1970: 1790779853.687)   // block 2 of the 9-30 chain
+let day: TimeInterval = 86400
+check(LogosWire.showsResetNote(chainStart: reset, now: reset + day, balances: [0]), "an empty account the day after a reset: say it")
+check(LogosWire.showsResetNote(chainStart: reset, now: reset + day, balances: [nil, 5, 0]), "one empty account among others is enough")
+check(!LogosWire.showsResetNote(chainStart: reset, now: reset + day, balances: [5, nil]), "no account reads zero: nothing to explain")
+check(!LogosWire.showsResetNote(chainStart: reset, now: reset + day, balances: [nil]), "an unread balance is not a zero")
+check(!LogosWire.showsResetNote(chainStart: reset, now: reset + 31 * day, balances: [0]), "a month on, an empty account is just quiet")
+check(!LogosWire.showsResetNote(chainStart: nil, now: reset, balances: [0]), "no chain read yet: nothing to say")
+
 print("what a paste is (prd §1034)")
 for wrapped in ["`" + CBGR + "`", "\"" + CBGR + "\"", "“" + CBGR + "”", CBGR + ".", "\u{FEFF}" + CBGR, "<" + CBGR + ">",
                 "https://explorer.testnet.lez.logos.co/account/" + CBGR + "?tab=tx", "Public/" + CBGR + ","] {
@@ -165,13 +176,19 @@ check(LogosWire.decimal("340282366920938463463374607431768211455")?.description 
 check(LogosWire.result(["jsonrpc": "2.0", "error": ["code": -32602]] as [String: Any]) == nil, "an error reply has no result")
 
 print("block 2 — the v0.3 testnet, live (2026-09-30)")
-let b2 = block("AgAAAAAAAAA4uwzzSJPklA8P971eY2jZRvRoXYiE/R6z9nTJwVp3Cm0uosxtzORJF4kAcRVBZ2JCYL23Y6JDcP7s8GMQ8AkWdwvM8qABAAAsS7XK+hFm8Wd4NJK5r0htkxeEuo0B8vO91+o5waxd8Sv2daKtZu0lV2LmDTMemRsCDOcz3WrcpMy+/geFW7DZzGE60Go9Rd1bNaFPxh3/REgg/1UU2QZnaQtb/9OGahsCAAAAABW9oLWl1jKV9JM0dmo9GnrN6Ke2Gs7SrX4zTFVzRD3yBAAAAFhiQRCrAUaxIeOhkkuWtUBSNVbiS9XHwH5Sq/pf66+LFb2gtaXWMpX0kzR2aj0aes3op7YaztKtfjNMVXNEPfJ/Gl6dyYFrnVVFr9xtSHsT1KLGj+K6Ox0VNgCzlaW4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAciTqtuAvizfYQbFjvriwFHCkLnOHXszPzXIYK+GxO1wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+xkEVTgqEdIUHwDA6JP3Zaeok41C2GZ2lyzEWVvHukAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwDAAAAL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMDEZWKD8YjKnx+berhrNjWxCoyy+ABMV1RwYL+5F4LAynC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDEwGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MBlYoPxiMqfH5t6uGs2NbEKjLL4AExXVHBgv7kXgsDKcAAAAABAAAAB3C8zyoAEAAAIAAAAAAAAAAAAAAAAC")
+let B2 = "AgAAAAAAAAA4uwzzSJPklA8P971eY2jZRvRoXYiE/R6z9nTJwVp3Cm0uosxtzORJF4kAcRVBZ2JCYL23Y6JDcP7s8GMQ8AkWdwvM8qABAAAsS7XK+hFm8Wd4NJK5r0htkxeEuo0B8vO91+o5waxd8Sv2daKtZu0lV2LmDTMemRsCDOcz3WrcpMy+/geFW7DZzGE60Go9Rd1bNaFPxh3/REgg/1UU2QZnaQtb/9OGahsCAAAAABW9oLWl1jKV9JM0dmo9GnrN6Ke2Gs7SrX4zTFVzRD3yBAAAAFhiQRCrAUaxIeOhkkuWtUBSNVbiS9XHwH5Sq/pf66+LFb2gtaXWMpX0kzR2aj0aes3op7YaztKtfjNMVXNEPfJ/Gl6dyYFrnVVFr9xtSHsT1KLGj+K6Ox0VNgCzlaW4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAciTqtuAvizfYQbFjvriwFHCkLnOHXszPzXIYK+GxO1wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+xkEVTgqEdIUHwDA6JP3Zaeok41C2GZ2lyzEWVvHukAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwDAAAAL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMDEZWKD8YjKnx+berhrNjWxCoyy+ABMV1RwYL+5F4LAynC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDEwGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MBlYoPxiMqfH5t6uGs2NbEKjLL4AExXVHBgv7kXgsDKcAAAAABAAAAB3C8zyoAEAAAIAAAAAAAAAAAAAAAAC"
+let b2 = block(B2)
 check(b2?.id == 2, "the block id")
 check(b2?.timestamp.timeIntervalSince1970 == 1790779853.687, "the millisecond timestamp, as seconds")
 check(b2?.transactions.count == 2, "the node's two per-block transactions")
 check(b2?.transactions.last?.hashHex == "f50ad68c6a4d2434415837e05246bb03258ec566900e7f0f36668a3802cd1411", "the hash matches the chain's (getTransaction)")
 let system = b2?.transactions ?? []
 check(system.allSatisfy { $0.signers == 0 && !$0.paysFee }, "both are unsigned and fee-exempt")
+check(system.allSatisfy(LogosWire.isSystem), "both read as the network's own (isSystem)")
+let head2 = LogosWire.header(Data(base64Encoded: B2)!)
+check(head2?.id == 2 && head2?.timestamp.timeIntervalSince1970 == 1790779853.687, "the header alone reads id and time")
+check(head2?.hashHex == "6d2ea2cc6dcce44917890071154167624260bdb763a24370feecf06310f00916", "the header's own hash, bytes 40–72")
+check(LogosWire.header(Data([1, 2, 3])) == nil, "a stub is no header")
 check(system.allSatisfy { LogosWire.events($0, watched: Set($0.accounts.map { Data($0) })).isEmpty },
       "the node's own transactions land nothing even when their accounts are watched")
 
@@ -214,6 +231,11 @@ let twice = LogosWire.block(wrap(publicTx(program: [UInt8](repeating: 7, count: 
 check(twice?.accounts.count == 2, "an account selected for two shards is one party")
 let deposit = LogosWire.block(wrap(publicTx(program: native, accounts: [from, to], instruction: [0] + u128(40), fee: false, signers: 0)))?.transactions.first
 check(deposit.map { LogosWire.events($0, watched: watched(DUMJ)) }?.isEmpty == true, "an unsigned, fee-exempt transaction is the node's own")
+// Genesis carries one of these for real (block 1, two signers, no fee):
+// signed is a person's act, fee or none.
+let signedFree = LogosWire.block(wrap(publicTx(program: native, accounts: [from, to], instruction: [0] + u128(40), fee: false, signers: 1)))?.transactions.first
+check(signedFree.map(LogosWire.isSystem) == false, "a signed transaction with no fee is not the network's")
+check(signedFree.map { LogosWire.events($0, watched: watched(DUMJ)).map(\.title) } == ["Received 40 — from CbgR…Sr2r"], "and it lands")
 
 var priv: [UInt8] = [1] + le32(1) + from + le32(1) + native + native + le32(2) + [5, 5]   // one public action, one effect
 priv += le32(0)                                                                  // nonces
@@ -354,8 +376,8 @@ mutate "a trailing byte tolerated" \
   'guard let status = r.u8(), status < 3, r.atEnd else { return nil }' \
   'guard let status = r.u8(), status < 3 else { return nil }'
 mutate "the node's own transactions not skipped" \
-  'if tx.signers == 0 && !tx.paysFee { return [] }' \
-  'if tx.signers < 0 && !tx.paysFee { return [] }'
+  'if isSystem(tx) { return [] }' \
+  'if tx.signers < 0 { return [] }'
 mutate "the producer's key not skipped" \
   'let ms = r.u64(), r.skip(32 + 64),' \
   'let ms = r.u64(), r.skip(64),'
@@ -410,6 +432,18 @@ mutate "a sentence's period kept" \
 mutate "the explorer link not unwrapped" \
   'if let range = text.range(of: "/account/", options: .backwards) {' \
   'if let range = text.range(of: "/account-never/", options: .backwards) {'
+mutate "an unread balance read as a reset's zero" \
+  'return balances.contains { $0 == 0 }' \
+  'return balances.contains { $0 == 0 || $0 == nil }'
+mutate "the reset named forever" \
+  'guard let chainStart, now.timeIntervalSince(chainStart) < resetNoticeWindow,' \
+  'guard let chainStart, now.timeIntervalSince(chainStart) < .infinity,'
+mutate "the header's hash read from the previous block's" \
+  'guard let id = r.u64(), r.skip(32), let hash = r.bytes(32), let ms = r.u64() else { return nil }' \
+  'guard let id = r.u64(), let hash = r.bytes(32), r.skip(32), let ms = r.u64() else { return nil }'
+mutate "a signed transaction read as the network's" \
+  'tx.kind == .publicCall && tx.signers == 0 && !tx.paysFee' \
+  'tx.kind == .publicCall && !tx.paysFee'
 mutate "a network address read as loopback" \
   'host.hasPrefix("127.")' \
   'host.hasPrefix("1")'

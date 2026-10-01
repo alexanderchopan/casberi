@@ -35,6 +35,50 @@ final class LogosStore {
     private static let cursorKey = "logos.cursor.v1"
     private static let readAtKey = "logos.readAt.v1"
     private static let nodeKey = "logos.node.v1"
+    private static let genesisKey = "logos.genesis.v1"
+    private static let chainStartKey = "logos.chainStart.v1"
+    private static let systemKey = "logos.systemAccounts.v1"
+
+    /// The hash of the chain's block 1 (prd §1035). A reset is a NEW chain, so
+    /// a different block 1 is the one sure sign of it — the cursor test
+    /// below only works while the new chain is still shorter than the old.
+    private(set) var genesis: String? {
+        didSet { UserDefaults.standard.set(genesis, forKey: Self.genesisKey) }
+    }
+
+    /// When the current chain began: block 2's time (block 1, genesis, is
+    /// stamped 0). What the page names when an account reads empty after it.
+    private(set) var chainStart: Date? {
+        didSet { UserDefaults.standard.set(chainStart, forKey: Self.chainStartKey) }
+    }
+
+    /// Watched accounts the network's own transactions touch (prd §1035):
+    /// network accounts, which no person moves. Learned from the walk.
+    private(set) var systemAccounts: Set<String> {
+        didSet { UserDefaults.standard.set(Array(systemAccounts), forKey: Self.systemKey) }
+    }
+
+    func isSystem(_ id: String) -> Bool { systemAccounts.contains(id) }
+    func markSystem(_ ids: Set<String>) {
+        let new = ids.subtracting(systemAccounts)
+        if !new.isEmpty { systemAccounts.formUnion(new) }
+    }
+
+    /// Records the chain's identity. Returns true when it CHANGED from a
+    /// known one — a reset; first sight is not.
+    @discardableResult
+    func rememberChain(genesis hash: String, start: Date?) -> Bool {
+        let reset = genesis != nil && genesis != hash
+        if genesis != hash { genesis = hash }
+        if let start, chainStart != start { chainStart = start }
+        return reset
+    }
+
+    /// The page's and the room's reset line applies (prd §1035).
+    func showsResetNote(now: Date = .now) -> Bool {
+        LogosWire.showsResetNote(chainStart: chainStart, now: now,
+                                 balances: accounts.map { balance(for: $0) })
+    }
     private static let nodeSnapshotKey = "logos.nodeSnapshot.v1"
 
     /// Your own node's base URL (prd §989), or nil when none is watched.
@@ -99,6 +143,9 @@ final class LogosStore {
         // v0.2 kept each account's owning program; v0.3 accounts have none.
         UserDefaults.standard.removeObject(forKey: "logos.owners.v1")
         node = UserDefaults.standard.string(forKey: Self.nodeKey)
+        genesis = UserDefaults.standard.string(forKey: Self.genesisKey)
+        chainStart = UserDefaults.standard.object(forKey: Self.chainStartKey) as? Date
+        systemAccounts = Set(UserDefaults.standard.stringArray(forKey: Self.systemKey) ?? [])
         nodeSnapshot = UserDefaults.standard.data(forKey: Self.nodeSnapshotKey)
             .flatMap { try? JSONDecoder().decode(LogosWire.NodeSnapshot.self, from: $0) }
     }
@@ -138,6 +185,7 @@ final class LogosStore {
     func remove(_ id: String) {
         accounts.removeAll { $0 == id }
         balances.removeValue(forKey: id)
+        systemAccounts.remove(id)
         if accounts.isEmpty { cursor = nil }
     }
 
@@ -158,6 +206,7 @@ final class LogosStore {
         cursor = head
         balances = [:]
         readAt = nil
+        systemAccounts = []
     }
 
     func disconnect() {
@@ -167,6 +216,7 @@ final class LogosStore {
         balances = [:]
         cursor = nil
         readAt = nil
+        systemAccounts = []
     }
 
     private func persist(_ list: [String], _ key: String) {
@@ -262,7 +312,15 @@ enum LogosIngest {
             if let balance = await balance(id) { read[id] = balance }
         }
 
-        if let cursor = store.cursor, cursor > tip {
+        // Which chain this is (prd §1035): block 1's hash names it, block 2's
+        // time says when it began. One small read a pass; a failed one
+        // leaves the last answer standing.
+        var newChain = false
+        if let first = await blocks(from: 1, to: 2), let genesis = first.first.flatMap(LogosWire.header) {
+            newChain = store.rememberChain(genesis: genesis.hashHex,
+                                           start: first.dropFirst().first.flatMap(LogosWire.header)?.timestamp)
+        }
+        if newChain || (store.cursor.map { $0 > tip } ?? false) {
             store.resetDetected(head: tip)
         } else if let cursor = store.cursor, cursor < tip {
             let walked = await walk(from: cursor + 1, to: tip, context: context)
@@ -367,6 +425,10 @@ enum LogosIngest {
                     break walking
                 }
                 for tx in block.transactions {
+                    if LogosWire.isSystem(tx) {
+                        store.markSystem(Set(tx.accounts.filter { watched.contains(Data($0)) }
+                                                .map(LogosWire.base58Encode)))
+                    }
                     for event in LogosWire.events(tx, watched: watched) {
                         let ref = "logos:lez:\(event.account):\(tx.hashHex)"
                         guard !existing.contains(ref) else { continue }

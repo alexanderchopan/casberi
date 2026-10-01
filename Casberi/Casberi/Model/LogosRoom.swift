@@ -102,6 +102,9 @@ enum LogosRoom {
         let node: LogosWire.NodeSnapshot?
         let nodeWatched: Bool
         let hasRead: Bool
+        /// The day the current chain began, while an account reads empty in
+        /// the month after it (prd §1035); nil otherwise.
+        var resetDay: Date? = nil
     }
 
     /// The row a watched account's rows carry in their ref:
@@ -143,6 +146,7 @@ enum LogosRoom {
         return Head(accounts: accounts, total: total,
                     series: RoomValueHistory.combined(room: source, addresses: ids),
                     node: store.nodeSnapshot, nodeWatched: store.node != nil,
-                    hasRead: store.readAt != nil || store.nodeSnapshot != nil)
+                    hasRead: store.readAt != nil || store.nodeSnapshot != nil,
+                    resetDay: store.showsResetNote() ? store.chainStart : nil)
     }
 }

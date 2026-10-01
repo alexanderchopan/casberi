@@ -64,11 +64,17 @@ struct LogosScreen: View {
         .onChange(of: logos.accounts) { _, _ in countWeek() }
     }
 
-    /// The page's one sentence: the exposure while a network node is set,
-    /// the devnets' test-coin line otherwise.
+    /// The page's one sentence: the exposure while a network node is set;
+    /// the reset, while an account reads empty in the month after one (prd
+    /// §1035) — the only thing that explains an empty account; the devnets'
+    /// test-coin line otherwise.
     private var sentence: String {
         if let node = logos.node, !LogosWire.isLoopback(node) {
             return String(localized: "A node reached over a network answers anyone on it, writes included.")
+        }
+        if logos.showsResetNote(), let start = logos.chainStart {
+            let day = start.formatted(.dateTime.month(.abbreviated).day())
+            return String(localized: "The testnet was reset on \(day), so accounts from before then are empty.")
         }
         return String(localized: "Test coins have no value, and the testnet may be reset without notice.")
     }
@@ -87,10 +93,14 @@ struct LogosScreen: View {
             // `AccountWeek` keys its counts lowercased; base58 is case-sensitive,
             // but two ids differing only in case are not a real collision here.
             let counted = weekly[id.lowercased()] ?? (week: 0, new: false)
+            // A network account (prd §1035) says what it is: it never lands
+            // a row, so "Activity · 0" would read as a quiet wallet.
             var row = AccountPageShape.Row(
                 id: id, title: LogosWire.short(id),
-                subline: AccountPageShape.subline(nouns: String(localized: "Activity"),
-                                                  weekCount: counted.week),
+                subline: logos.isSystem(id)
+                    ? String(localized: "Network account · moved only by the network")
+                    : AccountPageShape.subline(nouns: String(localized: "Activity"),
+                                               weekCount: counted.week),
                 weekCount: counted.week, hasNew: counted.new,
                 isYou: false, avatarURL: nil)
             row.faceAddress = id

@@ -90,11 +90,16 @@ struct LogosRoomFigure: View {
 
     private static let plain: (Double) -> String = { LogosWire.amount(Decimal($0.rounded())) }
 
+    /// Whose figure it is — and, in the month after a reset while an
+    /// account reads empty, when the chain began (prd §1035), riding the
+    /// caption so the fixed lead box never grows a line.
     private var caption: String {
-        if head.accounts.count == 1, let one = head.accounts.first {
-            return LogosWire.short(one.id)
-        }
-        return String(localized: "\(head.accounts.count) accounts · test coins")
+        let who = head.accounts.count == 1
+            ? LogosWire.short(head.accounts[0].id)
+            : String(localized: "\(head.accounts.count) accounts · test coins")
+        guard let reset = head.resetDay else { return who }
+        let day = reset.formatted(.dateTime.month(.abbreviated).day())
+        return String(localized: "\(who) · testnet reset \(day)")
     }
 
     // MARK: - Accounts
