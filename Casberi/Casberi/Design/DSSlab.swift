@@ -244,6 +244,10 @@ struct DSSlabField: View {
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    /// The well's own focus, for a caller that passes none: a wrapped
+    /// placeholder's second line sits below the field's one, and a tap there
+    /// still has to put the caret in (prd §1027).
+    @FocusState private var ownFocus: Bool
 
     private var armed: Bool {
         if let isArmed { return isArmed }
@@ -270,9 +274,7 @@ struct DSSlabField: View {
                 // THE WELL (prd §729): the field, its paste and its clear sit
                 // inside it; the disc stays outside, in the page's column.
                 HStack(spacing: DS.Space.s2) {
-                    Group {
-                        if let focus { field.focused(focus) } else { field }
-                    }
+                    entry
                     if busy { ProgressView().controlSize(.small) }
                     // Every empty SECRET field holds out a Paste from the
                     // first frame (prd §729 — it waited for the door to be
@@ -293,7 +295,13 @@ struct DSSlabField: View {
                 .frame(minHeight: DSActRow.wellHeight)
                 .background { DSActRow.well }
             }
-            .dsActRowFrame(glyphless: glyph == nil)
+            // THE WELL SPANS THE COLUMN (prd §1027, user: "the field should
+            // be left justified and span width evenly"). A glyphless well
+            // used to start at the title column, so its left margin was the
+            // disc's width wider than its right one and the placeholder lost
+            // that width to the ellipsis. It starts where the discs do now;
+            // the rows around it keep their own inset.
+            .dsActRowFrame()
             // The verb is its own row for the reason the slab put it inside
             // one: it belongs to the act, not to the last input. On a row it
             // also stops being a 40pt target wedged against a live caret.
@@ -328,6 +336,45 @@ struct DSSlabField: View {
         }
         .buttonStyle(RowPress())
         .disabled(!live)
+    }
+
+    /// THE ENTRY, ITS PLACEHOLDER WRAPPED (prd §1027, user: "it says node …
+    /// and doesn't complete. nobody can read that"). A one-line `TextField`
+    /// truncates its prompt, and on an account page the prompt is the field's
+    /// only label ("LEZ account id, or your node's address" read "…your
+    /// node'…"). Here the prompt is drawn as text that wraps, on the field's
+    /// first baseline, and the field draws none. A vertical field already
+    /// wraps its own prompt, so it is left alone.
+    @ViewBuilder private var entry: some View {
+        if axis == .vertical, !secure {
+            withFocus(field())
+        } else {
+            ZStack(alignment: Alignment(horizontal: .leading, vertical: .firstTextBaseline)) {
+                if !hasText {
+                    Text(LocalizedStringKey(placeholder))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        // The field covers the first line; a tap on the
+                        // second still puts the caret in. VoiceOver reads the
+                        // field, which carries these words as its label.
+                        .onTapGesture { focusField() }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityHidden(true)
+                }
+                withFocus(field(prompt: false))
+                    .accessibilityLabel(Text(LocalizedStringKey(placeholder)))
+            }
+        }
+    }
+
+    @ViewBuilder private func withFocus(_ view: some View) -> some View {
+        if let focus { view.focused(focus) } else { view.focused($ownFocus) }
+    }
+
+    private func focusField() {
+        if let focus { focus.wrappedValue = true } else { ownFocus = true }
     }
 
     private func pasteButton(_ paste: @escaping (String) -> Void) -> some View {
@@ -370,9 +417,9 @@ struct DSSlabField: View {
             }
             Group {
                 if let focus {
-                    field.focused(focus)
+                    field().focused(focus)
                 } else {
-                    field
+                    field()
                 }
             }
             if busy { ProgressView().controlSize(.small) }
@@ -499,15 +546,18 @@ struct DSSlabField: View {
         .clipShape(size.shape)
     }
 
-    @ViewBuilder private var field: some View {
+    /// `prompt: false` draws the field with no placeholder, for `entry`,
+    /// which draws its own.
+    @ViewBuilder private func field(prompt: Bool = true) -> some View {
+        let title = prompt ? LocalizedStringKey(placeholder) : ""
         Group {
             if secure {
-                SecureField(LocalizedStringKey(placeholder), text: $text)
+                SecureField(title, text: $text)
             } else if axis == .vertical {
-                TextField(LocalizedStringKey(placeholder), text: $text, axis: .vertical)
+                TextField(title, text: $text, axis: .vertical)
                     .lineLimit(lines)
             } else {
-                TextField(LocalizedStringKey(placeholder), text: $text)
+                TextField(title, text: $text)
             }
         }
         .dsText(.body17)

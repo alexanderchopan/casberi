@@ -377,6 +377,8 @@ marks chronological position within the pair.
 | §1016 (the faces ruling, as first numbered) | two sessions each took §1016 on 2026-09-30 | the faces ruling is §1016a; §1016 is Logos' Rewards tile, which the source cites |
 | §902 (the All feed's 52pt head) | `DSFeedRow.headHeight` was 52, a 26pt lead centred in it | amended by §1017 — 60, a 46pt lead with 7pt of air above and below |
 | §1016a (two circle sizes: `seat` standing alone, `row` beside words) | row leads stayed 26/28 and list marks 36 | superseded by §1017 — `row`, `rowCircle`, `list` and `Mark.tile` are all `seat` (46): one circle size for every mark and face |
+| §982 (declined: sketching in a note) | a note took a checklist, a scan, a link, a Quick Note and a lock, and no drawing | reversed in part by §1023 — Attach's Sketch opens Apple's canvas and keeps the drawing as the note's one picture; §982's other declines stand |
+| §640 (a glyphless act row is inset to the title column) | the entry well started at the title column, a disc wider on the left than the right | amended by §1027 — the entry well spans the column, discs' edge to the page's; every other glyphless row keeps the inset |
 
 ## 1. Thesis
 
@@ -62863,3 +62865,14 @@ Drawn first as a canvas (claude.ai artifact "Five things to do", `design/mockups
 **Guarded.** `CasberiTests/DemoSpreadTests` runs over the poured rows: no `ocrTopics` value in more than two rooms, and no room whose topic rows open with the same word more than twice (a reply's "To @handle · " prefix is read past). It fails on the table this replaced.
 
 **Compatibility.** `DemoSeedAll.version` is 11. The PostHog demo metric `answer_asked` became `doc_exported`; `retiredDemoMetrics` and the `refPrefixes` entry keep the old name so a demo poured before this still unwinds completely. `mac-appstore-capture.sh` opens `QM-412`.
+
+## §1027 — An entry field's placeholder wraps, and its well spans the column (user, with screenshots of Logos and Wallet: "look at this field it says node … and doesn't complete. nobody can read that. also its same way on wallet and the field should be left justified and span width evenly. please sweep all account set up pages for this issue and correct", 2026-10-01; amends §640)
+
+**What was wrong.** On an account page the entry row's placeholder is the field's only label (§640: "the placeholder stays the label"), and a one-line `TextField` cuts its prompt with an ellipsis. Logos read "LEZ account id, or your node'…" and Wallet "Paste an address — 0x, Bitcoin, or a…". The well also stood inset to the title column (§640's rule for a glyphless row), so its left margin was a 32pt disc plus a gap wider than its right one, and that width went to the ellipsis.
+
+**Ruling.** Both fixes live in `DSSlabField`'s row form, the one view every account page's entry goes through, so all of them change with no call site touched:
+- **The placeholder wraps.** In the row form a one-line field (and a secure one) draws no prompt of its own; the words are a `Text` under it on the field's first baseline, wrapping as far as they need, and the well grows to hold them. The field carries the words as its accessibility label; the text is hidden from VoiceOver. A tap on the second line puts the caret in. A vertical field already wraps its prompt and is unchanged. The slab form (the wallet manager, the devnet consoles, the trays' filters) is unchanged.
+- **The well spans the column.** It starts where the discs start and ends at the page's edge, so its margins are equal. A row whose field has a leading glyph keeps the disc outside the well, as §729 put it. Every other glyphless act row (a verb row with no disc, step lines) keeps §640's inset.
+
+**Not built.** Shortening placeholders to fit one line. The words name what the field takes, and a wrap keeps them whole on every width and every type size, where a shorter string would be cut again at the next Dynamic Type step.
+

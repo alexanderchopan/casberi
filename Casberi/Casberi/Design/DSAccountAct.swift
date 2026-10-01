@@ -29,8 +29,9 @@ import SwiftUI
 ///   `DSSlabDisc`'s own grammar.
 /// · `DSSlabDoor`   → the DOOR row: ink disc, primary title, its fact
 ///   trailing, chevron.
-/// · `DSSlabField`  → the ENTRY row: the field itself, left-aligned, keeping
-///   its placeholder; the verb becomes its own row underneath.
+/// · `DSSlabField`  → the ENTRY row: the field itself, keeping its
+///   placeholder, wrapped rather than cut; the verb becomes its own row
+///   underneath.
 /// · `DSSlabSwitch` → title, detail, a `Toggle`, no fill.
 /// · `BridgeStepLines` / `DSCheckList` / `BridgeSyncStatusRows` keep their
 ///   shape and drop to the page's quiet rung, so a form's prose stops
@@ -41,6 +42,11 @@ import SwiftUI
 /// guessed disc ("plus" over a Key ID) is worse than none — but a ragged left
 /// edge is what made the old stack read as a collage, so the text still lines
 /// up with every titled row above it.
+///
+/// **The entry well is the one exception (prd §1027).** It is a box, not a
+/// line of text, so it starts at the discs' edge and ends at the page's: a
+/// well inset to the title column had a left margin a disc wider than its
+/// right one, and gave that width to the placeholder's ellipsis.
 enum DSActRow {
     /// The row's height — `AccountFactRow`'s, because they stand in one column.
     static let height: CGFloat = 56
