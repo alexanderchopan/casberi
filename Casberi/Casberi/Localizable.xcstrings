@@ -785,6 +785,34 @@
         }
       }
     },
+    "%@ · testnet reset %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · testnet reiniciada %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · テストネットは%@にリセット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 테스트넷 %@ 초기화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 测试网已于%@重置"
+          }
+        }
+      }
+    },
     "%@ account" : {
       "localizations" : {
         "es" : {
@@ -1369,6 +1397,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "挖矿 · 此网络不支付奖励"
+          }
+        }
+      }
+    },
+    "Network account · moved only by the network" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta de la red · solo la mueve la red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ネットワークのアカウント · ネットワークだけが動かします"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "네트워크 계정 · 네트워크만 움직입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "网络账户 · 仅由网络变动"
           }
         }
       }
@@ -84779,6 +84835,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这是公钥。正在关注其账户 %@。"
+          }
+        }
+      }
+    },
+    "The testnet was reset on %@, so accounts from before then are empty." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La testnet se reinició el %@, así que las cuentas anteriores están vacías."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テストネットは%@にリセットされたため、それ以前のアカウントは空です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트넷이 %@에 초기화되어 그 이전의 계정은 비어 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "测试网已于%@重置，因此在此之前的账户均为空。"
           }
         }
       }
