@@ -269,8 +269,17 @@ grep -q 'fileprivate static var silhouetteArms: \[Path\] { armsFull }' "$MARK" \
   || { echo "✗ the drawn-on outline is not the full-arm silhouette — it changes shape at the settle"; exit 1; }
 cut_at=$(grep -o 'static let smallCutBelow: CGFloat = [0-9.]*' "$MARK" | grep -o '[0-9.]*$')
 floor_rung=$(grep -o 'private static let size = DS.Mark.[a-z]*' "$FLOOR" | sed 's/.*DS.Mark.//')
-floor_pt=$(grep -A1 "static let $floor_rung: CGFloat" Casberi/Casberi/Design/DesignTokens.swift \
-  | grep -o "static let $floor_rung: CGFloat = [0-9.]*" | grep -o '[0-9.]*$')
+# A rung may name another rung (`tile` is `Face.seat` since prd §1017):
+# follow one reference to its number.
+floor_rhs=$(grep -o "static let $floor_rung: CGFloat = [A-Za-z0-9_.]*" Casberi/Casberi/Design/DesignTokens.swift \
+  | head -1 | sed 's/.*= //')
+case "$floor_rhs" in
+  ''|*[!0-9.]*)
+    floor_ref=${floor_rhs##*.}
+    floor_pt=$(grep -o "static let $floor_ref: CGFloat = [0-9.]*" Casberi/Casberi/Design/DesignTokens.swift \
+      | head -1 | grep -o '[0-9.]*$');;
+  *) floor_pt=$floor_rhs;;
+esac
 [[ -n "$cut_at" && -n "$floor_pt" ]] \
   || { echo "✗ could not read smallCutBelow ($cut_at) or the floor's rung $floor_rung ($floor_pt)"; exit 1; }
 awk -v f="$floor_pt" -v c="$cut_at" 'BEGIN { exit !(f >= c) }' \
