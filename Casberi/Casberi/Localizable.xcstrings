@@ -785,6 +785,62 @@
         }
       }
     },
+    "%@ account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 账户"
+          }
+        }
+      }
+    },
+    "%@ account — needs your attention" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta de %@ — requiere tu atención"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のアカウント — 確認が必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 계정 — 확인이 필요합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 账户 — 需要你处理"
+          }
+        }
+      }
+    },
     "%@ · %lld tickets" : {
       "localizations" : {
         "es" : {
@@ -837,6 +893,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ · 1 张票"
+          }
+        }
+      }
+    },
+    "Already watching that key's account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya estás siguiendo la cuenta de esa clave."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのキーのアカウントはすでに監視中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "해당 키의 계정을 이미 지켜보는 중입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已经在关注该密钥的账户。"
           }
         }
       }
@@ -921,6 +1005,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法保存提醒事项"
+          }
+        }
+      }
+    },
+    "Every app, A to Z" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todas las apps, de la A a la Z"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべてのアプリ（A〜Z順）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 앱, A부터 Z까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所有应用，按 A 到 Z 排列"
           }
         }
       }
@@ -84611,6 +84723,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "该地址已不在 Casberi 中。"
+          }
+        }
+      }
+    },
+    "That isn't an LEZ account or key. It may be a Logos chat address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Eso no es una cuenta ni una clave de LEZ. Puede que sea una dirección de chat de Logos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "LEZ のアカウントやキーではありません。Logos のチャットアドレスかもしれません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "LEZ 계정이나 키가 아닙니다. Logos 채팅 주소일 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这不是 LEZ 账户或密钥，可能是 Logos 聊天地址。"
+          }
+        }
+      }
+    },
+    "That's a public key. Watching its account, %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Es una clave pública. Siguiendo su cuenta, %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これは公開鍵です。そのアカウント %@ を監視中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 키입니다. 해당 계정 %@을(를) 지켜보는 중입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是公钥。正在关注其账户 %@。"
           }
         }
       }
