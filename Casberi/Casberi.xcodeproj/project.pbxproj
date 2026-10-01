@@ -689,7 +689,7 @@
 				CODE_SIGN_ENTITLEMENTS = Casberi/Casberi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Casberi/Casberi-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -722,7 +722,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-stack_size,0x800000",
@@ -744,7 +744,7 @@
 				CODE_SIGN_ENTITLEMENTS = Casberi/Casberi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Casberi/Casberi-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -777,7 +777,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-stack_size,0x800000",
@@ -798,7 +798,7 @@
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "ShareExtension/ShareExtension-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -807,7 +807,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -825,7 +825,7 @@
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "ShareExtension/ShareExtension-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -834,7 +834,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -852,7 +852,7 @@
 				CODE_SIGN_ENTITLEMENTS = CasberiWidgets/CasberiWidgets.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "CasberiWidgets/CasberiWidgets-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CasberiWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -861,7 +861,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -879,7 +879,7 @@
 				CODE_SIGN_ENTITLEMENTS = CasberiWidgets/CasberiWidgets.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "CasberiWidgets/CasberiWidgets-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CasberiWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -888,7 +888,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -904,9 +904,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -921,9 +921,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -938,7 +938,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NotificationContent/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -947,7 +947,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.NotificationContent;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -963,7 +963,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NotificationContent/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -972,7 +972,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.NotificationContent;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -987,9 +987,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1003,9 +1003,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 712;
+				CURRENT_PROJECT_VERSION = 713;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.44;
+				MARKETING_VERSION = 1.0.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
