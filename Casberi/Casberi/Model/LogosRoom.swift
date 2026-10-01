@@ -5,7 +5,7 @@ import Foundation
 /// falling back to `.home`, `emptyHeadline`/`emptyBody` for a scope with
 /// nothing yet) and `DSRoomScopeChrome` is the shared control, which draws
 /// Home first and the rest in the alphabet (§936 amended): Home · Accounts ·
-/// Activity · Node.
+/// Activity · Node · Rewards.
 ///
 /// **What the family has that Logos does not, and why** (user, 2026-09-29:
 /// "i just want to make sure we stay aligned w/ the devnets and wallet and not
@@ -20,16 +20,20 @@ import Foundation
 ///     wait on the same indexer Holdings does.
 ///   • **Risk** — nothing has a price, so nothing can move against you.
 /// **Node is the one scope the family did not have**, because it is the one
-/// thing Logos lets you run.
+/// thing Logos lets you run. **Rewards** (prd §1016) is what that node earns —
+/// mining tickets and reward vouchers, both off the node's own API — so Node
+/// answers "is it healthy" and Rewards "what has it earned", and nothing
+/// earned sits on Node.
 enum LogosSection: String, CaseIterable, Identifiable, Sendable {
     case home
     case activity
     case accounts
     case node
+    case rewards
 
     var id: String { rawValue }
 
-    static let order: [LogosSection] = [.home, .activity, .accounts, .node]
+    static let order: [LogosSection] = [.home, .activity, .accounts, .node, .rewards]
 
     var label: String {
         switch self {
@@ -37,6 +41,7 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         case .activity: return String(localized: "Activity")
         case .accounts: return String(localized: "Accounts")
         case .node:     return String(localized: "Node")
+        case .rewards:  return String(localized: "Rewards")
         }
     }
 
@@ -45,7 +50,8 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         case .home:     return String(localized: "The balance, and the last few moves")
         case .activity: return String(localized: "What moved, dated from its block")
         case .accounts: return String(localized: "The accounts you watch")
-        case .node:     return String(localized: "Your node's sync, peers and reward vouchers")
+        case .node:     return String(localized: "Your node's sync and peers")
+        case .rewards:  return String(localized: "What your node earns: mining tickets and reward vouchers")
         }
     }
 
@@ -58,6 +64,7 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         case .activity: return String(localized: "None yet")
         case .accounts: return String(localized: "No accounts yet")
         case .node:     return String(localized: "No node")
+        case .rewards:  return String(localized: "No node")
         }
     }
 
@@ -67,6 +74,7 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         case .activity: return String(localized: "Covers what moved since you started watching.")
         case .accounts: return String(localized: "Paste an LEZ account id on the Logos page.")
         case .node:     return String(localized: "Give the Logos page your node's address.")
+        case .rewards:  return String(localized: "Mine with your own Logos node, added on the Logos page.")
         }
     }
 
@@ -104,7 +112,25 @@ enum LogosRoom {
         return parts.count >= 4 ? String(parts[2]) : nil
     }
 
-    static func isNodeRef(_ ref: String?) -> Bool { ref?.hasPrefix("logos:node:") == true }
+    /// A node row's ref is `logos:node:<kind>:<seconds>`; its kind says which
+    /// scope it belongs to.
+    static func nodeKind(ofRef ref: String?) -> String? {
+        guard let ref, ref.hasPrefix("logos:node:") else { return nil }
+        let parts = ref.split(separator: ":")
+        return parts.count >= 3 ? String(parts[2]) : nil
+    }
+
+    /// What the node EARNED (prd §1016): vouchers, tickets, and mining
+    /// starting or stopping. Every other node row is its health.
+    static let rewardKinds: Set<String> = ["vouchers", "tickets", "mining", "idle"]
+
+    static func isNodeRef(_ ref: String?) -> Bool {
+        nodeKind(ofRef: ref).map { !rewardKinds.contains($0) } ?? false
+    }
+
+    static func isRewardsRef(_ ref: String?) -> Bool {
+        nodeKind(ofRef: ref).map(rewardKinds.contains) ?? false
+    }
 
     /// `scope` narrows to one account (the deck's pick); nil is All.
     @MainActor

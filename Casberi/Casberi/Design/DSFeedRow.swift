@@ -134,7 +134,7 @@ struct DSGlyphLead: View {
         ZStack {
             Circle().fill(DS.fillFaint)
                 .frame(width: size, height: size)
-            Image(systemName: glyph)
+            Image(dsSymbol: glyph)
                 .accessibilityHidden(true)
                 // The rung follows the disc: `caption` in the 26pt feed lead,
                 // `subhead` in a 36pt face — a 12pt glyph in a 36pt disc read

@@ -99,6 +99,9 @@ enum ScopeTileGlyph {
     static let mood         = "face.smiling"
     /// Logos' Node scope (prd §991) — the node you run.
     static let node         = "server.rack"
+    /// Logos' Rewards scope (prd §1016) — what that node earns. The app's own
+    /// symbol (`DSSymbol`): SF Symbols has no coin without a currency sign.
+    static let rewards      = "coins.stack"
     /// The Notes room's tiles (prd §969). Pin is the dial's own pin glyph —
     /// the same meaning, so the same symbol; New is the bare plus, a verb in
     /// the tile row and the one tile that never lights. (`square.and.pencil`
@@ -279,7 +282,7 @@ extension WalletSection: DSTileScope {
 }
 
 /// Logos' scopes (prd §991): the family's Home, Activity and Accounts glyphs,
-/// and a rack for the node you run — the one scope the family did not have.
+/// a rack for the node you run, and a coin stack for what it earns (§1016).
 extension LogosSection: DSTileScope {
     var glyph: String {
         switch self {
@@ -287,6 +290,7 @@ extension LogosSection: DSTileScope {
         case .activity: return ScopeTileGlyph.activity
         case .accounts: return ScopeTileGlyph.accounts
         case .node:     return ScopeTileGlyph.node
+        case .rewards:  return ScopeTileGlyph.rewards
         }
     }
 }

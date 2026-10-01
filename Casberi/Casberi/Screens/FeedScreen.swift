@@ -4785,8 +4785,9 @@ struct FeedScreen: View {
     // MARK: - Logos (prd §991)
 
     /// The Logos room's rows for one scope: Activity is the chain's (narrowed
-    /// to the picked account), Node is your node's. Home and Accounts list
-    /// none — their figure and the Readings are the scope.
+    /// to the picked account), Node is your node's health and Rewards what it
+    /// earned (prd §1016). Home and Accounts list none — their figure and the
+    /// Readings are the scope.
     private func logosRows(_ rows: [Thing], section: LogosSection) -> [Thing] {
         switch section {
         case .activity:
@@ -4796,6 +4797,8 @@ struct FeedScreen: View {
             }
         case .node:
             return rows.filter { LogosRoom.isNodeRef($0.sourceRef) }
+        case .rewards:
+            return rows.filter { LogosRoom.isRewardsRef($0.sourceRef) }
         case .home, .accounts:
             return []
         }
@@ -4881,14 +4884,20 @@ struct FeedScreen: View {
             return accounts == 0 ? section.emptyHeadline
                 : (accounts == 1 ? String(localized: "1 account") : String(localized: "\(accounts) accounts"))
         case .node:
-            // Short, so the reading never truncates: the state, and the
-            // vouchers when there are any. The figure carries the rest.
+            // Short, so the reading never truncates; the figure carries the rest.
             guard head.nodeWatched else { return section.emptyHeadline }
             guard let snap = head.node else { return String(localized: "Not read yet") }
             guard snap.reachable else { return String(localized: "Not answering") }
-            let state = snap.synced ? String(localized: "In sync") : String(localized: "Syncing")
-            guard let v = snap.vouchers, v > 0 else { return state }
-            return v == 1 ? String(localized: "\(state) · 1 voucher") : String(localized: "\(state) · \(v) vouchers")
+            return snap.synced ? String(localized: "In sync") : String(localized: "Syncing")
+        case .rewards:
+            // Mining's state, then the tickets waiting when there are any.
+            guard head.nodeWatched else { return section.emptyHeadline }
+            guard let snap = head.node else { return String(localized: "Not read yet") }
+            guard snap.reachable else { return String(localized: "Not answering") }
+            guard let mining = snap.mining else { return String(localized: "Mining not reported") }
+            let state = mining ? String(localized: "Mining") : String(localized: "Not mining")
+            guard let t = snap.tickets, t > 0 else { return state }
+            return t == 1 ? String(localized: "\(state) · 1 ticket") : String(localized: "\(state) · \(t) tickets")
         }
     }
 
@@ -6007,12 +6016,13 @@ struct FeedScreen: View {
             // **THE LOGOS ROOM (prd §991)** — a devnet-family room that DOES land
             // rows. The chrome draws the crown, the tiles, Actions and the
             // Readings on Home; off Home the scope's figure leads and the tiles
-            // sit under it. Activity and Node then list their own rows here,
-            // with no cover: the crown is the room's lead, not the newest row.
+            // sit under it. Activity, Node and Rewards then list their own
+            // rows here, with no cover: the crown is the room's lead, not the
+            // newest row.
             let logosSection = LogosSection.resolve(chrome.logosSection,
                                                     present: chrome.logosSections)
             logosScopeChromeSection(logosSection, rows: rows)
-            if logosSection == .activity || logosSection == .node {
+            if logosSection == .activity || logosSection == .node || logosSection == .rewards {
                 let days = chronoGroups(logosRows(rows, section: logosSection))
                 groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
             }

@@ -285,8 +285,9 @@ enum LogosIngest {
 
     // MARK: - Your node (prd §989)
 
-    /// One reading of the node: three GETs, never a write. The vouchers read
-    /// needs the tip the info read returned.
+    /// One reading of the node: five GETs, never a write. The vouchers read
+    /// needs the tip the info read returned; the two mining reads (prd §1016)
+    /// fail soft, so a node without them still reads as a node.
     static func nodeReading(_ base: String) async -> LogosWire.NodeSnapshot {
         guard let info = LogosWire.nodeInfo(
             await IngestSupport.getJSON(base + LogosWire.nodeInfoPath, service: service))
@@ -301,6 +302,13 @@ enum LogosIngest {
             snap.vouchers = v.count
             snap.claimable = v.claimable
         }
+        if let m = LogosWire.nodeMining(
+            await IngestSupport.getJSON(base + LogosWire.nodeMiningPath, service: service)) {
+            snap.mining = m.mining
+            snap.miningPays = m.pays
+        }
+        snap.tickets = LogosWire.nodeTickets(
+            await IngestSupport.getJSON(base + LogosWire.nodeTicketsPath, service: service))
         return snap
     }
 

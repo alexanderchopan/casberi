@@ -2722,11 +2722,12 @@ enum ProbeHooks {
                 let added = await LogosIngest.readNode(base, context: context)
                 if added > 0 { context.saveHonestly() }
                 let snap = store.nodeSnapshot
-                NSLog("logosNode: %@ | loopback=%@ | first=%@ | reachable=%@ | phase=%@ | height=%@ | peers=%@ | vouchers=%@ | claimable=%@ | +%d | line=%@",
+                NSLog("logosNode: %@ | loopback=%@ | first=%@ | reachable=%@ | phase=%@ | height=%@ | peers=%@ | vouchers=%@ | claimable=%@ | mining=%@ | tickets=%@ | +%d | line=%@",
                       base, LogosWire.isLoopback(base) ? "YES" : "NO", before == nil ? "YES" : "NO",
                       snap?.reachable == true ? "YES" : "NO", snap?.phase ?? "-",
                       snap?.height.map(String.init) ?? "-", snap?.peers.map(String.init) ?? "-",
                       snap?.vouchers.map(String.init) ?? "-", snap?.claimable.map { "\($0)" } ?? "-",
+                      snap?.mining.map { $0 ? "YES" : "NO" } ?? "-", snap?.tickets.map(String.init) ?? "-",
                       added, LogosWire.nodeLine(snap))
             }
         },

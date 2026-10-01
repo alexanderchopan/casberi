@@ -27,7 +27,7 @@ struct CategoryGlyph: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Image(systemName: name)
+        Image(dsSymbol: name)
             .font(.system(size: size, weight: .medium))
             // A glyph that changes MORPHS (§867) — a held tile's plus into
             // its hold verb's glyph (prd §973). The dock's names never change,

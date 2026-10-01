@@ -98,8 +98,8 @@ struct LogosScreen: View {
         }
     }
 
-    /// Your node, when one is watched: its sync state, height, peers and
-    /// vouchers, read on every pass.
+    /// Your node, when one is watched: its sync state, height, peers,
+    /// vouchers and mining, read on every pass.
     private var nodeRow: [AccountPageShape.Row] {
         guard logos.node != nil else { return [] }
         let counted = weekly[Self.nodeRowID] ?? (week: 0, new: false)
@@ -229,7 +229,7 @@ struct LogosScreen: View {
                 store.registerConnected(
                     id: "logos", name: "Logos", proof: proof,
                     can: ["Reads the balance and activity of the public LEZ accounts you watch, on the Logos testnet.",
-                          "Reads your own node's sync state, peers and reward vouchers, at the address you give it.",
+                          "Reads your own node's sync state, peers, mining and reward vouchers, at the address you give it.",
                           "Read-only — no key, and nothing it could send."])
             } else {
                 lastResult = .failed(String(localized: "Couldn't reach the Logos testnet — check your connection."))

@@ -8,6 +8,7 @@
 #     — block(_:)                    (LEZ v0.3's Borsh layout, exact length or nil)
 #     — events(_:watched:)           (what a transaction means for one account)
 #     — nodeBase / isLoopback / nodeEvents (your own node, prd §989)
+#     — nodeMining / nodeTickets and their rows (mining, prd §1016)
 #
 # Foundation + CryptoKit only BY DESIGN, so it is compiled WHOLE AND UNMODIFIED
 # here. The testnet was RESET onto LEZ v0.3 on 2026-09-30 (prd §1007) and the
@@ -61,7 +62,7 @@ code="$(strip "$WIRE"; strip "$BRIDGE"; strip "$SCREEN")"
 # Conduct: read-only in the strongest grade — no credential, no write method.
 # The node's API serves writes beside its reads; only the three GET paths may
 # appear (prd §989).
-for banned in Authorization sendTransaction requeueCrossZoneDeadLetter '"/leader/claim"' '/pow/claim' '/wallet/' '/mempool/add' 'postJSON(base'; do
+for banned in Authorization sendTransaction requeueCrossZoneDeadLetter '"/leader/claim"' '/pow/claim' '/pow/mining/' '/pow/auto-claim' '/wallet/' '/mempool/add' 'postJSON(base'; do
   if print -r -- "$code" | grep -qF "$banned"; then
     echo "✗ conduct: $banned appears in the Logos seat — it is keyless and read-only"; guard_fail=1
   fi
@@ -76,11 +77,24 @@ grep -q 'destination: .logos' "$ROUTING" || { echo "✗ no routing row for Logos
 grep -q 'Offer(name: "Logos"' "$CATALOG" || { echo "✗ no catalog offer for Logos"; guard_fail=1; }
 # The cursor moves per BLOCK, after its rows are inserted — never per page.
 grep -q 'store.advance(to: block.id)' "$BRIDGE" || { echo "✗ the walk no longer advances per decoded block"; guard_fail=1; }
-# The room keeps the family's words and adds only Node (prd §991): a Holdings
-# or Permissions case would be a scope with nothing this network can fill.
+# The room keeps the family's words and adds only Node (prd §991) and Rewards
+# (prd §1016): a Holdings or Permissions case would be a scope with nothing
+# this network can fill.
 ROOM="Casberi/Casberi/Model/LogosRoom.swift"
-grep -q 'static let order: \[LogosSection\] = \[.home, .activity, .accounts, .node\]' "$ROOM" \
-  || { echo "✗ LogosSection's scopes moved — Home, Activity, Accounts, Node (prd §991)"; guard_fail=1; }
+grep -q 'static let order: \[LogosSection\] = \[.home, .activity, .accounts, .node, .rewards\]' "$ROOM" \
+  || { echo "✗ LogosSection's scopes moved — Home, Activity, Accounts, Node, Rewards (prd §991, §1016)"; guard_fail=1; }
+# What the node EARNED is Rewards', never Node's (prd §1016): every kind that
+# lands an earning must be in rewardKinds, or it shows under Node.
+grep -q 'static let rewardKinds: Set<String> = \["vouchers", "tickets", "mining", "idle"\]' "$ROOM" \
+  || { echo "✗ LogosRoom.rewardKinds moved — vouchers, tickets, mining, idle (prd §1016)"; guard_fail=1; }
+# The coin glyph is the app's own symbol: it must exist in the catalog and be
+# routed through Image(dsSymbol:), or the tile draws nothing, silently.
+[[ -f Casberi/Casberi/Assets.xcassets/coins.stack.symbolset/coins.stack.svg ]] \
+  || { echo "✗ coins.stack.symbolset is missing (prd §1016)"; guard_fail=1; }
+grep -q '"coins.stack"' Casberi/Casberi/Design/DSSymbol.swift \
+  || { echo "✗ DSSymbol.custom does not list coins.stack — the tile would draw nothing"; guard_fail=1; }
+grep -q 'Image(dsSymbol: name)' Casberi/Casberi/Design/CategoryGlyph.swift \
+  || { echo "✗ CategoryGlyph no longer draws through Image(dsSymbol:)"; guard_fail=1; }
 if grep -qE '^\s*case (holdings|permissions|positions|nfts|risk)\b' "$ROOM"; then
   echo "✗ LogosSection grew a scope LEZ cannot fill (prd §991)"; guard_fail=1
 fi
@@ -235,6 +249,27 @@ check(LogosWire.nodeEvents(old: paid, new: claimed).isEmpty, "claiming one is no
 var worthless = synced; worthless.vouchers = 1; worthless.claimable = 0
 check(LogosWire.nodeEvents(old: synced, new: worthless).isEmpty, "a voucher worth nothing yet (before its epoch) does not land")
 check(LogosWire.nodeLine(synced) == "In sync · height 71,763 · 8 peers", "the roster line")
+
+print("your node — mining (shapes from logos-blockchain 0.3.0, services/pow/src/service.rs)")
+let status = LogosWire.nodeMining(["is_mining": true, "are_rewards_enabled": true,
+                                   "auto_claim": ["is_armed": false, "tick": ["unit": "seconds", "value": 10], "targets": []]] as [String: Any])
+check(status?.mining == true && status?.pays == true, "pow/status reads mining and whether it pays")
+check(LogosWire.nodeMining(["code": 500, "message": "x"] as [String: Any]) == nil, "an error body is not a mining reading")
+check(LogosWire.nodeTickets(["claimable_tickets": 3, "slots_until_expiry": [120, 240, 299]] as [String: Any]) == 3, "pow/rewards/claimable reads the ticket count")
+check(LogosWire.nodeTickets(["error": "x"] as [String: Any]) == nil, "no count is not zero")
+var idle = synced; idle.mining = false; idle.tickets = 0
+var mining = synced; mining.mining = true; mining.tickets = 0
+check(LogosWire.nodeEvents(old: idle, new: mining).map(\.title) == ["Your node started mining"], "mining starting lands")
+check(LogosWire.nodeEvents(old: mining, new: idle).map(\.title) == ["Your node stopped mining"], "mining stopping lands")
+var won = mining; won.tickets = 3
+check(LogosWire.nodeEvents(old: mining, new: won).map(\.title) == ["3 mining tickets ready"], "tickets rising land with their count")
+check(LogosWire.nodeEvents(old: won, new: mining).isEmpty, "tickets claimed is not news")
+check(LogosWire.nodeEvents(old: won, new: won).isEmpty, "the same tickets do not land twice")
+check(LogosWire.nodeEvents(old: synced, new: won).isEmpty, "first sight of mining (an older reading) lands nothing")
+var lost = won; lost.mining = nil; lost.tickets = nil
+check(LogosWire.nodeEvents(old: lost, new: won).isEmpty, "a failed mining read, then a good one, is not news")
+check(LogosWire.nodeEvents(old: synced, new: paid).first?.tags == ["Rewards", "Voucher"], "a voucher is a reward")
+check(LogosWire.nodeLine(won) == "In sync · height 71,763 · 8 peers · mining", "the roster line says mining")
 check(LogosWire.nodeLine(.unreachable) == "Not answering", "the roster line, unreachable")
 
 if failures > 0 { print("✗ \(failures) assertion(s) failed"); exit(1) }
@@ -322,6 +357,18 @@ mutate "no port means 80" \
 mutate "a down reading forgets what the node held" \
   'guard !reachable, var kept = last else { return self }' \
   'guard !reachable, var kept = Optional(self), last != nil else { return self }'
+mutate "tickets land on first sight" \
+  'if let before = old.tickets, let count = new.tickets, count > before {' \
+  'if let count = new.tickets, count > (old.tickets ?? 0) {'
+mutate "a mining change read from one side" \
+  'if let was = old.mining, let now = new.mining, was != now {' \
+  'if let now = new.mining, old.mining != now {'
+mutate "mining stopping lands as starting" \
+  'NodeEvent(kind: "idle", title: "Your node stopped mining"' \
+  'NodeEvent(kind: "idle", title: "Your node started mining"'
+mutate "the ticket count read from the wrong key" \
+  '["claimable_tickets"] as? NSNumber' \
+  '["slots_until_expiry"] as? NSNumber'
 mutate "a network address read as loopback" \
   'host.hasPrefix("127.")' \
   'host.hasPrefix("1")'

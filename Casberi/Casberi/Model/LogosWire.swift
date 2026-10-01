@@ -404,12 +404,20 @@ extension LogosWire {
     /// `http_addr` empty, which is that address — and the public testnet's
     /// `401 Basic realm="Restricted API"` is a proxy in front, not the node.
     ///
-    /// **Only GETs, and only these three.** The same API serves writes
-    /// (`/leader/claim`, `/pow/claim`, `/wallet/*`, `/mempool/add/tx`), which
-    /// is why a node reached over the network is an exposure the page names.
+    /// **Only GETs, and only these five.** The same API serves writes
+    /// (`/leader/claim`, `/pow/claim`, `/pow/mining/start`, `/wallet/*`,
+    /// `/mempool/add/tx`), which is why a node reached over the network is an
+    /// exposure the page names.
     static let nodeInfoPath = "/cryptarchia/info"
     static let nodePeersPath = "/network/info"
     static let nodeVouchersPath = "/leader/claim/vouchers"
+    /// Proof-of-work mining (prd §1016), read from logos-blockchain 0.3.0's
+    /// source: `{is_mining, are_rewards_enabled, auto_claim}` and
+    /// `{claimable_tickets, slots_until_expiry}`, both plain GETs. The phone
+    /// never mines (App Review 3.1.5(b)(iii) bans it on device); it reads a
+    /// node that mines somewhere else.
+    static let nodeMiningPath = "/pow/status"
+    static let nodeTicketsPath = "/pow/rewards/claimable"
 
     /// The address someone types: `host:port`, a bare host (port 8080, the
     /// node's default), or a full `http(s)://` URL. Returns the base URL with
@@ -470,6 +478,16 @@ extension LogosWire {
         /// they are worth together at the tip. nil when the read failed.
         var vouchers: Int?
         var claimable: Decimal?
+        /// Whether the node is mining, and whether this network pays for it.
+        /// nil when the read failed or the node has no such route. Mining is
+        /// OFF at every start and is not saved (measured in source), so a
+        /// restart reads as it stopping.
+        var mining: Bool?
+        var miningPays: Bool?
+        /// Mining reward tickets won and waiting to be claimed. A COUNT and
+        /// never an amount: the route returns none, and a claim can still
+        /// fail (the pool exhausted, the reward below the fee).
+        var tickets: Int?
 
         var synced: Bool { reachable && phase == "Following" }
         static let unreachable = NodeSnapshot(reachable: false)
@@ -509,12 +527,23 @@ extension LogosWire {
         return (list.count, decimal(obj["total_claimable"]) ?? 0)
     }
 
+    /// `/pow/status`: `{is_mining, are_rewards_enabled, auto_claim}`.
+    static func nodeMining(_ json: Any?) -> (mining: Bool, pays: Bool?)? {
+        guard let obj = json as? [String: Any], let mining = obj["is_mining"] as? Bool else { return nil }
+        return (mining, obj["are_rewards_enabled"] as? Bool)
+    }
+
+    /// `/pow/rewards/claimable`: `{claimable_tickets, slots_until_expiry}`.
+    static func nodeTickets(_ json: Any?) -> Int? {
+        ((json as? [String: Any])?["claimable_tickets"] as? NSNumber)?.intValue
+    }
+
     /// What changed between two readings, as rows. Nothing on FIRST sight
     /// (`old == nil`): a node already synced when you started watching did not
     /// just sync, and a voucher already waiting did not just arrive. Peer
     /// counts and heights move every minute and are the roster's, never a row.
     struct NodeEvent: Equatable {
-        let kind: String      // offline | back | synced | behind | vouchers
+        let kind: String      // offline | back | synced | behind | vouchers | mining | idle | tickets
         let title: String
         let tags: [String]
     }
@@ -545,7 +574,19 @@ extension LogosWire {
             let noun = count == 1 ? "reward voucher" : "reward vouchers"
             out.append(NodeEvent(kind: "vouchers",
                                  title: "\(count) \(noun) ready — \(amount(worth)) claimable",
-                                 tags: ["Node", "Voucher"]))
+                                 tags: ["Rewards", "Voucher"]))
+        }
+        // Mining and its tickets land only between two readings that BOTH
+        // know them: a node read before this route existed, or a read that
+        // failed, is first sight, not a change.
+        if let was = old.mining, let now = new.mining, was != now {
+            out.append(now
+                ? NodeEvent(kind: "mining", title: "Your node started mining", tags: ["Rewards", "Mining"])
+                : NodeEvent(kind: "idle", title: "Your node stopped mining", tags: ["Rewards"]))
+        }
+        if let before = old.tickets, let count = new.tickets, count > before {
+            let noun = count == 1 ? "mining ticket" : "mining tickets"
+            out.append(NodeEvent(kind: "tickets", title: "\(count) \(noun) ready", tags: ["Rewards", "Ticket"]))
         }
         return out
     }
@@ -557,6 +598,7 @@ extension LogosWire {
         var parts: [String] = [snap.synced ? "In sync" : "Syncing"]
         if let h = snap.height { parts.append("height \(amount(Decimal(h)))") }
         if let p = snap.peers { parts.append(p == 1 ? "1 peer" : "\(p) peers") }
+        if snap.mining == true { parts.append("mining") }
         if let v = snap.vouchers, v > 0 { parts.append(v == 1 ? "1 voucher" : "\(v) vouchers") }
         return parts.joined(separator: " · ")
     }
