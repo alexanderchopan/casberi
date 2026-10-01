@@ -119,8 +119,11 @@ enum NoteReminders {
     /// time, through the system's own sheet.
     @MainActor
     static func set(item: String, on note: Thing, at date: Date, context: ModelContext) async -> Result<Entry, Failure> {
+        guard note.isLive else { return .failure(.saveFailed) }
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToReminders()) == true else { return .failure(.refused) }
+        // The access sheet can stand for as long as the person reads it.
+        guard note.isLive else { return .failure(.saveFailed) }
         guard let list = list(in: store) else { return .failure(.noList) }
         let reminder: EKReminder
         if let existing = entry(for: item, on: note),
@@ -147,6 +150,7 @@ enum NoteReminders {
     /// Remove the item's reminder, from Reminders and from the note.
     @MainActor
     static func remove(item: String, on note: Thing, context: ModelContext) async {
+        guard note.isLive else { return }
         if let existing = entry(for: item, on: note) {
             let store = EKEventStore()
             if EKEventStore.authorizationStatus(for: .reminder) == .fullAccess,

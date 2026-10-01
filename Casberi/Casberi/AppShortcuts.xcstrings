@@ -138,6 +138,35 @@
         }
       }
     },
+    "Things with someone in ${applicationName}" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cosas con alguien en ${applicationName}"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "${applicationName} で相手とのもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "${applicationName}에서 누군가와 관련된 항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "${applicationName} 中与某人相关的内容"
+          }
+        }
+      }
+    },
     "What's my week in ${applicationName}" : {
       "extractionState" : "manual",
       "localizations" : {

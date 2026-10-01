@@ -127,7 +127,7 @@ struct ShareCardView: View {
         VStack(alignment: .leading, spacing: 10) {
             ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
                 HStack(spacing: 10) {
-                    BridgeIcon(name: row.source, size: DS.Mark.row, circular: true, symbol: row.symbol)
+                    BridgeIcon(name: row.source, size: DS.Face.row, circular: true, symbol: row.symbol)
                     Text(verbatim: row.title)
                         .dsText(.body17)
                         .foregroundStyle(ink.primary)

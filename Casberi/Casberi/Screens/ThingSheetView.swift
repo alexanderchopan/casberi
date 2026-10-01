@@ -127,12 +127,16 @@ struct ThingSheetView: View {
         /// comment goes out of its way to avoid — caught by
         /// `money-receipt-selftest`'s own guard when the first cut added one.
         case vibenet(String)
+        /// A held checklist item's reminder tray (prd §1022) — the same
+        /// reason as `vibenet`: a case on this route, never a fourth sheet.
+        case remind(ordinal: Int, text: String)
 
         var id: String {
             switch self {
             case .person(let profile): return "person:\(profile.id)"
             case .address(let entry):  return "address:\(entry.id)"
             case .vibenet(let address): return "vibenet:\(address)"
+            case .remind(let ordinal, _): return "remind:\(ordinal)"
             }
         }
     }
@@ -210,8 +214,6 @@ struct ThingSheetView: View {
     @State private var walkingToNote: KeyedThing?
     /// The page a highlight was kept from (prd §1020), read once on appear.
     @State private var highlightOrigin: Thing?
-    /// The checklist item whose Remind me sheet is up (prd §1022).
-    @State private var remindingItem: RemindTarget?
     /// A highlight's card tray (prd §1020).
     @State private var sharingHighlight = false
     /// The scope a walked-to sheet inherits, so next/previous keeps following
@@ -1421,13 +1423,12 @@ struct ThingSheetView: View {
                 if let room = VibenetRoomSource.card() {
                     VibenetAccountSheet(address: address, room: room)
                 }
+            case .remind(_, let text):
+                NoteRemindTray(note: thing, item: text)
             }
         }
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
         // re-presentation of this same sheet over the linked note.
-        .sheet(item: $remindingItem) { target in
-            NoteRemindTray(note: thing, item: target.text)
-        }
         .sheet(item: $walkingToNote) { note in
             // `walkingToScope` rather than `walk`: the neighbour doors set it
             // to this sheet's own scope so a walk keeps following the list two
@@ -2474,15 +2475,8 @@ struct ThingSheetView: View {
         } : nil,
                   onHoldTask: NoteSheetSource.ticksTasks(thing) ? { ordinal in
             guard let item = NoteReminders.item(at: ordinal, in: tickedBody ?? thing.content) else { return }
-            remindingItem = RemindTarget(ordinal: ordinal, text: item)
+            faceTarget = .remind(ordinal: ordinal, text: item)
         } : nil)
-    }
-
-    /// A held checklist item (prd §1022).
-    private struct RemindTarget: Identifiable {
-        let ordinal: Int
-        let text: String
-        var id: Int { ordinal }
     }
 
     /// Whether the face in the eyebrow is a DOOR. Only the three networks with

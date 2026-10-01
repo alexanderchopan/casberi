@@ -142,7 +142,12 @@ grep -q 'route.push(.reach)' "$SETTINGS" \
 python3 - "$TMP/page-bare.swift" <<'PY' || { echo "✗ the Activity row's door no longer closes, pops, then asks — in that order (RoomDoor's lesson)"; exit 1; }
 import sys, re
 src = open(sys.argv[1]).read()
-m = re.search(r'private func openRoom\(\) \{(.*?)\n    \}', src, re.S)
+# §1029 moved the writes into `enterRoom()` so a connect's own landing makes
+# them too; the tap's door must still go through it.
+tap = re.search(r'private func openRoom\(\) \{(.*?)\n    \}', src, re.S)
+m = re.search(r'private func enterRoom\(\) \{(.*?)\n    \}', src, re.S)
+if not (tap and "enterRoom()" in tap.group(1)):
+    m = tap
 body = m.group(1) if m else ""
 a, b, c = body.find("route.closeConnectForm()"), body.find("route.path = []"), body.find("chrome.sourceRequest = source")
 sys.exit(0 if 0 <= a < b < c else 1)
@@ -162,9 +167,10 @@ grep -q 'AccountNotes.note(for: seatID)' "$TMP/page-bare.swift" \
   || { echo "✗ the Notes row no longer loads the stored note"; exit 1; }
 grep -q 'AccountNotes.set(now, for: seatID)' "$TMP/page-bare.swift" \
   || { echo "✗ the Notes row no longer stores what is typed"; exit 1; }
-grep -q '.onDisappear { AccountVisits.stamp(seatID) }' "$TMP/page-bare.swift" \
+# §1029 grew the block (it also clears `onScreen`), so read the block, not a line.
+perl -0ne 'exit(/\.onDisappear \{[^}]*AccountVisits\.stamp\(seatID\)/ ? 0 : 1)' "$TMP/page-bare.swift" \
   || { echo "✗ the visit is not stamped on disappearance — the ring would never clear"; exit 1; }
-grep -q 'onAppear { AccountVisits.stamp' "$TMP/page-bare.swift" \
+perl -0ne 'exit(/\.onAppear \{[^}]*AccountVisits\.stamp/ ? 0 : 1)' "$TMP/page-bare.swift" \
   && { echo "✗ the visit is stamped on ARRIVAL — the ring would clear before it was seen"; exit 1; }
 
 # 9. "WHO MAY READ IT" IS GONE FROM THE PAGE (prd §708, user: "it is really

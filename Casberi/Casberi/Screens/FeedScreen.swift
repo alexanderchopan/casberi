@@ -697,6 +697,17 @@ struct FeedScreen: View {
     /// §1031), so a demo seat with no key never draws a verb that cannot
     /// act (§83). Read in a `.task`, never a body (a Keychain read, §628).
     @State var githubKeyed = false
+    private var githubLandingKey: String { "\(source)|\(isActive)" }
+    private func landGitHubWatch() async {
+        guard source == "GitHub" else { return }
+        githubKeyed = TokenBridge.github.connected
+        guard isActive, chrome.connectLanding == source else { return }
+        chrome.connectLanding = nil
+        guard githubKeyed else { return }
+        try? await Task.sleep(for: .milliseconds(700))
+        guard !Task.isCancelled, feedSheet == nil else { return }
+        feedSheet = .githubWatch
+    }
     /// Non-nil while the last-account confirm sits open for a vibenet
     /// "Stop watching" tap — see `vibenetUnwatch`/`commitVibenetUnwatch`.
     @State private var removingLastVibenet: String?
@@ -7010,16 +7021,9 @@ struct FeedScreen: View {
         // room in front must neither spend the landing nor raise a tray
         // nobody is looking at. The beat lets the connect sheet finish closing
         // and the room's card land, or the tray's rise is refused mid-dismiss.
-        .task(id: "\(source)|\(isActive)") {
-            guard source == "GitHub" else { return }
-            githubKeyed = TokenBridge.github.connected
-            guard isActive, chrome.connectLanding == source else { return }
-            chrome.connectLanding = nil
-            guard githubKeyed else { return }
-            try? await Task.sleep(for: .milliseconds(700))
-            guard !Task.isCancelled, feedSheet == nil else { return }
-            feedSheet = .githubWatch
-        }
+        // A method, not an inline closure: this chain sits at the type-checker's
+        // limit, and the inline form tipped it over.
+        .task(id: githubLandingKey) { await landGitHubWatch() }
         .sheet(item: $roomShare) { input in
             ShareTray(room: input)
         }

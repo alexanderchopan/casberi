@@ -59,7 +59,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 11
+    static let version = 12
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -1986,11 +1986,11 @@ enum DemoSeedAll {
             ("Car maintenance log",
              "Tyres rotated at 41,200. Next service due around 46,000 or spring.",
              48),
-            // Mentions a link the Raindrop and Bookmarks rooms both saved, so
-            // the thing sheet's "points at" ties have one to draw (census
-            // 2026-09-05: no demo link row pointed at anything).
-            ("Concurrency reading",
-             "Re-read the proposals at https://github.com/apple/swift-evolution before the review.",
+            // Mentions a link the Bookmarks room saved, so the thing sheet's
+            // "points at" ties have one to draw (census 2026-09-05: no demo
+            // link row pointed at anything; §1026 moved the saved link here).
+            ("Saturday walk",
+             "Start at https://en.wikipedia.org/wiki/Bauhaus_Archive before the courtyards.",
              0.4),
         ]
         return notes.enumerated().map { i, n in

@@ -77,7 +77,9 @@ grep -q 'MoneyReceiptCard(receipt: moneyReceipt' "$SHEET" \
 #    VoiceOver, and the receipt reads out as eight loose fragments.
 grep -q 'accessibilityLabel(Text(receipt.spokenLabel))' "$CARD" \
   || { echo "✗ the receipt is no longer composed into one spoken label"; exit 1; }
-grep -q 'accessibilityValue(Text(receipt.spokenValue))' "$CARD" \
+# §1025 joins the first transfer after it, so the value may be a list that
+# LEADS with `receipt.spokenValue`; finality still has to be what is spoken first.
+grep -qE 'accessibilityValue\(Text\((verbatim: \[)?receipt\.spokenValue' "$CARD" \
   || { echo "✗ finality is no longer spoken as the receipt's accessibility value"; exit 1; }
 # Both strips play as Audio Graphs. A chart with no descriptor is not silent —
 # it is WORSE: Swift Charts falls back to one element per mark, so a 14-bar

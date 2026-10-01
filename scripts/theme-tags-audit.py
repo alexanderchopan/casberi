@@ -47,7 +47,7 @@ RETRIEVER = ROOT / "Casberi/Casberi/Model/Retriever.swift"
 # right to draw them. Every one of these is a demo seed or a sample feed topic;
 # a person's own tags never appear as literals in the tree at all.
 KNOWN_SUBJECT = {
-    "Book club", "Casberi", "casberi", "Fitness", "Food", "Home",
+    "Book club", "Casberi", "casberi", "Quillmark", "Fitness", "Food", "Home",
     "Lisbon trip", "Onchain", "Work",
     "crypto", "economics", "politics", "science", "sports", "tech",
     # A WALLET'S NAME (prd §419). Walletbeat stamps the affected wallet on each

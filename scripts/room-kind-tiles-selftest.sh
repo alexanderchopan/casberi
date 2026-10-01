@@ -402,14 +402,14 @@ for room in RoomKindTiles.Room.allCases {
 }
 
 // ── GitHub's Watch verb (prd §1031) ─────────────────────────────────────
-let gh = RoomKindTiles.Room.github
-check(RoomKindTiles.withVerbs([.all, .pullRequests, .issues], room: gh, acting: true)
+let ghRoom = RoomKindTiles.Room.github
+check(RoomKindTiles.withVerbs([.all, .pullRequests, .issues], room: ghRoom, acting: true)
         == [.all, .pullRequests, .issues, .watch], "Watch rides last, after the kinds")
-check(RoomKindTiles.withVerbs([], room: gh, acting: true) == [.all, .watch],
+check(RoomKindTiles.withVerbs([], room: ghRoom, acting: true) == [.all, .watch],
       "no kinds: All, then Watch — the act stands without rows")
-check(RoomKindTiles.withVerbs([.all, .pullRequests, .issues], room: gh, acting: false)
+check(RoomKindTiles.withVerbs([.all, .pullRequests, .issues], room: ghRoom, acting: false)
         == [.all, .pullRequests, .issues], "no key: no verb (§83)")
-check(RoomKindTiles.withVerbs([], room: gh, acting: false).isEmpty, "no key, no kinds: no tiles")
+check(RoomKindTiles.withVerbs([], room: ghRoom, acting: false).isEmpty, "no key, no kinds: no tiles")
 check(RoomKindTiles.withVerbs([.all, .payments, .payouts], room: .stripe, acting: true)
         == [.all, .payments, .payouts], "a room with no verbs is untouched")
 check(!RoomKindTiles.allows(.watch, kind: .pullRequests) && !RoomKindTiles.allows(.watch, kind: nil),
