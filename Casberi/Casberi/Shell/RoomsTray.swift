@@ -45,13 +45,17 @@ import SwiftUI
 /// the same hop every other room-to-room door takes, so a category label
 /// resolves through `CategoryFold.landing` exactly as a chip tap did.
 ///
-/// **Press and slide (prd §1002).** Hold anywhere in the roster for
-/// `scrubArm`, then slide: the door, category or source under the finger
-/// lifts with a selection tick, its row's name column says what it is, and
-/// letting go lands there — the dock's press-and-slide (§621), brought into
-/// the tray that replaced the strip. Letting go over nothing picks nothing.
-/// The scroll is off while a scrub is armed, and a hold released without
-/// moving is left to the Button under it, so a slow tap still taps.
+/// **The hold is the system's (prd §1015).** Hold a mark and it lifts with
+/// the one verb every seat has, Manage account. §1002's press-and-slide is
+/// deleted: it compensated for 28pt marks packed in a column, which §1013
+/// replaced with 46pt buttons on a grid, and a second meaning on the same
+/// hold was two gestures nobody could tell apart.
+///
+/// **Search and the pinned row (prd §1015).** A search field leads the tray
+/// as it leads Accounts; typing narrows the grid in place — hits stay under
+/// their headers, named — and nothing opens. The field and the You row are
+/// pinned above the scroll, so Home, Notes and Settings are one tap away
+/// however far the rooms scroll.
 struct RoomsTray: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
@@ -101,22 +105,16 @@ struct RoomsTray: View {
     @State private var grown = false
     @State private var dealt = false
     @State private var bounceTick = 0
-    /// Where every pickable thing stands, in window space: the flight's
-    /// start and the scrub's hit test. Layout, not state — a reference the
-    /// body never observes, so a scroll's frame writes re-render nothing.
+    /// Where every mark stands, in window space: the flight's start. Layout,
+    /// not state — a reference the body never observes, so a scroll's frame
+    /// writes re-render nothing.
     @State private var frames = TrayFrames()
-    /// The thing under a scrubbing finger, and whether a scrub is armed.
-    @State private var hot: ScrubTarget?
-    @State private var scrubbing = false
-    /// A scrub that moved owns its release: the Button the finger started on
-    /// must not also fire when it lifts there.
-    @State private var swallowTap = false
-
-    /// How long a hold arms the scrub — the chart scrub's clock is 0.15, but
-    /// here a hold that short would steal every slow tap on a mark.
-    static let scrubArm: Double = 0.3
-    /// How far a mark lifts under the finger.
-    static let hotScale: CGFloat = 1.2
+    /// The search (prd §1015): typing narrows the grid in place.
+    @State private var query = ""
+    @FocusState private var searchFocused: Bool
+    /// The pinned part's height — the search and the You row — so the
+    /// tray's natural height counts it.
+    @State private var headHeight: CGFloat = 0
 
     private var liftMotion: Animation { reduceMotion ? DS.Motion.glide : DS.Motion.folder }
 
@@ -154,6 +152,13 @@ struct RoomsTray: View {
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] openTray: raised")
             withAnimation(liftMotion) { chrome.roomsTray = true }
+            // `-trayQuery "<text>"`: type into the search headlessly (§1015),
+            // because a simctl-booted device shows no keyboard.
+            if let q = UserDefaults.standard.string(forKey: "trayQuery"), !q.isEmpty {
+                try? await Task.sleep(for: .seconds(1))
+                NSLog("[Casberi] trayQuery: %@", q)
+                query = q
+            }
         }
         #endif
         // Every room landed in, from anywhere, is the newest on Recent — a
@@ -161,15 +166,19 @@ struct RoomsTray: View {
         .onChange(of: filter.source) { _, source in
             if connectedSeats.contains(source) { RecentRooms.record(source) }
         }
+        .onChange(of: searchFocused) { _, focused in
+            if focused, !grown {
+                withAnimation(DS.Motion.glide) { grown = true }
+            }
+        }
         .onChange(of: chrome.roomsTray) { _, up in
             if up { recent = RecentRooms.list }
             // Deal the marks in once the panel has landed; under Reduce
             // Motion they are simply there.
             grown = false
             drag = 0
-            hot = nil
-            scrubbing = false
-            swallowTap = false
+            query = ""
+            searchFocused = false
             if reduceMotion {
                 dealt = up
             } else {
@@ -182,29 +191,61 @@ struct RoomsTray: View {
     // MARK: - The panel
 
     private func panel(screen: CGSize) -> some View {
-        let natural = contentHeight + Self.grabberHeight
+        let natural = contentHeight + headHeight + Self.grabberHeight
         let rest = min(natural, screen.height * Self.restShare)
         let full = min(natural, screen.height * Self.grownShare)
         // A header's glyph centres on the axis its first mark stands on.
         let headInset = Self.axis - Self.glyphSlot / 2
         let recent = recentShown
         let height = grown ? full : rest
+        let searching = !trimmedQuery.isEmpty
+        let hits = searching ? searchHits : []
         return VStack(spacing: 0) {
             grabber
+            // The pinned part (prd §1015): the search, then the You row —
+            // Home, Notes and Settings stay one tap away however far the
+            // rooms scroll under them. The You row steps aside while a
+            // query is up, the way the App Library's row does.
+            VStack(alignment: .leading, spacing: Self.sectionGap) {
+                searchField
+                if !searching { youRow }
+            }
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, DS.Space.s2)
+            .padding(.bottom, Self.sectionGap)
+            .background {
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { headHeight = g.size.height }
+                        .onChange(of: g.size.height) { _, h in headHeight = h }
+                }
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: Self.sectionGap) {
-                    youRow
-                    if !recent.isEmpty {
-                        recentSection(recent, headInset: headInset)
-                    }
-                    ForEach(Array(categories.enumerated()), id: \.element) { index, category in
-                        categoryRow(category, index: index, headInset: headInset)
+                    if searching {
+                        if hits.isEmpty {
+                            DSFootnote(Text("No room matches \u{201C}\(trimmedQuery)\u{201D}"))
+                                .padding(.leading, headInset)
+                        }
+                        ForEach(Array(hits.enumerated()), id: \.element.category) { index, hit in
+                            categoryRow(hit.category, present: hit.seats, index: index,
+                                        headInset: headInset, named: true)
+                        }
+                    } else {
+                        if !recent.isEmpty {
+                            recentSection(recent, headInset: headInset)
+                        }
+                        ForEach(Array(categories.enumerated()), id: \.element) { index, category in
+                            categoryRow(category, present: seats(in: category), index: index,
+                                        headInset: headInset, named: false)
+                        }
                     }
                 }
                 // One grid across the tray between its insets (§1013): the
                 // You doors and every section's marks share five columns.
                 .padding(.horizontal, DSRoomChassis.inset)
-                .padding(.top, DS.Space.s3)
+                // Hits settle into place rather than snapping (§1015).
+                .animation(DS.Motion.standard, value: trimmedQuery)
                 // The face rides ABOVE this tray (it is the way out), so the
                 // last row ends before its column — the same clearance every
                 // pushed screen leaves (§829).
@@ -216,20 +257,10 @@ struct RoomsTray: View {
                             .onChange(of: g.size.height) { _, h in contentHeight = h }
                     }
                 }
-                .simultaneousGesture(scrub)
             }
             .scrollIndicators(.hidden)
-            .scrollDisabled(scrubbing)
-            // The visible window: a row scrolled out of it keeps its last
-            // frame, and a finger over the grabber must not pick it.
-            .background {
-                GeometryReader { g in
-                    Color.clear
-                        .onAppear { frames.viewport = g.frame(in: .global) }
-                        .onChange(of: g.frame(in: .global)) { _, f in frames.viewport = f }
-                }
-            }
-            .frame(height: max(height - Self.grabberHeight, 1))
+            .scrollDismissesKeyboard(.interactively)
+            .frame(height: max(height - Self.grabberHeight - headHeight, 1))
         }
         .frame(maxWidth: .infinity)
         // The bottom corners sit below the edge: the panel is one radius, and
@@ -240,7 +271,9 @@ struct RoomsTray: View {
                     in: RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous))
         .offset(y: DS.Radius.sheet)
         .overlay(alignment: .topLeading) { closeDoor }
-        .ignoresSafeArea(edges: .bottom)
+        // The container's bottom only: the keyboard's inset stays, so a
+        // search's hits scroll above the keys (§1015).
+        .ignoresSafeArea(.container, edges: .bottom)
         .accessibilityAddTraits(.isModal)
         .animation(DS.Motion.glide, value: grown)
     }
@@ -360,6 +393,45 @@ struct RoomsTray: View {
         return bridges.bridges.contains { seats.contains($0.name) && $0.status == .attention }
     }
 
+    /// A category's seats, in the tray's order.
+    private func seats(in category: String) -> [String] {
+        CategoryFold.scopes(category: category,
+                            present: Set(chrome.categoryVenues[category] ?? []))
+    }
+
+    // MARK: - Search (§1015)
+
+    /// The field is Accounts' own (`DSSlabField`, the slab rung), at the top
+    /// of the tray as it is at the top of Accounts (user ruling, 2026-07-23).
+    private var searchField: some View {
+        DSSlabField(placeholder: String(localized: "Search"),
+                    text: $query, actionLabel: "",
+                    focus: $searchFocused,
+                    glyph: "magnifyingglass", clearable: true,
+                    size: .slab, submitLabel: .search, action: {})
+    }
+
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// What the query leaves: a seat one of whose name's WORDS starts with
+    /// it ("st" finds Stripe and App Store, not Instagram), under its own
+    /// header, or a whole category whose name starts with it — Spotlight's
+    /// rule, accents and case aside.
+    private var searchHits: [(category: String, seats: [String])] {
+        let q = trimmedQuery
+        func starts(_ name: String) -> Bool {
+            name.split(whereSeparator: { $0.isWhitespace || $0 == "." || $0 == "-" })
+                .contains { $0.range(of: q, options: [.caseInsensitive, .diacriticInsensitive, .anchored]) != nil }
+        }
+        return categories.compactMap { category in
+            let all = seats(in: category)
+            let kept = starts(category) ? all : all.filter { starts(BridgeCatalog.seatName(forSource: $0)) }
+            return kept.isEmpty ? nil : (category: category, seats: kept)
+        }
+    }
+
     /// You: five doors, drawn as APP TILES in the brand pink (prd §976,
     /// user, 2026-09-28: "make the You buttons in the tray the same size as
     /// the app tiles and lets color them … maybe they all should be pink
@@ -398,8 +470,7 @@ struct RoomsTray: View {
         }
     }
 
-    /// The You row's doors, in order — one list, so a tap and a scrub
-    /// release run the same act.
+    /// The You row's doors, in order.
     private struct Door {
         let word: String
         let glyph: String
@@ -422,32 +493,30 @@ struct RoomsTray: View {
     }
 
     /// A category: its header above, its marks under it on the tray's five
-    /// columns (prd §1013). The header opens the category's room.
-    private func categoryRow(_ category: String, index: Int, headInset: CGFloat) -> some View {
-        let present = CategoryFold.scopes(category: category,
-                                          present: Set(chrome.categoryVenues[category] ?? []))
+    /// columns (prd §1013). The header opens the category's room. `present`
+    /// is the category's seats, or the ones a search left (§1015), named.
+    private func categoryRow(_ category: String, present: [String], index: Int,
+                             headInset: CGFloat, named: Bool) -> some View {
         let lit = standingCategory == category
         let needsYou = broken(present)
         return VStack(alignment: .leading, spacing: 0) {
             Button {
-                tapped { pick(category) }
+                pick(category)
             } label: {
-                header(glyph: glyph(for: category, lit: lit),
-                       word: scrubWord(in: present) ?? category,
-                       lit: lit, broken: needsYou, opens: true,
-                       hot: hot == .category(category))
+                header(glyph: glyph(for: category, lit: lit), word: category,
+                       lit: lit, broken: needsYou, opens: true)
             }
             .buttonStyle(RowPress())
             .padding(.leading, headInset)
-            .scrubFrame(.category(category), in: frames)
             .accessibilityLabel(needsYou
                 ? Text("\(category), needs your attention")
                 : Text(category))
             .accessibilityAddTraits(lit ? .isSelected : [])
             MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
                 ForEach(Array(present.enumerated()), id: \.element) { slot, venue in
-                    markButton(venue, key: .source(venue))
+                    markButton(venue, key: .source(venue), named: named)
                         .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
             }
         }
@@ -458,13 +527,13 @@ struct RoomsTray: View {
     /// is something in it — a section of nothing is not a section.
     private func recentSection(_ recent: [String], headInset: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            header(glyph: "clock", word: scrubWord(in: recent, recent: true) ?? String(localized: "Recent"),
+            header(glyph: "clock", word: String(localized: "Recent"),
                    lit: false, broken: false, opens: false)
                 .padding(.leading, headInset)
                 .accessibilityAddTraits(.isHeader)
             MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
                 ForEach(Array(recent.enumerated()), id: \.element) { slot, venue in
-                    markButton(venue, key: .recent(venue))
+                    markButton(venue, key: .recent(venue), named: false)
                         .modifier(Dealt(on: dealt, index: slot, reduceMotion: reduceMotion))
                 }
             }
@@ -472,28 +541,48 @@ struct RoomsTray: View {
     }
 
     /// One account's mark: tap lands in its room, and the mark flies to the
-    /// room's head (§932). `key` tells a Recent mark from the same seat's
-    /// mark in its category, so the scrub and the flight find the one touched.
-    private func markButton(_ venue: String, key: ScrubTarget) -> some View {
+    /// room's head (§932); hold lifts it with the one verb every seat has,
+    /// Manage account (§1015). `key` tells a Recent mark from the same seat's
+    /// mark in its category, so the flight starts from the one touched. A
+    /// search's hit carries its name (`named`): a hit is read, not scanned.
+    private func markButton(_ venue: String, key: MarkKey, named: Bool) -> some View {
         Button {
-            tapped { pick(venue, flying: true, from: key) }
+            pick(venue, flying: true, from: key)
         } label: {
-            BridgeIcon(name: venue, size: Self.mark, circular: true)
-                .modifier(Lifted(on: hot == key, reduceMotion: reduceMotion))
-                .overlay {
-                    if filter.source == venue {
-                        Circle()
-                            .strokeBorder(DS.tint, lineWidth: 1.5)
-                            .padding(-2)
+            VStack(spacing: DS.Space.s2) {
+                BridgeIcon(name: venue, size: Self.mark, circular: true)
+                    .overlay {
+                        if filter.source == venue {
+                            Circle()
+                                .strokeBorder(DS.tint, lineWidth: 1.5)
+                                .padding(-2)
+                        }
                     }
+                if named {
+                    Text(BridgeCatalog.seatName(forSource: venue))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                        .frame(maxWidth: Self.mark + DS.Space.s6)
                 }
+            }
+            .contentShape(Rectangle())
+            // On the label, not the Button: every menu in the app stands on
+            // a plain view, and on the Button the hold fired the tap.
+            .contextMenu {
+                Button {
+                    manage(venue)
+                } label: {
+                    Label(String(localized: "Manage account"), systemImage: "gearshape")
+                }
+            }
         }
         .buttonStyle(PressSpring())
         .dsTapTarget(Circle())
         .accessibilityLabel(Text(BridgeCatalog.seatName(forSource: venue)))
         .accessibilityAddTraits(filter.source == venue ? .isSelected : [])
-        // Where this mark stands, for the flight and the scrub.
-        .scrubFrame(key, in: frames)
+        // Where this mark stands, for the flight.
+        .markFrame(key, in: frames)
     }
 
     // MARK: - Pieces
@@ -506,14 +595,13 @@ struct RoomsTray: View {
     /// plate (§746, §782). Tint says selected; the attention colour says a
     /// seat inside needs you (the label says it too).
     private func header(glyph: String, word: String, lit: Bool, broken: Bool,
-                        opens: Bool, hot: Bool = false) -> some View {
+                        opens: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: glyph)
                 .dsGlyph(.subhead, weight: .medium)
                 .frame(width: Self.glyphSlot)
                 .foregroundStyle(broken ? DS.attention : (lit ? DS.tint : DS.textSecondary))
                 .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
-                .modifier(Lifted(on: hot, reduceMotion: reduceMotion))
             Text(word)
                 .dsText(.heading17)
                 .foregroundStyle(lit ? DS.tint : DS.textSecondary)
@@ -550,12 +638,9 @@ struct RoomsTray: View {
     }
 
     private func door(_ door: Door, index: Int) -> some View {
-        Button {
-            tapped(door.act)
-        } label: {
+        Button(action: door.act) {
             VStack(spacing: DS.Space.s2) {
                 doorTile(door.glyph, lit: door.lit)
-                    .modifier(Lifted(on: hot == .door(index), reduceMotion: reduceMotion))
                 Text(door.word)
                     .dsText(.label12)
                     .foregroundStyle(door.lit ? DS.textPrimary : DS.textSecondary)
@@ -567,96 +652,9 @@ struct RoomsTray: View {
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text(door.word))
         .accessibilityAddTraits(door.lit ? .isSelected : [])
-        .scrubFrame(.door(index), in: frames)
         .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
     }
 
-    /// The thing under a scrubbing finger lifts; under Reduce Motion it does
-    /// not move, and the name column carries the pick alone.
-    private struct Lifted: ViewModifier {
-        let on: Bool
-        let reduceMotion: Bool
-        func body(content: Content) -> some View {
-            content
-                .scaleEffect(on && !reduceMotion ? RoomsTray.hotScale : 1)
-                .animation(DS.Motion.press, value: on)
-        }
-    }
-
-    // MARK: - Press and slide (§1002)
-
-    /// What a row's name column says while the finger is on one of its
-    /// marks: the source's seat name in its category row. Nil when the
-    /// finger is elsewhere. A You door carries its own word (§1012).
-    private func scrubWord(in present: [String], recent: Bool = false) -> String? {
-        switch hot {
-        case .source(let venue)? where !recent && present.contains(venue),
-             .recent(let venue)? where recent:
-            return BridgeCatalog.seatName(forSource: venue)
-        default:
-            return nil
-        }
-    }
-
-    /// Hold, then slide. The hold arms it (scroll off, a lift tick); the
-    /// first move takes the release from the Button underneath; each new
-    /// thing under the finger ticks; letting go lands on it.
-    private var scrub: some Gesture {
-        LongPressGesture(minimumDuration: Self.scrubArm)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .global))
-            .onChanged { value in
-                guard case .second(true, let drag) = value else { return }
-                if !scrubbing {
-                    scrubbing = true
-                    DSHaptic.lift()
-                }
-                guard let point = drag?.location else { return }
-                swallowTap = true
-                let target = frames.target(at: point)
-                if target != hot {
-                    hot = target
-                    if target != nil { DSHaptic.selection() }
-                }
-            }
-            .onEnded { _ in
-                let target = hot
-                hot = nil
-                scrubbing = false
-                #if DEBUG
-                NSLog("trayScrub: %@", target.map { "\($0)" } ?? "none")
-                #endif
-                if let target {
-                    perform(target)
-                } else if swallowTap {
-                    // Let go over nothing: nothing is picked, and the next
-                    // tap is a tap again.
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(350))
-                        swallowTap = false
-                    }
-                }
-            }
-    }
-
-    private func perform(_ target: ScrubTarget) {
-        switch target {
-        case .door(let i):
-            let all = doors()
-            if all.indices.contains(i) { all[i].act() }
-        case .category(let category):
-            pick(category)
-        case .source(let venue):
-            pick(venue, flying: true, from: .source(venue))
-        case .recent(let venue):
-            pick(venue, flying: true, from: .recent(venue))
-        }
-    }
-
-    /// A Button's act, unless a scrub already answered this release.
-    private func tapped(_ act: () -> Void) {
-        guard !swallowTap else { return }
-        act()
-    }
 
     /// One mark's arrival in the cascade: fades and grows in, one step after
     /// the mark before it. Under Reduce Motion it is simply there.
@@ -679,7 +677,7 @@ struct RoomsTray: View {
     /// Land in a room. A category label resolves through `CategoryFold.landing`
     /// inside `MainSurface`'s `sourceRequest` handler, the way a chip tap did.
     /// A source mark also FLIES to the room's head as the tray drops (§932).
-    private func pick(_ target: String, flying: Bool = false, from key: ScrubTarget? = nil) {
+    private func pick(_ target: String, flying: Bool = false, from key: MarkKey? = nil) {
         DSHaptic.selection()
         if flying, !reduceMotion, let key, let from = frames.map[key], from != .zero {
             chrome.roomPick = ShellChrome.RoomPick(source: target, from: from)
@@ -688,6 +686,14 @@ struct RoomsTray: View {
         if !route.path.isEmpty { route.path = [] }
         chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
         chrome.sourceRequest = target
+    }
+
+    /// A seat's own account page (prd §1015): the hold's one verb.
+    private func manage(_ venue: String) {
+        guard let offer = BridgeCatalog.offer(forSource: venue)?.name else { return }
+        DSHaptic.selection()
+        close()
+        route.openSetup(forOffer: offer)
     }
 
     /// Open Accounts on Connect; its switcher holds Manage (§933, §958).
@@ -711,33 +717,24 @@ struct RoomsTray: View {
     }
 }
 
-/// A pickable thing in the tray: a You door by position, a category by its
-/// label, a source by its seat — in its category, or on the Recent line.
-enum ScrubTarget: Hashable {
-    case door(Int)
-    case category(String)
+/// A mark in the tray: a source by its seat — in its category, or on the
+/// Recent line — so the flight starts from the one touched.
+enum MarkKey: Hashable {
     case source(String)
     case recent(String)
 }
 
-/// The tray's layout, in window space (§1002). A class held in `@State` and
-/// never observed, so writing a frame on every scroll step re-renders
-/// nothing — `ShellChrome.pagerFrame`'s rule, layout is not state.
+/// The tray's layout, in window space: where each mark stands, for the
+/// flight. A class held in `@State` and never observed, so writing a frame
+/// on every scroll step re-renders nothing — `ShellChrome.pagerFrame`'s
+/// rule, layout is not state.
 final class TrayFrames {
-    var map: [ScrubTarget: CGRect] = [:]
-    var viewport: CGRect = .zero
-
-    /// The thing whose 44pt target holds the point, inside the visible
-    /// window only.
-    func target(at point: CGPoint) -> ScrubTarget? {
-        guard viewport == .zero || viewport.contains(point) else { return nil }
-        return map.first { $0.value.contains(point) }?.key
-    }
+    var map: [MarkKey: CGRect] = [:]
 }
 
 private extension View {
-    /// Record where a pickable thing stands, and forget it when it goes.
-    func scrubFrame(_ target: ScrubTarget, in frames: TrayFrames) -> some View {
+    /// Record where a mark stands, and forget it when it goes.
+    func markFrame(_ target: MarkKey, in frames: TrayFrames) -> some View {
         background {
             GeometryReader { g in
                 Color.clear
