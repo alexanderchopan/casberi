@@ -215,13 +215,19 @@ enum ShareCardPart: Transferable {
             return image.pngData() ?? Data()
         }
         .exportingCondition { if case .card = $0 { true } else { false } }
-        // No force unwrap on the part's own value: `exportingCondition` does
-        // not stop the proxy closure from being CALLED (measured: a nil link
-        // trapped at the first tap), it only stops its result from being
-        // exported.
-        ProxyRepresentation { part in
-            guard case .link(let url) = part else { return URL(string: "about:blank")! }
-            return url
+        // The link goes out as `public.url` DATA — the URL's own UTF-8 bytes,
+        // the convention every reader of that type decodes
+        // (`NSURL(dataRepresentation:)`, the pasteboard, every share
+        // extension). A `ProxyRepresentation` to a `URL` here let
+        // CoreTransferable serialise it as a CoreFoundation property list, and
+        // X posted those bytes as the text (`bplist00%C2%A3…https://…`) — the
+        // card arrived, the link did not (§1018, measured on device). No force
+        // unwrap on the part's own value: `exportingCondition` does not stop
+        // the closure from being CALLED (measured: a nil link trapped at the
+        // first tap), it only stops its result from being exported.
+        DataRepresentation(exportedContentType: .url) { part in
+            guard case .link(let url) = part else { return Data() }
+            return url.dataRepresentation
         }
         .exportingCondition { if case .link = $0 { true } else { false } }
         ProxyRepresentation { part in

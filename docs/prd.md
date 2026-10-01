@@ -62744,3 +62744,11 @@ The Logos team asked for mining: more exposure for Logos, and a way to see it as
 **Ruling.** `DS.Face.row`, `rowCircle`, `list` and `DS.Mark.tile` are all `seat` (46pt), with `shelf` (§1016a). The ramp is now `badge` (20, inside a pill), `seat` (46, everything else) and `profile` (76, the one screen whose subject is a face); `Mark.hero` (60) stays for a screen's own head. `DSFeedRow.headHeight` is 60: the lead with 7pt above and below, the title and line centred on its axis as before, the type unchanged. The row's leading axis (`rowLeadCentre`) moves with the lead, so the face button and the tray's first column move with it.
 
 **Seen:** the demo on the iPhone 17 Pro simulator, dark: the All feed's leads, the cover's mark, the tray's doors and marks, the Wallet room's rows and its account faces, all one size beside the face button.
+
+## §1018 — The share sheet's link is `public.url` bytes, never a proxied `URL` (user: "Sharing to Twitter isn't working", 2026-10-01; amends the share-card session's `ShareCardPart`)
+
+**Why.** Sharing an RSS article to X from the share tray posted the card and, as the post's text, `bplist00%C2%A3%01%02%03_%10Ohttps://www.socialmediatoday.com/…%60` — a percent-encoded CoreFoundation property list with the article's URL inside it. `ShareCardPart.link` exported the thing's URL through a `ProxyRepresentation` to `URL`, and CoreTransferable serialises a proxied URL for `public.url` as that plist. Every reader of `public.url` outside CoreTransferable — `NSURL(dataRepresentation:)`, the pasteboard, a share extension — expects the URL's own UTF-8 bytes, so X read the plist as the string. The card arrived because it is a plain PNG `DataRepresentation`.
+
+**Ruling.** The link is a `DataRepresentation(exportedContentType: .url)` returning `url.dataRepresentation`, with the same exporting condition. Two items still (the card, then the link), the spec's section 2 is unchanged; what changed is the link's encoding. A `Transferable` handed to the system sheet exports a URL as `public.url` DATA, never as a proxied `URL`.
+
+**Not seen.** Fixed from the screenshot's bytes in a session with no device or simulator; the device check is the share tray on an RSS thing → X, the post's text reading as the article's URL alone.
