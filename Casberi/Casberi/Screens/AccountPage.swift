@@ -284,6 +284,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(900))
                 guard onScreen, landed else { return }
+                chrome.connectLanding = source
                 enterRoom()
             }
         }

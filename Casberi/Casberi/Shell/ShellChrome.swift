@@ -1039,6 +1039,13 @@ final class ShellChrome {
     /// fires rather than being swallowed as "no change".
     var sourceRequest: String?
 
+    /// The room a CONNECT just landed in (prd §1029, §1030) — set by
+    /// `AccountPage` beside its `sourceRequest`, never by a tap on the
+    /// Activity row. A room that has a next step after connecting (GitHub's
+    /// watch tray) reads it once and clears it, so the step is offered on
+    /// the arrival a connect made and on no visit after.
+    var connectLanding: String?
+
     // MARK: - The keyboard walk (Mac, 2026-07-31)
 
     /// The rows the ACTIVE feed page is showing, as ids only — the list half
