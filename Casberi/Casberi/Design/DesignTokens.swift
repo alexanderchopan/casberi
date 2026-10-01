@@ -662,7 +662,7 @@ enum DS {
         static let list: CGFloat = 36
         /// A horizontal face shelf, a profile head, a sheet's stage — every
         /// circle that stands on its own, at the face button's size (prd
-        /// §1016, user: "it would look cohesive when you are scrolling"). It
+        /// §1016a, user: "it would look cohesive when you are scrolling"). It
         /// was 56; the app's standalone circles are now ONE size, `seat`,
         /// and only a circle beside a row's words is smaller (`row`).
         ///

@@ -373,7 +373,8 @@ marks chronological position within the pair.
 | §1013 (the tray's You row scrolls with the rooms) | the You row was the first row of the scroll | amended by §1015 — the search field and the You row are pinned above the scroll |
 | §989 (the node's vouchers on Node) | your own node's reward vouchers were a line on the Node figure and Node's rows | amended by §1016 — vouchers move to the Rewards tile with mining, and Node keeps only the node's health: height, sync and peers |
 | §991 (the Logos room is Home · Accounts · Activity · Node) | four tiles, Node the one scope the family did not have | amended by §1016 — a fifth tile, Rewards (mining tickets and reward vouchers), drawn with the app's own `coins.stack` symbol |
-| §1013 (two sizes in the tray: `DS.Face.seat` and the row circle) | the social faces rail and every sheet head still drew at `DS.Face.shelf`, 56pt | amended by §1016 — `shelf` IS `seat` (46pt): every standalone circle in the app is the face button's size |
+| §1013 (two sizes in the tray: `DS.Face.seat` and the row circle) | the social faces rail and every sheet head still drew at `DS.Face.shelf`, 56pt | amended by §1016a — `shelf` IS `seat` (46pt): every standalone circle in the app is the face button's size |
+| §1016 (the faces ruling, as first numbered) | two sessions each took §1016 on 2026-09-30 | the faces ruling is §1016a; §1016 is Logos' Rewards tile, which the source cites |
 
 ## 1. Thesis
 
@@ -62726,7 +62727,7 @@ The Logos team asked for mining: more exposure for Logos, and a way to see it as
 
 **Seen:** built green on an iPhone 17 Pro simulator (iOS 26.5) against a stand-in node on the Mac's 127.0.0.1:8080 serving the five routes in the source's shapes: Rewards drew the coin tile, "3 mining tickets ready", Mining and the vouchers line, and listed "3 mining tickets ready" and "Your node started mining"; Node drew height, sync and peers only. Not seen: a real mining node (none was available), Mac Catalyst, and the String Catalog (the new strings sync at ship time, as every ship).
 
-## §1016 — Every standalone circle is the face button's size (user: "now we have three sizes of circles, the ones in our tray and fab, the ones in rows, and then the social faces in rows. can we make them all the same size?", "i don't understand why we wouldn't do them all the same size", "it would look cohesive when you are scrolling", 2026-09-30; amends §1013)
+## §1016a — Every standalone circle is the face button's size (user: "now we have three sizes of circles, the ones in our tray and fab, the ones in rows, and then the social faces in rows. can we make them all the same size?", "i don't understand why we wouldn't do them all the same size", "it would look cohesive when you are scrolling", 2026-09-30; amends §1013)
 
 **Why.** On a social room the faces rail (56pt, `DS.Face.shelf`), the face button (46pt) and the tray's marks (46pt) stand on one screen and read as two sizes of the same thing. The ramp's reason for `shelf` was the 44pt target, which `seat` already clears; the extra 10pt bought nothing. Sheet heads and the lead body drew at `shelf` too, and consistency outranks a bigger subject.
 
