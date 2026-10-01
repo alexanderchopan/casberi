@@ -183,6 +183,16 @@ enum ContactIndexSources {
     /// you follow would be "recent" whenever they posted. The card itself is
     /// not a thing from the person.
     static func activity(context: ModelContext) -> [String: ContactIndex.Activity] {
+        walk(context: context).activity
+    }
+
+    /// The one walk, and what it also hands the suggester: every mail sender
+    /// in the window with the display name the message carried (prd §1025).
+    /// No second fetch — the walk already reads `authorEmail` and `authorHandle`.
+    static func walk(context: ModelContext) -> (activity: [String: ContactIndex.Activity],
+                                                 senders: [ContactSuggest.Sender]) {
+        var senders: [ContactSuggest.Sender] = []
+        var sendersSeen = Set<String>()
         var descriptor = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
         descriptor.fetchLimit = activityWindow
         descriptor.propertiesToFetch = [\.source, \.kind, \.sourceRef, \.authorHandle, \.walletAddress,
@@ -190,6 +200,12 @@ enum ContactIndexSources {
         var rows: [ContactIndex.ActivityRow] = []
         for thing in (try? context.fetch(descriptor)) ?? [] {
             guard thing.kind != .contact else { continue }
+            if ["Gmail", "iCloud Mail", "Mail"].contains(thing.source),
+               let email = thing.authorEmail?.lowercased(), email.contains("@"),
+               let name = thing.authorHandle, !name.contains("@"), !name.isEmpty,
+               sendersSeen.insert(email).inserted {
+                senders.append(.init(email: email, name: name))
+            }
             let notification = thing.sourceRef?.hasPrefix("gh:notif:") ?? false
             guard !notification else { continue }
             // The transfer's OWN wallet is the one it is from, never the one
@@ -211,7 +227,21 @@ enum ContactIndexSources {
                                   at: thing.capturedAt, acted: false))
             }
         }
-        return ContactIndex.activity(rows: rows)
+        return (ContactIndex.activity(rows: rows), senders)
+    }
+
+    /// What each identity says about itself (prd §1025): the Farcaster and
+    /// Bluesky bios the watch lists already hold, and the book addresses'
+    /// web3.bio profiles (`ContactProfiles`). Read, never fetched.
+    static func profiles() -> [ContactSuggest.Profile] {
+        var out = ContactProfiles.shared.profiles
+        for a in FarcasterStore.shared.accounts {
+            if let bio = a.bio, !bio.isEmpty { out.append(.init(key: Identity.key(.farcaster, a.username), bio: bio)) }
+        }
+        for a in BlueskyStore.shared.accounts {
+            if let bio = a.bio, !bio.isEmpty { out.append(.init(key: Identity.key(.bluesky, a.handle), bio: bio)) }
+        }
+        return out
     }
 
     /// The distinct counterparties of the month's landed transfers, newest
@@ -240,8 +270,15 @@ enum ContactIndexSources {
         for link in discoverVerified() { store.record(link) }
         for link in ContactSuggest.stated(cards: cards, seeds: seeds) { store.record(link) }
         for link in ContactSuggest.suggested(cards: cards, seeds: seeds) { store.record(link) }
+        let walked = walk(context: context)
+        for link in ContactSuggest.claimed(profiles: profiles(), seeds: seeds) { store.record(link) }
+        let book = AddressBook.shared.all.map {
+            ContactSuggest.BookEntry(address: $0.address, name: $0.name, provenance: $0.provenance)
+        }
+        for link in ContactSuggest.fromProvenance(book, seeds: seeds) { store.record(link) }
+        for link in ContactSuggest.senders(walked.senders, cards: cards) { store.record(link) }
         let built = ContactIndex.build(seeds: seeds, links: store.ledger.all,
-                                       activity: activity(context: context))
+                                       activity: walked.activity)
         var byKey: [String: Int] = [:]
         for (i, contact) in built.enumerated() {
             for identity in contact.identities { byKey[identity.key] = i }
@@ -319,6 +356,14 @@ enum ContactIndexSources {
         let lined = built.filter { $0.lastThing != nil }.count
         let recent = built.filter { ($0.lastActedAt ?? .distantPast) > Date.now.addingTimeInterval(-30 * 86400) }.count
         lines.append("activity: \(lined) of \(built.count) carry a newest thing | recent: \(recent) dealt with you in 30 days")
+        // The rules past the name match (prd §1025): which rule each live
+        // suggestion came from, how many profiles web3.bio answered, how many
+        // senders the walk saw, and how many contacts carry a name you gave.
+        var bySource: [String: Int] = [:]
+        for link in ledger where link.tier == .suggested { bySource[link.source, default: 0] += 1 }
+        lines.append("suggest sources: " + bySource.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+        lines.append("profiles: \(ContactProfiles.shared.count) asked, \(profiles().count) with words or links | senders: \(walk(context: context).senders.count) in the window")
+        lines.append("named: \(built.filter(\.named).count) of \(built.count) carry a name you gave")
         for contact in built {
             let ids = contact.identities.map { id -> String in
                 let how = id.tier.map { " (\($0.rawValue)\(id.source == "you" ? ", you" : ""))" } ?? ""

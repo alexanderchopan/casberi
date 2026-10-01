@@ -345,6 +345,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-solNameProbe` `-solActivityProbe` — Wallet/Solana (2026-07-16, prd §85/§86) → docs/hooks/wallet.md · prd §85
 - **Wei / Gwei names, and the router the six copies became** (`-weiNameProbe`) → docs/hooks/wallet.md · prd §597
 - `-addressesProbe YES` `-addressesForget YES` — the Addresses index rebuilt over the stores and the link ledger (prd §916 step 2, `Model/ContactIndex.swift` pure + `ContactIndexSources.swift`) → docs/hooks/wallet.md · prd §916
+- **Addresses suggests from profile links, bios, book provenance and mail senders; a name you gave names the post's author; the receipt says the first transfer; a named book address anchors poisoning; `ThingsWithContactIntent` (prd §1025).** `-addressesProbe fill` reads web3.bio `/profile` first. Never "Waiting on you" from the to-do mark: bridges set it to mean "open" → prd §1025
 - **web3.bio is the resolver behind ENS, and the card gains Base/Linea/Farcaster/Lens rows (prd §916).** → docs/hooks/wallet.md · prd §916
 - **Whether an address belongs to a VERIFIED HUMAN, keylessly** → docs/hooks/wallet.md · prd §785 · §785a
 - **World Chain is ON by default, MEASURED (prd §788; §785 landed it off)** → docs/hooks/wallet.md · prd §785 · §788

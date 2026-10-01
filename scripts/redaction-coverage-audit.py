@@ -94,6 +94,10 @@ EGRESS = {
         "the App Intents display representation, rendered by the system",
     "CasberiIntents.swift":
         "Shortcuts and Siri grounding",
+    "ContactEntity.swift":
+        "the Addresses entity's subtitle (a contact's newest thing) and the "
+        "\"Things with someone\" dialog, both rendered by Siri and Shortcuts "
+        "(prd §1025)",
     "AgentAnswer.swift":
         "the keyed provider's request body — the candidates a paid model is "
         "asked to read",

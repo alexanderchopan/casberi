@@ -335,6 +335,17 @@ struct CasberiShortcuts: AppShortcutsProvider {
             shortTitle: "Search things",
             systemImageName: "magnifyingglass"
         )
+        // Your things with someone in Addresses (prd §1025) — Siri asks
+        // who when the phrase does not name them.
+        AppShortcut(
+            intent: ThingsWithContactIntent(),
+            phrases: [
+                "Things with someone in \(.applicationName)",
+                "What did someone send me in \(.applicationName)",
+            ],
+            shortTitle: "Things with someone",
+            systemImageName: "person.crop.circle"
+        )
         // A Quick Note by voice or the Action button (prd §982): the same
         // flag the Control Center note control writes.
         AppShortcut(

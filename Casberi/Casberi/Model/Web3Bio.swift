@@ -90,6 +90,12 @@ enum Web3Bio {
         let displayName: String?
         /// A plain http(s) URL, or nil.
         let avatar: String?
+        /// What the record says about itself (`description`), or nil.
+        var bio: String? = nil
+        /// The handles the record LINKS, by platform (`github` → `jessepollak`),
+        /// from the `/profile` answer only — `/ns` carries no `links` (measured
+        /// 2026-09-30). Self-asserted: a name's owner writes these text records.
+        var links: [String: String] = [:]
     }
 
     enum Outcome: Equatable {
@@ -117,6 +123,16 @@ enum Web3Bio {
         return URL(string: "https://\(host)/ns/\(encoded)")
     }
 
+    /// The `/profile` URL for an ADDRESS — the same rows as `/ns` plus each
+    /// record's `links` (measured 2026-09-30: same shape, same placeholder
+    /// row for a nameless address, same latency). Only a hex address is asked.
+    static func profileURL(for address: String) -> URL? {
+        let a = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard a.hasPrefix("0x"), a.count == 42,
+              a.dropFirst(2).allSatisfy(\.isHexDigit) else { return nil }
+        return URL(string: "https://\(host)/profile/\(a.lowercased())")
+    }
+
     static func parse(_ json: Any?, status: Int) -> Outcome {
         switch status {
         case 404: return .none
@@ -141,8 +157,16 @@ enum Web3Bio {
         let folded = platform == .sns ? address : address.lowercased()
         let avatar = (row["avatar"] as? String).flatMap { $0.hasPrefix("http") ? $0 : nil }
         let display = (row["displayName"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        let bio = (row["description"] as? String).flatMap {
+            let t = $0.trimmingCharacters(in: .whitespacesAndNewlines); return t.isEmpty ? nil : t
+        }
+        var links: [String: String] = [:]
+        for (platform, value) in (row["links"] as? [String: Any]) ?? [:] {
+            guard let handle = (value as? [String: Any])?["handle"] as? String, !handle.isEmpty else { continue }
+            links[platform.lowercased()] = handle
+        }
         return Record(platform: platform, identity: identity, address: folded,
-                      displayName: display, avatar: avatar)
+                      displayName: display, avatar: avatar, bio: bio, links: links)
     }
 
     /// The records that name THIS address — the first half of §599. The
@@ -233,6 +257,22 @@ enum Web3Bio {
         return names(records, ownedBy: address)
             .contains { $0.platform == record.platform
                      && $0.identity.caseInsensitiveCompare(record.identity) == .orderedSame }
+    }
+
+    /// The records web3.bio holds for this ADDRESS with their links — the
+    /// `/profile` read, kept apart from `lookup`'s cache so a name read never
+    /// stands in for it. Only the records whose own address is this one
+    /// (§599: a reverse answer names other people's addresses). nil when
+    /// there is no answer worth keeping (throttled, unreadable, the demo).
+    @MainActor
+    static func profile(for address: String) async -> [Record]? {
+        guard !DemoMode.isActive, let url = profileURL(for: address) else { return nil }
+        let (json, status) = await IngestSupport.getJSONStatus(url.absoluteString)
+        switch parse(json, status: status) {
+        case .records(let records): return names(records, ownedBy: address)
+        case .none:                 return []
+        case .throttled, .unreadable: return nil
+        }
     }
 
     /// The first http(s) avatar among the records that name this query —

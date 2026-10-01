@@ -99,8 +99,16 @@ enum SocialRoomSource {
     /// stable matching key, not a display string (see `NostrIngest.land`) — so
     /// it alone routes through `shortHandle`; Farcaster and Bluesky store a real
     /// handle and are returned as they are.
+    ///
+    /// **A name you gave wins (prd §1025).** When the Addresses index holds a
+    /// contact for the author whose name YOU gave it — their card, a save, a
+    /// wallet you named and a link joined — the row says that name: §169's
+    /// "naming is free" reaching the feed. A seat's display name never does;
+    /// the handle is what the row has always shown. The lookup reads the last
+    /// rebuild's snapshot and never fetches (§628).
     static func author(of thing: Thing) -> String {
         guard let handle = thing.authorHandle, !handle.isEmpty else { return thing.source }
+        if let contact = ContactIndexSources.contact(for: thing), contact.named { return contact.name }
         return thing.source == "Nostr" ? SocialThread.shortHandle(handle) : handle
     }
 

@@ -148,6 +148,10 @@ struct Contact: Identifiable, Equatable {
     /// a wallet entry's note. Never drawn (user, 2026-09-25: a company line
     /// is meaningless); only matched.
     let keywords: [String]
+    /// The name is one the PERSON gave — a card, a save, a wallet they named
+    /// (prd §1025). Only such a name may stand in for a seat's own handle on a
+    /// row: a display name is the seat's word, and the row already shows it.
+    var named: Bool = false
 
     var lead: Identity { identities[0] }
     func has(_ key: String) -> Bool { identities.contains { $0.key == key } }
@@ -323,7 +327,8 @@ enum ContactIndex {
                                avatar: componentSeeds.compactMap(\.avatar).first,
                                lastActedAt: acted,
                                lastThing: newest?.lastThing,
-                               keywords: keywords))
+                               keywords: keywords,
+                               named: componentSeeds.contains { $0.typed && !($0.name ?? "").isEmpty }))
         }
         return out.sorted { l, r in
             if l.lead.kind.precedence != r.lead.kind.precedence {

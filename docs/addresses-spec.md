@@ -356,6 +356,13 @@ person, which is one predicate per identity kind, never a name match.
 | 2 | **suggested** | the corpus: a contact card's `socialProfiles`/`instantMessageAddresses` naming a handle you follow; a contact's email matching a mail sender you also know as a social account (`from` ↔ card); a book entry's `provenance` ("Farcaster · @jesse") pointing at an account you watch; web3.bio `links` naming an X/GitHub handle you watch | **no** — one "Same person?" row | *you confirmed* once tapped |
 | 3 | **stated** | the contact card's own fields (an ENS name or `0x` address in a URL/note field, a handle in a social profile) | yes, into the contact, never outward | *from their contact card* |
 
+**Built (prd §1025, 2026-09-30).** Tier 2 now reads, besides the name match and the mailbox
+rule: web3.bio `/profile` links for book addresses (GitHub, Farcaster, Bluesky — X has no
+roster, so it drops), the links a Farcaster/Bluesky bio or web3.bio description spells, a book
+entry's social provenance, and a mail sender whose display name is one card's full name (a
+*joinable* end: the address is no row of its own, and a Yes files it under the card). Calendar
+attendees (names only) and commit authors (no email stored) are not built.
+
 Two rules keep §632: **a display name is never a key** — `AddressBookPeople.merged`'s
 name-match merge is deleted with the rest of that file, and the self-test mutates a name-only
 merge back in and must catch it. And **a suggestion is one row, once** — the room never fills

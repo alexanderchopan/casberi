@@ -88,8 +88,8 @@ struct AddressesSection: View {
                 resolverBlock(resolved)
             }
             if query.isEmpty, scope.name == nil, let suggestion,
-               let a = ContactIndexSources.contact(forKey: suggestion.a),
-               let b = ContactIndexSources.contact(forKey: suggestion.b) {
+               let a = Self.party(forKey: suggestion.a),
+               let b = Self.party(forKey: suggestion.b) {
                 suggestionRow(suggestion, a: a, b: b)
             }
             if query.isEmpty, scopes.count > 2, !DSScopeDock<AddressScope>.atBottom(sizeClass) {
@@ -176,25 +176,40 @@ struct AddressesSection: View {
             ($0.id, RowExtras(marks: Self.marks(of: $0), arrival: Self.arrival(of: $0),
                               line: Self.line(of: $0)))
         })
+        // Known means a contact on THIS list: yours are built but hidden
+        // (`isYours`), so a suggestion between your own accounts is never
+        // offered; and two ends one contact already holds ask nothing.
         let next = ContactSuggest.next(in: ContactLinksStore.shared.ledger,
-                                       known: { ContactIndexSources.contact(forKey: $0) != nil })
+                                       known: { key in
+                                           ContactIndexSources.contact(forKey: key)
+                                               .map { !ContactIndexSources.isYours($0) } ?? false
+                                       },
+                                       joinable: Self.joinable,
+                                       apart: { x, y in
+                                           ContactIndexSources.contact(forKey: x)?.id
+                                               != ContactIndexSources.contact(forKey: y)?.id
+                                       })
         if next?.pairKey != suggestion?.pairKey { verdict = nil }
         suggestion = next
         guard let next, verdict == nil,
-              let a = ContactIndexSources.contact(forKey: next.a),
-              let b = ContactIndexSources.contact(forKey: next.b) else { return }
+              let a = Self.party(forKey: next.a),
+              let b = Self.party(forKey: next.b) else { return }
         // The model's sentence, on the phone, from public words only (§916
         // section 3): the names and the handles, never a number or a mailbox.
         // Names and human handles only — a Nostr key or a hex address is
         // noise to a language model (measured: it called one "a random
         // string"), and a mailbox is not public. Only a YES is drawn: a
         // model's doubt is not a fact the row can stand on (§632).
+        // A joinable end's name IS its mailbox (prd §1025), so a name with
+        // an `@` is never handed over, and an end with nothing public left
+        // asks the model nothing.
         let describe = { (c: Contact) in
-            ([c.name] + c.identities
+            ((c.name.contains("@") ? [] : [c.name]) + c.identities
                 .filter { [.farcaster, .bluesky, .github, .ens, .basename, .linea, .lens, .worldApp].contains($0.kind) }
                 .map { ContactSheet.service($0.kind) + " " + $0.label })
                 .joined(separator: ", ")
         }
+        guard !describe(a).isEmpty, !describe(b).isEmpty else { return }
         if let answer = await ContactVerdictModel.judge(describe(a), describe(b)), answer.samePerson {
             verdict = answer.because
         }
@@ -228,6 +243,21 @@ struct AddressesSection: View {
         .buttonStyle(RowPress())
         .dsHover()
         .dsListRow()
+    }
+
+    /// An identity that may join a contact without being a row of its own —
+    /// a mail sender's address the inbox offered beside a card (prd §1025).
+    static func joinable(_ key: String) -> Bool {
+        key.hasPrefix(Identity.Kind.email.prefix) && ContactIndexSources.contact(forKey: key) == nil
+    }
+
+    /// One end of a suggestion as the row draws it: its contact, or — for a
+    /// joinable address — a contact of that address alone.
+    static func party(forKey key: String) -> Contact? {
+        if let contact = ContactIndexSources.contact(forKey: key) { return contact }
+        guard joinable(key), let identity = Identity.parse(key: key) else { return nil }
+        return Contact(id: key, name: identity.body, kind: .person, identities: [identity],
+                       avatar: nil, lastActedAt: nil, lastThing: nil, keywords: [])
     }
 
     /// "Nils on Bluesky" — the name and the service of the end the link names.
@@ -940,6 +970,10 @@ struct ContactSheet: View {
     /// this contact — VALUE snapshots, never a held `[Thing]` (the liveness
     /// class in CLAUDE.md); a tap refetches by id.
     @State private var withYou: [WithYouRow] = []
+    /// "Replied to you" (prd §1025): their replies to your posts, the Today
+    /// widget's "who answered you" for one person. Read on open, five at most,
+    /// and kept out of "With you" so no row is drawn twice.
+    @State private var waiting: [WithYouRow] = []
     /// How many "With you" rows are asked for; `Show older` raises it.
     @State private var withYouLimit = 20
     @State private var openedThing: Thing?
@@ -1075,6 +1109,14 @@ struct ContactSheet: View {
                             identityRow(identity)
                         }
                     }
+                    if !waiting.isEmpty {
+                        VStack(alignment: .leading, spacing: DS.Space.s2) {
+                            Text("Replied to you").dsText(.heading17).foregroundStyle(DS.textPrimary)
+                            VStack(spacing: 0) {
+                                ForEach(waiting) { row in withYouRow(row) }
+                            }
+                        }
+                    }
                     if !withYou.isEmpty {
                         VStack(alignment: .leading, spacing: DS.Space.s2) {
                             Text("With you").dsText(.heading17).foregroundStyle(DS.textPrimary)
@@ -1086,7 +1128,9 @@ struct ContactSheet: View {
                                 if withYou.count >= withYouLimit {
                                     DSDoorRow(icon: "clock.arrow.circlepath", label: "Show older") {
                                         withYouLimit += 80
+                                        let shown = Set(waiting.map(\.id))
                                         withYou = Self.things(for: contact, context: modelContext, limit: withYouLimit)
+                                            .filter { !shown.contains($0.id) }
                                     }
                                 }
                             }
@@ -1140,7 +1184,10 @@ struct ContactSheet: View {
             .dsPageBackground()
             .toolbar(.hidden, for: .navigationBar)
             .task {
+                waiting = Self.waiting(for: contact, context: modelContext)
+                let shown = Set(waiting.map(\.id))
                 withYou = Self.things(for: contact, context: modelContext, limit: withYouLimit)
+                    .filter { !shown.contains($0.id) }
                 if let ref = ContactIndexSources.cardRef(forKey: contact.lead.key) {
                     let facts = Self.cardFacts(ref: ref, context: modelContext)
                     cardPhone = facts.phone; cardEmail = facts.email
@@ -1339,14 +1386,16 @@ struct ContactSheet: View {
     /// Every thing whose `contact(for:)` would be this contact — one string
     /// predicate per identity (a `.contains` predicate traps, CLAUDE.md), the
     /// union sorted newest first and capped at 20.
-    static func things(for contact: Contact, context: ModelContext, limit: Int = 20) -> [WithYouRow] {
+    static func things(for contact: Contact, context: ModelContext, limit: Int = 20,
+                       depth: Int? = nil, keep: (Thing) -> Bool = { _ in true }) -> [WithYouRow] {
         var found: [UUID: WithYouRow] = [:]
         func take(_ descriptor: FetchDescriptor<Thing>) {
             var d = descriptor
             d.sortBy = [SortDescriptor(\Thing.capturedAt, order: .reverse)]
-            d.fetchLimit = limit * 2
+            d.fetchLimit = depth ?? limit * 2
             for thing in (try? context.fetch(d)) ?? [] {
                 if thing.sourceRef?.hasPrefix("gh:notif:") == true { continue }
+                guard keep(thing) else { continue }
                 found[thing.id] = WithYouRow(id: thing.id, title: thing.title,
                                              source: thing.source, when: thing.capturedAt)
             }
@@ -1370,7 +1419,84 @@ struct ContactSheet: View {
                 continue
             }
         }
+        // Screenshots that NAME them (prd §1025): the OCR text (`content`)
+        // spelling one of their public handles or names — `@jesse`, a Bluesky
+        // handle, `jesse.base.eth`. The newest screenshots only, matched in
+        // Swift (a `.contains` predicate is the trap CLAUDE.md records), and
+        // only on a whole token, so `@jess` never matches `@jessepollak`.
+        let tokens = mentionTokens(of: contact)
+        if !tokens.isEmpty {
+            var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Photos" },
+                                           sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+            d.fetchLimit = mentionWindow
+            for thing in (try? context.fetch(d)) ?? [] where thing.kind == .screenshot && keep(thing) {
+                guard mentions(thing.content, anyOf: tokens) else { continue }
+                found[thing.id] = WithYouRow(id: thing.id, title: thing.title,
+                                             source: thing.source, when: thing.capturedAt)
+            }
+        }
         return found.values.sorted { $0.when > $1.when }.prefix(limit).map { $0 }
+    }
+
+    /// How many of the newest screenshots a sheet open reads for mentions.
+    static let mentionWindow = 300
+
+    /// The words a screenshot would have to spell to be ABOUT this contact:
+    /// an `@handle` for a social identity, the full name for a name service.
+    /// Never a wallet's hex (a screenshot of an explorer is not a mention)
+    /// and never an email (OCR of a mail header is the inbox's job).
+    static func mentionTokens(of contact: Contact) -> [String] {
+        var out: [String] = []
+        for identity in contact.identities {
+            switch identity.kind {
+            case .farcaster, .github: out.append("@" + identity.body)
+            case .bluesky:            out.append("@" + identity.body); out.append(identity.body)
+            case .ens, .basename, .linea, .lens: out.append(identity.body)
+            default: continue
+            }
+        }
+        return out.filter { $0.count >= 4 }
+    }
+
+    /// A whole-token, case-folded match: the characters around the token may
+    /// not continue a handle. A dot followed by more name continues it, so
+    /// `@jesse` never matches `@jesse.base.eth`, a different account; a dot
+    /// ending the sentence does not.
+    static func mentions(_ text: String, anyOf tokens: [String]) -> Bool {
+        let hay = text.lowercased()
+        let continues = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_-"))
+        for token in tokens {
+            var rest = hay[...]
+            while let r = rest.range(of: token) {
+                let tail = rest[r.upperBound...].unicodeScalars
+                var boundaryAfter = true
+                if let next = tail.first {
+                    if continues.contains(next) {
+                        boundaryAfter = false
+                    } else if next == ".", let more = tail.dropFirst().first, continues.contains(more) {
+                        boundaryAfter = false
+                    }
+                }
+                let before = r.lowerBound > hay.startIndex ? hay[hay.index(before: r.lowerBound)] : " "
+                let boundaryBefore = !(before.isLetter || before.isNumber || before == "@" || before == "."
+                                       || before == "_" || before == "-")
+                if boundaryBefore, boundaryAfter { return true }
+                rest = rest[r.upperBound...]
+            }
+        }
+        return false
+    }
+
+    /// Their replies to your posts — `socialContext == "reply"`, set only on
+    /// the inbound read of YOUR posts (§804), the widget's own test. Not the
+    /// to-do mark: a bridge sets it to mean "open" (an issue anyone filed in
+    /// a repo you watch), so it cannot say a thing waits on you, and a
+    /// GitHub review request arrives as a notification, which names the repo
+    /// owner and never the person asking (`ContactIndex.keys`).
+    static func waiting(for contact: Contact, context: ModelContext) -> [WithYouRow] {
+        things(for: contact, context: context, limit: 5, depth: 200) { thing in
+            thing.socialContext == "reply" && thing.mark != .done
+        }
     }
 
     private func door(for identity: Identity) -> (() -> Void)? {

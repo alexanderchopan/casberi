@@ -44,6 +44,10 @@ struct MoneyReceiptCard: View {
     /// the disc inert, which is the honesty rule doing its job: a face with
     /// nowhere to go is not a door, and must not look like one.
     var onSubject: ((String) -> Void)?
+    /// How long you have dealt with the other side (prd §1025): "Your first
+    /// transfer with Sam." or "With Sam since Jul 2." — a fact off the
+    /// transfers you hold, drawn quiet under the sentence. nil draws nothing.
+    var history: String? = nil
     // `tear`, `torn` and `reduceMotion` were HERE and are deleted with the
     // paper (prd §583). Nothing is animated on this card any more, so there is
     // no motion for a motion preference to silence.
@@ -108,6 +112,13 @@ struct MoneyReceiptCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s3)
 
+                if let history {
+                    Text(verbatim: history)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
+
                 if let stamp = receipt.stamp {
                     DSStamp(word: stamp.word, weight: stamp.weight.stampWeight)
                         .padding(.top, DS.Space.s3)
@@ -119,7 +130,8 @@ struct MoneyReceiptCard: View {
             .padding(.top, DS.Space.s6)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(receipt.spokenLabel))
-            .accessibilityValue(Text(receipt.spokenValue))
+            .accessibilityValue(Text(verbatim: [receipt.spokenValue, history ?? ""]
+                .filter { !$0.isEmpty }.joined(separator: " ")))
         }
         // NO PAPER (prd §583, 2026-09-03, user: *"i think it looks WAY better
         // without the card"*). §363 gave this card its raised ground, its ink

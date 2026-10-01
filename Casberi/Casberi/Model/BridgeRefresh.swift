@@ -561,6 +561,12 @@ enum BridgeRefresh {
                 await AddressNames.shared.fill(
                     AddressBook.shared.all.map(\.address)
                     + ContactIndexSources.recentCounterparties(context: context))
+                // What the book's addresses say about themselves on web3.bio
+                // (prd §1025): a bio and the handles their names link, which
+                // become "Same person?" suggestions and never merges. Book
+                // only, newest first, six a pass, a fortnight's freshness.
+                await ContactProfiles.shared.fill(
+                    AddressBook.shared.all.sorted { $0.addedAt > $1.addedAt }.map(\.address))
                 // The Addresses index, after the names landed (prd §916,
                 // section 2.4): stores and ledger only, no network, behind a
                 // still hand so a sweep never lands inside a gesture (§666).

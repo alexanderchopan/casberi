@@ -71,6 +71,16 @@ func row(_ platform: String, _ identity: String, _ address: String,
     return r
 }
 
+/// A `/profile` row (prd §1025): the `/ns` row plus `description` and
+/// `links`, each link `{link, handle, sources}` as measured 2026-09-30.
+func prow(_ platform: String, _ identity: String, _ address: String,
+          bio: String?, links: [String: String]) -> [String: Any] {
+    var r = row(platform, identity, address)
+    r["description"] = bio ?? NSNull()
+    r["links"] = links.mapValues { ["link": "https://x/\($0)", "handle": $0, "sources": []] as [String: Any] }
+    return r
+}
+
 // The measured vitalik array: four records, three of which carry OTHER
 // addresses than the ENS one.
 let V = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
@@ -231,11 +241,37 @@ Task { @MainActor in
     _ = await Web3Bio.resolve("VITALIK.ETH")
     check(IngestSupport.requests.count == before + 2, "the cache key folds case")
 
+    // The /profile read (prd §1025): the address's OWN records, with bio and links.
+    let pj = "0x2211d1d0020daea8039e46cf1367962070d77da9"
+    let pbase = "https://api.web3.bio/profile/"
+    IngestSupport.canned[pbase + pj] = ([
+        prow("basenames", "jesse.base.eth", pj, bio: "  base.eth builder #001 ",
+             links: ["github": "jessepollak", "twitter": "jessepollak", "website": "jesse.xyz"]),
+        prow("farcaster", "someoneelse", "0x0000000000000000000000000000000000000009",
+             bio: "not jesse", links: ["github": "impostor"]),
+    ], 200)
+    IngestSupport.canned[pbase + "0x0000000000000000000000000000000000000404"] = (["error": "x"], 404)
+    IngestSupport.canned[pbase + "0x0000000000000000000000000000000000000429"] = (nil, 429)
+    let prof = await Web3Bio.profile(for: pj.uppercased().replacingOccurrences(of: "0X", with: "0x"))
+    check(prof?.count == 1, "a profile keeps only the records whose own address is the one asked")
+    check(prof?.first?.links["github"] == "jessepollak" && prof?.first?.links["twitter"] == "jessepollak",
+          "a profile record carries its links by platform")
+    check(prof?.first?.bio == "base.eth builder #001", "the description is trimmed into the bio")
+    check(await Web3Bio.profile(for: "0x0000000000000000000000000000000000000404") == [],
+          "a 404 is an answer: nothing linked")
+    check(await Web3Bio.profile(for: "0x0000000000000000000000000000000000000429") == nil,
+          "a throttle is no answer, so nothing is stored")
+    check(Web3Bio.profileURL(for: "vitalik.eth") == nil, "only an address is asked on /profile")
+    check(Web3Bio.profileURL(for: "0xZZ11d1d0020daea8039e46cf1367962070d77da9") == nil, "a non-hex body is refused")
+    check(Web3Bio.profileURL(for: pj.uppercased().replacingOccurrences(of: "0X", with: "0x"))?.absoluteString == pbase + pj,
+          "the address is lowercased into the path")
+
     // The demo reaches nothing — and makes no request at all.
     DemoMode.isActive = true
     let quiet = IngestSupport.requests.count
     check(await Web3Bio.resolve("fresh-name.eth") == nil, "the demo resolves nothing")
     check(await Web3Bio.names(for: "0x1111111111111111111111111111111111111111").isEmpty, "the demo names nothing")
+    check(await Web3Bio.profile(for: "0x1111111111111111111111111111111111111111") == nil, "the demo reads no profile")
     check(IngestSupport.requests.count == quiet, "the demo made NO request")
     DemoMode.isActive = false
 
@@ -335,6 +371,22 @@ mutate "the same name is listed twice under two services" \
 mutate "a Farcaster identity loses its @" \
   'self == .farcaster ? "@" + identity : identity' \
   'identity'
+mutate "a profile keeps another address's links" \
+  '        case .records(let records): return names(records, ownedBy: address)' \
+  '        case .records(let records): return records'
+mutate "a profile's links are dropped" \
+  '            links[platform.lowercased()] = handle' \
+  '            _ = handle'
+mutate "a throttled profile reads as nothing linked" \
+  '        case .throttled, .unreadable: return nil' \
+  '        case .throttled, .unreadable: return []'
+mutate "a name is asked on /profile" \
+  '        guard a.hasPrefix("0x"), a.count == 42,
+              a.dropFirst(2).allSatisfy(\.isHexDigit) else { return nil }' \
+  '        guard !a.isEmpty else { return nil }'
+mutate "the demo reads a profile" \
+  '        guard !DemoMode.isActive, let url = profileURL(for: address) else { return nil }' \
+  '        guard let url = profileURL(for: address) else { return nil }'
 
 echo ""
 echo "✓ web3bio self-test passed"

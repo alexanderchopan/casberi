@@ -265,7 +265,25 @@ enum WalletSafety {
                   let cp = t.counterpartyAddress?.lowercased() else { continue }
             out[owner, default: []].insert(cp)
         }
+        // The second anchor (prd §1025): every address the person NAMED in
+        // the book is one they meant, for every wallet they watch — a
+        // look-alike of "Mom" is the attack whether or not this wallet ever
+        // paid Mom. Only a typed name: an auto-name (`…44b1`) is how a
+        // counterparty lands in the book by itself, and a poisoner's own
+        // dust would otherwise become its anchor.
+        let named = namedBookAddresses()
+        if !named.isEmpty {
+            for owner in ownerSet { out[owner, default: []].formUnion(named) }
+        }
         return out
+    }
+
+    /// The book's addresses that carry a name the person typed, lowercased.
+    @MainActor
+    static func namedBookAddresses() -> Set<String> {
+        Set(AddressBook.shared.all
+            .filter { !WalletStore.isAutoName($0.name, for: $0.address) && ENS.isHexAddress($0.address) }
+            .map { $0.address.lowercased() })
     }
 
     /// The fuzzy-match rule: same first 4 and last 4 hex chars as a KNOWN

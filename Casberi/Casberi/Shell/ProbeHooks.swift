@@ -3420,8 +3420,15 @@ enum ProbeHooks {
         // docs/addresses-spec.md). The first line's `linked:` count is the
         // measurement the spec's step 3 waits on: how many of the person's
         // own entries actually join. Never prints a phone or an email.
-        Hook(key: "addressesProbe") { _, context in
+        // `-addressesProbe fill` first asks web3.bio for the book's profiles
+        // (`ContactProfiles.fill`, the sweep's own call, prd §1025), so the
+        // `claimed`/`bio` suggestion lines read a fresh answer.
+        Hook(key: "addressesProbe") { spec, context in
             Task { @MainActor in
+                if spec.lowercased() == "fill" {
+                    await ContactProfiles.shared.fill(
+                        AddressBook.shared.all.sorted { $0.addedAt > $1.addedAt }.map(\.address))
+                }
                 for line in ContactIndexSources.probe(context: context) {
                     NSLog("addresses| %@", line)
                 }

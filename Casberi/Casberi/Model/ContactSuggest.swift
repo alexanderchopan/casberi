@@ -102,11 +102,150 @@ enum ContactSuggest {
         return out
     }
 
+    // MARK: - More rules (prd §1025)
+
+    /// What else the app knows about ONE identity that a rule can read: the
+    /// words it says about itself (a Farcaster or Bluesky bio, a web3.bio
+    /// description) and the handles its profile claims (web3.bio's `links`,
+    /// read for book addresses only). Both are the identity's OWN claim about
+    /// itself — self-asserted, so they SUGGEST and never merge.
+    struct Profile: Equatable {
+        /// The identity the words belong to.
+        let key: String
+        var bio: String? = nil
+        /// Identity keys the profile names as its own (`gh:x`, `fc:y`).
+        var claims: [String] = []
+    }
+
+    /// A book entry as the provenance rule reads it.
+    struct BookEntry: Equatable {
+        let address: String
+        let name: String
+        let provenance: String?
+    }
+
+    /// A mail sender as the inbox names them: the address and the display name
+    /// the message carried.
+    struct Sender: Equatable {
+        let email: String
+        let name: String
+    }
+
+    /// The handles a bio spells as LINKS — `github.com/x`, `bsky.app/profile/x`,
+    /// `farcaster.xyz/x` (and `warpcast.com/x`), `@x.bsky.social`. A bare `@x`
+    /// names nothing: it could be any network's x.
+    static func handles(inBio bio: String) -> [Identity] {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
+        func token(after marker: String, in text: String) -> [String] {
+            var out: [String] = []
+            var rest = text[...]
+            while let r = rest.range(of: marker, options: .caseInsensitive) {
+                let tail = rest[r.upperBound...]
+                let word = String(tail.prefix { $0.unicodeScalars.allSatisfy(allowed.contains) })
+                    .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+                if !word.isEmpty { out.append(word) }
+                rest = tail
+            }
+            return out
+        }
+        var out: [Identity] = []
+        func add(_ id: Identity?) {
+            guard let id, !out.contains(where: { $0.key == id.key }) else { return }
+            out.append(id)
+        }
+        for login in token(after: "github.com/", in: bio) { add(Identity.make(.github, login)) }
+        for handle in token(after: "bsky.app/profile/", in: bio) { add(Identity.make(.bluesky, handle)) }
+        for user in token(after: "farcaster.xyz/", in: bio) + token(after: "warpcast.com/", in: bio) {
+            add(Identity.make(.farcaster, user))
+        }
+        for word in token(after: "@", in: bio) where word.lowercased().hasSuffix(".bsky.social") {
+            add(Identity.make(.bluesky, word))
+        }
+        return out
+    }
+
+    /// A profile's claims and its bio's links, to a handle the app HOLDS.
+    /// Suggested: a person can write anyone's GitHub in a bio.
+    static func claimed(profiles: [Profile], seeds: [ContactIndex.Seed], at: Date = .now) -> [ContactLink] {
+        let held = Set(seeds.map(\.identity.key))
+        var out: [ContactLink] = []
+        var seen = Set<String>()
+        for profile in profiles {
+            let fromBio = profile.bio.map { handles(inBio: $0).map(\.key) } ?? []
+            for (key, source) in profile.claims.map({ ($0, "web3.bio.links") }) + fromBio.map({ ($0, "corpus.bio") }) {
+                guard key != profile.key, held.contains(key),
+                      seen.insert(ContactLink.pairKey(profile.key, key)).inserted else { continue }
+                out.append(ContactLink(profile.key, key, tier: .suggested, source: source, at: at))
+            }
+        }
+        return out
+    }
+
+    /// A book entry saved from a social door — "Farcaster · @jesse", or the
+    /// name `@jesse` under provenance `Farcaster` — to that handle, when the
+    /// app holds it. Suggested: the door verified the address at the moment
+    /// of saving, but the app did not keep the proof.
+    static func fromProvenance(_ entries: [BookEntry], seeds: [ContactIndex.Seed], at: Date = .now) -> [ContactLink] {
+        let held = Set(seeds.map(\.identity.key))
+        var out: [ContactLink] = []
+        for entry in entries {
+            guard let provenance = entry.provenance, !provenance.isEmpty else { continue }
+            let parts = provenance.components(separatedBy: "·").map { $0.trimmingCharacters(in: .whitespaces) }
+            let service = parts[0].lowercased()
+            let handle = parts.count > 1 && parts[1].hasPrefix("@") ? parts[1]
+                : entry.name.hasPrefix("@") ? entry.name : nil
+            guard let handle else { continue }
+            let identity: Identity
+            switch service {
+            case "farcaster": identity = Identity.make(.farcaster, handle)
+            case "bluesky":   identity = Identity.make(.bluesky, handle)
+            default:          continue
+            }
+            let wallet = Identity.key(.wallet, entry.address)
+            guard held.contains(identity.key), wallet != identity.key else { continue }
+            out.append(ContactLink(wallet, identity.key, tier: .suggested, source: "book.provenance", at: at))
+        }
+        return out
+    }
+
+    /// A mail sender whose display name IS a card's full name, from an address
+    /// the card does not list. Two words at least — a first name alone is
+    /// everybody — and a name two cards share suggests nothing.
+    static func senders(_ senders: [Sender], cards: [Card], at: Date = .now) -> [ContactLink] {
+        var byName: [String: [Card]] = [:]
+        for card in cards { byName[fold(card.name), default: []].append(card) }
+        var out: [ContactLink] = []
+        var seen = Set<String>()
+        for sender in senders {
+            let name = fold(sender.name)
+            guard sender.email.contains("@"), name.split(separator: " ").count >= 2,
+                  let match = byName[name], match.count == 1 else { continue }
+            let card = match[0]
+            guard !card.emails.contains(where: { $0.caseInsensitiveCompare(sender.email) == .orderedSame }) else { continue }
+            let mail = Identity.key(.email, sender.email)
+            guard seen.insert(ContactLink.pairKey(card.key, mail)).inserted else { continue }
+            out.append(ContactLink(card.key, mail, tier: .suggested, source: "corpus.sender", at: at))
+        }
+        return out
+    }
+
     /// The ONE suggestion the list may draw: the newest live suggestion whose
-    /// two ends are both in the index.
-    static func next(in ledger: LinkLedger, known: (String) -> Bool) -> ContactLink? {
+    /// two ends are both in the index — or one end in it and the other an
+    /// identity that may JOIN it without being a row of its own (a mail
+    /// sender's address, `joinable`), which a Yes files under the contact.
+    ///
+    /// `apart` says the two ends are NOT already one contact: a suggestion
+    /// whose ends another link already joined asks a question with no
+    /// answer (a card stating a GitHub login, and a profile linking the same
+    /// login to the card's wallet), and a Yes would change nothing.
+    static func next(in ledger: LinkLedger, known: (String) -> Bool,
+                     joinable: (String) -> Bool = { _ in false },
+                     apart: (String, String) -> Bool = { _, _ in true }) -> ContactLink? {
         ledger.all
-            .filter { $0.suggests && known($0.a) && known($0.b) }
+            .filter { $0.suggests && ((known($0.a) && known($0.b))
+                                      || (known($0.a) && joinable($0.b))
+                                      || (joinable($0.a) && known($0.b)))
+                      && apart($0.a, $0.b) }
             .max { $0.at < $1.at }
     }
 

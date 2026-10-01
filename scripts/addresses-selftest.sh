@@ -275,6 +275,78 @@ check(ContactSuggest.suggested(cards: [], seeds: [ContactIndex.Seed(Identity.mak
                                                   ContactIndex.Seed(Identity.make(.bluesky, "b"), name: "Al")]).isEmpty,
       "a two-letter name is too short to suggest on")
 
+// ── More rules (prd §1025): bios, profile links, provenance, senders ────
+let bioIDs = ContactSuggest.handles(inBio: "builder. github.com/JessePollak, bsky.app/profile/jesse.xyz · warpcast.com/jesse. @uma.bsky.social and @plain")
+check(bioIDs.map(\.key) == ["gh:jessepollak", "bsky:jesse.xyz", "fc:jesse", "bsky:uma.bsky.social"],
+      "a bio's LINKS name handles, case folded and trailing punctuation dropped: \(bioIDs.map(\.key))")
+check(!bioIDs.contains { $0.key.hasSuffix("plain") }, "a bare @handle in a bio names nothing — it could be any network")
+check(ContactSuggest.handles(inBio: "farcaster.xyz/jesse").map(\.key) == ["fc:jesse"], "farcaster.xyz is read like warpcast.com")
+let walletJ = ContactIndex.Seed(Identity.make(.wallet, A), name: "Jesse", typed: true)
+let ghPollak = ContactIndex.Seed(Identity.make(.github, "jessepollak"), name: "Jesse Pollak")
+let claimedLinks = ContactSuggest.claimed(
+    profiles: [ContactSuggest.Profile(key: A, bio: nil, claims: ["gh:jessepollak", "gh:nobody", A]),
+               ContactSuggest.Profile(key: "fc:jesse", bio: "code: github.com/jessepollak", claims: [])],
+    seeds: [walletJ, ghPollak, fcJ])
+check(claimedLinks.count == 2 && claimedLinks.allSatisfy { $0.tier == .suggested },
+      "a profile's claims and a bio's links are SUGGESTED, one per held handle: \(claimedLinks.map(\.pairKey))")
+check(claimedLinks.contains { $0.pairKey == ContactLink.pairKey(A, "gh:jessepollak") && $0.source == "web3.bio.links" },
+      "a web3.bio link to a login you watch is suggested to the wallet")
+check(claimedLinks.contains { $0.pairKey == ContactLink.pairKey("fc:jesse", "gh:jessepollak") && $0.source == "corpus.bio" },
+      "a bio's GitHub link is suggested to the account whose bio it is")
+check(!claimedLinks.contains { $0.pairKey.contains("gh:nobody") }, "a claim to a handle nobody watches draws nothing")
+let builtClaims = ContactIndex.build(seeds: [walletJ, ghPollak, fcJ], links: claimedLinks)
+check(builtClaims.count == 3, "a claim merges nothing")
+
+let bskyUma = ContactIndex.Seed(Identity.make(.bluesky, "uma.bsky.social"), name: "Uma")
+let prov = ContactSuggest.fromProvenance([
+    .init(address: A, name: "Jesse", provenance: "Farcaster · @jesse"),
+    .init(address: B, name: "@uma.bsky.social", provenance: "Bluesky"),
+    .init(address: "0x" + String(repeating: "c", count: 40), name: "Mom", provenance: "Contacts"),
+    .init(address: "0x" + String(repeating: "d", count: 40), name: "@ghost", provenance: "Farcaster"),
+    .init(address: "0x" + String(repeating: "e", count: 40), name: "@jesse", provenance: "Vibenet key · main"),
+], seeds: [fcJ, bskyUma])
+check(prov.count == 2 && prov.allSatisfy { $0.tier == .suggested && $0.source == "book.provenance" },
+      "a book entry saved from a social door is suggested to that handle: \(prov.map(\.pairKey))")
+check(prov.contains { $0.pairKey == ContactLink.pairKey(A, "fc:jesse") }, "\"Farcaster · @jesse\" names fc:jesse")
+check(prov.contains { $0.pairKey == ContactLink.pairKey(B, "bsky:uma.bsky.social") }, "a name @uma under Bluesky names bsky:uma")
+
+let cardAna = ContactSuggest.Card(key: "contact:a1", name: "Ana Ruiz", lines: [], emails: ["ana@home.com"])
+let cardAna2 = ContactSuggest.Card(key: "contact:a2", name: "Sam Lee", lines: [], emails: [])
+let cardSam = ContactSuggest.Card(key: "contact:a3", name: "Sam Lee", lines: [], emails: [])
+let sent = ContactSuggest.senders([
+    .init(email: "ana@work.com", name: "Ana Ruiz"),
+    .init(email: "ana@home.com", name: "Ana Ruiz"),
+    .init(email: "ana@other.com", name: "Ana"),
+    .init(email: "sam@x.com", name: "Sam Lee"),
+    .init(email: "kai@x.com", name: "Kai"),
+], cards: [cardAna, cardAna2, cardSam, ContactSuggest.Card(key: "contact:k9", name: "Kai", lines: [], emails: [])])
+check(sent.count == 1 && sent[0].pairKey == ContactLink.pairKey("contact:a1", "mail:ana@work.com")
+      && sent[0].tier == .suggested && sent[0].source == "corpus.sender",
+      "a sender whose name is ONE card's full name, from an address the card lacks, is suggested: \(sent.map(\.pairKey))")
+var jl = LinkLedger()
+for l in sent { jl = jl.recording(l) }
+let cardKnown: (String) -> Bool = { $0 == "contact:a1" }
+let isMail: (String) -> Bool = { $0.hasPrefix("mail:") }
+check(ContactSuggest.next(in: jl, known: cardKnown) == nil, "a sender's address alone is no row, so it is not offered")
+check(ContactSuggest.next(in: jl, known: cardKnown, joinable: isMail)?.pairKey == sent[0].pairKey,
+      "…but it is offered beside a card when the address may JOIN it")
+check(ContactSuggest.next(in: jl, known: { _ in false }, joinable: isMail) == nil,
+      "two joinable ends with no contact between them are not offered")
+let yes = jl.confirming("contact:a1", "mail:ana@work.com")
+let joined = ContactIndex.build(seeds: [ContactIndex.Seed(Identity.make(.contact, "contact:a1"), name: "Ana Ruiz", typed: true)],
+                                links: yes.all)
+check(joined.count == 1 && joined[0].has("mail:ana@work.com"), "a Yes files the sender's address under the card")
+
+check(ContactSuggest.next(in: jl, known: cardKnown, joinable: isMail, apart: { _, _ in false }) == nil,
+      "a suggestion whose ends are already one contact is not offered")
+
+// The name you gave (prd §1025): only a typed name marks the contact named.
+let namedC = ContactIndex.build(seeds: [walletJ, fcJ],
+                                links: [ContactLink(A, "fc:jesse", tier: .verified, source: "farcaster.verifications")])
+check(namedC.count == 1 && namedC[0].named && namedC[0].name == "Jesse", "a typed name marks the contact named")
+let displayOnly = ContactIndex.build(seeds: [fcJ], links: [])
+check(displayOnly.count == 1 && !displayOnly[0].named, "a seat's display name is not a name you gave")
+
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("✓ addresses self-test: every assertion held")
 SWIFT
@@ -374,8 +446,8 @@ mutate "a card line for a service with no roster becomes an edge" "$SUGGEST" \
   '        default:                      return nil' \
   '        default:                      return Identity.make(.farcaster, handle)'
 mutate "a declined suggestion is offered again" "$SUGGEST" \
-  '            .filter { $0.suggests && known($0.a) && known($0.b) }' \
-  '            .filter { $0.tier == .suggested && known($0.a) && known($0.b) }'
+  '            .filter { $0.suggests && ((known($0.a) && known($0.b))' \
+  '            .filter { $0.tier == .suggested && ((known($0.a) && known($0.b))'
 mutate "an older thing overwrites the line" "$INDEX" \
   '                if (a.lastAt ?? .distantPast) < row.at {' \
   '                if true {'
@@ -388,6 +460,40 @@ mutate "a card's email stops joining the card" "$SUGGEST" \
 mutate "the joined identity forgets how it joined" "$INDEX" \
   '                    if let t = tiers[id.key] { id.tier = t.0; id.source = t.1 }' \
   ''
+mutate "a profile claim merges" "$SUGGEST" \
+  '                out.append(ContactLink(profile.key, key, tier: .suggested, source: source, at: at))' \
+  '                out.append(ContactLink(profile.key, key, tier: .verified, source: source, at: at))'
+mutate "a claim to a handle nobody watches becomes an edge" "$SUGGEST" \
+  '                guard key != profile.key, held.contains(key),' \
+  '                guard key != profile.key,'
+mutate "a bare @handle in a bio names a Bluesky account" "$SUGGEST" \
+  '        for word in token(after: "@", in: bio) where word.lowercased().hasSuffix(".bsky.social") {' \
+  '        for word in token(after: "@", in: bio) {'
+mutate "provenance from any service becomes an edge" "$SUGGEST" \
+  '            default:          continue
+            }
+            let wallet' \
+  '            default:          identity = Identity.make(.farcaster, handle)
+            }
+            let wallet'
+mutate "a first name alone suggests a sender" "$SUGGEST" \
+  'name.split(separator: " ").count >= 2' \
+  'name.split(separator: " ").count >= 1'
+mutate "a name two cards share suggests a sender" "$SUGGEST" \
+  'let match = byName[name], match.count == 1 else { continue }' \
+  'let match = byName[name], !match.isEmpty else { continue }'
+mutate "a sender the card already lists is suggested" "$SUGGEST" \
+  '            guard !card.emails.contains(where: { $0.caseInsensitiveCompare(sender.email) == .orderedSame }) else { continue }' \
+  ''
+mutate "a joinable end needs no contact beside it" "$SUGGEST" \
+  '                                      || (known($0.a) && joinable($0.b))' \
+  '                                      || joinable($0.b)'
+mutate "a suggestion inside one contact is offered" "$SUGGEST" \
+  '                      && apart($0.a, $0.b) }' \
+  '                      }'
+mutate "a seat's display name counts as one you gave" "$INDEX" \
+  'named: componentSeeds.contains { $0.typed && !($0.name ?? "").isEmpty }' \
+  'named: componentSeeds.contains { !($0.name ?? "").isEmpty }'
 
 echo ""
 echo "✓ addresses self-test passed"
