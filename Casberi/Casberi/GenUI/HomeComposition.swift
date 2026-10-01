@@ -80,6 +80,7 @@ enum HomeComposition {
             "Deal",                                       // Deals
             "Delivered", "Module added",                  // Safe, 7579
             "Deprecated", "Issue",
+            "Mining", "Rewards", "Ticket",                // Logos (prd §1016)
             "Regression", "Resolved",                     // GitHub, Sentry
             "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
             // The instrument a money row came off, stamped by
