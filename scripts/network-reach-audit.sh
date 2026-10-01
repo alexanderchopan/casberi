@@ -242,7 +242,7 @@ KNOWN_NON_REACH=(
   # returns immediately while `DemoMode.isActive`), so none of these is ever
   # fetched by us.
   picsum.photos www.allbirds.com www.google.com www.nasa.gov
-  developer.apple.com developer.mozilla.org www. example.com
+  developer.apple.com developer.mozilla.org en.wikipedia.org www. example.com
   # X's link shortener — appears ONLY in prose. Three comments in
   # XArchiveImport/ScreenshotTopics discuss the `https://t.co/…` shape
   # because handling it correctly is the whole point of those passages: an
