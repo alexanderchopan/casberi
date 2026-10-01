@@ -86,7 +86,15 @@ KNOWN_DANGLING = {
 # multi-part ruling). A lint that cries wolf gets turned off within a week, so
 # check the finding list against a tree you believe in before trusting a new
 # rule here — the design-motion audit paid for this same lesson in 2026-08-04.
-SECTION_HEADING = re.compile(r"^(##)\s+(?:§)?(\d{1,3}[a-z]{0,2})\b(.*)$")
+#
+# **THE NUMBER IS UNBOUNDED, `\d+`, in all four patterns** (2026-09-30). They
+# read `\d{1,3}` until the ledger reached §1000, and from there every new
+# heading was silently invisible: the count stood still, a duplicate
+# four-digit number could not fail check A, a four-digit citation could not
+# resolve, and text under a four-digit heading was charged to the last
+# three-digit section (a run reported §999 amending what a later entry did). A width cap is a check that switches
+# itself off on the ledger's own growth, so there is none.
+SECTION_HEADING = re.compile(r"^(##)\s+(?:§)?(\d+[a-z]{0,2})\b(.*)$")
 
 # A sub-entry: `## §319 amendment`, `### §286 follow-up`, `### 165a.`. These
 # deliberately re-use their parent's number and are NOT collisions.
@@ -108,10 +116,10 @@ SUB_ENTRY = re.compile(
 # An H1 carrying a § is always wrong — that is the §276/§277 bug, and the only
 # heading-level mistake worth failing a build over. An H3 carrying a § is the
 # established sub-entry convention and is fine.
-STRAY_H1 = re.compile(r"^#\s+§(\d{1,3}[a-z]{0,2})\b(.*)$")
+STRAY_H1 = re.compile(r"^#\s+§(\d+[a-z]{0,2})\b(.*)$")
 # A section reference in prose. The optional qualifier lets check D skip a
 # reference to a DIFFERENT document that happens to be numbered.
-SECTION_REF = re.compile(r"(build-brief |design-principle |agent-brief )?§(\d{1,3}[a-z]{0,2})\b")
+SECTION_REF = re.compile(r"(build-brief |design-principle |agent-brief )?§(\d+[a-z]{0,2})\b")
 SUPERSEDE_VERB = re.compile(
     r"\b(supersedes?|superseding|amends?|amending"
     # ACTIVE VOICE ONLY, and the omissions are deliberate: "superseded BY §N"
@@ -143,7 +151,7 @@ def headings(text):
 # `### §204 amendment`, `### §252a`. Qualified by a § or a letter suffix, which
 # is what separates it from `### 3. Color rule` — a numbered item inside an
 # entry, which nothing cites and which must not count as defining "§3".
-SUB_HEADING = re.compile(r"^#{3,6}\s+(§\d{1,3}[a-z]{0,2}|\d{1,3}[a-z]{1,2})\b")
+SUB_HEADING = re.compile(r"^#{3,6}\s+(§\d+[a-z]{0,2}|\d+[a-z]{1,2})\b")
 
 
 def defined(text):
@@ -437,6 +445,17 @@ def self_test():
         "no index at all": (
             "## §61 — The ladder\n", [], True,
             "a ledger with no Superseded index section"),
+        "four-digit collision": (
+            index + "## §1015 — The tray searches in place\n\n## §1015 — Another session\n",
+            [], True, "two headings sharing a FOUR-digit number (the `\\d{1,3}` ceiling)"),
+        "four-digit citation": (
+            index + "## §1015 — The tray searches in place\n",
+            [("Shell/RoomsTray.swift", "1015")], False,
+            "a citation of a four-digit section, which resolves"),
+        "four-digit supersede": (
+            index + "## §1008 — The tray's marks\n\n## §1012 — The You doors\n\n"
+                    "This supersedes §1008.\n",
+            [], True, "a four-digit section superseding one with no index row"),
         "clean": (clean, [("CLAUDE.md", "61")], False, "a correct ledger"),
     }
 
@@ -448,6 +467,14 @@ def self_test():
         mark = "ok  " if flagged == should_flag else "FAIL"
         verb = "flags " if should_flag else "passes"
         print(f"  {mark} {verb} {why}")
+
+    # The count itself: a four-digit heading is a section, and is not charged to
+    # the three-digit one before it. Under `\d{1,3}` this fixture counts ONE.
+    four = headings(index + "## §999 — Last of the three\n\n## §1000 — Markets\n")
+    got = {"999", "1000"} <= set(four) and "100" not in four
+    if not got:
+        ok = False
+    print(f"  {'ok  ' if got else 'FAIL'} counts a four-digit heading as its own section")
 
     # --next, proven on the one property that is its whole reason to exist: an
     # uncommitted claim counts as TAKEN. A heading-only reading of this fixture
