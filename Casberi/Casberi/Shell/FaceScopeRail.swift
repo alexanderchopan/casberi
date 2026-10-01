@@ -922,9 +922,10 @@ enum SocialScopeRail {
 /// **No `+` and no book door IN THE RAIL.** The rail picks; it never adds.
 /// Watching was the account page's alone (user: *"can we emulate the way
 /// wallet and devnets do their watching so it is only on the set up screen"*)
-/// until prd §1030 gave the room its own verb row under the menu,
-/// `FeedScreen.githubWatchSection` — as the Wallet's Follow address left
-/// setup for the room (§954). The verb is a row, so the rail stays a choice.
+/// until prd §1030 gave the room its own verb, now the Watch TILE last in the
+/// room's grid (§1031, `RoomKindTile.watch`) — as the Wallet's Follow address
+/// left setup for the room (§954). The verb is a tile, so the rail stays a
+/// choice.
 enum GitHubScopeRail {
     /// Nothing watched draws NO ROW — see `GitHubRowTag.railShows`, which owns
     /// the rule so a harness can compile it.

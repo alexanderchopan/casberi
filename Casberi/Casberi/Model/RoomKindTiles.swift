@@ -38,6 +38,11 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     case queue, activity, permissions
     // GitHub
     case pullRequests, issues, releases
+    // GitHub's VERB (prd §1031) — watch a repo or a person. Never a kind: no
+    // row is a `.watch`, no census returns it, and it never lights. It rides
+    // this enum as New rides Notes' and Mail's scopes, because a verb tile is
+    // a tile in the room's one grid.
+    case watch
     // Stripe
     case payments, payouts, disputes
     // App Store Connect (prd §816)
@@ -66,6 +71,9 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     var id: String { rawValue }
 
+    /// A verb tile acts instead of scoping, and never lights (prd §1031).
+    var isVerb: Bool { self == .watch }
+
     var label: String {
         switch self {
         case .all:          return String(localized: "All")
@@ -75,6 +83,7 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .pullRequests: return String(localized: "Pull requests")
         case .issues:       return String(localized: "Issues")
         case .releases:     return String(localized: "Releases")
+        case .watch:        return String(localized: "Watch")
         case .payments:     return String(localized: "Payments")
         case .payouts:      return String(localized: "Payouts")
         case .disputes:     return String(localized: "Disputes")
@@ -120,6 +129,7 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .pullRequests: return String(localized: "Pull requests")
         case .issues:       return String(localized: "Issues")
         case .releases:     return String(localized: "Releases")
+        case .watch:        return String(localized: "Watch a repo or a person, privately")
         case .payments:     return String(localized: "Failed, recovered and canceled payments")
         case .payouts:      return String(localized: "Money paid out to your bank")
         case .disputes:     return String(localized: "Disputes opened and closed")
@@ -219,6 +229,12 @@ enum RoomKindTiles {
             case .cursor:          return "Cursor"
             case .appleHealth:     return "Apple Health"
             }
+        }
+
+        /// The room's VERB tiles (prd §1031), drawn last and never lit —
+        /// apart from `order`, whose every tile is a kind a row can be.
+        var verbs: [RoomKindTile] {
+            self == .github ? [.watch] : []
         }
 
         /// Every tile the room could offer, All first, in drawing order.
@@ -525,6 +541,17 @@ enum RoomKindTiles {
         let shown = room.order.filter { $0 != .all && kinds.contains($0) }
         guard shown.count >= 2 || (shown.count == 1 && hasUnkinded) else { return [] }
         return [.all] + shown
+    }
+
+    /// The kinds `present` offers, with the room's verbs after them (prd
+    /// §1031) — only where the verb can act (`acting`: GitHub holds a key),
+    /// or it is a dead control (§83). A verb stands even when no kind would:
+    /// All, then the verb, because a room with no kinds still has the act,
+    /// and All beside a verb is not the §805 list drawn twice.
+    static func withVerbs(_ tiles: [RoomKindTile], room: Room,
+                          acting: Bool) -> [RoomKindTile] {
+        guard acting, !room.verbs.isEmpty else { return tiles }
+        return (tiles.isEmpty ? [.all] : tiles) + room.verbs
     }
 
     /// A pick whose kind is no longer offered falls back to All.

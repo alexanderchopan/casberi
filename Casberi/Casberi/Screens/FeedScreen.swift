@@ -620,7 +620,7 @@ struct FeedScreen: View {
         /// inside a List row tears this screen's own sheet down mid-rise.
         case socialFaces
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
-        /// connect made, and from the room's "Watch a repo or person" row.
+        /// connect made, and from the room's Watch tile (§1031).
         case githubWatch
         /// One address that paid somebody else's gas, with the moves the room
         /// is currently showing — passed rather than re-read, because the room
@@ -693,8 +693,8 @@ struct FeedScreen: View {
         }
     }
     @State var feedSheet: FeedSheetRoute?
-    /// Whether this device holds a GitHub key — the watch row's gate (prd
-    /// §1030), so a demo seat with no key never draws a verb that cannot
+    /// Whether this device holds a GitHub key — the Watch tile's gate (prd
+    /// §1031), so a demo seat with no key never draws a verb that cannot
     /// act (§83). Read in a `.task`, never a body (a Keychain read, §628).
     @State var githubKeyed = false
     /// Non-nil while the last-account confirm sits open for a vibenet
@@ -3216,12 +3216,24 @@ struct FeedScreen: View {
     /// last time (`RoomKindTileMemory`, prd §830) — never the attention dot,
     /// which waits for the reading.
     private var kindTilesInHead: DSScopeTiles<RoomKindTile>? {
-        let tiles = heads?.kindTiles
-            ?? (RoomKindTiles.Room(source: source) != nil ? RoomKindTileMemory.tiles(for: source) : nil)
+        let room = RoomKindTiles.Room(source: source)
+        var tiles = heads?.kindTiles
+            ?? (room != nil ? RoomKindTileMemory.tiles(for: source) : nil)
+        // GitHub's Watch verb, last (prd §1031) — where a key can act on it.
+        if let room {
+            tiles = RoomKindTiles.withVerbs(tiles ?? [], room: room,
+                                            acting: room == .github && githubKeyed)
+        }
         guard let tiles, !tiles.isEmpty else { return nil }
         return DSScopeTiles(sections: tiles,
                             active: roomKindPick,
-                            attention: heads?.kindAttention ?? []) { picked in
+                            attention: heads?.kindAttention ?? [],
+                            verbs: Set(tiles.filter(\.isVerb))) { picked in
+            // A verb acts and never scopes; Watch is the only one (§1031).
+            if picked.isVerb {
+                feedSheet = .githubWatch
+                return
+            }
             withAnimation(DS.Motion.standard) { chrome.roomKind = picked }
         }
     }
@@ -8369,8 +8381,6 @@ struct FeedScreen: View {
                        menuFollows: roomScopeDraws)
         // Under the tiles, as the Wallet's account menu is (prd §959).
         roomScopeSection
-        // GitHub's watch verb, under its menu (prd §1030).
-        githubWatchSection
         if visible.isEmpty {
             // A tile and a face together can hold nothing (the GitHub rail
             // combines with the tile) — said under the tiles, which stay, the

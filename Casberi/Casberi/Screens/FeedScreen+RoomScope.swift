@@ -160,30 +160,6 @@ extension FeedScreen {
         }
     }
 
-    /// WATCHING STANDS IN THE GITHUB ROOM (prd §1030, user: "ok do both",
-    /// amending the 2026-09-11 "only on the set up screen"). A verb is a row
-    /// (§746), last, under the tiles and the menu — and drawn with NO watch
-    /// too, because a room with no watch draws no menu, and this row is then
-    /// the only sign that watching exists. Every platform: the shell's rail
-    /// on iPad and Mac carries faces, not verbs. `eye` is the app's watch
-    /// glyph (Follow address, the address book's Watch).
-    @ViewBuilder
-    var githubWatchSection: some View {
-        if source == "GitHub", githubKeyed {
-            Section {
-                DevnetVerbRow(title: String(localized: "Watch a repo or person"),
-                              glyph: "eye",
-                              tint: DS.tint,
-                              act: { feedSheet = .githubWatch })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.leadGap,
-                                              trailing: DSRoomChassis.inset))
-            }
-        }
-    }
-
     /// The `+N` tray, presented through the screen's one sheet.
     var socialFacesTray: some View {
         SocialFacesTray(accounts: SocialRoomSource.accounts(for: source), source: source,

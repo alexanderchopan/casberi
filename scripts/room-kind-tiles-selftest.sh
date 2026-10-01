@@ -207,7 +207,8 @@ else:
                  "versions", "reviews", "builds", "models", "datasets", "papers",
                  "metrics", "annotations", "milestones", "chains", "wallets", "news", "revisions", "accounts",
                  "sales", "subscriptions", "errors", "regressions", "deploys", "failed",
-                 "alarms", "costs", "incidents", "resolved", "deprecations", "workouts", "sleep", "mood"]:
+                 "alarms", "costs", "incidents", "resolved", "deprecations", "workouts", "sleep", "mood",
+                 "watch"]:
         if not re.search(r'case \.%s:\s+return ScopeTileGlyph\.%s\b' % (case, case), body):
             fails.append(f"RoomKindTile.{case} does not wear ScopeTileGlyph.{case}")
 # All is the dock's own glyph, read from its one table.
@@ -388,11 +389,31 @@ check(RoomKindTiles.Room.l2beat.order.contains(.news) && RoomKindTiles.Room.wall
       && RoomKindTiles.Room.l2beat.order.contains(.revisions) && RoomKindTiles.Room.walletbeat.order.contains(.revisions),
       "News and Revisions are one case each, shared by L2BEAT and Walletbeat")
 // Every tile is offered by at least one room: a case no room orders is a
-// meaning with a glyph and no door.
+// meaning with a glyph and no door. A VERB is offered through `verbs`, never
+// `order`, whose every tile is a kind a row can be (prd §1031).
 for tile in T.allCases {
-    check(RoomKindTiles.Room.allCases.contains { $0.order.contains(tile) },
+    check(RoomKindTiles.Room.allCases.contains { $0.order.contains(tile) || $0.verbs.contains(tile) },
           "\(tile.rawValue) is offered by some room")
+    check(tile.isVerb == RoomKindTiles.Room.allCases.contains { $0.verbs.contains(tile) },
+          "\(tile.rawValue): a verb exactly when some room offers it as one")
 }
+for room in RoomKindTiles.Room.allCases {
+    check(!room.order.contains { $0.isVerb }, "\(room.source): no verb in the kinds' order")
+}
+
+// ── GitHub's Watch verb (prd §1031) ─────────────────────────────────────
+let gh = RoomKindTiles.Room.github
+check(RoomKindTiles.withVerbs([.all, .pullRequests, .issues], room: gh, acting: true)
+        == [.all, .pullRequests, .issues, .watch], "Watch rides last, after the kinds")
+check(RoomKindTiles.withVerbs([], room: gh, acting: true) == [.all, .watch],
+      "no kinds: All, then Watch — the act stands without rows")
+check(RoomKindTiles.withVerbs([.all, .pullRequests, .issues], room: gh, acting: false)
+        == [.all, .pullRequests, .issues], "no key: no verb (§83)")
+check(RoomKindTiles.withVerbs([], room: gh, acting: false).isEmpty, "no key, no kinds: no tiles")
+check(RoomKindTiles.withVerbs([.all, .payments, .payouts], room: .stripe, acting: true)
+        == [.all, .payments, .payouts], "a room with no verbs is untouched")
+check(!RoomKindTiles.allows(.watch, kind: .pullRequests) && !RoomKindTiles.allows(.watch, kind: nil),
+      "Watch scopes nothing")
 for room in RoomKindTiles.Room.allCases {
     check(room.order.first == .all, "\(room.source): All is the first tile")
     check(RoomKindTiles.Room(source: room.source) == room, "\(room.source): source round-trips")

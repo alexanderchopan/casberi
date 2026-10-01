@@ -380,6 +380,7 @@ marks chronological position within the pair.
 | §1016a (two circle sizes: `seat` standing alone, `row` beside words) | row leads stayed 26/28 and list marks 36 | superseded by §1017 — `row`, `rowCircle`, `list` and `Mark.tile` are all `seat` (46): one circle size for every mark and face |
 | §982 (declined: sketching in a note) | a note took a checklist, a scan, a link, a Quick Note and a lock, and no drawing | reversed in part by §1023 — Attach's Sketch opens Apple's canvas and keeps the drawing as the note's one picture; §982's other declines stand |
 | §640 (a glyphless act row is inset to the title column) | the entry well started at the title column, a disc wider on the left than the right | amended by §1027 — the entry well spans the column, discs' edge to the page's; every other glyphless row keeps the inset |
+| §1030 (GitHub's watch verb is a row under the menu) | `Watch a repo or person` stood as a `DevnetVerbRow` under the tiles and menu | amended by §1031 — the verb is the Watch tile, last in the room's grid, as Reminders' New is; the tray and its one-time rise after a connect stand |
 
 ## 1. Thesis
 
@@ -62925,3 +62926,19 @@ Drawn first as a canvas (claude.ai artifact "Five things to do", `design/mockups
 **Audit follow-through.** `setup-copy-audit.py` check 7d read the three door writes off `AccountPage.openRoom`; §1029 moved them into `enterRoom()`, so the check follows the call, with three new self-test cases (delegation passes, a delegated door missing `closeConnectForm` fails, a delegation to a deleted `enterRoom` fails).
 
 **Not verified:** written in a Linux cloud session with no Xcode or simulator — not built, not run. Owed: `verify.sh`, a real GitHub connect on the iPhone 17 Pro (the tray rises once after landing, the row opens it again, a watch shows in the menu after the tray closes), and the row on the Mac.
+
+## §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is (user: "perhaps GitHub should have a tile for follow, kind of like how we have one for new in reminders", 2026-10-01; amends §1030)
+
+**The row was a second control beside the grid.** §1030 put `Watch a repo or person` as a verb row under GitHub's tiles and menu. The room already has one control for what you can do there, the tile grid, and Notes, Mail, Calendar and Reminders carry their verb in it as New. GitHub now does the same: `All · Issues · Pull requests · Releases · Watch`.
+
+1. **`RoomKindTile.watch`, a verb (`isVerb`), never a kind.** No row is a `.watch` and no census returns it. It lives in `Room.verbs`, apart from `order`, whose every tile is a kind a row can be; `room-kind-tiles-selftest.sh` now accepts a tile offered as a room's verb as offered.
+2. **Drawn last and never lit** by the template (`DSScopeTiles.verbs`, `alphabetical`'s tail). A tap raises `FeedSheetRoute.githubWatch`, the same tray as §1030; it never writes `chrome.roomKind`.
+3. **It stands even when no kind does** (`RoomKindTiles.withVerbs`): a room with fewer than two kinds draws `All · Watch`, because the act exists with or without rows, and All beside a verb is not §805's one list drawn twice.
+4. **Only where it can act**: GitHub holding a key (`githubKeyed`, read in a `.task`). The demo's keyless seat draws its kinds without the verb (§83).
+5. **Glyph `eye`, `ScopeTileGlyph.watch`**: the app's watch glyph already (Follow address, the address book's Watch, Markets' Watchlist), now in the one table so no other tile can claim it.
+
+**Word: Watch, not Follow.** The user's message said "follow". The tile says Watch because the account page's field, its `Watching · N` roster and the tray say Watch, and the privacy line under the field says "nobody is followed": GitHub has its own Follow, and this verb never touches it.
+
+**Deleted:** `FeedScreen.githubWatchSection`, §1030's row. The tray, `GitHubWatchAdd` and the tray's one rise after a connect stand.
+
+**Not verified:** written in a Linux cloud session with no Xcode or simulator — not built, not run. Owed: `verify.sh` (it runs `room-kind-tiles-selftest.sh`, which needs `swiftc`), the GitHub room with a key on the iPhone 17 Pro (Watch last, unlit, opens the tray), and with fewer than two kinds (`All · Watch`).

@@ -57,8 +57,8 @@ enum GitHubWatchAdd {
 /// (`GitHubRowTag.railShows`), so nothing in it said watching exists.
 ///
 /// Raised twice, through `FeedScreen`'s one sheet: ONCE on the arrival a
-/// connect made (`ShellChrome.connectLanding`), and from the room's own
-/// "Watch a repo or person" row on any visit after. The feeds ride under the
+/// connect made (`ShellChrome.connectLanding`), and from the room's Watch
+/// tile, last in its grid (§1031), on any visit after. The feeds ride under the
 /// field because they are the page's other first-run choice, and a person
 /// who came here from a connect should not have to go back for them.
 struct GitHubWatchTray: View {

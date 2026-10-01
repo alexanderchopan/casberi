@@ -43,6 +43,10 @@ enum ScopeTileGlyph {
     static let pullRequests = "arrow.triangle.pull"
     static let issues       = "smallcircle.filled.circle"
     static let releases     = "tag"
+    /// GitHub's Watch verb (prd §1031) — the app's watch glyph wherever a
+    /// person follows something privately (Follow address, the address
+    /// book's Watch, Markets' Watchlist).
+    static let watch        = "eye"
     static let payments     = "dollarsign.circle"
     static let payouts      = "banknote"
     static let disputes     = "exclamationmark.triangle"
@@ -207,6 +211,7 @@ extension RoomKindTile: DSTileScope {
         case .pullRequests: return ScopeTileGlyph.pullRequests
         case .issues:       return ScopeTileGlyph.issues
         case .releases:     return ScopeTileGlyph.releases
+        case .watch:        return ScopeTileGlyph.watch
         case .payments:     return ScopeTileGlyph.payments
         case .payouts:      return ScopeTileGlyph.payouts
         case .disputes:     return ScopeTileGlyph.disputes
