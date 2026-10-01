@@ -209,7 +209,7 @@ let faces: [Face] = [
     // reason the publications above are: an org is not a person, and these
     // stand in for a logo we have no right to draw.
     .init(handle: "kyutai",      initial: "K", top: rgb(0x6FA8DC), bottom: rgb(0x3D6FA0)),
-    .init(handle: "espresso-lab", initial: "E", top: rgb(0xC98B5E), bottom: rgb(0x8A5630)),
+    .init(handle: "fieldwork",   initial: "F", top: rgb(0x7FB07A), bottom: rgb(0x4A7A46)),
 ]
 
 let faceSide: CGFloat = 320
@@ -464,70 +464,7 @@ print("wrote \(frameCount) stream frames")
 
 // MARK: - Book covers
 //
-// A Readwise highlight lands with its BOOK COVER on `previewImageURL` (the
-// `cover` field of the book it came from), so a real reading room is a column
-// of spines. The demo had none, and its rows fell back to the source glyph —
-// six identical marks for three different books.
-//
-// Keyed by BOOK, not by row: the demo quotes each book more than once, and a
-// second cover for the same title would say they were different books.
-// Abstract grounds rather than any real jacket — the same call the coin and
-// publication marks make about art we have no right to reproduce.
-
-struct Cover {
-    let key: String            // matches DemoSeedAll's own cover(for:) key
-    let top: NSColor
-    let bottom: NSColor
-    let ink: NSColor
-    let symbols: [String]
-}
-
-let covers: [Cover] = [
-    .init(key: "state", top: rgb(0xC5502F), bottom: rgb(0x7E2C16),
-          ink: rgb(0xF6E2CE), symbols: ["map.fill", "map"]),
-    .init(key: "timeless", top: rgb(0x2E6B5E), bottom: rgb(0x17403A),
-          ink: rgb(0xDCEFE6), symbols: ["square.grid.3x3.fill", "square.grid.3x3"]),
-    .init(key: "systems", top: rgb(0x36508F), bottom: rgb(0x1C2C57),
-          ink: rgb(0xDDE6FA), symbols: ["arrow.triangle.2.circlepath", "circle.fill"]),
-]
-
-let coverW: CGFloat = 400, coverH: CGFloat = 600
-var coverCount = 0
-for c in covers {
-    let canvas = NSImage(size: NSSize(width: coverW, height: coverH))
-    canvas.lockFocus()
-    NSGradient(starting: c.top, ending: c.bottom)?
-        .draw(in: NSRect(x: 0, y: 0, width: coverW, height: coverH), angle: -90)
-    if let glyph = symbol(c.symbols, size: coverW * 0.36, color: c.ink.withAlphaComponent(0.9)) {
-        let s = glyph.size
-        glyph.draw(in: NSRect(x: (coverW - s.width) / 2, y: (coverH - s.height) / 2,
-                              width: s.width, height: s.height))
-    }
-    canvas.unlockFocus()
-    guard let tiff = canvas.tiffRepresentation,
-          let rep = NSBitmapImageRep(data: tiff),
-          let jpg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.86]) else {
-        FileHandle.standardError.write("encode failed for \(c.key)\n".data(using: .utf8)!)
-        continue
-    }
-    let dir = root.appendingPathComponent("sample-cover-\(c.key).imageset")
-    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-    try? jpg.write(to: dir.appendingPathComponent("art.jpg"))
-    try? """
-    {
-      "images" : [
-        {
-          "filename" : "art.jpg",
-          "idiom" : "universal"
-        }
-      ],
-      "info" : {
-        "author" : "xcode",
-        "version" : 1
-      }
-    }
-    """.write(to: dir.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
-    coverCount += 1
-    print("sample-cover-\(c.key)")
-}
-print("wrote \(coverCount) book covers")
+// MOVED to `scripts/demo-art/` (2026-09-30): the three covers are drawn there
+// now, as made covers with the title and author in type (`pictures.py`,
+// `cover-*` keys). They are NOT drawn here as well, because two generators
+// writing the same imageset means whichever ran last wins.

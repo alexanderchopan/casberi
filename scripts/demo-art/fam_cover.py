@@ -197,100 +197,267 @@ def yt_3(w, h):
     return page(w, h, svg(w, h, grid + tree + pen + note, shadow("sh", 12, 12, .25)), "#fbfcfe")
 
 
+CITY_INK = "#14213d"
+CITY_SUN = "#ffc83d"
+
+
+def city_bug(w):
+    """Cityscope's corner mark, the same on all three of its thumbnails: a
+    yellow tile holding a three-tower skyline (a made channel, not a logo)."""
+    return (f"<g transform='translate({w - 80} 24)'><rect width='56' height='56' rx='14' fill='{CITY_SUN}'/>"
+            f"<g fill='{CITY_INK}'><rect x='11' y='24' width='10' height='20'/><rect x='23' y='13' width='11' height='31'/>"
+            "<rect x='36' y='29' width='9' height='15'/><rect x='9' y='43' width='38' height='4' rx='2'/></g></g>")
+
+
+def city_label(x, y, s, size, width):
+    """Cityscope's thumbnail words: navy condensed type on a leaning yellow slab."""
+    top = y - size * 0.80
+    return (f"<g transform='translate({x} {top}) skewX(-8)'>"
+            f"<rect x='8' y='8' width='{width + 36}' height='{size * 0.98:.0f}' fill='{CITY_INK}'/>"
+            f"<rect x='0' y='0' width='{width + 36}' height='{size * 0.98:.0f}' fill='{CITY_SUN}'/></g>"
+            + text(x + 20, y + size * 0.06, s, size, CITY_INK, COND, 800))
+
+
 def yt_1(w, h):
-    """Hoffmann: a puck in a basket, cut away, under warm studio light."""
-    defs = (rad("bg", [(0, "#5a3521"), (0.55, "#26150c"), (1, "#0d0704")], 0.35, 0.45, 0.8)
-            + lin("steel", [(0, "#6b6b6e"), (0.25, "#e9e9ea"), (0.5, "#9a9a9d"), (0.8, "#d7d7d9"), (1, "#5c5c60")], 1, 0)
-            + lin("puck", [(0, "#8a5a36"), (0.5, "#5b3620"), (1, "#3a2213")])
-            + lin("water", [(0, "#8fd3ff"), (1, "#8fd3ff00")])
-            + lin("shot", [(0, "#c7843f"), (1, "#5a2e10")])
-            + shadow("sh", 16, 18, .5))
-    bg = f"<rect width='{w}' height='{h}' fill='url(#bg)'/>"
-    glow = "<ellipse cx='250' cy='210' rx='260' ry='170' fill='#ffb06633' filter='url(#b)'/>"
-    cx = 250
-    handle = (f"<g filter='url(#sh)'><path d='M{cx - 150},222 L{cx - 212},252' stroke='url(#steel)' stroke-width='26'/>"
-              f"<path d='M{cx - 200},246 L{cx - 236},264' stroke='#1c110a' stroke-width='38' stroke-linecap='round'/>"
-              f"<path d='M{cx - 204},240 L{cx - 232},254' stroke='#5a3a26' stroke-width='6' stroke-linecap='round'/></g>")
-    basket = (f"<g filter='url(#sh)'><path d='M{cx - 150},150 L{cx + 150},150 L{cx + 128},292 Q{cx},312 {cx - 128},292 Z' fill='url(#steel)'/>"
-              f"<path d='M{cx - 134},168 L{cx + 134},168 L{cx + 116},282 Q{cx},298 {cx - 116},282 Z' fill='#2a1a10'/>"
-              f"<path d='M{cx - 132},196 L{cx + 132},196 L{cx + 116},282 Q{cx},298 {cx - 116},282 Z' fill='url(#puck)'/>")
-    layers = "".join(f"<path d='M{cx - 128 + i * 2},{214 + i * 18} L{cx + 128 - i * 2},{214 + i * 18}' stroke='#00000026' stroke-width='3'/>" for i in range(4))
-    basket += layers + "</g>"
-    arrows = ""
-    for i, x in enumerate(range(cx - 100, cx + 101, 50)):
-        arrows += (f"<rect x='{x - 5}' y='{58 + (i % 2) * 10}' width='10' height='82' rx='5' fill='url(#water)' transform='rotate(180 {x} 104)'/>"
-                   f"<path d='M{x - 14},160 L{x},182 L{x + 14},160' fill='#8fd3ff'/>")
-    drips = (f"<path d='M{cx - 30},306 C{cx - 30},340 {cx - 24},370 {cx - 26},420' stroke='url(#shot)' stroke-width='10' fill='none' stroke-linecap='round'/>"
-             f"<path d='M{cx + 30},306 C{cx + 30},340 {cx + 24},370 {cx + 26},420' stroke='url(#shot)' stroke-width='10' fill='none' stroke-linecap='round'/>")
-    words = (text(468, 138, "WHY", 56, "#f5e6d3", HEAVY, 700)
-             + text(462, 256, "9 BAR", 98, "#ffb366", HEAVY, 800)
-             + text(468, 312, "and not 12?", 40, "#f5e6d3", HEAVY, 500)
-             + "<rect x='470' y='336' width='90' height='8' rx='4' fill='#ffb366'/>")
-    return page(w, h, svg(w, h, bg + glow + handle + arrows + basket + drips + words, defs + blur("b", 40)), "#120a06")
+    """Cityscope: a calm street in one-point perspective — trees, a bike lane,
+    cafe tables, and no cars."""
+    vx, vy, f, eye = 540, 200, 250, 1.6
+
+    def P(X, Y, Z):
+        return (vx + X * f / Z, vy + (eye - Y) * f / Z)
+
+    def quad(a, b, c, d, fill, extra=""):
+        return f"<polygon points='{pts([a, b, c, d])}' fill='{fill}' {extra}/>"
+
+    defs = lin("sky", [(0, "#a9d8ee"), (1, "#fdf0d6")]) + blur("b", 3)
+    art = f"<rect width='{w}' height='{h}' fill='url(#sky)'/>"
+    zn, zf = 1.0, 95
+    # the far end of the street
+    art += quad(P(-7, 0, zf), P(7, 0, zf), P(7, 16, zf), P(-7, 16, zf), "#d9c7b0")
+    # ground: pavement · road · bike lane · kerb · pavement
+    strips = [(-7, -4.6, "#e7dccb"), (-4.6, -4.4, "#cdbfa9"), (-4.4, 1.6, "#a7a199"),
+              (1.6, 3.3, "#3fae7a"), (3.3, 3.6, "#f4efe6"), (3.6, 7, "#e7dccb")]
+    for x0, x1, c in strips:
+        art += quad(P(x0, 0, zn), P(x1, 0, zn), P(x1, 0, zf), P(x0, 0, zf), c)
+    for z in range(3, 90, 4):  # the bike lane's dashed edge
+        art += quad(P(1.62, 0, z), P(1.78, 0, z), P(1.78, 0, z + 1.8), P(1.62, 0, z + 1.8), "#ffffff")
+    for z in (8, 26):  # a bike painted in the lane
+        cx, cy = P(2.45, 0, z)
+        s = 0.55 * f / z
+        art += (f"<g transform='translate({cx:.1f} {cy:.1f}) scale({s:.2f} {s * 0.35:.2f})' stroke='#ffffff' stroke-width='{2.2 / s:.2f}' fill='none'>"
+                "<circle cx='-0.55' cy='0' r='0.42'/><circle cx='0.55' cy='0' r='0.42'/>"
+                "<path d='M-0.55,0 L-0.1,0 L0.25,-0.5 L-0.3,-0.5 L-0.1,0 M0.25,-0.5 L0.55,0'/></g>")
+    # facades, left and right, building by building
+    walls = {-7: ["#f0d3b3", "#e3a684", "#f3e6cf", "#c8d3bf", "#ecc497", "#d6dde1", "#f2d8bd", "#e6b493"],
+             7: ["#d9b89a", "#c8cfc6", "#e8c8a0", "#c98f72", "#dde0d6", "#d8b48f", "#c4cdd2", "#e2c3a3"]}
+    cuts = [1.2, 7, 13, 20, 28, 38, 52, 70, zf]
+    tall = [15, 12, 17, 13, 16, 12.5, 15, 14]
+    for X, cols in walls.items():
+        side = -1 if X < 0 else 1
+        for i in range(len(cuts) - 1):
+            z0, z1, H = cuts[i], cuts[i + 1], tall[(i + (0 if side < 0 else 3)) % len(tall)]
+            art += quad(P(X, 0, z0), P(X, 0, z1), P(X, H, z1), P(X, H, z0), cols[i])
+            art += quad(P(X, H - 0.5, z0), P(X, H - 0.5, z1), P(X, H, z1), P(X, H, z0), "#00000018")
+            # a shopfront and an awning on the ground floor
+            art += quad(P(X, 0.2, z0 + 0.6), P(X, 0.2, z1 - 0.6), P(X, 2.6, z1 - 0.6), P(X, 2.6, z0 + 0.6), "#6d8794")
+            aw = ["#e2553a", "#2f6f8f", "#3f8f5a", "#e8a33a"][i % 4]
+            art += quad(P(X, 2.7, z0 + 0.4), P(X, 2.7, z1 - 0.4), P(X - side * 1.2, 2.3, z1 - 0.4), P(X - side * 1.2, 2.3, z0 + 0.4), aw)
+            zz = z0 + 0.9
+            while zz + 1.2 < z1 - 0.4:
+                y0 = 3.6
+                while y0 + 1.6 < H - 1.0:
+                    art += quad(P(X, y0, zz), P(X, y0, zz + 1.2), P(X, y0 + 1.7, zz + 1.2), P(X, y0 + 1.7, zz), "#41515c")
+                    y0 += 3.0
+                zz += 2.3
+    # things on the pavements, far to near: trees, cafe tables, two people
+    things = []
+    for z in range(6, 80, 7):
+        things.append((z, "tree", -5.6))
+        things.append((z + 3.5, "tree", 6.2))
+    for z in (4.2, 6.6, 9.4, 12.6):
+        things.append((z, "table", 4.9))
+    things.append((16, "person", -6.0))
+    things.append((21, "person", 4.4))
+    things.sort(key=lambda t: -t[0])
+    for z, kind, X in things:
+        k = f / z
+        if kind == "tree":
+            bx, by = P(X, 0, z)
+            cx, cy = P(X, 4.6, z)
+            art += f"<path d='M{bx:.1f},{by:.1f} L{cx:.1f},{cy:.1f}' stroke='#6b4f3a' stroke-width='{0.28 * k:.1f}'/>"
+            art += f"<circle cx='{cx - 0.4 * k:.1f}' cy='{cy - 0.3 * k:.1f}' r='{2.0 * k:.1f}' fill='#4f9a4f'/>"
+            art += f"<circle cx='{cx + 0.6 * k:.1f}' cy='{cy - 0.9 * k:.1f}' r='{1.6 * k:.1f}' fill='#66b25c'/>"
+            art += f"<circle cx='{cx - 0.9 * k:.1f}' cy='{cy - 1.2 * k:.1f}' r='{0.8 * k:.1f}' fill='#82c46f'/>"
+        elif kind == "table":
+            tx, ty = P(X, 0.75, z)
+            gx, gy = P(X, 0, z)
+            ux, uy = P(X, 2.5, z)
+            art += f"<ellipse cx='{gx:.1f}' cy='{gy:.1f}' rx='{1.0 * k:.1f}' ry='{0.18 * k:.1f}' fill='#00000022'/>"
+            art += f"<path d='M{gx:.1f},{gy:.1f} L{ux:.1f},{uy:.1f}' stroke='#3a3a3a' stroke-width='{0.06 * k:.1f}'/>"
+            for dx in (-0.55, 0.55):  # two chairs
+                cxx, cyy = P(X + dx * 0.6, 0.45, z + dx)
+                art += f"<rect x='{cxx - 0.18 * k:.1f}' y='{cyy - 0.45 * k:.1f}' width='{0.36 * k:.1f}' height='{0.9 * k:.1f}' rx='{0.06 * k:.1f}' fill='#2f3b40'/>"
+            art += f"<ellipse cx='{tx:.1f}' cy='{ty:.1f}' rx='{0.45 * k:.1f}' ry='{0.12 * k:.1f}' fill='#f7f3ea'/>"
+            art += f"<path d='M{tx:.1f},{ty:.1f} L{gx:.1f},{gy:.1f}' stroke='#3a3a3a' stroke-width='{0.07 * k:.1f}'/>"
+            art += (f"<path d='M{ux - 1.2 * k:.1f},{uy + 0.35 * k:.1f} Q{ux:.1f},{uy - 0.55 * k:.1f} {ux + 1.2 * k:.1f},{uy + 0.35 * k:.1f} Z' fill='#f2efe6'/>"
+                    f"<path d='M{ux - 1.2 * k:.1f},{uy + 0.35 * k:.1f} L{ux + 1.2 * k:.1f},{uy + 0.35 * k:.1f}' stroke='#e2553a' stroke-width='{0.12 * k:.1f}'/>")
+        else:
+            px, py = P(X, 0, z)
+            art += (f"<rect x='{px - 0.22 * k:.1f}' y='{py - 1.45 * k:.1f}' width='{0.44 * k:.1f}' height='{1.45 * k:.1f}' rx='{0.2 * k:.1f}' fill='#2f4858'/>"
+                    f"<circle cx='{px:.1f}' cy='{py - 1.6 * k:.1f}' r='{0.17 * k:.1f}' fill='#2f4858'/>")
+    art += city_label(36, 400, "CALM?", 116, 334) + city_bug(w)
+    return page(w, h, svg(w, h, art, defs), "#fdf0d6")
+
+
+def car(x, y, s, body, glass="#cfe3ee"):
+    """A side-view hatchback, facing right; (x, y) is its rear wheel's ground point."""
+    return (f"<g transform='translate({x} {y}) scale({s})'>"
+            f"<path d='M-14,-14 L-14,-34 Q-12,-44 0,-46 L26,-48 L44,-70 Q48,-74 58,-74 L104,-74 Q114,-74 120,-66 L136,-46 L156,-42 Q166,-40 166,-28 L166,-14 Z' fill='{body}'/>"
+            f"<path d='M52,-48 L62,-66 L84,-66 L84,-48 Z M90,-48 L90,-66 L110,-66 Q114,-66 118,-60 L126,-48 Z' fill='{glass}'/>"
+            "<circle cx='14' cy='-12' r='16' fill='#1d1d1f'/><circle cx='14' cy='-12' r='7' fill='#9aa0a6'/>"
+            "<circle cx='128' cy='-12' r='16' fill='#1d1d1f'/><circle cx='128' cy='-12' r='7' fill='#9aa0a6'/>"
+            "<rect x='158' y='-36' width='8' height='6' rx='2' fill='#ffd36b'/></g>")
 
 
 def yt_4(w, h):
-    """Hoffmann: three grinders on a studio sweep, a particle chart above."""
-    defs = (lin("sweep", [(0, "#f3ebe0"), (0.62, "#e6d8c6"), (1, "#cdb89f")])
-            + lin("blk", [(0, "#3a3a3c"), (0.4, "#1d1d1f"), (1, "#0e0e10")], 1, 0)
-            + lin("stl", [(0, "#8d8f93"), (0.35, "#f1f1f2"), (0.7, "#a9abaf"), (1, "#6f7175")], 1, 0)
-            + lin("wht", [(0, "#ffffff"), (0.7, "#ece8e2"), (1, "#cfc9c0")], 1, 0)
-            + lin("hop", [(0, "#ffffffaa"), (1, "#ffffff22")], 1, 0)
-            + shadow("card", 8, 12, .18) + blur("b", 10))
-    bg = f"<rect width='{w}' height='{h}' fill='url(#sweep)'/>"
-    shadows = "".join(f"<ellipse cx='{x}' cy='418' rx='{r}' ry='12' fill='#6b523a55' filter='url(#b)'/>" for x, r in ((150, 80), (395, 60), (620, 90)))
-    g1 = ("<rect x='95' y='240' width='110' height='175' rx='14' fill='url(#blk)'/>"
-          "<path d='M105,240 L90,178 L210,178 L195,240 Z' fill='url(#hop)' stroke='#ffffff66' stroke-width='2'/>"
-          "<rect x='84' y='166' width='132' height='15' rx='6' fill='#1d1d1f'/>"
-          "<circle cx='150' cy='300' r='20' fill='#2c2c2e' stroke='#555' stroke-width='3'/>"
-          "<rect x='120' y='360' width='60' height='40' rx='4' fill='#111'/>")
-    g2 = ("<rect x='355' y='210' width='80' height='205' rx='40' fill='url(#stl)'/>"
-          "<rect x='392' y='175' width='6' height='40' fill='#6f7175'/>"
-          "<rect x='395' y='172' width='80' height='10' rx='5' fill='#6f7175'/>"
-          "<circle cx='478' cy='177' r='14' fill='#7a4a2a'/>"
-          "<rect x='355' y='300' width='80' height='10' fill='#00000018'/>")
-    g3 = ("<path d='M540,415 L540,300 Q540,270 570,270 L670,270 Q700,270 700,300 L700,415 Z' fill='url(#wht)'/>"
-          "<rect x='565' y='240' width='110' height='36' rx='12' fill='#e2ddd5'/>"
-          "<circle cx='620' cy='258' r='8' fill='#e0662d'/>"
-          "<rect x='590' y='330' width='60' height='60' rx='10' fill='#2a2522'/>")
-    chart = "<g filter='url(#card)'><rect x='548' y='24' width='222' height='124' rx='16' fill='#fffdf9'/></g>"
-    for col, mu, sd, amp in (("#1d1d1f", 62, 24, 58), ("#8a8d92", 96, 16, 76), ("#e0662d", 134, 13, 84)):
-        ps = [(564 + x, 128 - amp * math.exp(-((x - mu) ** 2) / (2 * sd * sd))) for x in range(0, 191, 5)]
-        chart += f"<polyline points='{pts(ps)}' fill='none' stroke='{col}' stroke-width='4' stroke-linejoin='round'/>"
-    chart += "<rect x='564' y='128' width='190' height='3' rx='1.5' fill='#d8cfc4'/>"
-    words = text(40, 90, "MEASURED.", 76, "#241a12", HEAVY, 800)
-    words += text(44, 134, "3 grinders · 1 laser", 28, "#8a5a36", HEAVY, 600)
-    return page(w, h, svg(w, h, bg + shadows + g1 + g2 + g3 + chart + words, defs), "#efe6da")
+    """Cityscope: before/after on one street — cars and asphalt on the left, a
+    tram on a grass track on the right."""
+    defs = lin("sky", [(0, "#bfe4f5"), (1, "#f4f1e6")])
+    gy = 336
+    # the shared street: sky and one row of buildings
+    city = f"<rect width='{w}' height='{h}' fill='url(#sky)'/>"
+    rows = [(0, 120, 140, "#e8c9a8"), (120, 110, 170, "#d7dfd6"), (230, 130, 120, "#efd9bd"), (360, 100, 160, "#d9a98a"),
+            (460, 140, 135, "#e9dcc5"), (600, 110, 175, "#c9d6dc"), (710, 100, 145, "#ecc8a2")]
+    for x, bw, bh, c in rows:
+        top = gy - 36 - bh
+        city += f"<rect x='{x}' y='{top}' width='{bw}' height='{bh + 36}' fill='{c}'/>"
+        city += f"<rect x='{x}' y='{top}' width='{bw}' height='10' fill='#00000014'/>"
+        for wx in range(x + 16, x + bw - 20, 30):
+            for wy in range(top + 24, gy - 60, 36):
+                city += f"<rect x='{wx}' y='{wy}' width='14' height='20' rx='2' fill='#5a6a74'/>"
+    city += f"<rect x='0' y='{gy - 36}' width='{w}' height='36' fill='#e4dccd'/>"  # the pavement
+    split = "M430,0 L370,450"
+    left = (f"<rect x='0' y='{gy}' width='{w}' height='{h - gy}' fill='#6f6c69'/>"
+            + "".join(f"<rect x='{x}' y='{gy + 52}' width='44' height='6' fill='#f2efe6'/>" for x in range(10, 470, 80))
+            + car(30, gy + 40, 0.82, "#c9452f") + car(210, gy + 40, 0.82, "#3d5a80")
+            + car(120, gy + 108, 0.95, "#e7b83a") + car(330, gy + 108, 0.95, "#8d99ae")
+            + f"<rect x='0' y='0' width='{w}' height='{h}' fill='#6b6f78' opacity='.28'/>"
+            + "<ellipse cx='20' cy='350' rx='30' ry='12' fill='#9a9a9a' opacity='.6'/>")
+    tram_y = gy + 34
+    right = (f"<rect x='0' y='{gy}' width='{w}' height='{h - gy}' fill='#e4dccd'/>"
+             f"<rect x='0' y='{gy + 14}' width='{w}' height='{h - gy - 14}' fill='#6dbb5c'/>"
+             + "".join(f"<path d='M{x},{gy + 30 + (x * 7) % 90} l4,-10 l4,10' stroke='#4f9a45' stroke-width='3' fill='none'/>" for x in range(380, 800, 23))
+             + f"<rect x='0' y='{tram_y + 4}' width='{w}' height='6' fill='#8a8f94'/><rect x='0' y='{tram_y + 10}' width='{w}' height='4' fill='#5c6166'/>"
+             # the overhead wire and its poles
+             + f"<path d='M400,{tram_y - 176} L800,{tram_y - 176}' stroke='#3a3f45' stroke-width='3'/>"
+             + "".join(f"<rect x='{x}' y='{tram_y - 192}' width='8' height='{192}' fill='#4a5058'/><rect x='{x - 10}' y='{tram_y - 182}' width='28' height='5' fill='#4a5058'/>" for x in (720,))
+             # the tram
+             + f"<g transform='translate(0 {tram_y})'>"
+             "<path d='M528,-120 L548,-150 L596,-150 L616,-120' stroke='#2b2f36' stroke-width='5' fill='none'/>"
+             "<path d='M572,-150 L560,-176 L590,-176' stroke='#2b2f36' stroke-width='4' fill='none'/>"
+             "<path d='M470,-6 L470,-96 Q472,-122 506,-122 L830,-122 L830,-6 Z' fill='#f7f5ef'/>"
+             "<path d='M470,-40 L830,-40 L830,-24 L470,-24 Z' fill='#e2553a'/>"
+             "<path d='M472,-90 Q476,-112 506,-112 L530,-112 L530,-56 L472,-56 Z' fill='#27323d'/>"
+             + "".join(f"<rect x='{x}' y='-108' width='46' height='50' rx='6' fill='#27323d'/>" for x in (548, 610, 712, 774))
+             + "".join(f"<rect x='{x}' y='-110' width='40' height='104' rx='4' fill='#cfd6db'/><rect x='{x + 19}' y='-108' width='2' height='100' fill='#9aa3aa'/>" for x in (664,))
+             + "".join(f"<circle cx='{x}' cy='-84' r='9' fill='{c}'/><path d='M{x - 15},-58 Q{x},-76 {x + 15},-58 Z' fill='{c}'/>" for x, c in ((571, '#f1c16b'), (633, '#5a3a26'), (735, '#2a2a2a'), (797, '#c98f60')))
+             + "<rect x='466' y='-6' width='368' height='10' rx='4' fill='#3a3f45'/></g>"
+             # trees and people along the new street
+             + "".join(f"<rect x='{x - 4}' y='{gy - 70}' width='8' height='44' fill='#6b4f3a'/><circle cx='{x}' cy='{gy - 92}' r='34' fill='#4f9a4f'/><circle cx='{x + 14}' cy='{gy - 104}' r='22' fill='#66b25c'/>" for x in (420,))
+             + "".join(f"<rect x='{x - 7}' y='{gy - 76}' width='14' height='42' rx='7' fill='{c}'/><circle cx='{x}' cy='{gy - 84}' r='8' fill='{c}'/>" for x, c in ((442, "#2f4858"), (456, "#c9452f"))))
+    defs += f"<clipPath id='L'><path d='M0,0 L430,0 L370,450 L0,450 Z'/></clipPath><clipPath id='R'><path d='M430,0 L{w},0 L{w},{h} L370,450 Z'/></clipPath>"
+    art = city + f"<g clip-path='url(#L)'>{left}</g><g clip-path='url(#R)'>{right}</g>"
+    art += f"<path d='{split}' stroke='#ffffff' stroke-width='8'/>"
+    art += ("<g transform='translate(400 244)'><circle r='30' fill='#ffffff'/>"
+            f"<path d='M-14,0 L12,0 M2,-11 L14,0 L2,11' stroke='{CITY_INK}' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></g>")
+    art += city_label(34, 104, "ONE LINE", 90, 346) + city_bug(w)
+    return page(w, h, svg(w, h, art, defs), "#f4f1e6")
+
+
+def cyclist(x, gy, s, shirt, bike, helmet=None, skin="#6b4a36", cargo=False):
+    """A side-view rider facing right; (x, gy) is the rear wheel's ground point,
+    `s` pixels per metre."""
+    def p(a, b):
+        return f"{x + a * s:.1f},{gy - b * s:.1f}"
+    sw = 0.05 * s
+    out = f"<g stroke-linecap='round' stroke-linejoin='round'>"
+    fx = 1.35 if cargo else 1.05
+    for cx in (0, fx):
+        out += f"<circle cx='{x + cx * s:.1f}' cy='{gy - 0.34 * s:.1f}' r='{0.31 * s:.1f}' fill='none' stroke='#22252a' stroke-width='{0.06 * s:.1f}'/>"
+    if cargo:
+        out += f"<path d='M{p(0.62, 0.42)} L{p(1.28, 0.42)} L{p(1.32, 0.86)} L{p(0.62, 0.86)} Z' fill='#e8a33a'/>"
+        out += f"<circle cx='{x + 0.92 * s:.1f}' cy='{gy - 0.98 * s:.1f}' r='{0.12 * s:.1f}' fill='{skin}'/>"
+    hx = fx - 0.13
+    out += (f"<path d='M{p(0, 0.34)} L{p(0.45, 0.30)} L{p(0.35, 0.92)} Z M{p(0.35, 0.92)} L{p(hx, 0.95)} L{p(0.45, 0.30)} "
+            f"M{p(hx, 0.95)} L{p(fx, 0.34)} M{p(hx, 0.95)} L{p(hx - 0.04, 1.06)}' fill='none' stroke='{bike}' stroke-width='{sw:.1f}'/>")
+    out += f"<path d='M{p(0.28, 0.95)} L{p(0.44, 0.95)}' stroke='#22252a' stroke-width='{0.06 * s:.1f}'/>"
+    out += (f"<path d='M{p(0.36, 0.98)} L{p(0.6, 0.66)} L{p(0.52, 0.2)} M{p(0.36, 0.98)} L{p(0.5, 0.7)} L{p(0.40, 0.42)}' "
+            f"fill='none' stroke='#2b3a4a' stroke-width='{0.12 * s:.1f}'/>")
+    out += f"<path d='M{p(0.36, 1.0)} L{p(0.58, 1.48)}' stroke='{shirt}' stroke-width='{0.24 * s:.1f}'/>"
+    out += f"<path d='M{p(0.58, 1.44)} L{p(hx - 0.04, 1.06)}' stroke='{shirt}' stroke-width='{0.08 * s:.1f}'/>"
+    out += f"<circle cx='{x + 0.66 * s:.1f}' cy='{gy - 1.68 * s:.1f}' r='{0.12 * s:.1f}' fill='{skin}'/>"
+    if helmet:
+        out += (f"<path d='M{p(0.53, 1.70)} A{0.14 * s:.1f},{0.14 * s:.1f} 0 0 1 {p(0.80, 1.70)} Z' fill='{helmet}' stroke='none'/>")
+    return out + "</g>"
 
 
 def yt_6(w, h):
-    """Hoffmann: a filter cone and an espresso cup on two grounds, split."""
-    defs = (lin("cone", [(0, "#ffffff"), (0.6, "#f1eee9"), (1, "#d5d0c8")], 1, 0)
-            + lin("glass", [(0, "#ffffff55"), (1, "#ffffff18")], 1, 0)
-            + lin("brew", [(0, "#b0652a"), (1, "#6c3714")])
-            + lin("cup", [(0, "#fbfaf7"), (0.7, "#ece7df"), (1, "#c9c1b5")], 1, 0)
-            + shadow("sh", 14, 14, .3))
-    bg = (f"<rect width='{w}' height='{h}' fill='#9fb59a'/>"
-          f"<polygon points='430,0 {w},0 {w},{h} 350,{h}' fill='#c8643c'/>")
-    cone = ("<g filter='url(#sh)'>"
-            "<path d='M120,300 L128,410 Q190,432 252,410 L260,300 Z' fill='url(#glass)' stroke='#ffffff99' stroke-width='3'/>"
-            "<path d='M132,360 L134,408 Q190,428 246,408 L248,360 Z' fill='url(#brew)' opacity='.9'/>"
-            "<path d='M95,160 L285,160 L215,292 L165,292 Z' fill='url(#cone)'/>"
-            "<rect x='88' y='150' width='204' height='18' rx='9' fill='#fff'/>"
-            "<rect x='150' y='286' width='80' height='16' rx='6' fill='#e7e2da'/></g>")
-    ribs = "".join(f"<path d='M{120 + i * 28},172 L{172 + i * 9},284' stroke='#00000012' stroke-width='3'/>" for i in range(6))
-    cup = ("<g filter='url(#sh)'>"
-           "<ellipse cx='600' cy='392' rx='130' ry='26' fill='#f3efe8'/>"
-           "<path d='M520,300 L528,372 Q600,404 672,372 L680,300 Z' fill='url(#cup)'/>"
-           "<path d='M678,318 C730,316 730,366 670,362' stroke='#e9e3da' stroke-width='14' fill='none'/>"
-           "<ellipse cx='600' cy='300' rx='80' ry='18' fill='#f7f4ef'/>"
-           "<ellipse cx='600' cy='302' rx='70' ry='13' fill='#c98a4f'/>"
-           "<ellipse cx='590' cy='300' rx='30' ry='5' fill='#e6b98a'/></g>")
-    words = (poster(40, 84, ["FILTER"], 70, "#fff", "#46603f", HEAVY, 800, sw=8)
-             + poster(760, 84, ["ESPRESSO"], 70, "#fff", "#7b3016", HEAVY, 800, anchor="end", sw=8)
-             + "<g transform='translate(400 215)'><circle r='44' fill='#fff'/>"
-             "<path d='M-20,0 L18,0 M4,-16 L20,0 L4,16' stroke='#2a2a2a' stroke-width='8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></g>")
-    return page(w, h, svg(w, h, bg + ribs + cone + cup + words, defs), "#9fb59a")
+    """Cityscope: a protected bike lane, busy, a kerb between it and the road,
+    and a plan of the junction pinned in a card."""
+    defs = shadow("sh", 10, 14, .25, "#1b2a33") + lin("park", [(0, "#a8d39a"), (1, "#7fbf73")])
+    art = f"<rect width='{w}' height='{h}' fill='url(#park)'/>"
+    rng = random.Random(6)
+    for i in range(14):  # a row of park trees behind the road
+        x = i * 62 + rng.uniform(-10, 10)
+        r = rng.uniform(34, 50)
+        art += f"<circle cx='{x:.0f}' cy='{150 - r * 0.4:.0f}' r='{r:.0f}' fill='{rng.choice(['#4f9a4f', '#5daa55', '#468a46'])}'/>"
+    art += f"<rect x='0' y='150' width='{w}' height='80' fill='#7a7772'/>"  # the road
+    art += "".join(f"<rect x='{x}' y='186' width='46' height='6' fill='#f2efe6'/>" for x in range(0, w, 90))
+    art += car(560, 222, 0.62, "#3d5a80") + car(110, 222, 0.62, "#c9452f")
+    art += f"<rect x='0' y='230' width='{w}' height='14' fill='#d9d4c8'/><rect x='0' y='244' width='{w}' height='8' fill='#a9a397'/>"  # the kerb
+    art += f"<rect x='0' y='252' width='{w}' height='132' fill='#3fae7a'/>"  # the lane
+    art += "".join(f"<rect x='{x}' y='314' width='34' height='5' fill='#ffffff88'/>" for x in range(0, w, 70))
+    art += f"<rect x='0' y='384' width='{w}' height='10' fill='#f4efe6'/><rect x='0' y='394' width='{w}' height='{h - 394}' fill='#e4dccd'/>"
+    riders = [
+        (0, 306, 60, "#e2553a", "#2f3b40", "#2f6f8f", False),
+        (150, 306, 60, "#6a4c93", "#3f8f5a", None, False),
+        (410, 306, 60, "#2f6f8f", "#c9452f", None, False),
+        (40, 374, 74, "#f2efe6", "#2f3b40", "#e8a33a", False),
+        (196, 374, 74, "#c9452f", "#2f6f8f", "#2f3b40", True),
+        (400, 374, 74, "#2f4858", "#e8a33a", "#f2efe6", False),
+        (560, 374, 74, "#e8a33a", "#3d5a80", None, False),
+        (280, 306, 60, "#f2efe6", "#2f3b40", "#3f8f5a", False),
+        (560, 306, 60, "#3f8f5a", "#e2553a", None, False),
+        (690, 306, 60, "#2f6f8f", "#e2553a", "#e8a33a", False),
+        (700, 374, 74, "#6a4c93", "#2f3b40", None, False),
+    ]
+    skins = ["#6b4a36", "#e0b48f", "#a8714f", "#f0c9a5", "#5a3c2a"]
+    for i, (x, gy, s, shirt, bike, helmet, cargo) in enumerate(sorted(riders, key=lambda r: r[1])):
+        art += cyclist(x, gy, s, shirt, bike, helmet, skins[i % len(skins)], cargo)
+    # the inset: the junction in plan
+    ix, iy, iw, ih = 470, 26, 200, 146
+    card = f"<g filter='url(#sh)'><rect x='{ix}' y='{iy}' width='{iw}' height='{ih}' rx='16' fill='#f7f4ec'/></g>"
+    defs += f"<clipPath id='ins'><rect x='{ix}' y='{iy}' width='{iw}' height='{ih}' rx='16'/></clipPath>"
+    cx, cy = ix + iw / 2, iy + ih / 2
+    plan = f"<rect x='{ix}' y='{iy}' width='{iw}' height='{ih}' fill='#b7d9a8'/>"
+    plan += f"<rect x='{ix}' y='{cy - 30}' width='{iw}' height='60' fill='#8d8a84'/><rect x='{cx - 30}' y='{iy}' width='60' height='{ih}' fill='#8d8a84'/>"
+    lane = "#3fae7a"
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            # each corner: a green lane bending round a kerbed island
+            ax, ay = cx + sx * 40, cy + sy * 40
+            plan += (f"<path d='M{ix if sx < 0 else ix + iw},{ay} L{cx + sx * 52},{ay} "
+                     f"M{ax},{iy if sy < 0 else iy + ih} L{ax},{cy + sy * 52}' stroke='{lane}' stroke-width='9'/>")
+            plan += f"<path d='M{cx + sx * 52},{ay} Q{ax},{ay} {ax},{cy + sy * 52}' stroke='{lane}' stroke-width='9' fill='none'/>"
+            plan += f"<circle cx='{cx + sx * 32}' cy='{cy + sy * 32}' r='7' fill='#f2efe6'/>"
+    for k in range(5):  # zebra crossings
+        o = -16 + k * 8
+        plan += (f"<rect x='{cx + o}' y='{cy - 38}' width='4' height='10' fill='#ffffff'/><rect x='{cx + o}' y='{cy + 28}' width='4' height='10' fill='#ffffff'/>"
+                 f"<rect x='{cx - 38}' y='{cy + o}' width='10' height='4' fill='#ffffff'/><rect x='{cx + 28}' y='{cy + o}' width='10' height='4' fill='#ffffff'/>")
+    art += card + f"<g clip-path='url(#ins)'>{plan}</g>"
+    art += f"<rect x='{ix}' y='{iy}' width='{iw}' height='{ih}' rx='16' fill='none' stroke='#ffffff' stroke-width='6'/>"
+    art += city_label(34, 100, "IT WORKS", 90, 376) + city_bug(w)
+    return page(w, h, svg(w, h, art, defs), "#a8d39a")
 
 
 def yt_2(w, h):
@@ -536,30 +703,59 @@ def rss_0(w, h):
 
 
 def rss_1(w, h):
-    """Inside a very small compiler: an isometric machine, tokens in, a tree out."""
-    P = iso(420, 228, 26)
-    art = f"<rect width='{w}' height='{h}' fill='#cfe9dc'/>"
-    art += iso_box(P, -9, -3, -1, 18, 8, 1, "#b7dac8", "#9cc7b1", "#8bb9a2")
-    art += iso_box(P, -8, -1, 0, 7, 3, 0.4, "#2d3b55", "#243049", "#1c263b")
-    for i, c in enumerate(("#ef8a3c", "#f2c14e", "#5fb3e8", "#ef8a3c")):
-        art += iso_box(P, -8 + i * 1.7, -0.2, 0.4, 1.1, 1.1, 1.1, c, c + "cc", c + "99")
-    art += iso_box(P, -1.5, -2, 0, 5, 5, 4.2, "#f6f1e6", "#e0d6c3", "#cbbfa8")
-    art += iso_box(P, -0.5, -1, 4.2, 3, 3, 0.8, "#ef8a3c", "#d27228", "#bb621c")
-    for k in range(3):
-        a = P(-1.5 + 1 + k * 1.4, 3, 3)
-        art += f"<circle cx='{a[0]:.1f}' cy='{a[1]:.1f}' r='6' fill='#2d3b55'/>"
-    art += iso_box(P, 3.5, -1, 0, 5, 3, 0.4, "#2d3b55", "#243049", "#1c263b")
-    root = P(6.8, 0.5, 5.4)
-    kids = [P(5.3, 0.5, 3.4), P(8.3, 0.5, 3.4)]
-    leaves = [P(4.6, 0.5, 1.5), P(6.0, 0.5, 1.5), P(8.6, 0.5, 1.5)]
-    for a, b in ((root, kids[0]), (root, kids[1]), (kids[0], leaves[0]), (kids[0], leaves[1]), (kids[1], leaves[2])):
-        art += f"<line x1='{a[0]:.1f}' y1='{a[1]:.1f}' x2='{b[0]:.1f}' y2='{b[1]:.1f}' stroke='#2d3b55' stroke-width='4'/>"
-    for (x, y), c, r in ([(root, "#ef8a3c", 15)] + [(k, "#5fb3e8", 12) for k in kids] + [(l, "#f2c14e", 10) for l in leaves]):
-        art += f"<circle cx='{x:.1f}' cy='{y:.1f}' r='{r}' fill='{c}' stroke='#2d3b55' stroke-width='3'/>"
-    puff = P(0.5, 0.5, 6.4)
-    art += "".join(f"<circle cx='{puff[0] + dx:.0f}' cy='{puff[1] - dy:.0f}' r='{r}' fill='#ffffff' opacity='.8'/>"
-                   for dx, dy, r in ((0, 0, 9), (14, 20, 12), (4, 44, 15)))
-    return page(w, h, svg(w, h, art))
+    """A weather station on an old e-reader: the reader propped on a sill, its
+    grey screen drawing the forecast, wired to a sensor; rain on the window."""
+    defs = (lin("wall", [(0, "#d7e1e4"), (1, "#c3d0d4")]) + lin("sky", [(0, "#8fa7b8"), (1, "#c4d2d9")])
+            + lin("sill", [(0, "#d9a46c"), (1, "#b47d48")]) + shadow("sh", 12, 12, .28, "#2a3438"))
+    art = f"<rect width='{w}' height='{h}' fill='url(#wall)'/>"
+    # the window, rain on it, a small anemometer outside
+    art += "<rect x='470' y='30' width='290' height='300' rx='6' fill='#f4f1ea'/>"
+    art += "<rect x='486' y='46' width='258' height='268' fill='url(#sky)'/>"
+    art += "<g fill='#e9eef1' opacity='.9'><circle cx='560' cy='120' r='40'/><circle cx='606' cy='104' r='48'/><circle cx='652' cy='126' r='34'/><rect x='520' y='118' width='166' height='40' rx='20'/></g>"
+    rng = random.Random(21)
+    for _ in range(26):
+        x, y = rng.uniform(492, 738), rng.uniform(52, 300)
+        art += f"<path d='M{x:.0f},{y:.0f} l-3,{rng.uniform(10, 22):.0f}' stroke='#ffffff' stroke-width='2.5' stroke-linecap='round' opacity='.7'/>"
+    art += ("<g transform='translate(690 210)' stroke='#2f3b40' stroke-width='4' fill='none' stroke-linecap='round'>"
+            "<path d='M0,0 L0,104'/><path d='M0,0 L-30,-8 M0,0 L26,-16 M0,0 L6,24'/></g>"
+            "<g fill='#2f3b40'><circle cx='660' cy='202' r='9'/><circle cx='716' cy='194' r='9'/><circle cx='696' cy='234' r='9'/><circle cx='690' cy='210' r='5'/></g>")
+    art += "<rect x='614' y='46' width='10' height='268' fill='#f4f1ea'/><rect x='486' y='176' width='258' height='10' fill='#f4f1ea'/>"
+    # the sill
+    art += f"<rect x='0' y='330' width='{w}' height='120' fill='url(#sill)'/><rect x='0' y='330' width='{w}' height='10' fill='#e8bd8a'/>"
+    # the sensor on its little board, and the cable
+    art += ("<path d='M350,356 C420,400 470,404 520,372' stroke='#2b2b2b' stroke-width='6' fill='none' stroke-linecap='round'/>"
+            "<g filter='url(#sh)'><rect x='500' y='344' width='120' height='34' rx='4' fill='#2f8a5a'/></g>"
+            "<rect x='516' y='352' width='24' height='18' rx='2' fill='#1d1d1f'/>"
+            + "".join(f"<circle cx='{x}' cy='372' r='2.5' fill='#e3c06b'/>" for x in range(552, 612, 9))
+            + "<rect x='556' y='310' width='40' height='40' rx='6' fill='#f4f4f2'/>"
+            + "".join(f"<rect x='562' y='{316 + k * 8}' width='28' height='3' rx='1.5' fill='#c9ccce'/>" for k in range(4)))
+    # the e-reader on its stand
+    art += "<path d='M180,350 L250,300 L260,306 L196,356 Z' fill='#7a5a3c'/>"
+    art += ("<g filter='url(#sh)' transform='rotate(-4 260 210)'>"
+            "<rect x='150' y='56' width='230' height='300' rx='18' fill='#4a4a4c'/>"
+            "<rect x='170' y='76' width='190' height='244' rx='4' fill='#e3e1d8'/>"
+            "<rect x='240' y='330' width='50' height='10' rx='5' fill='#3a3a3c'/>")
+    # the screen: a sun behind a cloud, a temperature line, a week of icons
+    ink = "#3b3b3b"
+    art += (f"<circle cx='238' cy='134' r='26' fill='none' stroke='{ink}' stroke-width='5'/>"
+            + "".join(f"<path d='M{238 + 36 * math.cos(a):.1f},{134 + 36 * math.sin(a):.1f} L{238 + 46 * math.cos(a):.1f},{134 + 46 * math.sin(a):.1f}' stroke='{ink}' stroke-width='5' stroke-linecap='round'/>"
+                      for a in [i * math.pi / 4 for i in range(8)])
+            + f"<g fill='#e3e1d8' stroke='{ink}' stroke-width='5'><path d='M240,176 a20,20 0 0 1 14,-34 a26,26 0 0 1 50,6 a18,18 0 0 1 4,28 Z'/></g>")
+    temps = [16, 18, 21, 23, 22, 19, 17]
+    ps = [(186 + i * 26, 250 - (t - 14) * 5) for i, t in enumerate(temps)]
+    art += f"<path d='M186,252 L342,252' stroke='#b5b3aa' stroke-width='2'/>"
+    art += f"<polyline points='{pts(ps)}' fill='none' stroke='{ink}' stroke-width='3.5' stroke-linejoin='round'/>"
+    art += "".join(f"<circle cx='{x}' cy='{y}' r='4' fill='{ink}'/>" for x, y in ps)
+    for i, kind in enumerate(("sun", "cloud", "rain", "sun", "cloud")):
+        x, y = 196 + i * 34, 290
+        if kind == "sun":
+            art += f"<circle cx='{x}' cy='{y}' r='7' fill='{ink}'/>"
+        else:
+            art += f"<path d='M{x - 11},{y + 4} a6,6 0 0 1 4,-11 a8,8 0 0 1 15,1 a6,6 0 0 1 3,10 Z' fill='{ink}'/>"
+            if kind == "rain":
+                art += f"<path d='M{x - 5},{y + 8} l-2,6 M{x + 3},{y + 8} l-2,6' stroke='{ink}' stroke-width='2.5' stroke-linecap='round'/>"
+    art += "</g>"
+    return page(w, h, svg(w, h, art, defs))
 
 
 def rss_2(w, h):
@@ -585,29 +781,59 @@ def rss_2(w, h):
 
 
 def rss_3(w, h):
-    """Type systems, plainly: a wooden shape sorter seen from above."""
-    defs = (lin("wood", [(0, "#e6b77e"), (1, "#c98f52")], 1, 1) + shadow("sh", 10, 8, .28, "#4a2c10") + blur("sf", 8))
-    art = f"<rect width='{w}' height='{h}' fill='#efe4d2'/>"
-    art += "<g filter='url(#sh)'><rect x='250' y='80' width='300' height='300' rx='28' fill='url(#wood)'/></g>"
-    art += "<rect x='262' y='92' width='276' height='276' rx='20' fill='none' stroke='#ffffff40' stroke-width='3'/>"
-    star = [(472 + (42 if i % 2 == 0 else 19) * math.sin(i * math.pi / 5), 298 - (42 if i % 2 == 0 else 19) * math.cos(i * math.pi / 5)) for i in range(10)]
-    holes = {"c": "<circle cx='330' cy='160' r='40'/>", "s": "<rect x='432' y='120' width='80' height='80' rx='6'/>",
-             "t": "<polygon points='330,258 376,338 284,338'/>", "st": f"<polygon points='{pts(star)}'/>"}
-    for k, shape in holes.items():
-        # a hole with a wall: dark, and the far wall's lit edge showing at its foot
-        defs += f"<clipPath id='h{k}'>{shape}</clipPath>"
-        art += f"<g fill='#2e1a08'>{shape}</g>"
-        art += f"<g clip-path='url(#h{k})'><g transform='translate(0 16)' fill='#6b4220'>{shape}</g></g>"
-    art += "<g filter='url(#sh)'>"
-    art += "<circle cx='140' cy='290' r='38' fill='#e2553a'/><circle cx='130' cy='280' r='12' fill='#ffffff33'/>"
-    art += "<polygon points='670,90 716,170 624,170' fill='#1bb58a' transform='rotate(12 670 140)'/>"
-    star2 = [(x + 220, y + 40) for x, y in star]
-    art += f"<polygon points='{pts(star2)}' fill='#f2c14e' transform='rotate(18 692 338)'/>"
-    art += "</g>"
-    # the square, lifted, about to drop into its hole
-    art += ("<rect x='452' y='150' width='80' height='80' rx='6' fill='#2a1a0a' opacity='.25' filter='url(#sf)'/>"
-            "<rect x='440' y='112' width='80' height='80' rx='6' fill='#3b7bff' transform='rotate(8 480 152)'/>"
-            "<rect x='440' y='112' width='80' height='14' rx='6' fill='#6a9bff' transform='rotate(8 480 152)'/>")
+    """The paper map's return: a folded map open on a desk, a pencilled route, a
+    compass on it, and a phone turned face down beside it."""
+    defs = (shadow("sh", 14, 14, .35, "#0d1a1d") + lin("brass", [(0, "#f3d382"), (1, "#b8862f")], 1, 1)
+            + "<clipPath id='map'><rect x='150' y='50' width='500' height='340'/></clipPath>")
+    art = f"<rect width='{w}' height='{h}' fill='#284650'/>"
+    art += "<g transform='rotate(-5 400 220)'>"
+    art += "<g filter='url(#sh)'><rect x='150' y='50' width='500' height='340' fill='#f3ecd9'/></g>"
+    m = "<g clip-path='url(#map)'>"
+    rng = random.Random(8)
+    # land use: woods and a lake, contour rings, a river
+    for cx, cy, rx, ry in ((250, 120, 90, 60), (560, 320, 110, 70), (470, 90, 60, 40)):
+        m += f"<ellipse cx='{cx}' cy='{cy}' rx='{rx}' ry='{ry}' fill='#cfe0b4'/>"
+    for k in range(5):
+        m += f"<ellipse cx='{380 + k * 3}' cy='{250 - k * 4}' rx='{120 - k * 22}' ry='{78 - k * 14}' fill='none' stroke='#c9a77a' stroke-width='1.6'/>"
+    m += "<path d='M150,330 C230,300 260,360 340,330 C420,300 440,220 520,200 C580,186 610,140 650,120' stroke='#7fb3d5' stroke-width='12' fill='none'/>"
+    m += "<ellipse cx='600' cy='210' rx='34' ry='22' fill='#9cc6e0'/>"
+    # roads, then the pencilled route over them
+    m += ("<path d='M150,200 C260,210 330,170 420,180 C520,190 560,260 650,250' stroke='#ffffff' stroke-width='9' fill='none'/>"
+          "<path d='M150,200 C260,210 330,170 420,180 C520,190 560,260 650,250' stroke='#e8a33a' stroke-width='5' fill='none'/>"
+          "<path d='M300,50 C310,140 280,260 320,390' stroke='#ffffff' stroke-width='6' fill='none'/>"
+          "<path d='M470,50 C460,120 500,220 470,390' stroke='#ffffff' stroke-width='5' fill='none'/>")
+    for _ in range(14):  # a village's houses
+        x, y = rng.uniform(395, 455), rng.uniform(150, 210)
+        m += f"<rect x='{x:.0f}' y='{y:.0f}' width='8' height='8' fill='#7b6a5a'/>"
+    m += ("<path d='M210,150 C250,190 280,236 330,250 C390,268 420,300 520,296' stroke='#d6342c' stroke-width='4' fill='none' "
+          "stroke-dasharray='10 8' stroke-linecap='round'/>"
+          "<circle cx='210' cy='150' r='8' fill='#d6342c'/>"
+          "<circle cx='520' cy='296' r='13' fill='none' stroke='#d6342c' stroke-width='4'/>")
+    # the folds: alternate panels catch the light differently
+    for i in range(4):
+        for j in range(2):
+            shade = "#ffffff" if (i + j) % 2 == 0 else "#5a4320"
+            op = 0.18 if shade == "#ffffff" else 0.10
+            m += f"<rect x='{150 + i * 125}' y='{50 + j * 170}' width='125' height='170' fill='{shade}' opacity='{op}'/>"
+    for i in range(1, 4):
+        m += f"<path d='M{150 + i * 125},50 L{150 + i * 125},390' stroke='#5a4320' stroke-width='1.5' opacity='.25'/>"
+    m += "<path d='M150,220 L650,220' stroke='#5a4320' stroke-width='1.5' opacity='.25'/>"
+    art += m + "</g></g>"
+    # the compass on the map
+    art += ("<g filter='url(#sh)'><circle cx='600' cy='120' r='58' fill='url(#brass)'/></g>"
+            "<circle cx='600' cy='120' r='48' fill='#fbf7ec'/>"
+            + "".join(f"<path d='M{600 + 40 * math.cos(a):.1f},{120 + 40 * math.sin(a):.1f} L{600 + 46 * math.cos(a):.1f},{120 + 46 * math.sin(a):.1f}' stroke='#3a3a3a' stroke-width='2.5'/>"
+                      for a in [i * math.pi / 8 for i in range(16)])
+            + "<g transform='rotate(24 600 120)'><polygon points='600,80 610,120 590,120' fill='#d6342c'/><polygon points='600,160 610,120 590,120' fill='#3a3a3a'/></g>"
+            "<circle cx='600' cy='120' r='5' fill='#b8862f'/>")
+    # a pencil across the corner
+    art += ("<g transform='translate(470 400) rotate(-28)' filter='url(#sh)'>"
+            "<rect x='0' y='-9' width='200' height='18' fill='#f2c14e'/><rect x='0' y='-9' width='200' height='6' fill='#f7d77a'/>"
+            "<polygon points='0,-9 -30,0 0,9' fill='#e9cfa2'/><polygon points='-20,-3 -30,0 -20,3' fill='#3a3a3a'/>"
+            "<rect x='200' y='-9' width='16' height='18' fill='#c9ccce'/><rect x='216' y='-9' width='18' height='18' rx='4' fill='#ef8a8a'/></g>")
+    # the phone, face down, set aside
+    art += ("<g transform='rotate(14 96 300)' filter='url(#sh)'><rect x='40' y='196' width='112' height='210' rx='22' fill='#1b2427'/>"
+            "<rect x='58' y='214' width='40' height='54' rx='14' fill='#2a363a'/><circle cx='70' cy='228' r='8' fill='#0f1517'/><circle cx='86' cy='252' r='8' fill='#0f1517'/></g>")
     return page(w, h, svg(w, h, art, defs))
 
 
@@ -658,28 +884,66 @@ def rss_5(w, h):
 
 
 def rss_6(w, h):
-    """Local-first, one year on: a tree-ring slice with the newest ring lit."""
-    defs = rad("wood", [(0, "#f3d6a8"), (1, "#d9a86c")], 0.5, 0.5, 0.6) + shadow("sh", 14, 16, .28, "#23321f")
-    art = f"<rect width='{w}' height='{h}' fill='#a9bf9c'/>"
-    art += "<circle cx='640' cy='80' r='120' fill='#b8cdab'/>"
-    cx, cy = 390, 225
-    rings = ""
-    for k, r in enumerate(range(18, 176, 13)):
-        ps = []
-        for i in range(73):
-            t = i / 72 * 2 * math.pi
-            rr = r * (1 + 0.035 * math.sin(3 * t + k * 0.7) + 0.02 * math.cos(5 * t + k))
-            ps.append((cx + rr * math.cos(t) * 1.02, cy + rr * math.sin(t)))
-        d = "M" + " L".join(f"{a:.1f},{b:.1f}" for a, b in ps) + "Z"
-        last = r + 13 >= 176
-        rings += f"<path d='{d}' fill='none' stroke='{'#e2553a' if last else '#b37a45'}' stroke-width='{5 if last else 2.2}' opacity='{1 if last else 0.55}'/>"
-    art += f"<g filter='url(#sh)'><ellipse cx='{cx}' cy='{cy}' rx='{190 * 1.02:.0f}' ry='190' fill='#8a5a33'/></g>"
-    art += f"<ellipse cx='{cx}' cy='{cy}' rx='{178 * 1.02:.0f}' ry='178' fill='url(#wood)'/>" + rings
-    art += f"<circle cx='{cx}' cy='{cy}' r='6' fill='#8a5a33'/>"
-    art += ("<g transform='translate(640 330)'><path d='M0,40 L0,-6' stroke='#3f6b39' stroke-width='5' stroke-linecap='round'/>"
-            "<path d='M0,4 C-30,-2 -38,-26 -34,-36 C-12,-34 0,-20 0,4Z' fill='#4f8a45'/>"
-            "<path d='M0,-6 C24,-14 34,-40 30,-50 C8,-46 -2,-28 0,-6Z' fill='#6aa85a'/>"
-            "<ellipse cx='0' cy='44' rx='36' ry='8' fill='#6b8a5e'/></g>")
+    """Night trains are busy again: a sleeper crossing a viaduct after dark,
+    every window lit and full, the light doubled in the lake below."""
+    defs = (lin("sky", [(0, "#120f33"), (0.55, "#2c2361"), (1, "#6a4180")]) + lin("lake", [(0, "#2a2257"), (1, "#0d0b24")])
+            + lin("beam", [(0, "#fff1c4aa"), (1, "#fff1c400")], 1, 0) + blur("g", 16))
+    art = f"<rect width='{w}' height='{h}' fill='url(#sky)'/>"
+    rng = random.Random(16)
+    for _ in range(46):
+        art += f"<circle cx='{rng.uniform(0, w):.0f}' cy='{rng.uniform(0, 150):.0f}' r='{rng.uniform(0.8, 1.9):.1f}' fill='#fff' opacity='{rng.uniform(.25, .75):.2f}'/>"
+    far = [(0, 196), (90, 150), (190, 186), (300, 118), (420, 180), (540, 128), (660, 176), (800, 140), (800, 320), (0, 320)]
+    art += f"<polygon points='{pts(far)}' fill='#43357a'/>"
+    near = [(0, 250), (120, 222), (260, 252), (380, 218), (520, 246), (650, 214), (800, 240), (800, 320), (0, 320)]
+    art += f"<polygon points='{pts(near)}' fill='#33295f'/>"
+    lake = 320
+    art += f"<rect x='0' y='{lake}' width='{w}' height='{h - lake}' fill='url(#lake)'/>"
+    # the viaduct: a deck on tall arched piers, a silhouette against the hills
+    deck = 222
+    via = "#120e2a"
+    art += f"<rect x='0' y='{deck}' width='{w}' height='16' fill='{via}'/>"
+    for x in range(-60, w + 100, 100):
+        art += (f"<path d='M{x},{deck + 16} L{x},{lake + 6} L{x + 18},{lake + 6} L{x + 18},{deck + 70} "
+                f"Q{x + 50},{deck + 24} {x + 82},{deck + 70} L{x + 82},{lake + 6} L{x + 100},{lake + 6} L{x + 100},{deck + 16} Z' fill='{via}'/>")
+        # the pier's reflection, broken by ripples
+        for r in range(4):
+            art += f"<rect x='{x + 1}' y='{lake + 12 + r * 16}' width='16' height='8' fill='{via}' opacity='{0.7 - r * 0.15:.2f}'/>"
+    # the train, heading right: coaches off the left edge, the engine and its lamp beam
+    win = "#ffcf6e"
+    body, roof, band = "#1e3a52", "#2a5070", "#c9452f"
+    coaches = [(-70 + i * 132, 126) for i in range(5)]
+    eng_x = coaches[-1][0] + 132
+    tr = f"<polygon points='{eng_x + 120},{deck - 36} {w + 10},{deck - 70} {w + 10},{deck + 10} {eng_x + 120},{deck - 14}' fill='url(#beam)'/>"
+    glow = ""
+    for i, (x, cw) in enumerate(coaches):
+        tr += f"<rect x='{x}' y='{deck - 50}' width='{cw}' height='48' rx='8' fill='{body}'/>"
+        tr += f"<rect x='{x + 4}' y='{deck - 54}' width='{cw - 8}' height='10' rx='5' fill='{roof}'/>"
+        tr += f"<rect x='{x}' y='{deck - 14}' width='{cw}' height='5' fill='{band}'/>"
+        for k in range(3):
+            wx = x + 12 + k * 38
+            glow += f"<rect x='{wx - 4}' y='{deck - 44}' width='38' height='32' fill='{win}'/>"
+            tr += f"<rect x='{wx}' y='{deck - 40}' width='30' height='22' rx='3' fill='{win}'/>"
+            n = 1 + (i * 5 + k * 2) % 2  # busy: nobody's window is empty
+            if (i + k) % 4 == 1:
+                tr += f"<path d='M{wx + 2},{deck - 38} L{wx + 9},{deck - 38} Q{wx + 6},{deck - 28} {wx + 9},{deck - 20} L{wx + 2},{deck - 20} Z' fill='#d98e3e'/>"
+            for j in range(n):
+                hx = wx + (17 if n == 1 else 12 + j * 11)
+                c = ["#3a2a3f", "#4a3346", "#2c2236"][(i + k + j) % 3]
+                tr += (f"<circle cx='{hx}' cy='{deck - 31}' r='4' fill='{c}'/>"
+                       f"<rect x='{hx - 5.5}' y='{deck - 25.5}' width='11' height='8' rx='4' fill='{c}'/>")
+        tr += f"<rect x='{x + cw}' y='{deck - 40}' width='6' height='28' fill='#14243a'/>"
+    tr += (f"<path d='M{eng_x},{deck - 2} L{eng_x},{deck - 52} L{eng_x + 92},{deck - 52} Q{eng_x + 120},{deck - 50} {eng_x + 124},{deck - 22} L{eng_x + 124},{deck - 2} Z' fill='{body}'/>"
+           f"<path d='M{eng_x + 92},{deck - 46} Q{eng_x + 112},{deck - 44} {eng_x + 116},{deck - 30} L{eng_x + 92},{deck - 30} Z' fill='{win}'/>"
+           f"<rect x='{eng_x}' y='{deck - 14}' width='124' height='5' fill='{band}'/>"
+           f"<circle cx='{eng_x + 118}' cy='{deck - 20}' r='4' fill='#fff7da'/>")
+    art += f"<g filter='url(#g)' opacity='.55'>{glow}</g>" + tr
+    # the windows' light on the water, broken into streaks
+    for x, cw in coaches:
+        for k in range(3):
+            wx = x + 12 + k * 38
+            for r in range(6):
+                ww = 28 - r * 3 + rng.uniform(-4, 3)
+                art += f"<rect x='{wx + rng.uniform(-4, 4):.0f}' y='{lake + 14 + r * 15}' width='{ww:.0f}' height='4' rx='2' fill='{win}' opacity='{0.6 - r * 0.09:.2f}'/>"
     return page(w, h, svg(w, h, art, defs))
 
 
@@ -784,65 +1048,165 @@ def raindrop_1(w, h):
 
 
 def raindrop_2(w, h):
-    """swift-evolution: proposals as fanned cards with status chips."""
-    defs = shadow("sh", 12, 14, .16, "#2a2a40")
-    art = f"<rect width='{w}' height='{h}' fill='#ecebe7'/>"
-    cards = [(-9, 130, 222, "SE-0412", "In review", "#f0a030"), (-2, 285, 182, "SE-0427", "Accepted", "#2fa56a"),
-             (6, 440, 200, "SE-0431", "Implemented", "#3a7bd5")]
-    for r, x, y, num, st, c in cards:
-        cw = len(st) * 9.4 + 30
-        art += (f"<g transform='rotate({r} {x + 120} {y})' filter='url(#sh)'>"
-                f"<rect x='{x}' y='{y - 150}' width='240' height='300' rx='18' fill='#fff'/>"
-                + text(x + 22, y - 110, num, 20, "#8a8a95", MONO, 600)
-                + f"<rect x='{x + 22}' y='{y - 90}' width='180' height='16' rx='8' fill='#26262e'/>"
-                + f"<rect x='{x + 22}' y='{y - 66}' width='130' height='16' rx='8' fill='#26262e'/>"
-                + "".join(f"<rect x='{x + 22}' y='{y - 30 + k * 20}' width='{196 - (k % 3) * 34}' height='9' rx='4.5' fill='#e3e3e8'/>" for k in range(5))
-                + f"<rect x='{x + 22}' y='{y + 94}' width='{cw:.0f}' height='32' rx='16' fill='{c}22'/>"
-                + f"<circle cx='{x + 38}' cy='{y + 110}' r='5' fill='{c}'/>"
-                + text(x + 50, y + 116, st, 15, c, SANS, 700)
-                + "</g>")
-    return page(w, h, svg(w, h, art, defs))
+    """A field guide to Berlin courtyards: one city block in isometric, its
+    wings and rear houses in stucco, the courtyards inside picked out in green."""
+    P = iso(400, 62, 28)
+    art = f"<rect width='{w}' height='{h}' fill='#efe9dd'/>"
+    # the streets round the block, and the pavements
+    art += f"<polygon points='{pts([P(-3, -3, 0), P(15, -3, 0), P(15, 13, 0), P(-3, 13, 0)])}' fill='#d9d2c4'/>"
+    art += f"<polygon points='{pts([P(-0.8, -0.8, 0), P(12.8, -0.8, 0), P(12.8, 10.8, 0), P(-0.8, 10.8, 0)])}' fill='#e8e2d6'/>"
+    for t in range(0, 13, 2):  # street trees
+        for (x, y) in ((t, -1.9), (13.6, t * 10 / 12)):
+            cx, cy = P(x, y, 0.9)
+            art += f"<circle cx='{cx:.1f}' cy='{cy:.1f}' r='9' fill='#9cbf8a'/>"
+    # the courtyards' floors, in green
+    courts = [(1.6, 1.6, 3.8, 3.0), (6.2, 1.6, 4.2, 3.0), (7.0, 4.6, 3.4, 1.0), (1.6, 5.6, 8.8, 2.8)]
+    for x, y, cw, cd in courts:
+        art += f"<polygon points='{pts([P(x, y, 0), P(x + cw, y, 0), P(x + cw, y + cd, 0), P(x, y + cd, 0)])}' fill='#4fbf62'/>"
+
+    def trees(spots):
+        out = ""
+        for x, y, r in spots:
+            gx, gy = P(x, y, 0)
+            cx, cy = P(x, y, 1.1)
+            out += f"<ellipse cx='{gx:.1f}' cy='{gy:.1f}' rx='{r * 0.9:.0f}' ry='{r * 0.45:.0f}' fill='#3f8a4c'/>"
+            out += f"<path d='M{gx:.1f},{gy:.1f} L{cx:.1f},{cy:.1f}' stroke='#6b4f3a' stroke-width='3'/>"
+            out += f"<circle cx='{cx:.1f}' cy='{cy:.1f}' r='{r}' fill='#2f9a4f'/><circle cx='{cx - r * 0.3:.1f}' cy='{cy - r * 0.35:.1f}' r='{r * 0.45:.1f}' fill='#7fd08a'/>"
+        return out
+
+    def block(x, y, bw, bd, hh, top, left, right):
+        out = iso_box(P, x, y, 0, bw, bd, hh, top, left, right)
+        # windows on the two faces we can see
+        for k in range(int(bw / 0.8)):
+            for f in range(int(hh / 0.5)):
+                a = x + 0.25 + k * 0.8
+                z = 0.35 + f * 0.5
+                if a + 0.35 < x + bw:
+                    out += f"<polygon points='{pts([P(a, y + bd, z), P(a + 0.35, y + bd, z), P(a + 0.35, y + bd, z + 0.25), P(a, y + bd, z + 0.25)])}' fill='#00000033'/>"
+        for k in range(int(bd / 0.8)):
+            for f in range(int(hh / 0.5)):
+                b = y + 0.25 + k * 0.8
+                z = 0.35 + f * 0.5
+                if b + 0.35 < y + bd:
+                    out += f"<polygon points='{pts([P(x + bw, b, z), P(x + bw, b + 0.35, z), P(x + bw, b + 0.35, z + 0.25), P(x + bw, b, z + 0.25)])}' fill='#00000026'/>"
+        return out
+
+    roof = "#c98a6a"
+    art += block(0, 0, 12, 1.6, 1.7, roof, "#e8cfa6", "#d6b88c")         # the back row
+    art += block(0, 1.6, 1.6, 6.8, 1.6, roof, "#e6d6c0", "#d9c4a6")       # the left row
+    art += block(5.4, 1.6, 0.8, 3.0, 1.4, roof, "#efe3cf", "#ddcdb2")     # a side wing
+    art += trees([(3.4, 3.2, 13), (8.4, 3.0, 12)])
+    art += block(1.6, 4.6, 5.4, 1.0, 1.4, roof, "#f0d9c6", "#e0c3aa")     # the rear house
+    art += block(10.4, 1.6, 1.6, 6.8, 1.6, roof, "#e3c9b7", "#d2b19b")    # the right row
+    art += trees([(4.0, 7.0, 15), (8.4, 6.8, 11)])
+    art += block(0, 8.4, 12, 1.6, 1.8, roof, "#f2dcc0", "#e2c6a0")        # the street front
+    # a gateway through the front, into the first court
+    gx = 5.4
+    art += f"<polygon points='{pts([P(gx, 10, 0), P(gx + 1, 10, 0), P(gx + 1, 10, 0.75), P(gx, 10, 0.75)])}' fill='#4a3a32'/>"
+    return page(w, h, svg(w, h, art))
 
 
 def raindrop_3(w, h):
-    """Swift README: a terminal building a toolchain, floating on a warm dusk."""
-    defs = lin("bg", [(0, "#3a1d5c"), (0.6, "#8a2f5a"), (1, "#d8653e")], 1, 1) + shadow("sh", 22, 26, .45, "#12051f")
-    art = f"<rect width='{w}' height='{h}' fill='url(#bg)'/>"
-    art += "<circle cx='690' cy='360' r='150' fill='#f39a5a' opacity='.25'/>"
-    art += ("<g filter='url(#sh)'><rect x='110' y='50' width='580' height='320' rx='16' fill='#16121f'/></g>"
-            "<rect x='110' y='50' width='580' height='38' rx='16' fill='#241e31'/><rect x='110' y='72' width='580' height='16' fill='#241e31'/>"
-            "<circle cx='136' cy='69' r='7' fill='#ff5f57'/><circle cx='158' cy='69' r='7' fill='#febc2e'/><circle cx='180' cy='69' r='7' fill='#28c840'/>")
-    lines = [("$ ", "#8be9a8", "utils/build-script --release", "#f2eefa"),
-             ("", "", "-- Configuring toolchain", "#8f86a6"),
-             ("[ 41%] ", "#f39a5a", "Building swift-frontend", "#f2eefa"),
-             ("[ 58%] ", "#f39a5a", "Building stdlib (arm64)", "#f2eefa"),
-             ("[ 73%] ", "#f39a5a", "Linking swift-driver", "#f2eefa")]
-    y = 128
-    for pre, pc, s, c in lines:
-        art += f"<text x='134' y='{y}' font-family=\"{MONO}\" font-size='19'><tspan fill='{pc}'>{pre}</tspan><tspan fill='{c}'>{s}</tspan></text>"
-        y += 34
-    art += "<rect x='134' y='310' width='530' height='22' rx='5' fill='#2c2640'/><rect x='134' y='310' width='387' height='22' rx='5' fill='#f39a5a'/>"
-    art += "<rect x='134' y='342' width='12' height='20' fill='#f2eefa'/>"
-    return page(w, h, svg(w, h, art, defs))
+    """Allotment planting calendar: months across, vegetables down, a sowing
+    bar and a harvest bar on each row."""
+    art = f"<rect width='{w}' height='{h}' fill='#e6efdc'/>"
+    art += "<rect x='24' y='20' width='752' height='380' rx='16' fill='#fffdf6'/>"
+    art += text(48, 60, "Planting calendar", 24, "#2e3a28", SERIF, 700)
+    left, col, top, row = 176, 48, 112, 38
+    months = "JFMAMJJASOND"
+    for i, m in enumerate(months):
+        x = left + i * col
+        if i % 2 == 0:
+            art += f"<rect x='{x}' y='{top - 30}' width='{col}' height='{row * 7 + 34}' fill='#f2efe2'/>"
+        art += text(x + col / 2, top - 10, m, 15, "#6b7560", SANS, 700, "middle")
+    sow, crop = "#c98a4f", "#4f9a4a"
+    veg = [("Broad beans", "#7fae5a", [(2, 4)], [(6, 8)]),
+           ("Carrots", "#ef8a3c", [(4, 7)], [(7, 10)]),
+           ("Lettuce", "#9ccc65", [(3, 8)], [(5, 10)]),
+           ("Tomatoes", "#e2553a", [(2, 3)], [(7, 9)]),
+           ("Potatoes", "#c9a26b", [(3, 4)], [(7, 9)]),
+           ("Squash", "#f2b632", [(4, 5)], [(9, 10)]),
+           ("Leeks", "#6aa37a", [(3, 4)], [(10, 12), (1, 2)])]
+    for r, (name, c, sows, crops) in enumerate(veg):
+        y = top + r * row
+        art += f"<circle cx='56' cy='{y + 18}' r='8' fill='{c}'/>"
+        art += text(74, y + 24, name, 16, "#2e3a28", SANS, 600)
+        for a, b in sows:
+            art += f"<rect x='{left + (a - 1) * col + 4}' y='{y + 6}' width='{(b - a + 1) * col - 8}' height='10' rx='5' fill='{sow}'/>"
+        for a, b in crops:
+            art += f"<rect x='{left + (a - 1) * col + 4}' y='{y + 20}' width='{(b - a + 1) * col - 8}' height='12' rx='6' fill='{crop}'/>"
+    ly = top + 7 * row + 18
+    art += (f"<rect x='{left}' y='{ly}' width='28' height='10' rx='5' fill='{sow}'/>" + text(left + 36, ly + 10, "Sow", 14, "#4a5541", SANS, 600)
+            + f"<rect x='{left + 90}' y='{ly - 1}' width='28' height='12' rx='6' fill='{crop}'/>" + text(left + 126, ly + 10, "Harvest", 14, "#4a5541", SANS, 600))
+    # a sprouting seedling in the corner
+    art += ("<g transform='translate(726 58)'><path d='M0,10 L0,-12' stroke='#4f9a4a' stroke-width='3' stroke-linecap='round'/>"
+            "<path d='M0,-6 C-14,-8 -18,-20 -16,-26 C-6,-24 0,-16 0,-6Z' fill='#6fbf5a'/>"
+            "<path d='M0,-10 C12,-14 18,-26 16,-30 C6,-28 0,-20 0,-10Z' fill='#4f9a4a'/>"
+            "<path d='M-16,10 L16,10 L12,22 L-12,22 Z' fill='#c98a4f'/></g>")
+    return page(w, h, svg(w, h, art))
 
 
 def raindrop_3b(w, h):
-    """Swift README, second image: a full-bleed light build log ending green."""
-    art = f"<rect width='{w}' height='{h}' fill='#fdf6e3'/>"
-    art += f"<rect x='0' y='0' width='64' height='{h}' fill='#f3ead2'/>"
-    log = [("[1/9]", "Compiling Lexer.swift"), ("[2/9]", "Compiling Parser.swift"), ("[3/9]", "Compiling Sema.swift"),
-           ("[4/9]", "Compiling IRGen.swift"), ("[5/9]", "Emitting module Swift"), ("[6/9]", "Compiling Driver.swift"),
-           ("[7/9]", "Linking swiftc"), ("[8/9]", "Applying Package.swift")]
-    y = 40
-    for i, (a, b) in enumerate(log):
-        art += text(52, y, str(101 + i), 15, "#b8ab88", MONO, 400, "end")
-        art += f"<text x='84' y='{y}' font-family=\"{MONO}\" font-size='19'><tspan fill='#268bd2'>{a}</tspan><tspan fill='#586e75'> {b}</tspan></text>"
-        y += 38
-    art += "<rect x='64' y='334' width='736' height='56' fill='#d9f2d2'/>"
-    art += text(52, 369, "109", 15, "#6aa56a", MONO, 400, "end")
-    art += ("<circle cx='102' cy='362' r='14' fill='#2fa84f'/><path d='M95,362 L100,368 L110,356' stroke='#fff' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/>")
-    art += text(130, 369, "Build complete!", 22, "#1f7f3a", MONO, 700) + text(340, 369, "(412.08s)", 20, "#4f9a5f", MONO, 400)
-    return page(w, h, svg(w, h, art))
+    """The planting calendar, second image: seed packets fanned out on a wooden
+    table, a trowel beside them, a few seeds spilled."""
+    defs = shadow("sh", 8, 8, .3, "#3a2410") + lin("blade", [(0, "#e3e6e8"), (0.5, "#a9b0b5"), (1, "#7d858b")], 1, 0)
+    art = f"<rect width='{w}' height='{h}' fill='#b98552'/>"
+    rng = random.Random(30)
+    for y in range(0, h, 84):  # planks and their grain
+        art += f"<rect x='0' y='{y}' width='{w}' height='82' fill='{rng.choice(['#b98552', '#c08b57', '#b27e4c'])}'/>"
+        art += f"<rect x='0' y='{y + 82}' width='{w}' height='2' fill='#8a5c32'/>"
+        for _ in range(4):
+            gy = y + rng.uniform(10, 72)
+            art += f"<path d='M0,{gy:.0f} C200,{gy - 6:.0f} 400,{gy + 8:.0f} {w},{gy - 2:.0f}' stroke='#a3703f' stroke-width='2' fill='none' opacity='.6'/>"
+
+    def carrot():
+        return ("<path d='M-10,-30 L10,-30 L0,24 Z' fill='#ef8a3c'/>"
+                "<path d='M0,-30 L-10,-52 M0,-30 L0,-56 M0,-30 L10,-52' stroke='#4f9a4a' stroke-width='5' stroke-linecap='round'/>")
+
+    def tomato():
+        return ("<circle cx='0' cy='0' r='26' fill='#e2553a'/><circle cx='-8' cy='-8' r='7' fill='#ffffff44'/>"
+                "<path d='M0,-24 L-10,-30 M0,-24 L10,-30 M0,-24 L0,-34 M0,-24 L-12,-20 M0,-24 L12,-20' stroke='#3f8a4c' stroke-width='4' stroke-linecap='round'/>")
+
+    def pea():
+        return ("<path d='M-30,10 Q0,-30 30,-10 Q0,22 -30,10 Z' fill='#6fbf5a'/>"
+                + "".join(f"<circle cx='{x}' cy='{-2 - x * 0.2:.0f}' r='6' fill='#9be07f'/>" for x in (-14, 0, 14)))
+
+    def beet():
+        return ("<circle cx='0' cy='6' r='22' fill='#8e2b5a'/><path d='M0,28 Q2,38 -2,46' stroke='#8e2b5a' stroke-width='3' fill='none'/>"
+                "<path d='M0,-14 C-16,-30 -14,-44 -6,-46 C0,-36 2,-24 0,-14 Z M0,-14 C14,-32 20,-40 12,-48 C4,-40 0,-28 0,-14 Z' fill='#4f9a4a'/>")
+
+    def sunflower():
+        out = "".join(f"<ellipse cx='0' cy='-20' rx='7' ry='14' fill='#f2c14e' transform='rotate({a})'/>" for a in range(0, 360, 30))
+        return out + "<circle r='14' fill='#6b4a2a'/>"
+
+    packets = [(-30, "#f4c9a0", carrot), (-15, "#f7d6d0", tomato), (0, "#d7ebc6", pea), (15, "#ead3e2", beet), (30, "#fbe7b0", sunflower)]
+    px, py = 330, 520
+    for rot, band, pic in packets:
+        art += (f"<g transform='rotate({rot} {px} {py})' filter='url(#sh)'>"
+                f"<rect x='{px - 72}' y='{py - 420}' width='144' height='210' rx='6' fill='#f7f1e3'/>"
+                f"<rect x='{px - 72}' y='{py - 420}' width='144' height='26' rx='6' fill='{band}'/>"
+                f"<path d='M{px - 72},{py - 400} l144,0' stroke='#00000014' stroke-width='2'/>"
+                f"<rect x='{px - 54}' y='{py - 382}' width='108' height='100' rx='8' fill='{band}' opacity='.55'/>"
+                f"<g transform='translate({px} {py - 332})'>{pic()}</g>"
+                f"<rect x='{px - 54}' y='{py - 266}' width='84' height='9' rx='4.5' fill='#5a4a3a' opacity='.7'/>"
+                f"<rect x='{px - 54}' y='{py - 250}' width='60' height='7' rx='3.5' fill='#5a4a3a' opacity='.35'/>"
+                "</g>")
+    # spilled seeds and a crumb of soil
+    for _ in range(18):
+        x, y = rng.uniform(470, 560), rng.uniform(330, 400)
+        art += f"<ellipse cx='{x:.0f}' cy='{y:.0f}' rx='4' ry='2.5' fill='#f1e2c0' transform='rotate({rng.uniform(0, 180):.0f} {x:.0f} {y:.0f})'/>"
+    for _ in range(14):
+        x, y = rng.uniform(600, 700), rng.uniform(300, 360)
+        art += f"<circle cx='{x:.0f}' cy='{y:.0f}' r='{rng.uniform(2, 5):.1f}' fill='#4a3322'/>"
+    # the trowel
+    art += ("<g transform='translate(640 210) rotate(28)' filter='url(#sh)'>"
+            "<path d='M-40,0 C-40,-40 -10,-80 0,-110 C10,-80 40,-40 40,0 C40,22 -40,22 -40,0 Z' fill='url(#blade)'/>"
+            "<path d='M0,-100 L0,8' stroke='#ffffff66' stroke-width='3'/>"
+            "<rect x='-6' y='14' width='12' height='34' fill='#7d858b'/>"
+            "<rect x='-15' y='46' width='30' height='120' rx='14' fill='#3f8a4c'/>"
+            "<rect x='-11' y='50' width='8' height='108' rx='4' fill='#ffffff33'/>"
+            "<circle cx='0' cy='150' r='4' fill='#1f4a28'/></g>")
+    return page(w, h, svg(w, h, art, defs))
 
 
 def raindrop_4(w, h):
@@ -1000,6 +1364,120 @@ def notion_9(w, h):
     return page(w, h, svg(w, h, art, defs))
 
 
+# ── Book covers (400×600) ─────────────────────────────────────────────────
+# Made covers, never the real jackets: each sets its title and author in type
+# over a motif of its own, in a palette of its own.
+
+BASKERVILLE = "Baskerville, 'New York', Georgia, serif"
+GILL = "'Gill Sans', 'Avenir Next', system-ui, sans-serif"
+FUTURA = "Futura, 'Avenir Next', system-ui, sans-serif"
+
+
+def cover_state(w, h):
+    """Seeing Like a State: an old town's crooked blocks, and a surveyor's
+    straight red grid laid over them."""
+    paper, ink, red = "#efe6d2", "#2b2620", "#b8322a"
+    art = f"<rect width='{w}' height='{h}' fill='{paper}'/>"
+    defs = "<clipPath id='plan'><rect x='36' y='40' width='328' height='328'/></clipPath>"
+    rng = random.Random(41)
+    n = 8
+    step = 328 / (n - 1)
+
+    def warp(x, y):  # the old town's lanes bend with the ground, not the survey
+        return (x + 16 * math.sin(y / 46 + 0.6) + rng.uniform(-6, 6),
+                y + 14 * math.sin(x / 52 + 1.9) + rng.uniform(-6, 6))
+    grid = [[warp(36 + i * step, 40 + j * step) for i in range(n)] for j in range(n)]
+    plan = f"<rect x='36' y='40' width='328' height='328' fill='{paper}'/>"
+    for j in range(n - 1):
+        for i in range(n - 1):
+            q = [grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]]
+            cx = sum(p[0] for p in q) / 4
+            cy = sum(p[1] for p in q) / 4
+            q = [(cx + (x - cx) * 0.86, cy + (y - cy) * 0.86) for x, y in q]
+            # each edge bends once, so the lanes between blocks wander
+            ring = []
+            for a, b in zip(q, q[1:] + q[:1]):
+                ring.append(a)
+                ring.append(((a[0] + b[0]) / 2 + rng.uniform(-5, 5), (a[1] + b[1]) / 2 + rng.uniform(-5, 5)))
+            plan += f"<polygon points='{pts(ring)}' fill='{ink}' opacity='{rng.uniform(0.62, 0.86):.2f}' stroke='{ink}' stroke-opacity='.2' stroke-width='1.5' stroke-linejoin='round'/>"
+    plan += f"<circle cx='200' cy='204' r='22' fill='{paper}'/>"  # a market square
+    lines = ""
+    for k in range(0, 5):
+        v = 36 + k * 82
+        lines += (f"<path d='M{v},40 L{v},368' stroke='{red}' stroke-width='4'/>"
+                  f"<path d='M36,{v + 4} L364,{v + 4}' stroke='{red}' stroke-width='4'/>")
+    marks = "".join(f"<path d='M{36 + i * 82 - 6},{44 + j * 82} l12,0 M{36 + i * 82},{38 + j * 82} l0,12' stroke='{paper}' stroke-width='3'/>"
+                    for i in range(5) for j in range(5))
+    art += f"<g clip-path='url(#plan)'>{plan}{lines}{marks}</g>"
+    art += text(36, 446, "Seeing Like", 46, ink, BASKERVILLE, 700)
+    art += text(36, 496, "a State", 46, ink, BASKERVILLE, 700)
+    art += f"<rect x='36' y='520' width='48' height='4' fill='{red}'/>"
+    art += text(36, 560, "James C. Scott", 20, ink, BASKERVILLE, 400)
+    return page(w, h, svg(w, h, art, defs), paper)
+
+
+def cover_timeless(w, h):
+    """The Timeless Way of Building: one gabled house and the path to its door,
+    repeated quietly as a pattern behind."""
+    ground, cream, deep = "#b65a34", "#f6e8d2", "#7a3520"
+    art = f"<rect width='{w}' height='{h}' fill='{ground}'/>"
+
+    def house(x, y, s, fill, stroke=None, sw=0):
+        st = f"stroke='{stroke}' stroke-width='{sw}' stroke-linejoin='round'" if stroke else ""
+        return f"<path d='M{x - 20 * s},{y} L{x - 20 * s},{y - 22 * s} L{x},{y - 40 * s} L{x + 20 * s},{y - 22 * s} L{x + 20 * s},{y} Z' fill='{fill}' {st}/>"
+
+    for j in range(8):  # the pattern: small houses in staggered rows
+        for i in range(6):
+            x = 20 + i * 72 + (36 if j % 2 else 0)
+            y = 60 + j * 64
+            art += house(x, y, 0.62, "#c46d44")
+    # the motif: a house, its door, a winding path of stepping stones
+    art += f"<rect x='60' y='60' width='280' height='300' fill='{ground}'/>"
+    art += f"<rect x='60' y='60' width='280' height='300' fill='none' stroke='{cream}' stroke-width='3'/>"
+    art += house(200, 230, 3.2, cream)
+    art += f"<rect x='186' y='184' width='28' height='46' rx='14' fill='{deep}'/>"
+    art += f"<rect x='150' y='150' width='22' height='22' fill='{deep}'/><rect x='228' y='150' width='22' height='22' fill='{deep}'/>"
+    art += f"<circle cx='200' cy='124' r='9' fill='{deep}'/>"
+    stones = [(200, 248, 16), (188, 272, 15), (204, 296, 14), (226, 316, 13), (246, 334, 12)]
+    for x, y, r in stones:
+        art += f"<ellipse cx='{x}' cy='{y}' rx='{r}' ry='{r * 0.5:.1f}' fill='{cream}'/>"
+    art += f"<path d='M84,230 L316,230' stroke='{cream}' stroke-width='3'/>"
+    art += f"<rect x='40' y='392' width='320' height='170' fill='{ground}'/>"
+    art += text(200, 432, "The Timeless Way", 34, cream, GILL, 600, "middle")
+    art += text(200, 474, "of Building", 34, cream, GILL, 600, "middle")
+    art += f"<circle cx='200' cy='504' r='4' fill='{cream}'/>"
+    art += text(200, 546, "Christopher Alexander", 21, cream, GILL, 400, "middle")
+    return page(w, h, svg(w, h, art), ground)
+
+
+def cover_systems(w, h):
+    """Thinking in Systems: a tank (the stock), a tap filling it, a drain
+    emptying it, and the loop arrow that feeds back to the tap."""
+    bg, ink, acc, water = "#dcefe6", "#163c45", "#f07a3a", "#5fb7c9"
+    art = f"<rect width='{w}' height='{h}' fill='{bg}'/>"
+    art += text(36, 92, "Thinking", 56, ink, FUTURA, 700)
+    art += text(36, 150, "in Systems", 56, ink, FUTURA, 700)
+    # the inflow: a pipe and a tap, a stream falling into the tank
+    art += f"<path d='M36,236 L170,236' stroke='{ink}' stroke-width='16'/>"
+    art += (f"<path d='M118,220 L138,236 L118,252 Z M158,220 L138,236 L158,252 Z' fill='{ink}'/>"
+            f"<path d='M138,236 L138,206' stroke='{ink}' stroke-width='6'/><rect x='122' y='198' width='32' height='10' rx='5' fill='{acc}'/>"
+            f"<path d='M170,236 Q186,236 186,254' stroke='{ink}' stroke-width='16' fill='none'/>"
+            f"<rect x='180' y='262' width='12' height='60' rx='6' fill='{water}'/>")
+    # the stock
+    art += (f"<rect x='120' y='272' width='160' height='170' rx='10' fill='#ffffff' stroke='{ink}' stroke-width='8'/>"
+            f"<path d='M128,348 Q160,340 200,348 T272,348 L272,432 Q272,436 266,436 L134,436 Q128,436 128,432 Z' fill='{water}'/>")
+    # the outflow
+    art += (f"<path d='M280,412 L364,412' stroke='{ink}' stroke-width='16'/>"
+            f"<path d='M312,396 L332,412 L312,428 Z M352,396 L332,412 L352,428 Z' fill='{ink}'/>"
+            f"<path d='M332,412 L332,382' stroke='{ink}' stroke-width='6'/>")
+    # the loop: from the stock's level back to the inflow tap
+    art += (f"<path d='M290,330 C350,300 350,190 240,184 C190,182 160,186 146,196' stroke='{acc}' stroke-width='7' fill='none' stroke-linecap='round'/>"
+            f"<polygon points='140,190 154,206 160,186' fill='{acc}'/>")
+    art += f"<rect x='36' y='496' width='56' height='6' rx='3' fill='{acc}'/>"
+    art += text(36, 548, "Donella Meadows", 24, ink, FUTURA, 500)
+    return page(w, h, svg(w, h, art), bg)
+
+
 # ── dispatch ──────────────────────────────────────────────────────────────
 
 DRAW = {
@@ -1014,6 +1492,7 @@ DRAW = {
     "raindrop-2": raindrop_2, "raindrop-3": raindrop_3, "raindrop-3b": raindrop_3b,
     "raindrop-4": raindrop_4, "raindrop-5": raindrop_5,
     "notion-0": notion_0, "notion-3": notion_3, "notion-6": notion_6, "notion-9": notion_9,
+    "cover-state": cover_state, "cover-timeless": cover_timeless, "cover-systems": cover_systems,
 }
 
 

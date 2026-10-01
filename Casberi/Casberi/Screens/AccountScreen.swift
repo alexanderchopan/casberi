@@ -471,7 +471,7 @@ struct SettingsRows: View {
     ///
     /// Gated on a DEMO-CLEAN corpus, and the gate is load-bearing, not
     /// decorative: `seedBridgeState` writes PostHog metrics named
-    /// `signed_up`/`answer_asked`, and `DemoMode.exit` FORGETS those by
+    /// `signed_up`/`doc_exported`, and `DemoMode.exit` FORGETS those by
     /// name — on a lived-in install with a real PostHog connection, exiting
     /// a re-entered demo would destroy that person's real readings. A watched
     /// real wallet fails the same way through the seeded balance curve. So

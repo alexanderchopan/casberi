@@ -258,18 +258,6 @@ def tree(x, yb, h, rng, leaf, trunk, hi=None, lightx=-1, shadow=None, spread=1.0
     return "".join(out)
 
 
-def cypress(x, yb, h, fill, hi=None):
-    w = h * 0.13
-    d = (f"M{n(x)} {n(yb - h)} C{n(x + w)} {n(yb - h * 0.7)} {n(x + w * 1.1)} {n(yb - h * 0.2)} {n(x + w * 0.5)} {n(yb)} "
-         f"L{n(x - w * 0.5)} {n(yb)} C{n(x - w * 1.1)} {n(yb - h * 0.2)} {n(x - w)} {n(yb - h * 0.7)} {n(x)} {n(yb - h)} Z")
-    out = path(d, fill)
-    if hi:
-        d2 = (f"M{n(x)} {n(yb - h)} C{n(x - w)} {n(yb - h * 0.7)} {n(x - w * 1.1)} {n(yb - h * 0.2)} {n(x - w * 0.5)} {n(yb)} "
-              f"L{n(x - w * 0.1)} {n(yb)} C{n(x - w * 0.4)} {n(yb - h * 0.4)} {n(x - w * 0.3)} {n(yb - h * 0.8)} {n(x)} {n(yb - h)} Z")
-        out += path(d2, hi)
-    return out
-
-
 def person(x, yb, h, fill, **kw):
     """A distant standing silhouette, no features."""
     hr = h * 0.085
@@ -616,13 +604,6 @@ def tram_side(x, y, L, col="#f3b61f", roof="#f1ece0", glass="#2c3440", skirt="#3
     return "".join(out)
 
 
-def sailboat(x, y, h, fill):
-    return (path(f"M{n(x - h * 0.45)} {n(y)} L{n(x + h * 0.45)} {n(y)} L{n(x + h * 0.32)} {n(y + h * 0.12)} "
-                 f"L{n(x - h * 0.34)} {n(y + h * 0.12)} Z", fill)
-            + poly([(x, y - h), (x, y - 2), (x + h * 0.36, y - 2)], fill)
-            + poly([(x - 2, y - h * 0.85), (x - 2, y - 2), (x - h * 0.3, y - 2)], fill, opacity=0.85))
-
-
 def cloud(S, x, y, w, rng, col="#ffffff", shade="#c9d6e8", lobes=6):
     out = []
     for i in range(lobes):
@@ -637,41 +618,6 @@ def cloud(S, x, y, w, rng, col="#ffffff", shade="#c9d6e8", lobes=6):
 
 
 # ── compositions ──────────────────────────────────────────────────────────
-
-
-def shot_13(p):
-    """Late sun over Lisbon roofs, the river beyond — backlit, portrait."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("shot-13")
-    hy = 300
-    S(sky(S, [(0, "#6f7fa6"), (0.45, "#d99a7a"), (0.8, "#f5c27a"), (1, "#fbe3a6")], 0, hy + 20))
-    S(glow(S, 400, hy - 18, 320, "#ffe2a0", 0.55))
-    S(glow(S, 400, hy - 18, 90, "#fff6dc", 0.9))
-    S(circ(400, hy - 18, 26, "#fff8e6"))
-    # far bank
-    S(ridge(S, rng, hy - 6, 7, "#c99a86", freq=1.4, bottom=hy + 4))
-    S(ridge(S, rng, hy - 1, 4, "#b98a82", freq=2.2, bottom=hy + 4))
-    # river
-    S(rect(0, hy + 2, w, h - hy, S.lin([(0, "#f4c98a"), (0.25, "#dca27c"), (0.6, "#9a6f7e"), (1, "#6a4c6a")], 0, 0, 0, 1)))
-    S(water_glints(rng, 0, w, hy + 6, hy + 120, "#fff3cf", 70, 0.8, 50, center=400, spread=22))
-    for bx, by, bs in ((150, hy + 46, 1.0), (250, hy + 22, 0.6)):
-        S(sailboat(bx, by, 40 * bs, "#6e4a5e"))
-    cam = Cam((0, 70, -10), yaw=4, pitch=10, f=560, cx=w / 2, cy=hy + 98, light=(0.35, 0.28, 1.0),
-              shadow="#4a2f55", shadow_k=0.68, lit="#ffc97e", lit_k=0.45, fog="#eeb28a", fogd=240, fogmax=0.85)
-
-    def ground(x, z):
-        return -0.2 * z + 0.02 * x
-    items = city_grid(cam, rng, (-170, 190), (2, 250), ground, 9, 20, gap=0.12, skip=0.04,
-                      roof_rim="#ffcf8a", win_w=0.3)
-    # a bell tower and a cypress mid-slope
-    items.append(house(cam, 20, 30, 120, 130, ground(25, 125), 40, 8, "#efdcc0", "#b0583a", rng, win=False,
-                       roof_rim="#ffd79a"))
-    S(draw_sorted(items))
-    for x, yb, hh in ((72, 640, 150), (540, 700, 190)):
-        S(cypress(x, yb, hh, "#3a2f3f", hi="#5b4250"))
-    S(rect(0, 0, w, h, S.lin([(0, "#000", 0), (0.75, "#2a1830", 0), (1, "#2a1830", 0.35)])))
-    return S.html()
 
 
 def dome(cam, S, base, R, H_drum, wall="#f4f0e8", shade="#9aa7bd", lantern=True):
@@ -735,67 +681,6 @@ def ig_photo_0(p):
         tb = (tx + 4, gy + 34, dz)
         items.append((cam.dist(tb) - 4, dome(cam, S, tb, 4.6, 2, lantern=False)))
     S(draw_sorted(items))
-    return S.html()
-
-
-def terrace(S, y, w, stone="#efe6d6", shadow="#b9ab98"):
-    out = [rect(0, y, w, 14, light(stone, 0.2)), rect(0, y + 14, w, 6, shadow)]
-    bal = S.lin([(0, stone), (0.5, light(stone, 0.2)), (1, shadow)], 0, 0, 1, 0)
-    k = int(w / 34)
-    for i in range(k + 1):
-        x = i * 34 + 6
-        out.append(path(f"M{n(x)} {n(y + 20)} C{n(x - 5)} {n(y + 34)} {n(x + 5)} {n(y + 44)} {n(x - 3)} {n(y + 58)} "
-                        f"L{n(x + 21)} {n(y + 58)} C{n(x + 13)} {n(y + 44)} {n(x + 23)} {n(y + 34)} {n(x + 18)} {n(y + 20)} Z", bal))
-    out.append(rect(0, y + 58, w, 12, stone))
-    out.append(rect(0, y + 70, w, 200, S.lin([(0, "#cbbba3"), (1, "#a8977f")])))
-    return "".join(out)
-
-
-def blossoms(rng, cx, cy, r, cols, count=60):
-    out = []
-    for _ in range(count):
-        a = rng.uniform(0, 6.283)
-        d = r * math.sqrt(rng.random())
-        x, y = cx + math.cos(a) * d, cy + math.sin(a) * d * 0.7
-        out.append(circ(x, y, rng.uniform(2.5, 6.5), rng.choice(cols)))
-    return "".join(out)
-
-
-def reddit_4(p):
-    """A miradouro: stone terrace, jacaranda overhead, the city falling to a wide river."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("reddit-4")
-    hy = 150
-    S(sky(S, [(0, "#8fb4d9"), (1, "#e6e6e8")], 0, hy + 10))
-    S(ridge(S, rng, hy - 10, 10, "#b7bfd2", freq=1.5, bottom=hy + 6))
-    S(ridge(S, rng, hy - 2, 5, "#a7b2c8", freq=2.5, bottom=hy + 6))
-    S(rect(0, hy + 2, w, 200, S.lin([(0, "#b9cddd"), (0.5, "#8fb0cc"), (1, "#7699ba")])))
-    S(water_glints(rng, 0, w, hy + 8, hy + 150, "#e8f1f8", 60, 0.6, 30))
-    for bx, by, bs in ((560, hy + 40, 0.8), (320, hy + 70, 0.6)):
-        S(sailboat(bx, by, 30 * bs, "#f5f2ec"))
-    cam = Cam((0, 45, -20), yaw=6, pitch=8, f=720, cx=w / 2, cy=hy + 101, light=(0.8, 0.8, -0.35),
-              shadow="#6a6d9a", shadow_k=0.45, lit="#fff1dc", lit_k=0.25, fog="#c9d3e0", fogd=260, fogmax=0.85)
-
-    def ground(x, z):
-        return -0.08 * z + 0.02 * x
-    S(rect(0, hy + 150, w, h, S.lin([(0, "#cfd3da"), (1, "#c8a88e")])))
-    items = city_grid(cam, rng, (-200, 230), (40, 300), ground, 9, 19, gap=0.1, skip=0.05, win_w=0.3,
-                      lot=(14, 26),
-                      walls=lambda r: r.choice(["#f4efe6", "#f1e6cf", "#efe0c4", "#e9d7cf", "#f6f2ea", "#e3ddc8"]))
-    S(draw_sorted(items))
-    # the jacaranda over the terrace
-    br = "#4a3a3a"
-    for d in ("M-10 60 C120 90 210 70 330 30", "M60 -10 C90 50 150 80 240 110", "M-10 180 C40 140 80 110 150 90"):
-        S(path(d, "none", stroke=br, stroke_width=7, stroke_linecap="round"))
-    cols = ["#8a78c8", "#9d8ad6", "#b3a3e6", "#7563b4", "#c6b9f0"]
-    for cx, cy, r in ((70, 40, 90), (220, 70, 80), (330, 20, 60), (30, 150, 60), (150, 110, 50)):
-        S(blossoms(rng, cx, cy, r, cols, 45))
-    S(terrace(S, 480, w))
-    S(lamp_post(700, 490, 250, "#26272c", "#efe7cf", "#fff0c0", S, on=False))
-    for i in range(24):
-        x, y = rng.uniform(0, w), rng.uniform(520, 600)
-        S(ell(x, y, 3.5, 2, rng.choice(cols), opacity=0.8))
     return S.html()
 
 
@@ -863,97 +748,6 @@ def ig_photo_2(p):
     # a walker on the pavement
     S(person(560, sy(560) - 22, 64, "#2c3040"))
     S(rect(0, 0, w, h, S.lin([(0, "#fff3d6", 0.12), (0.5, "#fff3d6", 0), (1, "#1b1e2e", 0.2)])))
-    return S.html()
-
-
-def tram_front(cx, yb, W, col="#f3b61f", roof="#f1ece0", glass="#26303c", lampglow=True):
-    """A Lisbon-style tram seen head-on; bottom-centre at (cx, yb), width W."""
-    H = W * 1.45
-    x0 = cx - W / 2
-    top = yb - H
-    out = []
-    out.append(line(cx + W * 0.1, top + H * 0.02, cx + W * 0.35, top - H * 0.5, "#222", max(1, W * 0.03)))
-    out.append(path(f"M{n(x0 + W * 0.04)} {n(top + H * 0.08)} Q{n(cx)} {n(top - H * 0.03)} {n(x0 + W * 0.96)} {n(top + H * 0.08)} Z", roof))
-    out.append(rect(x0, top + H * 0.07, W, H * 0.83, col, rx=W * 0.08))
-    out.append(rect(x0 + W * 0.62, top + H * 0.07, W * 0.38, H * 0.83, "#b07a00", opacity=0.25, rx=W * 0.08))
-    out.append(rect(cx - W * 0.28, top + H * 0.1, W * 0.56, H * 0.08, "#1e1e22", rx=W * 0.02))
-    out.append(rect(x0 + W * 0.1, top + H * 0.22, W * 0.37, H * 0.3, glass, rx=W * 0.03))
-    out.append(rect(cx + W * 0.03, top + H * 0.22, W * 0.37, H * 0.3, glass, rx=W * 0.03))
-    out.append(poly([(x0 + W * 0.12, top + H * 0.24), (x0 + W * 0.26, top + H * 0.24), (x0 + W * 0.14, top + H * 0.5),
-                     (x0 + W * 0.12, top + H * 0.5)], "#ffffff", opacity=0.14))
-    out.append(rect(x0, top + H * 0.56, W, H * 0.02, dark(col, 0.35)))
-    if lampglow:
-        out.append(circ(cx, top + H * 0.68, W * 0.2, "#fff4c0", opacity=0.25))
-    out.append(circ(cx, top + H * 0.68, W * 0.065, "#fffbe8"))
-    for sx in (-1, 1):
-        out.append(circ(cx + sx * W * 0.34, top + H * 0.74, W * 0.035, "#ffe7a8"))
-    out.append(rect(x0 - W * 0.02, top + H * 0.84, W * 1.04, H * 0.06, "#2a2a2e", rx=W * 0.02))
-    out.append(rect(x0 + W * 0.08, top + H * 0.9, W * 0.84, H * 0.1, "#18181b"))
-    return "".join(out)
-
-
-def reddit_5(p):
-    """A tram stop with a queue, the yellow tram coming head-on up the street, afternoon."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("reddit-5")
-    cam = Cam((1.5, 1.7, 0), yaw=-3, pitch=-1, f=560, cx=w / 2, cy=300, light=(-0.55, 0.75, 0.35),
-              shadow="#4a4f7a", shadow_k=0.4, lit="#fff0d0", lit_k=0.25, fog="#e9e2d6", fogd=160, fogmax=0.75)
-    S(sky(S, [(0, "#4f8fd1"), (1, "#cfe2f2")], 0, 320))
-    far = 170
-    S(rect(0, 300, w, h - 300, "#6f6a66"))
-    # ground: street and pavements
-    S(cam.face([(-3.6, 0, 2), (3.6, 0, 2), (3.6, 0, far), (-3.6, 0, far)], "#8a8580"))
-    S(cam.face([(-6, 0.15, 2), (-3.6, 0.15, 2), (-3.6, 0.15, far), (-6, 0.15, far)], "#d8cfc0"))
-    S(cam.face([(3.6, 0.15, 2), (6.5, 0.15, 2), (6.5, 0.15, far), (3.6, 0.15, far)], "#e2d9ca"))
-    S(cam.face([(-3.6, 0.01, 2), (-1.4, 0.01, 2), (-1.4, 0.01, far), (-3.6, 0.01, far)], "#3e3f5c", opacity=0.35))
-    for rx in (-0.72, 0.72):
-        a, b = cam.p((rx, 0.02, 2)), cam.p((rx, 0.02, far))
-        S(line(a[0], a[1], b[0], b[1], "#d8d8de", 2.4))
-    items = []
-    walls = ["#e7b98a", "#f0dcc0", "#d98f6a", "#e9d8a8", "#c8d4d8", "#f2e6d8", "#e6c3b0"]
-    for side, x0, x1 in ((-1, -18, -6), (1, 6.5, 19)):
-        z = 2
-        while z < far:
-            L = rng.uniform(7, 13)
-            H = rng.uniform(11, 18)
-            items.append(house(cam, x0, x1, z, z + L, 0, H, 0, rng.choice(walls), "#b55", rng, win_w=0.3,
-                               floor_h=3.4, shutters=rng.choice(["#3f6b5a", "#5b6f8c", None]), cornice="#f6efe2"))
-            z += L
-    S(draw_sorted(items))
-    # wires
-    for z in (10, 30, 55, 90):
-        a, b = cam.p((-6, 7.5, z)), cam.p((6.5, 7.5, z))
-        S(line(a[0], a[1], b[0], b[1], "#2a2a30", 1, opacity=0.6))
-    for wx in (-0.6, 0.6):
-        a, b = cam.p((wx, 6.2, 3)), cam.p((wx, 6.2, far))
-        S(line(a[0], a[1], b[0], b[1], "#2a2a30", 1.2, opacity=0.7))
-    # the tram
-    tp = (0.2, 0, 15)
-    x, y = cam.p(tp)
-    S(ell(x + cam.scale(tp) * 0.3, y, cam.scale(tp) * 1.6, cam.scale(tp) * 0.12, "#2a2a3a", opacity=0.35))
-    S(tram_front(x, y, cam.scale(tp) * 2.5))
-    # the queue on the near pavement
-    stop = (4.0, 0.15, 7.5)
-    a, b = cam.p(stop), cam.p((4.0, 3.1, 7.5))
-    S(line(a[0], a[1], b[0], b[1], "#2e2e33", 3))
-    S(circ(b[0], b[1], 10, "#f3b61f"))
-    S(circ(b[0], b[1], 6, "#fff4d0"))
-    cloth = ["#2d3a52", "#7a3b2e", "#4a5a3a", "#2b2b30", "#8a6a4a", "#34466a", "#5a2e3e", "#6b6f78"]
-    people = []
-    zz = 6.2
-    for i in range(13):
-        pz = zz + i * 1.05 + rng.uniform(-0.2, 0.2)
-        px = 5.0 + rng.uniform(-0.45, 0.6)
-        hh = rng.uniform(1.62, 1.85)
-        people.append((pz, px, hh))
-    for pz, px, hh in sorted(people, key=lambda q: -q[0]):
-        base = cam.p((px, 0.15, pz))
-        sc = cam.scale((px, 0.15, pz))
-        sh = cam.p((px + 1.1, 0.15, pz - 0.5))
-        S(line(base[0], base[1], sh[0], sh[1], "#3a3f60", sc * 0.45, opacity=0.35, stroke_linecap="round"))
-        S(person(base[0], base[1], hh * sc, rng.choice(cloth)))
-    S(rect(0, 0, w, h, S.lin([(0, "#fff", 0), (0.7, "#fff", 0), (1, "#20202a", 0.25)])))
     return S.html()
 
 
@@ -2493,8 +2287,1044 @@ def snap_5(p):
     return S.html()
 
 
+# ── a Berlin balcony, football days, Tempelhof and the Ringbahn ──────────
+
+
+def gline(cam, pts3, col, w_m, op=1.0):
+    """A line painted on the ground: a polyline whose width follows the depth."""
+    out = []
+    for a, b in zip(pts3, pts3[1:]):
+        pa, pb = cam.p(a), cam.p(b)
+        sc = cam.scale(((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2))
+        out.append(line(pa[0], pa[1], pb[0], pb[1], col, max(0.7, sc * w_m), opacity=op, stroke_linecap="round"))
+    return "".join(out)
+
+
+def garc(cx, cz, r, a0, a1, y=0.02, steps=28):
+    """Points of a ground arc around (cx, cz), angles in degrees."""
+    return [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * i / steps)), y,
+             cz + r * math.sin(math.radians(a0 + (a1 - a0) * i / steps))) for i in range(steps + 1)]
+
+
+def leaflets(x, y, ang, size, col, hi=None, k=5, rng=None):
+    """A compound leaf: a rib with broad, uneven leaflets either side (tomato, rose)."""
+    a = math.radians(ang)
+    ux, uy = math.cos(a), math.sin(a)
+    out = [line(x, y, x + ux * size, y + uy * size, dark(col, 0.25), max(0.8, size * 0.04))]
+    for i in range(k):
+        t = 0.25 + 0.75 * i / max(1, k - 1)
+        px, py = x + ux * size * t, y + uy * size * t
+        for s in ((-1, 1) if i < k - 1 else (0,)):
+            la = ang + s * 55 + (rng.uniform(-18, 18) if rng else 0)
+            r = size * (0.2 if s else 0.24) * (rng.uniform(0.8, 1.2) if rng else 1)
+            lx = px + math.cos(math.radians(la)) * r * 0.8
+            ly = py + math.sin(math.radians(la)) * r * 0.8
+            out.append(ell(lx, ly, r, r * 0.58, col, transform=f"rotate({la:.0f} {lx:.1f} {ly:.1f})"))
+            out.append(ell(lx + r * 0.2, ly + r * 0.1, r * 0.45, r * 0.3, dark(col, 0.2), opacity=0.5,
+                           transform=f"rotate({la + 25:.0f} {lx:.1f} {ly:.1f})"))
+            if hi:
+                out.append(ell(lx, ly - r * 0.12, r * 0.6, r * 0.2, hi, opacity=0.55,
+                               transform=f"rotate({la:.0f} {lx:.1f} {ly:.1f})"))
+    return "".join(out)
+
+
+def pot(x, yb, wtop, h, col="#c1663f", rim=None, shade="#6e3420"):
+    """A terracotta pot, bottom-centre (x, yb)."""
+    rim = rim or light(col, 0.12)
+    wb = wtop * 0.72
+    out = [poly([(x - wtop / 2, yb - h), (x + wtop / 2, yb - h), (x + wb / 2, yb), (x - wb / 2, yb)], col),
+           poly([(x + wtop * 0.12, yb - h), (x + wtop / 2, yb - h), (x + wb / 2, yb), (x + wb * 0.1, yb)], shade, opacity=0.4),
+           rect(x - wtop * 0.54, yb - h - h * 0.16, wtop * 1.08, h * 0.2, rim, rx=2),
+           rect(x - wtop * 0.54, yb - h + h * 0.02, wtop * 1.08, h * 0.03, shade, opacity=0.5)]
+    return "".join(out)
+
+
+def tomato(x, y, r, col="#d8342a"):
+    out = [circ(x, y, r, col), circ(x - r * 0.35, y - r * 0.35, r * 0.28, "#ffffff", opacity=0.35)]
+    for i in range(5):
+        a = math.radians(i * 72 - 90)
+        out.append(line(x, y - r * 0.85, x + math.cos(a) * r * 0.45, y - r * 0.85 + math.sin(a) * r * 0.3,
+                        "#2f5a22", max(0.8, r * 0.16), stroke_linecap="round"))
+    return "".join(out)
+
+
+def bulbs(S, x0, y0, x1, y1, sag, count, col="#ffe2a0", wire="#120f18"):
+    """A string of party lights hanging as a parabola between two hooks."""
+    def at(t):
+        return (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t + sag * 4 * t * (1 - t))
+    pts_ = [at(i / 40) for i in range(41)]
+    out = [pline(pts_, wire, 1.6)]
+    glows, heads = [], []
+    for i in range(count):
+        t = (i + 0.5) / count
+        bx, by = at(t)
+        glows.append(circ(bx, by + 9, 30, col, opacity=0.22))
+        heads.append(rect(bx - 2.5, by, 5, 5, wire) + ell(bx, by + 10, 5, 7, light(col, 0.6))
+                     + ell(bx, by + 10, 9, 11, col, opacity=0.5))
+    return "".join(out) + g(glows, filter=S.blur(7)) + "".join(heads)
+
+
+def shot_13(p):
+    """A small Berlin balcony at dusk: tomatoes and herbs, string lights, the courtyard's windows beyond."""
+    w, h = p["size"]
+    S = Svg(w, h)
+    rng = random.Random("shot-13-balcony")
+    roof_y = 176
+    S(sky(S, [(0, "#18214a"), (0.55, "#3f4682"), (1, "#a8789a")], 0, roof_y + 20))
+    for _ in range(14):
+        S(circ(rng.uniform(0, w), rng.uniform(40, 120), rng.uniform(0.5, 1.2), "#ffffff", opacity=0.5))
+    # the facing house's roof: chimneys, an aerial
+    S(poly([(0, roof_y + 2), (w, roof_y - 6), (w, roof_y + 24), (0, roof_y + 24)], "#262640"))
+    for cx_, cw, ch in ((96, 26, 40), (418, 22, 34), (520, 30, 26)):
+        S(rect(cx_, roof_y - ch, cw, ch + 6, "#262640"), rect(cx_ - 3, roof_y - ch - 5, cw + 6, 6, "#1d1d33"))
+    S(line(300, roof_y - 2, 300, roof_y - 64, "#1d1d33", 2))
+    for dy, L in ((-58, 40), (-46, 30), (-34, 22)):
+        S(line(300 - L / 2, roof_y + dy, 300 + L / 2, roof_y + dy, "#1d1d33", 1.6))
+    # the courtyard facade
+    S(rect(0, roof_y + 20, w, h, S.lin([(0, "#6b6890"), (0.6, "#4c4a6c"), (1, "#2e2d45")], 0, roof_y, 0, h, user=True)))
+    S(rect(0, roof_y + 20, w, 12, "#7f7ca4"))
+    S(rect(0, roof_y + 32, w, 4, "#3a3858", opacity=0.6))
+    warm = [("#ffd88f", "#f2a75c"), ("#ffe6b0", "#f6bf72"), ("#ffcc7a", "#e88f4a")]
+    for r_, wy in enumerate((222, 360, 498, 636)):
+        for c_, wx in enumerate((28, 158, 288, 418, 548)):
+            ww, wh = 70, 104
+            S(rect(wx - 8, wy - 8, ww + 16, wh + 16, "#7a789c", opacity=0.55))
+            S(rect(wx - 12, wy + wh + 4, ww + 24, 7, "#8a88ac"))
+            lit = rng.random() < 0.42 or (r_, c_) in ((0, 1), (1, 3), (2, 0))
+            if lit:
+                a, b = rng.choice(warm)
+                S(rect(wx, wy, ww, wh, S.lin([(0, a), (1, b)])))
+                kind = rng.random()
+                if kind < 0.4:  # curtains half drawn
+                    S(rect(wx, wy, ww * 0.3, wh, "#c97a50", opacity=0.55), rect(wx + ww * 0.72, wy, ww * 0.28, wh, "#c97a50", opacity=0.55))
+                elif kind < 0.7:  # a hanging lamp
+                    S(line(wx + ww * 0.5, wy, wx + ww * 0.5, wy + 26, "#6a3a22", 1.5))
+                    S(path(f"M{n(wx + ww * 0.34)} {n(wy + 40)} Q{n(wx + ww * 0.5)} {n(wy + 18)} {n(wx + ww * 0.66)} {n(wy + 40)} Z", "#6a3a22"))
+                    S(circ(wx + ww * 0.5, wy + 44, 14, "#fff4d0", opacity=0.6))
+                else:  # a shelf of books, a plant on the sill
+                    for i in range(7):
+                        S(rect(wx + 6 + i * 8, wy + 62 - (i % 3) * 3, 6, 22 + (i % 3) * 3, rng.choice(["#8a4a3a", "#3a5a6a", "#6a6a3a", "#9a6a3a"]), opacity=0.8))
+                    S(blob(wx + ww * 0.75, wy + wh - 12, 11, rng, "#4a5a2e"))
+            else:
+                S(rect(wx, wy, ww, wh, S.lin([(0, "#2c2f4c"), (1, "#22243a")])))
+                S(poly([(wx, wy), (wx + ww * 0.45, wy), (wx, wy + wh * 0.6)], "#9aa0d0", opacity=0.12))
+            S(rect(wx + ww / 2 - 2, wy, 4, wh, "#5a5878"), rect(wx, wy + wh * 0.3, ww, 4, "#5a5878"))
+            S(rect(wx, wy, ww, wh, "none", stroke="#5a5878", stroke_width=4))
+            if (r_, c_) in ((1, 1), (2, 3)):  # the neighbours' balconies
+                S(rect(wx - 22, wy + wh + 10, ww + 44, 9, "#3c3a58"))
+                for i in range(12):
+                    S(rect(wx - 20 + i * (ww + 40) / 11, wy + wh - 26, 2.2, 36, "#2a2840"))
+                S(rect(wx - 22, wy + wh - 28, ww + 44, 4, "#2a2840"))
+    # the courtyard's chestnut, dark, rising from below
+    for cx_, cy_, r in ((-20, 640, 120), (80, 600, 90), (170, 660, 80), (40, 520, 70), (560, 690, 90), (640, 620, 80)):
+        S(blob(cx_, cy_, r, rng, "#141c24", lobes=11, jitter=0.22))
+    for _ in range(26):
+        bx, by = rng.choice(((20, 560), (90, 560), (580, 640)))
+        S(blob(bx + rng.uniform(-60, 60), by + rng.uniform(-30, 40), rng.uniform(10, 20), rng, "#22313a", opacity=0.9))
+    # the balcony above us: its underside and a hook for the lights
+    S(rect(0, 0, w, 30, "#100e16"), rect(0, 30, w, 5, "#2a2432"))
+    S(bulbs(S, -20, 36, 620, 44, 120, 11))
+    S(bulbs(S, -20, 160, 380, 34, 70, 7))
+    # warm light falling on the balcony from the bulbs
+    S(rect(0, 360, w, h - 360, S.rad([(0, "#ffcf7a", 0.22), (1, "#ffcf7a", 0)], 0.5, 0.0, 0.8)))
+    # floor boards
+    S(rect(0, 740, w, 60, S.lin([(0, "#5a3f30"), (1, "#3a281f")])))
+    for i in range(9):
+        S(line(i * 74 - 20, 740, i * 90 - 120, 800, "#2a1c16", 1.4, opacity=0.6))
+    # the railing
+    rail = "#17161f"
+    S(rect(0, 742, w, 8, rail))
+    for i in range(27):
+        x = 6 + i * 23
+        S(rect(x, 566, 4, 178, rail), rect(x + 0.5, 566, 1.2, 178, "#6e5a58", opacity=0.6))
+    S(rect(0, 556, w, 12, rail), rect(0, 556, w, 2.5, "#e8b878", opacity=0.75))
+    # a planter box hung on the rail: basil, parsley, chives
+    S(rect(176, 568, 250, 52, S.lin([(0, "#3f6a52"), (1, "#24402f")]), rx=4))
+    S(rect(170, 562, 262, 10, "#4f7d62", rx=3))
+    for i in range(22):
+        x = 186 + i * 11
+        S(line(x, 564, x + rng.uniform(-6, 6), 500 + rng.uniform(-14, 10), "#3f7a3a", 2.2, stroke_linecap="round"))
+    for _ in range(26):
+        bx, by = rng.uniform(250, 330), rng.uniform(510, 560)
+        S(ell(bx, by, rng.uniform(8, 12), rng.uniform(5, 7), rng.choice(["#3f8a3a", "#4f9a44", "#2f6a2e"]),
+              transform=f"rotate({rng.uniform(-40, 40):.0f} {bx:.1f} {by:.1f})"))
+        S(ell(bx - 1, by - 2, 4, 2, "#b9e08a", opacity=0.45))
+    for _ in range(30):
+        bx, by = rng.uniform(340, 420), rng.uniform(520, 562)
+        S(circ(bx, by, rng.uniform(3.5, 6), rng.choice(["#2f6a2e", "#3a7a34", "#4a8a3c"])))
+    # tomato plants in big pots, staked, either side
+    for side, (px, top) in enumerate(((92, 250), (512, 290))):
+        S(line(px - 10, 700, px - 16, top, "#b8925a", 4), line(px + 14, 700, px + 22, top + 40, "#b8925a", 4))
+        stem = [(px + rng.uniform(-14, 14), 700 - i * (700 - top) / 9) for i in range(10)]
+        S(path(smooth(stem), "none", stroke="#3f6a2a", stroke_width=5, stroke_linecap="round"))
+        for i, (sx, sy_) in enumerate(stem[1:]):
+            for sgn in ((-1, 1) if i % 3 == 0 else ((1,) if i % 2 else (-1,))):
+                ang = rng.uniform(-40, 25) if sgn > 0 else 180 + rng.uniform(-25, 40)
+                S(leaflets(sx, sy_, ang, rng.uniform(38, 58), rng.choice(["#2c5a26", "#356a2c", "#28502a"]),
+                           hi="#e0b86a", k=rng.choice((3, 4)), rng=rng))
+        for cx_, cy_, k in ((px + 30, 470 - side * 20, 3), (px - 34, 560, 2), (px + 8, 380 + side * 30, 3)):
+            for j in range(k):
+                col = "#d8342a" if (j + side) % 3 else "#e8742a"
+                if j == k - 1 and side == 0:
+                    col = "#7ea83a"
+                S(tomato(cx_ + j * 15 - k * 6, cy_ + (j % 2) * 14, rng.uniform(11, 15), col))
+        S(pot(px, 790, 150, 96, "#b85c38"))
+    # herbs in small pots on the floor: rosemary and thyme
+    for i in range(16):
+        a = -90 + rng.uniform(-30, 30)
+        x0 = 262 + rng.uniform(-14, 14)
+        L = rng.uniform(70, 110)
+        x1, y1 = x0 + math.cos(math.radians(a)) * L, 720 + math.sin(math.radians(a)) * L
+        S(line(x0, 720, x1, y1, "#4d6a4a", 2.5, stroke_linecap="round"))
+        for t in range(6):
+            tx, ty = x0 + (x1 - x0) * (t + 1) / 7, 720 + (y1 - 720) * (t + 1) / 7
+            S(line(tx - 5, ty + 2, tx + 5, ty - 2, "#5f7f5a", 1.4))
+    S(pot(262, 790, 70, 58, "#c4703f"))
+    for _ in range(80):
+        S(circ(360 + rng.gauss(0, 18), 708 + rng.gauss(0, 12), rng.uniform(2, 3.4), rng.choice(["#4f7040", "#5f8048", "#3f6038"])))
+    S(pot(360, 790, 64, 52, "#ad5a36"))
+    S(rect(0, 0, w, h, S.rad([(0, "#000", 0), (0.7, "#000", 0), (1, "#05030a", 0.45)], 0.5, 0.45, 0.75)))
+    return S.html()
+
+
+def crowd_dots(S, cam, rng, corners, du, dv, cols, r_m=0.28, dim=None):
+    """Heads in a stand: a jittered grid of dots over a quad (bottom-left, bottom-right, top-right, top-left)."""
+    a, b, _, d = corners
+    lu = math.dist((a[0], a[2]), (b[0], b[2]))
+    lv = math.dist(a, d)
+    nu, nv = int(lu / du), int(lv / dv)
+    out = []
+    for j in range(nv):
+        v = (j + 0.5) / nv
+        for i in range(nu):
+            u = (i + rng.uniform(0.1, 0.9)) / nu
+            q = tuple(a[k] + (b[k] - a[k]) * u + (d[k] - a[k]) * v for k in range(3))
+            x, y = cam.p(q)
+            if x < -4 or x > S.w + 4 or y < -4 or y > S.h + 4:
+                continue
+            col = rng.choice(cols)
+            if dim:
+                col = mix(col, dim[0], dim[1] * v)
+            out.append(circ(x, y, max(0.7, cam.scale(q) * r_m * rng.uniform(0.85, 1.15)), col))
+    return "".join(out)
+
+
+def player(x, yb, h, shirt, shorts="#1a1a22", shadow=None, sdx=0.0):
+    out = []
+    if shadow:
+        out.append(ell(x + sdx, yb, h * 0.32, h * 0.07, shadow, opacity=0.5))
+    out.append(rect(x - h * 0.09, yb - h * 0.46, h * 0.07, h * 0.46, "#e8c8a8"))
+    out.append(rect(x + h * 0.02, yb - h * 0.46, h * 0.07, h * 0.46, "#e8c8a8"))
+    out.append(rect(x - h * 0.13, yb - h * 0.56, h * 0.26, h * 0.16, shorts))
+    out.append(rect(x - h * 0.15, yb - h * 0.86, h * 0.3, h * 0.32, shirt, rx=h * 0.05))
+    out.append(circ(x, yb - h * 0.93, h * 0.08, "#3a2a22"))
+    return "".join(out)
+
+
+def shot_1(p):
+    """From high in the stand under floodlights: the pitch below, the full stand opposite."""
+    w, h = p["size"]
+    S = Svg(w, h)
+    rng = random.Random("shot-1-stand")
+    cam = Cam((-16, 28, -30), yaw=8, pitch=21, f=560, cx=w / 2, cy=h / 2 - 20, light=(0.1, 1, -0.2),
+              shadow="#0c1830", shadow_k=0.5, lit="#f0f8ff", lit_k=0.1, fog="#22314e", fogd=500, fogmax=0.35)
+    S(rect(0, 0, w, h, S.lin([(0, "#060b1a"), (0.3, "#132240"), (1, "#0e1626")])))
+    # the stand opposite: one rake of seats under a roof, full
+    st = [(-110, 1.2, 76), (110, 1.2, 76), (110, 26, 108), (-110, 26, 108)]
+    S(poly([cam.p(q) for q in st], "#1a1e2c"))
+    home = ["#c62b34", "#c62b34", "#e8e6ea", "#2a2a36", "#c62b34", "#3a3a48", "#d84a3a", "#f2f0f2"]
+    S(crowd_dots(S, cam, rng, st, 0.72, 0.85, home, r_m=0.3, dim=("#1a2030", 0.55)))
+    # a concourse band halfway up, with its dark mouths
+    band = [(-110, 13, 92), (110, 13, 92), (110, 14.2, 93.5), (-110, 14.2, 93.5)]
+    S(poly([cam.p(q) for q in band], "#151826"))
+    for x in range(-100, 110, 16):
+        S(poly([cam.p(q) for q in ((x, 11.4, 90), (x + 3, 11.4, 90), (x + 3, 13.2, 92), (x, 13.2, 92))], "#05070d"))
+    # the roof and its floodlights
+    roof = [(-115, 28, 104), (115, 28, 104), (115, 31, 112), (-115, 31, 112)]
+    under = [(-115, 26.5, 104), (115, 26.5, 104), (115, 28, 104), (-115, 28, 104)]
+    S(poly([cam.p(q) for q in roof], "#0c1222"), poly([cam.p(q) for q in under], "#2a3248"))
+    glows = []
+    for x in range(-104, 108, 9):
+        a = cam.p((x, 27.2, 104))
+        glows.append(circ(a[0], a[1], 34, "#dff0ff", opacity=0.35))
+    S(g(glows, filter=S.blur(14)))
+    for x in range(-104, 108, 9):
+        a, b = cam.p((x - 2.2, 27.6, 104)), cam.p((x + 2.2, 26.8, 104))
+        S(rect(a[0], a[1], max(3, b[0] - a[0]), max(2.5, b[1] - a[1]), "#ffffff"))
+    # LED boards along the stand's front
+    front = [(-110, 0, 74.5), (110, 0, 74.5), (110, 1.3, 75.6), (-110, 1.3, 75.6)]
+    S(poly([cam.p(q) for q in front], "#0d1424"))
+    for i, x in enumerate(range(-80, 80, 12)):
+        col = ["#2ad0ff", "#ffffff", "#ff3a52", "#ffd23a"][i % 4]
+        q = [(x, 0.2, 71), (x + 11.6, 0.2, 71), (x + 11.6, 1.0, 71), (x, 1.0, 71)]
+        S(poly([cam.p(v) for v in q], col, opacity=0.85))
+    # the pitch: mown stripes, floodlit
+    S(poly([cam.p(q) for q in ((-62, 0, -6), (62, 0, -6), (62, 0, 71), (-62, 0, 71))], "#2a7a36"))
+    for i in range(20):
+        x0 = -52.5 + i * 5.25
+        if i % 2:
+            S(poly([cam.p(q) for q in ((x0, 0, -3), (x0 + 5.25, 0, -3), (x0 + 5.25, 0, 71), (x0, 0, 71))], "#3a9444"))
+    L, Wd = 52.5, 68
+    wl, lc = 0.14, "#f4f8f4"
+    S(gline(cam, [(-L, 0, 0), (L, 0, 0), (L, 0, Wd), (-L, 0, Wd), (-L, 0, 0)], lc, wl))
+    S(gline(cam, [(0, 0, 0), (0, 0, Wd)], lc, wl))
+    S(gline(cam, garc(0, 34, 9.15, 0, 360, steps=48), lc, wl))
+    for sgn in (-1, 1):
+        x0, x1, x2 = sgn * L, sgn * (L - 16.5), sgn * (L - 5.5)
+        S(gline(cam, [(x0, 0, 13.84), (x1, 0, 13.84), (x1, 0, 54.16), (x0, 0, 54.16)], lc, wl))
+        S(gline(cam, [(x0, 0, 24.84), (x2, 0, 24.84), (x2, 0, 43.16), (x0, 0, 43.16)], lc, wl))
+        arc_a = 127 if sgn > 0 else -53
+        S(gline(cam, garc(sgn * (L - 11), 34, 9.15, arc_a, arc_a + 106, steps=16), lc, wl))
+        # the goal: posts, bar and the net behind
+        g0, g1 = 30.34, 37.66
+        xb = x0 + sgn * 2.0
+        net = []
+        for z in [g0 + (g1 - g0) * i / 8 for i in range(9)]:
+            net.append(gline(cam, [(x0, 2.44, z), (xb, 1.8, z), (xb, 0, z)], "#dfe6e0", 0.03, 0.6))
+        S("".join(net))
+        S(gline(cam, [(x0, 0, g0), (x0, 2.44, g0), (x0, 2.44, g1), (x0, 0, g1)], "#ffffff", 0.14))
+    S(poly([cam.p(q) for q in ((-60, 0, 69.5), (60, 0, 69.5), (60, 0, 71), (-60, 0, 71))], "#1e5a2a", opacity=0.6))
+    # the players, mid-move toward the right-hand box, and the ball
+    shirts = ["#d8303a"] * 10 + ["#f4f4f6"] * 10
+    spots = [(28, 30), (34, 40), (38, 22), (20, 44), (14, 26), (40, 34), (24, 36), (8, 50), (2, 18), (44, 46),
+             (36, 30), (42, 38), (31, 24), (45, 28), (26, 48), (18, 32), (10, 40), (48.5, 34), (22, 20), (-6, 30)]
+    figs = []
+    for (x, z), sh in zip(spots, shirts):
+        q = (x, 0, z)
+        a = cam.p(q)
+        figs.append((cam.depth(q), player(a[0], a[1], cam.scale(q) * 1.8, sh, "#20202a" if sh != "#f4f4f6" else "#1d2c5a",
+                                         shadow="#0a2a10", sdx=-cam.scale(q) * 0.5)))
+    q = (-38, 0, 34)
+    a = cam.p(q)
+    figs.append((cam.depth(q), player(a[0], a[1], cam.scale(q) * 1.8, "#2ad06a", "#18301e", shadow="#0a2a10")))
+    for _, s in sorted(figs, key=lambda t: -t[0]):
+        S(s)
+    ball = cam.p((32.6, 0.2, 31.4))
+    S(circ(ball[0], ball[1], 2.4, "#ffffff"))
+    # our own stand: rows of seat backs below us, a few heads and a scarf
+    for row, (yb, sw, gap, col) in enumerate(((520, 30, 36, "#1d3f86"), (600, 44, 52, "#22489a"))):
+        x = -10 + row * 14
+        while x < w + 40:
+            S(rect(x, yb - sw * 0.9, sw, sw * 1.3, dark(col, 0.25), rx=sw * 0.25))
+            S(rect(x + 2, yb - sw * 0.9 + 2, sw - 4, sw * 0.5, light(col, 0.12), rx=sw * 0.2))
+            x += gap
+        S(rect(0, yb + sw * 0.35, w, 10 + row * 6, "#0a0e18"))
+    for x, yb, s, scarf in ((150, 532, 1.0, None), (560, 540, 1.1, ("#c62b34", "#f2f0f2")), (690, 610, 1.6, None),
+                            (90, 612, 1.5, ("#c62b34", "#f2f0f2"))):
+        hr = 15 * s
+        S(path(f"M{n(x - hr * 2.4)} {n(yb + 40)} Q{n(x - hr * 2.2)} {n(yb - hr * 0.6)} {n(x)} {n(yb - hr * 0.9)} "
+               f"Q{n(x + hr * 2.2)} {n(yb - hr * 0.6)} {n(x + hr * 2.4)} {n(yb + 40)} Z", "#0b0f1a"))
+        S(circ(x, yb - hr * 1.9, hr, "#0b0f1a"))
+        S(path(f"M{n(x - hr * 0.8)} {n(yb - hr * 2.6)} A{n(hr)} {n(hr)} 0 0 1 {n(x + hr * 0.8)} {n(yb - hr * 2.6)}", "none",
+               stroke="#9fc0e8", stroke_width=1.4, opacity=0.6))
+        if scarf:
+            for k in range(6):
+                S(rect(x - hr * 1.3 + k * hr * 0.44, yb - hr * 1.05, hr * 0.44, hr * 0.5, scarf[k % 2]))
+    S(rect(0, 0, w, h, S.lin([(0, "#000", 0.25), (0.25, "#000", 0), (0.8, "#000", 0), (1, "#000", 0.3)])))
+    return S.html()
+
+
+def chainlink(cam, a, b, y0, y1, col, step=0.55, op=0.35, sw=0.035):
+    """A chain-link fence panel from ground point a to b (x, z), as two families of diagonals."""
+    L = math.dist(a, b)
+    ux, uz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+    H = y1 - y0
+    out = []
+
+    def seg(t0, v0, t1, v1):
+        p0 = (a[0] + ux * t0, y0 + v0, a[1] + uz * t0)
+        p1 = (a[0] + ux * t1, y0 + v1, a[1] + uz * t1)
+        pa, pb = cam.p(p0), cam.p(p1)
+        out.append(line(pa[0], pa[1], pb[0], pb[1], col, max(0.5, cam.scale(p0) * sw), opacity=op))
+    c = -H
+    while c < L:  # rising: v = t - c
+        t0, t1 = max(0.0, c), min(L, c + H)
+        if t1 - t0 > 0.05:
+            seg(t0, t0 - c, t1, t1 - c)
+        c += step
+    c = 0.0
+    while c < L + H:  # falling: v = c - t
+        t0, t1 = max(0.0, c - H), min(L, c)
+        if t1 - t0 > 0.05:
+            seg(t0, c - t0, t1, c - t1)
+        c += step
+    return "".join(out)
+
+
+def ball_icon(x, y, r):
+    out = [circ(x, y, r, "#f6f6f2"), circ(x + r * 0.2, y + r * 0.25, r, "#c8ccd0", opacity=0.35)]
+    out.append(poly([(x + r * 0.5 * math.cos(math.radians(a)), y + r * 0.5 * math.sin(math.radians(a))) for a in range(-90, 270, 72)], "#1c1c22"))
+    for a in range(-54, 306, 72):
+        cx_, cy_ = x + r * 0.98 * math.cos(math.radians(a)), y + r * 0.98 * math.sin(math.radians(a))
+        out.append(circ(cx_, cy_, r * 0.26, "#1c1c22"))
+        out.append(line(x + r * 0.5 * math.cos(math.radians(a)), y + r * 0.5 * math.sin(math.radians(a)), cx_, cy_, "#1c1c22", r * 0.06))
+    out.append(circ(x - r * 0.35, y - r * 0.4, r * 0.25, "#ffffff", opacity=0.6))
+    return "".join(out)
+
+
+def bag(x, yb, wd, ht, col, strap="#1a1a1e", kind=0):
+    """A sports holdall (kind 0) or a backpack (kind 1), standing on the ground at bottom-centre (x, yb)."""
+    out = [ell(x, yb, wd * 0.6, ht * 0.08, "#1a2a18", opacity=0.35)]
+    if kind == 0:
+        out.append(rect(x - wd / 2, yb - ht, wd, ht, col, rx=ht * 0.4))
+        out.append(rect(x - wd / 2, yb - ht * 0.45, wd, ht * 0.12, dark(col, 0.3)))
+        out.append(path(f"M{n(x - wd * 0.25)} {n(yb - ht)} Q{n(x)} {n(yb - ht * 1.7)} {n(x + wd * 0.25)} {n(yb - ht)}", "none",
+                        stroke=strap, stroke_width=max(1.2, ht * 0.08)))
+        out.append(rect(x - wd / 2, yb - ht, wd * 0.18, ht, light(col, 0.15), rx=ht * 0.4, opacity=0.6))
+    else:
+        out.append(rect(x - wd / 2, yb - ht, wd, ht, col, rx=wd * 0.35))
+        out.append(rect(x - wd * 0.36, yb - ht * 0.48, wd * 0.72, ht * 0.4, dark(col, 0.18), rx=wd * 0.15))
+        out.append(rect(x - wd / 2, yb - ht, wd * 0.2, ht, light(col, 0.15), rx=wd * 0.3, opacity=0.6))
+    return "".join(out)
+
+
+def shot_2(p):
+    """A five-a-side cage on a Sunday morning, from just outside the fence: low sun, long shadows, bags."""
+    w, h = p["size"]
+    S = Svg(w, h)
+    rng = random.Random("shot-2-cage")
+    cam = Cam((0.4, 2.3, -4.6), yaw=0, pitch=10, f=410, cx=w / 2, cy=h * 0.36, light=(-0.8, 0.35, 0.25),
+              shadow="#5a6a8a", shadow_k=0.35, lit="#fff2d8", lit_k=0.3, fog="#e6ecf0", fogd=180, fogmax=0.8)
+    hz = cam.p((0, 0, 5000))[1]
+    S(sky(S, [(0, "#8fbde4"), (0.7, "#d2e4ef"), (1, "#f8ead0")], 0, hz + 4))
+    S(glow(S, 30, hz - 70, 300, "#fff3d6", 0.65))
+    # what lies beyond: blocks in the morning haze, then a line of trees
+    items = []
+    for i, x in enumerate(range(-110, 120, 25)):
+        items.append(house(cam, x, x + rng.uniform(15, 21), 70, 82, 0, rng.uniform(14, 26), 0,
+                           rng.choice(["#e9dfcf", "#dcd6cf", "#efe2c4", "#d6dcd8"]), "#999", rng, win_w=0.3, floor_h=3.0))
+    S(draw_sorted(items))
+    S(rect(0, hz - 2, w, h, "#86a65e"))
+    for i in range(19):
+        x = -70 + i * 8 + rng.uniform(-2, 2)
+        q = (x, 0, rng.uniform(26, 34))
+        a = cam.p(q)
+        S(tree(a[0], a[1], cam.scale(q) * rng.uniform(9, 13), rng, rng.choice(["#6f9a52", "#5f8a48", "#7aa25a"]), "#5a4a3a",
+               hi="#e0eaa8", lightx=-1))
+    # the cage floor: artificial turf, mown-looking stripes, a sheen toward the sun
+    PX, PZ1 = 10.0, 13.0
+    S(cam.face([(-40, 0, 14.6), (40, 0, 14.6), (40, 0, 24), (-40, 0, 24)], "#7a9a52", flat=True))
+    S(cam.face([(-PX - 0.6, 0, -0.6), (PX + 0.6, 0, -0.6), (PX + 0.6, 0, PZ1 + 0.6), (-PX - 0.6, 0, PZ1 + 0.6)], "#3d9a4a", flat=True))
+    for i in range(11):
+        x0 = -PX + i * 2 * PX / 11
+        if i % 2:
+            S(cam.face([(x0, 0, 0), (x0 + 2 * PX / 11, 0, 0), (x0 + 2 * PX / 11, 0, PZ1), (x0, 0, PZ1)], "#47a655", flat=True))
+    turf = [cam.p(q) for q in ((-PX - 0.6, 0, -0.6), (PX + 0.6, 0, -0.6), (PX + 0.6, 0, PZ1 + 0.6), (-PX - 0.6, 0, PZ1 + 0.6))]
+    S(poly(turf, S.lin([(0, "#fff4cc", 0.35), (0.55, "#fff4cc", 0)], 0, 0, 1, 0.2)))
+    lc, wl = "#f4f6ee", 0.09
+    S(gline(cam, [(-PX, 0, 0), (PX, 0, 0), (PX, 0, PZ1), (-PX, 0, PZ1), (-PX, 0, 0)], lc, wl))
+    S(gline(cam, [(0, 0, 0), (0, 0, PZ1)], lc, wl))
+    S(gline(cam, garc(0, PZ1 / 2, 2.6, 0, 360, steps=40), lc, wl))
+    for sgn in (-1, 1):
+        S(gline(cam, garc(sgn * PX, PZ1 / 2, 4.5, 90 if sgn > 0 else -90, 270 if sgn > 0 else 90, steps=24), lc, wl))
+    # long morning shadows: the sun is low on the left, so everything throws right and a little toward us
+    sdx, sdz = 1.0, -0.42
+    post = "#2f4a3a"
+    for i in range(10):
+        x = -PX - 0.6 + i * (2 * PX + 1.2) / 9
+        z = PZ1 + 0.6
+        S(gline(cam, [(x, 0.01, z), (x + sdx * 7, 0.01, z + sdz * 7)], "#1f4a3a", 0.1, 0.3))
+    # the goals: small white frames with nets, at both ends
+    for sgn in (-1, 1):
+        x0, xb = sgn * PX, sgn * (PX + 0.9)
+        g0, g1 = PZ1 / 2 - 1.5, PZ1 / 2 + 1.5
+        S(poly([cam.p(q) for q in ((x0, 0.01, g0), (x0, 0.01, g1), (x0 + sdx * 1.6, 0.01, g1 + sdz * 1.6),
+                                   (x0 + sdx * 1.6, 0.01, g0 + sdz * 1.6))], "#1f4a3a", opacity=0.22))
+        for t in range(10):
+            z = g0 + (g1 - g0) * t / 9
+            S(gline(cam, [(x0, 1.0, z), (xb, 0.8, z), (xb, 0, z)], "#eef2f2", 0.012, 0.7))
+        for yy in (0.2, 0.4, 0.6, 0.8):
+            S(gline(cam, [(xb, yy, g0), (xb, yy, g1)], "#eef2f2", 0.012, 0.6))
+            S(gline(cam, [(x0 + (xb - x0) * yy, 1.0 - 0.2 * yy, g0), (x0 + (xb - x0) * yy, 1.0 - 0.2 * yy, g1)], "#eef2f2", 0.012, 0.5))
+        S(gline(cam, [(x0, 0, g0), (x0, 1.0, g0), (x0, 1.0, g1), (x0, 0, g1)], "#ffffff", 0.08))
+        S(gline(cam, [(x0, 0, g0), (xb, 0, g0), (xb, 0, g1), (x0, 0, g1)], "#e8ecec", 0.03))
+    # the fences: the far side and both ends, chain-link on posts over a low board
+    for a, b in (((-PX - 0.6, PZ1 + 0.6), (PX + 0.6, PZ1 + 0.6)), ((PX + 0.6, -0.6), (PX + 0.6, PZ1 + 0.6)),
+                 ((-PX - 0.6, -0.6), (-PX - 0.6, PZ1 + 0.6))):
+        S(cam.face([(a[0], 0, a[1]), (b[0], 0, b[1]), (b[0], 0.6, b[1]), (a[0], 0.6, a[1])], "#2e6248", flat=True))
+        S(chainlink(cam, a, b, 0.6, 4.0, "#36584a", step=0.42, op=0.3, sw=0.025))
+        L = math.dist(a, b)
+        for i in range(int(L / 2.5) + 1):
+            t = min(1.0, i * 2.5 / L)
+            x, z = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+            S(gline(cam, [(x, 0, z), (x, 4.0, z)], post, 0.07))
+        S(gline(cam, [(a[0], 4.0, a[1]), (b[0], 4.0, b[1])], post, 0.06))
+    # the ball, left mid-pitch
+    bq = (-2.2, 0.11, 3.6)
+    bp = cam.p(bq)
+    br = cam.scale(bq) * 0.11
+    S(poly([cam.p(q) for q in ((-2.25, 0.005, 3.55), (-2.15, 0.005, 3.65), (-2.2 + sdx * 0.7, 0.005, 3.6 + sdz * 0.7))],
+           "#1f4a3a", opacity=0.35))
+    S(ball_icon(bp[0], bp[1], br))
+    # our side: a low kick board, then the gravel path we stand on
+    S(cam.face([(-PX - 0.6, 0, -0.6), (PX + 0.6, 0, -0.6), (PX + 0.6, 0.3, -0.6), (-PX - 0.6, 0.3, -0.6)], "#2e6248", flat=True))
+    S(gline(cam, [(-PX - 0.6, 0.3, -0.6), (PX + 0.6, 0.3, -0.6)], "#5a9a78", 0.04))
+    yb = cam.p((0, 0, -0.6))[1]
+    S(rect(0, yb, w, h - yb, S.lin([(0, "#d2c8b4"), (1, "#bcae96")])))
+    for _ in range(70):
+        S(circ(rng.uniform(0, w), rng.uniform(yb + 3, h), rng.uniform(0.8, 2.2), rng.choice(["#9a8e7a", "#e6dccb"]), opacity=0.6))
+    for q, wd, ht, col, kind in (((-2.4, 0, -1.3), 0.8, 0.34, "#1f3f86", 0), ((-1.6, 0, -1.15), 0.34, 0.48, "#c8423a", 1),
+                                 ((2.0, 0, -1.4), 0.7, 0.3, "#2a2a30", 0)):
+        a = cam.p(q)
+        sc = cam.scale(q)
+        S(poly([(a[0] - wd * sc * 0.5, a[1]), (a[0] + wd * sc * 0.5, a[1]), (a[0] + wd * sc * 0.5 + ht * sc * 1.4, a[1] + ht * sc * 0.25),
+                (a[0] - wd * sc * 0.5 + ht * sc * 1.4, a[1] + ht * sc * 0.25)], "#6a5a48", opacity=0.3))
+        S(bag(a[0], a[1], wd * sc, ht * sc, col, kind=kind))
+    a = cam.p((-1.05, 0, -1.2))
+    sc = cam.scale((-1.05, 0, -1.2))
+    S(rect(a[0] - 0.04 * sc, a[1] - 0.24 * sc, 0.08 * sc, 0.24 * sc, "#3aa0d8", rx=0.02 * sc, opacity=0.9))
+    S(rect(a[0] - 0.025 * sc, a[1] - 0.27 * sc, 0.05 * sc, 0.03 * sc, "#1a1a1e"))
+    # the near fence: posts and a faint mesh we look through
+    S(chainlink(cam, (-PX - 0.6, -0.6), (PX + 0.6, -0.6), 0.3, 4.0, "#2a4a3c", step=0.42, op=0.14, sw=0.02))
+    for x in (-5.2, 0.0 - 0.4, 4.4):
+        a, b = cam.p((x, 0, -0.6)), cam.p((x, 4.0, -0.6))
+        sc = cam.scale((x, 0, -0.6))
+        S(rect(a[0] - sc * 0.035, b[1], sc * 0.07, a[1] - b[1], post))
+        S(rect(a[0] - sc * 0.035, b[1], sc * 0.02, a[1] - b[1], "#fff2d0", opacity=0.35))
+    a, b = cam.p((-30, 4.0, -0.6)), cam.p((30, 4.0, -0.6))
+    S(line(a[0], a[1], b[0], b[1], post, 4))
+    S(rect(0, 0, w, h, S.lin([(0, "#fff8e0", 0.2), (0.6, "#fff8e0", 0)], 0, 0, 1, 0.4)))
+    return S.html()
+
+
+def shot_3(p):
+    """A watch party from behind the sofa: the big screen lights the room, scarves over the sofa back."""
+    w, h = p["size"]
+    S = Svg(w, h)
+    rng = random.Random("shot-3-sofa")
+    S(rect(0, 0, w, h, "#0d1220"))
+    S(rect(0, 0, w, 360, S.rad([(0, "#3a5c7a", 0.85), (0.5, "#1e2e48", 0.6), (1, "#0d1220", 0)], 0.5, 0.55, 0.7)))
+    S(rect(0, 360, w, 120, S.lin([(0, "#1a2232"), (1, "#0e1320")])))
+    S(ell(400, 372, 360, 40, "#5a86a8", opacity=0.25, filter=S.blur(18)))
+    # a framed print and a scarf pinned to the wall
+    S(rect(52, 96, 92, 120, "#1a2234"), rect(60, 104, 76, 104, "#2a3a52"))
+    # a scarf hung over a hook: the band sags across, both ends hang down, fringed
+    def sag(t):
+        return 74 + 18 * 4 * t * (1 - t)
+    band = [(640 + 130 * t / 20, sag(t / 20)) for t in range(21)]
+    scarf_clip = S.clip(f'<path d="{"M" + " L".join(f"{n(x)} {n(y)}" for x, y in band)} '
+                        f'{" ".join(f"L{n(x)} {n(y + 20)}" for x, y in band[::-1])} Z"/>')
+    stripes = [rect(640 + k * 13, 60, 13, 60, "#a8242c" if k % 2 == 0 else "#d8d2da") for k in range(10)]
+    S(g(stripes, clip_path=scarf_clip))
+    for x0 in (632, 760):
+        for k in range(5):
+            S(rect(x0, 78 + k * 14, 18, 14, "#a8242c" if k % 2 == 0 else "#d8d2da"))
+        for i in range(5):
+            S(line(x0 + 2 + i * 3.5, 148, x0 + 2 + i * 3.5, 160, "#a8242c", 1.4))
+    S(rect(0, 60, w, 120, S.lin([(0, "#0d1220", 0.25), (1, "#0d1220", 0.25)])))
+    # the TV, and what it shows: the broadcast view of a pitch
+    tx, ty, tw, th = 214, 112, 372, 210
+    S(rect(tx - 10, ty - 10, tw + 20, th + 20, "#05070b", rx=6))
+    clip = S.clip(f'<rect x="{tx}" y="{ty}" width="{tw}" height="{th}"/>')
+    scr = [rect(tx, ty, tw, th, "#0e1a2a")]
+    tcam = Cam((0, 22, -40), yaw=0, pitch=17, f=300, cx=tx + tw / 2, cy=ty + th * 0.48)
+    scr.append(poly([tcam.p(q) for q in ((-90, 0, -30), (90, 0, -30), (90, 8, 76), (-90, 8, 76))], "#1d2436"))
+    scr.append(crowd_dots(S, tcam, rng, [(-90, 1, 72), (90, 1, 72), (90, 16, 90), (-90, 16, 90)], 1.6, 1.6,
+                          ["#c62b34", "#e8e6ea", "#2a2a36", "#4a4a5a"], r_m=0.5))
+    scr.append(poly([tcam.p(q) for q in ((-90, 0, -10), (90, 0, -10), (90, 0, 72), (-90, 0, 72))], "#2f9a44"))
+    for i in range(24):
+        x0 = -60 + i * 5
+        if i % 2:
+            scr.append(poly([tcam.p(q) for q in ((x0, 0, -10), (x0 + 5, 0, -10), (x0 + 5, 0, 72), (x0, 0, 72))], "#3aac50"))
+    scr.append(gline(tcam, [(-52.5, 0, 0), (52.5, 0, 0)], "#f4f8f4", 0.25))
+    scr.append(gline(tcam, [(-52.5, 0, 68), (52.5, 0, 68)], "#f4f8f4", 0.25))
+    scr.append(gline(tcam, [(0, 0, -10), (0, 0, 68)], "#f4f8f4", 0.25))
+    scr.append(gline(tcam, garc(0, 34, 9.15, 0, 360, steps=40), "#f4f8f4", 0.25))
+    for (x, z, sh) in ((-8, 30, "#d8303a"), (4, 22, "#f4f4f6"), (10, 38, "#d8303a"), (-16, 44, "#f4f4f6"),
+                       (18, 28, "#f4f4f6"), (-4, 14, "#d8303a"), (24, 46, "#d8303a"), (-22, 24, "#f4f4f6")):
+        a = tcam.p((x, 0, z))
+        scr.append(player(a[0], a[1], tcam.scale((x, 0, z)) * 2.2, sh))
+    a = tcam.p((2, 0.2, 26))
+    scr.append(circ(a[0], a[1], 2, "#ffffff"))
+    scr.append(rect(tx, ty, tw, th, S.lin([(0, "#ffffff", 0.12), (0.4, "#ffffff", 0), (1, "#000000", 0.15)], 0, 0, 1, 1)))
+    # the broadcast's corner graphic: two colour chips, no words
+    scr.append(rect(tx + 14, ty + 12, 70, 16, "#0a0e18", rx=3, opacity=0.85))
+    scr.append(rect(tx + 18, ty + 16, 12, 8, "#d8303a"))
+    scr.append(rect(tx + 68, ty + 16, 12, 8, "#f4f4f6"))
+    S(g(scr, clip_path=clip))
+    S(rect(tx - 10, ty - 10, tw + 20, th + 20, "none", stroke="#2a3446", stroke_width=1.2, rx=6))
+    # the low cabinet, a plant, the coffee table with bowls and bottles
+    S(rect(180, 360, 440, 40, "#0b0f18"), rect(180, 360, 440, 2, "#6a8eb0", opacity=0.6))
+    S(circ(596, 380, 2, "#4aff8a"))
+    for _ in range(16):
+        a = rng.uniform(-150, -30)
+        S(ell(680 + math.cos(math.radians(a)) * 30, 330 + math.sin(math.radians(a)) * 40, 26, 7, "#0a1210",
+              transform=f"rotate({a:.0f} {680 + math.cos(math.radians(a)) * 30:.1f} {330 + math.sin(math.radians(a)) * 40:.1f})"))
+    S(rect(664, 340, 32, 50, "#141820"))
+    S(rect(230, 420, 340, 18, "#090c14"), rect(230, 420, 340, 2, "#7aa0c0", opacity=0.5))
+    for bx in (300, 318, 520):
+        S(rect(bx - 5, 384, 10, 36, "#0c1a14"), rect(bx - 2.5, 372, 5, 14, "#0c1a14"), rect(bx - 5, 384, 2, 34, "#7ab0a0", opacity=0.5))
+    S(path("M380 420 Q380 404 410 404 L450 404 Q480 404 480 420 Z", "#0c0f18"))
+    for _ in range(9):
+        S(circ(rng.uniform(394, 466), rng.uniform(400, 408), rng.uniform(4, 7), "#c89a4a", opacity=0.8))
+    # the sofa back, seen from behind, rim-lit by the screen
+    sofa = "#161b2a"
+    S(path("M-20 600 L-20 470 Q-20 438 30 436 L250 432 Q300 430 304 452 Q308 430 360 430 L560 430 Q610 430 612 452 "
+           "Q616 432 660 432 L790 434 Q830 436 830 470 L830 600 Z", sofa))
+    S(path("M-20 470 Q-20 438 30 436 L250 432 Q300 430 304 452 Q308 430 360 430 L560 430 Q610 430 612 452 "
+           "Q616 432 660 432 L790 434 Q830 436 830 470", "none", stroke="#7fa6c8", stroke_width=2.5, opacity=0.55))
+    S(rect(-20, 480, 840, 120, S.lin([(0, "#000", 0), (1, "#000", 0.45)])))
+    # friends on the sofa: heads and shoulders against the glow; one celebrating
+    people = ((150, 378, 1.0, None, False), (330, 370, 1.06, ("#c62b34", "#f2f0f2"), False),
+              (488, 374, 1.0, None, True), (660, 380, 0.96, ("#1f3f86", "#e8eaf0"), False))
+    for x, y, s, scarf, cheer in people:
+        hr = 34 * s
+        body = "#070a12"
+        if cheer:
+            for sgn in (-1, 1):
+                sh, el, hd = (x + sgn * hr * 1.5, y + hr * 1.3), (x + sgn * hr * 2.3, y - hr * 0.5), (x + sgn * hr * 1.9, y - hr * 2.2)
+                S(pline([sh, el], body, hr * 0.5, stroke_linecap="round", stroke_linejoin="round"))
+                S(pline([el, hd], body, hr * 0.4, stroke_linecap="round"))
+                S(ell(hd[0], hd[1] - hr * 0.15, hr * 0.26, hr * 0.32, body))
+                S(pline([(el[0] + sgn * hr * 0.2, el[1]), (hd[0] + sgn * hr * 0.2, hd[1])], "#9cc4e6", 1.4, opacity=0.5))
+        S(path(f"M{n(x - hr * 2.3)} {n(y + hr * 3.2)} Q{n(x - hr * 2.3)} {n(y + hr * 1.1)} {n(x - hr * 0.9)} {n(y + hr * 0.95)} "
+               f"L{n(x + hr * 0.9)} {n(y + hr * 0.95)} Q{n(x + hr * 2.3)} {n(y + hr * 1.1)} {n(x + hr * 2.3)} {n(y + hr * 3.2)} Z", body))
+        S(rect(x - hr * 0.45, y + hr * 0.4, hr * 0.9, hr * 0.8, body))
+        S(ell(x, y, hr * 0.92, hr, body))
+        S(path(f"M{n(x - hr * 0.8)} {n(y - hr * 0.5)} A{n(hr * 0.92)} {n(hr)} 0 0 1 {n(x + hr * 0.8)} {n(y - hr * 0.5)}", "none",
+               stroke="#9cc4e6", stroke_width=2.2, opacity=0.7))
+        S(path(f"M{n(x - hr * 2.2)} {n(y + hr * 1.5)} Q{n(x - hr * 2.0)} {n(y + hr * 1.05)} {n(x - hr * 0.9)} {n(y + hr * 0.95)}",
+               "none", stroke="#9cc4e6", stroke_width=1.6, opacity=0.45))
+        if scarf:
+            for k in range(7):
+                S(rect(x - hr * 1.05 + k * hr * 0.3, y + hr * 0.75, hr * 0.3, hr * 0.42, scarf[k % 2]))
+            S(rect(x - hr * 0.95, y + hr * 0.75, hr * 1.9, hr * 0.42, S.lin([(0, "#000", 0.35), (1, "#000", 0.1)])))
+    # scarves thrown over the sofa back, hanging toward us
+    for x0, cols, sway in ((236, ("#c62b34", "#f2f0f2"), 6), (568, ("#c62b34", "#f2f0f2"), -8), (742, ("#1f3f86", "#e8eaf0"), 4)):
+        sw = 44
+        top = 432
+        stripes = 9
+        for k in range(stripes):
+            y0, y1 = top + k * 16, top + (k + 1) * 16
+            dx0, dx1 = sway * (k / stripes) ** 2, sway * ((k + 1) / stripes) ** 2
+            S(poly([(x0 + dx0, y0), (x0 + sw + dx0, y0), (x0 + sw + dx1, y1 + 0.5), (x0 + dx1, y1 + 0.5)],
+                   mix(cols[k % 2], "#0d1220", 0.35 + 0.04 * k)))
+        yb = top + stripes * 16
+        for i in range(9):
+            fx = x0 + sway + 3 + i * (sw - 6) / 8
+            S(line(fx, yb, fx + rng.uniform(-2, 2), yb + 16, mix(cols[0], "#0d1220", 0.6), 2))
+        S(rect(x0 - 2, top - 6, sw + 4, 10, mix(cols[0], "#9cc4e6", 0.3), rx=4, opacity=0.8))
+    S(rect(0, 0, w, h, S.rad([(0, "#000", 0), (0.65, "#000", 0), (1, "#000", 0.5)], 0.5, 0.4, 0.8)))
+    return S.html()
+
+
+def flag(x, y, fw, fh, field="#c62b34", band="#f2f0f2", wave=0.16):
+    """A club flag flying from (x, y): a red field crossed by one white diagonal, waving."""
+    def F(u, v):
+        return (x + fw * u, y + fh * v + math.sin(u * 5.0 + 0.6) * fh * wave * u)
+
+    def shape(uv, steps=6):
+        pts_ = []
+        for (u0, v0), (u1, v1) in zip(uv, uv[1:] + uv[:1]):
+            for k in range(steps):
+                t = k / steps
+                pts_.append(F(u0 + (u1 - u0) * t, v0 + (v1 - v0) * t))
+        return pts_
+    out = [poly(shape([(0, 0), (1, 0), (1, 1), (0, 1)]), field),
+           poly(shape([(0, 0.72), (0, 1), (0.28, 1), (1, 0.28), (1, 0), (0.72, 0)]), band)]
+    for k in range(3):  # the folds catch the light and lose it
+        u0 = 0.18 + k * 0.32
+        out.append(poly(shape([(u0, 0), (u0 + 0.12, 0), (u0 + 0.12, 1), (u0, 1)], 3), "#000000", opacity=0.14))
+    return "".join(out)
+
+
+def shot_4(p):
+    """Match day: walking with the crowd up the street toward the lit stadium at dusk, scarves and flags."""
+    w, h = p["size"]
+    S = Svg(w, h)
+    rng = random.Random("shot-4-walk")
+    cam = Cam((0.6, 1.75, 0), yaw=-1, pitch=-3, f=600, cx=w / 2, cy=330, light=(-0.4, 0.5, 0.9),
+              shadow="#2a2042", shadow_k=0.55, lit="#ffb06a", lit_k=0.25, fog="#a85a70", fogd=150, fogmax=0.7)
+    hy = cam.p((0, 0, 4000))[1]
+    S(sky(S, [(0, "#1e1c46"), (0.45, "#5a3a6e"), (0.8, "#d4705a"), (1, "#f6b26a")], 0, hy + 10))
+    for (cx_, cy_, cw) in ((130, 80, 260), (560, 50, 220), (680, 140, 200)):
+        S(ell(cx_, cy_, cw / 2, 8, "#e88a7a", opacity=0.3))
+    # the stadium beyond the houses: its roof rim and floodlight masts burning white over the rooftops
+    sq = (0, 0, 210)
+    sx, sy_ = cam.p(sq)
+    s = cam.scale(sq)
+    W2, Hs = 75 * s, 40 * s
+    S(glow(S, sx, sy_ - Hs, W2 * 2.0, "#fff0d0", 0.55))
+    S(glow(S, sx, sy_ - Hs * 1.05, W2 * 0.9, "#ffffff", 0.45))
+    S(path(f"M{n(sx - W2)} {n(sy_)} L{n(sx - W2)} {n(sy_ - Hs * 0.62)} Q{n(sx)} {n(sy_ - Hs * 1.18)} {n(sx + W2)} {n(sy_ - Hs * 0.62)} "
+           f"L{n(sx + W2)} {n(sy_)} Z", "#3c2a4a"))
+    for i in range(36):
+        t = (i + 0.5) / 36
+        x = sx - W2 + 2 * W2 * t
+        ytop = sy_ - Hs * 0.62 - Hs * 0.56 * (1 - (2 * t - 1) ** 2) * 0.98
+        S(line(x, ytop + Hs * 0.1, x + W2 * 0.05, sy_, "#ffcf8a", max(1, s * 1.2), opacity=0.55))
+        S(line(x + W2 * 0.05, ytop + Hs * 0.1, x, sy_, "#ffcf8a", max(1, s * 1.2), opacity=0.35))
+    S(path(f"M{n(sx - W2 * 1.06)} {n(sy_ - Hs * 0.6)} Q{n(sx)} {n(sy_ - Hs * 1.22)} {n(sx + W2 * 1.06)} {n(sy_ - Hs * 0.6)}",
+           "none", stroke="#2a1e38", stroke_width=max(3, s * 4)))
+    S(path(f"M{n(sx - W2 * 1.04)} {n(sy_ - Hs * 0.6 + s * 2)} Q{n(sx)} {n(sy_ - Hs * 1.22 + s * 2)} {n(sx + W2 * 1.04)} {n(sy_ - Hs * 0.6 + s * 2)}",
+           "none", stroke="#ffffff", stroke_width=max(1.5, s * 1.2)))
+    for k in (-0.82, -0.4, 0.4, 0.82):
+        mx = sx + k * W2 * 1.12
+        top = sy_ - Hs * 1.75 + abs(k) * Hs * 0.15
+        S(line(mx, sy_, mx, top, "#2a1e38", max(1.5, s * 1.4)))
+        S(glow(S, mx, top, s * 34, "#fff6e0", 0.55))
+        S(rect(mx - s * 5.5, top - s * 3, s * 11, s * 5.5, "#2a1e38"))
+        for r_ in range(2):
+            for c_ in range(4):
+                S(rect(mx - s * 5 + c_ * s * 2.6, top - s * 2.5 + r_ * s * 2.6, s * 2.1, s * 2.1, "#ffffff"))
+    # the street: road, pavements, houses either side with windows coming on, trees and lamps
+    far = 400
+    S(rect(0, hy, w, h - hy, "#2a2234"))
+    S(cam.face([(-60, 0, 120), (60, 0, 120), (60, 0, far), (-60, 0, far)], "#3a2e42", flat=True))
+    S(cam.face([(-6, 0, 1), (6, 0, 1), (6, 0, far), (-6, 0, far)], "#3a3040", flat=True))
+    for sgn in (-1, 1):
+        S(cam.face([(sgn * 6, 0.15, 1), (sgn * 10, 0.15, 1), (sgn * 10, 0.15, 120), (sgn * 6, 0.15, 120)], "#4a3e4c", flat=True))
+    road = [cam.p(q) for q in ((-6, 0, 3), (6, 0, 3), (6, 0, far), (-6, 0, far))]
+    S(poly(road, S.lin([(0, "#f6b26a", 0.0), (0.7, "#f6b26a", 0.15), (1, "#ffd8a0", 0.45)], 0, 1, 0, 0)))
+    items = []
+    walls = ["#c49a88", "#a88a90", "#d0a890", "#9a8496", "#b89a8a"]
+    for x0, x1 in ((-26, -10), (10, 26)):
+        z = 2
+        while z < 112:
+            L = rng.uniform(12, 18)
+            items.append(house(cam, x0, x1, z, min(z + L, 118), 0, rng.uniform(11, 14.5), 0, rng.choice(walls), "#555", rng,
+                               win_w=0.3, win_h=0.52, floor_h=3.3, lit_windows=0.35, lit_col="#ffc878", cornice="#c8b0a8"))
+            z += L + rng.uniform(0, 1.5)
+    S(draw_sorted(items))
+    for z in range(14, 112, 14):
+        for sgn in (-1, 1):
+            q = (sgn * 8.0, 0.15, z + (5 if sgn > 0 else 0))
+            a = cam.p(q)
+            S(tree(a[0], a[1], cam.scale(q) * 7.5, rng, "#2a2440", "#1e1a2a", hi="#6a4a6a", lightx=0))
+    for z in (10, 34, 58, 82, 106):
+        for sgn in (-1, 1):
+            q = (sgn * 6.5, 0.15, z + (12 if sgn > 0 else 0))
+            a = cam.p(q)
+            S(lamp_post(a[0], a[1], cam.scale(q) * 5.5, "#1a1424", "#fff0c8", "#ffd890", S, style="classic"))
+    # the crowd, back to front: scarves round necks, some held up, flags on poles
+    people = []
+    for _ in range(190):
+        z = 6 + (rng.random() ** 1.5) * 120
+        x = rng.uniform(-8.8, 8.8)
+        people.append((z, x, None))
+    people += [(5.0, -2.8, None), (5.6, 1.6, None), (4.6, 3.8, None), (6.2, -0.4, None), (5.2, -5.2, None)]
+    people += [(9.0, 2.6, "flag"), (24.0, -3.4, "flag"), (52.0, 4.2, "flag")]
+    scarves = [("#c62b34", "#f2f0f2"), ("#c62b34", "#f2f0f2"), ("#c62b34", "#1a1a1a")]
+    for z, x, kind in sorted(people, key=lambda q: -q[0]):
+        q = (x, 0, z)
+        a = cam.p(q)
+        sc = cam.scale(q)
+        hh = sc * rng.uniform(1.65, 1.9)
+        body = mix(rng.choice(["#140f1e", "#1c1424", "#18141e", "#221a2a"]), "#5a3a5a", min(1.0, z / 170))
+        S(person(a[0], a[1], hh, body))
+        sc_ = rng.choice(scarves)
+        nw, ny = hh * 0.26, a[1] - hh * 0.8
+        if z < 40:
+            for k in range(5):
+                S(rect(a[0] - nw / 2 + k * nw / 5, ny, nw / 5 + 0.3, hh * 0.06, sc_[k % 2]))
+        else:
+            S(rect(a[0] - nw / 2, ny, nw, hh * 0.06, sc_[0]))
+        S(path(f"M{n(a[0] - hh * 0.07)} {n(a[1] - hh * 0.95)} A{n(hh * 0.085)} {n(hh * 0.085)} 0 0 1 {n(a[0] + hh * 0.07)} {n(a[1] - hh * 0.95)}",
+               "none", stroke="#ffc890", stroke_width=max(0.6, hh * 0.012), opacity=0.5))
+        if kind == "flag":
+            ptop = a[1] - hh * 1.9
+            S(line(a[0] + hh * 0.12, a[1] - hh * 0.55, a[0] + hh * 0.16, ptop, "#1a1520", max(1.2, hh * 0.02)))
+            S(flag(a[0] + hh * 0.16, ptop, hh * 0.75, hh * 0.48))
+        elif rng.random() < 0.13 and 7 < z < 90:
+            ytop = a[1] - hh * 1.12
+            S(line(a[0] - hh * 0.12, a[1] - hh * 0.7, a[0] - hh * 0.28, ytop, body, hh * 0.055, stroke_linecap="round"))
+            S(line(a[0] + hh * 0.12, a[1] - hh * 0.7, a[0] + hh * 0.28, ytop, body, hh * 0.055, stroke_linecap="round"))
+            for k in range(6):
+                S(rect(a[0] - hh * 0.28 + k * hh * 0.0933, ytop - hh * 0.035, hh * 0.0933 + 0.3, hh * 0.07, sc_[k % 2]))
+    S(rect(0, 0, w, h, S.lin([(0, "#000", 0), (0.7, "#000", 0), (1, "#0a0612", 0.45)])))
+    return S.html()
+
+
+def kite(x, y, s, col, tail_to, rng, spar="#2a1a24"):
+    """A diamond kite with its spars, a bowed tail and a string down to (tail_to)."""
+    out = [line(x, y + s * 1.2, tail_to[0], tail_to[1], "#3a2a3a", 0.7, opacity=0.55)]
+    t = [(x + math.sin(i * 0.9) * s * 0.25, y + s * 1.2 + i * s * 0.32) for i in range(9)]
+    out.append(pline(t, "#3a2a3a", 1.0, opacity=0.8))
+    for i in (2, 4, 6, 8):
+        out.append(poly([(t[i][0] - s * 0.12, t[i][1] - s * 0.06), (t[i][0] + s * 0.12, t[i][1] + s * 0.06),
+                         (t[i][0] + s * 0.12, t[i][1] - s * 0.06), (t[i][0] - s * 0.12, t[i][1] + s * 0.06)], col))
+    out.append(poly([(x, y - s), (x + s * 0.65, y), (x, y + s * 1.2), (x - s * 0.65, y)], col))
+    out.append(poly([(x, y - s), (x + s * 0.65, y), (x, y)], light(col, 0.25)))
+    out.append(poly([(x, y), (x - s * 0.65, y), (x, y + s * 1.2)], dark(col, 0.2)))
+    out.append(line(x, y - s, x, y + s * 1.2, spar, 1) + line(x - s * 0.65, y, x + s * 0.65, y, spar, 1))
+    return "".join(out)
+
+
+def reddit_4(p):
+    """Tempelhof at sunset: the old runway running to a flat horizon, walkers and cyclists, kites."""
+    w, h = p["size"]
+    S = Svg(w, h)
+    rng = random.Random("reddit-4-tempelhof")
+    cam = Cam((-17.0, 1.6, 0), yaw=5, pitch=-1.5, f=640, cx=w / 2, cy=340)
+    hy = cam.p((0, 0, 20000))[1]
+    S(sky(S, [(0, "#2a3672"), (0.35, "#6e4a86"), (0.62, "#d8687a"), (0.85, "#f7a066"), (1, "#ffd890")], 0, hy + 2))
+    sunx = cam.p((0, 0, 20000))[0] + 50
+    S(glow(S, sunx, hy - 6, 380, "#ffcf8a", 0.55))
+    S(glow(S, sunx, hy - 6, 90, "#fff2c8", 0.9))
+    S(circ(sunx, hy - 6, 22, "#fff7e0"))
+    for cx_, cy_, cw, op in ((140, 150, 300, 0.25), (420, 205, 360, 0.3), (660, 120, 240, 0.2), (300, 250, 260, 0.3)):
+        S(ell(cx_, cy_, cw / 2, 6, "#ffb0a0", opacity=op))
+        S(ell(cx_ + 20, cy_ + 5, cw / 2.6, 3, "#ffe0b8", opacity=op))
+    # the long terminal on the horizon, the radar dome, a tree line far off
+    S(rect(0, hy - 9, 300, 9, "#5a3a58"))
+    S(rect(30, hy - 13, 210, 4, "#5a3a58"))
+    S(line(112, hy - 13, 112, hy - 34, "#5a3a58", 3))
+    S(circ(112, hy - 38, 7, "#5a3a58"))
+    S(ridge(S, rng, hy - 5, 3, "#6a4258", freq=3, x0=300, x1=w + 4, bottom=hy + 1))
+    # the field: grass going gold toward the sun
+    S(rect(0, hy, w, h - hy, S.lin([(0, "#e0a070"), (0.08, "#b88a58"), (0.4, "#7a7038"), (1, "#4a4a28")], 0, hy, 0, h, user=True)))
+    for _ in range(700):
+        x, y = rng.uniform(0, w), hy + (rng.random() ** 1.6) * (h - hy)
+        L = 2 + (y - hy) * 0.09
+        S(line(x, y, x + rng.uniform(-L * 0.3, L * 0.3), y - L, rng.choice(["#d8b070", "#9a8a48", "#6a6a34", "#b89858"]),
+               max(1, (y - hy) * 0.008), opacity=0.7))
+    # the runway: broad, worn, its paint faded
+    far = 6000
+    rw = [cam.p(q) for q in ((-21, 0, 3), (21, 0, 3), (21, 0, far), (-21, 0, far))]
+    S(poly(rw, S.lin([(0, "#e8a88a"), (0.12, "#a8747a"), (0.45, "#7a6068"), (1, "#5e4e5a")], 0, hy, 0, h, user=True)))
+    for sgn in (-1, 1):
+        S(gline(cam, [(sgn * 20, 0, 12), (sgn * 20, 0, far)], "#e8d4b8", 0.3, 0.45))
+    for z in range(40, 1600, 60):
+        S(gline(cam, [(0, 0, z), (0, 0, z + 30)], "#efe2cc", 0.3, 0.55))
+    for _ in range(18):  # patched and weathered slabs
+        z, x = rng.uniform(4, 70), rng.uniform(-19, 15)
+        dz, dx = rng.uniform(2, 8), rng.uniform(2, 6)
+        S(poly([cam.p(q) for q in ((x, 0, z), (x + dx, 0, z), (x + dx, 0, z + dz), (x, 0, z + dz))],
+               rng.choice(["#4e4250", "#8a6e74", "#6a5662"]), opacity=0.35))
+    for _ in range(40):
+        z = rng.uniform(18, 200)
+        x = rng.uniform(-20, 20)
+        S(gline(cam, [(x, 0, z), (x + rng.uniform(-3, 3), 0, z + rng.uniform(2, 10))], "#2a2430", 0.15, 0.4))
+    # kites high over the field, their strings down to the people flying them
+    flyers = [(-30, 40), (8, 110), (-40, 150), (16, 60)]
+    kites = [(170, 120, 18, "#e8483a"), (610, 80, 14, "#2a7ad8"), (300, 200, 9, "#f2c23a"), (720, 190, 11, "#3ab07a")]
+    for (kx, ky, ks, kc), (fx, fz) in zip(kites, flyers):
+        a = cam.p((fx, 1.5, fz))
+        S(kite(kx, ky, ks, kc, a, rng))
+    # people out on the runway at sunset: walkers, cyclists, a skater, a dog
+    def shadow_to(q, L):
+        x, _, z = q
+        z1 = max(z - L, 4.5)
+        x1 = x - 0.2 * (z - z1)
+        return poly([cam.p((x - 0.22, 0, z)), cam.p((x + 0.22, 0, z)), cam.p((x1 + 0.05, 0, z1)), cam.p((x1 - 0.05, 0, z1))],
+                    "#2a1a2a", opacity=0.24)
+    sil = "#2a1c2c"
+    folks = []
+    for x, z in ((-10, 34), (-8.8, 35), (5, 62), (18, 120), (-14, 170), (-2, 230), (9, 320), (-26, 26), (-15, 95), (12, 40)):
+        folks.append(("walk", x, z))
+    folks += [("bike", -9, 15), ("bike", 0, 48), ("bike", 14, 200), ("skate", 6, 85), ("dog", -7.6, 34)]
+    folks += [("fly", fx, fz) for fx, fz in flyers]
+    for kind, x, z in sorted(folks, key=lambda t: -t[2]):
+        q = (x, 0, z)
+        a = cam.p(q)
+        sc = cam.scale(q)
+        S(shadow_to(q, 6))
+        if kind == "walk" or kind == "fly":
+            S(person(a[0], a[1], sc * rng.uniform(1.65, 1.85), sil))
+            if kind == "fly":
+                S(line(a[0] + sc * 0.15, a[1] - sc * 1.25, a[0] + sc * 0.45, a[1] - sc * 1.75, sil, max(1, sc * 0.1), stroke_linecap="round"))
+        elif kind == "dog":
+            S(ell(a[0], a[1] - sc * 0.35, sc * 0.35, sc * 0.14, sil), circ(a[0] + sc * 0.36, a[1] - sc * 0.48, sc * 0.1, sil))
+            for dx in (-0.25, -0.15, 0.2, 0.28):
+                S(line(a[0] + sc * dx, a[1] - sc * 0.3, a[0] + sc * dx, a[1], sil, max(0.8, sc * 0.05)))
+        elif kind == "skate":
+            S(person(a[0], a[1] - sc * 0.12, sc * 1.7, sil))
+            S(rect(a[0] - sc * 0.4, a[1] - sc * 0.12, sc * 0.8, sc * 0.06, sil))
+        else:
+            k = sc * 1.8 / 290 * 0.62
+            S(g(bicycle(mono=sil, basket=None, spokes=False), transform=f"translate({n(a[0] - 145 * k)} {n(a[1] - 88 * k)}) scale({k:.4f})"))
+            S(path(f"M{n(a[0] - sc * 0.25)} {n(a[1] - sc * 1.0)} L{n(a[0] + sc * 0.35)} {n(a[1] - sc * 1.55)} "
+                   f"L{n(a[0] + sc * 0.55)} {n(a[1] - sc * 1.45)} L{n(a[0])} {n(a[1] - sc * 0.9)} Z", sil))
+            S(circ(a[0] + sc * 0.42, a[1] - sc * 1.72, sc * 0.13, sil))
+            S(line(a[0] + sc * 0.4, a[1] - sc * 1.45, a[0] + sc * 0.62, a[1] - sc * 1.15, sil, max(1, sc * 0.09)))
+    S(rect(0, 0, w, h, S.lin([(0, "#000", 0), (0.75, "#000", 0), (1, "#1a0a1a", 0.35)])))
+    return S.html()
+
+
+def rail_car(cam, a, b, y0, H, W, lower="#e3a52a", upper="#9e2a24", glass="#20262e", roof="#7c7a78"):
+    """One S-Bahn car as a box over the track chord a→b (x, z); floor at y0. Returns (distance, svg)."""
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    L = math.hypot(dx, dz)
+    nx, nz = -dz / L * W / 2, dx / L * W / 2
+    A0, A1 = (a[0] + nx, a[1] + nz), (a[0] - nx, a[1] - nz)
+    B0, B1 = (b[0] + nx, b[1] + nz), (b[0] - nx, b[1] - nz)
+    c = ((a[0] + b[0]) / 2, y0 + H / 2, (a[1] + b[1]) / 2)
+    out = []
+
+    def quad(p0, p1, yA, yB):
+        return [(p0[0], yA, p0[1]), (p1[0], yA, p1[1]), (p1[0], yB, p1[1]), (p0[0], yB, p0[1])]
+
+    sides = [(A0, B0), (B1, A1)]
+    ends = [(B0, B1), (A1, A0)]
+    for p0, p1 in sides:
+        q = quad(p0, p1, y0, y0 + H)
+        vis, nrm, fc = cam.visible(q, c)
+        if not vis:
+            continue
+
+        def at(u, v, p0=p0, p1=p1):
+            return (p0[0] + (p1[0] - p0[0]) * u, y0 + H * v, p0[1] + (p1[1] - p0[1]) * u)
+
+        def band(u0, u1, v0, v1, col, flat=False):
+            pts3 = [at(u0, v0), at(u1, v0), at(u1, v1), at(u0, v1)]
+            cc = cam.fogged(col, fc) if flat else cam.lightcol(col, nrm, fc)
+            return poly([cam.p(t) for t in pts3], cc)
+        out.append(band(0, 1, 0, 1, upper))
+        out.append(band(0, 1, 0, 0.5, lower))
+        out.append(band(0, 1, 0, 0.07, "#2a2a2c", flat=True))
+        out.append(band(0, 1, 0.5, 0.52, dark(lower, 0.35)))
+        for d in (0.12, 0.42, 0.72):  # doors
+            out.append(band(d, d + 0.08, 0.07, 0.92, lower))
+            out.append(band(d + 0.005, d + 0.08 - 0.005, 0.07, 0.92, dark(lower, 0.15)))
+            out.append(band(d + 0.012, d + 0.068, 0.5, 0.82, glass, flat=True))
+            out.append(band(d + 0.0385, d + 0.0415, 0.07, 0.92, "#1a1a1c", flat=True))
+        for wu in (0.03, 0.22, 0.31, 0.52, 0.61, 0.82, 0.91):
+            out.append(band(wu, wu + 0.07, 0.58, 0.84, glass, flat=True))
+            out.append(band(wu + 0.005, wu + 0.025, 0.6, 0.82, "#ffffff", flat=True).replace("/>", ' opacity="0.12"/>'))
+    for p0, p1 in ends:
+        q = quad(p0, p1, y0, y0 + H)
+        vis, nrm, fc = cam.visible(q, c)
+        if not vis:
+            continue
+        out.append(cam.face(q, upper, centre=c))
+        out.append(cam.face(quad(p0, p1, y0, y0 + H * 0.5), lower, centre=c))
+    roofq = [(A0[0], y0 + H, A0[1]), (B0[0], y0 + H, B0[1]), (B1[0], y0 + H, B1[1]), (A1[0], y0 + H, A1[1])]
+    out.append(cam.face(roofq, roof, centre=c))
+    return cam.dist(c), "".join(out)
+
+
+def reddit_5(p):
+    """The Ringbahn from the street: a red-and-ochre S-Bahn on a curving brick viaduct, late afternoon."""
+    w, h = p["size"]
+    S = Svg(w, h)
+    rng = random.Random("reddit-5-ring")
+    cam = Cam((0, 1.6, 0), yaw=0, pitch=-7, f=540, cx=w / 2, cy=h * 0.6, light=(-0.75, 0.4, -0.5),
+              shadow="#4a4a7a", shadow_k=0.42, lit="#ffcf8a", lit_k=0.45, fog="#e6dcd8", fogd=260, fogmax=0.7)
+    hy = cam.p((0, 0, 5000))[1]
+    S(sky(S, [(0, "#3a72b8"), (0.6, "#8fb4d8"), (1, "#f2d8b4")], 0, hy + 4))
+    S(cloud(S, 500, 70, 170, rng, col="#fff4e6", shade="#d8c8d8"))
+    S(cloud(S, 90, 120, 110, rng, col="#fff4e6", shade="#d8c8d8"))
+    # the blocks inside the curve: Altbau rows and one taller post-war slab
+    items = []
+    walls = ["#e8d4b0", "#d8b89a", "#efe4cc", "#c9b8a8", "#e2c49a", "#d6d0c4"]
+    for i in range(10):
+        x0 = -70 + i * 14 + rng.uniform(-2, 2)
+        z0 = 50 + abs(x0 + 6) * 0.35 + rng.uniform(0, 6)
+        items.append(house(cam, x0, x0 + rng.uniform(12, 14), z0, z0 + 12, 0, rng.uniform(22, 26), rng.uniform(0, 2.5),
+                           rng.choice(walls), "#8a5a4a", rng, win_w=0.3, win_h=0.5, floor_h=3.6, cornice="#f0e6d6",
+                           frame="#f2ece2", tiles=False))
+    items.append(house(cam, 14, 32, 84, 98, 0, 44, 0, "#d2d4d8", "#888", rng, win_w=0.5, win_h=0.45, floor_h=2.9))
+    S(draw_sorted(items))
+    S(rect(0, hy, w, h - hy, "#8c8478"))
+    # the viaduct: brick arches on a curve round a centre ahead and to the left
+    C, R = (-6.0, 76.0), 46.0
+    deck, para = 7.0, 8.0
+
+    def arcp(th, r):
+        return (C[0] + r * math.cos(math.radians(th)), C[1] + r * math.sin(math.radians(th)))
+    brick = "#a9523a"
+    segs = []
+    th, k = -175.0, 0
+    while th < -5:
+        th1 = th + 9.0
+        a, b = arcp(th, R + 4.5), arcp(th1, R + 4.5)
+        q = [(a[0], 0, a[1]), (b[0], 0, b[1]), (b[0], deck, b[1]), (a[0], deck, a[1])]
+        mid = ((a[0] + b[0]) / 2, deck / 2, (a[1] + b[1]) / 2)
+        _, nrm, fc = cam.visible(q, (C[0], deck / 2, C[1]))
+        col = cam.lightcol(brick, nrm, fc)
+        sv = poly([cam.p(t) for t in q], col)
+
+        def at(u, v, a=a, b=b):
+            return (a[0] + (b[0] - a[0]) * u, v, a[1] + (b[1] - a[1]) * u)
+        r_ = math.dist(a, b) * 0.36
+        spring = 3.2
+        arch = [at(0.14, 0), at(0.86, 0)] + [at(0.5 + 0.36 * math.cos(math.radians(d)), spring + r_ * math.sin(math.radians(d)))
+                                             for d in range(0, 181, 15)]
+        if k % 3 == 1:  # a glazed shopfront in the arch
+            sv += poly([cam.p(t) for t in arch], cam.fogged("#8fb0c8", fc))
+            sv += poly([cam.p(t) for t in arch[:2] + [at(0.86, 1.2), at(0.14, 1.2)]], cam.fogged("#3a4450", fc), opacity=0.5)
+            for u in (0.38, 0.62):
+                p0, p1 = cam.p(at(u, 0)), cam.p(at(u, spring + r_ * 0.95))
+                sv += line(p0[0], p0[1], p1[0], p1[1], cam.fogged("#2a2a30", fc), max(1, cam.scale(mid) * 0.12))
+            p0, p1 = cam.p(at(0.14, spring)), cam.p(at(0.86, spring))
+            sv += line(p0[0], p0[1], p1[0], p1[1], cam.fogged("#2a2a30", fc), max(1, cam.scale(mid) * 0.12))
+            sv += poly([cam.p(t) for t in (at(0.18, spring + 0.2), at(0.36, spring + 0.2), at(0.3, spring + r_ * 0.8))],
+                       "#ffffff", opacity=0.25)
+        else:
+            sv += poly([cam.p(t) for t in arch], cam.fogged("#3a2a2e", fc))
+        ring = [at(0.5 + 0.41 * math.cos(math.radians(d)), spring + r_ * 1.12 * math.sin(math.radians(d))) for d in range(0, 181, 15)]
+        sv += pline([cam.p(t) for t in ring], cam.fogged(dark(col, 0.18), fc), max(1, cam.scale(mid) * 0.3))
+        for u in (0.0, 1.0):  # pilasters on the piers
+            sv += poly([cam.p(t) for t in (at(u - 0.04, 0), at(u + 0.04, 0), at(u + 0.04, deck), at(u - 0.04, deck))],
+                       cam.lightcol(light(brick, 0.08), nrm, fc))
+        segs.append((cam.dist(mid), sv))
+        th, k = th1, k + 1
+    S(draw_sorted(segs))
+    # the train on top, coming round the curve
+    cars = []
+    th = -150.0
+    car_len = 18.0 / R * 180 / math.pi
+    gap = 0.9 / R * 180 / math.pi
+    for i in range(4):
+        a, b = arcp(th, R), arcp(th + car_len, R)
+        cars.append(rail_car(cam, a, b, deck + 0.9, 3.5, 3.0))
+        th += car_len + gap
+    S(draw_sorted(cars))
+    # the parapet in front of the wheels, and its railing
+    th = -175.0
+    while th < -5:
+        th1 = th + 3.0
+        a, b = arcp(th, R + 4.5), arcp(th1, R + 4.5)
+        q = [(a[0], deck - 0.6, a[1]), (b[0], deck - 0.6, b[1]), (b[0], para, b[1]), (a[0], para, a[1])]
+        S(cam.face(q, "#b5654a", centre=(C[0], deck, C[1])))
+        q = [(a[0], deck - 0.6, a[1]), (b[0], deck - 0.6, b[1]), (b[0], deck, b[1]), (a[0], deck, a[1])]
+        S(cam.face(q, "#cdbda4", centre=(C[0], deck, C[1])))
+        S(gline(cam, [(a[0], para + 0.9, a[1]), (b[0], para + 0.9, b[1])], "#3a3a40", 0.05))
+        S(gline(cam, [(a[0], para, a[1]), (a[0], para + 0.9, a[1])], "#3a3a40", 0.04))
+        th = th1
+    # the street under it: road, pavement, people, a parked car, a street tree
+    S(poly([cam.p(q) for q in ((-60, 0, 7), (60, 0, 7), (60, 0, 22), (-60, 0, 22))], "#5e5a64"))
+    for x in range(-40, 40, 6):
+        S(gline(cam, [(x, 0, 14.5), (x + 3, 0, 14.5)], "#e8e4dc", 0.15, 0.7))
+    yb = cam.p((0, 0, 7))[1]
+    S(rect(0, yb, w, h - yb, S.lin([(0, "#cbbfae"), (1, "#b2a594")])))
+    for i in range(12):
+        z = 7 - i * 0.6
+        if z < 2.2:
+            break
+        a, b = cam.p((-30, 0, z)), cam.p((30, 0, z))
+        S(line(a[0], a[1], b[0], b[1], "#9a8e7e", 1, opacity=0.5))
+    for x, z, col in ((-7, 26, "#2a2f44"), (-5.8, 27, "#5a3040"), (6, 23.5, "#3a4a3a"), (10, 27, "#2a2f44")):
+        q = (x, 0, z)
+        a = cam.p(q)
+        S(person(a[0], a[1], cam.scale(q) * 1.75, col))
+    q = (11, 0, 11)
+    a = cam.p(q)
+    sc = cam.scale(q)
+    S(ell(a[0], a[1], sc * 2.4, sc * 0.18, "#2a2a30", opacity=0.35))
+    S(rect(a[0] - sc * 2.2, a[1] - sc * 1.0, sc * 4.4, sc * 0.78, "#3a5a7a", rx=sc * 0.3))
+    S(path(f"M{n(a[0] - sc * 1.4)} {n(a[1] - sc * 0.98)} Q{n(a[0] - sc * 1.0)} {n(a[1] - sc * 1.55)} {n(a[0])} {n(a[1] - sc * 1.55)} "
+           f"L{n(a[0] + sc * 0.6)} {n(a[1] - sc * 1.55)} Q{n(a[0] + sc * 1.2)} {n(a[1] - sc * 1.5)} {n(a[0] + sc * 1.5)} {n(a[1] - sc * 0.98)} Z", "#3a5a7a"))
+    S(path(f"M{n(a[0] - sc * 1.15)} {n(a[1] - sc * 1.02)} Q{n(a[0] - sc * 0.9)} {n(a[1] - sc * 1.45)} {n(a[0] - sc * 0.1)} {n(a[1] - sc * 1.45)} "
+           f"L{n(a[0] - sc * 0.1)} {n(a[1] - sc * 1.02)} Z", "#a8c4d8"))
+    S(path(f"M{n(a[0] + sc * 0.05)} {n(a[1] - sc * 1.02)} L{n(a[0] + sc * 0.05)} {n(a[1] - sc * 1.45)} L{n(a[0] + sc * 0.6)} {n(a[1] - sc * 1.45)} "
+           f"Q{n(a[0] + sc * 1.05)} {n(a[1] - sc * 1.4)} {n(a[0] + sc * 1.3)} {n(a[1] - sc * 1.02)} Z", "#a8c4d8"))
+    S(rect(a[0] - sc * 2.2, a[1] - sc * 0.6, sc * 4.4, sc * 0.08, "#ffffff", opacity=0.25))
+    for dx in (-1.35, 1.35):
+        S(circ(a[0] + sc * dx, a[1] - sc * 0.25, sc * 0.33, "#1a1a1e"), circ(a[0] + sc * dx, a[1] - sc * 0.25, sc * 0.14, "#8a8c90"))
+    q = (-5.2, 0.15, 6.5)
+    a = cam.p(q)
+    S(lamp_post(a[0], a[1], cam.scale(q) * 6.5, "#2a2e36", "#e8e2cc", "#fff0c0", S, on=False))
+    S(rect(0, 0, w, h, S.lin([(0, "#ffd8a0", 0.16), (0.6, "#ffd8a0", 0)], 0, 0, 1, 0.3)))
+    return S.html()
+
+
 PICS = {
     "shot-13": shot_13,
+    "shot-1": shot_1,
+    "shot-2": shot_2,
+    "shot-3": shot_3,
+    "shot-4": shot_4,
     "ig-photo-0": ig_photo_0,
     "reddit-4": reddit_4,
     "ig-photo-2": ig_photo_2,

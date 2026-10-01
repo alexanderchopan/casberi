@@ -1,8 +1,8 @@
 """fam_ui.py — screens and documents for the demo (render.py's `ui` family).
 
 Phone screenshots (shot-5…12), drawings (file-0/1/2/4), a whiteboard and a
-code editor (reddit-2/3), two channel graphics (tg-2/4), a photographed laptop
-dashboard (fc-0) and a paper figure (hf-paper-1). Every page is self-contained:
+checklist page (reddit-2/3), two channel graphics (tg-2/4), a photographed
+laptop showing a design file (fc-0) and a paper figure (hf-paper-1). Every page is self-contained:
 inline CSS and SVG, system fonts only, no logos.
 
 `html(p)` dispatches on `p["key"]`; each builder returns the page's body and
@@ -11,7 +11,6 @@ CSS, and `doc()` wraps it at exactly `p["size"]`.
 
 import html as _h
 import math
-import re
 
 # ── shared helpers ─────────────────────────────────────────────────────────
 
@@ -63,65 +62,6 @@ def chev(color, size=22, left=True):
     d = "M14 4 6 12l8 8" if left else "M8 4l8 8-8 8"
     return (f'<svg width="{size}" height="{size}" viewBox="0 0 22 24"><path d="{d}" fill="none" '
             f'stroke="{color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>')
-
-
-# A small code highlighter: enough to colour Swift and TypeScript believably.
-SWIFT_KW = set("import struct var let some if else in private return func class enum case "
-               "true false self static guard while for".split())
-TS_KW = set("export type function const let while if continue return new of for "
-            "string number boolean import from interface".split())
-TOKEN = re.compile(r'(?P<com>//.*$)|(?P<str>"[^"]*")|(?P<rx>/(?:\\.|\[[^\]]*\]|[^/\\\s])+/[a-z]*(?=\.))'
-                   r'|(?P<attr>@\w+)|(?P<num>\b\d+(?:\.\d+)?\b)|(?P<mem>\.[A-Za-z_]\w*)'
-                   r'|(?P<id>[A-Za-z_]\w*)|(?P<ws>\s+)|(?P<p>.)')
-
-
-def highlight(line, kw, pal):
-    out = []
-    for m in TOKEN.finditer(line):
-        k, t = m.lastgroup, m.group()
-        col, weight = None, ""
-        if k == "com":
-            col = pal["com"]
-        elif k in ("str", "rx"):
-            col = pal["str"]
-        elif k == "num":
-            col = pal["num"]
-        elif k == "attr":
-            col, weight = pal["kw"], "font-weight:700;"
-        elif k == "mem":
-            col = pal["mem"]
-        elif k == "id":
-            nxt = line[m.end():m.end() + 1]
-            if t in kw:
-                col, weight = pal["kw"], "font-weight:700;" if pal.get("bold") else ""
-            elif t[0].isupper():
-                col = pal["type"]
-            elif nxt == "(":
-                col = pal["fn"]
-        if col:
-            out.append(f'<span style="color:{col};{weight}">{esc(t)}</span>')
-        else:
-            out.append(esc(t))
-    return "".join(out)
-
-
-def code_block(lines, kw, pal, size, lh, gutter, num_col, active=None, active_bg="transparent", start=1):
-    rows = []
-    for i, ln in enumerate(lines):
-        n = i + start
-        bg = active_bg if n == active else "transparent"
-        rows.append(f'<div style="display:flex;height:{lh}px;line-height:{lh}px;background:{bg}">'
-                    f'<span style="width:{gutter}px;text-align:right;padding-right:10px;color:{num_col};flex:none">{n}</span>'
-                    f'<span style="white-space:pre;color:{pal["plain"]}">{highlight(ln, kw, pal)}</span></div>')
-    return f'<div style="font:{size}px/{lh}px {MONO}">{"".join(rows)}</div>'
-
-
-XCODE_DARK = dict(plain="#DFDFE0", kw="#FF7AB2", type="#DABAFF", fn="#B281EB", mem="#67B7A4",
-                  num="#D9C97C", str="#FF8170", com="#7F8C98", bold=True)
-XCODE_LIGHT = dict(plain="#262626", kw="#AD3DA4", type="#703DAA", fn="#4B21B0", mem="#3E8087",
-                   num="#272AD8", str="#D12F1B", com="#707F8C", bold=True)
-ONE_DARK = dict(plain="#ABB2BF", kw="#C678DD", type="#E5C07B", fn="#61AFEF", mem="#E06C75",
-                num="#D19A66", str="#98C379", com="#7F848E", bold=False)
 
 
 # ── phone screenshots ──────────────────────────────────────────────────────
@@ -223,73 +163,135 @@ def shot_9(p):
     return doc(p, body, bg="#1E1E1E")
 
 
+def lcg(seed):
+    """A deterministic scatter, so a redraw is the same picture."""
+    s = seed
+    while True:
+        s = (s * 1103515245 + 12345) & 0x7FFFFFFF
+        yield s / 0x7FFFFFFF
+
+
+def stock_pot_photo(w=350, h=150):
+    """A photo in a note: a tall steel stock pot on a gas hob, broth, bones, kombu, steam."""
+    r = lcg(61)
+    bones = ""
+    for _ in range(7):
+        x, y, a = 128 + next(r) * 94, 58 + next(r) * 12, next(r) * 70 - 35
+        bones += (f'<g transform="translate({x:.0f} {y:.0f}) rotate({a:.0f}) scale(1 .55)" fill="#EADFC8" stroke="#B59C74" stroke-width="1.2">'
+                  f'<rect x="-11" y="-3" width="22" height="6" rx="3"/><circle cx="-11" cy="-3" r="4"/><circle cx="-11" cy="3" r="4"/>'
+                  f'<circle cx="11" cy="-3" r="4"/><circle cx="11" cy="3" r="4"/></g>')
+    steam = "".join(
+        f'<path d="M{x} 52c-14-12 12-20 -2-34s12-18 0-34" fill="none" stroke="rgba(255,255,255,.{o})" stroke-width="{sw}" stroke-linecap="round" filter="url(#steam)"/>'
+        for x, o, sw in [(146, 22, 16), (180, 18, 22), (214, 20, 14)])
+    return f'''<svg width="{w}" height="{h}" viewBox="0 0 350 150" style="display:block;border-radius:10px">
+ <defs>
+  <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4A3A2C"/><stop offset="1" stop-color="#1E1712"/></linearGradient>
+  <linearGradient id="steel" x1="0" x2="1"><stop offset="0" stop-color="#6E7276"/><stop offset=".22" stop-color="#D9DCDE"/>
+   <stop offset=".45" stop-color="#9DA1A5"/><stop offset=".8" stop-color="#C9CCCF"/><stop offset="1" stop-color="#55595D"/></linearGradient>
+  <radialGradient id="broth" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#E7D3A8"/><stop offset="1" stop-color="#B8925C"/></radialGradient>
+  <filter id="soft" filterUnits="userSpaceOnUse" x="0" y="0" width="350" height="150"><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="steam" filterUnits="userSpaceOnUse" x="0" y="0" width="350" height="150"><feGaussianBlur stdDeviation="6"/></filter>
+ </defs>
+ <rect width="350" height="150" fill="url(#wall)"/>
+ <rect x="0" y="118" width="350" height="32" fill="#141416"/>
+ <g stroke="#2E2E31" stroke-width="5" stroke-linecap="round"><path d="M20 128H330M60 120v24M290 120v24"/></g>
+ <circle cx="300" cy="40" r="60" fill="rgba(255,190,110,.18)" filter="url(#soft)"/>
+ <path d="M96 64H254V122C254 132 236 138 175 138S96 132 96 122Z" fill="url(#steel)"/>
+ <path d="M86 70c-6 0-10 4-10 8s4 8 10 8M264 70c6 0 10 4 10 8s-4 8-10 8" fill="none" stroke="#7B7F83" stroke-width="5"/>
+ <ellipse cx="175" cy="64" rx="79" ry="15" fill="#5C6064"/>
+ <ellipse cx="175" cy="65" rx="73" ry="12" fill="url(#broth)"/>
+ {bones}
+ <path d="M130 66c14-4 22 2 34-2" stroke="#2F4A2A" stroke-width="5" stroke-linecap="round" fill="none"/>
+ <circle cx="214" cy="64" r="7" fill="#D9B46A" stroke="#A37B3B" stroke-width="1.2"/>
+ <circle cx="138" cy="58" r="5" fill="#EFE6D2" stroke="#C3B28E"/>
+ <path d="M96 118c30 8 128 8 158 0" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none"/>
+ <path d="M118 134c20-6 104-6 124 0" stroke="rgba(90,150,255,.55)" stroke-width="5" fill="none" stroke-linecap="round" filter="url(#soft)"/>
+ {steam}
+</svg>'''
+
+
 def shot_6(p):
-    """Dark Swift editor, playground-style, with a quick-help card."""
-    lines = [
-        "import SwiftUI", "", "struct CardList: View {", "  let cards: [Card]", "",
-        "  var body: some View {", "    ScrollView {", "      LazyVStack(spacing: 16) {",
-        "        ForEach(cards) { card in", "          CardView(card: card)",
-        "            .scrollTransition {", "              content, phase in",
-        "              content.opacity(", "                phase.isIdentity",
-        "                  ? 1 : 0.4)", "            }", "        }", "      }",
-        "      .padding(.horizontal)", "    }", "  }", "}", "",
-        "#Preview {", "  CardList(cards: .samples)", "}",
-    ]
-    code = code_block(lines, SWIFT_KW, XCODE_DARK, 13, 22, 34, "#5E5F66", active=13, active_bg="#2A2C33")
-    body = f'''{status_bar(True, "#26272C")}
-<div style="height:48px;background:#26272C;display:flex;align-items:center;padding:0 14px;color:#fff">
-  <svg width="24" height="20" viewBox="0 0 24 20"><rect x="1" y="1.5" width="22" height="17" rx="3.5" fill="none" stroke="#FF9F0A" stroke-width="1.8"/><path d="M8 2v16" stroke="#FF9F0A" stroke-width="1.8"/></svg>
-  <div style="flex:1;text-align:center;font:600 16px {SANS}">ScrollTransitions.swift</div>
-  <div style="width:30px;height:30px;border-radius:15px;background:#FF9F0A;display:grid;place-items:center">
-    <svg width="12" height="13" viewBox="0 0 12 13"><path d="M2 1l9 5.5L2 12z" fill="#fff"/></svg></div>
+    """A notes app, light: Uma's ramen broth, the pot photo, ingredients and timed steps."""
+    Y = "#D9A400"
+    ingredients = ["Pork bones, 1.5 kg", "Kombu, 10 cm", "2 onions, halved", "Ginger, a thumb, sliced", "A head of garlic, cut across"]
+    steps = [("Blanch the bones", "10 min"), ("Rinse under cold water", ""), ("Simmer, lid off", "12 h"), ("Strain", "")]
+    bul = "".join(f'<div style="display:flex;gap:10px;font:400 17px/28px {SANS};color:#1C1C1E"><span>&bull;</span>{esc(t)}</div>' for t in ingredients)
+    num = "".join(
+        f'<div style="display:flex;gap:8px;font:400 17px/28px {SANS};color:#1C1C1E"><span style="width:18px">{i}.</span>'
+        f'{esc(t)}{" &middot; " + b if b else ""}</div>' for i, (t, b) in enumerate(steps, 1))
+    icon = lambda d: f'<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="{Y}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{d}</svg>'
+    body = f'''{status_bar(False)}
+<div style="height:44px;display:flex;align-items:center;padding:0 12px;color:{Y};font:400 17px {SANS}">
+  {chev(Y, 22)}<span>Recipes</span><span style="flex:1"></span>
+  <svg width="22" height="24" viewBox="0 0 22 24" fill="none" stroke="{Y}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 14V2M6 7l5-5 5 5M4 11v10h14V11"/></svg>
+  <span style="width:18px"></span>
+  <span style="width:26px;height:26px;border-radius:13px;border:2px solid {Y};display:grid;place-items:center;font:700 12px {SANS};line-height:0">&middot;&middot;&middot;</span>
+  <span style="width:16px"></span><span style="font-weight:600">Done</span></div>
+<div style="padding:2px 20px 0">
+  <div style="text-align:center;font:400 13px {SANS};color:#8E8E93;margin-bottom:10px">27 September 2026 at 18:04</div>
+  <div style="font:700 28px/1.15 {SANS};letter-spacing:-.5px;color:#1C1C1E">Uma&rsquo;s ramen &mdash; the broth</div>
+  <div style="margin:14px 0 4px">{stock_pot_photo()}</div>
+  <div style="font:600 21px {SANS};color:#1C1C1E;margin:14px 0 4px">Ingredients</div>
+  {bul}
+  <div style="font:600 21px {SANS};color:#1C1C1E;margin:16px 0 4px">Steps</div>
+  {num}
+  <div style="font:400 17px/1.4 {SANS};color:#1C1C1E;margin-top:12px">Skim in the first hour. Never a hard boil, or it clouds.</div>
 </div>
-<div style="background:#1F1F24;padding-top:10px;height:742px">{code}</div>
-<div class="abs" style="left:16px;right:16px;bottom:40px;background:#2E2F36;border-radius:14px;padding:14px 16px;
-  box-shadow:0 12px 30px rgba(0,0,0,.5);color:#E5E5E7">
-  <div style="font:600 14px {MONO};color:#B281EB">scrollTransition(_:)</div>
-  <div style="font:400 13.5px/1.4 {SANS};color:#B8B8BD;margin-top:6px">Animates the view as it enters and leaves the visible
-   region of its scroll view. The phase is identity while fully on screen.</div>
-</div>
-{home_bar(True)}'''
-    return doc(p, body, bg="#1F1F24")
-
-
-def shot_10(p):
-    """Light Swift editor split over a live preview of a card expanding."""
-    lines = [
-        "struct Gallery: View {", "  @Namespace private var ns", "  @State private var open = false", "",
-        "  var body: some View {", "    if open {", "      BigCard()", "        .matchedGeometryEffect(",
-        "          id: \"card\", in: ns)", "    } else {", "      SmallCard()", "        .matchedGeometryEffect(",
-        "          id: \"card\", in: ns)", "    }", "  }", "}",
-    ]
-    code = code_block(lines, SWIFT_KW, XCODE_LIGHT, 13, 21, 32, "#A8A8AE", active=9, active_bg="#EAF1FB")
-    body = f'''{status_bar(False, "#F7F7F9")}
-<div style="height:46px;background:#F7F7F9;display:flex;align-items:center;padding:0 14px">
-  {chev("#007AFF", 20)}<span style="font:400 17px {SANS};color:#007AFF;margin-left:2px">Files</span>
-  <div style="flex:1;text-align:center;font:600 16px {SANS};color:#111;margin-right:52px">MatchedGeometry.swift</div>
-</div>
-<div style="background:#fff;padding-top:8px;height:360px">{code}</div>
-<div class="abs" style="top:460px;left:0;right:0;bottom:0;background:linear-gradient(#EEF0F5,#E4E7EE)">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 0">
-    <span style="font:600 13px {SANS};color:#3C3C43;background:#fff;padding:5px 11px;border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.08)">Live Preview</span>
-    <span style="font:500 13px {SANS};color:#8E8E93">open = true</span></div>
-  <div class="abs" style="left:26px;top:58px;width:112px;height:70px;border-radius:14px;border:2px dashed #A9B0C0"></div>
-  <svg class="abs" style="left:74px;top:30px" width="140" height="120" viewBox="0 0 140 120">
-    <path d="M40 30C70 8 110 20 128 60" fill="none" stroke="#007AFF" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"/>
-    <path d="M122 50l7 11 4-13" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  <div class="abs" style="left:78px;top:108px;width:276px;height:230px;border-radius:22px;background:#fff;overflow:hidden;
-    box-shadow:0 18px 40px rgba(40,50,80,.22)">
-    <div style="height:138px;background:linear-gradient(135deg,#FF9A62,#F2566B 55%,#8E5BD8);position:relative;overflow:hidden">
-      <div class="abs" style="width:150px;height:150px;border-radius:75px;background:rgba(255,255,255,.18);right:-30px;top:-50px"></div>
-      <div class="abs" style="width:90px;height:90px;border-radius:45px;background:rgba(255,255,255,.14);left:20px;bottom:-40px"></div></div>
-    <div style="padding:14px 16px">
-      <div style="font:700 18px {SANS};color:#111">Card</div>
-      <div style="font:400 13px {SANS};color:#8E8E93;margin-top:3px">Shares its frame across views</div>
-      <div style="height:8px;width:180px;background:#EDEEF2;border-radius:4px;margin-top:12px"></div></div>
-  </div>
+<div class="abs" style="left:0;right:0;bottom:30px;height:50px;display:flex;align-items:center;justify-content:space-around;padding:0 16px;background:#fff">
+  {icon('<circle cx="6" cy="7" r="2.5"/><path d="M12 7h11M12 13h11M12 19h11"/><circle cx="6" cy="13" r="2.5"/><circle cx="6" cy="19" r="2.5"/>')}
+  {icon('<path d="M3 8h4l2-3h8l2 3h4v13H3z"/><circle cx="13" cy="14" r="4"/>')}
+  {icon('<path d="M5 21l2-6L18 4l4 4L11 19zM15 7l4 4"/>')}
+  {icon('<path d="M4 6h9M4 22V6M22 13v9H4M11 16l1-4 9-9 3 3-9 9z"/>')}
 </div>
 {home_bar()}'''
     return doc(p, body, bg="#fff")
+
+
+def shot_10(p):
+    """A running-plan app, dark: week 6 of a half-marathon plan, Thursday's tempo lit."""
+    O = "#FF9F0A"
+    week = [("Mon", 21, "Easy 6 km", "6:10 /km", "done"), ("Tue", 22, "Intervals 6&times;800 m", "4:55 /km reps", "done"),
+            ("Wed", 23, "Rest", "", "rest"), ("Thu", 24, "Tempo 8 km", "5:20 /km", "today"),
+            ("Fri", 25, "Rest", "", "rest"), ("Sat", 26, "Easy 5 km", "6:15 /km", "next"),
+            ("Sun", 27, "Long run 16 km", "6:00 /km", "next")]
+    tick = (f'<span style="width:24px;height:24px;border-radius:12px;background:#30D158;display:grid;place-items:center">'
+            f'<svg width="12" height="10" viewBox="0 0 12 10"><path d="M1.5 5l3 3 6-6.5" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>')
+    rows = ""
+    for i, (d, n, what, pace, st) in enumerate(week):
+        today = st == "today"
+        rest = st == "rest"
+        right = (tick if st == "done" else
+                 f'<span style="font:600 13px {SANS};color:#000;background:{O};padding:4px 10px;border-radius:12px">Today</span>' if today else
+                 '<span style="width:24px;height:24px;border-radius:12px;border:1.6px solid #48484A"></span>' if not rest else "")
+        rows += f'''<div style="display:flex;align-items:center;gap:14px;height:56px;padding:0 14px;
+  {"background:rgba(255,159,10,.14);box-shadow:inset 0 0 0 1.5px " + O + ";border-radius:12px;" if today else ""}
+  {"" if i == 0 or today or week[i - 1][4] == "today" else "border-top:1px solid #2C2C2E;"}">
+  <div style="width:36px;text-align:center;line-height:1.1"><div style="font:600 12px {SANS};color:{O if today else "#8E8E93"}">{d}</div>
+    <div style="font:600 18px {SANS};color:{"#fff" if not rest else "#636366"}">{n}</div></div>
+  <div style="flex:1"><div style="font:{600 if not rest else 400} 17px {SANS};color:{"#636366" if rest else "#fff"}">{what}</div>
+    {f'<div style="font:400 13px {SANS};color:#8E8E93;margin-top:2px">{pace}</div>' if pace else ""}</div>{right}</div>'''
+    tab = lambda name, on, d: (f'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:{O if on else "#8E8E93"};font:500 10px {SANS}">'
+                               f'<svg width="26" height="24" viewBox="0 0 26 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{d}</svg>{name}</div>')
+    body = f'''{status_bar(True)}
+<div style="height:44px;display:flex;align-items:center;padding:0 10px;color:{O};font:400 17px {SANS}">{chev(O, 22)}Plans
+  <span style="flex:1"></span><span style="font-weight:600;margin-right:6px">Edit</span></div>
+<div style="padding:2px 18px 0;color:#fff">
+  <div style="font:700 30px/1.12 {SANS};letter-spacing:-.6px">Half-marathon plan &mdash; week 6</div>
+  <div style="font:400 15px {SANS};color:#8E8E93;margin-top:6px">Goal 1:55 &middot; race day 8 November</div>
+  <div style="display:flex;justify-content:space-between;font:600 14px {SANS};margin:18px 0 8px">
+    <span>6 of 12 weeks</span><span style="color:#8E8E93;font-weight:400">12 of 41 km this week</span></div>
+  <div style="height:8px;border-radius:4px;background:#2C2C2E;overflow:hidden"><div style="width:50%;height:100%;background:{O};border-radius:4px"></div></div>
+  <div style="font:600 13px {SANS};color:#8E8E93;margin:24px 4px 8px">This week</div>
+  <div style="background:#1C1C1E;border-radius:14px;padding:4px">{rows}</div>
+</div>
+<div class="abs" style="left:0;right:0;bottom:0;height:84px;background:rgba(22,22,24,.96);border-top:1px solid #2C2C2E;display:flex;padding-top:8px">
+  {tab("Today", False, '<circle cx="13" cy="12" r="9"/><path d="M13 7v5l3 2"/>')}
+  {tab("Plan", True, '<rect x="4" y="4" width="18" height="17" rx="3"/><path d="M4 9h18M9 2v4M17 2v4"/>')}
+  {tab("Runs", False, '<path d="M3 18l5-6 4 3 5-8 6 6"/>')}
+  {tab("Me", False, '<circle cx="13" cy="8" r="4"/><path d="M5 21c1-4 4-6 8-6s7 2 8 6"/>')}
+</div>
+{home_bar(True)}'''
+    return doc(p, body, bg="#000")
 
 
 def shot_7(p):
@@ -379,49 +381,98 @@ def shot_7(p):
     return doc(p, body, bg="#F3EFE7")
 
 
+def smooth_loop(pts):
+    """A closed curve through the midpoints of a polygon, so a scatter of points reads as a soft blob."""
+    mid = lambda a, b: ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+    n = len(pts)
+    m0 = mid(pts[-1], pts[0])
+    d = f"M{m0[0]:.1f} {m0[1]:.1f}"
+    for i in range(n):
+        m = mid(pts[i], pts[(i + 1) % n])
+        d += f"Q{pts[i][0]:.1f} {pts[i][1]:.1f} {m[0]:.1f} {m[1]:.1f}"
+    return d + "Z"
+
+
+def shakshuka_photo(w=390, h=340):
+    """Overhead: a black pan of red tomato sauce, six eggs set in it, feta and parsley."""
+    r = lcg(88)
+    cx, cy = 190, 186
+    eggs = [(150, 130), (232, 128), (118, 200), (196, 196), (262, 214), (176, 262)]
+    sauce = "".join(
+        f'<circle cx="{cx + (next(r) - .5) * 220:.0f}" cy="{cy + (next(r) - .5) * 220:.0f}" r="{4 + next(r) * 10:.0f}" '
+        f'fill="{"#7E1A10" if next(r) < .5 else "#D2492E"}" opacity=".55"/>' for _ in range(70))
+    whites = ""
+    yolks = ""
+    for i, (x, y) in enumerate(eggs):
+        pts = []
+        for k in range(10):
+            a = k / 10 * 6.283
+            rr = 30 + next(r) * 8
+            pts.append((x + rr * math.cos(a), y + rr * .9 * math.sin(a)))
+        whites += f'<path d="{smooth_loop(pts)}" fill="#FBF6EC" stroke="#EBDCC6" stroke-width="2" filter="url(#eg)"/>'
+        yolks += (f'<circle cx="{x + 3}" cy="{y + 2}" r="13" fill="#F0A100"/><circle cx="{x + 3}" cy="{y + 2}" r="13" fill="url(#yolk)"/>'
+                  f'<ellipse cx="{x - 1}" cy="{y - 3}" rx="4" ry="2.5" fill="#FFF3C4" opacity=".8"/>')
+    feta = "".join(
+        f'<rect x="{cx + (next(r) - .5) * 210:.0f}" y="{cy + (next(r) - .5) * 210:.0f}" width="{6 + next(r) * 7:.0f}" height="{5 + next(r) * 6:.0f}" '
+        f'rx="2" fill="#FFFDF7" stroke="#E2D9C6" stroke-width=".8" transform="rotate({next(r) * 90:.0f})" transform-origin="center"/>' for _ in range(22))
+    herbs = "".join(
+        f'<ellipse cx="{cx + (next(r) - .5) * 230:.0f}" cy="{cy + (next(r) - .5) * 230:.0f}" rx="{2.5 + next(r) * 3:.1f}" ry="{1.4 + next(r) * 1.5:.1f}" '
+        f'fill="{"#2F7A2C" if next(r) < .6 else "#4E9A3A"}" transform="rotate({next(r) * 180:.0f} {cx} {cy})"/>' for _ in range(60))
+    clip_r = 132
+    return f'''<svg width="{w}" height="{h}" viewBox="0 0 390 340" style="display:block">
+ <defs>
+  <linearGradient id="table" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D9C3A3"/><stop offset="1" stop-color="#B89670"/></linearGradient>
+  <radialGradient id="sauce" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#C7351F"/><stop offset="1" stop-color="#8E1D10"/></radialGradient>
+  <radialGradient id="yolk" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#FFC93C" stop-opacity=".9"/><stop offset="1" stop-color="#E08A00" stop-opacity="0"/></radialGradient>
+  <filter id="eg"><feGaussianBlur stdDeviation=".8"/></filter>
+  <filter id="sh"><feGaussianBlur stdDeviation="10"/></filter>
+  <clipPath id="pan"><circle cx="{cx}" cy="{cy}" r="{clip_r}"/></clipPath>
+ </defs>
+ <rect width="390" height="340" fill="url(#table)"/>
+ {''.join(f'<path d="M0 {y}C120 {y + 6} 260 {y - 8} 390 {y + 2}" stroke="#A9865F" stroke-opacity=".35" stroke-width="1.5" fill="none"/>' for y in range(14, 340, 26))}
+ <rect x="300" y="250" width="120" height="110" rx="6" fill="#EDE6DA" transform="rotate(-12 340 300)"/>
+ <path d="M318 176h90" stroke="#1A1A1A" stroke-width="22" stroke-linecap="round"/>
+ <circle cx="{cx + 6}" cy="{cy + 12}" r="156" fill="rgba(40,20,10,.35)" filter="url(#sh)"/>
+ <circle cx="{cx}" cy="{cy}" r="154" fill="#1C1C1C"/>
+ <circle cx="{cx}" cy="{cy}" r="146" fill="#2A2A2A"/>
+ <circle cx="{cx}" cy="{cy}" r="{clip_r}" fill="url(#sauce)"/>
+ <g clip-path="url(#pan)">{sauce}{whites}{yolks}{feta}{herbs}</g>
+ <path d="M{cx - 120} {cy - 70}A140 140 0 0 1 {cx - 40} {cy - 138}" stroke="rgba(255,255,255,.18)" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>'''
+
+
 def shot_8(p):
-    """A notes app, dark: the espresso dial-in note with a checklist."""
-    Y = "#FFD60A"
-
-    def check(done, text):
-        mark = (f'<span style="width:22px;height:22px;border-radius:11px;background:{Y};display:grid;place-items:center;flex:none">'
-                f'<svg width="12" height="10" viewBox="0 0 12 10"><path d="M1.5 5l3 3 6-6.5" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
-                if done else '<span style="width:22px;height:22px;border-radius:11px;border:1.6px solid #6B6B70;flex:none"></span>')
-        st = "color:#8E8E93;text-decoration:line-through" if done else "color:#fff"
-        return f'<div style="display:flex;align-items:center;gap:12px;margin:12px 0;font:400 17px {SANS};{st}">{mark}{text}</div>'
-
-    icon = lambda d: f'<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="{Y}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{d}</svg>'
-    body = f'''{status_bar(True)}
-<div style="height:44px;display:flex;align-items:center;padding:0 12px;color:{Y};font:400 17px {SANS}">
-  {chev(Y, 22)}<span>Notes</span><span style="flex:1"></span>
-  <svg width="22" height="24" viewBox="0 0 22 24" fill="none" stroke="{Y}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 14V2M6 7l5-5 5 5M4 11v10h14V11"/></svg>
-  <span style="width:18px"></span>
-  <span style="width:26px;height:26px;border-radius:13px;border:2px solid {Y};display:grid;place-items:center;font:700 12px {SANS};line-height:0">&middot;&middot;&middot;</span>
-  <span style="width:16px"></span><span style="font-weight:600">Done</span></div>
-<div style="padding:4px 20px 0;color:#fff">
-  <div style="text-align:center;font:400 13px {SANS};color:#8E8E93;margin-bottom:12px">23 September 2026 at 08:12</div>
-  <div style="font:700 30px {SANS};letter-spacing:-.5px">Espresso dial-in</div>
-  <div style="font:600 21px {SANS};margin:20px 0 8px">Recipe</div>
-  <div style="font:400 17px/1.65 {SANS};color:#EDEDED">
-    &bull;&nbsp; 18.0 g in / 36 g out<br>&bull;&nbsp; 28 s<br>&bull;&nbsp; Grind 2.8 &rarr; 2.6<br>
-    &bull;&nbsp; Tastes: sour, then balanced</div>
-  <div style="font:400 17px/1.5 {SANS};color:#EDEDED;margin-top:16px">Pulled at 93&deg;C. The first shot ran fast and sour;
-    one notch finer and it came together.</div>
-  <div style="font:600 21px {SANS};margin:22px 0 2px">Next time</div>
-  {check(True, "Purge the group head")}
-  {check(True, "Grind 2.6, finer by one")}
-  {check(False, "Weigh the output, not the cup")}
-  {check(False, "Try 94&deg;C with the new beans")}
-  {check(False, "Log three shots in a row")}
+    """A recipe app: Shakshuka for four, the pan photo up top, quantities, Start cooking."""
+    A = "#E0482F"
+    ing = [("6", "eggs"), ("2 tins", "chopped tomatoes"), ("1", "red pepper, sliced"), ("1 tsp", "ground cumin"), ("100 g", "feta, crumbled")]
+    rows = "".join(
+        f'<div style="display:flex;align-items:center;height:46px;{"" if i == 0 else "border-top:1px solid #EFEFF2;"}font:400 17px {SANS};color:#1C1C1E">'
+        f'<span style="width:78px;font-weight:600;font-variant-numeric:tabular-nums">{a}</span><span>{b}</span></div>'
+        for i, (a, b) in enumerate(ing))
+    disc = lambda d: (f'<span style="width:36px;height:36px;border-radius:18px;background:rgba(255,255,255,.92);display:grid;place-items:center;'
+                      f'box-shadow:0 2px 8px rgba(0,0,0,.18)">{d}</span>')
+    body = f'''<div class="abs" style="left:0;top:0">{shakshuka_photo()}</div>
+<div class="abs" style="left:0;right:0;top:0;height:120px;background:linear-gradient(rgba(0,0,0,.38),transparent)"></div>
+<div class="abs" style="left:0;right:0;top:0">{status_bar(True)}</div>
+<div class="abs" style="top:58px;left:16px;right:16px;display:flex;justify-content:space-between">
+  {disc(chev("#1C1C1E", 18))}
+  <span style="display:flex;gap:10px">{disc('<svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 19S3 13.6 3 8.4A4.4 4.4 0 0 1 11 6a4.4 4.4 0 0 1 8 2.4C19 13.6 11 19 11 19z" fill="none" stroke="#1C1C1E" stroke-width="2" stroke-linejoin="round"/></svg>')}
+  {disc('<svg width="16" height="18" viewBox="0 0 22 24" fill="none" stroke="#1C1C1E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 14V2M6 7l5-5 5 5M4 11v10h14V11"/></svg>')}</span></div>
+<div class="abs" style="top:310px;left:0;right:0;bottom:0;background:#fff;border-radius:22px 22px 0 0;padding:22px 20px 0">
+  <div style="font:700 30px {SANS};letter-spacing:-.6px;color:#1C1C1E">Shakshuka for four</div>
+  <div style="display:flex;gap:16px;margin-top:6px;font:500 15px {SANS};color:#6C6C70">
+    <span>Serves 4 &middot; 35 min</span><span style="color:#C7C7CC">|</span><span>Easy</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 4px">
+    <span style="font:700 20px {SANS};color:#1C1C1E">Ingredients</span>
+    <span style="display:flex;align-items:center;gap:12px;font:600 15px {SANS};color:{A}">
+      <span style="width:28px;height:28px;border-radius:14px;background:#FCE9E5;display:grid;place-items:center">&minus;</span>4 people
+      <span style="width:28px;height:28px;border-radius:14px;background:#FCE9E5;display:grid;place-items:center">+</span></span></div>
+  {rows}
 </div>
-<div class="abs" style="left:0;right:0;bottom:30px;height:50px;display:flex;align-items:center;justify-content:space-around;padding:0 16px">
-  {icon('<circle cx="6" cy="7" r="2.5"/><path d="M12 7h11M12 13h11M12 19h11"/><circle cx="6" cy="13" r="2.5"/><circle cx="6" cy="19" r="2.5"/>')}
-  {icon('<path d="M3 8h4l2-3h8l2 3h4v13H3z"/><circle cx="13" cy="14" r="4"/>')}
-  {icon('<path d="M5 21l2-6L18 4l4 4L11 19zM15 7l4 4"/>')}
-  {icon('<path d="M4 6h9M4 22V6M22 13v9H4M11 16l1-4 9-9 3 3-9 9z"/>')}
-</div>
-{home_bar(True)}'''
-    return doc(p, body, bg="#000")
+<div class="abs" style="left:20px;right:20px;bottom:42px;height:54px;border-radius:16px;background:{A};color:#fff;
+  font:600 18px {SANS};display:grid;place-items:center;box-shadow:0 6px 18px rgba(224,72,47,.35)">Start cooking</div>
+{home_bar()}'''
+    return doc(p, body, bg="#fff")
 
 
 def tram_glyph(size=30, color="#1C1C1E"):
@@ -479,47 +530,53 @@ def shot_11(p):
 
 
 def shot_12(p):
-    """A chart screenshot in espresso colours: grind vs shot time, target band."""
-    pts = [(2.3, 35.2), (2.4, 33.1), (2.5, 31.0), (2.6, 28.4), (2.7, 27.2), (2.8, 25.6), (2.9, 24.1), (3.0, 22.8), (3.1, 21.5)]
-    X0, X1, Y0, Y1 = 2.2, 3.2, 20, 36
-    L, R, T, B = 44, 330, 16, 300
+    """A chart screenshot, green: pace over the last four runs, falling toward a 5:30 target."""
+    G, INK, SUB = "#1F8A4C", "#12301F", "#5E7A68"
+    runs = [("13 Sep", 342, "8.1 km"), ("17 Sep", 335, "10.0 km"), ("21 Sep", 331, "8.4 km"), ("25 Sep", 324, "10.2 km")]
+    lo, hi = 315, 350      # seconds per km
+    L, R, T, B = 52, 326, 30, 248
 
-    def px(x):
-        return L + (x - X0) / (X1 - X0) * (R - L)
+    def py(s):
+        return B - (s - lo) / (hi - lo) * (B - T)
 
-    def py(y):
-        return B - (y - Y0) / (Y1 - Y0) * (B - T)
-    grid = "".join(f'<line x1="{L}" x2="{R}" y1="{py(v):.1f}" y2="{py(v):.1f}" stroke="#EDE3D6" stroke-width="1"/>'
-                   f'<text x="{L - 8}" y="{py(v) + 4:.1f}" text-anchor="end" font-size="11" fill="#9C8773">{v}</text>' for v in range(20, 37, 4))
-    xt = "".join(f'<text x="{px(v):.1f}" y="{B + 18}" text-anchor="middle" font-size="11" fill="#9C8773">{v:.1f}</text>' for v in (2.2, 2.4, 2.6, 2.8, 3.0, 3.2))
-    line = " ".join(f"{px(x):.1f},{py(y):.1f}" for x, y in pts)
-    dots = "".join(f'<circle cx="{px(x):.1f}" cy="{py(y):.1f}" r="{6 if x == 2.6 else 4.5}" fill="{"#C7843B" if x == 2.6 else "#fff"}" stroke="#5B3A24" stroke-width="2.2"/>' for x, y in pts)
-    chart = f'''<svg width="346" height="330" viewBox="0 0 346 330" font-family="{SANS}">
-  <rect x="{L}" y="{py(30):.1f}" width="{R - L}" height="{py(25) - py(30):.1f}" fill="#E9C99E" fill-opacity=".45"/>
-  <text x="{R - 6}" y="{py(30) + 15:.1f}" text-anchor="end" font-size="11" font-weight="600" fill="#9A6A33">Target 25&ndash;30 s</text>
+    def px(i):
+        return L + 22 + i * (R - L - 44) / 3
+
+    def mmss(s):
+        return f"{s // 60}:{s % 60:02d}"
+    grid = "".join(f'<line x1="{L}" x2="{R}" y1="{py(v):.1f}" y2="{py(v):.1f}" stroke="#E1ECE4"/>'
+                   f'<text x="{L - 10}" y="{py(v) + 4:.1f}" text-anchor="end" font-size="12" fill="{SUB}">{mmss(v)}</text>' for v in (320, 330, 340, 350))
+    xt = "".join(f'<text x="{px(i):.1f}" y="{B + 22}" text-anchor="middle" font-size="12" fill="{SUB}">{d}</text>' for i, (d, _, _) in enumerate(runs))
+    line = " ".join(f"{px(i):.1f},{py(s):.1f}" for i, (_, s, _) in enumerate(runs))
+    area = f"{px(0):.1f},{B} {line} {px(3):.1f},{B}"
+    dots = "".join(
+        f'<circle cx="{px(i):.1f}" cy="{py(s):.1f}" r="{7 if i == 3 else 5.5}" fill="{G if i == 3 else "#fff"}" stroke="{G}" stroke-width="2.6"/>'
+        f'<text x="{px(i):.1f}" y="{py(s) - 14:.1f}" text-anchor="middle" font-size="13" font-weight="700" fill="{INK}">{mmss(s)}</text>'
+        for i, (_, s, _) in enumerate(runs))
+    chart = f'''<svg width="346" height="280" viewBox="0 0 346 280" font-family="{SANS}">
+  <defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{G}" stop-opacity=".22"/><stop offset="1" stop-color="{G}" stop-opacity="0"/></linearGradient></defs>
   {grid}{xt}
-  <polyline points="{line}" fill="none" stroke="#5B3A24" stroke-width="2.6" stroke-linejoin="round"/>{dots}
-  <g transform="translate({px(2.6) + 10:.1f},{py(28.4) - 34:.1f})"><rect width="74" height="24" rx="6" fill="#3B2A20"/>
-  <text x="37" y="16" text-anchor="middle" font-size="12" font-weight="600" fill="#FFF6EA">2.6 &middot; 28.4 s</text></g>
-  <text x="{(L + R) / 2}" y="{B + 30}" text-anchor="middle" font-size="12" fill="#7B6552">Grind setting</text>
-  <text transform="translate(12 {(T + B) / 2}) rotate(-90)" text-anchor="middle" font-size="12" fill="#7B6552">Shot time (s)</text>
+  <line x1="{L}" x2="{R}" y1="{py(330):.1f}" y2="{py(330):.1f}" stroke="#E0A100" stroke-width="2" stroke-dasharray="6 5"/>
+  <text x="{L + 4}" y="{py(330) - 7:.1f}" font-size="12" font-weight="600" fill="#A67600">Target 5:30</text>
+  <polygon points="{area}" fill="url(#fill)"/>
+  <polyline points="{line}" fill="none" stroke="{G}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>{dots}
 </svg>'''
-    stats = "".join(f'<div style="flex:1"><div style="font:700 22px {SANS};color:#3B2A20;letter-spacing:-.3px">{a}</div>'
-                    f'<div style="font:400 13px {SANS};color:#9C8773">{b}</div></div>' for a, b in [("2.6", "Sweet spot"), ("28.4 s", "Average"), ("14", "Shots")])
-    shots = "".join(f'<div style="display:flex;justify-content:space-between;padding:11px 0;font:400 15px {SANS};color:#3B2A20">'
-                    f'<span>{a}</span><span style="color:#9C8773;font-variant-numeric:tabular-nums">{b}</span></div>' for a, b in [
-                        ("Today, 08:12 &middot; grind 2.6", "28 s"), ("Yesterday &middot; grind 2.8", "25 s")])
+    stats = "".join(f'<div style="flex:1"><div style="font:700 22px {SANS};color:{INK};letter-spacing:-.3px;font-variant-numeric:tabular-nums">{a}</div>'
+                    f'<div style="font:400 13px {SANS};color:{SUB}">{b}</div></div>' for a, b in [("5:24", "Best /km"), ("&minus;18 s", "Since 13 Sep"), ("36.7 km", "Four runs")])
+    lst = "".join(f'<div style="display:flex;justify-content:space-between;padding:10px 0;{"" if i == 0 else "border-top:1px solid #E6EFE9;"}font:400 15px {SANS};color:{INK}">'
+                  f'<span>{d} &middot; {km}</span><span style="color:{SUB};font-variant-numeric:tabular-nums">{mmss(s)} /km</span></div>'
+                  for i, (d, s, km) in enumerate(reversed(runs)))
     body = f'''{status_bar(False)}
-<div style="padding:8px 20px 0">
-  <div style="display:flex;justify-content:space-between;color:#9A6A33;font:400 17px {SANS}"><span style="display:flex;align-items:center">{chev("#9A6A33", 22)}Shots</span><span>Edit</span></div>
-  <div style="font:700 34px {SANS};color:#3B2A20;letter-spacing:-.6px;margin-top:10px">Grind chart</div>
-  <div style="font:400 15px {SANS};color:#9C8773;margin-top:2px">Shot time by grind setting &middot; last 14 shots</div>
-  <div style="background:#FFFBF5;border-radius:18px;margin-top:18px;padding:14px 4px 6px;box-shadow:0 2px 10px rgba(91,58,36,.08)">{chart}</div>
-  <div style="display:flex;gap:10px;margin-top:22px;padding:0 4px">{stats}</div>
-  <div style="margin-top:20px;padding:4px 16px;background:#FFFBF5;border-radius:14px">{shots}</div>
+<div style="padding:4px 20px 0">
+  <div style="display:flex;justify-content:space-between;color:{G};font:400 17px {SANS}"><span style="display:flex;align-items:center">{chev(G, 22)}Runs</span><span>Share</span></div>
+  <div style="font:700 30px/1.12 {SANS};color:{INK};letter-spacing:-.6px;margin-top:10px">Pace chart &mdash; last four runs</div>
+  <div style="font:400 15px {SANS};color:{SUB};margin-top:4px">Average pace, min/km</div>
+  <div style="background:#fff;border-radius:18px;margin-top:16px;padding:12px 0 2px;box-shadow:0 2px 10px rgba(18,48,31,.07)">{chart}</div>
+  <div style="display:flex;gap:10px;margin-top:18px;padding:0 4px">{stats}</div>
+  <div style="margin-top:14px;padding:2px 16px;background:#fff;border-radius:14px">{lst}</div>
 </div>
 {home_bar()}'''
-    return doc(p, body, bg="#F6EEE3")
+    return doc(p, body, bg="#EEF5F0")
 
 
 # ── drawings ───────────────────────────────────────────────────────────────
@@ -809,7 +866,7 @@ def file_4(p):
     return doc(p, svg, bg="#0E2D52")
 
 
-# ── saves: a whiteboard and an editor ──────────────────────────────────────
+# ── saves: a whiteboard and a checklist ────────────────────────────────────
 
 def reddit_2(p):
     """A whiteboard sequence diagram in marker: client, queue, server."""
@@ -862,64 +919,54 @@ def reddit_2(p):
 
 
 def reddit_3(p):
-    """A desktop editor, dark, on a tiny tokenizer."""
-    lines = [
-        "// lexer.ts — turn source text into tokens",
-        "export type Token =",
-        "  | { kind: \"num\"; value: number }",
-        "  | { kind: \"ident\"; name: string }",
-        "  | { kind: \"op\"; op: string };",
-        "",
-        "export function tokenize(src: string): Token[] {",
-        "  const out: Token[] = [];",
-        "  let i = 0;",
-        "  while (i < src.length) {",
-        "    const c = src[i];",
-        "    if (/\\s/.test(c)) { i++; continue; }",
-        "    if (/\\d/.test(c)) {",
-        "      let j = i;",
-        "      while (/\\d/.test(src[j])) j++;",
-        "      out.push({ kind: \"num\", value: Number(src.slice(i, j)) });",
-        "      i = j; continue;",
-        "    }",
-        "    if (/\\w/.test(c)) {",
-        "      let j = i;",
-        "      while (/\\w/.test(src[j] ?? \"\")) j++;",
-        "      out.push({ kind: \"ident\", name: src.slice(i, j) });",
-        "      i = j; continue;",
-        "    }",
-        "    out.push({ kind: \"op\", op: c }); i++;",
-        "  }",
-        "  return out;",
-        "}",
-    ]
-    code = code_block(lines, TS_KW, ONE_DARK, 12, 17.5, 40, "#4B5263", active=15, active_bg="#2C313C")
-    tree = [("&#9662; src", 0, False), ("lexer.ts", 1, True), ("parser.ts", 1, False), ("check.ts", 1, False), ("emit.ts", 1, False),
-            ("&#9656; test", 0, False), ("package.json", 0, False), ("README.md", 0, False)]
-    tree_html = "".join(f'<div style="height:22px;line-height:22px;padding-left:{14 + 14 * d}px;font:12.5px {SANS};'
-                        f'color:{"#D7DAE0" if sel else "#9DA5B4"};background:{"#2C313A" if sel else "transparent"}">{n}</div>'
-                        for n, d, sel in tree)
-    mini = "".join(f'<div style="height:2px;margin:1.5px 0;width:{w}px;background:{c};opacity:.55"></div>' for w, c in [
-        (40, "#7F848E"), (20, "#C678DD"), (30, "#E5C07B"), (32, "#98C379"), (28, "#98C379"), (0, "#000"), (46, "#61AFEF"),
-        (24, "#C678DD"), (12, "#C678DD"), (26, "#ABB2BF"), (18, "#ABB2BF"), (34, "#98C379"), (22, "#98C379"), (12, "#ABB2BF"),
-        (30, "#98C379"), (56, "#61AFEF"), (18, "#ABB2BF"), (6, "#ABB2BF"), (22, "#98C379"), (12, "#ABB2BF"), (36, "#98C379"),
-        (48, "#61AFEF"), (18, "#ABB2BF"), (6, "#ABB2BF"), (34, "#E06C75"), (4, "#ABB2BF"), (12, "#C678DD")])
-    tab = lambda n, on: (f'<div style="height:34px;line-height:34px;padding:0 16px;font:12.5px {SANS};color:{"#D7DAE0" if on else "#7D8594"};'
-                         f'background:{"#23272E" if on else "transparent"};border-top:2px solid {"#528BFF" if on else "transparent"}">{n}</div>')
-    body = f'''<div class="abs" style="inset:0;background:#23272E"></div>
-<div class="abs" style="left:0;right:0;top:0;height:30px;background:#1B1E23;display:flex;align-items:center;padding-left:12px;gap:8px">
-  {''.join(f'<span style="width:12px;height:12px;border-radius:6px;background:{c}"></span>' for c in ("#FF5F57", "#FEBC2E", "#28C840"))}
-  <span style="flex:1;text-align:center;font:12.5px {SANS};color:#9DA5B4;margin-right:60px">lexer.ts &mdash; tiny-compiler</span></div>
-<div class="abs" style="left:0;top:30px;bottom:24px;width:176px;background:#1E2227;padding-top:10px">
-  <div style="font:600 11px {SANS};color:#7D8594;padding:0 14px 8px;">Explorer</div>{tree_html}</div>
-<div class="abs" style="left:176px;right:0;top:30px;height:34px;background:#1E2227;display:flex">{tab("lexer.ts", True)}{tab("parser.ts", False)}{tab("README.md", False)}</div>
-<div class="abs" style="left:176px;right:64px;top:70px;bottom:24px;overflow:hidden">{code}</div>
-<div class="abs" style="right:0;top:70px;width:64px;bottom:24px;padding:4px 8px">
-  <div class="abs" style="left:4px;right:4px;top:70px;height:60px;background:rgba(255,255,255,.06)"></div>{mini}</div>
-<div class="abs" style="left:0;right:0;bottom:0;height:24px;background:#21252B;display:flex;align-items:center;gap:18px;padding:0 12px;
-  font:11.5px {SANS};color:#9DA5B4"><span style="color:#D7DAE0">main</span><span>0 problems</span><span style="flex:1"></span>
-  <span>Ln 16, Col 54</span><span>Spaces: 2</span><span>UTF-8</span><span>TypeScript</span></div>'''
-    return doc(p, body, bg="#23272E")
+    """A docs app, light: the 'Design review' checklist page, four of seven ticked."""
+    B = "#2F7CF6"
+    items = [("Every state drawn: empty, loading, error, full", True),
+             ("Works at the largest text size", True),
+             ("Contrast passes in light and dark", True),
+             ("Every control has a VoiceOver label", True),
+             ("Tap targets at least 44 pt", False),
+             ("Motion respects Reduce Motion", False),
+             ("Copy reads in one voice", False)]
+    box = lambda on: (f'<span style="width:18px;height:18px;border-radius:4px;flex:none;background:{B};display:grid;place-items:center">'
+                      f'<svg width="11" height="9" viewBox="0 0 12 10"><path d="M1.5 5l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+                      if on else '<span style="width:18px;height:18px;border-radius:4px;flex:none;border:1.6px solid #A9A9A6;background:#fff"></span>')
+    checks = "".join(
+        f'<div style="display:flex;align-items:center;gap:12px;height:36px;font:400 16px {SANS};'
+        f'{"color:#787774" if on else "color:#37352F"}">{box(on)}{esc(t)}</div>'
+        for t, on in items)
+    side = [("Team wiki", 0, False), ("Process", 0, False), ("Design review", 1, True), ("Handoff notes", 1, False),
+            ("Release checklist", 1, False), ("Projects", 0, False), ("Meeting notes", 0, False)]
+    side_html = "".join(
+        f'<div style="height:28px;line-height:28px;margin:0 8px;border-radius:5px;padding-left:{10 + 14 * d}px;font:{"500" if sel else "400"} 13.5px {SANS};'
+        f'color:{"#37352F" if sel else "#6B6A66"};background:{"#E9E9E6" if sel else "transparent"}">'
+        f'{"&#9662; " if n == "Process" else ("&#9656; " if d == 0 else "")}{n}</div>' for n, d, sel in side)
+    page_icon = (f'<svg width="54" height="54" viewBox="0 0 54 54"><rect x="6" y="4" width="42" height="46" rx="7" fill="#E6F0FE"/>'
+                 f'<path d="M16 18l4 4 8-8M16 32l4 4 8-8" fill="none" stroke="{B}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'
+                 f'<path d="M33 19h8M33 33h8" stroke="#9DBEF8" stroke-width="3" stroke-linecap="round"/></svg>')
+    body = f'''<div class="abs" style="inset:0;background:#fff"></div>
+<div class="abs" style="left:0;top:0;bottom:0;width:200px;background:#F7F7F5;padding-top:40px">
+  <div style="display:flex;align-items:center;gap:8px;padding:0 16px 14px">
+    <span style="width:22px;height:22px;border-radius:5px;background:#37352F;color:#fff;font:700 12px {SANS};display:grid;place-items:center">S</span>
+    <span style="font:600 14px {SANS};color:#37352F">Studio team</span></div>
+  <div style="font:500 11.5px {SANS};color:#9B9A97;padding:6px 18px">Pages</div>{side_html}</div>
+<div class="abs" style="left:14px;top:13px;display:flex;gap:8px">
+  {''.join(f'<span style="width:12px;height:12px;border-radius:6px;background:{c}"></span>' for c in ("#FF5F57", "#FEBC2E", "#28C840"))}</div>
+<div class="abs" style="left:200px;right:0;top:0;height:44px;display:flex;align-items:center;padding:0 18px;gap:6px;font:400 13.5px {SANS};color:#6B6A66">
+  <span>Process</span><span style="color:#C4C3BF">/</span><span style="color:#37352F">Design review</span>
+  <span style="flex:1"></span><span>Edited 2 days ago</span><span style="width:12px"></span>
+  <span style="color:#37352F;font-weight:500">Share</span></div>
+<div class="abs" style="left:262px;right:60px;top:58px">
+  {page_icon}
+  <div style="font:700 38px {SANS};color:#37352F;letter-spacing:-.6px;margin-top:10px">Design review</div>
+  <div style="font:400 15px/1.5 {SANS};color:#6B6A66;margin-top:8px">Run it before every handoff. A screen ships when every box is ticked.</div>
+  <div style="display:flex;align-items:center;gap:10px;margin:20px 0 8px;font:500 13px {SANS};color:#6B6A66">
+    <div style="width:120px;height:6px;border-radius:3px;background:#EDECE9;overflow:hidden"><div style="width:57%;height:100%;background:{B}"></div></div>4 of 7 done</div>
+  {checks}
+  <div style="margin-top:18px;display:flex;gap:10px;background:#F1F1EF;border-radius:6px;padding:12px 14px;font:400 14.5px/1.45 {SANS};color:#37352F">
+    <span style="font:700 15px Georgia,serif;color:{B}">i</span>An empty box is a question for the room, not a reason to hold the release.</div>
+</div>'''
+    return doc(p, body, bg="#fff")
 
 
 # ── channel graphics ───────────────────────────────────────────────────────
@@ -997,57 +1044,80 @@ def tg_4(p):
     return doc(p, body, bg="#143CA8")
 
 
-# ── photo of a laptop dashboard ────────────────────────────────────────────
+# ── photo of a laptop design file ──────────────────────────────────────────
 
 def fc_0(p):
-    """A photographed laptop screen: a dark dashboard of small charts and a treemap."""
-    def spark(pts, col, fill=True):
-        d = " ".join(f"{i * 100 / (len(pts) - 1):.1f},{40 - v * 0.38:.1f}" for i, v in enumerate(pts))
-        f = f'<polygon points="0,40 {d} 100,40" fill="{col}" fill-opacity=".18"/>' if fill else ""
-        return f'<svg viewBox="0 0 100 40" preserveAspectRatio="none" style="width:100%;height:46px">{f}<polyline points="{d}" fill="none" stroke="{col}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>'
+    """A photographed laptop screen: a design file, one onboarding phone where four used to be."""
+    BL = "#0D99FF"
 
-    def card(title, val, inner, col=1):
-        return (f'<div style="grid-column:span {col};background:#161B24;border-radius:8px;padding:9px 11px">'
-                f'<div style="font:500 9px {SANS};color:#7C8698">{title}</div><div style="font:600 17px {SANS};color:#E8ECF3;margin:2px 0 4px">{val}</div>{inner}</div>')
-    bars = "".join(f'<div style="flex:1;height:{h}%;background:{"#8B7CF6" if i == 9 else "#3F4A6B"};border-radius:2px"></div>' for i, h in enumerate([40, 55, 35, 60, 72, 50, 66, 80, 58, 92, 70, 64]))
-    tm = [(0, 0, 46, 60, "#2E7D6B", "Wallet"), (46, 0, 30, 36, "#3F5FA8", "Social"), (76, 0, 24, 36, "#8B5A9E", "Reading"),
-          (46, 36, 20, 24, "#A8743F", "Photos"), (66, 36, 34, 24, "#3D6E8F", "Work"), (0, 60, 28, 40, "#6A4FA0", "Agents"),
-          (28, 60, 38, 40, "#2F7F8F", "Mail"), (66, 60, 34, 40, "#7F4A5A", "Calendar")]
-    tmap = "".join(f'<div class="abs" style="left:{x}%;top:{y}%;width:{w}%;height:{h}%;padding:1.5px"><div style="width:100%;height:100%;background:{c};border-radius:4px;'
-                   f'font:600 9px {SANS};color:rgba(255,255,255,.85);padding:5px 6px">{n}</div></div>' for x, y, w, h, c, n in tm)
-    donut = ('<svg viewBox="0 0 42 42" style="width:62px;height:62px"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#243047" stroke-width="5"/>'
-             '<circle cx="21" cy="21" r="15.9" fill="none" stroke="#F2B84B" stroke-width="5" stroke-dasharray="62 38" transform="rotate(-90 21 21)"/>'
-             '<circle cx="21" cy="21" r="15.9" fill="none" stroke="#56C2A6" stroke-width="5" stroke-dasharray="22 78" stroke-dashoffset="-62" transform="rotate(-90 21 21)"/></svg>')
-    screen = f'''<div style="width:100%;height:100%;background:#0D1117;padding:12px 14px;font-family:{SANS}">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-    <span style="width:14px;height:14px;border-radius:4px;background:linear-gradient(135deg,#8B7CF6,#56C2A6)"></span>
-    <span style="font:600 13px {SANS};color:#E8ECF3">Panel</span><span style="font:400 10px {SANS};color:#6B7486">every room, one place</span>
-    <span style="flex:1"></span><span style="font:500 9px {SANS};color:#7C8698;background:#161B24;padding:3px 8px;border-radius:10px">Last 30 days</span></div>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-    {card("Things kept", "4,812", spark([20, 26, 24, 34, 38, 36, 48, 52, 60, 58, 70, 78], "#56C2A6"))}
-    {card("Wallet", "$12,340", spark([50, 46, 52, 58, 54, 62, 60, 66, 72, 68, 74, 80], "#8B7CF6"))}
-    {card("Replies", "128", spark([30, 60, 40, 70, 50, 44, 80, 62, 58, 90, 64, 72], "#F2B84B", False))}
-    {card("Reading", "36 h", f'<div style="display:flex;align-items:flex-end;gap:3px;height:46px">{bars}</div>')}
-  </div>
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:8px">
-    <div style="background:#161B24;border-radius:8px;padding:9px 11px">
-      <div style="font:500 9px {SANS};color:#7C8698;margin-bottom:6px">Rooms by size</div>
-      <div style="position:relative;height:172px">{tmap}</div></div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <div style="background:#161B24;border-radius:8px;padding:9px 11px;display:flex;gap:10px;align-items:center">{donut}
-        <div style="font:500 9px/1.7 {SANS};color:#9AA4B6"><span style="color:#F2B84B">&#9679;</span> Saved<br><span style="color:#56C2A6">&#9679;</span> Synced<br><span style="color:#3A4660">&#9679;</span> Idle</div></div>
-      {card("Activity", "Today", spark([10, 30, 22, 50, 40, 64, 30, 44, 70, 52, 84, 60], "#5AA9F2"))}
-    </div></div>
+    def mini_phone(w, h, inner, extra=""):
+        return (f'<div style="position:relative;width:{w}px;height:{h}px;background:#fff;border-radius:{w * .12:.0f}px;overflow:hidden;'
+                f'box-shadow:0 1px 3px rgba(0,0,0,.18);{extra}">{inner}</div>')
+
+    def old_screen(title, n):
+        lines = "".join(f'<div style="height:3px;width:{w}%;background:#D7DAE0;border-radius:2px;margin:3px auto"></div>' for w in (80, 66, 72)[:n])
+        return (f'<div style="height:30px;margin:10px 8px 6px;border-radius:6px;background:#EEF0F4"></div>'
+                f'<div style="font:700 6.5px {SANS};color:#222;text-align:center">{title}</div>{lines}'
+                f'<div class="abs" style="left:8px;right:8px;bottom:9px;height:9px;border-radius:5px;background:#9AA3B2"></div>'
+                f'<div class="abs" style="left:0;right:0;bottom:3px;text-align:center;font:500 4px {SANS};color:#9AA3B2">{n} of 4</div>')
+    olds = "".join(
+        f'<div style="position:relative;text-align:left"><div style="font:500 7px {SANS};color:#8A8F98;margin-bottom:3px">{i}. {t}</div>'
+        f'{mini_phone(62, 128, old_screen(t, i), "opacity:.55")}'
+        f'<svg class="abs" style="left:-4px;top:6px" width="70" height="136" viewBox="0 0 70 136"><path d="M4 132L66 8" stroke="#F24822" stroke-width="2.6" stroke-linecap="round"/></svg></div>'
+        for i, t in enumerate(["Welcome", "Connect", "Notifications", "You're set"], 1))
+    feat = "".join(
+        f'<div style="display:flex;align-items:center;gap:7px;margin:6px 0"><span style="width:16px;height:16px;border-radius:5px;background:{c};flex:none"></span>'
+        f'<div style="flex:1"><div style="font:600 7px {SANS};color:#111">{a}</div><div style="font:400 5.5px {SANS};color:#8A8F98">{b}</div></div></div>'
+        for c, a, b in [("#FFB020", "Drafts that save themselves", "Every keystroke, kept"), ("#2FBF71", "Tags, not folders", "File it once you know"),
+                        ("#5B7CFA", "Publish when ready", "One tap to your blog")])
+    new_inner = f'''<div style="height:12px"></div>
+<div style="margin:10px 12px 0;height:74px;border-radius:12px;background:linear-gradient(135deg,#FFE3C2,#FFC1D0 50%,#C9D6FF);position:relative;overflow:hidden">
+  <div class="abs" style="left:20px;top:14px;width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.75)"></div>
+  <div class="abs" style="left:56px;top:24px;width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.55)"></div>
+  <div class="abs" style="left:92px;top:10px;width:30px;height:30px;border-radius:15px;background:rgba(255,255,255,.65)"></div></div>
+<div style="padding:10px 12px 0"><div style="font:800 12px/1.15 {SANS};color:#111;letter-spacing:-.2px">Write first.<br>Sort it out later.</div>
+  <div style="margin-top:6px">{feat}</div></div>
+<div class="abs" style="left:12px;right:12px;bottom:22px;height:20px;border-radius:7px;background:#111;color:#fff;font:600 7.5px {SANS};display:grid;place-items:center">Get started</div>
+<div class="abs" style="left:0;right:0;bottom:10px;text-align:center;font:500 5.5px {SANS};color:#8A8F98">I already have an account</div>'''
+    sel = "".join(f'<span class="abs" style="{pos};width:6px;height:6px;background:#fff;border:1.3px solid {BL}"></span>'
+                  for pos in ("left:-4px;top:-4px", "right:-4px;top:-4px", "left:-4px;bottom:-4px", "right:-4px;bottom:-4px"))
+    layers = "".join(f'<div style="height:17px;line-height:17px;padding-left:{8 + 9 * d}px;font:{500 if s else 400} 8px {SANS};'
+                     f'color:{"#fff" if s else "#C4C4C4"};background:{"#0C5DA5" if s else "transparent"};white-space:nowrap">{n}</div>'
+                     for n, d, s in [("Onboarding v2", 0, False), ("Welcome — one screen", 1, True), ("Hero", 2, False),
+                                     ("Features", 2, False), ("Get started", 2, False), ("Onboarding v1 (old)", 0, False),
+                                     ("1. Welcome", 1, False), ("2. Connect", 1, False), ("3. Notifications", 1, False), ("4. You're set", 1, False)])
+    screen = f'''<div style="width:100%;height:100%;background:#E5E5E5;position:relative;font-family:{SANS}">
+  <div class="abs" style="left:0;right:0;top:0;height:28px;background:#2C2C2C;display:flex;align-items:center;padding:0 10px;gap:10px">
+    <span style="width:18px;height:18px;border-radius:4px;background:{BL}"></span>
+    {''.join('<span style="width:12px;height:12px;border:1.5px solid #BDBDBD;border-radius:2px"></span>' for _ in range(3))}
+    <span style="flex:1;text-align:center;font:500 9.5px {SANS};color:#E8E8E8">Onboarding &mdash; v2 <span style="color:#8C8C8C">/ Drafts</span></span>
+    <span style="width:16px;height:16px;border-radius:8px;background:#9747FF;color:#fff;font:600 8px {SANS};display:grid;place-items:center">U</span>
+    <span style="font:600 8.5px {SANS};color:#fff;background:{BL};padding:3px 8px;border-radius:4px">Share</span></div>
+  <div class="abs" style="left:0;top:28px;bottom:0;width:118px;background:#2C2C2C;padding-top:8px;border-top:1px solid #3A3A3A">
+    <div style="font:600 8px {SANS};color:#fff;padding:0 8px 6px">Layers</div>{layers}</div>
+  <div class="abs" style="right:0;top:28px;bottom:0;width:104px;background:#2C2C2C;padding:8px;border-top:1px solid #3A3A3A;font:400 8px {SANS};color:#C4C4C4">
+    <div style="font:600 8px {SANS};color:#fff;margin-bottom:8px">Frame</div>
+    <div style="display:flex;gap:6px;margin-bottom:6px"><span style="flex:1;background:#383838;padding:3px 5px;border-radius:3px">W 390</span><span style="flex:1;background:#383838;padding:3px 5px;border-radius:3px">H 844</span></div>
+    <div style="font:600 8px {SANS};color:#fff;margin:12px 0 6px">Prototype</div>
+    <div style="background:#383838;padding:3px 5px;border-radius:3px">Starting point</div>
+    <div style="font:600 8px {SANS};color:#fff;margin:12px 0 6px">Comments</div>
+    <div style="line-height:1.4">&ldquo;Four screens became one.&rdquo;</div></div>
+  <div class="abs" style="left:136px;top:44px;font:600 9px {SANS};color:#7A7A7A"><s>Onboarding v1 &middot; 4 screens</s></div>
+  <div class="abs" style="left:136px;top:60px;display:grid;grid-template-columns:repeat(2,62px);gap:12px 14px">{olds}</div>
+  <div class="abs" style="left:318px;top:44px;font:600 9px {SANS};color:{BL}">Onboarding v2 &middot; 1 screen</div>
+  <div class="abs" style="left:318px;top:60px">{mini_phone(152, 318, new_inner, "outline:1.5px solid " + BL + ";border-radius:16px")}{sel}
+    <div class="abs" style="left:50%;bottom:-16px;transform:translateX(-50%);background:{BL};color:#fff;font:600 7.5px {SANS};padding:1px 5px;border-radius:3px;white-space:nowrap">390 &times; 844</div></div>
+  <svg class="abs" style="left:282px;top:180px" width="34" height="20" viewBox="0 0 34 20"><path d="M2 10h26M22 4l7 6-7 6" fill="none" stroke="#8A8F98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </div>'''
-    body = f'''<div class="abs" style="inset:0;background:radial-gradient(ellipse at 82% 20%,#3B2A1C 0%,transparent 45%),radial-gradient(ellipse at 50% 60%,#1A1E27,#07080B 80%)"></div>
+    body = f'''<div class="abs" style="inset:0;background:radial-gradient(ellipse at 82% 20%,#4A3826 0%,transparent 45%),radial-gradient(ellipse at 50% 60%,#23252B,#0A0B0D 80%)"></div>
 {''.join(f'<div class="abs" style="left:{x}px;top:{y}px;width:{r}px;height:{r}px;border-radius:50%;background:{c};filter:blur({b}px)"></div>' for x, y, r, c, b in [
         (660, 30, 90, 'rgba(255,170,90,.35)', 18), (720, 110, 50, 'rgba(255,200,120,.3)', 12), (40, 60, 70, 'rgba(120,150,255,.15)', 20)])}
 <div class="abs" style="left:50%;top:50%;width:660px;height:430px;margin:-250px 0 0 -330px;perspective:1100px">
   <div style="width:100%;height:100%;transform:rotateY(-14deg) rotateX(7deg) rotateZ(-1deg);transform-origin:50% 60%;position:relative">
     <div class="abs" style="inset:0;border-radius:18px;background:linear-gradient(#1C1F25,#0F1115);padding:14px 14px 22px;
-      box-shadow:0 40px 80px rgba(0,0,0,.7),0 0 0 1.5px #2C3038,0 0 90px rgba(90,110,200,.18)">
+      box-shadow:0 40px 80px rgba(0,0,0,.7),0 0 0 1.5px #2C3038,0 0 90px rgba(200,200,220,.14)">
       <div style="width:100%;height:100%;border-radius:4px;overflow:hidden;position:relative;filter:blur(.35px)">{screen}
-        <div class="abs" style="inset:0;background:linear-gradient(118deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,.02) 38%,transparent 55%)"></div></div>
+        <div class="abs" style="inset:0;background:linear-gradient(118deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,.03) 38%,transparent 55%)"></div></div>
     </div>
     <div class="abs" style="left:-40px;right:-40px;bottom:-40px;height:26px;border-radius:0 0 14px 14px;
       background:linear-gradient(#5A5E66,#2A2D33 40%,#15171A);box-shadow:0 20px 40px rgba(0,0,0,.6)"></div>

@@ -103,6 +103,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Wallet-total audit (scripts/wallet-total-audit.py, was `chain-filter-audit.py`)** → docs/verify.md · prd §825 · §826
 - **Card-spend audit (scripts/card-spend-audit.py) — the three onchain-card seats, and four failures that compile and look right** → docs/verify.md · prd §857
 - **The demo's mark is ONE BLUE PILL that floats over every demo screen, All included (prd §919, §946 — the All feed's `DemoLead` is deleted as the demo said twice)** → docs/verify.md · prd §864 · §919 · §946
+- **The demo is one person's life (prd §1026): a topic (`ocrTopics`) in at most two rooms, no room leading three topic rows with one word, and the person's app is Quillmark, never Casberi (`CasberiTests/DemoSpreadTests`); pictures are drawn by `scripts/demo-art/render.py`, one generator per imageset** → prd §1026 · §890
 - **Dead-closure audit (scripts/dead-closure-audit.py) — a control calling a closure property nothing ever supplies** → docs/verify.md · prd §669
 - **Defaults-lock audit (scripts/defaults-lock-audit.py) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721
 - **ShareLink style audit (scripts/sharelink-style-audit.py) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693

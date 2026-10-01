@@ -83,8 +83,8 @@ shot 1-brief    -deeplink "casberi://brief"
 shot 2-wallet   -deeplink "casberi://feed/source/Wallet"   -openThing "Uniswap can spend" -openThingDelay $D
 shot 3-photos   -deeplink "casberi://feed/source/Photos"   -openThing "Figma — spacing tokens" -openThingDelay $D
 shot 4-social   -deeplink "casberi://feed/source/Snapchat" -openThing "Sam" -openThingDelay $D
-shot 5-work     -deeplink "casberi://feed/source/Linear"   -openThing "CAS-412" -openThingDelay $D
-shot 6-chats    -deeplink "casberi://feed/source/Claude"   -openThing "Reviewing" -openThingDelay $D
+shot 5-work     -deeplink "casberi://feed/source/Linear"   -openThing "QM-412" -openThingDelay $D
+shot 6-chats    -deeplink "casberi://feed/source/Claude"   -openThing "Feedback on the onboarding" -openThingDelay $D
 shot 7-posthog  -deeplink "casberi://feed/source/PostHog"  -openThing "signed_up" -openThingDelay $D
 
 echo ""

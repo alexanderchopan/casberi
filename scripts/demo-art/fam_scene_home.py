@@ -2,13 +2,13 @@
 
 Every picture is one SVG built from the small motif helpers below, one
 composition function per key. They stand in for photographs, so they carry no
-words — except the two a subject asks for (a scale reading 36.0 g, a timer
-reading 0:18).
+words — except the one a subject asks for (a gym timer reading 0:07).
 
-Distinctness is the point of the whole table: the coffee subjects (ten of
-them), the ceramics, the pastry and the windowsills each take a different
-viewpoint, surface, palette and time of day. The notes on each function say
-which one, so a later edit does not drift two of them together.
+Distinctness is the point of the whole table: the climbing subjects (six of
+them), the coffee, the ceramics, the pastry, the houseplants and the
+windowsills each take a different viewpoint, surface, palette and time of
+day. The notes on each function say which one, so a later edit does not drift
+two of them together.
 """
 
 import math
@@ -286,263 +286,7 @@ def leaf(cx, cy, length, width, angle, fill, vein=None):
     return f'<g transform="translate({n(cx)} {n(cy)}) rotate({n(angle)})"><path d="{d}" fill="{fill}"/>{v}</g>'
 
 
-# ── coffee (ten subjects, ten set-ups) ────────────────────────────────────
-
-
-def tt_post_0(p):
-    """Espresso into a glass on a scale reading 36.0 g — dark, eye-level, chrome and amber."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.rg((0, "#3a302a"), (.6, "#171311"), (1, "#0b0909"), cx=.3, cy=.35, r=.9)))
-    # group head
-    p.add(R(70, -20, 310, 150, chrome(p, "#7c7f86"), rx=18))
-    p.add(R(70, 118, 310, 14, "#121212"))
-    # portafilter body + handle out to the left
-    p.add(P("M120,132 L330,132 L312,196 L138,196 Z", p.lg("#2a2a2c", "#0f0f10", x2=0, y2=1)))
-    p.add(R(-20, 142, 160, 34, p.lg("#1b1b1c", "#050505"), rx=14))
-    p.add(R(180, 196, 90, 18, chrome(p, "#6e7076"), rx=4))
-    # double spout
-    for sx in (196, 254):
-        p.add(P(f"M{sx - 12},212 L{sx + 12},212 L{sx + 6},250 L{sx - 6},250 Z", chrome(p, "#6e7076")))
-    # streams
-    for i, sx in enumerate((196, 254)):
-        d = f"M{sx - 3},250 C{sx - 2},330 {sx + (6 if i == 0 else -6)},400 {sx + (14 if i == 0 else -14)},470 L{sx + (18 if i == 0 else -10)},470 C{sx + 8},400 {sx + 3},330 {sx + 3},250 Z"
-        p.add(P(d, p.lg("#5a2e12", "#b36a2c", "#6b3614")))
-    p.add(p.soft(E(225, 480, 60, 14, "#e6a45a", opacity=.25), 12))
-    # glass: back rim, liquid, glass walls
-    gx0, gx1, gy0, gy1 = 150, 300, 440, 612
-    p.add(E(225, gy0, 75, 12, "#ffffff", opacity=.07))
-    p.add(P(f"M{gx0 + 6},520 L{gx1 - 6},520 L{gx1 - 12},{gy1 - 8} Q225,{gy1 + 4} {gx0 + 12},{gy1 - 8} Z", p.lg("#3b1a09", "#1a0a03")))
-    p.add(P(f"M{gx0 + 6},490 L{gx1 - 6},490 L{gx1 - 6},522 L{gx0 + 6},522 Z", p.lg("#d99a55", "#a4612c", "#5a2c10")))
-    p.add(E(225, 490, 69, 10, p.rg("#f0c186", "#c98642", "#9a5a28", cx=.45, cy=.4, r=.6)))
-    p.add(P(f"M{gx0},{gy0} L{gx1},{gy0} L{gx1 - 8},{gy1} Q225,{gy1 + 10} {gx0 + 8},{gy1} Z", "#ffffff", opacity=.08))
-    p.add(P(f"M{gx0 + 14},{gy0 + 10} L{gx0 + 26},{gy0 + 10} L{gx0 + 30},{gy1 - 16} L{gx0 + 20},{gy1 - 16} Z", "#ffffff", opacity=.28))
-    p.add(P(f"M{gx1 - 30},{gy0 + 20} L{gx1 - 24},{gy0 + 20} L{gx1 - 26},{gy1 - 30} L{gx1 - 31},{gy1 - 30} Z", "#ffffff", opacity=.16))
-    p.add(E(225, gy0, 75, 12, "none", stroke="#ffffff", stroke_width=2, opacity=.4))
-    # scale
-    p.add(PL([(52, 624), (398, 624), (412, 646), (38, 646)], "#2b2c2f"))
-    p.add(PL([(52, 624), (398, 624), (405, 634), (45, 634)], "#44464b"))
-    p.add(R(38, 646, 374, 70, p.lg("#1a1b1d", "#0c0c0d"), rx=6))
-    p.add(R(122, 660, 206, 42, "#07090a", rx=5))
-    p.add(p.soft(T(225, 693, "36.0 g", fill="#8fe3ff", font_family="Menlo, monospace", font_size=34,
-                   text_anchor="middle", font_weight="bold"), 6, .7))
-    p.add(T(225, 693, "36.0 g", fill="#c9f3ff", font_family="Menlo, monospace", font_size=34,
-            text_anchor="middle", font_weight="bold"))
-    # drip tray
-    p.add(R(0, 716, w, 84, p.lg("#2c2d30", "#101113")))
-    for x in range(-10, w + 20, 26):
-        p.add(R(x, 730, 12, 70, "#070708", rx=3))
-    # rim light from upper-left
-    p.add(p.soft(R(40, 0, 30, h, "#ffcf9a", opacity=.05), 30))
-
-
-def tt_notice_1(p):
-    """A fast, pale shot and a 0:18 timer — bright daylight, pale-blue machine, white cup."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#f4f1ec", "#e7e2da")))
-    # machine face: cream enamel, chrome trim, a round badge; the group underneath
-    p.add(p.soft(R(-20, 180, w + 40, 30, "#8f8778", opacity=.5), 12))
-    p.add(R(-20, -40, w + 40, 236, p.lg((0, "#f3e3c2"), (.7, "#e9d3a8"), (1, "#cdb384")), rx=26))
-    p.add(R(-20, 176, w + 40, 20, chrome(p, "#9aa3aa", horizontal=False)))
-    p.add(C(225, 80, 34, chrome(p, "#9aa3aa")))
-    p.add(C(225, 80, 26, "#b5412f"))
-    p.add(R(145, 190, 160, 40, chrome(p, "#9aa3aa"), rx=10))
-    p.add(R(0, 206, 190, 30, p.lg("#2b2b2b", "#141414"), rx=15))
-    p.add(P("M170,226 L280,226 L268,262 L182,262 Z", chrome(p, "#9aa3aa")))
-    p.add(P("M214,262 L236,262 L232,286 L218,286 Z", chrome(p, "#8b939a")))
-    # fast pale gush, spraying a little
-    p.add(P("M216,286 C212,360 206,430 200,520 L250,520 C244,430 238,360 234,286 Z",
-            p.lg((0, "#e9bf7c"), (.5, "#d9a25d"), (1, "#c98a45"), x2=1, y2=0)))
-    p.add(P("M221,290 C219,360 216,430 214,515 L222,515 C223,430 225,360 226,290 Z", "#fff3d8", opacity=.55))
-    rnd = random.Random(7)
-    for _ in range(9):
-        y = rnd.uniform(330, 500)
-        x = 225 + rnd.choice([-1, 1]) * rnd.uniform(26, 44)
-        p.add(C(x, y, rnd.uniform(2, 3.6), "#d9a25d", opacity=.8))
-    # white cup
-    p.add(p.soft(E(225, 626, 96, 16, "#7d7466", opacity=.4), 8))
-    p.add(cup_side(p, 225, 620, 150, 118, "#fbfaf7", liquid="#d6a061", handle="right", persp=.16))
-    p.add(p.soft(E(222, 507, 32, 8, "#fff3d8", opacity=.7), 3))
-    # drip tray grill
-    p.add(R(0, 628, w, 172, p.lg("#c9ccd0", "#9ea3a8")))
-    for y in range(640, 800, 20):
-        p.add(R(0, y, w, 8, "#8a8f95", opacity=.55))
-    # timer on the tray
-    p.add(p.soft(R(292, 552, 150, 88, "#6d665c", rx=18, opacity=.35), 8))
-    p.add(R(286, 540, 150, 90, p.lg("#ffffff", "#e3e1dc"), rx=18))
-    p.add(R(300, 554, 122, 50, "#20241f", rx=8))
-    p.add(p.soft(T(361, 594, "0:18", fill="#ff6a3d", font_family="Menlo, monospace", font_size=38,
-                   text_anchor="middle", font_weight="bold"), 5, .8))
-    p.add(T(361, 594, "0:18", fill="#ff9a70", font_family="Menlo, monospace", font_size=38,
-            text_anchor="middle", font_weight="bold"))
-    p.add(C(320, 616, 5, "#e4644a"))
-    p.add(C(402, 616, 5, "#b9b6b0"))
-
-
-def portafilter_top(p, cx, cy, r, handle_angle, puck, tamped=False, handle_col="#1d1a18"):
-    """Top-down portafilter: chrome ring, basket, coffee bed, handle at an angle (deg, 90 = down)."""
-    a = math.radians(handle_angle)
-    out = []
-    hx, hy = cx + math.cos(a) * r * .95, cy + math.sin(a) * r * .95
-    out.append(f'<g transform="translate({n(hx)} {n(hy)}) rotate({n(handle_angle)})">'
-               + R(-6, -r * .2, r * .38, r * .4, chrome(p, "#8d9298", horizontal=False), rx=6)
-               + R(r * .3, -r * .17, r * 1.7, r * .34, p.lg(lt(handle_col, .18), handle_col, dk(handle_col, .5), x2=0, y2=1), rx=r * .17)
-               + R(r * .36, -r * .1, r * 1.55, r * .05, "#ffffff", rx=3, opacity=.18) + "</g>")
-    for ang in (handle_angle + 90, handle_angle - 90):
-        b = math.radians(ang)
-        out.append(C(cx + math.cos(b) * r * .98, cy + math.sin(b) * r * .98, r * .13, chrome(p, "#8d9298")))
-    out.append(C(cx, cy, r, p.rg((0, "#d6d9dd"), (.8, "#a7acb2"), (.9, "#eef0f2"), (1, "#6f757c"))))
-    out.append(C(cx, cy, r * .86, p.lg("#5f656b", "#c9cdd1", "#7a8087", x2=1, y2=1)))
-    out.append(C(cx, cy, r * .8, "#2b2724"))
-    out.append(C(cx, cy, r * .78, p.rg(*puck, cx=.42, cy=.4, r=.62)))
-    if tamped:
-        out.append(C(cx, cy, r * .72, "none", stroke="#ffffff", stroke_width=1.5, opacity=.12))
-    return "".join(out)
-
-
-def tt_post_3(p):
-    """Macro, top-down: a portafilter full of levelled grounds, a WDT tool — pale oak, soft north light."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#e2c9a3", "#d2b389", x2=1, y2=1)))
-    p.add(grain(p, 0, 0, w, h, "#a8834f", k=22, op=.3, seed=11, vertical=True, wav=10))
-    cx, cy, r = 225, 330, 172
-    shadow = C(cx + 22, cy + 30, r, "#4d3517") + R(cx - 30, cy + 100, 90, 420, "#4d3517", rx=40)
-    p.add(p.soft(shadow, 16, .35))
-    p.add(portafilter_top(p, cx, cy, r, 92, [(0, "#6b4428"), (.55, "#4e301b"), (1, "#3a2313")]))
-    # the levelled bed: a faint polish ring
-    p.add(C(cx, cy, r * .6, "none", stroke="#8a5d3a", stroke_width=10, opacity=.18))
-    p.add(p.soft(E(cx - 40, cy - 50, 60, 30, "#9b6c46", opacity=.35), 18))
-    # WDT tool lying diagonally at the lower right
-    g = []
-    g.append(R(0, -13, 120, 26, p.lg("#8a5a36", "#5b3a20", "#3d2613", x2=0, y2=1), rx=13))
-    g.append(R(8, -9, 100, 5, "#ffffff", rx=2, opacity=.2))
-    g.append(R(118, -9, 22, 18, chrome(p, "#9aa0a6", horizontal=False), rx=4))
-    for k in range(-3, 4):
-        g.append(L(140, k * 2.5, 250, k * 6.5, "#d9dde1", 1.4))
-    p.add(p.soft(f'<g transform="translate(212 640) rotate(-32)">{R(6, -8, 250, 26, "#4d3517", rx=12)}</g>', 8, .35))
-    p.add(f'<g transform="translate(200 622) rotate(-32)">{"".join(g)}</g>')
-    # a few stray grounds
-    rnd = random.Random(4)
-    for _ in range(16):
-        p.add(C(rnd.uniform(40, 420), rnd.uniform(560, 780), rnd.uniform(1.2, 2.4), "#3a2313", opacity=.7))
-
-
-def reddit_1(p):
-    """Wide flat lay on a sage tamping mat: portafilter (tamped), a lying tamper, a distribution tool."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#efe9df", "#e3dccf", x2=1, y2=1)))
-    p.add(p.soft(R(58, 58, 700, 500, "#6d7162", rx=40), 14, .35))
-    p.add(R(46, 44, 700, 500, p.lg("#b5c4ab", "#9fb096", x2=1, y2=1), rx=40))
-    p.add(R(46, 44, 700, 500, "none", rx=40, stroke="#cfdcc6", stroke_width=3, opacity=.6))
-    # portafilter, handle toward lower-left
-    cx, cy = 300, 260
-    p.add(p.soft(C(cx + 12, cy + 16, 120, "#3f4a3a") +
-                 f'<g transform="translate({cx + 12} {cy + 16}) rotate(145)">{R(100, -22, 230, 44, "#3f4a3a", rx=22)}</g>', 10, .4))
-    p.add(portafilter_top(p, cx, cy, 118, 145, [(0, "#5c3a22"), (.7, "#4a2d19"), (1, "#3b2313")], tamped=True, handle_col="#6b4428"))
-    p.add(C(cx - 20, cy - 24, 58, "#ffffff", opacity=.05))
-    # tamper lying on its side, upper right
-    tx, ty = 560, 170
-    t = [R(-18, -62, 36, 124, chrome(p, "#8f969d"), rx=6),
-         P("M18,-18 L60,-12 L60,12 L18,18 Z", chrome(p, "#8f969d", horizontal=False)),
-         E(98, 0, 46, 34, p.lg("#8a5a36", "#5e3b20", "#40271a", x2=0, y2=1)),
-         E(92, -12, 26, 9, "#ffffff", opacity=.18)]
-    p.add(p.soft(f'<g transform="translate({tx + 10} {ty + 14}) rotate(8)">{R(-18, -62, 36, 124, "#3f4a3a")}{E(98, 0, 46, 34, "#3f4a3a")}</g>', 8, .4))
-    p.add(f'<g transform="translate({tx} {ty}) rotate(8)">{"".join(t)}</g>')
-    # distribution tool, upside down so its vanes show
-    dx, dy, dr = 590, 390, 80
-    p.add(p.soft(C(dx + 10, dy + 14, dr, "#3f4a3a"), 8, .4))
-    p.add(C(dx, dy, dr, p.rg("#d9dcdf", "#b3b8bd", "#6f757c")))
-    p.add(C(dx, dy, dr * .86, "#8d949b"))
-    vanes = []
-    for k in range(4):
-        vanes.append(f'<g transform="rotate({k * 90})"><path d="M8,-6 C30,-40 52,-42 64,-26 L58,-18 C46,-28 30,-24 14,4 Z" fill="{p.lg("#e8eaec", "#9aa1a8")}"/></g>')
-    p.add(f'<g transform="translate({dx} {dy})">{"".join(vanes)}</g>')
-    p.add(C(dx, dy, 12, chrome(p, "#8f969d")))
-    # a few grounds on the mat
-    rnd = random.Random(2)
-    for _ in range(10):
-        p.add(C(rnd.uniform(420, 520), rnd.uniform(420, 520), rnd.uniform(1.5, 2.6), "#3b2313", opacity=.7))
-
-
-def reddit_0(p):
-    """An old chrome lever machine on butcher block, oxblood wall, warm lamp from the left."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.rg("#8a3a33", "#5c211e", "#3a1413", cx=.3, cy=.3, r=.9)))
-    p.add(p.soft(E(170, 140, 220, 160, "#f5b673", opacity=.25), 40))
-    # counter
-    p.add(R(0, 470, w, 130, p.lg("#b88453", "#8c5c33")))
-    p.add(R(0, 470, w, 8, "#d9a574"))
-    p.add(grain(p, 0, 478, w, 122, "#6b4323", k=12, op=.35, seed=5))
-    p.add(p.soft(E(430, 474, 230, 20, "#2a120c", opacity=.6), 10))
-    # base
-    p.add(R(270, 360, 320, 116, chrome(p, "#8c6a62"), rx=10))
-    p.add(R(270, 360, 320, 8, "#f6e0d4", opacity=.5))
-    # boiler
-    p.add(R(310, 130, 240, 236, chrome(p, "#8c6a62"), rx=6))
-    p.add(P("M310,132 C310,40 550,40 550,132 Z", p.lg("#f6ece6", "#b28e84", "#6b4a42", x2=1, y2=1)))
-    p.add(C(430, 58, 16, "#241816"))
-    p.add(E(425, 52, 6, 3, "#ffffff", opacity=.5))
-    # a brass band
-    p.add(R(310, 220, 240, 14, p.lg("#e7c27a", "#b08638", "#7a5a22", x2=1, y2=0)))
-    # gauge
-    p.add(C(370, 290, 30, "#1c1515"))
-    p.add(C(370, 290, 25, p.rg("#fbf5e8", "#e6dcc6")))
-    for k in range(9):
-        a = math.radians(140 + k * 32.5)
-        p.add(L(370 + math.cos(a) * 17, 290 + math.sin(a) * 17, 370 + math.cos(a) * 22, 290 + math.sin(a) * 22, "#3b2b28", 1.4))
-    p.add(L(370, 290, 385, 279, "#b32a1f", 2.2))
-    # group head
-    p.add(R(440, 280, 70, 110, chrome(p, "#8c6a62"), rx=8))
-    p.add(R(430, 386, 90, 20, chrome(p, "#6f5550"), rx=6))
-    # lever
-    p.add(P("M470,290 L630,40 L646,50 L486,300 Z", chrome(p, "#8c6a62")))
-    p.add(C(640, 44, 22, p.rg("#4a3a36", "#140e0d", cx=.35, cy=.35)))
-    p.add(C(634, 38, 6, "#ffffff", opacity=.35))
-    # portafilter + handle toward the viewer (left)
-    p.add(R(440, 404, 74, 22, "#1c1515", rx=6))
-    p.add(P("M444,412 L300,440 L296,420 L440,404 Z", "#140e0d"))
-    # cup on the tray
-    p.add(R(420, 450, 110, 12, chrome(p, "#6f5550"), rx=4))
-    p.add(cup_side(p, 476, 450, 44, 34, "#f2ece4", handle="right", persp=.2))
-
-
-def bsky_2(p):
-    """Daylight desk: a laptop with syntax-coloured code, an espresso on a saucer front-right."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#dfe4e8", "#c9d0d6")))
-    p.add(p.soft(PL([(520, 0), (800, 0), (800, 330), (640, 330)], "#ffffff", opacity=.55), 24))
-    p.add(PL([(0, 330), (w, 330), (w, h), (0, h)], p.lg("#e8d6bd", "#d4bc9a")))
-    p.add(grain(p, 0, 330, w, 270, "#b89468", k=10, op=.25, seed=9))
-    # laptop, angled a little
-    sq = [(110, 60), (520, 40), (540, 330), (130, 336)]
-    p.add(p.soft(PL([(120, 340), (600, 328), (720, 470), (60, 486)], "#5c4a36"), 14, .3))
-    p.add(PL([(96, 50), (534, 28), (556, 338), (118, 346)], "#2f3236"))
-    p.add(PL(sq, "#1b1f2b"))
-    cols = ["#ff7a9c", "#7fd6e8", "#f2c96b", "#b59cff", "#9fe39a", "#c6cbd6"]
-    rnd = random.Random(12)
-    y = 0.07
-    indent = 0
-    while y < 0.93:
-        u = 0.1 + indent * 0.05
-        p.add(PL(subquad(sq, .035, y, .07, y + .022), "#565d70"))
-        for _ in range(rnd.randint(1, 4)):
-            ln = rnd.uniform(.05, .18)
-            if u + ln > .95:
-                break
-            p.add(PL(subquad(sq, u, y, u + ln, y + .024), rnd.choice(cols), opacity=.9))
-            u += ln + .02
-        indent = max(0, min(4, indent + rnd.choice([-1, 0, 0, 1])))
-        y += .052
-    p.add(PL([(110, 60), (300, 50), (250, 336), (130, 336)], "#ffffff", opacity=.04))
-    # deck
-    deck = [(118, 346), (556, 338), (690, 470), (40, 490)]
-    p.add(PL(deck, p.lg("#d9dce0", "#b7bcc2")))
-    p.add(PL(subquad(deck, .1, .1, .9, .62), "#a4a9b0", opacity=.6))
-    p.add(PL(subquad(deck, .38, .7, .62, .95), "#c7cbd0"))
-    p.add(PL([(40, 490), (690, 470), (690, 478), (40, 498)], "#8f949a"))
-    # espresso
-    p.add(p.soft(E(640, 540, 100, 26, "#6a5238", opacity=.45), 10))
-    p.add(cup_side(p, 628, 528, 96, 66, "#ffffff", liquid=p.rg("#c88b52", "#8a5129"), saucer="#f4f2ee", persp=.26))
-    p.add(steam(p, 628, 450, 110, op=.5, wide=8, seed=4))
+# ── coffee (three subjects, three set-ups) ────────────────────────────────
 
 
 def x_photo_1(p):
@@ -617,44 +361,6 @@ def nostr_2b(p):
     p.add(steam(p, 555, 300, 120, col="#ffe7c2", op=.3, seed=6))
 
 
-def tt_post_2(p):
-    """Coffee at altitude: an enamel camp mug on a plank table, snowy peaks in a log-cabin window."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#2d6fb8", "#7fb4e3", "#cfe5f5")))
-    # peaks
-    p.add(PL([(-20, 470), (70, 330), (140, 380), (230, 240), (300, 330), (360, 290), (470, 420), (470, 520), (-20, 520)], "#e9f1f8"))
-    p.add(PL([(230, 240), (300, 330), (270, 330), (240, 300), (210, 350), (180, 330)], "#9fb9d6"))
-    p.add(PL([(70, 330), (140, 380), (110, 390), (60, 360)], "#a9c1db"))
-    p.add(PL([(360, 290), (470, 420), (430, 420), (380, 360)], "#9fb9d6"))
-    p.add(PL([(-20, 520), (-20, 440), (40, 470), (120, 430), (200, 470), (300, 440), (380, 470), (470, 450), (470, 520)], "#b7cde3"))
-    trees = []
-    rnd = random.Random(5)
-    for i in range(24):
-        x = i * 20 + rnd.uniform(-6, 6)
-        th = rnd.uniform(40, 80)
-        trees.append(PL([(x, 540 - th), (x - 12, 545), (x + 12, 545)], "#23443a"))
-    p.add("".join(trees))
-    p.add(R(0, 540, w, 20, "#1c3830"))
-    # log window frame
-    wood = p.lg("#9b6a3f", "#7a4f2c", "#5e3a1f", x2=1, y2=0)
-    p.add(R(0, 0, 34, 560, wood), R(w - 34, 0, 34, 560, wood), R(0, 0, w, 30, wood))
-    p.add(R(212, 30, 26, 520, wood))
-    p.add(R(0, 530, w, 36, p.lg("#b07a4a", "#7a4f2c")))
-    # table
-    p.add(PL([(0, 566), (w, 566), (w, h), (0, h)], p.lg("#8e5b33", "#6a4022")))
-    for x in (-40, 80, 200, 320, 440):
-        p.add(L(x + 60, 566, x - 30, h, "#4e2e17", 3, opacity=.6))
-    p.add(p.soft(PL([(0, 566), (w, 566), (w, 640), (0, 700)], "#ffe7b8", opacity=.18), 10))
-    # enamel mug
-    p.add(p.soft(E(210, 712, 92, 18, "#2e1a0c", opacity=.6), 8))
-    mx, my = 214, 706
-    p.add(cup_side(p, mx, my, 150, 140, "#f4f5f2", liquid=p.rg("#6b4127", "#2f1b10"), handle="right", persp=.18, inner="#e8ebea"))
-    p.add(E(mx, my - 140, 75, 13.5, "none", stroke="#1f3f73", stroke_width=6))
-    for (x, y, r) in [(170, 640, 5), (246, 610, 4), (200, 680, 3)]:
-        p.add(C(x, y, r, "#8a9290", opacity=.5))
-    p.add(steam(p, mx, 540, 150, op=.5, seed=9))
-
-
 def ig_save_0(p):
     """A café interior: bottle-green wall, cup shelves, three pendant lamps, white marble counter."""
     w, h = p.w, p.h
@@ -703,61 +409,8 @@ def ig_save_0(p):
     p.add(p.soft(R(0, 556, w, 60, "#ffd9a0", opacity=.2), 20))
 
 
-def jug(p, x, y, rot, s=1.0):
-    """A steel milk jug whose spout tip sits at (x, y); rot tilts it (about 115 pours down-right)."""
-    body = p.lg("#5f656b", "#c9ced3", "#f4f6f7", "#9aa1a8", "#50565c", x1=0, y1=0, x2=1, y2=0)
-    g = [P("M-170,20 C-172,120 -178,170 -178,196 L6,196 C4,170 0,120 -2,20 Z", body),
-         E(-86, 196, 92, 16, "#6f757b"),
-         P("M-176,40 C-230,40 -236,150 -176,160", "none", stroke="#8a9096", stroke_width=14, stroke_linecap="round"),
-         E(-86, 20, 84, 14, "#3d4247"),
-         P("M-40,10 L0,0 L-6,26 Z", "#c9ced3"),
-         E(-86, 20, 84, 14, "none", stroke="#eef0f2", stroke_width=3),
-         R(-150, 40, 10, 140, "#ffffff", rx=4, opacity=.35)]
-    return f'<g transform="translate({n(x)} {n(y)}) rotate({n(rot)}) scale({n(s)})">' + "".join(g) + "</g>"
-
-
-def tt_notice_0(p):
-    """Latte art from above-and-behind: a steel jug pouring into a teal bowl-cup, rosetta forming."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#3b2a22", "#241914")))
-    p.add(bokeh(p, [(60, 90, 40, "#ffb866", .3), (380, 60, 55, "#ffd28f", .22), (330, 200, 26, "#ff9d57", .25),
-                    (40, 300, 20, "#ffe2b0", .2), (420, 330, 36, "#ffb866", .18)], 10))
-    p.add(R(0, 600, w, 200, p.lg("#5a4034", "#3a281f")))
-    p.add(R(0, 600, w, 3, "#7a5a48", opacity=.6))
-    cx, cy = 225, 520
-    p.add(p.soft(E(cx, 742, 150, 22, "#140c08", opacity=.85), 10))
-    # bowl, foot, rim
-    p.add(R(cx - 70, 700, 140, 40, p.lg("#155055", "#2f9a98", "#123f43", x2=1, y2=0), rx=10))
-    p.add(P(f"M{cx - 184},{cy} C{cx - 180},{cy + 170} {cx - 80},{cy + 196} {cx},{cy + 196} "
-            f"C{cx + 80},{cy + 196} {cx + 180},{cy + 170} {cx + 184},{cy} Z",
-            p.lg((0, "#155a5e"), (.3, "#3fb0ab"), (.5, "#2a8f8c"), (1, "#0f4448"), x2=1, y2=0)))
-    p.add(p.soft(P(f"M{cx - 150},{cy + 30} C{cx - 140},{cy + 120} {cx - 100},{cy + 160} {cx - 80},{cy + 170}",
-                   "none", stroke="#bff3ee", stroke_width=8, opacity=.45), 3))
-    p.add(E(cx, cy, 184, 94, "#eee9df"))
-    p.add(E(cx, cy + 4, 170, 85, p.rg("#c9874a", "#a3602d", "#7a4220", cx=.5, cy=.45, r=.6)))
-    # rosetta: drawn from above, squashed into the ellipse; widest at the near side, heart at the tip
-    lay = []
-    k = 12
-    for i in range(k):
-        y = 92 - i * 12.5
-        wd = 100 * math.sin(math.pi * (i + 1.5) / (k + 1.2)) ** .8 + 8
-        th = 7
-        lay.append(f'<path d="M{n(-wd)},{n(y + 10)} C{n(-wd * .7)},{n(y - 24)} {n(wd * .7)},{n(y - 24)} {n(wd)},{n(y + 10)} '
-                   f'C{n(wd * .6)},{n(y - 24 + th * 2.2)} {n(-wd * .6)},{n(y - 24 + th * 2.2)} {n(-wd)},{n(y + 10)} Z" fill="#f7efe1"/>')
-    heart = '<path d="M0,-66 C-30,-104 -56,-72 0,-50 C56,-72 30,-104 0,-66 Z" fill="#f7efe1"/>'
-    stem = '<path d="M0,-86 L0,104" stroke="#f7efe1" stroke-width="5" stroke-linecap="round"/>'
-    p.add(f'<g transform="translate({cx} {cy + 6}) scale(1 0.5)">' + "".join(lay) + heart + stem + "</g>")
-    p.add(E(cx, cy, 184, 94, "none", stroke="#ffffff", stroke_width=3, opacity=.6))
-    # the jug and its stream, landing on the heart
-    p.add(P("M244,300 C250,360 240,420 228,498 L218,498 C226,420 236,360 234,302 Z", "#f7efe1"))
-    p.add(jug(p, 252, 296, 118, 1.05))
-    p.add(p.soft(E(224, 500, 18, 7, "#ffffff", opacity=.8), 3))
-
-
 DRAW = {
-    "tt-post-0": tt_post_0, "tt-notice-1": tt_notice_1, "tt-post-3": tt_post_3, "reddit-1": reddit_1,
-    "reddit-0": reddit_0, "bsky-2": bsky_2, "x-photo-1": x_photo_1, "nostr-2b": nostr_2b,
-    "tt-post-2": tt_post_2, "ig-save-0": ig_save_0, "tt-notice-0": tt_notice_0,
+    "x-photo-1": x_photo_1, "nostr-2b": nostr_2b, "ig-save-0": ig_save_0,
 }
 
 
@@ -1224,61 +877,10 @@ def dayone_14(p):
     p.add(p.soft(R(0, 0, w, h, "none", stroke="#000", stroke_width=120), 40, .5))
 
 
-def tt_post_1(p):
-    """Grinder teardown, knolled flat on a slate-blue mat: body, hopper, cone and ring burrs, screws, tools."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#3e5a6c", "#2e4757", x2=1, y2=1)))
-    p.add(p.soft(R(0, 0, w, 160, "#ffffff", opacity=.08), 40))
-
-    def sh(item, dx=8, dy=10):
-        return p.soft(f'<g transform="translate({dx} {dy})">{item}</g>', 7, .45)
-
-    # grinder body without its hopper (top view)
-    body = C(150, 170, 92, p.rg("#3a3a3c", "#1c1c1e")) + C(150, 170, 66, "#0e0e0f") + C(150, 170, 40, p.rg("#8b9197", "#4a5056"))
-    p.add(sh(C(150, 170, 92, "#000")), body)
-    # hopper (smoked translucent)
-    p.add(sh(C(345, 150, 70, "#000"), 6, 8))
-    p.add(C(345, 150, 70, "#8a6a4a", opacity=.45), C(345, 150, 70, "none", stroke="#d8c3a8", stroke_width=5, opacity=.8),
-          C(330, 132, 30, "#ffffff", opacity=.15))
-    # conical burr: spiral teeth
-    cx, cy = 130, 400
-    p.add(sh(C(cx, cy, 78, "#000")))
-    p.add(C(cx, cy, 78, p.rg("#e7eaed", "#a9b0b6", "#6c737a")))
-    p.add("".join(P(f"M{n(cx + math.cos(a) * 18)},{n(cy + math.sin(a) * 18)} Q{n(cx + math.cos(a + .5) * 50)},{n(cy + math.sin(a + .5) * 50)} {n(cx + math.cos(a + .9) * 76)},{n(cy + math.sin(a + .9) * 76)}",
-                    "none", stroke="#5f666d", stroke_width=3) for a in [i * math.pi / 9 for i in range(18)]))
-    p.add(C(cx, cy, 16, "#3a3f44"))
-    # ring burr: teeth inward
-    rx_, ry_ = 320, 410
-    p.add(sh(C(rx_, ry_, 88, "#000")))
-    p.add(C(rx_, ry_, 88, p.rg("#dfe3e6", "#a2a9b0")), C(rx_, ry_, 56, "#2e4757"))
-    p.add("".join(L(rx_ + math.cos(a) * 56, ry_ + math.sin(a) * 56, rx_ + math.cos(a + .12) * 72, ry_ + math.sin(a + .12) * 72, "#6c737a", 3)
-                  for a in [i * math.pi / 14 for i in range(28)]))
-    # screws in a row, brass
-    for i in range(5):
-        x = 80 + i * 36
-        p.add(sh(C(x, 560, 11, "#000"), 3, 4), C(x, 560, 11, p.rg("#f2d38b", "#b98a3a")), L(x - 6, 560, x + 6, 560, "#6e4f1c", 2.5))
-    # springs / washers
-    for i in range(3):
-        x = 290 + i * 40
-        p.add(C(x, 560, 13, "none", stroke="#b9c0c6", stroke_width=5))
-    # hex key
-    p.add(sh(P("M60,650 L300,650 L300,700", "none", stroke="#000", stroke_width=12)))
-    p.add(P("M60,650 L300,650 L300,700", "none", stroke="#2a2d31", stroke_width=12, stroke_linejoin="round"),
-          P("M64,647 L296,647", "none", stroke="#8a9096", stroke_width=2))
-    # brush
-    p.add(sh(R(60, 730, 250, 26, "#000", rx=10)))
-    p.add(R(60, 730, 170, 26, "#d2442f", rx=10), R(226, 732, 26, 22, "#b9c0c6"), R(250, 728, 90, 30, "#e7d6b5", rx=4))
-    p.add("".join(L(254 + i * 7, 730, 254 + i * 7, 756, "#c7b48c", 1.5) for i in range(12)))
-    # a little heap of old grounds
-    rnd = random.Random(81)
-    p.add(p.soft(C(390, 700, 34, "#2a1a0e"), 6, .9))
-    p.add(flour(p, (340, 650, 440, 750), 30, rnd, col="#3a2313", op=.9))
-
-
 DRAW.update({
     "ig-photo-1": ig_photo_1, "ig-photo-3": ig_photo_3, "ig-save-5": ig_save_5, "ig-save-10": ig_save_10,
     "ig-like-1": ig_like_1, "tt-save-0": tt_save_0, "tt-save-1": tt_save_1, "snap-2": snap_2,
-    "dayone-14": dayone_14, "tt-post-1": tt_post_1,
+    "dayone-14": dayone_14,
 })
 
 
@@ -2133,4 +1735,742 @@ def bsky_4a(p):
 DRAW.update({
     "ig-save-8": ig_save_8, "ig-save-11": ig_save_11, "ig-like-2": ig_like_2, "file-3": file_3, "file-5": file_5,
     "trello-0": trello_0, "fc-5a": fc_5a, "fc-5b": fc_5b, "bsky-4a": bsky_4a,
+})
+
+
+# ── climbing (six subjects, six set-ups) ──────────────────────────────────
+# A climbing gym is drawn like an interior: walls, holds, mats, light. The six
+# never share a wall colour or a viewpoint: tan plywood looking UP an overhang
+# (tt-post-0), a charcoal macro (tt-post-1), a home doorway at lamp-light
+# (tt-post-2), a pale grey wall straight on (tt-post-3), a sage slab at low
+# golden light (tt-notice-0), a black training wall at night (tt-notice-1).
+
+HOLD_COLS = ["#f2c230", "#e8457a", "#3fae5a", "#f07a2a", "#2f7fd6", "#8a4fd0", "#26292e", "#f4f1ea", "#21b5b0"]
+
+
+def rot_pt(x, y, deg):
+    a = math.radians(deg)
+    return x * math.cos(a) - y * math.sin(a), x * math.sin(a) + y * math.cos(a)
+
+
+def hold(p, x, y, r, col, rnd, kind="jug", rot=0, shadow=(.22, .28), sh_op=.38, sh_blur=3, bolt=True):
+    """One climbing hold: a lumpy resin shape lit from the upper left, its bolt, its cast shadow."""
+    shapes = {"jug": (1, .74, .16, 9), "crimp": (1.3, .36, .1, 8), "sloper": (1.1, .92, .07, 10),
+              "pinch": (.55, 1.1, .14, 8), "chip": (.8, .5, .22, 7)}
+    fx, fy, jit, k = shapes[kind]
+    d = blob(0, 0, r * fx, r * fy, rnd, k, jit, rot)
+    out = [p.soft(P(d, "#000", transform=f"translate({n(x + shadow[0] * r)} {n(y + shadow[1] * r)})"), sh_blur, sh_op)]
+    body = p.rg((0, lt(col, .42)), (.45, col), (1, dk(col, .38)), cx=.36, cy=.3, r=.85)
+    out.append(P(d, body, transform=f"translate({n(x)} {n(y)})"))
+    if kind == "jug":
+        # the incut lip: a dark crescent under the top edge
+        ca, sa = math.cos(math.radians(rot)), math.sin(math.radians(rot))
+        lx, ly = x - sa * r * .12, y + ca * r * .12
+        out.append(E(lx, ly, r * .62, r * .2, dk(col, .5), transform=f"rotate({n(rot)} {n(lx)} {n(ly)})", opacity=.8))
+    if bolt and r > 9:
+        bx, by = x + r * .12, y + (r * .3 if kind == "jug" else 0)
+        out.append(C(bx, by, r * .14, dk(col, .55)))
+        out.append(C(bx, by, r * .07, "#c9ccd0"))
+    out.append(E(x - r * .3, y - r * .28 * fy, r * .32 * fx, r * .12 * fy, "#ffffff", opacity=.28))
+    return "".join(out)
+
+
+def tnuts(quad, cols, rows, r, col, op):
+    """The T-nut grid every gym wall carries, laid on a quad in perspective (r scales with depth)."""
+    out = []
+    for i in range(1, cols):
+        for j in range(1, rows):
+            u, v = i / cols, j / rows
+            x, y = quadpt(quad, u, v)
+            out.append(C(x, y, r(v), col))
+    return G(*out, opacity=op)
+
+
+SHOE = ("M24,8 C4,6 -4,-16 0,-40 C3,-60 14,-74 30,-78 C52,-80 74,-74 92,-70 C120,-66 150,-56 178,-44 "
+        "C210,-30 236,-16 248,-2 C254,6 250,14 238,14 C200,14 150,2 110,4 C80,6 50,10 24,8 Z")
+
+
+def shoe(p, x, y, rot, s=1.0, upper="#f2b531", rand="#1c1c1f", strap="#d6453b", flip=False):
+    """A downturned climbing shoe in profile, heel at the origin, toe to the right (flip mirrors it)."""
+    cid = p.clip(P(SHOE, "#fff"))
+    inner = [P(SHOE, p.lg(lt(upper, .25), upper, dk(upper, .25))),
+             P("M-12,30 L-12,-50 C12,-58 32,-40 46,-18 C52,-8 54,4 56,30 Z", rand),       # heel rubber cup
+             P("M-12,0 C60,4 150,-6 262,-8 L262,30 L-12,30 Z", rand),                     # sole
+             P("M40,-2 C110,-6 170,-12 236,-14", "none", stroke=rand, stroke_width=7),    # rand
+             P("M196,-32 C222,-22 240,-12 262,-2 L262,30 L204,30 C216,8 212,-14 196,-32 Z", rand),  # toe patch
+             P("M98,-72 L126,-63 L106,-8 L80,-12 Z", strap),
+             P("M102,-66 L120,-60 L108,-24 L94,-26 Z", "#ffffff", opacity=.14),
+             P("M6,-40 C8,-58 18,-70 32,-74", "none", stroke="#ffffff", stroke_width=3, opacity=.22),
+             P("M140,-54 C180,-40 214,-26 236,-12", "none", stroke="#ffffff", stroke_width=3, opacity=.3)]
+    tab = P("M16,-72 C8,-92 24,-100 36,-90 L34,-74 Z", rand)
+    sx = -s if flip else s
+    return (f'<g transform="translate({n(x)} {n(y)}) rotate({n(rot)}) scale({n(sx)} {n(s)})">'
+            + tab + G(*inner, clip_path=cid) + "</g>")
+
+
+def shoe_pt(x, y, rot, s, flip, lx, ly):
+    """Where a point of the shoe's local outline lands on the canvas."""
+    if flip:
+        lx = -lx
+    rx, ry = rot_pt(lx * s, ly * s, rot)
+    return x + rx, y + ry
+
+
+def limb(a, b, w0, w1, fill, **kw):
+    """A tapered limb from a (width w0) to b (width w1), round at both ends."""
+    (x0, y0), (x1, y1) = a, b
+    dx, dy = x1 - x0, y1 - y0
+    ln = math.hypot(dx, dy) or 1
+    nx, ny = -dy / ln, dx / ln
+    pts = [(x0 + nx * w0 / 2, y0 + ny * w0 / 2), (x1 + nx * w1 / 2, y1 + ny * w1 / 2),
+           (x1 - nx * w1 / 2, y1 - ny * w1 / 2), (x0 - nx * w0 / 2, y0 - ny * w0 / 2)]
+    return G(PL(pts, fill), C(x0, y0, w0 / 2, fill), C(x1, y1, w1 / 2, fill), **kw)
+
+
+def seg7(x, y, w, h, digit, on, off):
+    """One seven-segment LED digit, unlit segments ghosted as on a real gym timer."""
+    t = w * .2
+    segs = {"a": (x + t * .6, y, w - t * 1.2, t, "h"), "d": (x + t * .6, y + h - t, w - t * 1.2, t, "h"),
+            "g": (x + t * .6, y + h / 2 - t / 2, w - t * 1.2, t, "h"),
+            "f": (x, y + t * .6, t, h / 2 - t * .9, "v"), "b": (x + w - t, y + t * .6, t, h / 2 - t * .9, "v"),
+            "e": (x, y + h / 2 + t * .3, t, h / 2 - t * .9, "v"), "c": (x + w - t, y + h / 2 + t * .3, t, h / 2 - t * .9, "v")}
+    lit = {"0": "abcdef", "7": "abc", "1": "bc"}[digit]
+    out = []
+    for k, (sx, sy, sw, sh, o) in segs.items():
+        c = on if k in lit else off
+        if o == "h":
+            pts = [(sx, sy + sh / 2), (sx + sh / 2, sy), (sx + sw - sh / 2, sy), (sx + sw, sy + sh / 2),
+                   (sx + sw - sh / 2, sy + sh), (sx + sh / 2, sy + sh)]
+        else:
+            pts = [(sx + sw / 2, sy), (sx + sw, sy + sw / 2), (sx + sw, sy + sh - sw / 2), (sx + sw / 2, sy + sh),
+                   (sx, sy + sh - sw / 2), (sx, sy + sw / 2)]
+        out.append(PL(pts, c))
+    return "".join(out)
+
+
+def chalk(p, x, y, rx, ry, op=.55, sd=6):
+    return p.soft(E(x, y, rx, ry, "#ffffff", opacity=op), sd)
+
+
+def tt_post_0(p):
+    """Looking UP a steep overhang from the mats: tan plywood, every colour of hold, a climber
+    pulling over the lip against a bright skylit ceiling. Midday, the brightest of the six."""
+    w, h = p.w, p.h
+    rnd = random.Random(101)
+    # ceiling, skylight and steel above the lip
+    p.add(R(0, 0, w, 260, p.lg("#dfe6ec", "#c5ced6")))
+    p.add(PL([(60, 0), (300, 0), (360, 120), (90, 150)], "#ffffff"))
+    p.add(p.soft(PL([(60, 0), (300, 0), (360, 120), (90, 150)], "#ffffff"), 22, .9))
+    for (x0, x1) in ((0, 470), (-40, 300)):
+        p.add(L(x0, 40 + x0 * .2, x1, 150 - x1 * .1, "#3b4148", 7, opacity=.7))
+    p.add(L(380, 0, 420, 200, "#3b4148", 9, opacity=.6))
+    # the overhang: near (bottom) wide, the lip (top) far and narrow
+    q = [(-30, 205), (480, 180), (620, 720), (-170, 740)]
+    p.add(PL(q, p.lg((0, "#c9a476"), (.5, "#d8b585"), (1, "#c09868"))))
+    p.add(PL(subquad(q, 0, 0, 1, .2), "#ffffff", opacity=.12))
+    for i in range(1, 5):
+        a, b = quadpt(q, i / 5, 0), quadpt(q, i / 5, 1)
+        p.add(L(a[0], a[1], b[0], b[1], "#9c7a52", 1.6, opacity=.55))
+    for j in range(1, 5):
+        a, b = quadpt(q, 0, j / 5), quadpt(q, 1, j / 5)
+        p.add(L(a[0], a[1], b[0], b[1], "#9c7a52", 1.6, opacity=.55))
+    p.add(tnuts(q, 16, 14, lambda v: 1.2 + 2.2 * v, "#5a4228", .55))
+    # two volumes bolted to the wall
+    vq = subquad(q, .08, .34, .36, .62)
+    p.add(p.soft(PL([(vq[0][0] + 14, vq[0][1] + 16), (vq[1][0] + 14, vq[1][1] + 16), (vq[3][0] + 14, vq[3][1] + 16)], "#000"), 8, .3))
+    p.add(PL([vq[0], vq[1], vq[3]], "#7fc8bb"), PL([vq[1], vq[3], quadpt(q, .26, .56)], "#5fae9f"))
+    v2 = subquad(q, .62, .12, .88, .4)
+    p.add(PL([v2[0], v2[1], v2[2]], "#ef8f7a"), PL([v2[0], v2[2], quadpt(q, .7, .34)], "#d8705c"))
+    # holds, bigger as they come toward the camera
+    spots = []
+    for _ in range(46):
+        u, v = rnd.uniform(.03, .97), rnd.uniform(.06, .96)
+        if any(abs(u - a) < .07 and abs(v - b) < .06 for a, b in spots):
+            continue
+        spots.append((u, v))
+        x, y = quadpt(q, u, v)
+        if x < -10 or x > w + 10:
+            continue
+        r = 7 + 26 * v ** 1.3
+        p.add(hold(p, x, y, r, rnd.choice(HOLD_COLS), rnd, rnd.choice(["jug", "jug", "crimp", "sloper", "pinch"]),
+                   rot=rnd.uniform(-40, 40), shadow=(.15, .35)))
+    # the lip: a padded edge
+    p.add(PL([(-30, 196), (480, 171), (480, 186), (-30, 211)], "#3d3f45"))
+    p.add(p.soft(PL([(-30, 211), (480, 186), (480, 230), (-30, 255)], "#000"), 10, .25))
+    # the climber mantling over the lip: elbows up, one heel hooked on the edge, one leg hanging
+    sk, top, bot, sh = "#b77a5a", "#e2553c", "#2b2f3b", "#f2c230"
+    lip = lambda x: 196 - (x + 30) * 25 / 510
+    hx = 298
+    hip = (hx, lip(hx) + 10)
+    p.add(hold(p, 280, lip(280) + 118, 14, "#2f7fd6", rnd, "jug", shadow=(.15, .35)))
+    p.add(limb((hx - 10, hip[1]), (272, lip(272) + 62), 24, 17, bot))            # hanging leg
+    p.add(limb((272, lip(272) + 62), (282, lip(282) + 104), 17, 12, bot))
+    p.add(E(286, lip(286) + 108, 17, 8, sh, transform=f"rotate(20 286 {n(lip(286) + 108)})"))
+    p.add(limb((hx + 8, hip[1]), (356, lip(356) + 22), 24, 17, bot))             # heel-hook leg
+    p.add(limb((356, lip(356) + 22), (404, lip(404) - 2), 17, 12, bot))
+    p.add(E(412, lip(412) - 6, 18, 8, sh, transform=f"rotate(-12 412 {n(lip(412) - 6)})"))
+    sy = lip(hx) - 46
+    p.add(limb(hip, (hx, sy + 6), 46, 54, top))                                    # torso over the lip
+    p.add(C(hx, sy - 18, 17, "#2e211b"), R(hx - 7, sy - 6, 14, 10, sk))
+    for side in (-1, 1):
+        sh_ = (hx + side * 24, sy + 2)
+        el = (hx + side * 64, sy - 18)
+        hd = (hx + side * 58, lip(hx + side * 58) - 8)
+        p.add(limb(sh_, el, 15, 12, top if side < 0 else top), limb(el, hd, 12, 10, sk))
+        p.add(E(hd[0], hd[1], 11, 6, sk))
+    p.add(C(hx + 16, hip[1] + 2, 8, "#f4f1ea"))                                   # chalk bag on the hip
+    p.add(p.soft(E(hx, sy - 10, 90, 60, "#ffffff", opacity=.35), 14))            # backlight halo
+    p.add(p.soft(PL([(-30, 0), (w, 0), (w, 120), (-30, 160)], "#ffffff"), 30, .25))
+    # the mats underfoot
+    p.add(PL([(-20, 708), (470, 690), (470, h), (-20, h)], p.lg("#2c5aa0", "#1f4683")))
+    p.add(PL([(-20, 708), (470, 690), (470, 698), (-20, 716)], "#5b86c9"))
+    p.add(PL([(200, 700), (226, 699), (250, h), (214, h)], "#1a3c72"))
+    p.add(chalk(p, 120, 760, 60, 14, .35, 10), chalk(p, 360, 740, 40, 8, .3, 8))
+
+
+def tt_post_1(p):
+    """Macro on a charcoal wall: a yellow shoe's heel hooked over a big teal ball of a hold, toe
+    cocked up, chalk hanging in the air. Hard light from the upper right; the rest falls to dark."""
+    w, h = p.w, p.h
+    rnd = random.Random(111)
+    p.add(R(0, 0, w, h, p.rg("#3b3e46", "#24262c", "#141519", cx=.7, cy=.35, r=.95)))
+    p.add(G(*[C(rnd.uniform(0, w), rnd.uniform(0, h), rnd.uniform(.6, 1.6), rnd.choice(["#4a4d56", "#1a1b20"])) for _ in range(260)], opacity=.7))
+    p.add(bokeh(p, [(390, 90, 34, "#f2c230", .4), (60, 760, 44, "#3fae5a", .35), (410, 770, 56, "#8a4fd0", .35),
+                    (40, 470, 24, "#e8457a", .35)], 14))
+    # the hold: a big round dome, its top worn white with chalk
+    cx, cy, rx, ry = 262, 660, 205, 168
+    p.add(p.soft(E(cx + 34, cy + 40, rx, ry, "#000"), 18, .65))
+    p.add(E(cx, cy, rx, ry, p.rg((0, "#86e6dc"), (.3, "#33b8ab"), (.75, "#177d74"), (1, "#0b4642"), cx=.66, cy=.22, r=.85)))
+    hcid = p.clip(E(cx, cy, rx, ry, "#fff"))
+    p.add(G(*[C(rnd.uniform(cx - rx, cx + rx), rnd.uniform(cy - ry, cy + ry), rnd.uniform(.8, 1.8),
+                rnd.choice(["#0b4642", "#a6efe7"]), opacity=rnd.uniform(.25, .5)) for _ in range(420)], clip_path=hcid))
+    p.add(p.soft(E(cx + 70, cy - 112, 80, 26, "#ffffff", opacity=.4), 10))
+    p.add(p.soft(E(cx - 50, cy - 140, 110, 26, "#eef5f4", opacity=.65), 8))
+    p.add(p.soft(E(cx + 30, cy - 96, 70, 30, "#eef5f4", opacity=.3), 12))
+    p.add(C(cx + 10, cy + 20, 13, "#0b4642"), C(cx + 10, cy + 20, 6, "#c9ccd0"))
+    # leg first, then the shoe over its cuff
+    x, y, rot, s = 128, 516, -30, 1.34
+    a, b = shoe_pt(x, y, rot, s, False, 32, -76), shoe_pt(x, y, rot, s, False, 90, -70)
+    mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+    p.add(limb((mid[0] - 6, mid[1] + 4), (-70, -60), 82, 136, p.lg("#2b1f3a", "#4c3864", "#36284a", x2=1, y2=0)))
+    p.add(P(f"M{n(mid[0] + 24)},{n(mid[1] - 10)} C{n(mid[0] - 10)},{n(mid[1] - 160)} 70,120 30,-10", "none",
+            stroke="#6d5488", stroke_width=10, opacity=.45, stroke_linecap="round"))
+    p.add(limb(a, b, 16, 16, "#f4f1ea"))                                         # sock cuff
+    p.add(p.soft(P(SHOE, "#000", transform=f"translate({x + 14} {y + 16}) rotate({rot}) scale({s})"), 8, .55))
+    p.add(shoe(p, x, y, rot, s))
+    # chalk knocked loose at the heel, hanging in the light
+    for (px, py, r_, op) in [(196, 500, 40, .45), (250, 470, 30, .3), (150, 470, 26, .3), (300, 430, 44, .18), (350, 380, 30, .15)]:
+        p.add(chalk(p, px, py, r_, r_ * .7, op, 10))
+    for _ in range(46):
+        p.add(C(rnd.uniform(150, 440), rnd.uniform(330, 520), rnd.uniform(.8, 2.2), "#ffffff", opacity=rnd.uniform(.3, .85)))
+
+
+def tt_post_2(p):
+    """At home, evening, lamp-lit: a pale beech fingerboard screwed above a white doorway on a
+    terracotta wall, two chalky hands hanging from it, the room beyond in blue dusk."""
+    w, h = p.w, p.h
+    p.add(R(0, 0, w, h, p.lg("#c98a6c", "#b5735a", "#94583f")))
+    p.add(p.soft(E(40, 170, 200, 260, "#ffd29a", opacity=.55), 50))
+    # sconce at the left edge
+    p.add(p.soft(E(40, 200, 90, 70, "#fff0c8", opacity=.6), 20))
+    p.add(R(-6, 140, 14, 60, "#b08a4a", rx=4), P("M8,170 C24,170 30,160 34,152", "none", stroke="#b08a4a", stroke_width=5))
+    p.add(P("M14,96 L62,96 L78,158 L-2,158 Z", p.lg("#fff6e0", "#f6d9a2", "#e8bd78")))
+    p.add(E(38, 158, 40, 6, "#fffaf0"))
+    # the doorway, the room beyond
+    p.add(R(66, 470, 318, 330, p.lg("#2c3a55", "#1d2639")))
+    p.add(R(250, 520, 110, 150, p.lg("#5c79a8", "#3a5481")))       # far window at dusk
+    p.add(R(300, 520, 6, 150, "#1d2639"), R(250, 590, 110, 6, "#1d2639"))
+    p.add(p.soft(C(120, 640, 50, "#ffc070", opacity=.45), 20))
+    p.add(R(100, 700, 120, 100, "#151b29"))
+    p.add(R(46, 450, 358, 22, p.lg("#fbf7f0", "#e6dccd")), R(46, 450, 22, 350, "#f3ece1"), R(382, 450, 22, 350, "#e3d8c7"))
+    # backing plank and the board
+    p.add(p.soft(R(26, 262, 410, 168, "#4a2a1a"), 10, .5))
+    p.add(R(18, 250, 414, 168, p.lg("#7a4e33", "#5c3824")), )
+    for sx_, sy_ in ((40, 270), (410, 270), (40, 398), (410, 398)):
+        p.add(C(sx_, sy_, 6, "#c9ccd0"), L(sx_ - 4, sy_ - 4, sx_ + 4, sy_ + 4, "#6b6f74", 1.5))
+    bx0, by0, bw, bh = 52, 270, 346, 132
+    p.add(p.soft(R(bx0 + 6, by0 + 12, bw, bh, "#2a160c", rx=18), 6, .55))
+    beech = p.lg("#f1d4a6", "#e2bd88", "#c99c62")
+    p.add(R(bx0, by0, bw, bh, beech, rx=18))
+    p.add(R(bx0, by0, bw, 26, "#f7e3c2", rx=14))                 # the rounded top jug
+    p.add(R(bx0 + 8, by0 + 26, bw - 16, 4, "#a77c48", opacity=.6))
+    for i, (px, pw) in enumerate([(70, 70), (152, 52), (246, 52), (320, 70)]):   # pockets
+        p.add(R(px, 312, pw, 30, "#7a5530", rx=13), R(px + 4, 314, pw - 8, 10, "#4f3519", rx=6))
+    p.add(R(bx0 + 10, 356, bw - 20, 30, "#c99c62", rx=8), R(bx0 + 12, 358, bw - 24, 8, "#8a6338", rx=4))
+    p.add(grain(p, bx0, by0, bw, bh, "#b8874f", k=10, op=.25, seed=21))
+    for cx_ in (150, 300):
+        p.add(chalk(p, cx_, 362, 50, 9, .7, 4), chalk(p, cx_ + 14, 300, 26, 6, .45, 5))
+    # two hands, from behind: fingers over the bottom edge, forearms falling toward the camera
+    sk, skd = "#e6ad8c", "#b97d60"
+    for cx_, inward in ((150, 1), (300, -1)):
+        lean = 8 * inward
+        p.add(p.soft(PL([(cx_ - 30, 440), (cx_ + 34, 440), (cx_ + 74 + lean, h), (cx_ - 54 + lean, h)], "#1a1010"), 10, .35))
+        p.add(PL([(cx_ - 29, 430), (cx_ + 29, 430), (cx_ + 56 + lean, h + 10), (cx_ - 56 + lean, h + 10)],
+                 p.lg(skd, sk, lt(sk, .1), skd, x2=1, y2=0)))
+        # back of the hand
+        p.add(P(f"M{cx_ - 46},388 C{cx_ - 46},414 {cx_ - 34},436 {cx_ - 28},446 L{cx_ + 28},446 "
+                f"C{cx_ + 34},436 {cx_ + 46},414 {cx_ + 46},388 Z", p.lg(lt(sk, .12), sk, skd)))
+        p.add(limb((cx_ + 36 * inward, 436), (cx_ + 46 * inward, 404), 19, 15, skd))      # thumb, tucked along the index
+        p.add(limb((cx_ + 35 * inward, 436), (cx_ + 44 * inward, 405), 15, 12, sk))
+        # four fingers, index nearest the thumb, the little finger shortest
+        for k in range(4):
+            fx = cx_ + inward * (34 - k * 23)
+            top_ = 356 + (8 if k == 3 else 0)
+            p.add(R(fx - 10, top_, 20, 396 - top_, p.lg(dk(sk, .12), sk, lt(sk, .1)), rx=9))
+            p.add(E(fx, 392, 9, 5, lt(sk, .25), opacity=.7))
+            p.add(R(fx - 9, top_, 18, 7, "#ffffff", rx=3, opacity=.55))
+        p.add(chalk(p, cx_, 384, 36, 8, .45, 5))
+
+
+def tt_post_3(p):
+    """Straight on, flat daylight: a pale grey wall and one route of purple holds snaking up it,
+    start tape at the bottom, a mustard chalk bag waiting on the charcoal mat."""
+    w, h = p.w, p.h
+    rnd = random.Random(131)
+    q = [(0, 0), (w, 0), (w, 700), (0, 700)]
+    p.add(R(0, 0, w, 700, p.lg("#eef0f2", "#e1e4e8", "#d4d8dd")))
+    p.add(p.soft(E(225, 0, 300, 160, "#ffffff", opacity=.7), 40))
+    for x in (150, 300):
+        p.add(L(x, 0, x, 700, "#c3c8ce", 1.6))
+    for y in (175, 350, 525):
+        p.add(L(0, y, w, y, "#c3c8ce", 1.6))
+    p.add(tnuts(q, 12, 20, lambda v: 2.1, "#8c939b", .6))
+    # a few neutral holds from other routes, small and quiet
+    for _ in range(12):
+        x, y = rnd.uniform(20, w - 20), rnd.uniform(30, 650)
+        p.add(hold(p, x, y, rnd.uniform(8, 13), rnd.choice(["#f8f8f8", "#2a2c30", "#b9bec5"]), rnd,
+                   rnd.choice(["crimp", "chip", "jug"]), rot=rnd.uniform(-30, 30), sh_op=.22))
+    # the purple line
+    line = [(118, 620, 30, "jug"), (190, 560, 24, "crimp"), (150, 488, 30, "sloper"), (236, 440, 26, "pinch"),
+            (302, 380, 28, "jug"), (250, 312, 24, "crimp"), (182, 262, 30, "sloper"), (230, 196, 24, "pinch"),
+            (306, 150, 26, "crimp"), (262, 82, 34, "jug")]
+    purples = ["#8a4fd0", "#7a3fc0", "#9a5fe0", "#6e35b0"]
+    for i, (x, y, r, kind) in enumerate(line):
+        p.add(hold(p, x, y, r, purples[i % 4], rnd, kind, rot=rnd.uniform(-35, 35), sh_op=.32))
+        p.add(chalk(p, x - 4, y - r * .4, r * .7, r * .25, .45, 3))
+    p.add(R(70, 650, 34, 10, "#8a4fd0", transform="rotate(-8 87 655)"), R(76, 664, 34, 10, "#8a4fd0", transform="rotate(6 93 669)"))
+    # floor: wall foot shadow, charcoal mat
+    p.add(p.soft(R(0, 690, w, 24, "#000"), 8, .3))
+    p.add(R(0, 700, w, 100, p.lg("#4a4e56", "#33363c")))
+    p.add(R(0, 700, w, 5, "#666b74"))
+    p.add(R(0, 748, w, 6, "#2a2d32", opacity=.8))
+    p.add(chalk(p, 100, 730, 44, 8, .3, 8), chalk(p, 300, 770, 50, 9, .25, 8))
+    # the chalk bag
+    bx, by = 320, 762
+    p.add(p.soft(E(bx + 8, by + 6, 52, 10, "#000"), 6, .5))
+    p.add(L(bx - 120, by + 8, bx - 40, by + 2, "#1d1f24", 6, stroke_linecap="round"))
+    p.add(P(f"M{bx - 44},{by - 70} L{bx + 44},{by - 70} C{bx + 50},{by - 30} {bx + 48},{by - 4} {bx + 40},{by} "
+            f"C{bx + 20},{by + 8} {bx - 20},{by + 8} {bx - 40},{by} C{bx - 48},{by - 4} {bx - 50},{by - 30} {bx - 44},{by - 70} Z",
+            p.lg("#b27f22", "#e3b047", "#f0c35c", "#c7922e", "#8f6418", x2=1, y2=0)))
+    p.add(E(bx, by - 70, 46, 12, "#f4efe4"), E(bx, by - 70, 36, 8, "#3a2f26"), E(bx - 4, by - 72, 26, 5, "#ffffff", opacity=.85))
+    p.add(R(bx + 40, by - 64, 10, 40, "#2c2f35", rx=4), R(bx + 42, by - 92, 6, 30, "#c99a5a", rx=2))
+    p.add(chalk(p, bx - 60, by + 4, 26, 6, .6, 4))
+
+
+def tt_notice_0(p):
+    """Low on the mat looking UP a sage slab at golden hour: low sun through tall windows rakes
+    across it in stripes, small grey chips throw long shadows, two red shoes balance on two of them."""
+    w, h = p.w, p.h
+    rnd = random.Random(141)
+    p.add(R(0, 0, w, h, p.lg("#93a98e", "#86a083", "#7a9377")))
+    # the slab recedes upward: seams converge, rows crowd together toward the top
+    q = [(90, -40), (360, -40), (720, 800), (-270, 800)]
+    vs = lambda t: t ** 1.6
+    for i in range(1, 6):
+        a_, b_ = quadpt(q, i / 6, 0), quadpt(q, i / 6, 1)
+        p.add(L(a_[0], a_[1], b_[0], b_[1], "#6a8166", 1.8, opacity=.6))
+    for t in (.3, .5, .68, .84):
+        a_, b_ = quadpt(q, 0, vs(t)), quadpt(q, 1, vs(t))
+        p.add(L(a_[0], a_[1], b_[0], b_[1], "#6a8166", 1.8, opacity=.6))
+    dots = []
+    for i in range(1, 24):
+        for j in range(1, 22):
+            x_, y_ = quadpt(q, i / 24, vs(j / 22))
+            if -5 < x_ < w + 5:
+                dots.append(C(x_, y_, 1 + 2 * vs(j / 22), "#4a5e4a"))
+    p.add(G(*dots, opacity=.5))
+    # low sun through tall windows: warm stripes across the slab
+    for (x0, x1) in ((-60, 60), (130, 230), (330, 400)):
+        p.add(p.soft(PL([(x0, 0), (x1, 0), (x1 + 260, h), (x0 + 180, h)], "#ffcf7e", opacity=.38), 7))
+    # small grey chips with long shadows to the right
+    for _ in range(34):
+        u, t = rnd.uniform(.02, .98), rnd.uniform(.05, .97)
+        x_, y_ = quadpt(q, u, vs(t))
+        if not (-10 < x_ < w + 10):
+            continue
+        r = 3 + 10 * vs(t)
+        p.add(hold(p, x_, y_, r, rnd.choice(["#8e9297", "#a7abb0", "#6f7378"]), rnd, rnd.choice(["chip", "crimp"]),
+                   rot=rnd.uniform(-20, 20), shadow=(1.8, .3), sh_op=.32, sh_blur=2.5, bolt=False))
+    # the feet: inside edges on two tiny footholds, toes cocked up
+    feet = [(70, 556, -10, .92, False, 214), (380, 446, 10, .86, True, 270)]
+    for (x_, y_, rot, s, flip, top_x) in feet:
+        tip = shoe_pt(x_, y_, rot, s, flip, 236, 10)
+        p.add(hold(p, tip[0] + (14 if flip else -14), tip[1] + 18, 17, "#686d74", rnd, "crimp", rot=-6 if flip else 6,
+                   shadow=(1.8, .3), sh_op=.4, sh_blur=2.5, bolt=False))
+    for (x_, y_, rot, s, flip, top_x) in feet:
+        a_ = shoe_pt(x_, y_, rot, s, flip, 32, -76)
+        b_ = shoe_pt(x_, y_, rot, s, flip, 90, -70)
+        mid = ((a_[0] + b_[0]) / 2, (a_[1] + b_[1]) / 2)
+        p.add(p.soft(PL([a_, b_, (top_x + 90, 0), (top_x + 30, 0)], "#3a4a38"), 10, .25))
+        p.add(limb((mid[0], mid[1] - 20), (top_x, -60), 50, 86, p.lg("#2b303b", "#454c5a", "#2b303b", x2=1, y2=0)))
+        p.add(limb(a_, b_, 20, 20, "#c08a6a"))                                      # bare ankle
+        p.add(PL([(a_[0], a_[1] - 22), (b_[0], b_[1] - 22), (b_[0], b_[1] - 34), (a_[0], a_[1] - 34)], "#1f232b"))
+        p.add(p.soft(P(SHOE, "#000", transform=f"translate({x_ + 40} {y_ + 8}) rotate({rot}) scale({-s if flip else s} {s})"), 5, .3))
+        p.add(shoe(p, x_, y_, rot, s, upper="#d9543f", strap="#1f2a44", flip=flip))
+    p.add(p.soft(PL([(0, 0), (w, 0), (w, 120), (0, 170)], "#fff2d6", opacity=.25), 30))
+    # the mat edge at the very bottom
+    p.add(PL([(-10, 750), (460, 738), (460, h), (-10, h)], p.lg("#3b4250", "#262b35")))
+    p.add(PL([(-10, 750), (460, 738), (460, 744), (-10, 756)], "#59617a"))
+
+
+def tt_notice_1(p):
+    """Night in the training corner: black wall, a big LED interval timer reading 0:07 over a
+    chalked resin hangboard on a pine beam, one spot of light, a kettlebell and a chalk bucket."""
+    w, h = p.w, p.h
+    rnd = random.Random(151)
+    p.add(R(0, 0, w, h, p.lg("#20242b", "#16191e")))
+    p.add(G(*[C(rnd.uniform(0, w), rnd.uniform(0, 680), rnd.uniform(.6, 1.4), "#2c3139") for _ in range(160)]))
+    p.add(p.soft(PL([(150, 300), (300, 300), (470, 700), (-20, 700)], "#fff1d8", opacity=.12), 20))
+    p.add(p.soft(E(225, 470, 230, 120, "#ffe9c4", opacity=.18), 30))
+    # the timer
+    p.add(p.soft(R(66, 116, 330, 156, "#000"), 10, .7))
+    p.add(R(56, 104, 338, 156, p.lg("#2a2d33", "#0d0e10"), rx=14))
+    p.add(R(70, 118, 310, 128, "#060607", rx=8))
+    on, off = "#ff3b2f", "#2a0d0b"
+    dg = [(88, "0"), (232, "0"), (308, "7")]
+    glow = []
+    for x, d in dg:
+        glow.append(seg7(x, 136, 56, 92, d, on, "none"))
+    p.add(G(*[seg7(x, 136, 56, 92, d, on, off) for x, d in dg]))
+    p.add(R(170, 162, 12, 12, on, rx=2), R(170, 198, 12, 12, on, rx=2))
+    p.add(p.soft("".join(glow) + R(170, 162, 12, 12, on) + R(170, 198, 12, 12, on), 8, .7))
+    p.add(R(70, 118, 310, 40, "#ffffff", rx=8, opacity=.04))
+    p.add(p.soft(E(225, 300, 170, 30, "#ff3b2f", opacity=.12), 20))
+    # pine beam and the resin hangboard
+    p.add(p.soft(R(0, 410, w, 70, "#000"), 8, .5))
+    p.add(R(0, 400, w, 64, p.lg("#d9b27a", "#b98d52", "#93693a")))
+    p.add(grain(p, 0, 400, w, 64, "#7a5530", k=8, op=.3, seed=17))
+    for x in (30, 420):
+        p.add(C(x, 432, 7, "#9aa0a6"), C(x, 432, 3, "#3a3d42"))
+    bx0, by0, bw, bh = 64, 418, 322, 116
+    p.add(p.soft(R(bx0 + 6, by0 + 14, bw, bh, "#000", rx=26), 8, .6))
+    p.add(R(bx0, by0, bw, bh, p.lg("#5a5f68", "#40444c", "#2c2f35"), rx=26))
+    p.add(P(f"M{bx0 + 10},{by0 + 18} C{bx0 + 60},{by0 - 6} {bx0 + bw - 60},{by0 - 6} {bx0 + bw - 10},{by0 + 18} Z", "#6c727c"))
+    for px, pw in ((86, 64), (164, 44), (242, 44), (300, 64)):
+        p.add(R(px, by0 + 42, pw, 28, "#1a1c20", rx=12), R(px + 4, by0 + 44, pw - 8, 8, "#0c0d0f", rx=4))
+    p.add(R(bx0 + 16, by0 + 82, bw - 32, 22, "#1f2226", rx=8))
+    p.add(R(bx0 + 18, by0 + 82, bw - 36, 6, "#0c0d0f", rx=3))
+    for (cx_, cy_, rx_, op) in ((122, 462, 22, .55), (330, 462, 22, .55), (196, 462, 16, .45), (256, 462, 16, .45),
+                                (150, 504, 34, .5), (300, 504, 34, .5), (225, 420, 70, .3)):
+        p.add(chalk(p, cx_, cy_, rx_, rx_ * .28, op, 3))
+    # floor: rubber tiles, a kettlebell and a chalk bucket
+    p.add(R(0, 680, w, 120, p.lg("#2a2d33", "#1b1d21")))
+    p.add(R(0, 680, w, 3, "#3d4149"))
+    p.add(L(225, 683, 225, h, "#14161a", 2), L(0, 742, w, 742, "#14161a", 2))
+    kx, ky = 110, 760
+    p.add(p.soft(E(kx + 6, ky + 4, 52, 10, "#000"), 6, .7))
+    p.add(P(f"M{kx - 30},{ky - 74} C{kx - 32},{ky - 112} {kx + 32},{ky - 112} {kx + 30},{ky - 74}", "none", stroke="#2a2c30", stroke_width=12))
+    p.add(C(kx, ky - 38, 46, p.rg("#5a5e66", "#2a2c30", "#141518", cx=.35, cy=.3, r=.8)))
+    p.add(R(kx - 34, ky - 4, 68, 10, "#141518", rx=4))
+    cbx, cby = 330, 766
+    p.add(p.soft(E(cbx + 6, cby + 4, 54, 10, "#000"), 6, .7))
+    p.add(P(f"M{cbx - 50},{cby - 90} L{cbx + 50},{cby - 90} L{cbx + 42},{cby} L{cbx - 42},{cby} Z",
+            p.lg("#cfd2d6", "#f2f3f4", "#b9bdc2", x2=1, y2=0)))
+    p.add(E(cbx, cby - 90, 50, 10, "#9da2a8"), E(cbx, cby - 89, 46, 8, "#fbfbfa"))
+    p.add(chalk(p, cbx, cby - 96, 40, 10, .8, 4))
+
+
+# ── houseplants ───────────────────────────────────────────────────────────
+
+
+def monstera(x, y, length, ang, rnd, light="#4f9a52", dark="#2f6d3a", slits=4, holes=2, p=None):
+    """A split monstera leaf, base at (x, y), pointing along ang (0 = up): slits cut in from both
+    edges and a few windows near the midrib, both cut out of one evenodd path."""
+    L_, W = length, length * .46
+    N = 46
+
+    def edge(s):
+        return (W * math.sin(math.pi * s) ** .8 * (1 - .22 * s), -L_ * s + .6 * L_ * math.sin(math.pi * s) * (1 - s) ** 2)
+
+    def side(sign):
+        cuts = [.14 + (k + rnd.uniform(.25, .75)) * .7 / slits for k in range(slits)] if slits else []
+        pts = []
+        for i in range(N + 1):
+            s = i / N
+            if cuts and abs(s - cuts[0]) < .5 / N:
+                c = cuts.pop(0)
+                # a long, nearly parallel slit running in along the lateral vein toward the midrib
+                ex, ey = edge(c)
+                dx_, dy_ = -ex, -L_ * max(.02, c - .1) - ey
+                ln = math.hypot(dx_, dy_) or 1
+                nx, ny = -dy_ / ln, dx_ / ln
+                g = L_ * .022
+                dpt = rnd.uniform(.62, .84)
+                ix, iy = ex + dx_ * dpt, ey + dy_ * dpt
+                pts += [((ex - nx * g) * sign, ey - ny * g), ((ix - nx * g * .5) * sign, iy - ny * g * .5),
+                        ((ix + nx * g * .5) * sign, iy + ny * g * .5), ((ex + nx * g) * sign, ey + ny * g)]
+                continue
+            ex, ey = edge(s)
+            pts.append((ex * sign, ey))
+        return pts
+
+    right = side(1)
+    left = list(reversed(side(-1)))
+    d = "M" + " L".join(f"{n(a)},{n(b)}" for a, b in right + left) + " Z"
+    for _ in range(holes):
+        s = rnd.uniform(.25, .7)
+        sg = rnd.choice([-1, 1])
+        hx, hy = sg * W * .36 * math.sin(math.pi * s), -L_ * s
+        rx, ry = L_ * .05, L_ * .022
+        d += f" M{n(hx - rx)},{n(hy)} a{n(rx)},{n(ry)} 0 1,0 {n(2 * rx)},0 a{n(rx)},{n(ry)} 0 1,0 {n(-2 * rx)},0 Z"
+    fill = p.lg((0, dark), (.5, dk(light, .08)), (.5, light), (1, lt(light, .1)), x2=1, y2=0) if p else light
+    veins = "".join(L(0, -L_ * s, sg * W * .8 * math.sin(math.pi * s), -L_ * s - L_ * .14, lt(light, .3), 1.2, opacity=.35)
+                    for s in (.2, .35, .5, .65) for sg in (-1, 1))
+    mid = L(0, 0, 0, -L_ * .95, lt(light, .35), 2, opacity=.6)
+    inner = G(veins, mid, clip_path=p.clip(P(d, "#fff", clip_rule="evenodd"))) if p else ""
+    return (f'<g transform="translate({n(x)} {n(y)}) rotate({n(ang)})">'
+            f'<path d="{d}" fill="{fill}" fill-rule="evenodd"/>{inner}</g>')
+
+
+def corner_room(p, x0, w, h, big, rnd):
+    """The same sunny room corner — oak floor, white skirting, a small framed print — with a monstera
+    in it. `big` is three years on."""
+    cx, fy = x0 + w * .6, 430
+    p.add(PL([(x0, 0), (cx, 0), (cx, fy), (x0, fy + 70)], p.lg("#f6efe2", "#eee4d2", x2=1, y2=0)))
+    p.add(PL([(cx, 0), (x0 + w, 0), (x0 + w, fy + 46), (cx, fy)], p.lg("#ddd1bd", "#e7dccb", x2=1, y2=0)))
+    p.add(p.soft(PL([(x0 - 20, 40), (x0 + 120, 20), (x0 + 150, 330), (x0 - 20, 380)], "#fff8e6", opacity=.8), 18))
+    # floor and skirting
+    p.add(PL([(x0, fy + 70), (cx, fy), (x0 + w, fy + 46), (x0 + w, h), (x0, h)], p.lg("#c99a64", "#b3834f")))
+    for k in range(-6, 9):
+        p.add(L(cx, fy, x0 + w * .6 + k * 70, h, "#9a6c3c", 1.4, opacity=.45))
+    p.add(PL([(x0, fy + 56), (cx, fy - 12), (cx, fy), (x0, fy + 70)], "#fbf8f2"))
+    p.add(PL([(cx, fy - 12), (x0 + w, fy + 34), (x0 + w, fy + 46), (cx, fy)], "#ece6db"))
+    p.add(p.soft(PL([(x0, fy + 120), (x0 + 150, fy + 90), (x0 + 230, h), (x0, h)], "#ffe9c2", opacity=.5), 14))
+    # framed print on the right wall
+    p.add(PL([(cx + 50, 110), (cx + 120, 122), (cx + 120, 222), (cx + 50, 214)], "#3a3330"))
+    p.add(PL([(cx + 56, 118), (cx + 114, 128), (cx + 114, 214), (cx + 56, 207)], "#efe7d8"))
+    p.add(C(cx + 84, 160, 16, "#d77a4a"), PL([(cx + 62, 200), (cx + 84, 176), (cx + 108, 204)], "#4a6a7a"))
+    if not big:
+        px, py = cx - 6, fy + 40
+        p.add(p.soft(E(px + 20, py + 2, 50, 10, "#5a3a20"), 6, .45))
+        stems = [(-22, -64, -38, 70), (14, -78, 22, 82), (-4, -92, -6, 64), (30, -54, 52, 58)]
+        for (dx, dy, ang, ln) in stems:
+            p.add(P(f"M{px},{py - 40} Q{px + dx * .4},{py - 40 + dy * .6} {px + dx},{py - 40 + dy}", "none", stroke="#4f7a3a", stroke_width=3))
+        for (dx, dy, ang, ln) in stems:
+            p.add(monstera(px + dx, py - 40 + dy, ln, ang, rnd, slits=2 if ln > 66 else 0, holes=0, p=p))
+        p.add(P(f"M{px - 34},{py - 44} L{px + 34},{py - 44} L{px + 26},{py} L{px - 26},{py} Z", p.lg("#d07a4c", "#b45f36", "#93492a", x2=1, y2=0)))
+        p.add(R(px - 38, py - 52, 76, 12, "#c96f42", rx=3))
+    else:
+        px, py = cx - 10, fy + 70
+        p.add(p.soft(E(px + 40, py, 130, 22, "#4a2f18"), 10, .5))
+        leaves = [(-150, -250, -62, 170), (130, -280, 58, 160), (-60, -360, -20, 175), (60, -400, 18, 165),
+                  (-190, -150, -84, 150), (190, -150, 82, 150), (0, -250, 4, 170), (-110, -420, -36, 150),
+                  (150, -390, 42, 150), (-20, -170, -10, 140), (100, -200, 40, 150), (-120, -320, -40, 160)]
+        for (dx, dy, ang, ln) in leaves:
+            p.add(P(f"M{px},{py - 80} Q{px + dx * .25},{py - 80 + dy * .7} {px + dx * .6},{py - 80 + dy * .55}", "none", stroke="#4f7a3a", stroke_width=6))
+        for (dx, dy, ang, ln) in leaves:
+            sx, sy = px + dx * .6, py - 80 + dy * .55
+            lc = rnd.choice(["#4f9a52", "#468f4a", "#5aa45a"])
+            p.add(p.soft(f'<g transform="translate(14 18)">{monstera(sx, sy, ln, ang, random.Random(int(dx * 7 + dy)), light="#1f3320", slits=4, holes=3)}</g>', 8, .25))
+            p.add(monstera(sx, sy, ln, ang, random.Random(int(dx * 7 + dy)), light=lc, slits=4, holes=3, p=p))
+        p.add(P(f"M{px - 92},{py - 92} L{px + 92},{py - 92} L{px + 76},{py} L{px - 76},{py} Z", p.lg("#cfa76e", "#b48a52", "#8e6a3a", x2=1, y2=0)))
+        for k in range(1, 6):
+            yy = py - 92 + k * 16
+            p.add(L(px - 92 + k * 3, yy, px + 92 - k * 3, yy, "#7a5a30", 2, opacity=.5))
+
+
+def reddit_0(p):
+    """Before and after, side by side: the same oak-floored corner in soft daylight, a little
+    monstera in a terracotta pot, then a huge one filling the corner from a basket."""
+    w, h = p.w, p.h
+    p.add(R(0, 0, w, h, "#ffffff"))
+    pw = (w - 10) / 2
+    for i, big in enumerate((False, True)):
+        x0 = i * (pw + 10)
+        cid = p.clip(R(x0, 0, pw, h, "#fff"))
+        p.body.append(f'<g clip-path="{cid}">')
+        corner_room(p, x0, pw, h, big, random.Random(7 + i))
+        p.body.append("</g>")
+
+
+def pothos(x, y, length, ang, rnd, p, col="#4f9a46"):
+    """A heart-shaped pothos leaf with pale-yellow marbling, base at (x, y)."""
+    L_, W = length, length * .42
+    d = (f"M0,0 C{n(W * .9)},{n(L_ * .12)} {n(W * 1.3)},{n(-L_ * .45)} 0,{n(-L_)} "
+         f"C{n(-W * 1.3)},{n(-L_ * .45)} {n(-W * .9)},{n(L_ * .12)} 0,0 Z")
+    cid = p.clip(P(d, "#fff"))
+    streaks = "".join(P(f"M{n(rnd.uniform(-W, W))},{n(rnd.uniform(-L_ * .2, 0))} C{n(rnd.uniform(-W, W))},{n(-L_ * .4)} "
+                        f"{n(rnd.uniform(-W, W))},{n(-L_ * .6)} {n(rnd.uniform(-W * .3, W * .3))},{n(-L_)}",
+                        "none", stroke="#f3eca0", stroke_width=n(rnd.uniform(5, 10)), opacity=.38, stroke_linecap="round") for _ in range(3))
+    return (f'<g transform="translate({n(x)} {n(y)}) rotate({n(ang)})">'
+            + P(d, p.lg((0, dk(col, .12)), (.5, col), (.5, lt(col, .1)), (1, lt(col, .2)), x2=1, y2=0))
+            + G(streaks, clip_path=cid) + L(0, 0, 0, -L_ * .9, lt(col, .4), 1.5, opacity=.6) + "</g>")
+
+
+def reddit_1(p):
+    """Bright morning, backlit: five odd glass jars on a white sill, pothos cuttings trailing white
+    roots in the water, their shadows and caustics thrown toward the camera."""
+    w, h = p.w, p.h
+    rnd = random.Random(171)
+    # the view: sky, soft trees
+    p.add(R(0, 0, w, 400, p.lg("#a9d4f2", "#d6ecf8", "#eef7fb")))
+    p.add(bokeh(p, [(rnd.uniform(0, w), rnd.uniform(240, 380), rnd.uniform(40, 90),
+                     rnd.choice(["#8fbf7a", "#a5cc8a", "#7fae6c"]), .7) for _ in range(16)], 14))
+    p.add(p.soft(C(650, 60, 120, "#ffffff", opacity=.95), 40))
+    p.add(window_panes(18, 0, w - 36, 380, "#f7f5f0", 18, cols=2, rows=1))
+    p.add(R(0, 0, 18, 400, "#f1eee7"), R(w - 18, 0, 18, 400, "#e8e4db"))
+    # sill
+    p.add(PL([(0, 380), (w, 380), (w, 520), (0, 520)], p.lg("#fbf9f4", "#f1ece2")))
+    p.add(R(0, 520, w, 36, p.lg("#e6e0d4", "#d6cfc1")))
+    p.add(R(0, 556, w, 44, p.lg("#cfc7b8", "#bdb4a3")))
+    jars = [(120, 470, 92, 118, "mason"), (262, 462, 66, 170, "bottle"), (402, 476, 104, 98, "tumbler"),
+            (546, 466, 80, 104, "jam"), (684, 470, 74, 146, "tall")]
+    # shadows and caustics, thrown forward-left
+    for (cx, by, jw, jh, kind) in jars:
+        p.add(p.soft(PL([(cx - jw / 2, by), (cx + jw / 2, by), (cx + jw / 2 - 40, by + 52), (cx - jw / 2 - 70, by + 54)], "#8a8f86"), 6, .35))
+        p.add(p.soft(E(cx - 30, by + 30, jw * .28, 9, "#fff6c8", opacity=.9), 4))
+    for i, (cx, by, jw, jh, kind) in enumerate(jars):
+        top = by - jh
+        mouth = jw * (.36 if kind == "bottle" else .5)
+        water = by - jh * (.5 if kind != "bottle" else .42)
+        # back wall of the glass
+        if kind == "bottle":
+            body = (f"M{cx - jw / 2},{by - 8} L{cx - jw / 2},{by - jh * .55} C{cx - jw / 2},{by - jh * .7} {cx - mouth / 2},{by - jh * .75} "
+                    f"{cx - mouth / 2},{by - jh * .82} L{cx - mouth / 2},{top} L{cx + mouth / 2},{top} L{cx + mouth / 2},{by - jh * .82} "
+                    f"C{cx + mouth / 2},{by - jh * .75} {cx + jw / 2},{by - jh * .7} {cx + jw / 2},{by - jh * .55} L{cx + jw / 2},{by - 8} "
+                    f"Q{cx + jw / 2},{by} {cx + jw / 2 - 8},{by} L{cx - jw / 2 + 8},{by} Q{cx - jw / 2},{by} {cx - jw / 2},{by - 8} Z")
+        else:
+            tw = jw * (.94 if kind == "tumbler" else 1)
+            body = (f"M{cx - jw / 2},{by - 10} L{cx - tw / 2},{top} L{cx + tw / 2},{top} L{cx + jw / 2},{by - 10} "
+                    f"Q{cx + jw / 2},{by} {cx + jw / 2 - 10},{by} L{cx - jw / 2 + 10},{by} Q{cx - jw / 2},{by} {cx - jw / 2},{by - 10} Z")
+        p.add(P(body, "#e9f4f2", opacity=.55))
+        wcid = p.clip(P(body, "#fff"))
+        p.add(G(R(cx - jw, water, jw * 2, jh, "#8fc7c3", opacity=.4), clip_path=wcid))
+        # stems and roots inside
+        stems = rnd.randint(2, 3)
+        for k in range(stems):
+            sx = cx + (k - (stems - 1) / 2) * mouth * .3
+            p.add(L(sx, top - 6, sx + rnd.uniform(-6, 6), water + 18, "#5d8a3e", 4))
+            ry0 = water + 14
+            for _ in range(6):
+                rx_ = sx + rnd.uniform(-4, 4)
+                ln = rnd.uniform(.55, 1) * (by - ry0 - 8)
+                ex = rx_ + rnd.uniform(-jw * .32, jw * .32)
+                d_ = f"M{n(rx_)},{n(ry0)} C{n(rx_ + rnd.uniform(-14, 14))},{n(ry0 + ln * .4)} {n(ex + rnd.uniform(-10, 10))},{n(ry0 + ln * .7)} {n(ex)},{n(ry0 + ln)}"
+                wd = rnd.uniform(2.4, 3.6)
+                p.add(P(d_, "none", stroke="#9fa894", stroke_width=n(wd + 1.6), stroke_linecap="round", opacity=.55))
+                p.add(P(d_, "none", stroke="#fbf8ec", stroke_width=n(wd), stroke_linecap="round"))
+        # water, then the glass's front
+        p.add(G(R(cx - jw, water, jw * 2, jh, "#9fd2cf", opacity=.12),
+                E(cx, water, jw * .6, 5, "#ffffff", opacity=.6), clip_path=wcid))
+        p.add(P(body, "none", stroke="#ffffff", stroke_width=2.5, opacity=.75))
+        p.add(G(R(cx - jw / 2, top, 7, jh, "#7aa9a8", opacity=.3), R(cx + jw / 2 - 7, top, 7, jh, "#7aa9a8", opacity=.3),
+                R(cx - jw * .3, top + 10, 6, jh - 26, "#ffffff", opacity=.7), clip_path=wcid))
+        p.add(E(cx, by - 4, jw * .44, 5, "#cfe6e2", opacity=.8))
+        if kind == "mason":
+            for k in range(3):
+                p.add(R(cx - jw / 2, top + 4 + k * 6, jw, 2.5, "#ffffff", opacity=.6))
+        p.add(E(cx, top, mouth / 2 if kind == "bottle" else jw / 2 * (.94 if kind == "tumbler" else 1), 4, "none", stroke="#ffffff", stroke_width=2))
+        # the cuttings' leaves above the mouth
+        for k in range(rnd.randint(3, 4)):
+            ang = rnd.uniform(-70, 70)
+            sx, sy = cx + rnd.uniform(-8, 8), top - 4
+            ex, ey = sx + math.sin(math.radians(ang)) * rnd.uniform(26, 60), sy - math.cos(math.radians(ang)) * rnd.uniform(20, 50)
+            p.add(P(f"M{n(sx)},{n(sy)} Q{n(sx)},{n(ey)} {n(ex)},{n(ey)}", "none", stroke="#5d8a3e", stroke_width=3))
+            p.add(pothos(ex, ey, rnd.uniform(44, 62), ang + rnd.uniform(-20, 20), rnd, p, col=rnd.choice(["#4f9a46", "#5aa84c", "#468e40"])))
+    p.add(p.soft(PL([(560, 0), (800, 0), (800, 600), (420, 600)], "#fffbe8", opacity=.18), 30))
+
+
+# ── the workshop ──────────────────────────────────────────────────────────
+
+
+def sawhorse(p, x, top, foot, width=120):
+    """A pine A-frame sawhorse seen three-quarters on: back legs darker, a brace, the top beam."""
+    pine, pd = "#e2c08a", "#b8955e"
+    out = [limb((x - width / 2 + 16, top + 8), (x - width / 2 - 6, foot - 30), 14, 14, pd),
+           limb((x + width / 2 - 16, top + 8), (x + width / 2 + 2, foot - 30), 14, 14, pd),
+           limb((x - width / 2 + 22, top + 10), (x - width / 2 - 20, foot), 16, 16, pine),
+           limb((x + width / 2 - 22, top + 10), (x + width / 2 + 16, foot), 16, 16, pine),
+           R(x - width / 2 - 8, (top + foot) / 2 + 10, width + 16, 12, pd, rx=2),
+           R(x - width / 2 - 10, top - 4, width + 20, 22, p.lg("#efd3a2", pine, pd), rx=3)]
+    return "".join(out)
+
+
+def bsky_2(p):
+    """A small workshop in late-afternoon window light: a walnut shelf across two pine sawhorses,
+    freshly sanded, the right end wet with its first coat; sandpaper, an oil tin, sawdust."""
+    w, h = p.w, p.h
+    rnd = random.Random(181)
+    # plywood wall, a window, clamps on a rail
+    p.add(R(0, 0, w, 400, p.lg("#d8b98d", "#c9a676")))
+    for x in (0, 244, 488, 732):
+        p.add(L(x, 0, x, 400, "#a7834f", 2, opacity=.6))
+    p.add(grain(p, 0, 0, w, 400, "#b08a55", k=16, op=.22, seed=31, vertical=True, wav=14))
+    p.add(R(40, 40, 230, 190, p.lg("#cfe2d6", "#9fc2a8")))
+    p.add(bokeh(p, [(90, 170, 40, "#7fae6c", .6), (200, 150, 50, "#6f9d5c", .55), (150, 90, 30, "#ffffff", .5)], 10))
+    p.add(window_panes(40, 40, 230, 190, "#efe9de", 12, cols=2, rows=2))
+    p.add(p.soft(PL([(70, 240), (300, 240), (560, 600), (60, 600)], "#fff1cc", opacity=.28), 30))
+    p.add(R(470, 80, 290, 12, "#6b4a2a"))
+    for i, x in enumerate((500, 560, 620, 680, 730)):
+        col = ["#d6453b", "#f2a33a", "#d6453b", "#3a6fb0", "#f2a33a"][i]
+        p.add(R(x, 92, 8, 130 + (i % 2) * 20, chrome(p, "#8f969d")))
+        p.add(R(x - 4, 96, 34, 12, "#5a5f66", rx=2), R(x - 4, 150 + (i % 2) * 20, 34, 12, "#5a5f66", rx=2))
+        p.add(R(x + 22, 108, 14, 40 + (i % 2) * 18, col, rx=6))
+    # concrete floor
+    p.add(R(0, 400, w, 200, p.lg("#a8a49c", "#8e8a82")))
+    p.add(R(0, 396, w, 8, "#7a6a55"))
+    p.add(p.soft(PL([(120, 420), (360, 420), (520, 600), (90, 600)], "#fff1cc", opacity=.25), 24))
+    # sawdust on the floor
+    for (sx, sy, r_) in ((200, 520, 70), (560, 510, 80), (380, 560, 50)):
+        p.add(p.soft(E(sx, sy, r_, r_ * .22, "#e8d3ab", opacity=.85), 8))
+    p.add(flour(p, (120, 470, 680, 590), 120, rnd, col="#f0dcb6", op=.8))
+    # sawhorses
+    p.add(p.soft(E(220, 540, 110, 14, "#3a3026"), 8, .5), p.soft(E(590, 536, 110, 14, "#3a3026"), 8, .5))
+    p.add(sawhorse(p, 220, 380, 540), sawhorse(p, 590, 376, 536))
+    # the walnut board
+    top = [(70, 330), (730, 316), (748, 356), (60, 374)]
+    p.add(p.soft(PL([(70, 380), (748, 362), (760, 400), (60, 420)], "#2a1a10"), 10, .5))
+    p.add(PL([(60, 374), (748, 356), (748, 378), (60, 396)], p.lg("#4a2c1c", "#2e1a10")))
+    p.add(PL([(60, 374), (70, 330), (70, 352), (60, 396)], "#5a3826"))
+    p.add(PL(top, p.lg("#86604a", "#7a5540", x2=1, y2=0)))
+    cid = p.clip(PL(top, "#fff"))
+    g = [grain(p, 40, 300, 740, 90, "#4a2c1c", k=18, op=.55, seed=41, wav=5),
+         grain(p, 40, 300, 740, 90, "#a07a5e", k=8, op=.35, seed=42, wav=4)]
+    oiled = subquad(top, .64, 0, 1, 1)
+    g.append(PL(oiled, p.lg("#5a321c", "#4a2814", x2=1, y2=0), opacity=.88))
+    g.append(grain(p, 480, 300, 300, 90, "#2a140a", k=8, op=.5, seed=43, wav=4))
+    g.append(p.soft(PL(subquad(top, .7, .1, .9, .45), "#ffe6c0", opacity=.45), 6))
+    g.append(PL(subquad(top, 0, 0, .62, 1), "#e8dccb", opacity=.12))
+    p.add(G(*g, clip_path=cid))
+    p.add(PL(subquad([(60, 374), (748, 356), (748, 378), (60, 396)], .64, 0, 1, 1), "#1e0f06", opacity=.5))
+    p.add(flour(p, (120, 330, 420, 370), 60, rnd, col="#e8d3ab", op=.8))
+    # sanding block wrapped in paper, loose sheets
+    p.add(p.soft(R(206, 336, 100, 30, "#1a0f08", rx=6, transform="rotate(-4 256 351)"), 4, .5))
+    p.add(R(200, 326, 100, 28, "#c9935a", rx=6, transform="rotate(-4 250 340)"))
+    p.add(R(204, 322, 92, 12, "#e8c08a", rx=5, transform="rotate(-4 250 328)"))
+    for (pts_, col) in (([(330, 452), (420, 440), (446, 476), (352, 492)], "#d8b27a"),
+                        ([(372, 470), (462, 474), (452, 512), (360, 506)], "#c46a4a")):
+        p.add(p.soft(PL([(x_ + 3, y_ + 4) for x_, y_ in pts_], "#2a1a10"), 3, .35))
+        p.add(PL(pts_, col))
+        p.add(G(*[C(rnd.uniform(min(a for a, _ in pts_) + 8, max(a for a, _ in pts_) - 8),
+                    rnd.uniform(min(b for _, b in pts_) + 6, max(b for _, b in pts_) - 6), .9, dk(col, .3)) for _ in range(40)], opacity=.6))
+    p.add(PL([(446, 476), (420, 440), (432, 444), (452, 470)], "#f3ead8"))      # a curled corner, paper side up
+    p.add(PL([(330, 338), (392, 334), (398, 352), (334, 357)], "#d8b27a", opacity=.95))
+    # the oil tin and a rag on the floor by the right sawhorse
+    tx, ty = 700, 500
+    p.add(p.soft(E(tx + 10, ty + 4, 44, 10, "#2a1a10"), 5, .6))
+    p.add(R(tx - 36, ty - 70, 72, 70, chrome(p, "#b5a14e"), rx=3))
+    p.add(R(tx - 36, ty - 52, 72, 30, "#2f4a3c"))
+    p.add(R(tx - 30, ty - 46, 20, 18, "#c9a04a", rx=2))
+    p.add(E(tx, ty - 70, 36, 8, "#d9cfa0"), E(tx, ty - 70, 20, 4, "#8f8a70"))
+    p.add(E(tx, ty, 36, 6, "#7a6a2a"))
+    p.add(P("M600,520 C610,494 640,496 650,508 C668,502 684,520 670,534 C650,546 610,544 600,520 Z", "#f1ece2"))
+    p.add(P("M612,520 C622,506 640,508 646,516", "none", stroke="#c9b9a0", stroke_width=3))
+    p.add(P("M640,528 C650,520 664,524 664,530", "none", stroke="#6b3a1c", stroke_width=4, opacity=.6))
+
+
+DRAW.update({
+    "tt-post-0": tt_post_0, "tt-post-1": tt_post_1, "tt-post-2": tt_post_2, "tt-post-3": tt_post_3,
+    "tt-notice-0": tt_notice_0, "tt-notice-1": tt_notice_1, "reddit-0": reddit_0, "reddit-1": reddit_1,
+    "bsky-2": bsky_2,
 })

@@ -31,18 +31,24 @@ def pic(key, family, size, subject, scale=1, asset=None):
 # the row's OCR `content` claims the screenshot holds.
 shots = [
     (5, "Figma on iPhone: a spacing-tokens frame — space-1 4, space-2 8, space-3 12, space-4 16, space-6 24, space-8 32 — each a labelled bar; page title 'Spacing tokens', Design system file"),
-    (6, "Xcode-style dark code editor on iPhone (Swift Playgrounds look): SwiftUI code using .scrollTransition { content, phase in content.opacity(phase.isIdentity ? 1 : 0.4) }, line numbers, title 'ScrollTransitions.swift'"),
+    (6, "Notes-like recipe screen titled 'Uma's ramen — the broth': ingredients (pork bones 1.5 kg, kombu 10 cm, 2 onions, ginger, a head of garlic), then steps with times (blanch 10 min · rinse · simmer 12 h · strain), a small photo of a stock pot at the top"),
     (7, "Apple Maps-like screen: Alfama, Lisbon; a walking route drawn in blue through winding streets from Miradouro de Santa Luzia to Sé; a card 'Alfama walking route · 18:40 · 42 min walk'"),
-    (8, "Apple Notes-like screen titled 'Espresso dial-in': list — 18.0 g in / 36 g out / 28 s / grind 2.8 → 2.6 / tastes: sour, then balanced; a checklist"),
+    (8, "Recipe-app screen titled 'Shakshuka for four': a top photo of eggs set in red tomato sauce in a black pan, 'Serves 4 · 35 min', ingredients with quantities (6 eggs, 2 tins tomatoes, 1 red pepper, cumin, feta), a 'Start cooking' button"),
     (9, "Figma on iPhone: a colour-ramp frame — ten swatches from pale espresso-cream to deep brown with hex labels, title 'Colour ramp', Design system file"),
-    (10, "Swift Playgrounds-like screen split: SwiftUI code with matchedGeometryEffect(id: \"card\", in: ns) above, a live preview of a card expanding below; title 'MatchedGeometry.swift'"),
+    (10, "Running-plan app screen: 'Half-marathon plan — week 6', a Mon–Sun list (Easy 6 km · Intervals 6×800 m · Rest · Tempo 8 km · Rest · Easy 5 km · Long run 16 km), today highlighted, a progress bar '6 of 12 weeks'"),
     (11, "Transit timetable screen: 'Tram 28E · Martim Moniz → Campo Ourique', a table of departure times 08:02 08:14 08:26 …, current time highlighted, yellow tram glyph"),
-    (12, "A chart screenshot titled 'Grind chart': grind setting (x) vs shot time in seconds (y), a line with dots, a shaded target band 25–30 s, espresso-brown palette"),
+    (12, "A chart screenshot titled 'Pace chart — last four runs': four dots joined by a line, pace in min/km (5:42, 5:35, 5:31, 5:24) falling left to right, a dashed target line at 5:30, green palette"),
 ]
 for n, subject in shots:
     pic(f"shot-{n}", "ui", PHONE, subject, scale=1.5, asset=f"sample-screenshot-{n}")
 # The two WORDLESS shots — OCR found no words, so these must contain no text.
-pic("shot-13", "scene_out", (600, 800), "Wordless camera photo: late sun over Lisbon terracotta rooftops, the river beyond, no text", asset="sample-screenshot-13")
+pic("shot-13", "scene_out", (600, 800), "Wordless camera photo: a small Berlin balcony at dusk, potted herbs and tomato plants, string lights, courtyard windows beyond, no text", asset="sample-screenshot-13")
+# The DEBUG dev seed's four shots (DemoCorpus) — drawn, like everything else
+# here, rather than the four stock football photographs they used to be.
+pic("shot-1", "scene_out", (800, 600), "Wordless camera photo for 'Saturday's match — our view': the view from high stadium seats down to a green pitch, crowd in the stand opposite, floodlights", asset="sample-screenshot-1")
+pic("shot-2", "scene_out", (800, 600), "Wordless camera photo for 'Sunday five-a-side': a small fenced artificial pitch in the morning, a ball, two small goals, bags by the fence", asset="sample-screenshot-2")
+pic("shot-3", "scene_out", (800, 600), "Wordless camera photo for 'Watch party — Sunday's final': a living room from behind a sofa, friends' silhouettes, a big glowing TV showing a pitch, scarves", asset="sample-screenshot-3")
+pic("shot-4", "scene_out", (800, 600), "Wordless camera photo for 'Match day — from Dani's story': fans in scarves walking toward a stadium at dusk along a street, flags", asset="sample-screenshot-4")
 pic("shot-14", "scene_home", (600, 800), "Wordless camera photo: a plant in a terracotta pot on a sunny windowsill, long shadows, no text", asset="sample-screenshot-14")
 
 # ── X archive (DemoSeedAll.xArchive) ──────────────────────────────────────
@@ -88,13 +94,14 @@ pic("ig-notice-3", "scene_out", ig, "Your post (lena and 4 others liked it): ste
 # ── TikTok (DemoSeedAll.tiktok / tiktokNotices) ───────────────────────────
 tt = (450, 800)
 tt_posts = [
-    "Two minutes on espresso ratios: espresso dripping into a cup on a scale reading 36.0 g",
-    "Grinder teardown, part one: a coffee grinder opened up, burrs laid out on a mat",
-    "Coffee at altitude, why it tastes flat: a mountain cabin table, a cup, peaks outside",
-    "Espresso puck prep, honestly: top-down portafilter with a levelled coffee puck and a WDT tool",
+    "My first V4, finally: a bouldering wall from below, a climber topping out on a steep overhang, coloured holds, crash mats",
+    "Heel hooks, for people who hate heel hooks: close-up of a climbing shoe heel hooked over a big round hold, chalk dust",
+    "Ten-minute fingerboard routine: a wooden fingerboard mounted over a doorway at home, two chalky hands hanging from it",
+    "The purple route beat me for a month: a vertical wall with a line of purple holds snaking up it, a chalk bag on the mat",
 ]
 for i, s in enumerate(tt_posts):
     pic(f"tt-post-{i}", "scene_home", tt, f"Your video's cover — {s}")
+# A climbing gym is drawn like an interior: walls, holds, mats, light.
 tt_saves = [
     ("Knife skills in 40 seconds", "scene_home", "a chef's knife and finely diced onion on a board"),
     ("One-pan dinner, no fuss", "scene_home", "a sheet pan of roasted vegetables and chicken, top-down"),
@@ -103,8 +110,8 @@ tt_saves = [
 ]
 for i, (caption, fam, subject) in enumerate(tt_saves):
     pic(f"tt-save-{i}", fam, tt, f"Saved video '{caption}': {subject}")
-pic("tt-notice-0", "scene_home", tt, "Your video 'Pouring a flat white, slowed down': milk pouring into espresso, a rosetta forming")
-pic("tt-notice-1", "scene_home", tt, "Your video 'Why my shot ran in 18 seconds': a fast pale espresso stream, a timer reading 0:18")
+pic("tt-notice-0", "scene_home", tt, "Your video 'Slab day, slowed down': a low-angle slab wall with small grey holds, a climber's feet balanced on tiny footholds")
+pic("tt-notice-1", "scene_home", tt, "Your video 'Hangs, seven on, three off': a hangboard in a gym with a big timer on the wall reading 0:07")
 
 # ── Snapchat memories (DemoSeedAll.snapchat) ──────────────────────────────
 snap = [
@@ -125,12 +132,12 @@ pic("tg-4", "ui", (800, 450), "Telegram News channel graphic: an Apple-Watch-sha
 # ── YouTube (DemoSeedAll.youtube) — thumbnails ────────────────────────────
 yt = [
     ("How a compiler actually reads your code", "Computerphile", "source code turning into a token stream and a tree"),
-    ("The physics of a good espresso shot", "James Hoffmann", "espresso extraction diagram, pressure arrows through a puck"),
+    ("Why some streets feel calm", "Cityscope", "a narrow tree-lined street with a bike lane and cafe tables, no cars; big words 'CALM?'"),
     ("Systems that scale down", "Strange Loop", "conference-talk slide: tiny boxes and arrows, a small server"),
     ("Compilers from scratch, part four", "Computerphile", "a parse tree on graph paper, 'Part 4'"),
-    ("Coffee grinders, measured", "James Hoffmann", "three grinders in a row with a particle-size chart"),
+    ("The tram line that remade a city", "Cityscope", "a modern tram on a grass track, split before/after: a car road on the left, the tram street on the right; big words 'ONE LINE'"),
     ("Systems thinking for small teams", "Strange Loop", "talk slide: feedback loop diagram, stock and flow"),
-    ("Espresso, but for filter drinkers", "James Hoffmann", "a filter cone beside an espresso cup"),
+    ("Bike lanes people actually use", "Cityscope", "a protected bike lane with a kerb, many cyclists, a plan-view inset of the junction; big words 'IT WORKS'"),
     ("A tour of modern type systems", "Strange Loop", "talk slide: type lattice / Venn of types"),
 ]
 for i, (title, channel, s) in enumerate(yt):
@@ -150,16 +157,16 @@ for i, (name, fam, s) in enumerate(files):
 
 # ── Reading: Substack and RSS heroes (DemoSeedAll.reading) ────────────────
 substack = [
-    "The case for small software", "What a good changelog says", "Notes on interface latency",
-    "Latency is a feature", "Writing for people who skim", "The end of the settings screen",
+    "The case for small software", "What a good changelog says", "Letters to a junior designer",
+    "Against the dashboard", "Writing for people who skim", "The end of the settings screen",
 ]
 for i, t in enumerate(substack):
     pic(f"substack-{i}", "cover", (800, 420), f"Substack post header illustration for '{t}' — editorial, abstract, no words")
 rss = [
-    ("A quieter approach to notifications", "The Verge"), ("Inside a very small compiler", "Hacker News"),
-    ("The return of local-first", "The Verge"), ("Type systems, plainly", "Hacker News"),
+    ("A quieter approach to notifications", "The Verge"), ("Show HN: A weather station on an old e-reader", "Hacker News"),
+    ("The return of local-first", "The Verge"), ("The quiet return of the paper map", "Hacker News"),
     ("Why your app feels slow", "TechCrunch"), ("The cost of a background sync", "TechCrunch"),
-    ("Local-first, one year on", "The Verge"),
+    ("Night trains are busy again", "The Verge"),
 ]
 for i, (t, pub) in enumerate(rss):
     pic(f"rss-{i}", "cover", (800, 450), f"News article lead image for '{t}' ({pub}) — editorial illustration, no words, no publisher logo")
@@ -187,7 +194,7 @@ for i, t in enumerate(spotify):
 podcasts = [
     ("The one about compilers", "Signals and Threads"), ("Latency, end to end", "Signals and Threads"),
     ("Making things for two people", "Design Details"), ("The shape of a good demo", "Design Details"),
-    ("Coffee, measured", "Filter Stories"), ("Roasting at altitude", "Filter Stories"),
+    ("Stock, slowly", "Heat and Salt"), ("Why restaurant rice tastes better", "Heat and Salt"),
 ]
 for i, (ep, show) in enumerate(podcasts):
     pic(f"podcast-{i}", "sleeve", (600, 600), f"Podcast EPISODE art: show '{show}', episode '{ep}' — the show's look, with this episode's own motif and title")
@@ -197,27 +204,27 @@ for i, g in enumerate(steam):
 
 # ── Saves: Reddit, Raindrop, Pinterest (DemoSeedAll.saves) ────────────────
 reddit = [
-    ("The espresso machine that lasted 20 years", "scene_home", "an old chrome lever espresso machine on a counter"),
-    ("Puck prep, settled", "scene_home", "top-down: a portafilter, a tamper and a distribution tool on a mat"),
+    ("My monstera, three years apart", "scene_home", "the same room corner twice, side by side: a small monstera in a pot, then a huge one filling the corner"),
+    ("Propagating pothos in water — what worked", "scene_home", "five glass jars on a sunny windowsill, pothos cuttings with white roots in water"),
     ("What I learned rewriting our sync layer", "ui", "a whiteboard-style sequence diagram: client, queue, server, arrows"),
-    ("A small compiler in 400 lines", "ui", "a code editor screenshot: a tiny tokenizer function, dark theme"),
-    ("Lisbon in three days — what worked", "scene_out", "a Lisbon viewpoint (miradouro) over the city and river"),
-    ("Tram 28 is a trap (kind of)", "scene_out", "a crowded yellow tram stop with a queue, tram approaching"),
+    ("A design review checklist that stuck", "ui", "a document screenshot: a checklist titled 'Design review', seven ticked and unticked items, light theme"),
+    ("Tempelhof at sunset is still the best park", "scene_out", "a vast old airfield runway at sunset, people walking and cycling, kites in the sky, flat horizon"),
+    ("The whole Ringbahn loop in one go", "scene_out", "a red-and-ochre S-Bahn train curving along an elevated track past apartment blocks, late afternoon"),
 ]
 for i, (t, fam, s) in enumerate(reddit):
     pic(f"reddit-{i}", fam, (800, 600), f"Reddit post image for '{t}': {s}")
 raindrop = [
     "Human Interface Guidelines — a documentation cover: soft UI shapes, layered panels",
     "SwiftUI documentation — a cover: stacked view rectangles and a layout grid",
-    "swift-evolution — a repository cover: proposals as cards with status chips",
-    "Swift README — a repository cover: a terminal building a toolchain",
+    "Hackesche Höfe (Wikipedia) — an article cover: an illustrated plan of a Berlin block, its chain of inner courtyards highlighted in green",
+    "Allotment (gardening) (Wikipedia) — an article cover: a chart with months across and vegetable rows, sow and harvest bars",
     "CSS scroll-driven animations (MDN) — a cover: a scroll bar driving a progress animation",
     "SwiftData — a cover: model boxes linked to a database cylinder",
 ]
 for i, s in enumerate(raindrop):
     pic(f"raindrop-{i}", "cover", (800, 420), f"Bookmark cover image: {s}; no Apple or MDN logos")
 pic("raindrop-0b", "cover", (800, 420), "Second image of the HIG bookmark: a colour and typography specimen page")
-pic("raindrop-3b", "cover", (800, 420), "Second image of the Swift README bookmark: a build log with a green success line")
+pic("raindrop-3b", "cover", (800, 420), "Second image of the planting-calendar bookmark: seed packets fanned out on a wooden table, a trowel")
 pinterest = [
     ("Kitchen — open shelving", "open kitchen shelves with jars, plates and a plant"),
     ("Studio — one lamp", "a studio corner lit by a single floor lamp, armchair"),
@@ -230,10 +237,10 @@ for i, (t, s) in enumerate(pinterest):
     pic(f"pin-{i}", "scene_home", (540, 810), f"Pin '{t}': {s}")
 
 # ── Social posts' own pictures (DemoSeedAll.social) ───────────────────────
-pic("fc-0", "ui", (800, 600), "Photo attached to 'Shipped the panel today. Every room's figure in one place.': a laptop-screen photo of a dashboard of small charts and a treemap, dark")
+pic("fc-0", "ui", (800, 600), "Photo attached to 'Shipped the new onboarding today. Four screens became one.': a laptop-screen photo of a design file showing one phone screen where four used to be, the old four struck through to the side")
 pic("fc-5a", "scene_home", (800, 600), "Photo attached to 'Books that changed how I plan.': a stack of books on a desk")
 pic("fc-5b", "scene_home", (800, 600), "Second photo on 'Books that changed how I plan.': an open book with pencil notes and a coffee")
-pic("bsky-2", "scene_home", (800, 600), "Photo on 'Espresso and compilers, the eternal pairing.': an espresso cup beside a laptop showing code")
+pic("bsky-2", "scene_home", (800, 600), "Photo on 'Sanded the walnut shelf. Six coats of oil to go.': a walnut shelf on two sawhorses in a small workshop, sandpaper, an oil tin, sawdust")
 pic("bsky-4a", "scene_home", (800, 600), "Photo on 'Notes from a quiet week.': an open notebook and pen on a table")
 pic("bsky-4b", "scene_out", (800, 600), "Second photo on 'Notes from a quiet week.': an empty park path in the rain")
 pic("bsky-link-0", "cover", (800, 420), "Link card image for the article 'The quiet case for local-first software' — editorial illustration: a laptop holding its own data, calm, no words")
@@ -265,6 +272,18 @@ notion = [
 ]
 for i, s in notion:
     pic(f"notion-{i}", "cover", (900, 360), f"Notion page cover, {s}; no words")
+
+# ── Book covers (DemoSeedAll.bookCover) ───────────────────────────────────
+# Made covers, never the real jacket: title and author in type over a motif.
+# These were SF-symbol tiles from `make-demo-art.swift`, which read as app
+# icons beside a column of highlights.
+covers = [
+    ("state", "Seeing Like a State — James C. Scott", "a surveyor's grid laid over winding old streets"),
+    ("timeless", "The Timeless Way of Building — Christopher Alexander", "a simple house and a path drawn as a pattern"),
+    ("systems", "Thinking in Systems — Donella Meadows", "a stock-and-flow diagram: a tank, a tap and a loop arrow"),
+]
+for key, book, motif in covers:
+    pic(f"cover-{key}", "cover", (400, 600), f"A made book cover for '{book}' — title and author in type, motif: {motif}; NOT the real jacket", asset=f"sample-cover-{key}")
 
 PICTURES = P
 

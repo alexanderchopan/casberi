@@ -59,7 +59,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 10
+    static let version = 11
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -125,19 +125,19 @@ enum DemoSeedAll {
     /// in the same list the rows are built from — see its own note.
     static let xNoticeRows: [(String, String, String, String, Double, Int)] = [
         ("sam liked your post",
-         "sam", "Interfaces that age well say less.", "you", 1, 20),
+         "sam", "Good design is mostly removing the second way to do something.", "you", 1, 20),
         ("mia and 2 others liked your repost",
          "mia", "Most product demos show a screen nobody has ever had.", "mia", 1, 15),
         ("sam reposted your post",
-         "sam", "Archives are the only honest analytics.", "you", 1, 9),
+         "sam", "If a screen needs a tutorial, the screen is the bug.", "you", 1, 9),
         ("New post from mia",
-         "mia", "Shipped the thing that reads the other things.", "mia", 2, 18),
+         "mia", "Shipped the booking site for the pottery studio.", "mia", 2, 18),
         // THE DIGEST (prd §772). X files "new posts from accounts you have
         // notifications on" as one notice naming every account, and it is the
         // shape that sent the user to this pass: a sentence about seven people
         // over a lead that drew one of them and 176pt of black.
         ("New post notifications for mia and 6 others",
-         "mia", "Interfaces should say what they know.", "mia", 2, 11),
+         "mia", "New colour study up. Twelve greens, one winner.", "mia", 2, 11),
     ]
 
     /// The digest row's ref, FOUND rather than remembered.
@@ -327,12 +327,16 @@ enum DemoSeedAll {
                               // already carries for these same two names:
                               // a real PostHog connection watching a metric
                               // literally called "signed_up" or
-                              // "answer_asked" would lose it on demo exit.
+                              // "doc_exported" would lose it on demo exit.
                               // Not reachable through the UI (`demoReentryAvailable`
                               // hides the re-entry door the moment anything
                               // real is connected), only through the DEBUG
                               // `-demoEnter` hook.
                               PostHogWatch.metricRef("signed_up"),
+                              PostHogWatch.metricRef("doc_exported"),
+                              // Retired 2026-09-30 (the demo's app stopped
+                              // being Casberi), kept so a demo poured before
+                              // the rename still unwinds completely.
                               PostHogWatch.metricRef("answer_asked"),
                               // Railgun rows (2026-08-11) carry the real
                               // "railgun:shield:"/"railgun:unshield:" prefix
@@ -463,11 +467,11 @@ enum DemoSeedAll {
         // reconciles its own row. Two are scoped by the demo WALLET, which is
         // exact. The ENS one cannot be: `wallet:ensexpiry:` keys on the NAME,
         // so it is listed as an exact ref and carries the PostHog/Stocktwits
-        // accepted risk — somebody watching `casberi.eth` themselves would lose
+        // accepted risk — somebody watching `quillmark.eth` themselves would lose
         // that row on demo exit.
         "aerodrome:vote:\(demoWallet):",
         "hyperliquid:unlock:\(demoWallet):",
-        "wallet:ensexpiry:casberi.eth",
+        "wallet:ensexpiry:quillmark.eth",
         // The ENS seat's follows (prd §534) — the Stocktwits reason exactly:
         // `ENSWatch.follow` builds the same ref a real follow would, so a
         // real follow of one of these three names must survive demo exit.
@@ -475,7 +479,7 @@ enum DemoSeedAll {
         // it is scoped by name instead, which is still narrower than the
         // bare "ens:" prefix every OTHER followed name sits under.
         ENSName.ref(for: "nick.eth"),
-        ENSName.ref(for: "casberi.eth"),
+        ENSName.ref(for: "quillmark.eth"),
         "ens:registered:uma.eth:",
     ]
 
@@ -636,6 +640,14 @@ enum DemoSeedAll {
             take(\.previewImageURL)
             take(\.imageURLs)
             take(\.previewImageData)
+            // What a room reads as its subject, and the words a row quotes
+            // (prd §1026): without these an older pour kept every topic map
+            // and quoted post the table no longer holds.
+            take(\.ocrTopics)
+            take(\.enrichedText)
+            take(\.postAuthor)
+            take(\.quote)
+            take(\.parent)
             if changed { moved += 1 }
         }
         if moved > 0 { context.saveHonestly() }
@@ -741,7 +753,11 @@ enum DemoSeedAll {
     /// The PostHog metrics `seedBridgeState` plants, named once for the same
     /// reason as `demoVisits` — `PostHogState.clear()` would take a real
     /// project's readings with them.
-    static let demoMetrics = ["signed_up", "answer_asked"]
+    static let demoMetrics = ["signed_up", "doc_exported"]
+
+    /// Metrics an earlier table planted. `teardown` forgets these too, so a
+    /// demo poured before a rename still leaves nothing behind.
+    static let retiredDemoMetrics = ["answer_asked"]
 
     /// Undo everything `seed` did — the rows AND the state it planted.
     ///
@@ -772,7 +788,7 @@ enum DemoSeedAll {
             }
         }
 
-        for event in demoMetrics { PostHogState.forget(event) }
+        for event in demoMetrics + retiredDemoMetrics { PostHogState.forget(event) }
         ChipMemory.forgetDemo(Array(demoVisits.keys))
         SocialLikers.shared.forgetDemo(refs: demoLikerRolls.map(\.ref))
         ThingCast.shared.forgetDemo(refs: demoNoticeCast.map(\.ref))
@@ -875,8 +891,8 @@ enum DemoSeedAll {
         WalletbeatState.forgetDemo(demoWalletbeatIDs)
         WalletbeatIncidentBook.forgetDemo(demoWalletbeatSlugs)
         // BY NAME (prd §534), same reasoning: a dev install may be reading a
-        // real "nick.eth" or "casberi.eth" through this same store.
-        ENSState.forgetDemo(["nick.eth", "casberi.eth", "uma.eth"])
+        // real "nick.eth" or "quillmark.eth" through this same store.
+        ENSState.forgetDemo(["nick.eth", "quillmark.eth", "uma.eth"])
         // BY NAME (prd §401), same reasoning. `L2beatState` is deliberately NOT
         // touched: the demo seeds no assessment into it — the bundled directory
         // already answers for every chain, which is exactly what a device that
@@ -1451,11 +1467,11 @@ enum DemoSeedAll {
         // The state neither `ENSExpiry` nor any wallet screen has ever shown,
         // and the whole reason this seat exists rather than riding the wallet.
         let graceExpiry = Date.now.addingTimeInterval(-20 * 86_400)
-        out.append(row(.link, "casberi.eth", source: "ENS", ref: ENSName.ref(for: "casberi.eth"),
-                       days: 20, hour: 11, content: "https://app.ens.domains/name/casberi.eth",
+        out.append(row(.link, "quillmark.eth", source: "ENS", ref: ENSName.ref(for: "quillmark.eth"),
+                       days: 20, hour: 11, content: "https://app.ens.domains/name/quillmark.eth",
                        tags: ["Watchlist", "Grace"]) { thing in
-            thing.authorHandle = "casberi.eth"
-            thing.title = ENSName.title(name: "casberi.eth", expiry: graceExpiry)
+            thing.authorHandle = "quillmark.eth"
+            thing.title = ENSName.title(name: "quillmark.eth", expiry: graceExpiry)
             thing.dueAt = ENSName.nextCliff(expiry: graceExpiry)
         })
 
@@ -1683,16 +1699,16 @@ enum DemoSeedAll {
     private static func photos() -> [Thing] {
         let shots: [(String, [String], Double, Int)] = [
             ("Figma — spacing tokens", ["Figma", "Design system"], 1, 11),
-            ("SwiftUI — scroll transitions", ["SwiftUI", "Design system"], 2, 15),
+            ("Uma's ramen — the broth", ["Recipes"], 2, 15),
             // Carries a FUTURE date in its text (census 2026-09-05): the
             // facts strip lifts dates out of a screenshot's OCR, and no demo
             // screenshot had one to lift.
             ("Lisbon — Alfama walking route · \(demoLongDay(9)) 18:40", ["Lisbon", "Maps"], 5, 9),
-            ("Espresso dial-in notes", ["Espresso"], 8, 8),
-            ("Figma — colour ramp", ["Figma", "Espresso"], 12, 14),
-            ("SwiftUI — matchedGeometry demo", ["SwiftUI"], 19, 21),
+            ("Shakshuka for four", ["Recipes"], 8, 8),
+            ("Figma — colour ramp", ["Figma"], 12, 14),
+            ("Half-marathon plan — week 6", ["Running"], 19, 21),
             ("Lisbon — tram 28 timetable", ["Lisbon", "Maps"], 26, 10),
-            ("Espresso — grind chart", ["Espresso", "Design system"], 40, 16),
+            ("Pace chart — last four runs", ["Running"], 40, 16),
         ]
         var out = shots.enumerated().map { i, s in
             row(.screenshot, s.0, source: "Photos", ref: "sample:demo-shot-\(i + 5)",
@@ -1742,14 +1758,14 @@ enum DemoSeedAll {
     private static func obsidian() -> [Thing] {
         let notes: [(String, [String], Double)] = [
             ("Weekly review — week 32", ["Review", "Focus"], 2),
-            ("Reading — Seeing Like a State", ["Reading", "Legibility"], 6),
-            ("Focus: one surface at a time", ["Focus", "Design system"], 11),
-            ("Legibility and the corpus", ["Legibility", "Review"], 17),
-            ("Reading — The Timeless Way", ["Reading", "Design system"], 24),
+            ("Seeing Like a State, chapter notes", ["Books"], 6),
+            ("Focus: one surface at a time", ["Focus"], 11),
+            ("Allotment — what to sow in March", ["Garden"], 17),
+            ("What The Timeless Way gets right", ["Books", "Garden"], 24),
             ("Focus blocks that actually held", ["Focus"], 33),
             ("Review — what shipped in July", ["Review", "Focus"], 45),
-            ("Legibility notes for the panel", ["Legibility", "Design system"], 55),
-            ("Reading list, autumn", ["Reading"], 63),
+            ("Tomatoes — what went wrong this year", ["Garden"], 55),
+            ("Books for the autumn", ["Books"], 63),
         ]
         // REAL `obsidian:` ref shape (2026-08-12). `NoteSheet`'s `.note`
         // anatomy — the one built for a vault note, where the NAME is the
@@ -1832,16 +1848,16 @@ enum DemoSeedAll {
     static let demoNostr: [(handle: String, name: String, bio: String, pubkey: String)] = [
         ("you", "You", "Making a small thing carefully.",
          String(repeating: "a1b2c3d4", count: 8)),
-        ("uma", "Uma", "Signed, not hosted.",
+        ("uma", "Uma", "Product design. Book club organiser.",
          String(repeating: "b2c3d4e5", count: 8)),
-        ("nils", "Nils", "Coffee, compilers, quiet weeks.",
+        ("nils", "Nils", "Woodwork and slow software.",
          String(repeating: "c3d4e5f6", count: 8)),
     ]
 
     static let demoBluesky: [(handle: String, name: String, bio: String)] = [
         ("you", "You", "Making a small thing carefully."),
         ("uma", "Uma", "Product design. Book club organiser."),
-        ("nils", "Nils", "Woodwork, coffee, and slow software."),
+        ("nils", "Nils", "Woodwork and slow software."),
     ]
 
     /// One stable synthetic address per counterparty NAME — same name, same
@@ -1962,7 +1978,7 @@ enum DemoSeedAll {
              "The one about the lighthouse keeper, and anything by the Norwegian essayist.",
              21),
             ("Standup talking points",
-             "Ship the import receipt. Flag the Thursday review moving. Ask about the joinery quote.",
+             "Ship the export fix. Flag the Thursday review moving. Ask about the joinery quote.",
              26),
             ("Recipe — weeknight pasta",
              "Anchovy, garlic, chilli, breadcrumbs. Twenty minutes, one pan, no cream.",
@@ -2086,8 +2102,8 @@ enum DemoSeedAll {
         // export posts, so the notice drew the export's own cover a second
         // time in the same room.
         let rows: [(String, String, String?, Double, Int, Bool)] = [
-            ("rui liked your video", "rui", "Pouring a flat white, slowed down", 1, 22, false),
-            ("dana commented: grind finer?", "dana", "Why my shot ran in 18 seconds", 1, 15, false),
+            ("rui liked your video", "rui", "Slab day, slowed down", 1, 22, false),
+            ("dana commented: try a half crimp?", "dana", "Hangs, seven on, three off", 1, 15, false),
             ("kofi followed you", "kofi", nil, 2, 19, true),
         ]
         return rows.enumerated().map { i, n in
@@ -2120,35 +2136,35 @@ enum DemoSeedAll {
         // one year is deliberately silent: a strip where every bar is the same
         // height demonstrates nothing about a strip whose whole job is shape.
         let posts: [(String, [String], Double)] = [
-            ("Shipping is a habit, not an event.", ["Shipping", "Craft"], 4),
-            ("The best interface is the one that answers.", ["Craft", "Interfaces"], 9),
-            ("Shipping small beats planning big.", ["Shipping"], 16),
-            ("Interfaces should say what they know.", ["Interfaces", "Craft"], 23),
-            ("Craft is what survives the deadline.", ["Craft"], 31),
-            ("Interfaces that hide state are lying.", ["Interfaces"], 44),
-            ("Shipping again this week.", ["Shipping", "Craft"], 58),
-            ("A room should answer the question you walked in with.", ["Interfaces"], 96),
-            ("Every registry drifts. Check the registry.", ["Craft"], 140),
-            ("Shipping is mostly deleting.", ["Shipping"], 190),
-            ("Interfaces are promises you have to keep.", ["Interfaces", "Craft"], 240),
-            ("The demo is the product, briefly.", ["Craft"], 300),
+            ("Shipped the onboarding rewrite. Four screens became one.", ["Work"], 4),
+            ("Good design is mostly removing the second way to do something.", ["Design"], 9),
+            ("Tempelhof at 7pm is the best room in Berlin.", ["Berlin"], 16),
+            ("Hot take: the settings screen is where features go to hide.", ["Design"], 23),
+            ("Made shakshuka for six with one pan. Never again. Also, again.", ["Food"], 31),
+            ("The U8 at midnight is a whole personality.", ["Berlin"], 44),
+            ("Invoiced, shipped, slept. In that order.", ["Work"], 58),
+            ("If a screen needs a tutorial, the screen is the bug.", ["Design"], 96),
+            ("Every bakery in Neukölln sells out of cardamom buns by ten.", ["Food", "Berlin"], 140),
+            ("Deleted 2,000 lines today. Best commit of the month.", ["Work"], 190),
+            ("Typography is the interface. The rest is decoration.", ["Design"], 240),
+            ("Spent a whole afternoon on one empty state. Worth it.", ["Design", "Work"], 300),
             // Last year — the busiest, and the one the head names.
-            ("Notes on reading your own archive.", ["Archives"], 430),
-            ("An archive is a corpus, not a feed.", ["Archives", "Craft"], 455),
-            ("Archives outlive the app that made them.", ["Archives"], 480),
+            ("First winter in Berlin. Nobody warned me about four o'clock.", ["Berlin"], 430),
+            ("Six months freelance. Still no regrets.", ["Work"], 455),
+            ("Learning to cook properly, one dish a week.", ["Food"], 480),
             // On this day a year ago (census 2026-09-05): the throwback ask
             // composes only over a bulk-import row sharing today's month and
             // day in an earlier year, and none did.
-            ("A year ago today: shipped the first import.", ["Shipping", "Archives"], yearAgoDays),
-            ("Shipping in public, year three.", ["Shipping"], 505),
-            ("Interfaces that age well say less.", ["Interfaces"], 530),
-            ("Archives are the only honest analytics.", ["Archives"], 560),
-            ("Craft is legible from the outside.", ["Craft"], 590),
-            ("Archives, again, because nobody else keeps them.", ["Archives"], 620),
+            ("Quillmark 1.0 is out. Launch day.", ["Work"], yearAgoDays),
+            ("Moving cities is mostly finding a new bakery.", ["Food", "Berlin"], 505),
+            ("Design reviews should end with fewer screens than they started with.", ["Design"], 530),
+            ("Found a Späti that stocks good olive oil. Life complete.", ["Berlin", "Food"], 560),
+            ("Freelance tip: send the invoice the day you ship.", ["Work"], 590),
+            ("The best tools disappear while you use them.", ["Design"], 620),
             // Two years back — thinner.
-            ("Starting to keep things properly.", ["Archives"], 900),
-            ("Notes to myself, in public.", ["Craft"], 960),
-            ("A feed you can't search isn't a record.", ["Archives"], 1010),
+            ("Looking at flats in Berlin, apparently.", ["Berlin"], 900),
+            ("Redesigned my portfolio for the fourth time this year.", ["Design"], 960),
+            ("Sourdough starter is alive. Named it Gerald.", ["Food"], 1010),
             // …and the first year, one post. The year between it and the next
             // is SILENT on purpose — the strip draws a gap, which is the one
             // reading no other card in this room can make.
@@ -2189,7 +2205,7 @@ enum DemoSeedAll {
         let replies: [(String, String, String, Double)] = [
             ("Agreed — and the archive is where you find out.",
              "lindsey", "The best product decisions are legible a year later.", 12),
-            ("This, but for rooms as well as rows.",
+            ("This, but for empty states too.",
              "rauno", "Latency is a design problem, not an infrastructure one.", 34),
             ("Still true.", "lindsey", "", 210),
             // A THIRD reply to the same person, on purpose (2026-08-18, prd
@@ -2205,7 +2221,7 @@ enum DemoSeedAll {
             row(.note, "To @\(r.1) · \(r.0)", source: "X", ref: "demo:x:reply:\(i)",
                 days: r.3, hour: 15, content: r.0, tags: ["Reply"]) { t in
                 t.postText = r.0
-                t.ocrTopics = ["Craft"]
+                t.ocrTopics = ["Design"]
                 t.topicsAt = .now
                 t.authorHandle = "you"
                 t.authorAvatarURL = avatarArt("you")
@@ -2278,7 +2294,7 @@ enum DemoSeedAll {
             ("On drawing data honestly", "@tufte_bot", 10),
             ("Ship the boring version first", "@lindsey", 18),
             ("Latency is a design problem", "@rauno", 27),
-            ("Notes on legible systems", "@tufte_bot", 39),
+            ("Notes on quiet interfaces", "@tufte_bot", 39),
         ]
         out += likes.enumerated().map { i, l in
             row(.link, l.0, source: "X", ref: "demo:x:like:\(i)", days: l.2, hour: 22,
@@ -2410,10 +2426,10 @@ enum DemoSeedAll {
     private static func tiktok() -> [Thing] {
         var out: [Thing] = [receipt("TikTok", "212 saved · 64 comments", days: 9)]
         let captions: [(String, [String], Double)] = [
-            ("Two minutes on espresso ratios", ["Espresso", "Coffee"], 10),
-            ("Grinder teardown, part one", ["Espresso"], 20),
-            ("Coffee at altitude, why it tastes flat", ["Coffee"], 30),
-            ("Espresso puck prep, honestly", ["Espresso", "Coffee"], 42),
+            ("My first V4, finally", ["Bouldering"], 10),
+            ("Heel hooks, for people who hate heel hooks", ["Bouldering", "Technique"], 20),
+            ("Ten-minute fingerboard routine", ["Training"], 30),
+            ("The purple route beat me for a month", ["Bouldering"], 42),
         ]
         out += captions.enumerated().map { i, c in
             row(.link, c.0, source: "TikTok", ref: "demo:tt:post:\(i)", days: c.2, hour: 18,
@@ -2426,10 +2442,10 @@ enum DemoSeedAll {
             }
         }
         let comments: [(String, [String], Double)] = [
-            ("Coffee this good is a bit unfair", ["Coffee"], 11),
-            ("Espresso people are very serious", ["Espresso"], 25),
-            ("Coffee on the trip was the highlight", ["Coffee", "Lisbon"], 36),
-            ("Espresso machine finally arrived", ["Espresso"], 52),
+            ("That dyno cannot be real", ["Bouldering"], 11),
+            ("Rest days are part of the plan", ["Training"], 25),
+            ("The new set at the wall is brutal", ["Bouldering"], 36),
+            ("Chalk everywhere, worth it", ["Technique"], 52),
         ]
         out += comments.enumerated().map { i, c in
             row(.note, c.0, source: "TikTok", ref: "demo:tt:comment:\(i)", days: c.2, hour: 21,
@@ -2562,12 +2578,12 @@ enum DemoSeedAll {
     private static func youtube() -> [Thing] {
         let videos: [(String, String, [String], Double)] = [
             ("How a compiler actually reads your code", "Computerphile", ["Compilers", "Systems"], 1),
-            ("The physics of a good espresso shot", "James Hoffmann", ["Espresso", "Coffee"], 3),
+            ("Why some streets feel calm", "Cityscope", ["Cities"], 3),
             ("Systems that scale down", "Strange Loop", ["Systems"], 6),
             ("Compilers from scratch, part four", "Computerphile", ["Compilers"], 12),
-            ("Coffee grinders, measured", "James Hoffmann", ["Coffee", "Espresso"], 18),
+            ("The tram line that remade a city", "Cityscope", ["Cities", "Transit"], 18),
             ("Systems thinking for small teams", "Strange Loop", ["Systems", "Compilers"], 25),
-            ("Espresso, but for filter drinkers", "James Hoffmann", ["Espresso"], 35),
+            ("Bike lanes people actually use", "Cityscope", ["Transit"], 35),
             ("A tour of modern type systems", "Strange Loop", ["Compilers", "Systems"], 47),
         ]
         return videos.enumerated().map { i, v in
@@ -2686,8 +2702,8 @@ enum DemoSeedAll {
         let substack: [(String, String, String, Double)] = [
             ("The case for small software", "Anna Reid", "Small Things", 2),
             ("What a good changelog says", "Anna Reid", "Small Things", 8),
-            ("Notes on interface latency", "Ben Ito", "Latency Club", 13),
-            ("Latency is a feature", "Ben Ito", "Latency Club", 20),
+            ("Letters to a junior designer", "Ben Ito", "Latency Club", 13),
+            ("Against the dashboard", "Ben Ito", "Latency Club", 20),
             ("Writing for people who skim", "Cara Vale", "Small Things", 31),
             ("The end of the settings screen", "Cara Vale", "Latency Club", 46),
         ]
@@ -2708,12 +2724,12 @@ enum DemoSeedAll {
         // than a week of ordinary use.
         let rss: [(String, String, String, Double)] = [
             ("A quieter approach to notifications", "Dana Cole", "The Verge", 1),
-            ("Inside a very small compiler", "Eli Rosen", "Hacker News", 4),
+            ("Show HN: A weather station on an old e-reader", "Eli Rosen", "Hacker News", 4),
             ("The return of local-first", "Dana Cole", "The Verge", 4),
-            ("Type systems, plainly", "Eli Rosen", "Hacker News", 4),
+            ("The quiet return of the paper map", "Eli Rosen", "Hacker News", 4),
             ("Why your app feels slow", "Dana Cole", "TechCrunch", 24),
             ("The cost of a background sync", "Fay Ng", "TechCrunch", 32),
-            ("Local-first, one year on", "Fay Ng", "The Verge", 41),
+            ("Night trains are busy again", "Fay Ng", "The Verge", 41),
         ]
         out += rss.enumerated().map { i, r in
             row(.link, r.0, source: "RSS", ref: "demo:rss:\(i)", days: r.3,
@@ -2831,8 +2847,8 @@ enum DemoSeedAll {
             ("Latency, end to end", "Signals and Threads", 11),
             ("Making things for two people", "Design Details", 5),
             ("The shape of a good demo", "Design Details", 17),
-            ("Coffee, measured", "Filter Stories", 25),
-            ("Roasting at altitude", "Filter Stories", 39),
+            ("Stock, slowly", "Heat and Salt", 25),
+            ("Why restaurant rice tastes better", "Heat and Salt", 39),
         ]
         out += shows.enumerated().map { i, s in
             row(.link, s.0, source: "Podcasts", ref: "demo:podcast:\(i)", days: s.2, hour: 7) { t in
@@ -2903,12 +2919,12 @@ enum DemoSeedAll {
         var out: [Thing] = []
         // Reddit groups on the subreddit; Raindrop on the saved URL's host.
         let reddit: [(String, String, Double)] = [
-            ("The espresso machine that lasted 20 years", "r/espresso", 1),
-            ("Puck prep, settled", "r/espresso", 6),
+            ("My monstera, three years apart", "r/houseplants", 1),
+            ("Propagating pothos in water — what worked", "r/houseplants", 6),
             ("What I learned rewriting our sync layer", "r/programming", 3),
-            ("A small compiler in 400 lines", "r/programming", 12),
-            ("Lisbon in three days — what worked", "r/travel", 8),
-            ("Tram 28 is a trap (kind of)", "r/travel", 20),
+            ("A design review checklist that stuck", "r/userexperience", 12),
+            ("Tempelhof at sunset is still the best park", "r/berlin", 8),
+            ("The whole Ringbahn loop in one go", "r/berlin", 20),
         ]
         out += reddit.enumerated().map { i, r in
             row(.link, r.0, source: "Reddit", ref: "demo:reddit:\(i)", days: r.2, hour: 22) { t in
@@ -2916,39 +2932,40 @@ enum DemoSeedAll {
                 t.previewImageURL = art("reddit-\(i)")
             }
         }
-        let raindrop: [(String, Double)] = [
-            ("https://developer.apple.com/design/human-interface-guidelines", 2),
-            ("https://developer.apple.com/documentation/swiftui", 7),
-            ("https://github.com/apple/swift-evolution", 11),
-            ("https://github.com/swiftlang/swift/blob/main/README.md", 19),
-            // A real, stable page — not `example.com` (2026-08-08, P4): every
-            // OTHER row in this array is a real doc URL whose title is
-            // DERIVED from the URL's own last path component, so the fix
-            // has to be a real matching page, not a dropped link (dropping it
-            // would leave `URL(string:)?.lastPathComponent` with nothing to
-            // read and the row with no title at all).
-            ("https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_scroll-driven_animations", 26),
-            ("https://developer.apple.com/documentation/swiftdata", 34),
+        // Every bookmark is a real, stable page — not `example.com`
+        // (2026-08-08, P4) — and carries the TITLE Raindrop stores for it.
+        // Titles were derived from the URL's last path component until
+        // 2026-09-30, which drew "Readme.Md" and "Css_Scroll
+        // Driven_Animations" as two rows' titles.
+        let raindrop: [(title: String, url: String, days: Double)] = [
+            ("Human Interface Guidelines",
+             "https://developer.apple.com/design/human-interface-guidelines", 2),
+            ("SwiftUI", "https://developer.apple.com/documentation/swiftui", 7),
+            ("Hackesche Höfe", "https://en.wikipedia.org/wiki/Hackesche_H%C3%B6fe", 11),
+            ("Allotment (gardening)", "https://en.wikipedia.org/wiki/Allotment_(gardening)", 19),
+            ("CSS scroll-driven animations",
+             "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_scroll-driven_animations", 26),
+            ("SwiftData", "https://developer.apple.com/documentation/swiftdata", 34),
         ]
         // Raindrop stamps the save's own TYPE and tags, and its excerpt on
         // `summary` (2026-08-12) — the sheet renders that excerpt, and the
         // type is what makes a Raindrop room filterable at all. The demo
         // carried neither, so every save was an untyped, untagged, wordless
         // link where the real room shows what kind of thing it saved.
-        let raindropTags = [["Article", "Design"], ["Article", "SwiftUI"], ["Document"],
-                            ["Document"], ["Article", "CSS"], ["Article", "SwiftUI"]]
+        let raindropTags = [["Article", "Design"], ["Article", "SwiftUI"], ["Article", "Berlin"],
+                            ["Article", "Garden"], ["Article", "CSS"], ["Article", "SwiftUI"]]
         let raindropNotes = [
             "The platform conventions, in one place.",
             "Declarative views, state and layout.",
-            "Every accepted proposal, with its rationale.",
-            "Building the toolchain from source.",
+            "Eight courtyards in a row, and the way through all of them.",
+            "What to sow when, for a plot with a cold spring.",
             "Animations driven by scroll position rather than time.",
             "Persistence with the model layer Swift already knows.",
         ]
         out += raindrop.enumerated().map { i, u in
-            row(.link, URL(string: u.0)?.lastPathComponent.replacingOccurrences(of: "-", with: " ").capitalized ?? "Saved link",
-                source: "Raindrop", ref: "demo:raindrop:\(i)", days: u.1, hour: 15,
-                content: u.0, tags: raindropTags[i % raindropTags.count]) { t in
+            row(.link, u.title,
+                source: "Raindrop", ref: "demo:raindrop:\(i)", days: u.days, hour: 15,
+                content: u.url, tags: raindropTags[i % raindropTags.count]) { t in
                 t.summary = raindropNotes[i % raindropNotes.count]
                 // The saved page's cover (2026-08-17). `RaindropBridge` stamps
                 // the bookmark's own `cover` and its media list, and the demo
@@ -2959,8 +2976,8 @@ enum DemoSeedAll {
             }
         }
         let bookmarks: [(String, String, Double)] = [
-            ("Human Interface Guidelines", "https://developer.apple.com/design", 5),
-            ("Swift concurrency notes", "https://github.com/apple/swift-evolution", 13),
+            ("Bauhaus-Archiv", "https://en.wikipedia.org/wiki/Bauhaus_Archive", 5),
+            ("Nasu dengaku", "https://en.wikipedia.org/wiki/Nasu_dengaku", 13),
             // No real page named "The grid system" exists to link — title
             // and URL are independent fields here, unlike `raindrop` above,
             // so the P4 fix is to drop the URL rather than invent a match.
@@ -2994,7 +3011,7 @@ enum DemoSeedAll {
     private static func castParent(_ i: Int) -> SocialCard? {
         switch i {
         case 1: SocialCard(handle: "you",
-                           text: "Shipped the panel today. Every room's figure in one place.",
+                           text: "Shipped the new onboarding today. Four screens became one.",
                            avatarURL: avatarArt("you"))
         case 4: SocialCard(handle: "sam", text: "Onchain receipts, but for what exactly?",
                            avatarURL: avatarArt("sam"))
@@ -3087,9 +3104,9 @@ enum DemoSeedAll {
             // timestamps tie the sort, and a run whose order changes between
             // renders is the reshuffling this codebase already refuses
             // elsewhere.
-            ("Shipped the panel today. Every room's figure in one place.", "/design", "you", 32, 1),
+            ("Shipped the new onboarding today. Four screens became one.", "/design", "you", 32, 1),
             ("A chart of everything at once is a chart of nothing.", "/design", "mia", 21, 1),
-            ("Reading about legibility again.", "/books", "you", 9, 1),
+            ("Finally finishing Seeing Like a State.", "/books", "you", 9, 1),
             ("The best demo is a real one.", "/design", "sam", 44, 10),
             ("Onchain receipts are underrated.", "/base", "mia", 12, 14),
             ("Books that changed how I plan.", "/books", "you", 7, 22),
@@ -3146,8 +3163,8 @@ enum DemoSeedAll {
             // two social rooms folding on DIFFERENT days is what keeps the feed
             // from reading as one synthetic burst.
             ("Small software, made carefully.", "you", 18, 2),
-            ("The panel draws only figures. No sentences.", "uma", 26, 2),
-            ("Espresso and compilers, the eternal pairing.", "nils", 11, 2),
+            ("Critique day. Every note was some version of: say less.", "uma", 26, 2),
+            ("Sanded the walnut shelf. Six coats of oil to go.", "nils", 11, 2),
             ("Local-first is just software that respects you.", "you", 33, 12),
             ("Notes from a quiet week.", "uma", 6, 19),
             ("Reading, mostly.", "nils", 4, 27),
@@ -3186,7 +3203,7 @@ enum DemoSeedAll {
                 }
                 if i == 3 {
                     t.quote = SocialCard(handle: "nils",
-                                         text: "Espresso and compilers, the eternal pairing.",
+                                         text: "Sanded the walnut shelf. Six coats of oil to go.",
                                          avatarURL: avatarArt("nils"))
                 }
                 // BOTH picture paths, the cast block's own lesson: `PostCard`
@@ -3483,7 +3500,7 @@ enum DemoSeedAll {
         // any corpus this project can show itself. No counterparty and no
         // amount, exactly as `WalletVerbs.voidVerb`'s own arm lands them: the
         // other side is the void, which is not an address you can meet again.
-        for (i, m) in [(true, "Minted Casberi Genesis #12", 4.0),
+        for (i, m) in [(true, "Minted Quillmark Genesis #12", 4.0),
                        (false, "Burned 0.7500 PEPE", 9.0)].enumerated() {
             out.append(row(.transaction, m.1, source: "Wallet",
                            ref: "demo:wallet:void:\(i)", days: m.2, hour: 11 + i,
@@ -3510,7 +3527,7 @@ enum DemoSeedAll {
         let deadlines: [(title: String, ref: String, due: Double, tag: String)] = [
             ("Aerodrome vote closes", "aerodrome:vote:\(demoWallet):4821", -3, "Onchain"),
             ("Staked HYPE unlocks", "hyperliquid:unlock:\(demoWallet):0xvalidator", -29, "Onchain"),
-            ("casberi.eth expires", "wallet:ensexpiry:casberi.eth", -96, "Onchain"),
+            ("quillmark.eth expires", "wallet:ensexpiry:quillmark.eth", -96, "Onchain"),
         ]
         out += deadlines.map { d in
             row(.transaction, d.title, source: "Wallet", ref: d.ref,
@@ -4184,8 +4201,8 @@ enum DemoSeedAll {
     /// second entry for it — see there.
     private static func infra() -> [Thing] {
         let certs: [(String, String, Double, Double)] = [
-            ("demo0", "casberi.app certificate renews", 3, -34),
-            ("demo1", "api.casberi.app certificate renews", 6, -71),
+            ("demo0", "quillmark.app certificate renews", 3, -34),
+            ("demo1", "api.quillmark.app certificate renews", 6, -71),
         ]
         return certs.map { id, title, days, dueDays in
             row(.reminder, title, source: "Cloudflare", ref: "cloudflare:cert:\(id)",
@@ -4391,7 +4408,7 @@ enum DemoSeedAll {
 
     private static func seedCloudflareEstate() {
         CloudflareEstateStore.save(CloudflareEstate(
-            zoneNames: ["demo0": "casberi.app", "demo1": "api.casberi.app"],
+            zoneNames: ["demo0": "quillmark.app", "demo1": "api.quillmark.app"],
             autoRenew: [:], zonesSeen: 2, zonesCovered: 2))
     }
 
@@ -4400,13 +4417,13 @@ enum DemoSeedAll {
         // Linear's rail reads `mark`, which the bridge maps from Linear's own
         // state TYPE — an unclassified issue counts in neither bucket.
         let issues: [(String, Mark, Double)] = [
-            ("CAS-412 Panel reshuffles between opens", .doing, 1),
-            ("CAS-408 Seed every room on the sim", .doing, 2),
-            ("CAS-401 Flow band declines one-sided windows", .todo, 4),
-            ("CAS-399 Heatmap outranks the topic map", .done, 7),
-            ("CAS-396 Chip strip freezes mid-reach", .done, 12),
-            ("CAS-390 Receipts screen misses runtime hosts", .todo, 18),
-            ("CAS-384 Embedding race on foreground", .done, 25),
+            ("QM-412 Search results jump while typing", .doing, 1),
+            ("QM-408 Sync conflicts between two devices", .doing, 2),
+            ("QM-401 PDF export drops footnotes", .todo, 4),
+            ("QM-399 Editor contrast in dark mode", .done, 7),
+            ("QM-396 Onboarding skips the import step", .done, 12),
+            ("QM-390 Widget shows yesterday's word count", .todo, 18),
+            ("QM-384 Crash when pasting a large table", .done, 25),
         ]
         out += issues.enumerated().map { i, s in
             // `.link`, which is what `TokenBridges` lands for Linear — the
@@ -4452,14 +4469,14 @@ enum DemoSeedAll {
         // shapes GitHub really serves; the ids are the demo's own.
         let github: [(title: String, who: String, days: Double,
                       ask: String?, ref: String, url: String)] = [
-            ("Merged: panel draws only figures (#412)", "you", 1, nil,
-             "gh:demo412", "https://github.com/casberi/app/pull/412"),
-            ("seed every source on the sim (#414) — Mentioned you · casberi/app", "you", 1.5,
-             "Mentioned", "gh:notif:demo414", "https://github.com/casberi/app/issues/414"),
-            ("serialize NLEmbedding inference (#409) — Assigned to you · casberi/app", "you", 6,
-             "Assigned", "gh:notif:demo409", "https://github.com/casberi/app/issues/409"),
-            ("receipts reach map (#402) — Review requested · casberi/app", "mia", 14,
-             "Review", "gh:notif:demo402", "https://github.com/casberi/app/pull/402"),
+            ("Merged: one onboarding screen instead of four (#412)", "you", 1, nil,
+             "gh:demo412", "https://github.com/quillmark/app/pull/412"),
+            ("sync conflicts between two devices (#414) — Mentioned you · quillmark/app", "you", 1.5,
+             "Mentioned", "gh:notif:demo414", "https://github.com/quillmark/app/issues/414"),
+            ("paste large tables without freezing (#409) — Assigned to you · quillmark/app", "you", 6,
+             "Assigned", "gh:notif:demo409", "https://github.com/quillmark/app/issues/409"),
+            ("footnotes in the PDF export (#402) — Review requested · quillmark/app", "mia", 14,
+             "Review", "gh:notif:demo402", "https://github.com/quillmark/app/pull/402"),
         ]
         out += github.map { g in
             let i = github.firstIndex { $0.ref == g.ref } ?? 0
@@ -4479,7 +4496,7 @@ enum DemoSeedAll {
             }
         }
         let slack: [(String, String, Double)] = [
-            ("Uma: can we ship the panel this week?", "#design", 1),
+            ("Uma: can we ship the onboarding this week?", "#design", 1),
             ("Nils: joinery quote came back under budget", "#home", 3),
             ("Mia: book club moved to Thursday", "#book-club", 5),
         ]
@@ -4520,9 +4537,9 @@ enum DemoSeedAll {
         // so the room's kind tiles sort the demo too (prd §911); `!` is
         // GitLab's merge-request sigil, `#` an issue's.
         let gitlab: [(String, Mark, Double, String)] = [
-            ("casberi/casberi#58 · Fix the flat curve on refresh", .doing, 2, "issue"),
-            ("casberi/casberi!61 · Serialize NLEmbedding inference", .done, 5, "mr"),
-            ("casberi/casberi#54 · Receipts screen misses runtime hosts", .todo, 11, "issue"),
+            ("quillmark/quillmark#58 · Word count lags on long documents", .doing, 2, "issue"),
+            ("quillmark/quillmark!61 · Faster paste for large tables", .done, 5, "mr"),
+            ("quillmark/quillmark#54 · PDF export drops footnotes", .todo, 11, "issue"),
         ]
         out += gitlab.enumerated().map { i, g in
             row(.link, g.0, source: "GitLab", ref: "gitlab:\(g.3):demo\(i)", days: g.2, hour: 13) { t in
@@ -4536,20 +4553,20 @@ enum DemoSeedAll {
         // Jira's title shape: the key leads on its own (`"PROJ-123 · summary"`,
         // legible without a join the way a bare Trello/Linear title isn't).
         let jira: [(String, Mark, Double, Double?)] = [
-            ("CAS-201 · Draft the launch email", .todo, 3, 5),
-            ("CAS-198 · Review the App Store screenshots", .doing, 6, nil),
-            ("CAS-190 · File the CloudKit schema deploy", .done, 15, nil),
+            ("QM-201 · Draft the launch email", .todo, 3, 5),
+            ("QM-198 · Review the App Store screenshots", .doing, 6, nil),
+            ("QM-190 · Ship the sync schema update", .done, 15, nil),
         ]
         out += jira.enumerated().map { i, j in
             row(.reminder, j.0, source: "Jira", ref: "demo:jira:\(i)", days: j.2, hour: 9,
-                tags: ["Casberi"]) { t in
+                tags: ["Quillmark"]) { t in
                 t.mark = j.1
                 if let due = j.3 { t.dueAt = at(-due, 17) }
             }
         }
         let cursor: [(String, Double)] = [
-            ("casberi · seed every room", 1), ("casberi · fix the flat curve", 4),
-            ("Failed · casberi · migrate the schema", 9),
+            ("quillmark · fix the paste freeze", 1), ("quillmark · tidy the export code", 4),
+            ("Failed · quillmark · migrate the settings", 9),
         ]
         out += cursor.enumerated().map { i, c in
             row(.link, c.0, source: "Cursor", ref: "demo:cursor:\(i)", days: c.1, hour: 22) { t in
@@ -4560,7 +4577,7 @@ enum DemoSeedAll {
                 // repos and the head is nil no matter how many rows landed.
                 // Found by the room-head coverage check's own first run
                 // (2026-08-10): all three seeded runs were missing it.
-                t.authorHandle = "alexanderchopan/casberi"
+                t.authorHandle = "you/quillmark"
                 // The tags `CursorBridge` stamps (prd §895) — without them no
                 // demo run ever read as finished or failed.
                 // The PR tag rides the two runs whose summary says they opened
@@ -4577,16 +4594,16 @@ enum DemoSeedAll {
         // Regression; Vercel, PagerDuty, npm and PyPI have their own.
         let ops: [(String, String, String, Double, [String])] = [
             ("Resolved: elevated 5xx on the edge", "Sentry", "12 events", 2, ["Regression"]),
-            ("New issue: nil unwrap in FeedScreen", "Sentry", "3 events", 6, ["Issue"]),
-            ("Deployed casberi-site to production", "Vercel", "Ready in 24s", 1, ["Deploy"]),
+            ("New issue: nil unwrap in EditorView", "Sentry", "3 events", 6, ["Issue"]),
+            ("Deployed quillmark-site to production", "Vercel", "Ready in 24s", 1, ["Deploy"]),
             ("Preview ready for pull/412", "Vercel", "Ready in 19s", 3, ["Deploy"]),
             ("Acknowledged: latency alert", "PagerDuty", "Resolved in 8m", 8, ["Resolved", "Alert"]),
             // Cloudflare's rows are readings, not outcomes — its bridge stamps
             // no outcome tag and `WorkStage.outcome` has no case for it, so
             // these two correctly produce no Work reading. Left tagless on
             // purpose rather than given an invented tag to make a card appear.
-            ("casberi.app · 1.2M requests today", "Cloudflare", "Cached 92%", 1, []),
-            ("Certificate renews in 21 days", "Cloudflare", "casberi.app", 4, []),
+            ("quillmark.app · 1.2M requests today", "Cloudflare", "Cached 92%", 1, []),
+            ("Certificate renews in 21 days", "Cloudflare", "quillmark.app", 4, []),
             ("swift-markdown 0.4.0 published", "npm", "2 dependents", 5, ["Release"]),
             ("httpx 0.28.1 published", "PyPI", "security fix", 7, ["Release"]),
         ]
@@ -4606,15 +4623,15 @@ enum DemoSeedAll {
         // and the Obsidian vault were the others. A gate that keys on a ref
         // shape cannot be satisfied by a row that merely looks right.
         let asc: [(String, String, Double)] = [
-            ("In review · Casberi 1.4", "asc:version:demo1:IN_REVIEW", 1),
-            ("★★★★★ \"Finally, one place for everything\"", "asc:review:demo1", 3),
+            ("In review · Quillmark 1.4", "asc:version:demo1:IN_REVIEW", 1),
+            ("★★★★★ \"Opens before I lose the thought\"", "asc:review:demo1", 3),
             ("Build 285 ready to test", "asc:build:demo285", 2),
             ("Build 274 expires in 9 days", "asc:buildexpiry:demo274", 5),
         ]
         out += asc.enumerated().map { i, a in
             row(.link, a.0, source: "App Store Connect", ref: a.1,
-                days: a.2, hour: 10, content: "Casberi · iOS") { t in
-                if i == 1 { t.summary = "Everything I save actually turns up when I look for it."
+                days: a.2, hour: 10, content: "Quillmark · iOS") { t in
+                if i == 1 { t.summary = "I write more because it opens instantly and gets out of the way."
                             t.authorHandle = "grid_walker" }
                 if i == 3 { t.dueAt = at(-9, 12) }
             }
@@ -4678,7 +4695,7 @@ enum DemoSeedAll {
         let hf: [(String, String, Double)] = [
             ("kyutai/moshi-v2 · Model", "kyutai", 1),
             ("Scaling laws for retrieval · Paper", "", 2),
-            ("espresso-lab/open-espresso-1k · Dataset", "espresso-lab", 6),
+            ("fieldwork/birdsong-1k · Dataset", "fieldwork", 6),
         ]
         out += hf.enumerated().map { i, h in
             row(.link, h.0, source: "Hugging Face", ref: "demo:hf:\(i)", days: h.2, hour: 9) { t in
@@ -4740,12 +4757,12 @@ enum DemoSeedAll {
             }
         }
         let posthog: [(String, Double)] = [
-            ("signed_up crossed 1,000", 3), ("Annotation · shipped the panel", 5),
-            ("answer_asked has gone quiet", 8),
+            ("signed_up crossed 1,000", 3), ("Annotation · shipped the onboarding", 5),
+            ("doc_exported has gone quiet", 8),
         ]
         out += posthog.enumerated().map { i, p in
             row(.note, p.0, source: "PostHog", ref: "demo:posthog:\(i)", days: p.1, hour: 16,
-                content: "Casberi · production")
+                content: "Quillmark · production")
         }
         // The room head reads WATCH rows, not these alert rows — a watch IS
         // the `Thing` (`PostHogWatch.add`, the TokenWatch precedent), keyed
@@ -4754,7 +4771,7 @@ enum DemoSeedAll {
         // has nothing to iterate and the head stays nil forever — found
         // building the room-head coverage check (2026-08-10): three alert
         // rows landed and the card never once appeared.
-        out += ["signed_up", "answer_asked"].map { event in
+        out += ["signed_up", "doc_exported"].map { event in
             row(.link, IngestSupport.titleLine(event), source: "PostHog",
                 ref: PostHogWatch.metricRef(event), days: 3, hour: 16,
                 content: "https://us.posthog.com", tags: ["Watchlist"])
@@ -4826,12 +4843,12 @@ enum DemoSeedAll {
                        tags: ["Alarm"]))
         // A failed deploy stamps the pipeline on `authorHandle` — that is
         // what the head's tap target matches, not the title.
-        out.append(row(.link, "casberi-deploy — Failed", source: "AWS",
+        out.append(row(.link, "quillmark-deploy — Failed", source: "AWS",
                        ref: "aws:pipeline:9f2c1e40-7b3a-4c19-9f0d-2a5e6c8b1d33",
                        days: 1.2, hour: 16,
-                       content: "https://console.aws.amazon.com/codesuite/codepipeline/pipelines/casberi-deploy/executions/9f2c1e40-7b3a-4c19-9f0d-2a5e6c8b1d33/timeline?region=us-east-1",
+                       content: "https://console.aws.amazon.com/codesuite/codepipeline/pipelines/quillmark-deploy/executions/9f2c1e40-7b3a-4c19-9f0d-2a5e6c8b1d33/timeline?region=us-east-1",
                        tags: ["Deploy", "Failed"]) { t in
-            t.authorHandle = "casberi-deploy"
+            t.authorHandle = "quillmark-deploy"
         })
         out.append(row(.reminder, "Spend anomaly · $184.20", source: "AWS",
                        ref: "aws:costanomaly:\(demoDayStamp(2))",
@@ -4847,10 +4864,10 @@ enum DemoSeedAll {
         // The dispute is what makes the head compose at all: its source reads
         // `dueAt` inside a [-14, +90] day window on a row tagged "Dispute",
         // and its item id IS the row's `sourceRef`, so the tap has to land.
-        out.append(row(.link, "Casberi Pro · $29.00", source: "Polar",
+        out.append(row(.link, "Quillmark Pro · $29.00", source: "Polar",
                        ref: "polar:order:0a9b7c6d-1e2f-4a3b-8c9d-0e1f2a3b4c5d",
                        days: 0.6, hour: 11,
-                       content: "https://polar.sh/dashboard/casberi/sales",
+                       content: "https://polar.sh/dashboard/quillmark/sales",
                        tags: ["Sale", "New subscriber"]) { t in
             t.priceValue = 29
             t.priceCurrency = "USD"
@@ -4858,7 +4875,7 @@ enum DemoSeedAll {
         out.append(row(.link, "Refund · $29.00", source: "Polar",
                        ref: "polar:refund:3c4d5e6f-7a8b-4c9d-0e1f-2a3b4c5d6e7f",
                        days: 3, hour: 14,
-                       content: "https://polar.sh/dashboard/casberi/finance/refunds",
+                       content: "https://polar.sh/dashboard/quillmark/finance/refunds",
                        tags: ["Refund"]) { t in
             t.priceValue = 29
             t.priceCurrency = "USD"
@@ -4867,7 +4884,7 @@ enum DemoSeedAll {
                        source: "Polar",
                        ref: "polar:dispute:8b7a6c5d-4e3f-4a2b-9c8d-7e6f5a4b3c2d:opened",
                        days: 1.5, hour: 10,
-                       content: "https://polar.sh/dashboard/casberi/finance/refunds",
+                       content: "https://polar.sh/dashboard/quillmark/finance/refunds",
                        tags: ["Dispute", "Opened"]) { t in
             t.priceValue = 49
             t.priceCurrency = "USD"
@@ -4983,7 +5000,7 @@ enum DemoSeedAll {
             (2,   "Slow morning, long walk", "Out along the canal before anything else was awake. Berlin does this about four days a year and I keep forgetting to be outside for them."),
             (3,   "Wrote for an hour before anything else", "Kept the phone in the other room. Two pages, both keepable."),
             (4,   "Cooked properly for the first time in weeks", "Sam came over. We ate late and nobody looked at a screen."),
-            (5,   "The panel finally looks like one thing", "Six weeks of it being four things stacked up. Today it stopped arguing with itself."),
+            (5,   "The onboarding finally reads as one thing", "Six weeks of it being four screens stacked up. Today it stopped arguing with itself."),
             (11,  "Rain all day, read instead", "Finished the book I have been carrying around since Lisbon."),
             (18,  "Cleared the desk, cleared the head", "The studio is workable again."),
             (26,  "Ran the loop twice", "Slower than the spring but the whole way without stopping."),
@@ -5079,11 +5096,11 @@ enum DemoSeedAll {
         // headline branch — the card's own lead, unreachable in the corpus
         // built to prove the card draws.
         let chats: [(String, String, Double, Int)] = [
-            ("Designing a bento panel", "ChatGPT", 3, 9),
+            ("Designing a pricing page", "ChatGPT", 3, 9),
             ("SwiftData migration plan", "ChatGPT", 18, 31),
             ("Explain PCA simply", "ChatGPT", 33, 7),
             ("Naming things", "ChatGPT", 48, 12),
-            ("Espresso ratios", "ChatGPT", 70, 5),
+            ("Balcony watering schedule", "ChatGPT", 70, 5),
             ("Trip itinerary", "ChatGPT", 85, 18),
             ("Rewriting the onboarding copy", "ChatGPT", 100, 24),
             ("Why is this query slow", "ChatGPT", 115, 41),
@@ -5093,21 +5110,21 @@ enum DemoSeedAll {
             ("Draft the release notes", "ChatGPT", 175, 11),
             ("Compare two hosting options", "ChatGPT", 190, 19),
             ("Sourdough troubleshooting", "ChatGPT", 205, 7),
-            ("Reviewing the panel ruling", "Claude", 1, 22),
-            ("Writing the seed table", "Claude", 2, 14),
-            ("Liveness corollaries, explained", "Claude", 4, 38),
+            ("Feedback on the onboarding flow", "Claude", 1, 22),
+            ("Tidy up this spreadsheet", "Claude", 2, 14),
+            ("Explain the tenancy agreement", "Claude", 4, 38),
             ("Copy for the connect screen", "Claude", 6, 9),
-            ("Refactoring the composer", "Claude", 8, 27),
+            ("Refactoring the settings screen", "Claude", 8, 27),
             ("Schema versioning", "Claude", 11, 16),
-            ("The room-head ranking chain", "Claude", 14, 33),
-            ("Why the harness passed wrongly", "Claude", 17, 45),
-            ("Naming the two title kinds", "Claude", 21, 12),
-            ("A month strip, not a year one", "Claude", 26, 20),
-            ("Reading the export's shape", "Claude", 31, 29),
-            ("Redundancy in the card", "Claude", 38, 8),
-            ("Migrating the store", "Claude", 95, 17),
+            ("Prioritising the backlog", "Claude", 14, 33),
+            ("Why this test only passes locally", "Claude", 17, 45),
+            ("Naming the pricing tiers", "Claude", 21, 12),
+            ("A chart for the investor update", "Claude", 26, 20),
+            ("Parsing a CSV export", "Claude", 31, 29),
+            ("Shortening the cover letter", "Claude", 38, 8),
+            ("Moving-flat checklist", "Claude", 95, 17),
             ("An old question about layout", "Claude", 150, 6),
-            ("First look at the corpus", "Claude", 200, 13),
+            ("First look at the sales data", "Claude", 200, 13),
             ("Summarise this paper", "Gemini", 6, 1),
             ("Translate the release notes", "Gemini", 15, 1),
             ("Compare these two charts", "Gemini", 30, 1),
@@ -5164,18 +5181,18 @@ enum DemoSeedAll {
         // narrows by it: a demo where every session ran in the same repo
         // cannot show that filter doing anything.
         let claudeCode: [(String, Int, Double)] = [
-            ("casberi · Fix the demo room-head coverage gaps", 42, 1),
-            ("casberi · Wire the source tray packing self-test", 18, 4),
-            ("casberi · Chase the embedding race on foreground", 61, 12),
-            ("casberi · Measure the transcript format", 88, 16),
-            ("casberi · The month strip and its floors", 27, 23),
-            ("casberi · Why the drift guard passed wrongly", 34, 30),
+            ("quillmark · Fix the paste freeze on large tables", 42, 1),
+            ("quillmark · Add a test for the PDF export", 18, 4),
+            ("quillmark · Chase the sync race on launch", 61, 12),
+            ("quillmark · Measure typing latency in the editor", 88, 16),
+            ("quillmark · Word count widget, take two", 27, 23),
+            ("quillmark · Why the snapshot test is flaky", 34, 30),
             ("notes-cli · First pass at the parser", 12, 38),
             ("notes-cli · Handle the empty-folder case", 9, 45),
-            ("casberi · Redundancy sweep on the cards", 21, 52),
+            ("quillmark · Tidy the settings code", 21, 52),
             ("notes-cli · Ship the release script", 15, 59),
-            ("casberi · The comparison line's honesty rule", 36, 66),
-            ("casberi · Read the ledger before proposing", 24, 71),
+            ("quillmark · Footnotes in the PDF export", 36, 66),
+            ("quillmark · Read the crash logs before guessing", 24, 71),
         ]
         out += claudeCode.enumerated().map { i, c in
             let headline = c.0.components(separatedBy: " · ").last ?? c.0
@@ -5183,7 +5200,7 @@ enum DemoSeedAll {
             // the tag and the words can never disagree — which is what
             // `ClaudeCodeSession` guarantees on a real import, where both come
             // from the same `cwd`.
-            let project = c.0.components(separatedBy: " · ").first ?? "casberi"
+            let project = c.0.components(separatedBy: " · ").first ?? "quillmark"
             return row(.chat, c.0, source: "Claude Code", ref: "demo:claudecode:\(i)",
                 days: c.2, hour: 20,
                 // The OPENING ASK, as `ClaudeCodeImport` lands it: the session
@@ -5207,7 +5224,7 @@ enum DemoSeedAll {
         }
         out += (0..<10).map { i in
             row(.note, ["Roadmap", "Meeting notes — Tuesday", "Kitchen budget", "Trip plan",
-                        "Reading list", "Panel spec", "Hiring loop", "Q4 goals",
+                        "Reading list", "Onboarding spec", "Hiring loop", "Q4 goals",
                         "Home projects", "Recipes"][i],
                 source: "Notion", ref: "demo:notion:\(i)", days: Double(2 + i * 7), hour: 12,
                 content: "Page in your workspace") { t in
@@ -5225,7 +5242,7 @@ enum DemoSeedAll {
         }
         out += (0..<3).map { i in
             // A voice note is a note of yours, under `You` (prd §972).
-            row(.voice, ["Idea for the panel", "Shopping list", "Note to self — call Nils"][i],
+            row(.voice, ["Idea for the onboarding", "Shopping list", "Note to self — call Nils"][i],
                 source: "You", ref: "demo:voice:\(i)", days: Double(1 + i * 4), hour: 8,
                 content: "0:2\(i) · transcribed on device")
         }
@@ -5606,11 +5623,11 @@ enum DemoSeedAll {
         // (a REAL `.p8` key in the Keychain), which a demo must never fake —
         // so `ASCRoomSource.compose` widens for `DemoMode.isActive` instead,
         // and this plants the standing it reads once that door is open.
-        // Matches the alert row above ("In review · Casberi 1.4", build 285).
-        ASCState.apps = ["casberi": "Casberi"]
+        // Matches the alert row above ("In review · Quillmark 1.4", build 285).
+        ASCState.apps = ["quillmark": "Quillmark"]
         ASCState.standing = [
-            "casberi": ASCStanding(
-                appID: "casberi", app: "Casberi", version: "1.4",
+            "quillmark": ASCStanding(
+                appID: "quillmark", app: "Quillmark", version: "1.4",
                 state: ASCVersionState.inReview.rawValue, since: at(1, 10), observed: true,
                 build: "285", buildState: ASCBuildState.valid.rawValue, expires: nil),
         ]
@@ -5626,7 +5643,7 @@ enum DemoSeedAll {
         AWSState.standing = AWSStanding(
             region: "us-east-1",
             alarmsInAlarm: ["prod-api-5xx"],
-            lastFailedPipeline: "casberi-deploy",
+            lastFailedPipeline: "quillmark-deploy",
             lastFailedPipelineWhen: at(1.2, 16),
             costToday: 184.20, costBaseline: 61.40,
             costAnomalyDay: demoDayStamp(2),
@@ -5641,8 +5658,8 @@ enum DemoSeedAll {
         PolarState.set(PolarState.Reading(mrrMinor: 48_200, currency: "USD",
                                           activeSubscriptions: 1_204,
                                           fetchedAt: .now))
-        UserDefaults.standard.set("Casberi", forKey: "polar.orgName")
-        UserDefaults.standard.set("casberi", forKey: "polar.orgSlug")
+        UserDefaults.standard.set("Quillmark", forKey: "polar.orgName")
+        UserDefaults.standard.set("quillmark", forKey: "polar.orgSlug")
 
         // Radicle's open work (prd §401). The head reads bridge STATE, not
         // rows, so seeding the three patch/issue rows above is not enough to

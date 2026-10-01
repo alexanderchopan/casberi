@@ -46,6 +46,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SEED = ROOT / "Casberi/Casberi/Model/DemoSeedAll.swift"
+# The DEBUG dev seed names its four screenshots by `sample:demo-shot-N` too, and
+# since prd §1026 they are drawn in the same table, so it is read alongside.
+CORPUS = ROOT / "Casberi/Casberi/Model/DemoCorpus.swift"
 ASSETS = ROOT / "Casberi/Casberi/Assets.xcassets"
 EACH_CAP = 160 * 1024
 TOTAL_CAP = 9 * 1024 * 1024
@@ -96,6 +99,10 @@ def audit(table: dict, assets: dict, seed: str) -> list:
             continue
         m = re.fullmatch(r"shot-(\d+)", key)
         if m and any(int(m.group(1)) >= base for base in shots):
+            continue
+        # A whole `sample:` ref spelled out — a book cover (`"sample:cover-state"`)
+        # or one of the dev seed's shots (`"sample:demo-shot-1"`).
+        if f'"sample:{key}"' in code or (m and f'"sample:demo-shot-{m.group(1)}"' in code):
             continue
         out.append(f"{key} is drawn but no art()/pixels() literal in DemoSeedAll names it")
 
@@ -159,6 +166,12 @@ def self_test() -> bool:
         ("a picture over the cap", table, {**assets, "sample-pic-x-video-0": 400_000}, seed, 1),
         ("a commented-out literal does not count", {**table, "rss-0": "sample-pic-rss-0"},
          {**assets, "sample-pic-rss-0": 40_000}, seed + '\n    // art("rss-\\(i)")', 1),
+        ("a whole sample: ref names its key", {**table, "cover-state": "sample-cover-state",
+                                               "shot-1": "sample-screenshot-1"},
+         {**assets, "sample-cover-state": 40_000, "sample-screenshot-1": 40_000},
+         seed + '\n    return "sample:cover-state"\n    sourceRef: "sample:demo-shot-1")', 0),
+        ("a cover nothing names", {**table, "cover-state": "sample-cover-state"},
+         {**assets, "sample-cover-state": 40_000}, seed, 1),
     ]
     ok = True
     for name, t, a, s, want in cases:
@@ -177,7 +190,8 @@ def main() -> int:
     if "--self-test" in sys.argv:
         print("  self-test passed")
         return 0
-    findings = audit(load_table(), load_assets(), SEED.read_text(encoding="utf-8"))
+    findings = audit(load_table(), load_assets(),
+                     SEED.read_text(encoding="utf-8") + "\n" + CORPUS.read_text(encoding="utf-8"))
     if findings:
         print("demo-picture-audit: FAIL")
         for f in findings:

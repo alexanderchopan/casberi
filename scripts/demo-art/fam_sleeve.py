@@ -508,51 +508,122 @@ def podcast_good_demo():
     return design_details("#e6eaf7", "#1b1b1f", "The shape of|a good demo", motif)
 
 
-def filter_stories(ground, ink, accent, title, motif):
-    """Filter Stories: a coffee show. A round stamp with the name set on its
-    rim, Futura, one hand-cut figure per episode on its own ground."""
-    tspans = "".join(f"<tspan x='300' dy='{0 if i == 0 else 40}'>{esc(t)}</tspan>" for i, t in enumerate(title.split("|")))
-    defs = "<path id='rimtop' d='M300 300 m-232 0 a232 232 0 1 1 464 0'/>"
+def heat_and_salt(ground, accent, ep_no, title, motif, defs=""):
+    """Heat and Salt: a cooking show. Rockwell throughout, a flame-and-salt-crystal
+    mark, and every episode's title printed on a kitchen order ticket; each
+    episode has its own ground colour and its own figure from the stove."""
+    ink, cream = "#2a1c16", "#f6ecd8"
+    mark = (f"<path d='M58 30 C70 46 74 54 70 64 C67 72 60 76 54 76 C44 76 38 68 39 59 C40 50 48 46 47 36 "
+            f"C53 40 55 46 54 52 C58 46 59 38 58 30 Z' fill='{accent}'/>"
+            "<path d='M64 60 L76 54 L88 60 L76 66 Z' fill='#ffffff'/>"
+            "<path d='M64 60 L76 66 L76 80 L64 74 Z' fill='#e4dccd'/>"
+            "<path d='M88 60 L76 66 L76 80 L88 74 Z' fill='#c9bfae'/>")
+    lines = title.split("|")
+    tspans = "".join(f"<tspan x='70' dy='{0 if i == 0 else 42}'>{esc(t)}</tspan>" for i, t in enumerate(lines))
+    teeth = "".join(f"L{48 + k * 16 + 8} 418 L{48 + k * 16 + 16} 426 " for k in range(32))
+    ticket = (f"<g transform='rotate(-2 300 488)'>"
+              f"<path d='M48 572 L48 426 {teeth} L560 426 L560 572 Z' fill='#000' opacity='.22' transform='translate(5 7)'/>"
+              f"<path d='M48 572 L48 426 {teeth} L560 426 L560 572 Z' fill='{cream}'/>"
+              f"<text x='70' y='458' font-family='Rockwell' font-size='16' fill='{ink}' opacity='.6'>No. {ep_no}</text>"
+              f"<line x1='70' y1='470' x2='538' y2='470' stroke='{ink}' stroke-width='1.5' stroke-dasharray='2 5' opacity='.45'/>"
+              f"<text y='{510 if len(lines) > 1 else 526}' font-family='Rockwell' font-weight='bold' font-size='34' fill='{ink}'>{tspans}</text>"
+              f"</g>")
     inner = (f"<rect width='600' height='600' fill='{ground}'/>"
-             f"<circle cx='300' cy='300' r='262' fill='none' stroke='{ink}' stroke-width='3'/>"
-             f"<circle cx='300' cy='300' r='206' fill='none' stroke='{ink}' stroke-width='1.5' opacity='.5'/>"
-             f"<text font-family='Futura' font-weight='bold' font-size='30' fill='{ink}'>"
-             f"<textPath href='#rimtop' startOffset='50%' text-anchor='middle'>Filter Stories</textPath></text>"
-             f"<circle cx='88' cy='300' r='5' fill='{accent}'/><circle cx='512' cy='300' r='5' fill='{accent}'/>"
-             + motif +
-             f"<text y='464' text-anchor='middle' font-family='Avenir Next' font-weight='700' font-size='32' fill='{ink}'>{tspans}</text>")
+             f"<rect width='600' height='600' fill='url(#hs-glow)'/>"
+             + mark +
+             f"<text x='104' y='68' font-family='Rockwell' font-weight='bold' font-size='30' fill='{cream}'>Heat and Salt</text>"
+             + motif + ticket)
+    defs = rad("hs-glow", [(0, accent, .22), (1, accent, 0)], .5, .48, .55) + defs
     return svg(600, 600, inner, defs)
 
 
-def podcast_coffee_measured():
-    ink, acc = "#3a2317", "#c2562b"
-    ticks = "".join(
-        f"<line x1='{200 + i * 10}' y1='{396 if i % 5 else 388}' x2='{200 + i * 10}' y2='404' stroke='{ink}' stroke-width='2'/>"
-        for i in range(13))
-    motif = (f"<path d='M226 150 L374 150 L336 228 L264 228 Z' fill='{acc}'/>"
-             f"<rect x='214' y='140' width='172' height='14' rx='4' fill='{ink}'/>"
-             f"<rect x='292' y='228' width='16' height='12' fill='{ink}'/>"
-             f"<path d='M300 246 L300 262' stroke='{acc}' stroke-width='4' stroke-linecap='round'/>"
-             f"<circle cx='300' cy='276' r='4' fill='{acc}'/>"
-             f"<path d='M246 292 L354 292 L346 360 Q300 372 254 360 Z' fill='#f3e6cf' stroke='{ink}' stroke-width='5' stroke-linejoin='round'/>"
-             f"<rect x='182' y='364' width='236' height='42' rx='8' fill='{ink}'/>"
-             + ticks.replace(ink, "#f3e6cf") +
-             f"<text x='400' y='392' text-anchor='end' font-family='Menlo' font-size='16' fill='#ffb68a'>18.0 g</text>")
-    return filter_stories("#e6cfa9", ink, acc, "Coffee, measured", motif)
+def podcast_stock():
+    """Stock, slowly: a tall enamel stockpot on a low blue flame, bones and an
+    onion half in the broth, steam taking its time."""
+    acc = "#f2a541"
+    steam = "".join(
+        f"<path d='M{x} 196 C{x - 22} 170 {x + 22} 150 {x} 124 S{x - 18} 86 {x + 4} 70' stroke='#f6ecd8' "
+        f"stroke-width='{sw}' fill='none' stroke-linecap='round' opacity='{op}'/>"
+        for x, sw, op in ((236, 9, .28), (300, 12, .35), (366, 8, .25)))
+    flames = "".join(
+        f"<path d='M{x - 7} 392 Q{x - 6} 380 {x} 372 Q{x + 6} 380 {x + 7} 392 Z' fill='#5ab4ff'/>"
+        f"<path d='M{x - 3} 392 Q{x - 2} 385 {x} 381 Q{x + 2} 385 {x + 3} 392 Z' fill='#d8f0ff'/>"
+        for x in range(222, 384, 20))
+    pepper = "".join(f"<circle cx='{x}' cy='{y}' r='3' fill='#3a2412'/>"
+                     for x, y in ((206, 214), (296, 206), (312, 214), (322, 203), (398, 206), (404, 214), (268, 220)))
+    motif = ("<defs_placeholder/>"
+             "<rect x='196' y='392' width='208' height='10' rx='5' fill='#14302f'/>"
+             + flames +
+             # the pot: cream enamel, a dark rim and foot band, two loop handles
+             "<path d='M170 206 L430 206 L424 360 Q422 380 400 382 L200 382 Q178 380 176 360 Z' fill='url(#pot)'/>"
+             "<rect x='176' y='344' width='248' height='12' fill='#24383a' opacity='.85'/>"
+             "<path d='M170 222 Q136 222 136 252 Q136 278 172 276' stroke='#24383a' stroke-width='10' fill='none'/>"
+             "<path d='M430 222 Q464 222 464 252 Q464 278 428 276' stroke='#24383a' stroke-width='10' fill='none'/>"
+             "<ellipse cx='300' cy='206' rx='134' ry='24' fill='#24383a'/>"
+             "<ellipse cx='300' cy='208' rx='122' ry='18' fill='#c98b3a'/>"
+             "<ellipse cx='300' cy='211' rx='112' ry='13' fill='#d9a24a'/>"
+             # what's in the broth: a bone, an onion half, bay leaves, peppercorns
+             "<g transform='rotate(-8 250 206)'><rect x='222' y='200' width='58' height='12' rx='6' fill='#f3ead8'/>"
+             "<circle cx='222' cy='200' r='8' fill='#f3ead8'/><circle cx='222' cy='212' r='8' fill='#f3ead8'/>"
+             "<circle cx='280' cy='200' r='8' fill='#f3ead8'/><circle cx='280' cy='212' r='8' fill='#f3ead8'/></g>"
+             "<ellipse cx='344' cy='208' rx='26' ry='12' fill='#f4dca8'/>"
+             "<ellipse cx='344' cy='208' rx='18' ry='8' fill='none' stroke='#d6a85a' stroke-width='2'/>"
+             "<ellipse cx='344' cy='208' rx='9' ry='4' fill='none' stroke='#d6a85a' stroke-width='2'/>"
+             "<ellipse cx='380' cy='216' rx='16' ry='5' fill='#4f6a2a' transform='rotate(-20 380 216)'/>"
+             "<ellipse cx='300' cy='218' rx='14' ry='4.5' fill='#5a7a32' transform='rotate(14 300 218)'/>"
+             + pepper +
+             # the enamel's shine
+             "<path d='M196 230 L206 230 L204 334 L194 334 Z' fill='#ffffff' opacity='.35'/>"
+             + steam)
+    defs = lin("pot", [(0, "#d9cdb4"), (.3, "#f6efe0"), (.7, "#ece2cc"), (1, "#b8ab92")], 0, 0, 1, 0)
+    return heat_and_salt("#1f4a4c", acc, 14, "Stock, slowly", motif.replace("<defs_placeholder/>", ""), defs)
 
 
-def podcast_altitude():
-    ink, acc = "#f1e4c8", "#e0a15a"
-    contours = "".join(
-        f"<path d='M110 {300 + i * 14} Q200 {262 + i * 14} 300 {288 + i * 14} T490 {280 + i * 14}' "
-        f"stroke='{ink}' stroke-width='1.3' fill='none' opacity='{.35 - i * .05:.2f}'/>" for i in range(6))
-    motif = (f"<ellipse cx='300' cy='184' rx='40' ry='54' fill='{acc}' transform='rotate(-24 300 184)'/>"
-             f"<path d='M284 146 Q306 184 316 222' stroke='#1d3a2e' stroke-width='5' fill='none' stroke-linecap='round' transform='rotate(-24 300 184)'/>"
-             f"<path d='M120 372 L218 244 L262 290 L330 204 L480 372 Z' fill='{ink}'/>"
-             f"<path d='M330 204 L480 372 L380 372 Z' fill='#1d3a2e' opacity='.18'/>"
-             f"<path d='M218 244 L262 290 L240 300 Z' fill='#1d3a2e' opacity='.18'/>"
-             + contours)
-    return filter_stories("#1d3a2e", ink, acc, "Roasting at altitude", motif)
+def podcast_rice():
+    """Why restaurant rice tastes better: a black wok tossing rice through a
+    wall of flame — the breath of the wok the episode is about."""
+    acc = "#ffd166"
+    rng = random.Random(505)
+    # rice and egg and scallion flying up out of the wok in an arc
+    grains = []
+    for _ in range(150):
+        t = rng.random()
+        x = 210 + t * 250 + rng.gauss(0, 12)
+        y = 300 - math.sin(t * math.pi) * 170 + rng.gauss(0, 14) * (0.5 + t)
+        a = rng.uniform(0, 180)
+        grains.append(f"<ellipse cx='{x:.0f}' cy='{y:.0f}' rx='5.5' ry='2.6' fill='#fbf6ea' transform='rotate({a:.0f} {x:.0f} {y:.0f})'/>")
+    for _ in range(14):
+        t = rng.random()
+        x = 220 + t * 230 + rng.gauss(0, 10)
+        y = 300 - math.sin(t * math.pi) * 160 + rng.gauss(0, 12)
+        grains.append(f"<path d='M{x:.0f} {y:.0f} l9 -3 l2 7 l-8 3 Z' fill='#ffcf3a'/>")
+    for _ in range(10):
+        t = rng.random()
+        x = 220 + t * 230 + rng.gauss(0, 10)
+        y = 300 - math.sin(t * math.pi) * 160 + rng.gauss(0, 12)
+        grains.append(f"<circle cx='{x:.0f}' cy='{y:.0f}' r='5' fill='none' stroke='#6fbf4a' stroke-width='3'/>")
+    flames = []
+    for k in range(9):
+        x = 150 + k * 34
+        hgt = 70 + (k % 3) * 22 + rng.uniform(0, 14)
+        flames.append(f"<path d='M{x - 22} 392 Q{x - 26} {392 - hgt * .55} {x + 4} {392 - hgt} "
+                      f"Q{x - 4} {392 - hgt * .45} {x + 22} 392 Z' fill='#ff7a2a' opacity='.9'/>")
+        flames.append(f"<path d='M{x - 12} 392 Q{x - 12} {392 - hgt * .4} {x + 2} {392 - hgt * .7} "
+                      f"Q{x} {392 - hgt * .3} {x + 12} 392 Z' fill='{acc}'/>")
+    motif = ("<ellipse cx='300' cy='330' rx='190' ry='70' fill='#ff8a3a' opacity='.25' filter='url(#wokglow)'/>"
+             + "".join(flames) +
+             # the wok, tipped toward us: a dark bowl, its lip lit by the fire, a long handle
+             "<path d='M146 318 Q300 300 446 312 Q430 396 300 400 Q172 398 146 318 Z' fill='#1c1918'/>"
+             "<path d='M146 318 Q300 300 446 312' stroke='#ffb36a' stroke-width='5' fill='none'/>"
+             "<path d='M170 324 Q300 312 420 318 Q400 340 300 344 Q196 342 170 324 Z' fill='#2c2622'/>"
+             "<path d='M440 318 L556 282' stroke='#1c1918' stroke-width='14' stroke-linecap='round'/>"
+             "<path d='M498 300 L556 282' stroke='#6a3a22' stroke-width='18' stroke-linecap='round'/>"
+             "<path d='M200 330 Q260 312 330 316 Q380 318 404 326 Q300 340 200 330 Z' fill='#f2e6c8'/>"
+             + "".join(f"<ellipse cx='{rng.uniform(214, 392):.0f}' cy='{rng.uniform(319, 330):.0f}' rx='4.5' ry='2' fill='#fffaf0'/>"
+                       for _ in range(40))
+             + "".join(grains))
+    defs = blur("wokglow", 18)
+    return heat_and_salt("#b5361f", acc, 15, "Why restaurant rice|tastes better", motif, defs)
 
 
 # ── Steam library headers (736×344) ───────────────────────────────────────
@@ -793,8 +864,8 @@ DRAW = {
     "podcast-1": podcast_latency,
     "podcast-2": podcast_two_people,
     "podcast-3": podcast_good_demo,
-    "podcast-4": podcast_coffee_measured,
-    "podcast-5": podcast_altitude,
+    "podcast-4": podcast_stock,
+    "podcast-5": podcast_rice,
     "steam-0": factorio,
     "steam-1": balatro,
     "steam-2": outer_wilds,
