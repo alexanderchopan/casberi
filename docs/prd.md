@@ -374,6 +374,7 @@ marks chronological position within the pair.
 | §1013 (the tray's You row scrolls with the rooms) | the You row was the first row of the scroll | amended by §1015 — the search field and the You row are pinned above the scroll |
 | §989 (the node's vouchers on Node) | your own node's reward vouchers were a line on the Node figure and Node's rows | amended by §1016 — vouchers move to the Rewards tile with mining, and Node keeps only the node's health: height, sync and peers |
 | §991 (the Logos room is Home · Accounts · Activity · Node) | four tiles, Node the one scope the family did not have | amended by §1016 — a fifth tile, Rewards (mining tickets and reward vouchers), drawn with the app's own `coins.stack` symbol |
+| §988 (an LEZ id is base58, optionally `Public/`) | the field took only a base58 id, so a hex public key, a quoted id, an id ending a sentence and an explorer link were all "not an LEZ account id" | amended by §1034 — the paste is cleaned first, a valid hex public key watches its derived account, and hex off the curve is named as maybe a chat address |
 | §1013 (two sizes in the tray: `DS.Face.seat` and the row circle) | the social faces rail and every sheet head still drew at `DS.Face.shelf`, 56pt | amended by §1016a — `shelf` IS `seat` (46pt): every standalone circle in the app is the face button's size |
 | §1016 (the faces ruling, as first numbered) | two sessions each took §1016 on 2026-09-30 | the faces ruling is §1016a; §1016 is Logos' Rewards tile, which the source cites |
 | §902 (the All feed's 52pt head) | `DSFeedRow.headHeight` was 52, a 26pt lead centred in it | amended by §1017 — 60, a 46pt lead with 7pt of air above and below |
@@ -62973,3 +62974,18 @@ Drawn first as a canvas (claude.ai artifact "Five things to do", `design/mockups
 **Guards.** `dock-selftest.sh` §13: the door is in the room's title row, wears the sliders and not the gear, raises through `openAccount`; no `.contextMenu` on the tray; `AccountsHeld` never returns (its old "Connect | Manage alone" check is inverted).
 
 **Seen** on a private iPhone 17 Pro simulator (iOS 27), the furnished demo, dark: the Stripe room's sliders disc beside its name; a tap raised Stripe's account page over the room; Apps with no switcher, connected rows green with no chevron, addable rows with their verb. Not seen: a room-less connected seat (none in the demo), the Mac.
+
+## §1034 — Logos: the field reads what people actually paste, and turns a public key into its account (user: "no matter what i paste into the search field it tells me isn't an lez or node address … they were given to me from logos team and user", then "yes make these changes", 2026-10-01; amends §988)
+
+Three values from the Logos team and a user, measured: `6x1m…g4DY` was a valid base58 id (it parsed and watched — it is one of the four system accounts the node's per-block transaction touches, so it will always read 0); `b65b…0dd4` was 64 hex characters that the field refused; `4fba…ee1a` likewise. All three accounts are empty, because the 9-30 reset wiped every account made before it.
+
+**What the 64-hex values are.** Logos's command-line wallet prints `Public/<base58 id>` and, on the next line, `With pk <hex>` — the account's public KEY. `b65b…` is a valid secp256k1 x-only key; `4fba…` is not a point on the curve at all, and Logos's chat identity service takes it as an address format (404 "no account log", where `b65b…` is a 400 "not a valid account address"), so it is most likely a chat address.
+
+**What the field does now** (`LogosWire.clean`, `entry`):
+- **Cleans the paste first:** invisible marks (a byte-order mark, zero-width spaces), the quotes, curly quotes, backticks and angle brackets a chat wraps an id in, a sentence's trailing period, comma or semicolon, and an explorer link (`…/account/<id>?…` gives the id). Each turned a good id into the error before (measured with the shipped parser).
+- **A hex public key watches its account** (`.key`), derived as LEZ does in `public_key.rs`: `SHA256("/LEE/v0.3/AccountId/Public/" ‖ five zero bytes ‖ key)`. `b65b…` watches `9WGi…3oBC`, the same id Python derives. The page says "That's a public key. Watching its account, 9WGi…3oBC." because the roster shows the account, not what was pasted.
+- **Hex that is not a key is named, never watched** (`.notKey`): "That isn't an LEZ account or key. It may be a Logos chat address." Treating any 32 bytes as an id would watch an account nobody owns and draw it as a confident, empty one (§83). The curve test is Euler's criterion over secp256k1's prime in plain 256-bit arithmetic, so `LogosWire` stays Foundation-only for its harness.
+
+**Guards:** `logos-selftest.sh` holds eight paste shapes, nine curve vectors checked against Python (the generator's x, both pastes, a value past the prime), the key's derived id, `0x` and capitals, and that only a readable entry arms the verb; four new mutations (no curve test, the key hashed without its padding, the period kept, the link not unwrapped).
+
+**Seen** on an iPhone 17 Pro simulator: a pasted `6x1m…` watched, and a pasted `4fba…` drew the chat-address line with the check unarmed. Not seen on screen: a pasted key's note — the simulator stopped taking taps and typed text before that paste; the path is the account path plus that one line, and `entry` itself is covered by the harness.

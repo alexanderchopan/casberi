@@ -126,13 +126,15 @@ struct LogosScreen: View {
                         actionLabel: String(localized: "Watch"),
                         keyboard: .URL,
                         focus: $fieldFocused,
-                        isArmed: LogosWire.entry(field) != .invalid,
+                        isArmed: LogosWire.arms(LogosWire.entry(field)),
                         // The paste FILLS the field, as on every devnet page;
                         // the armed verb then does what it does for typing.
                         paste: { pasted in
                             field = pasted
-                            if LogosWire.entry(pasted) == .invalid {
-                                lastResult = .failed(Self.malformed)
+                            switch LogosWire.entry(pasted) {
+                            case .invalid: lastResult = .failed(Self.malformed)
+                            case .notKey:  lastResult = .failed(Self.notKey)
+                            default:       break
                             }
                         },
                         action: watch)
@@ -153,14 +155,31 @@ struct LogosScreen: View {
     }
 
     private static let malformed = String(localized: "That isn't an LEZ account id or a node address.")
+    /// Sixty-four hex characters that are not a point on the curve: no LEZ
+    /// key or id, and the one measured case was a chat address (prd §1034).
+    private static let notKey = String(localized: "That isn't an LEZ account or key. It may be a Logos chat address.")
 
     // MARK: - Actions
 
     private func watch() {
+        var note: String?
         switch LogosWire.entry(field) {
         case .invalid:
             lastResult = .failed(Self.malformed)
             return
+        case .notKey:
+            lastResult = .failed(Self.notKey)
+            return
+        case .key(let id):
+            // A public key, as Logos's command-line wallet prints it: watch
+            // its account, and say so, since the roster shows the account's
+            // id rather than what was pasted (prd §1034).
+            guard logos.add(id) == .added else {
+                lastResult = .says(String(localized: "Already watching that key's account."))
+                field = ""
+                return
+            }
+            note = String(localized: "That's a public key. Watching its account, \(LogosWire.short(id)).")
         case .privateAccount:
             // Not a typo: a real account this door cannot read.
             lastResult = .says(String(localized: "A private account is readable only with its owner's consent."))
@@ -182,7 +201,10 @@ struct LogosScreen: View {
         field = ""
         fieldFocused = false
         DSHaptic.tap()
-        Task { await sync() }
+        Task {
+            await sync()
+            if let note { lastResult = .says(note) }
+        }
     }
 
     private func unwatch(_ id: String) {

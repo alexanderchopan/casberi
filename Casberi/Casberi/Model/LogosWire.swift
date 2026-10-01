@@ -38,7 +38,7 @@ enum LogosWire {
     }
 
     static func parseAccountID(_ raw: String) -> AccountID? {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = clean(raw)
         var visibility: Visibility?
         for v in [Visibility.publicAccount, .privateAccount] {
             let prefix = v.rawValue + "/"
@@ -58,6 +58,30 @@ enum LogosWire {
     static func watchableID(_ raw: String) -> String? {
         guard let id = parseAccountID(raw), id.visibility != .privateAccount else { return nil }
         return id.base58
+    }
+
+    /// What a paste carries around an id (prd §1034): whitespace and
+    /// invisible marks (a byte-order mark, zero-width spaces), the quotes or
+    /// backticks a chat wraps it in, the period that ends its sentence, and
+    /// the explorer link it was copied from. Measured: each one turned a
+    /// good id into "That isn't an LEZ account id".
+    static func clean(_ raw: String) -> String {
+        let invisible: Set<Character> = ["\u{200B}", "\u{200C}", "\u{200D}", "\u{2060}", "\u{FEFF}"]
+        var text = String(raw.filter { !invisible.contains($0) })
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = text.range(of: "/account/", options: .backwards) {
+            text = String(text[range.upperBound...].prefix { !"/?#".contains($0) })
+        }
+        let wrap = CharacterSet(charactersIn: "\"'`“”‘’<>()[]")
+        let trailing = CharacterSet(charactersIn: ".,;!")
+        var last = ""
+        while text != last {
+            last = text
+            text = text.trimmingCharacters(in: wrap)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            while let end = text.unicodeScalars.last, trailing.contains(end) { text.removeLast() }
+        }
+        return text
     }
 
     /// `EfQh…PLw7` — the short form every row and roster line uses.
@@ -444,16 +468,69 @@ extension LogosWire {
     /// node, or neither. An id wins — a base58 id is also a valid bare host
     /// name, so a mistyped id must never become a node at `<typo>:8080`. A node
     /// needs a dot, a colon or `localhost` to be read as one.
-    enum Entry: Equatable { case account(String), privateAccount, node(String), invalid }
+    ///
+    /// **Sixty-four hex characters** are what Logos's command-line wallet
+    /// prints for an account's public KEY ("With pk …", under the base58 id),
+    /// so a valid secp256k1 x-only key is read as one and watched as its
+    /// account (`.key`, the id derived exactly as LEZ does). Hex that is not
+    /// a point on the curve is no LEZ key at all — measured, one such paste
+    /// was a Logos chat address — so it is named (`.notKey`) rather than
+    /// turned into an account nobody owns, which would read as an empty one.
+    enum Entry: Equatable { case account(String), key(String), privateAccount, node(String), notKey, invalid }
 
     static func entry(_ raw: String) -> Entry {
         if let id = parseAccountID(raw) {
             return id.visibility == .privateAccount ? .privateAccount : .account(id.base58)
         }
-        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleaned = clean(raw)
+        if let bytes = hexKey(cleaned) {
+            guard isXOnlyKey(bytes) else { return .notKey }
+            return .key(accountID(publicKey: bytes))
+        }
+        let text = cleaned.lowercased()
         guard text.contains(".") || text.contains(":") || text.hasPrefix("localhost"),
-              let base = nodeBase(raw) else { return .invalid }
+              let base = nodeBase(cleaned) else { return .invalid }
         return .node(base)
+    }
+
+    /// Whether the field's verb can act: everything but nonsense and a hex
+    /// string that is not a key.
+    static func arms(_ entry: Entry) -> Bool { entry != .invalid && entry != .notKey }
+
+    /// 32 bytes written as 64 hex characters, `0x` allowed; nil otherwise.
+    static func hexKey(_ text: String) -> [UInt8]? {
+        var hex = text.lowercased()
+        if hex.hasPrefix("0x") { hex.removeFirst(2) }
+        guard hex.count == 64, hex.allSatisfy(\.isHexDigit) else { return nil }
+        var out: [UInt8] = []
+        var i = hex.startIndex
+        while i < hex.endIndex {
+            let j = hex.index(i, offsetBy: 2)
+            guard let byte = UInt8(hex[i..<j], radix: 16) else { return nil }
+            out.append(byte)
+            i = j
+        }
+        return out
+    }
+
+    /// A public account's id from its key, as LEZ derives it
+    /// (`lee/state_machine/src/signature/public_key.rs`, v0.3.0):
+    /// `SHA256("/LEE/v0.3/AccountId/Public/" ‖ five zero bytes ‖ key)`.
+    static func accountID(publicKey: [UInt8]) -> String {
+        let prefix = Array("/LEE/v0.3/AccountId/Public/".utf8) + [UInt8](repeating: 0, count: 5)
+        return base58Encode(Array(SHA256.hash(data: prefix + publicKey)))
+    }
+
+    /// Whether 32 bytes are a BIP-340 x-only public key: x below the field
+    /// prime and x³ + 7 a square mod p (Euler's criterion). About half of
+    /// random 32-byte strings are not, which is what tells a key from other
+    /// hex. Plain 256-bit arithmetic, so this file stays Foundation-only.
+    static func isXOnlyKey(_ bytes: [UInt8]) -> Bool {
+        guard bytes.count == 32 else { return false }
+        let x = Secp.from(bytes)
+        guard Secp.less(x, Secp.p) else { return false }
+        let y2 = Secp.add(Secp.mul(Secp.mul(x, x), x), [7, 0, 0, 0])
+        return Secp.pow(y2, Secp.halfPMinusOne) == [1, 0, 0, 0]
     }
 
     /// Whether an address stays on this machine. Anything else reaches a node
@@ -604,3 +681,105 @@ extension LogosWire {
     }
 }
 
+/// secp256k1's field, mod p = 2^256 − 2^32 − 977: four 64-bit limbs, least
+/// significant first. Just enough for `isXOnlyKey`'s one exponentiation.
+private enum Secp {
+    typealias U = [UInt64]
+    static let p: U = [0xFFFF_FFFE_FFFF_FC2F, .max, .max, .max]
+    /// 2^256 mod p, which is what folds a product's high half back in.
+    static let fold: UInt64 = 0x1_0000_03D1
+    static let halfPMinusOne: U = {
+        let m = sub(p, [1, 0, 0, 0])
+        return (0..<4).map { i in (m[i] >> 1) | (i < 3 ? m[i + 1] << 63 : 0) }
+    }()
+
+    static func from(_ bytes: [UInt8]) -> U {
+        (0..<4).map { i in
+            bytes[(3 - i) * 8 ..< (3 - i) * 8 + 8].reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
+        }
+    }
+
+    static func less(_ a: U, _ b: U) -> Bool {
+        for i in (0..<4).reversed() where a[i] != b[i] { return a[i] < b[i] }
+        return false
+    }
+
+    static func sub(_ a: U, _ b: U) -> U {
+        var r = a, borrow: UInt64 = 0
+        for i in 0..<4 {
+            let (d1, o1) = a[i].subtractingReportingOverflow(b[i])
+            let (d2, o2) = d1.subtractingReportingOverflow(borrow)
+            r[i] = d2
+            borrow = (o1 ? 1 : 0) + (o2 ? 1 : 0)
+        }
+        return r
+    }
+
+    /// `top · 2^256 + r`, reduced: `top · fold` added back until nothing
+    /// overflows, then one or two subtractions of p.
+    static func reduce(_ r0: U, top t0: UInt64) -> U {
+        var r = r0, top = t0
+        while top > 0 {
+            let (high, low) = top.multipliedFullWidth(by: fold)
+            var carry = high
+            let (s0, o0) = r[0].addingReportingOverflow(low)
+            r[0] = s0
+            carry &+= o0 ? 1 : 0
+            for i in 1..<4 {
+                let (s, o) = r[i].addingReportingOverflow(carry)
+                r[i] = s
+                carry = o ? 1 : 0
+            }
+            top = carry
+        }
+        while !less(r, p) { r = sub(r, p) }
+        return r
+    }
+
+    static func add(_ a: U, _ b: U) -> U {
+        var r = a, carry: UInt64 = 0
+        for i in 0..<4 {
+            let (s1, o1) = a[i].addingReportingOverflow(b[i])
+            let (s2, o2) = s1.addingReportingOverflow(carry)
+            r[i] = s2
+            carry = (o1 ? 1 : 0) + (o2 ? 1 : 0)
+        }
+        return reduce(r, top: carry)
+    }
+
+    static func mul(_ a: U, _ b: U) -> U {
+        var t = [UInt64](repeating: 0, count: 8)
+        for i in 0..<4 {
+            var carry: UInt64 = 0
+            for j in 0..<4 {
+                let (high, low) = a[i].multipliedFullWidth(by: b[j])
+                let (s1, o1) = t[i + j].addingReportingOverflow(low)
+                let (s2, o2) = s1.addingReportingOverflow(carry)
+                t[i + j] = s2
+                carry = high &+ (o1 ? 1 : 0) &+ (o2 ? 1 : 0)
+            }
+            t[i + 4] = carry
+        }
+        // high · 2^256 + low ≡ low + high · fold
+        var r = Array(t[0..<4]), carry: UInt64 = 0
+        for i in 0..<4 {
+            let (high, low) = t[i + 4].multipliedFullWidth(by: fold)
+            let (s1, o1) = r[i].addingReportingOverflow(low)
+            let (s2, o2) = s1.addingReportingOverflow(carry)
+            r[i] = s2
+            carry = high &+ (o1 ? 1 : 0) &+ (o2 ? 1 : 0)
+        }
+        return reduce(r, top: carry)
+    }
+
+    static func pow(_ base: U, _ exponent: U) -> U {
+        var result: U = [1, 0, 0, 0]
+        for i in (0..<4).reversed() {
+            for bit in (0..<64).reversed() {
+                result = mul(result, result)
+                if (exponent[i] >> UInt64(bit)) & 1 == 1 { result = mul(result, base) }
+            }
+        }
+        return result
+    }
+}

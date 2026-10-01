@@ -4,6 +4,7 @@
 #
 #   Casberi/Casberi/Model/LogosWire.swift
 #     — parseAccountID / watchableID (base58, the Public/Private prefix)
+#     — clean / entry / hexKey / isXOnlyKey / accountID (what a paste is, prd §1034)
 #     — balance(_:)                  (getAccountBalance, u128 via Decimal)
 #     — block(_:)                    (LEZ v0.3's Borsh layout, exact length or nil)
 #     — events(_:watched:)           (what a transaction means for one account)
@@ -128,6 +129,34 @@ check(LogosWire.parseAccountID("0OIl" + CBGR.dropFirst(4)) == nil, "characters o
 check(LogosWire.base58Encode(LogosWire.base58Decode(DUMJ)!) == DUMJ, "base58 round-trips")
 check(LogosWire.base58Encode([0, 0, 1]) == "112", "leading zero bytes keep their 1s")
 check(LogosWire.short(CBGR) == "CbgR…Sr2r", "the short form")
+
+print("what a paste is (prd §1034)")
+for wrapped in ["`" + CBGR + "`", "\"" + CBGR + "\"", "“" + CBGR + "”", CBGR + ".", "\u{FEFF}" + CBGR, "<" + CBGR + ">",
+                "https://explorer.testnet.lez.logos.co/account/" + CBGR + "?tab=tx", "Public/" + CBGR + ","] {
+    check(LogosWire.entry(wrapped) == .account(CBGR), "a paste cleans to the id: \(wrapped.prefix(12))…")
+}
+check(LogosWire.entry("node.example.com.") == .node("http://node.example.com:8080"), "a node keeps its address, trailing period gone")
+// The curve test against Python's Euler criterion (secp256k1, x³ + 7 a square mod p).
+let curve: [(String, Bool)] = [
+    ("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", true),   // the generator's x
+    ("b65bc5ea6bbc6442cfa9ade3efbd9a5165ca6bdd37a0616eca15e010ad8e0dd4", true),   // a key the Logos team sent
+    ("4fba1bd3b931f415156cc639f4b1b7973ac8274125129d1adca70e6efeabee1a", false),  // a chat address they sent
+    ("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc30", false),  // past the field prime
+    ("2bc27e528f6dfd28bbf31fc4594437e38bb0203c63f4822ebac3a3265d65b94b", true),
+    ("08f43bdf7e2b5b16e25acf77593a695d105c864ba75fa96aa8d0ad82a4aa10f4", true),
+    ("653e09f78221d08196c394627a320165c301696ae878eea286a5bda877f3160c", true),
+    ("57a9a51694bd6cec42e7a5333bf25ba3340d9c892ef78b0f74941859a5065835", false),
+    ("5a263d2f55ff21184ebe64b4231bb874835dfa91c3c6b49a5f3843a25876a0fa", true)]
+for (hex, want) in curve {
+    check(LogosWire.hexKey(hex).map(LogosWire.isXOnlyKey) == want, "curve: \(hex.prefix(8))… is \(want ? "" : "not ")a key")
+}
+check(LogosWire.entry("b65bc5ea6bbc6442cfa9ade3efbd9a5165ca6bdd37a0616eca15e010ad8e0dd4")
+      == .key("9WGi9TEb22h9eVujFZUV6opHwJ7irRmWu2yoGTPa3oBC"), "a hex key watches its account, derived as LEZ does")
+check(LogosWire.entry("0xB65BC5EA6BBC6442CFA9ADE3EFBD9A5165CA6BDD37A0616ECA15E010AD8E0DD4")
+      == .key("9WGi9TEb22h9eVujFZUV6opHwJ7irRmWu2yoGTPa3oBC"), "0x and capitals are the same key")
+check(LogosWire.entry("4fba1bd3b931f415156cc639f4b1b7973ac8274125129d1adca70e6efeabee1a") == .notKey, "hex off the curve is named, never watched")
+check(!LogosWire.arms(.notKey) && !LogosWire.arms(.invalid) && LogosWire.arms(.key("x")), "only a readable entry arms the verb")
+check(LogosWire.hexKey(String(repeating: "a", count: 63)) == nil, "63 hex characters are not a key")
 
 print("getAccountBalance (v0.3)")
 check(LogosWire.balance(1481100) == 1481100, "a bare number is the balance")
@@ -369,6 +398,18 @@ mutate "mining stopping lands as starting" \
 mutate "the ticket count read from the wrong key" \
   '["claimable_tickets"] as? NSNumber' \
   '["slots_until_expiry"] as? NSNumber'
+mutate "hex watched without the curve test" \
+  'guard isXOnlyKey(bytes) else { return .notKey }' \
+  'guard !bytes.isEmpty else { return .notKey }'
+mutate "the key's id derived without its padding" \
+  '[UInt8](repeating: 0, count: 5)' \
+  '[UInt8](repeating: 0, count: 0)'
+mutate "a sentence's period kept" \
+  'let trailing = CharacterSet(charactersIn: ".,;!")' \
+  'let trailing = CharacterSet(charactersIn: ",;!")'
+mutate "the explorer link not unwrapped" \
+  'if let range = text.range(of: "/account/", options: .backwards) {' \
+  'if let range = text.range(of: "/account-never/", options: .backwards) {'
 mutate "a network address read as loopback" \
   'host.hasPrefix("127.")' \
   'host.hasPrefix("1")'
