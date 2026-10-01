@@ -381,6 +381,7 @@ marks chronological position within the pair.
 | §982 (declined: sketching in a note) | a note took a checklist, a scan, a link, a Quick Note and a lock, and no drawing | reversed in part by §1023 — Attach's Sketch opens Apple's canvas and keeps the drawing as the note's one picture; §982's other declines stand |
 | §640 (a glyphless act row is inset to the title column) | the entry well started at the title column, a disc wider on the left than the right | amended by §1027 — the entry well spans the column, discs' edge to the page's; every other glyphless row keeps the inset |
 | §1030 (GitHub's watch verb is a row under the menu) | `Watch a repo or person` stood as a `DevnetVerbRow` under the tiles and menu | amended by §1031 — the verb is the Watch tile, last in the room's grid, as Reminders' New is; the tray and its one-time rise after a connect stand |
+| §729 (the commit is a row under the field) | an account page's entry committed from a check disc and its verb's word on a row of its own under the well | superseded by §1032 — the commit is a check disc inside the well, taking Paste's place once the field holds something; a second verb (§212) keeps its row |
 
 ## 1. Thesis
 
@@ -62942,3 +62943,12 @@ Drawn first as a canvas (claude.ai artifact "Five things to do", `design/mockups
 **Deleted:** `FeedScreen.githubWatchSection`, §1030's row. The tray, `GitHubWatchAdd` and the tray's one rise after a connect stand.
 
 **Not verified:** written in a Linux cloud session with no Xcode or simulator — not built, not run. Owed: `verify.sh` (it runs `room-kind-tiles-selftest.sh`, which needs `swiftc`), the GitHub room with a key on the iPhone 17 Pro (Watch last, unlit, opens the tray), and with fewer than two kinds (`All · Watch`).
+
+## §1032 — An account page's commit is a check INSIDE the well, where Paste is (user: "i don't think the watch check mark should be below the search field, it should be a check mark inside the field like paste is", on Logos, 2026-10-01; supersedes §729's commit row, follows §1027)
+
+**Ruling.** `DSSlabField`'s entry row (`Design/DSSlab.swift`) draws its commit as a 32pt check disc at the well's trailing edge, so every `AccountPage` takes it at once. The well holds one trailing control at a time: an empty field that takes a paste holds out Paste, and once it holds something the check takes Paste's place. A field with no Paste shows the check from the first frame. The check is filled in Paste's blue when armed and a quiet well disc when not (§83, a control states its own disabled state). The verb's word ("Watch", "Connect", "Save") is no longer drawn; it is the disc's accessibility label. Return still commits.
+
+**Kept.** The quieter second verb (§212, the Wallet's "Name it") keeps its own row under the well: two discs in one well would be two commits for one act. The slab form, which is everything outside an account page, is unchanged.
+
+**Verified** on an iPhone 18 Pro simulator, Logos: empty (wrapped placeholder, Paste), then pasted (id, a filled check, no row under the well).
+

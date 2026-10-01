@@ -260,8 +260,8 @@ struct DSSlabField: View {
         if accountAct { actRow } else { slab }
     }
 
-    /// THE ENTRY ROW (prd §640) — the field itself, keeping its placeholder
-    /// and its left edge, with the verb moved to a row of its own underneath.
+    /// THE ENTRY ROW (prd §640) — the field itself, keeping its placeholder,
+    /// spanning the column (§1027), its commit a check inside the well (§1032).
     ///
     /// The placeholder stays the label: half these fields are also the
     /// roster's filter (§639 amendment), and a search bar re-drawn as
@@ -288,6 +288,13 @@ struct DSSlabField: View {
                         pasteButton { text = $0 }
                     }
                     if clearable, hasText { clearButton }
+                    // THE COMMIT SITS IN THE WELL, BESIDE PASTE (prd §1032,
+                    // user: "it should be a check mark inside the field like
+                    // paste is"). It takes Paste's place once there is
+                    // something to commit, so the well holds one trailing
+                    // control at a time: empty, Paste fills it; filled, the
+                    // check finishes it.
+                    if !actionLabel.isEmpty, !holdsOutPaste { commitButton }
                 }
                 .padding(.leading, DS.Space.s3)
                 .padding(.trailing, DS.Space.s2)
@@ -302,40 +309,53 @@ struct DSSlabField: View {
             // that width to the ellipsis. It starts where the discs do now;
             // the rows around it keep their own inset.
             .dsActRowFrame()
-            // The verb is its own row for the reason the slab put it inside
-            // one: it belongs to the act, not to the last input. On a row it
-            // also stops being a 40pt target wedged against a live caret.
+            // The quieter second verb (§212) keeps a row of its own: two
+            // discs in one well would be two commits for one act.
             if let secondaryLabel, secondaryArmed {
-                verbRow(secondaryLabel, live: true, tone: DS.textSecondary,
-                        act: secondaryAction)
-            }
-            if !actionLabel.isEmpty {
-                verbRow(actionLabel, live: armed,
-                        tone: armed ? DS.tint : DS.textTertiary,
-                        glyph: "checkmark", act: action)
+                verbRow(secondaryLabel, act: secondaryAction)
             }
         }
         .animation(DS.Motion.standard, value: secondaryArmed)
+        .animation(DS.Motion.standard, value: hasText)
     }
 
-    /// The commit wears a disc (prd §729) — the commit row's own form, tinted
-    /// once it can act — because a bare grey word under a field read as dead
-    /// text rather than as the control that finishes the page.
-    private func verbRow(_ label: String, live: Bool, tone: Color,
-                         glyph: String? = nil,
-                         act: @escaping () -> Void) -> some View {
+    /// The well is holding out Paste: an empty field that takes one.
+    private var holdsOutPaste: Bool { !hasText && (paste != nil || secure) }
+
+    /// The commit (prd §1032): a check disc in the well, filled in Paste's
+    /// blue once it can act and a quiet well disc until then (§83 — it states
+    /// its own disabled state). The verb's word is its accessibility label.
+    private var commitButton: some View {
+        Button(action: action) {
+            Image(systemName: "checkmark")
+                .dsGlyph(.subhead, weight: .semibold)
+                .foregroundStyle(armed ? Color.white : DS.textTertiary)
+                .frame(width: DSActRow.discSize, height: DSActRow.discSize)
+                .background {
+                    if armed {
+                        Circle().fill(DS.tint)
+                    } else {
+                        Circle().fill(DS.surfaceWell)
+                            .overlay { Circle().fill(DS.pourInk) }
+                    }
+                }
+                .animation(DS.Motion.standard, value: armed)
+                .dsTapTarget(Circle())
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!armed)
+        .accessibilityLabel(Text(LocalizedStringKey(actionLabel)))
+        .transition(.opacity)
+    }
+
+    private func verbRow(_ label: String, act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            HStack(spacing: DS.Space.s3) {
-                if let glyph { DSActRow.disc(glyph, tinted: live) }
-                Text(LocalizedStringKey(label))
-                    .dsText(.heading17)
-                    .foregroundStyle(tone)
-            }
-            .animation(DS.Motion.standard, value: live)
-            .dsActRowFrame(glyphless: glyph == nil)
+            Text(LocalizedStringKey(label))
+                .dsText(.heading17)
+                .foregroundStyle(DS.textSecondary)
+                .dsActRowFrame(glyphless: true)
         }
         .buttonStyle(RowPress())
-        .disabled(!live)
     }
 
     /// THE ENTRY, ITS PLACEHOLDER WRAPPED (prd §1027, user: "it says node …

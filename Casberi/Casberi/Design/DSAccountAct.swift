@@ -30,8 +30,8 @@ import SwiftUI
 /// · `DSSlabDoor`   → the DOOR row: ink disc, primary title, its fact
 ///   trailing, chevron.
 /// · `DSSlabField`  → the ENTRY row: the field itself, keeping its
-///   placeholder, wrapped rather than cut; the verb becomes its own row
-///   underneath.
+///   placeholder, wrapped rather than cut; the commit is a check inside the
+///   well (prd §1032).
 /// · `DSSlabSwitch` → title, detail, a `Toggle`, no fill.
 /// · `BridgeStepLines` / `DSCheckList` / `BridgeSyncStatusRows` keep their
 ///   shape and drop to the page's quiet rung, so a form's prose stops
