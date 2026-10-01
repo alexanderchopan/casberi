@@ -155,8 +155,25 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// raises the count at which it dies; not drawing the rows is the fix
     /// (`RowWindow`'s own ruling).
     @State private var windowSteps = 0
+    /// A CONNECT LANDS YOU IN THE ROOM (prd §1029, user: "once you connect
+    /// and it's successful, it redirects you to the room … automatically").
+    /// Armed only while the seat is ABSENT from `BridgeStore`, never by
+    /// `state` alone: a dozen adopters derive `connected` from a count or a
+    /// flag they load after the page appears (`held` starts at 0), so a
+    /// `state` flip on its own would also fire on opening a page you
+    /// connected last week. A seat registering while the page is up is the
+    /// one signal that means "this visit connected it".
+    @State private var landingArmed = false
+    /// Whether the page is still on screen when the landing's beat ends —
+    /// a person who left in that beat is not pulled back.
+    @State private var onScreen = false
 
     private var seat: BridgeApp? { store.bridges.first { $0.id == seatID } }
+
+    /// The seat is registered AND the adopter calls it connected — both,
+    /// because either can land first (`registerConnected` before or after
+    /// the key or the count the adopter reads).
+    private var landed: Bool { seat != nil && state.connected }
 
     var body: some View {
         pageList
@@ -246,11 +263,36 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // query clears, which is the bound gone by the back door. Guarded on
         // the value so a keystroke over an unopened window writes nothing.
         .onChange(of: query) { _, _ in if windowSteps != 0 { windowSteps = 0 } }
-        .onAppear { note = AccountNotes.note(for: seatID) ?? "" }
+        .onAppear {
+            note = AccountNotes.note(for: seatID) ?? ""
+            onScreen = true
+            if seat == nil { landingArmed = true }
+        }
         .onChange(of: note) { _, now in AccountNotes.set(now, for: seatID) }
+        // Re-armed by a Disconnect on this same visit, so connecting again
+        // lands too.
+        .onChange(of: seat == nil) { _, absent in if absent { landingArmed = true } }
+        .onChange(of: landed) { _, now in
+            guard now, landingArmed else { return }
+            landingArmed = false
+            // A seat that lands nothing has no room to open (the agent keys,
+            // Apple Intelligence) — the same rule that hides the Activity row.
+            guard lands else { return }
+            // A BEAT FIRST: long enough for the state line to read
+            // "Reading" and the connect's own toast to start, so the move
+            // reads as the result of the connect, not as the page vanishing.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(900))
+                guard onScreen, landed else { return }
+                enterRoom()
+            }
+        }
         // The visit is stamped on the way OUT: the ring a row wears is "since
         // you last looked", and looking is only over once you leave.
-        .onDisappear { AccountVisits.stamp(seatID) }
+        .onDisappear {
+            onScreen = false
+            AccountVisits.stamp(seatID)
+        }
     }
 
     /// The in-app door (prd §653). Mac Catalyst has no Safari controller and
@@ -384,6 +426,15 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// raised as often as it is pushed, and the stack is BEHIND the sheet).
     private func openRoom() {
         DSHaptic.tap()
+        enterRoom()
+    }
+
+    /// The three writes without the tap's haptic — the Activity row's door,
+    /// and the landing a connect makes on its own (prd §1029), where no
+    /// hand pressed anything. A door sheet still up (the provider's page in
+    /// `DSWebSheet`) goes first, so the pop is not made under a presentation.
+    private func enterRoom() {
+        sheet = nil
         route.closeConnectForm()
         route.path = []
         chrome.sourceRequest = source

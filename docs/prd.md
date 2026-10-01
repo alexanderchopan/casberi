@@ -62894,3 +62894,17 @@ Drawn first as a canvas (claude.ai artifact "Five things to do", `design/mockups
 **Unchanged:** the spoken label (`coverSpoken`, still the lead-in plus the catalog's word), the word's source (`demo-marking-audit.py` check three), the shared gravity (`gravityDrop`), `autoLift`, and the heap.
 
 **Not verified:** written in a Linux cloud session with no Xcode or simulator — not built, not run. `verify.sh` and a look at the cover on the iPhone 17 Pro and an SE (`-fresh YES`) are owed before it ships: the seat's width beside the lead-in, the baseline match, and the word landing before the heap.
+
+## §1029 — A connect LANDS YOU IN THE ROOM, on every account page (user: "when they connect on a set up screen, it will confirm, but then they may not realize they need to go back out and go to the room … once you connect and it's successful, it redirects you to the room? I don't mean with a link, I mean automatically", 2026-10-01; extends §465)
+
+**The page confirmed and stopped.** A connect flipped the state line to `Reading`, drew the Activity row, and left the person on a page whose job was done. The room the connect made was one Activity tap away, or back out and find it in the tray — and a person who did not know a room now existed did neither. §465 already ruled that watching the first address lands you in the Wallet and vibenet rooms; this is that rule for every seat.
+
+**One change, in the chassis, so all ~60 adopters take it untouched (`Screens/AccountPage.swift`).** When the seat registers in `BridgeStore` while the page is on screen and the page calls it connected, the page waits 0.9s, then makes the Activity row's three writes (`enterRoom()`: close the connect sheet, pop the stack, `chrome.sourceRequest = source`). The beat lets the state line read `Reading` and the connect's toast start, so the move reads as the connect's result rather than the page vanishing. No haptic: no hand pressed anything.
+
+**Armed on the SEAT, never on `state` alone.** A dozen adopters derive `connected` from a count or flag loaded after the page appears (the imports' `held` starts at 0, X/Instagram/TikTok's `liveConnected` starts false), so a `state` flip by itself also fires on opening a page connected last week. The page arms only while its seat is absent from `BridgeStore`, at appear or after a Disconnect on the same visit, and fires once.
+
+**Not routed:** a seat that lands nothing (`lands: false` — the agent keys, Apple Intelligence, the exchanges), the same rule that withholds its Activity row; a reconnect (`needsReconnecting` → `reading` is not a new seat); a person who left the page inside the beat. Wallet and Altana keep their own landing (§465); the chassis's arrives second and finds the page gone, or closes the connect sheet theirs left up.
+
+**Known cost:** a seat whose page offers a second step after connecting (GitHub's feed picker in `more()`) now leaves before it. The step is still on the page, one tap from the room's seat.
+
+**Not verified:** written in a Linux cloud session with no Xcode or simulator — not built, not run. `verify.sh` and one real connect (a keyed seat, an import, and a sheet-raised connect) on the iPhone 17 Pro and the Mac are owed before it ships.
