@@ -375,6 +375,8 @@ marks chronological position within the pair.
 | §991 (the Logos room is Home · Accounts · Activity · Node) | four tiles, Node the one scope the family did not have | amended by §1016 — a fifth tile, Rewards (mining tickets and reward vouchers), drawn with the app's own `coins.stack` symbol |
 | §1013 (two sizes in the tray: `DS.Face.seat` and the row circle) | the social faces rail and every sheet head still drew at `DS.Face.shelf`, 56pt | amended by §1016a — `shelf` IS `seat` (46pt): every standalone circle in the app is the face button's size |
 | §1016 (the faces ruling, as first numbered) | two sessions each took §1016 on 2026-09-30 | the faces ruling is §1016a; §1016 is Logos' Rewards tile, which the source cites |
+| §902 (the All feed's 52pt head) | `DSFeedRow.headHeight` was 52, a 26pt lead centred in it | amended by §1017 — 60, a 46pt lead with 7pt of air above and below |
+| §1016a (two circle sizes: `seat` standing alone, `row` beside words) | row leads stayed 26/28 and list marks 36 | superseded by §1017 — `row`, `rowCircle`, `list` and `Mark.tile` are all `seat` (46): one circle size for every mark and face |
 
 ## 1. Thesis
 
@@ -62734,3 +62736,11 @@ The Logos team asked for mining: more exposure for Logos, and a way to see it as
 **Ruling.** `DS.Face.shelf` is `seat` (46pt): the faces rail, every sheet's head, the lead body's faces, the devnet and Frames sheets. The app's circles are now two sizes — `seat` for a circle that stands on its own, `row`/`rowCircle` (26/28) for a circle beside a row's words — and `profile` (76) for the one screen whose whole subject is a face. The row lead stays smaller because its text block is ~32pt tall; a 46pt lead there needs Messages' two-line rows, which is a feed redesign, boarded separately.
 
 **Seen:** the Farcaster room on the iPhone 17 Pro simulator, dark: the rail's three faces at the face button's size, names under them.
+
+## §1017 — One circle size: every mark and face is the face button's 46pt, and the row breathes (user: "and why not make the row be same size as the fab?", "what would apple do?", "ok, but we don't need a second line of subtext to it", "just center axis it and give it more room to breath", 2026-09-30; supersedes §1016a, amends §902)
+
+**Why.** §1016a left two sizes — 46 standing alone, 26/28 beside a row's words — and on one screen they still read as different sizes of the same thing (user, on the All feed and a social room). Apple grows the picture with the row (Messages' 45pt avatar beside two lines); the user declined the second line and asked for air instead.
+
+**Ruling.** `DS.Face.row`, `rowCircle`, `list` and `DS.Mark.tile` are all `seat` (46pt), with `shelf` (§1016a). The ramp is now `badge` (20, inside a pill), `seat` (46, everything else) and `profile` (76, the one screen whose subject is a face); `Mark.hero` (60) stays for a screen's own head. `DSFeedRow.headHeight` is 60: the lead with 7pt above and below, the title and line centred on its axis as before, the type unchanged. The row's leading axis (`rowLeadCentre`) moves with the lead, so the face button and the tray's first column move with it.
+
+**Seen:** the demo on the iPhone 17 Pro simulator, dark: the All feed's leads, the cover's mark, the tray's doors and marks, the Wallet room's rows and its account faces, all one size beside the face button.

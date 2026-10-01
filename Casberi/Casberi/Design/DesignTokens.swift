@@ -644,7 +644,10 @@ enum DS {
         static let badge: CGFloat = 20
         /// A row's leading identity, sized to its two-line title+meta block.
         /// A face here is never the tap target; the whole row is.
-        static let row: CGFloat = 26
+        /// Since prd §1017 the row lead is the face button's size too: ONE
+        /// circle size for every mark and face (user: "why not make the row be
+        /// same size as the fab?"), with the row given room to breathe.
+        static let row: CGFloat = seat
         /// The optical size a full-bleed CIRCLE draws at inside the `row`
         /// SEAT (2026-08-13, user: the feed's leaders read unevenly sized).
         /// They were already one frame — the unevenness is optics: a circle
@@ -656,10 +659,10 @@ enum DS {
         /// stands in a MIXED column beside squircle marks (the feed rows);
         /// an all-circle line (a venue switcher, a sheet head) has no weight
         /// mismatch to correct and stays on `row`.
-        static let rowCircle: CGFloat = 28
+        static let rowCircle: CGFloat = seat
         /// A list or picker you tap through — bigger than a feed row because
         /// choosing between people is the screen's whole job.
-        static let list: CGFloat = 36
+        static let list: CGFloat = seat
         /// A horizontal face shelf, a profile head, a sheet's stage — every
         /// circle that stands on its own, at the face button's size (prd
         /// §1016a, user: "it would look cohesive when you are scrolling"). It
@@ -752,7 +755,7 @@ enum DS {
         static let list: CGFloat = Face.list
         /// A catalog cell or card where the mark IS the item's identity, not a
         /// label on it.
-        static let tile: CGFloat = 44
+        static let tile: CGFloat = Face.seat
         /// A screen's own head — a product page, a setup or connected header.
         /// One rung, so the page you connect from and the page you connect on
         /// introduce themselves at the same size.
