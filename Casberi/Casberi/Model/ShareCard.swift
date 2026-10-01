@@ -55,12 +55,33 @@ enum ShareCard {
         var bars: [Int]? = nil
         /// A workout's measurements: (value, unit), drawn as columns.
         var stats: [(String, String)] = []
+        /// A highlight (prd §1020): the title is a quoted passage and the
+        /// words name the page, so the statement may run long.
+        var quote = false
+        /// A folder's things (prd §1021), each a mark and a one-line title.
+        var rows: [Row] = []
+        /// The eyebrow's mark when it is not the seat's: a note's glyph in
+        /// the brand pink (§976a), a folder's, a highlight's.
+        var symbol: String? = nil
+        /// A voice note's waveform (prd §1024): the player's 32 bars, read
+        /// off the bytes after the model is built, and its length as drawn
+        /// on the row ("0:42"). The card draws every bar solid: no playhead.
+        var wave: [CGFloat]? = nil
+        var length: String? = nil
+    }
+
+    /// One row on a folder's card.
+    struct Row: Hashable {
+        let source: String
+        let symbol: String?
+        let title: String
     }
 
     /// The model, or nil for a thing the sheet cannot draw (a tombstone).
     @MainActor
     static func model(for thing: Thing) -> Model? {
         guard thing.isLive else { return nil }
+        if Highlight.isHighlight(thing) { return highlightModel(thing) }
         let link = ShareTargetMemo.url(for: thing)
         let handle = (thing.authorHandle ?? "").trimmingCharacters(in: .whitespaces)
         let post = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -84,7 +105,67 @@ enum ShareCard {
                      artURL: thing.previewImageURL.flatMap { $0.isEmpty ? nil : $0 },
                      faceURL: isPost ? thing.authorAvatarURL : nil,
                      picture: StoredPixels.cached(for: thing),
-                     stats: stats)
+                     stats: stats,
+                     symbol: BridgeIcon.noteSymbol(for: thing),
+                     length: voiceLength(thing))
+    }
+
+    /// A highlight's card (prd §1020): the passage in quotation marks as
+    /// the statement, the page it came from as the line under it, and the
+    /// page's link as the second share item.
+    @MainActor
+    private static func highlightModel(_ thing: Thing) -> Model {
+        let passage = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        var from = Highlight.originTitle(of: thing).map { TitleSeam.split($0).name } ?? ""
+        if let origin = thing.modelContext.flatMap({ Highlight.origin(of: thing, context: $0) }) {
+            let seat = BridgeCatalog.seatName(forSource: origin.source)
+            from = [seat, TitleSeam.split(origin.title).name].filter { !$0.isEmpty }.joined(separator: " · ")
+        }
+        return Model(source: thing.source,
+                     sourceName: BridgeCatalog.seatName(forSource: thing.source),
+                     author: nil,
+                     day: thing.capturedAt.formatted(date: .abbreviated, time: .omitted),
+                     title: "\u{201C}\(passage)\u{201D}",
+                     words: from,
+                     link: thing.externalLink.flatMap(URL.init(string:)),
+                     artURL: nil, faceURL: nil, picture: nil, quote: true,
+                     symbol: BridgeIcon.noteSymbol(for: thing))
+    }
+
+    /// A kept voice note's length (§987.1), off its stored span; nil for
+    /// anything else, a sealed note included (its `audio` is a box, §982.6).
+    static func voiceLength(_ thing: Thing) -> String? {
+        guard isVoice(thing) else { return nil }
+        return VoiceLength.seconds(from: thing.capturedAt, to: thing.endAt).map { VoiceLength.label($0) }
+    }
+
+    /// A voice note of yours with a recording to share.
+    static func isVoice(_ thing: Thing) -> Bool {
+        thing.kind == .voice && NoteSheetSource.isKeptNote(thing) && !NoteLock.isLocked(thing)
+            && (thing.audio?.isEmpty == false)
+    }
+
+    /// The recording as a file for the share sheet (prd §1024): the kept
+    /// `.m4a` bytes under the note's name in a temporary folder of their
+    /// own. A `Transferable` case could not carry it — the sheet types every
+    /// item of one `Transferable` by its first representation, so the
+    /// recording went out as "2 Images" (measured) — so a voice note's
+    /// Share hands the system sheet the card and this file as two items.
+    static func audioFile(_ audio: Data, name: String) -> URL? {
+        let safe = name.replacingOccurrences(of: "/", with: "-").trimmingCharacters(in: .whitespaces)
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("share-" + UUID().uuidString, isDirectory: true)
+        guard (try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)) != nil
+        else { return nil }
+        let url = dir.appendingPathComponent((safe.isEmpty ? "Voice note" : safe) + ".m4a")
+        guard (try? audio.write(to: url)) != nil else { return nil }
+        return url
+    }
+
+    /// The waveform, read off the bytes (prd §1024). Off main; nil when the
+    /// bytes will not decode, and the card then draws no strip.
+    static func wave(for audio: Data) async -> [CGFloat]? {
+        await VoiceEnvelope.read(url: nil, data: audio)?.bars
     }
 
     /// A workout's measurements off its facts — `HealthIngest.workoutFacts`

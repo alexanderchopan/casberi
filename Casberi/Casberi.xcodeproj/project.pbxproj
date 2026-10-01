@@ -709,7 +709,7 @@
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Casberi reads your own Logos node at the address you give it, when that node is on your network.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things, and keeps a reminder you set from a note.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Casberi transcribes your voice notes so they stay findable.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -764,7 +764,7 @@
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Casberi reads your own Logos node at the address you give it, when that node is on your network.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things, and keeps a reminder you set from a note.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Casberi transcribes your voice notes so they stay findable.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

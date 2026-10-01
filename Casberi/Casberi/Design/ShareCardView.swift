@@ -37,8 +37,10 @@ struct ShareCardView: View {
                 words
             }
             if !model.stats.isEmpty { statsBlock }
+            if !model.rows.isEmpty { rowsBlock }
             Spacer(minLength: 0)
             if let bars = model.bars, !bars.isEmpty { barsBlock(bars) }
+            if let wave = model.wave, !wave.isEmpty { waveBlock(wave) }
             foot
         }
         .padding(pad)
@@ -60,7 +62,7 @@ struct ShareCardView: View {
                         .dsText(.subhead12).foregroundStyle(ink.tertiary).lineLimit(1)
                 }
             } else {
-                BridgeIcon(name: model.source, size: DS.Face.row, circular: true)
+                BridgeIcon(name: model.source, size: DS.Face.row, circular: true, symbol: model.symbol)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(model.sourceName).dsText(.label12).foregroundStyle(ink.primary).lineLimit(1)
                     Text(model.day).dsText(.subhead12).foregroundStyle(ink.tertiary).lineLimit(1)
@@ -104,7 +106,9 @@ struct ShareCardView: View {
                 Text(model.title)
                     .dsText(!hasPicture && model.title.count <= 40 ? .heading40 : .heading24)
                     .foregroundStyle(ink.primary)
-                    .lineLimit(hasPicture ? 2 : 3)
+                    // A quoted passage is the whole card (prd §1020): it
+                    // takes the lines a title never needs.
+                    .lineLimit(hasPicture ? 2 : model.quote ? 9 : 3)
                 if !model.words.isEmpty {
                     Text(model.words)
                         .dsText(.body17)
@@ -115,6 +119,23 @@ struct ShareCardView: View {
         }
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A folder's things (prd §1021): the feed row's lead and its one-line
+    /// title, nothing else — the eyebrow already says how many there are.
+    private var rowsBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 10) {
+                    BridgeIcon(name: row.source, size: DS.Mark.row, circular: true, symbol: row.symbol)
+                    Text(verbatim: row.title)
+                        .dsText(.body17)
+                        .foregroundStyle(ink.primary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(.top, 2)
     }
 
     /// A room's figure: the number at the price rung, its caption under it,
@@ -170,6 +191,23 @@ struct ShareCardView: View {
             }
         }
         .frame(width: ShareCard.size.width - pad * 2, height: 56)
+        .padding(.bottom, 10)
+    }
+
+    /// A voice note's strip (prd §1024): the player's 32 capsules, 3pt wide
+    /// on 2pt gaps, every bar solid, and the length at its end.
+    private func waveBlock(_ wave: [CGFloat]) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            HStack(alignment: .center, spacing: 2) {
+                ForEach(Array(wave.enumerated()), id: \.offset) { _, h in
+                    Capsule().fill(ink.primary).frame(width: 3, height: max(4, h))
+                }
+            }
+            .frame(height: 22)
+            if let length = model.length {
+                Text(verbatim: length).dsText(.subhead12).foregroundStyle(ink.tertiary)
+            }
+        }
         .padding(.bottom, 10)
     }
 

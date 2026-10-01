@@ -52,6 +52,10 @@ struct NoteProse: View {
     /// facts — a vault's list is the vault's to tick, and a locked note's
     /// words are read-only while it is open.
     var onToggleTask: ((Int) -> Void)?
+    /// When the item at an ordinal rings (prd §1022), and what a hold on it
+    /// does; both nil for every body but a note of yours.
+    var taskWhen: ((Int) -> String?)?
+    var onHoldTask: ((Int) -> Void)?
     /// The tier the body is set in (2026-08-20).
     ///
     /// `reading17` is this view's own ruling and stays the default: on a note
@@ -65,6 +69,9 @@ struct NoteProse: View {
     /// code fence starts drawing correctly in one room and as prose in the
     /// other.
     var tier: DSTextStyle = .reading17
+    /// Keep a passage out of a paragraph (prd §1020): set by a reading page,
+    /// never by a note of yours.
+    @Environment(\.keepPassage) private var keepPassage
     /// The ink the prose is set in (2026-08-21).
     ///
     /// `textPrimary` is this view's own ruling and stays the default, for the
@@ -142,7 +149,9 @@ struct NoteProse: View {
             marked("\(index).", prose(text))
         case .task(let done, let text, let ordinal):
             NoteTaskRow(done: done, text: prose(text), tier: tier,
-                        onToggle: onToggleTask.map { toggle in { toggle(ordinal) } })
+                        onToggle: onToggleTask.map { toggle in { toggle(ordinal) } },
+                        when: taskWhen?(ordinal),
+                        onHold: onHoldTask.map { hold in { hold(ordinal) } })
         case .quote(let text):
             // The rail is a 2pt shape marking a quoted block, not a divider:
             // the no-hairlines law is about DIVIDERS, and this divides nothing
@@ -156,12 +165,18 @@ struct NoteProse: View {
                     .foregroundStyle(DS.textSecondary)
             }
         case .paragraph(let text):
-            prose(text)
-                .dsText(tier)
-                .foregroundStyle(ink)
-                // Words are what people copy a phrase out of, and until §366 no
-                // note body in this app allowed it.
-                .textSelection(.enabled)
+            if let keepPassage, !markdown, !wikilinks {
+                // A page that offers Keep draws its paragraphs in the text
+                // view that carries it (prd §1020), in the same rung.
+                KeepableText(text: text, tier: tier, ink: ink, onKeep: keepPassage)
+            } else {
+                prose(text)
+                    .dsText(tier)
+                    .foregroundStyle(ink)
+                    // Words are what people copy a phrase out of, and until §366 no
+                    // note body in this app allowed it.
+                    .textSelection(.enabled)
+            }
         case .code(let language, let text):
             // VERBATIM, and monospaced — the two things that make code code.
             // `Text(verbatim:)` rather than `prose`, because every step `prose`
@@ -728,6 +743,10 @@ struct NoteTaskRow: View {
     let text: Text
     let tier: DSTextStyle
     let onToggle: (() -> Void)?
+    /// When the item rings (prd §1022), at its trailing edge; nil draws none.
+    var when: String? = nil
+    /// A hold on the item — Remind me. nil for a list that is a fact.
+    var onHold: (() -> Void)? = nil
 
     var body: some View {
         if let onToggle {
@@ -737,8 +756,14 @@ struct NoteTaskRow: View {
             } label: { line }
                 .buttonStyle(RowPress())
                 .dsHover()
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                    guard let onHold else { return }
+                    DSHaptic.lift()
+                    onHold()
+                })
                 .accessibilityAddTraits(done ? [.isSelected] : [])
                 .accessibilityValue(done ? Text("Done") : Text("Not done"))
+                .accessibilityAction(named: Text("Remind me")) { onHold?() }
         } else {
             line
         }
@@ -757,6 +782,18 @@ struct NoteTaskRow: View {
                 .foregroundStyle(done ? DS.textSecondary : DS.textPrimary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
+            if let when {
+                Spacer(minLength: DS.Space.s2)
+                HStack(spacing: 4) {
+                    Image(systemName: "bell")
+                        .dsGlyph(.tick, weight: .regular)
+                    Text(verbatim: when)
+                        .dsText(.subhead12)
+                }
+                .foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+                .fixedSize()
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
         .contentShape(Rectangle())

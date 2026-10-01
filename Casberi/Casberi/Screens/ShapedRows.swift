@@ -786,7 +786,8 @@ struct BandRow: View {
     private var previewLine: Text? {
         let words = NotePreview.line(title: thing.title, content: thing.content,
                                      isVoice: thing.kind == .voice,
-                                     isLocked: NoteLock.isLocked(thing))
+                                     isLocked: NoteLock.isLocked(thing),
+                                     from: Highlight.originTitle(of: thing))
         // A voice note's line carries its length after its kind (prd §987):
         // "Voice note · 0:42".
         if let words, let voiceLength {

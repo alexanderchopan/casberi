@@ -114,6 +114,8 @@ struct NoteCaptureSheet: View {
     /// page of receipt at the head rung would bury the sentence being written.
     @State private var scanOpen = false
     @State private var scanText: String?
+    /// The sketch canvas (prd §1023): a drawing kept as the note's one picture.
+    @State private var sketchOpen = false
     /// The link picker (prd §982).
     @State private var linkPickerOpen = false
     #if DEBUG
@@ -268,6 +270,7 @@ struct NoteCaptureSheet: View {
             if DocumentScan.isSupported {
                 Button("Scan a document") { DSHaptic.tap(); scanOpen = true }
             }
+            Button("Sketch over it") { DSHaptic.tap(); sketchOpen = true }
             Button("Remove photo", role: .destructive) {
                 DSHaptic.tap(); picture = nil; scanText = nil
             }
@@ -279,6 +282,21 @@ struct NoteCaptureSheet: View {
         }
         .sheet(isPresented: $linkPickerOpen) {
             NoteLinkPicker { title in insertLink(title) }
+        }
+        // The canvas (prd §1023). Closing keeps: the drawing, flattened over
+        // the page and whatever picture was under it, becomes the note's
+        // picture through the one path a photo and a scan take.
+        .sheet(isPresented: $sketchOpen) {
+            NoteSketchSheet(over: picture?.image) { image in
+                guard let image, let raw = image.jpegData(compressionQuality: 0.9) else { return }
+                Task { @MainActor in
+                    if let drawn = await NotePicture.prepared(raw) {
+                        picture = drawn
+                        scanText = nil
+                        DSHaptic.success()
+                    }
+                }
+            }
         }
         #if !targetEnvironment(macCatalyst)
         .fullScreenCover(isPresented: $scanOpen) {
@@ -496,6 +514,12 @@ struct NoteCaptureSheet: View {
                 } label: {
                     Label("Scan a document", systemImage: "doc.viewfinder")
                 }
+            }
+            Button {
+                DSHaptic.tap()
+                sketchOpen = true
+            } label: {
+                Label(picture == nil ? "Sketch" : "Sketch over it", systemImage: "pencil.and.outline")
             }
         } label: {
             barGlyph("paperclip", live: toolsLive)

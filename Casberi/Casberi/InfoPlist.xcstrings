@@ -501,31 +501,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi reads your reminders so your list lands as things."
+            "value": "Casberi reads your reminders so your list lands as things, and keeps a reminder you set from a note."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi lee tus recordatorios para que tu lista llegue como cosas."
+            "value": "Casberi lee tus recordatorios para que tu lista llegue como cosas, y guarda un recordatorio que creas desde una nota."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi はリマインダーを読み込み、あなたのリストを thing として届けます。"
+            "value": "Casberi はリマインダーを読み込み、あなたのリストを thing として届け、メモから設定したリマインダーを保存します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi는 미리 알림을 읽어 목록이 항목으로 들어오게 해요."
+            "value": "Casberi는 미리 알림을 읽어 목록이 항목으로 들어오게 하고, 메모에서 설정한 미리 알림을 저장해요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi 会读取你的提醒事项，让你的清单作为内容进来。"
+            "value": "Casberi 会读取你的提醒事项，让你的清单作为内容进来，并保存你从笔记设置的提醒。"
           }
         }
       }

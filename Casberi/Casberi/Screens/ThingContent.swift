@@ -1426,51 +1426,7 @@ private struct VoiceContent: View {
     /// height (there's no absolute loudness to compare against, only this
     /// clip's own shape) — and the length, off the same read.
     private static func readEnvelope(url: URL?, data: Data?) async -> (bars: [CGFloat]?, length: Double)? {
-        await Task.detached(priority: .utility) {
-            var tempURL: URL?
-            defer { tempURL.map { try? FileManager.default.removeItem(at: $0) } }
-            let fileURL: URL
-            if let url {
-                fileURL = url
-            } else if let data {
-                let tmp = FileManager.default.temporaryDirectory
-                    .appendingPathComponent(UUID().uuidString + ".m4a")
-                guard (try? data.write(to: tmp)) != nil else { return nil }
-                tempURL = tmp
-                fileURL = tmp
-            } else {
-                return nil
-            }
-            guard let file = try? AVAudioFile(forReading: fileURL) else { return nil }
-            let frameCount = AVAudioFrameCount(file.length)
-            let seconds = Double(file.length) / file.processingFormat.sampleRate
-            guard frameCount > 0,
-                  let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
-                                                frameCapacity: frameCount),
-                  (try? file.read(into: buffer)) != nil,
-                  let channelData = buffer.floatChannelData
-            else { return (nil, seconds) }
-            let channels = Int(buffer.format.channelCount)
-            let frames = Int(buffer.frameLength)
-            let bars = barCount
-            guard frames > 0, channels > 0 else { return (nil, seconds) }
-            let samplesPerBar = max(1, frames / bars)
-            var peaks = [Float](repeating: 0, count: bars)
-            for bar in 0..<bars {
-                let start = bar * samplesPerBar
-                let end = min(start + samplesPerBar, frames)
-                guard start < end else { continue }
-                var peak: Float = 0
-                for ch in 0..<channels {
-                    let samples = channelData[ch]
-                    for i in start..<end { peak = max(peak, abs(samples[i])) }
-                }
-                peaks[bar] = peak
-            }
-            guard let maxPeak = peaks.max(), maxPeak > 0 else { return (nil, seconds) }
-            // 6...22pt, the same range the old hardcoded bars drew in.
-            return (peaks.map { 6 + CGFloat($0 / maxPeak) * 16 }, seconds)
-        }.value
+        await VoiceEnvelope.read(url: url, data: data, bars: barCount)
     }
 
     // MARK: - Transport
@@ -1861,6 +1817,7 @@ private struct MailContentView: View {
     /// `ForEach` closure cannot protect a row already in the tree. The
     /// original body moved to `liveBody`; everything it reads now sits behind
     /// this check.
+        @Environment(\.keepPassage) private var keepPassage
     var body: some View {
         if thing.isLive { liveBody }
     }
@@ -1887,9 +1844,14 @@ private struct MailContentView: View {
                 }
             }
             if !isFromLine, !thing.content.isEmpty {
-                Text(ProseLinks.rendered(thing.content))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(10)
+                if let keepPassage {
+                    KeepableText(text: thing.content, tier: .body17, ink: DS.textPrimary,
+                                 onKeep: keepPassage)
+                } else {
+                    Text(ProseLinks.rendered(thing.content))
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(10)
+                }
             }
             // WHY THE SHEET STOPS HERE (prd §365). `MailBridge` stores no body
             // — `content` is literally "From <sender>" — so this anatomy was a
@@ -2118,7 +2080,7 @@ struct FactRows: View {
             guard let url = URL(string: fact.value),
                   url.scheme == "https" || url.scheme == "http" else { return nil }
             return url
-        case .none, .metric, .state, .allDay:
+        case .none, .metric, .state, .allDay, .reminder:
             return nil
         }
     }

@@ -563,6 +563,10 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// `init(encoded:)`) and draws it as an ordinary fact row reading
         /// "When · All day", which is still true.
         case allDay
+        /// A checklist item's reminder (prd §1022): `label` the item's
+        /// words, `value` the reminder's identifier and its time
+        /// (`NoteReminders`). Drawn at the item, never as a fact row.
+        case reminder
     }
 
     var id: String { "\(label)\u{1F}\(value)" }

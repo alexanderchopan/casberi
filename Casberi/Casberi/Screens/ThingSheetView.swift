@@ -167,6 +167,12 @@ struct ThingSheetView: View {
     /// per sheet open, like `replies`/`approvalCheck` below, is the honest
     /// place to pay that cost.
     @State private var crossSourceEcho: String?
+    /// When this transfer's counterparty was FIRST met across every watched
+    /// wallet (prd §1025) — nil until read, read once per sheet open in the
+    /// counterparty's own `.task`, never in a body (§628). `firstSeenIsThis`
+    /// says the earliest transfer is this one.
+    @State private var firstSeen: Date?
+    @State private var firstSeenIsThis = false
     /// An Obsidian note's own `[[wikilink]]` targets, resolved against notes
     /// already landed (2026-07-28) — fetched once on open, like `replies`
     /// above. Held as `KeyedThing` (see `ThingRowKeying.swift`) rather than
@@ -202,6 +208,12 @@ struct ThingSheetView: View {
     /// this same sheet over the target, the recursive shape already used
     /// elsewhere in this app (e.g. `-agentThingProbe`'s Stack push).
     @State private var walkingToNote: KeyedThing?
+    /// The page a highlight was kept from (prd §1020), read once on appear.
+    @State private var highlightOrigin: Thing?
+    /// The checklist item whose Remind me sheet is up (prd §1022).
+    @State private var remindingItem: RemindTarget?
+    /// A highlight's card tray (prd §1020).
+    @State private var sharingHighlight = false
     /// The scope a walked-to sheet inherits, so next/previous keeps following
     /// the SAME list two doors in. Only the neighbour doors set it; every
     /// other walk in this file (a quote, a parent, a vault link, an "on this
@@ -469,8 +481,11 @@ struct ThingSheetView: View {
                     MoneyReceiptCard(receipt: moneyReceipt,
                                      landed: thing.capturedAt,
                                      kindWord: moneyKindWord,
-                                     onSubject: openAddressCard)
+                                     onSubject: openAddressCard,
+                                     history: counterpartyHistory)
                         .settleIn(delay: 0.06)
+                        // Read once per open (§628), the spec row's own read.
+                        .task(id: "firstSeen:\(thing.counterpartyAddress ?? "")") { readFirstSeen() }
                     // The poisoning flag rides EVERY wallet stage now, not just
                     // Sent/Received — a spoofed-address warning on a Swap or a
                     // Moved leg is exactly as real, and used to be invisible
@@ -918,6 +933,7 @@ struct ThingSheetView: View {
                                      articleArt: !articleHead,
                                      mailSender: !mailHead)
                         .environment(\.priceHeadDrawn, chartHead)
+                        .environment(\.keepPassage, keepPassage)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
                 }
@@ -1125,7 +1141,8 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                 }
-                if !liveLinkedNotes.isEmpty {
+                // A highlight's one link is its "from" door (prd §1020).
+                if !liveLinkedNotes.isEmpty, !Highlight.isHighlight(thing) {
                     noteLinksSection
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
@@ -1318,6 +1335,9 @@ struct ThingSheetView: View {
             // can't answer — a thing with no link and no distinctive title
             // costs nothing here.
             pointingAt = ThingLinksSource.ties(for: thing, context: modelContext)
+            if Highlight.isHighlight(thing) {
+                highlightOrigin = Highlight.origin(of: thing, context: modelContext)
+            }
             // The gate is a string check — non-approval things spend nothing.
             if WalletPrepare.applies(to: thing) {
                 Task { approvalCheck = await WalletPrepare.check(for: thing) }
@@ -1405,6 +1425,9 @@ struct ThingSheetView: View {
         }
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
         // re-presentation of this same sheet over the linked note.
+        .sheet(item: $remindingItem) { target in
+            NoteRemindTray(note: thing, item: target.text)
+        }
         .sheet(item: $walkingToNote) { note in
             // `walkingToScope` rather than `walk`: the neighbour doors set it
             // to this sheet's own scope so a walk keeps following the list two
@@ -1936,6 +1959,13 @@ struct ThingSheetView: View {
                 // Where the note is filed, as a door (prd §983; §736: a row
                 // that names a place is a button).
                 if pagedNote, !NoteLock.isLocked(thing) {
+                    // A highlight names the page it came from, as a door
+                    // (prd §1020; §736).
+                    if let origin = highlightOrigin {
+                        highlightOriginLine(origin)
+                            .padding(.horizontal, DSRoomChassis.leadInset)
+                            .padding(.top, DS.Space.s2)
+                    }
                     noteFolderLine
                         .padding(.horizontal, DSRoomChassis.leadInset)
                         .padding(.top, DS.Space.s2)
@@ -2127,11 +2157,25 @@ struct ThingSheetView: View {
                     }
                 }
             } else {
-                ThingShareLink(thing: thing) {
-                    bandDisc("square.and.arrow.up")
+                if Highlight.isHighlight(thing) {
+                    // A highlight shares as the quote card (prd §1020), the
+                    // dial's tray on the note's own key.
+                    Button {
+                        DSHaptic.tap()
+                        sharingHighlight = true
+                    } label: {
+                        bandDisc("square.and.arrow.up")
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text("Share the highlight"))
+                    .sheet(isPresented: $sharingHighlight) { ShareTray(thing: thing) }
+                } else {
+                    ThingShareLink(thing: thing) {
+                        bandDisc("square.and.arrow.up")
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text("Share the note"))
                 }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Share the note"))
                 Button {
                     chrome.lockNote(thing, context: modelContext)
                 } label: {
@@ -2231,12 +2275,56 @@ struct ThingSheetView: View {
     private var entryLine: String {
         // A note you wrote is a Note, not a Journal entry (prd §981).
         let what = thing.kind == .voice ? String(localized: "Voice note")
+            : Highlight.isHighlight(thing) ? String(localized: "Highlight")
             : thing.source == NoteSheetSource.keptSource ? String(localized: "Note")
             : String(localized: "Journal")
         let clock = thing.capturedAt.formatted(date: .omitted, time: .shortened)
         let act = thing.kind == .voice ? String(localized: "recorded \(clock)")
-                                       : String(localized: "written \(clock)")
+            : Highlight.isHighlight(thing) ? String(localized: "kept \(clock)")
+            : String(localized: "written \(clock)")
         return "\(what) · \(act)"
+    }
+
+    // MARK: - Highlights (prd §1020)
+
+    /// What Keep does on this page: nil for a note of yours (its words are
+    /// already yours) and for a sealed note; otherwise a highlight is kept
+    /// and the page's own shelf shows it at once.
+    private var keepPassage: ((String) -> Void)? {
+        guard !NoteSheetSource.isKeptNote(thing), !NoteLock.isLocked(thing) else { return nil }
+        return { passage in keepHighlight(passage) }
+    }
+
+    private func keepHighlight(_ passage: String) {
+        guard Highlight.keep(passage, from: thing, link: ShareTargetMemo.url(for: thing),
+                             context: modelContext) != nil else { return }
+        chrome.flash(String(localized: "Kept in Notes"), tone: .success)
+        pointingAt = ThingLinksSource.ties(for: thing, context: modelContext)
+    }
+
+    /// "from <the page> ›" — the door back to what the passage came from,
+    /// drawn as the folder line is, one row above it.
+    private func highlightOriginLine(_ origin: Thing) -> some View {
+        Button {
+            DSHaptic.tap()
+            walkingToScope = .none
+            walkingToNote = KeyedThing(origin)
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "text.quote")
+                    .dsGlyph(.caption, weight: .regular)
+                Text(String(localized: "from \(TitleSeam.split(origin.title).name)"))
+                    .dsText(.body17)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .dsGlyph(.tick, weight: .semibold)
+            }
+            .foregroundStyle(DS.tint)
+            .frame(minHeight: DS.Hit.min)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityLabel(Text(String(localized: "Kept from \(origin.title). Open it")))
     }
 
     /// An entry's first line and the rest of it. A markdown heading mark on
@@ -2371,7 +2459,30 @@ struct ThingSheetView: View {
             thing.content = next
             modelContext.saveHonestly()
             tickedBody = next
+            // The reminder the app made for this item follows the tick
+            // (prd §1022).
+            if let item = NoteReminders.item(at: ordinal, in: next) {
+                let done = next.components(separatedBy: "\n").compactMap(NoteChecklist.task)
+                    .first { NoteReminders.key($0.text) == NoteReminders.key(item) }?.done ?? false
+                NoteReminders.sync(item: item, done: done, on: thing)
+            }
+        } : nil,
+                  taskWhen: NoteSheetSource.ticksTasks(thing) ? { ordinal in
+            guard let item = NoteReminders.item(at: ordinal, in: tickedBody ?? thing.content),
+                  let entry = NoteReminders.entry(for: item, on: thing) else { return nil }
+            return NoteReminders.label(entry.date)
+        } : nil,
+                  onHoldTask: NoteSheetSource.ticksTasks(thing) ? { ordinal in
+            guard let item = NoteReminders.item(at: ordinal, in: tickedBody ?? thing.content) else { return }
+            remindingItem = RemindTarget(ordinal: ordinal, text: item)
         } : nil)
+    }
+
+    /// A held checklist item (prd §1022).
+    private struct RemindTarget: Identifiable {
+        let ordinal: Int
+        let text: String
+        var id: Int { ordinal }
     }
 
     /// Whether the face in the eyebrow is a DOOR. Only the three networks with
@@ -2516,6 +2627,17 @@ struct ThingSheetView: View {
                 // captured (native sends have none) (2026-07-15).
                 if hasCounterparty, let cp = thing.counterpartyAddress {
                     counterpartyRow(cp)
+                    // When you first dealt with them (prd §1025): a fact
+                    // about your own history, read off the transfers you
+                    // hold. "This transfer" is the honest form of "a
+                    // stranger" — it says what the app saw, not who they are.
+                    if let firstSeen {
+                        DSSpecRow(label: Text("First seen"),
+                                  value: firstSeenIsThis
+                                      ? Text("This transfer")
+                                      : Text(firstSeen.formatted(.dateTime.month(.abbreviated).day().year())),
+                                  lineLimit: 1)
+                    }
                     // Whether the other side is a verified human (prd §791).
                     // World Chain only: the book lists World App wallets, which
                     // live there, and an address on any other chain is not one.
@@ -2534,12 +2656,56 @@ struct ThingSheetView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             // Opening the sheet is the intent that buys the World ID read
             // (§785's rule) — one `eth_call`, cached a week, never from a row.
+            .task(id: "firstSeen:\(thing.counterpartyAddress ?? "")") {
+                guard hasCounterparty else { return }
+                readFirstSeen()
+            }
             .task(id: thing.counterpartyAddress) {
                 guard hasCounterparty, isWorldChainTransfer,
                       let cp = thing.counterpartyAddress else { return }
                 await WorldIDSource.shared.fill(cp)
             }
         }
+    }
+
+    /// Fills `firstSeen` for a Wallet transfer's counterparty. A Moved leg's
+    /// other side is your own wallet, and "since" says nothing about yourself.
+    private func readFirstSeen() {
+        guard thing.source == "Wallet", MovedStage(thing) == nil,
+              let cp = thing.counterpartyAddress?.lowercased(), !cp.isEmpty else { return }
+        (firstSeen, firstSeenIsThis) = Self.firstSeen(of: cp, this: thing, context: modelContext)
+    }
+
+    /// The receipt's history line (prd §1025), named the way the Who row
+    /// names the other side. nil until read.
+    private var counterpartyHistory: String? {
+        guard let firstSeen, let cp = thing.counterpartyAddress else { return nil }
+        let name = WalletIngest.knownLabel(for: cp)
+        if firstSeenIsThis {
+            return name.map { String(localized: "Your first transfer with \($0).") }
+                ?? String(localized: "Your first transfer with this address.")
+        }
+        // The receipt's own day form ("Left Savings on Sep 14."): the year
+        // only when it is not this one.
+        let thisYear = Calendar.current.isDate(firstSeen, equalTo: .now, toGranularity: .year)
+        let day = thisYear ? firstSeen.formatted(.dateTime.month(.abbreviated).day())
+                           : firstSeen.formatted(.dateTime.month(.abbreviated).day().year())
+        return name.map { String(localized: "With \($0) since \(day).") }
+            ?? String(localized: "With this address since \(day).")
+    }
+
+    /// The earliest transfer with this counterparty across every watched
+    /// wallet, and whether it is this one. One fetch of one row; a counterparty
+    /// is stored lowercased (`WalletIngest`), so the predicate is equality.
+    @MainActor
+    static func firstSeen(of counterparty: String, this thing: Thing,
+                          context: ModelContext) -> (Date?, Bool) {
+        var d = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Wallet" && $0.counterpartyAddress == counterparty },
+            sortBy: [SortDescriptor(\Thing.capturedAt, order: .forward)])
+        d.fetchLimit = 1
+        guard let first = (try? context.fetch(d))?.first else { return (nil, false) }
+        return (first.capturedAt, first.id == thing.id || first.capturedAt >= thing.capturedAt)
     }
 
     /// A transfer on World Chain, read off its explorer link — the chain the

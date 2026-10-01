@@ -128,6 +128,8 @@ struct FeedScreen: View {
     /// (docs/social-spec.md section 6, item 3). Presented from the screen's
     /// root, never from the row that asks for it.
     @State private var roomShare: RoomShareCard.Input?
+    /// A Notes folder's card (prd §1021), from the folder's long press.
+    @State private var folderShare: FolderShareCard.Input?
 
     /// Source-scoped since 2026-07-21 (perf audit): the pager keeps every
     /// neighbor page MOUNTED (doc above), so an unfiltered `@Query` here used
@@ -3491,6 +3493,14 @@ struct FeedScreen: View {
                 }
                 .frame(minHeight: DS.Hit.min)
                 .contextMenu {
+                    // Share leads (prd §1021): the folder as one card.
+                    Button {
+                        folderShare = FolderShareCard.Input(name: name, things: filed.filter {
+                            $0.folder.map(NoteFolderName.key) == NoteFolderName.key(name)
+                        })
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
                     Button {
                         folderPrompt = .rename(name)
                     } label: {
@@ -3549,6 +3559,15 @@ struct FeedScreen: View {
                 withAnimation(DS.Motion.standard) { chrome.notesFolder = nil }
             }
             .accessibilityHint(Text("Back to folders"))
+            // The open folder's long press shares it too (prd §1021); its
+            // rows are the list under it.
+            .contextMenu {
+                Button {
+                    folderShare = FolderShareCard.Input(name: name, things: visible)
+                } label: {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+            }
             .noteFolderRowChrome()
         }
     }
@@ -6966,6 +6985,9 @@ struct FeedScreen: View {
         }
         .sheet(item: $roomShare) { input in
             ShareTray(room: input)
+        }
+        .sheet(item: $folderShare) { input in
+            ShareTray(folder: input)
         }
         #if !targetEnvironment(macCatalyst)
         .translationPresentation(isPresented: $showTranslate, text: translateText)

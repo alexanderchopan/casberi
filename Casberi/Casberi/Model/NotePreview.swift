@@ -14,9 +14,11 @@ import Foundation
 enum NotePreview {
 
     static func line(title: String, content: String, isVoice: Bool,
-                     isLocked: Bool) -> String? {
+                     isLocked: Bool, from origin: String? = nil) -> String? {
         if isLocked { return String(localized: "Locked") }
         if isVoice { return String(localized: "Voice note") }
+        // A highlight's line names the page it was kept from (prd §1020).
+        if let origin, !origin.isEmpty { return origin }
         if let list = NoteChecklist.progress(content) {
             let next = content.components(separatedBy: "\n")
                 .compactMap(NoteChecklist.task)

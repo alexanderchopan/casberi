@@ -24,11 +24,14 @@ struct ShareTray: View {
     enum Source {
         case thing(Thing)
         case room(RoomShareCard.Input)
+        /// A Notes folder (prd §1021).
+        case folder(FolderShareCard.Input)
     }
     let source: Source
 
     init(thing: Thing) { source = .thing(thing) }
     init(room: RoomShareCard.Input) { source = .room(room) }
+    init(folder: FolderShareCard.Input) { source = .folder(folder) }
 
     /// The thing, when the card is of one — every read of it is guarded.
     private var thing: Thing? {
@@ -43,6 +46,9 @@ struct ShareTray: View {
     @State private var nothingToDraw = false
     /// The thing's own person, resolved on open through the address book.
     @State private var recipient: Recipient?
+    /// A voice note's recording, written once for the system sheet (prd §1024).
+    @State private var voiceFile: URL?
+    @State private var activityUp = false
     @Environment(\.modelContext) private var context
 
     private enum Composer: String, Identifiable {
@@ -99,8 +105,16 @@ struct ShareTray: View {
                     if MessageCompose.canMail {
                         DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
                     }
-                    if let image {
-                        ShareLink(items: ShareCardPart.items(image: image, link: model?.link, title: shareTitle),
+                    if let image, let voiceFile {
+                        // A voice note goes out as the card and the recording
+                        // (prd §1024), two items on the system sheet.
+                        DSDoorRow(icon: "square.and.arrow.up", label: "Share…") { activityUp = true }
+                            .sheet(isPresented: $activityUp) {
+                                ActivitySheet(items: [image, voiceFile])
+                                    .ignoresSafeArea()
+                            }
+                    } else if let image {
+                        ShareLink(items: ShareCardPart.items(image: image, link: model?.link, title: shareWords),
                                   subject: Text(shareTitle),
                                   preview: { _ in SharePreview(shareTitle, image: Image(uiImage: image)) }) {
                             DSDoorRowLabel(icon: "square.and.arrow.up", title: Text("Share…"))
@@ -168,10 +182,18 @@ struct ShareTray: View {
     /// figure said in words ("12 contributions this week").
     private var shareTitle: String {
         if let thing, thing.isLive { return thing.title }
+        if case .folder(let input) = source { return input.name }
         if let model, let figure = model.figure {
             return [figure, model.caption].compactMap { $0 }.joined(separator: " ")
         }
         return model?.sourceName ?? ""
+    }
+
+    /// What a target that takes words gets beside the card: a folder's list
+    /// (prd §1021), else the subject.
+    private var shareWords: String {
+        if case .folder(let input) = source { return FolderShareCard.words(input) }
+        return shareTitle
     }
 
     /// The composer's body: the thing's link when it has one, else the
@@ -189,10 +211,20 @@ struct ShareTray: View {
             model = base
             recipient = Self.recipient(for: thing, context: context)
             let pixels = thing.isLive ? thing.previewImageData : nil
-            let filled = await ShareCard.fetchingPictures(base, storedPixels: pixels)
+            var filled = await ShareCard.fetchingPictures(base, storedPixels: pixels)
+            // A voice note's strip (prd §1024), read off the bytes once.
+            if ShareCard.isVoice(thing), let audio = thing.audio {
+                filled.wave = await ShareCard.wave(for: audio)
+                voiceFile = ShareCard.audioFile(audio, name: TitleSeam.split(thing.title).name)
+            }
             guard !Task.isCancelled else { return }
             model = filled
             image = ShareCard.render(filled)
+            if image == nil { nothingToDraw = true }
+        case .folder(let input):
+            let built = FolderShareCard.model(input)
+            model = built
+            image = ShareCard.render(built)
             if image == nil { nothingToDraw = true }
         case .room(let input):
             let built = await RoomShareCard.model(input)
@@ -235,4 +267,15 @@ struct ShareTray: View {
         guard phone != nil || email != nil else { return nil }
         return Recipient(name: contact.name, phone: phone, email: email)
     }
+}
+
+/// The system share sheet with items of more than one kind (prd §1024): a
+/// `ShareLink` types every item of one `Transferable` alike, so a card and
+/// a recording go through UIKit's own sheet as two items.
+struct ActivitySheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }

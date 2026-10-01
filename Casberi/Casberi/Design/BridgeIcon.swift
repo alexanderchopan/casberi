@@ -90,7 +90,8 @@ struct BridgeIcon: View {
     /// from a seat keeps its seat's mark, which is how the room tells a pin
     /// from a note. Callers hold a live model.
     static func noteSymbol(for thing: Thing) -> String? {
-        Pinboard.isNote(thing) ? thing.kind.symbol : nil
+        guard Pinboard.isNote(thing) else { return nil }
+        return Highlight.isHighlight(thing) ? "text.quote" : thing.kind.symbol
     }
 
     var body: some View {

@@ -892,6 +892,12 @@ enum HandOffState {
 /// was rewritten: it said "Casberi adds reminders to your list when you ask",
 /// which as of today is a promise the app makes to the system and then
 /// doesn't keep.
+///
+/// AMENDED for one case (prd §1022): a checklist item on a note of yours can
+/// RING — `NoteReminders` makes a reminder in a list named Casberi and
+/// completes that one reminder when the item is ticked. The app's own
+/// reminder, both ways; a reminder you made in Reminders is still never
+/// written, and this hand-off is unchanged.
 enum HandOff {
 
     static func addToCalendar(_ thing: Thing) async throws {
