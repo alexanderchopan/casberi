@@ -159,14 +159,19 @@ grep -q 'previewImageURL' "$TMP/watch.stripped" \
 
 # The field exists and is wired. A parser nothing can reach is a feature nobody has.
 # Since prd §639 the screen has ONE watch field for a repo or a person
-# (`action: watchEither`), and `watchEither` is what reaches `watchPerson()` —
-# so both halves are checked: the field's verb, and the verb's hand-off.
+# (`action: watchEither`). Since prd §1030 `watchEither` hands off to
+# `GitHubWatchAdd.watch`, the one verb the room's watch tray shares — so three
+# links are checked: the field's verb, the hand-off, and the shared verb
+# landing the person. The tray's own hand-off is the fourth.
+WATCHVERB="Casberi/Casberi/Shell/GitHubWatchTray.swift"
 grep -q 'action: watchEither' "$SCREEN" \
   || { echo "✗ the setup screen has no Watch verb (the one field, prd §639)"; exit 1; }
-grep -q 'watchPerson()' "$SCREEN" \
-  || { echo "✗ the setup screen's Watch verb never reaches watchPerson()"; exit 1; }
-grep -q 'GitHubPersonWatch.add(resolved, context: modelContext)' "$SCREEN" \
-  || { echo "✗ the screen's Watch verb no longer lands the watch"; exit 1; }
+grep -q 'GitHubWatchAdd.watch(' "$SCREEN" \
+  || { echo "✗ the setup screen's Watch verb never reaches GitHubWatchAdd (prd §1030)"; exit 1; }
+grep -q 'GitHubPersonWatch.add(resolved, context: context)' "$WATCHVERB" \
+  || { echo "✗ GitHubWatchAdd no longer lands a person's watch"; exit 1; }
+grep -q 'GitHubWatchAdd.watch(q, context: modelContext)' "$WATCHVERB" \
+  || { echo "✗ the room's watch tray never reaches GitHubWatchAdd (prd §1030)"; exit 1; }
 
 # --- the driver -------------------------------------------------------------
 cat > "$TMP/main.swift" <<'SWIFT'

@@ -62908,3 +62908,20 @@ Drawn first as a canvas (claude.ai artifact "Five things to do", `design/mockups
 **Known cost:** a seat whose page offers a second step after connecting (GitHub's feed picker in `more()`) now leaves before it. The step is still on the page, one tap from the room's seat.
 
 **Not verified:** written in a Linux cloud session with no Xcode or simulator — not built, not run. `verify.sh` and one real connect (a keyed seat, an import, and a sheet-raised connect) on the iPhone 17 Pro and the Mac are owed before it ships.
+
+## §1030 — GitHub's next step after a connect is a tray, and watching stands in the room (user: "it does matter for GitHub. We could add a prompt there when they connect that ask them if they want to add more feeds, like a pop up or something", then "ok do both", 2026-10-01; amends the 2026-09-11 "watching only on the set up screen")
+
+**§1029 skipped GitHub's one step.** A connect now lands in the room, and GitHub's account page was the only place to watch a repo or a person. Every feed is already on (`GitHubFeeds.defaultOn` holds all seven), so "add more feeds" offered nothing to add; the missed step is watching, and a room with no watch draws no menu (`GitHubRowTag.railShows`), so nothing in the room said watching existed.
+
+**Both, through `FeedScreen`'s one sheet (`FeedSheetRoute.githubWatch`):**
+
+1. **Once, on the arrival a connect made.** `AccountPage` sets `ShellChrome.connectLanding` beside its `sourceRequest`; the GitHub page reads it when it is the page in front (`isActive`, since the pager mounts neighbours), clears it, waits 0.7s for the connect sheet to finish closing, and raises the tray. Opening the room any other way never raises it.
+2. **Always, from the room.** `FeedScreen.githubWatchSection` draws a `Watch a repo or person` verb row (glyph `eye`, the app's watch glyph) under the tiles and the menu, on every platform, with or without a watch. Gated on a GitHub key read in a `.task` (`githubKeyed`), so the demo's keyless seat draws no verb that cannot act (§83).
+
+**The tray (`Shell/GitHubWatchTray.swift`, a `DSTray`):** the account page's watch field, its status row and its privacy line, then the seven feed switches under `Feeds`. A watch refreshes `GitHubWatchStore` so the face is in the menu when the tray comes down, then runs `TokenIngest.refresh(.github)`.
+
+**One verb, two callers.** `GitHubWatchAdd.watch` is the account page's repo-or-person logic lifted out of `TokenSetupScreen` (its `watchRepo`/`watchPerson` and their two fields are deleted); same sentences, same faces, same refusal with no key. The rail's "no `+`" stands: the rail picks, the verb is a row (§746).
+
+**Audit follow-through.** `setup-copy-audit.py` check 7d read the three door writes off `AccountPage.openRoom`; §1029 moved them into `enterRoom()`, so the check follows the call, with three new self-test cases (delegation passes, a delegated door missing `closeConnectForm` fails, a delegation to a deleted `enterRoom` fails).
+
+**Not verified:** written in a Linux cloud session with no Xcode or simulator — not built, not run. Owed: `verify.sh`, a real GitHub connect on the iPhone 17 Pro (the tray rises once after landing, the row opens it again, a watch shows in the menu after the tray closes), and the row on the Mac.

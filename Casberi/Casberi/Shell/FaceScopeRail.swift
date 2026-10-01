@@ -919,11 +919,12 @@ enum SocialScopeRail {
 /// wears a squircle and the person a circle — the 2026-08-14 rule that an
 /// avatar is an identity and a logo is not — so the two never read as one kind.
 ///
-/// **No `+` and no book door.** Watching happens on the account page and only
-/// there (user: *"can we emulate the way wallet and devnets do their watching
-/// so it is only on the set up screen"*), which is `VibenetScopeRail`'s own
-/// §465 ruling: one tier, so a second slot pointing at the same screen is
-/// chrome rather than a choice.
+/// **No `+` and no book door IN THE RAIL.** The rail picks; it never adds.
+/// Watching was the account page's alone (user: *"can we emulate the way
+/// wallet and devnets do their watching so it is only on the set up screen"*)
+/// until prd §1030 gave the room its own verb row under the menu,
+/// `FeedScreen.githubWatchSection` — as the Wallet's Follow address left
+/// setup for the room (§954). The verb is a row, so the rail stays a choice.
 enum GitHubScopeRail {
     /// Nothing watched draws NO ROW — see `GitHubRowTag.railShows`, which owns
     /// the rule so a harness can compile it.

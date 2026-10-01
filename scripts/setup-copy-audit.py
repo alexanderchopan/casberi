@@ -555,6 +555,16 @@ def audit_door_mechanics(page_src: str):
                 "back to its things went with it, and checks 7a/7b now certify "
                 "a control that does not exist"]
     body = balanced(page_src, page_src.index("{", at))
+    # FOLLOWED INTO `enterRoom()` SINCE §1029 (2026-10-01): the three writes
+    # are shared with the landing a connect makes on its own, so the tap's
+    # door delegates. The rule is unchanged; the check reads the body that
+    # actually writes.
+    if "enterRoom()" in body:
+        at = page_src.find("private func enterRoom() {")
+        if at < 0:
+            return ["AccountPage.swift: openRoom calls enterRoom(), which is "
+                    "gone — the door's writes are nowhere this check can read"]
+        body = balanced(page_src, page_src.index("{", at))
     close = body.find("closeConnectForm()")
     pop = body.find("path = []")
     ask = body.find("sourceRequest =")
@@ -1450,6 +1460,34 @@ def self_test() -> bool:
         print("  ✗ missed a door whose writes are out of order"); ok = False
     else:
         print("  ✓ catches close/pop written the wrong way round")
+    # §1029's shape: the tap delegates to the shared writes.
+    delegating = ('private func openRoom() {\n'
+                  '    DSHaptic.tap()\n'
+                  '    enterRoom()\n'
+                  '}\n'
+                  'private func enterRoom() {\n'
+                  '    sheet = nil\n'
+                  '    route.closeConnectForm()\n'
+                  '    route.path = []\n'
+                  '    chrome.sourceRequest = source\n'
+                  '}\n')
+    if audit_door_mechanics(delegating):
+        print(f"  SELF-TEST FAIL: the delegating door was flagged — "
+              f"{audit_door_mechanics(delegating)}")
+        ok = False
+    else:
+        print("  ✓ follows openRoom into enterRoom's writes")
+    if not any("never calls" in x
+               for x in audit_door_mechanics(delegating.replace(
+                   "    route.closeConnectForm()\n", ""))):
+        print("  ✗ missed a delegated door that leaves the form up"); ok = False
+    else:
+        print("  ✓ catches the delegated door leaving the connect form up")
+    if not any("enterRoom(), which is gone" in x
+               for x in audit_door_mechanics(delegating.split("private func enterRoom")[0])):
+        print("  ✗ a delegation to nothing passed silently"); ok = False
+    else:
+        print("  ✓ catches openRoom delegating to a deleted enterRoom")
     if not any("openRoom is gone" in x for x in audit_door_mechanics("enum X {}")):
         print("  ✗ a missing openRoom passed silently"); ok = False
     else:

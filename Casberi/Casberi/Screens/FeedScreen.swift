@@ -619,6 +619,9 @@ struct FeedScreen: View {
         /// routed here since the row moved into the room (§959): a `.sheet`
         /// inside a List row tears this screen's own sheet down mid-rise.
         case socialFaces
+        /// GitHub's watch tray (prd §1030): raised once on the arrival a
+        /// connect made, and from the room's "Watch a repo or person" row.
+        case githubWatch
         /// One address that paid somebody else's gas, with the moves the room
         /// is currently showing — passed rather than re-read, because the room
         /// may be scoped and a sheet that quietly widened to every account
@@ -682,6 +685,7 @@ struct FeedScreen: View {
             case .framesPayer(let p, _): "framesPayer:\(p.id)"
             case .framesAccount(let a): "framesAccount:\(a.address)"
             case .framesSponsor(let r): "framesSponsor:\(r.id)"
+            case .githubWatch: "githubWatch"
             case .vibenetSend(let a): "vibenetSend:\(VibenetTransaction.hex(a))"
             case .vibenetAuthorize(let account, _, _, let editing, let replacing):
                 "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")\(replacing ? ":replace" : "")"
@@ -689,6 +693,10 @@ struct FeedScreen: View {
         }
     }
     @State var feedSheet: FeedSheetRoute?
+    /// Whether this device holds a GitHub key — the watch row's gate (prd
+    /// §1030), so a demo seat with no key never draws a verb that cannot
+    /// act (§83). Read in a `.task`, never a body (a Keychain read, §628).
+    @State var githubKeyed = false
     /// Non-nil while the last-account confirm sits open for a vibenet
     /// "Stop watching" tap — see `vibenetUnwatch`/`commitVibenetUnwatch`.
     @State private var removingLastVibenet: String?
@@ -5340,6 +5348,8 @@ struct FeedScreen: View {
             TokenQuickSheet(route: route)
         case .socialFaces:
             socialFacesTray
+        case .githubWatch:
+            GitHubWatchTray()
         case .allocation:
             if let portfolio {
                 WalletAllocationTray(portfolio: portfolio)
@@ -6983,6 +6993,21 @@ struct FeedScreen: View {
         .sheet(item: $feedSheet) { route in
             sheetContent(route)
         }
+        // GITHUB'S NEXT STEP AFTER A CONNECT (prd §1030). Keyed on `isActive`
+        // too: the pager mounts neighbours, and a GitHub page built beside the
+        // room in front must neither spend the landing nor raise a tray
+        // nobody is looking at. The beat lets the connect sheet finish closing
+        // and the room's card land, or the tray's rise is refused mid-dismiss.
+        .task(id: "\(source)|\(isActive)") {
+            guard source == "GitHub" else { return }
+            githubKeyed = TokenBridge.github.connected
+            guard isActive, chrome.connectLanding == source else { return }
+            chrome.connectLanding = nil
+            guard githubKeyed else { return }
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled, feedSheet == nil else { return }
+            feedSheet = .githubWatch
+        }
         .sheet(item: $roomShare) { input in
             ShareTray(room: input)
         }
@@ -8344,6 +8369,8 @@ struct FeedScreen: View {
                        menuFollows: roomScopeDraws)
         // Under the tiles, as the Wallet's account menu is (prd §959).
         roomScopeSection
+        // GitHub's watch verb, under its menu (prd §1030).
+        githubWatchSection
         if visible.isEmpty {
             // A tile and a face together can hold nothing (the GitHub rail
             // combines with the tile) — said under the tiles, which stay, the

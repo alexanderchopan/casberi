@@ -22,8 +22,8 @@ struct TokenSetupScreen: View {
     @State private var result: BridgeProof?
 
     /// GitHub only — watching a repo directly, privately (2026-07-16): unlike
-    /// a star or subscribe, it never touches the GitHub account.
-    @State private var watchField = ""
+    /// a star or subscribe, it never touches the GitHub account. The verb is
+    /// `GitHubWatchAdd`, shared with the room's watch tray (prd §1030).
     @State private var watching = false
     @State private var watchResult: BridgeProof?
 
@@ -35,7 +35,6 @@ struct TokenSetupScreen: View {
     /// status row between the two fields would make a repo error read as the
     /// person field being broken. One result is also unambiguous, since each
     /// sentence names its own subject.
-    @State private var personField = ""
     @State private var watchingPerson = false
     /// The face of whoever just landed — proof that reads "this person
     /// arrived", not "a row arrived". `BridgeSyncStatusRows.faces` has existed
@@ -554,13 +553,22 @@ struct TokenSetupScreen: View {
     /// account — nothing is starred, subscribed or followed.
     private func watchEither() {
         let q = watchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return }
-        if TokenSetupScreen.looksLikeRepo(q) {
-            watchField = q
-            watchRepo()
-        } else {
-            personField = q
-            watchPerson()
+        guard !q.isEmpty, !watching, !watchingPerson else { return }
+        let repo = TokenSetupScreen.looksLikeRepo(q)
+        DSHaptic.tap()
+        if repo { watching = true } else { watchingPerson = true }
+        watchFaces = []
+        Task {
+            let outcome = await GitHubWatchAdd.watch(q, context: modelContext)
+            watching = false
+            watchingPerson = false
+            guard let outcome else { return }
+            watchResult = outcome.proof
+            guard outcome.added else { return }
+            watchQuery = ""
+            watchFaces = outcome.faces
+            readRows()
+            await sync()
         }
     }
 
@@ -678,62 +686,6 @@ struct TokenSetupScreen: View {
               url.scheme?.hasPrefix("http") == true
         else { return }
         openURL(url)
-    }
-
-    private func watchRepo() {
-        let q = watchField.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty, !watching, let token = TokenVault.get(bridge.tokenKey) else { return }
-        DSHaptic.tap()
-        watching = true
-        watchFaces = []
-        Task {
-            let resolved = await GitHubRepoWatch.resolve(q, token: token)
-            watching = false
-            guard let resolved else {
-                watchResult = .failed(String(localized: "Couldn't find that repo on GitHub."))
-                return
-            }
-            guard let thing = GitHubRepoWatch.add(resolved, context: modelContext) else {
-                watchResult = .failed(String(localized: "\(resolved.fullName) is already watched."))
-                return
-            }
-            watchField = ""
-            watchQuery = ""
-            watchResult = .says(String(localized: "Watching \(thing.title)"))
-            readRows()
-            await sync()
-        }
-    }
-
-    /// Watch a person (prd §519). The repo verb's shape exactly, with two
-    /// differences that are both about honesty: the failure sentence names the
-    /// two ways a paste can fail here (a profile URL and a REPO URL look
-    /// alike, and `GitHubLinks.personLogin` refuses the second rather than
-    /// quietly watching its owner), and the success carries their face.
-    private func watchPerson() {
-        let q = personField.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty, !watchingPerson, let token = TokenVault.get(bridge.tokenKey) else { return }
-        DSHaptic.tap()
-        watchingPerson = true
-        watchFaces = []
-        Task {
-            let resolved = await GitHubPersonWatch.resolve(q, token: token)
-            watchingPerson = false
-            guard let resolved else {
-                watchResult = .failed(String(localized: "No such account on GitHub — a username, or a link to a profile."))
-                return
-            }
-            guard let thing = GitHubPersonWatch.add(resolved, context: modelContext) else {
-                watchResult = .failed(String(localized: "\(resolved.login) is already watched."))
-                return
-            }
-            personField = ""
-            watchQuery = ""
-            watchFaces = [resolved.avatarURL].compactMap { $0 }
-            watchResult = .says(String(localized: "Watching \(thing.title)"))
-            readRows()
-            await sync()
-        }
     }
 
     private func connect() {
