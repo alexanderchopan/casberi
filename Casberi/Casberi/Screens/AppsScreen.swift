@@ -56,9 +56,6 @@ struct AppsScreen: View {
     /// name lifts as it takes its connected seat. `connectLiftToken` fires one
     /// lift; the name gates which row.
     @State private var justConnectedName: String?
-    /// The offers whose room stands in the rooms tray (prd §1033), read off
-    /// `chrome.categoryVenues` once per change rather than per row.
-    @State private var roomed: Set<String> = []
     @State private var connectLiftToken = 0
     /// Connect-count milestones (5 / 10 / 25 seats): the highest threshold
     /// already celebrated, persisted so each fires once, forever. Seeded to the
@@ -259,10 +256,6 @@ struct AppsScreen: View {
         // just-connected row can be identified.
         .onChange(of: connectedNames) { old, new in
             handleConnectChange(old: old, new: new)
-        }
-        .onAppear { roomed = Self.roomedOffers(chrome.categoryVenues) }
-        .onChange(of: chrome.categoryVenues) { _, venues in
-            roomed = Self.roomedOffers(venues)
         }
         // The tray can be raised OVER this screen and a second door tapped, so
         // a request made while it is already up still lands (prd §930).
@@ -944,18 +937,20 @@ struct AppsScreen: View {
         FramesIdentity.source, PrivacyDevnetIdentity.source,
     ]
 
-    /// The offer names behind every room the tray draws.
-    private static func roomedOffers(_ venues: [String: [String]]) -> Set<String> {
-        Set(venues.values.joined().map { BridgeCatalog.seatName(forSource: $0) })
-    }
-
     /// A connected account with a room is a STATUS here (prd §1033, user:
     /// "lets make it go nowhere. it's just a status"): the room's own door
     /// beside its name manages it. One with no room — an agent key, an
     /// exchange, Apple Intelligence — keeps its door, or nothing would reach
     /// its page.
+    ///
+    /// Read off the SAME rule the dock gives a connected seat its room by
+    /// (`LiveRoomSources.earnsEmptyRoom`, prd §1036), not off the tray's
+    /// current venues: a seat that had landed nothing yet had no venue, so
+    /// its row kept a chevron the user called out (Apple Health).
     private func isStatusOnly(_ entry: Ranked) -> Bool {
-        entry.tier == 2 && roomed.contains(entry.offer.name)
+        guard entry.tier == 2, let bridge = entry.bridge,
+              LiveRoomSources.earnsEmptyRoom(bridge.name) else { return false }
+        return Corpus.earnsRoom(BridgeRouter.roomSource(forID: bridge.id) ?? bridge.name)
     }
 
     private func rowOpen(_ entry: Ranked) -> (() -> Void)? {

@@ -137,9 +137,9 @@ NOTE_ALLOWANCE = {
     # to record.
     "TokenSetupScreen.swift": 6,
     "HandleSetupScreen.swift": 3,
-    # Day One, Apple Journal, Apple Notes and Bookmarks are four screens in
-    # one file.
-    "NotesImportScreens.swift": 4,
+    # Day One, Apple Journal and Bookmarks are three screens in one file
+    # (Apple Notes, the fourth, left the catalogue, prd §1036).
+    "NotesImportScreens.swift": 3,
     # The screen has a connect form and a connected state with separate notes.
     "DropboxScreen.swift": 3,
     "PostHogScreen.swift": 3,
@@ -481,11 +481,6 @@ KNOWN_LANDS_NOTHING = {
     # Apple Intelligence (prd §833) is a switch over WHICH model answers the
     # composer; an answer stores nothing, so there is no source to hold.
     "AppleIntelligenceScreen.swift": "a model switch — an answer lands no rows",
-    # Apple Notes shares OUT of Notes and reads nothing back — a shared note
-    # lands under source "You" (`Corpus.earnsRoom` refuses it), so this seat
-    # has no room of its own and never will. Per-file, and the file's other
-    # three screens keep their Activity rows.
-    "NotesImportScreens.swift": "Apple Notes shares out; its notes land under You",
     # Two seats whose money is REAL and whose rows do not exist: both fold
     # holdings into `WalletPortfolio` (the Wallet room's balance card) without
     # ever constructing a `Thing`. `Model/ExchangeBridge.swift` and
@@ -496,7 +491,7 @@ KNOWN_LANDS_NOTHING = {
 
 # STATED CEILING: this is per FILE, so a file holding several screens is judged
 # on all of them at once. `NotesImportScreens.swift` is the case in the tree —
-# four screens, none of them rowless. Splitting this per struct means parsing
+# three screens, none of them rowless. Splitting this per struct means parsing
 # Swift; the honest move is to say so rather than imply a guarantee it cannot
 # make.
 

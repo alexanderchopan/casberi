@@ -259,7 +259,7 @@ guard "…and only when it is a note, typed or recorded (prd §972)" \
 # NOT by joining `sources`, which the catalog guard below checks against the
 # Notes group — `You` is not a catalog seat.
 absent "You is not smuggled into the catalog-checked source set" \
-  '"Obsidian", "Day One", "Apple Journal", "Apple Notes", "Kindle", "You"' "$SOURCE"
+  '"Obsidian", "Day One", "Apple Journal", "Kindle", "You"' "$SOURCE"
 # The day shelf excludes SIBLINGS, not the whole source — the old rule hid every
 # screenshot, link and voice note from the same day in the room this widened to.
 guard "the day shelf excludes same source AND same kind" \

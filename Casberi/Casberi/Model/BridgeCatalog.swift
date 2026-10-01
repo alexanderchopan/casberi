@@ -661,8 +661,6 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Day One",     tagline: "Import your journal",                   group: "Notes",     connectable: true,
               needsSetup: true),
-        Offer(name: "Apple Notes", tagline: "Share notes in",                        group: "Notes",     connectable: true,
-              needsSetup: true),
         Offer(name: "RSS",         tagline: "Any site with a feed",                  group: "Reading",   connectable: true,
               needsSetup: true),
         // Social, with Bluesky (user ruling 2026-07-17, reversing the
@@ -915,7 +913,7 @@ enum BridgeCatalog {
         // 2026-09-06 with the Markets seats, prd §638).
         ("Reading", "Readwise",    ["Reading", "Saves"]),
         ("Shopping", "Shopify",    ["Shopping"]),
-        ("Notes",   "Apple Notes", ["Notes"]),
+        ("Notes",   "Obsidian",    ["Notes"]),
     ]
 
     static func category(of offer: Offer) -> String {
@@ -946,8 +944,8 @@ enum BridgeCatalog {
     /// `Thing.source` is "Privacy Pools" while the offer (and the wallet seat)
     /// is "0xBow Privacy Pools", so exact matching alone files the flagship
     /// privacy seat under nothing. The suffix rule fixes that family at a
-    /// stroke — it is also what resolves "Music" → "Apple Music", "Notes" →
-    /// "Apple Notes" and "Journal" → "Apple Journal", where the catalog carries
+    /// stroke — it is also what resolves "Music" → "Apple Music" and
+    /// "Journal" → "Apple Journal", where the catalog carries
     /// the vendor prefix and the corpus does not.
     ///
     /// Matched on a SPACE boundary (`" " + source`), never `contains`: a bare
@@ -1151,7 +1149,7 @@ enum BridgeSetupMode {
 
     /// A system permission or a folder on this device, behind a setup screen
     /// (the pure one-tap grants have no screen and are `mode == nil`).
-    static let onDeviceSeats: Set<String> = ["Apple Wallet", "Files", "Obsidian", "Apple Notes"]
+    static let onDeviceSeats: Set<String> = ["Apple Wallet", "Files", "Obsidian"]
 
     /// Reads the wallets already watched — no connection of its own (§515):
     /// `WalletSeatStanding.seats`, by offer name (that table is by seat id and

@@ -88,6 +88,28 @@ enum LiveRoomSources {
     /// and by `FeedScreen.connectedHoldsLead`.
     static let keepsEmptyRoom: Set<String> = ["Calendar", "Reminders", "Gmail", "iCloud Mail"]
 
+    /// **EVERY CONNECTED SEAT HAS A ROOM, EMPTY OR NOT (prd §1036, §998
+    /// widened).** The room is where an app's settings live (its door beside
+    /// the name, §1033), and Apps draws a connected row as a status with no
+    /// way in — so a seat that had landed nothing yet (Apple Health with no
+    /// workout) was connected and unreachable. Its room stands empty instead,
+    /// wearing `quietState`, with the door.
+    ///
+    /// Not `keepsEmptyRoom`: those rooms ALSO hold their lead over nothing
+    /// (`FeedScreen.connectedHoldsLead`); this only gives the dock a room.
+    static func earnsEmptyRoom(_ seat: String) -> Bool {
+        !landsNothing.contains(seat)
+    }
+
+    /// The seats that land no row under a source of their own, ever — so no
+    /// room, and Apps keeps their row's door (prd §1036). The exchanges'
+    /// balances ride the wallet; an answer from
+    /// Apple Intelligence stores nothing; the validator is read in place.
+    static let landsNothing: Set<String> = [
+        "Apple Intelligence", "ETH Validators",
+        "Kraken", "Coinbase", "Binance", "Gemini Exchange",
+    ]
+
     /// **The prediction venues, and ONLY them — now EMPTY, and kept.**
     ///
     /// Kalshi and Polymarket, its only two members, were deleted on 2026-09-06.

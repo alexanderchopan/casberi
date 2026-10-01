@@ -12,21 +12,14 @@ enum NoteSheetSource {
 
     /// The sources whose things are notes — writing kept to be read back.
     ///
-    /// The catalog's `Notes` group (Obsidian, Day One, Apple Journal, Apple
-    /// Notes) plus **Kindle**, which browses under `Reading` because that is
+    /// The catalog's `Notes` group (Obsidian, Day One, Apple Journal) plus
+    /// **Kindle**, which browses under `Reading` because that is
     /// where you would look for it but lands marked passages — a note all the
     /// same. **Voice** left this set with its source (prd §972): a voice note
     /// is kept under `You` and takes the kept-note anatomy (`isKeptNote`).
     ///
-    /// **"Apple Notes" is in this set and nothing lands under it**, which is
-    /// itself a finding rather than an oversight: the seat is share-sheet
-    /// instructions, and a note shared from Apple Notes lands under source
-    /// `You` with no record of where it came from. Widening this set to `You`
-    /// would give every hand-captured note this anatomy — plausibly right, and
-    /// a different ruling than this one, because it first needs an answer to
-    /// what `You` means (wrote it, or merely brought it). Left out
-    /// deliberately; the name stays here so the catalog guard keeps covering
-    /// the seat.
+    /// **Apple Notes left with its seat (prd §1036)**: it was share-sheet
+    /// instructions, and a note shared from Apple Notes lands under `You`.
     ///
     /// A literal set rather than a `BridgeCatalog` walk on purpose — this is
     /// read on every sheet open, and the catalog answer is a linear scan over
@@ -34,7 +27,7 @@ enum NoteSheetSource {
     /// `note-sheet-selftest.sh`, so a renamed or added `Notes` seat fails the
     /// build rather than silently losing its anatomy.
     static let sources: Set<String> = [
-        "Obsidian", "Day One", "Apple Journal", "Apple Notes", "Kindle",
+        "Obsidian", "Day One", "Apple Journal", "Kindle",
     ]
 
     static func isNotes(_ source: String) -> Bool { sources.contains(source) }

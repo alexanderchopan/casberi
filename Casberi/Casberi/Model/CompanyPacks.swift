@@ -176,7 +176,6 @@ enum CompanyPacks {
             "Shopify": ("Shopify", .stock("SHOP")),
             // Notes
             "Apple Journal": apple,
-            "Apple Notes": apple,
             "Day One": own("Automattic"),
             "Obsidian": own("Obsidian"),
         ]

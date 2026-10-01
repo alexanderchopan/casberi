@@ -961,27 +961,9 @@ KNOWN_BALANCE_ONLY = {
     # money story is ever scaled up to a size that can carry one.
     "ETH Validators",
 }
-KNOWN_CHIPLESS_CAPTURE = {
-    # Rides the generic share-sheet capture path (`Thing`'s own default
-    # source, "You") rather than a distinct bridge — Apple offers no export
-    # or live read for Notes, so there is no ingest file to stamp a
-    # dedicated source at all. `Corpus.chiplessSources` excludes "You" from
-    # ever earning a room or chip by ruling (2026-08-02, "get rid of the you
-    # chip and room"), so this could never be tray-visible even if seeded.
-    #
-    # DO NOT "fix" this by giving Apple Notes a demo seat — that was tried
-    # on 2026-08-11 and reverted the same day. `NotesShareScreen` is an
-    # INSTRUCTION CARD, not a bridge: its own intro says "there is nothing
-    # to connect", and unlike Day One / Apple Journal / Bookmarks (all in
-    # the same file) it calls NO `registerConnected`. iOS never tells a
-    # share extension which app a share came from, so there is no signal a
-    # bridge could ever key on. A demo seat here claims a connected state
-    # the real screen explicitly refuses to claim. The seven note rows that
-    # seed attempt added are kept, correctly, as `source: "You"` own-captures
-    # (`DemoSeedAll.ownCaptures`) — which is exactly what a person who
-    # shared those notes really would have.
-    "Apple Notes",
-}
+# Its one member, Apple Notes, left the catalogue (prd §1036): it was share-
+# sheet instructions with nothing to connect, which is why it never had a seat.
+KNOWN_CHIPLESS_CAPTURE: set = set()
 KNOWN_SEARCH_ONLY = {
     # `Corpus.roomOnlySources` — its demo rows are `contactsAndHome()`, not a
     # seat in `seatTable`, so it is exempt by name (a room since prd §818).

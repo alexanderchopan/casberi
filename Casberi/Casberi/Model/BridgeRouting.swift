@@ -133,7 +133,6 @@ enum BridgeRouter {
         case kindle
         case dayOne
         case appleJournal
-        case appleNotes
         case bookmarks
         case token(TokenBridge)
         /// PostHog is a TokenBridge for its key and seat id, but a WATCH LIST
@@ -288,7 +287,7 @@ enum BridgeRouter {
                  // there, alone among the agent seats (audit, 2026-07-31).
                  .venice, .bankr, .appleIntelligence, .openRouter, .grok, .nearAI, .muse,
                  .chatgpt, .claude, .claudeCode, .gemini,
-                 .kindle, .dayOne, .appleJournal, .appleNotes, .bookmarks:
+                 .kindle, .dayOne, .appleJournal, .bookmarks:
                 true
             // Snapchat is an import, but NOT a one-shot: landing the export
             // is the first of two acts, and the second (fetching the
@@ -375,7 +374,6 @@ enum BridgeRouter {
             case .kindle:         "kindle"
             case .dayOne:         "dayone"
             case .appleJournal:   "journal"
-            case .appleNotes:     "notes"
             case .bookmarks:      "bookmarks"
             case .token(let b):   b.bridgeID
             case .appleWallet:    AppleWalletBridge.seatID
@@ -503,7 +501,6 @@ enum BridgeRouter {
         Row(offer: "Apple Journal", id: "journal", destination: .appleJournal),
         // Apple Notes never registers a seat (nothing to connect) — the row
         // exists so Connect routes to the share-path explainer (prd 55).
-        Row(offer: "Apple Notes", id: "notes", destination: .appleNotes),
         Row(offer: "Bookmarks", id: "bookmarks", destination: .bookmarks),
         Row(offer: "Apple Wallet", id: AppleWalletBridge.seatID, destination: .appleWallet),
         Row(offer: "PostHog", id: "posthog", destination: .posthog),
@@ -723,7 +720,6 @@ struct BridgeDestinationView: View {
         case .kindle:         KindleImportScreen()
         case .dayOne:         DayOneImportScreen()
         case .appleJournal:   JournalImportScreen()
-        case .appleNotes:     NotesShareScreen()
         case .bookmarks:      BookmarksImportScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
         case .appleWallet:    AppleWalletScreen()

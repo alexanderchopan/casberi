@@ -1050,9 +1050,11 @@ struct MainSurface: View {
     /// bridges, not the corpus — and it's what lets a chip appear the moment you
     /// come back from connecting rather than waiting for the next foreground.
     private var liveRoomChipCount: Int {
+        // Every connected seat earns a room since §1036, so a connect is a
+        // label-set change whatever the seat.
         store.bridges.filter {
             $0.status == .connected
-                && (LiveRoomSources.has($0.name) || LiveRoomSources.keepsEmptyRoom.contains($0.name))
+                && (LiveRoomSources.has($0.name) || LiveRoomSources.earnsEmptyRoom($0.name))
         }.count
     }
 
@@ -1459,6 +1461,21 @@ struct MainSurface: View {
             && Corpus.earnsRoom(bridge.name)
             && seen.insert(bridge.name).inserted {
             ordered.append(bridge.name)
+        }
+        // EVERY OTHER CONNECTED SEAT KEEPS A ROOM, EMPTY (prd §1036): the
+        // room holds its settings door (§1033) and Apps gives a connected row
+        // no other way in. Skipped when a landed source already resolves to
+        // the seat (an aliased one — "Privacy Pools" for "0xBow Privacy
+        // Pools" — must not gain a second room), and a seat whose rows land
+        // in another seat's room (`roomSource(forID:)`) is placed there.
+        let seatsSeen = Set(ordered.map { BridgeCatalog.seatName(forSource: $0) })
+        for bridge in store.bridges where bridge.status == .connected
+            && LiveRoomSources.earnsEmptyRoom(bridge.name)
+            && !seatsSeen.contains(bridge.name) {
+            let room = BridgeRouter.roomSource(forID: bridge.id) ?? bridge.name
+            guard Corpus.earnsRoom(room), BridgeCatalog.offer(forSource: room) != nil,
+                  seen.insert(room).inserted else { continue }
+            ordered.append(room)
         }
         // **THE STRIP DOES NOT LEARN ANY MORE (user, 2026-09-06: "get rid of
         // chip memory ... b/c user wanting to reorder is more important").**

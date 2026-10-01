@@ -389,6 +389,8 @@ marks chronological position within the pair.
 | §1015 (hold is Manage account) | a hold on a tray mark raised one verb, Manage account | superseded by §1033 — the hold is deleted; the room's own door is that verb |
 | §796 (the face opens Accounts) | the screen was named Accounts, with a Connect \| Manage switcher | amended by §1033 — the screen is Apps, with no switcher |
 | §958 (Connect opens Accounts, whose switcher holds Manage) | the tray's door opened Accounts on Connect, Manage one switch away | amended by §1033 — the door is worded Apps and opens the one catalogue |
+| §1033 (a connected row with a room is a status) | read off the tray's live venues, so a seat that had landed nothing kept its chevron | amended by §1036 — every connected seat has a room (bar `LiveRoomSources.landsNothing`), and Apps reads that rule |
+| §998 (Calendar and Reminders keep their room when connected and empty) | the empty-room rule named two seats | extended by §1036 — every connected seat keeps its room, bar `LiveRoomSources.landsNothing` |
 
 ## 1. Thesis
 
@@ -63004,3 +63006,17 @@ The confusion it answers: three ids from the Logos team, all reading 0, with not
 **Guards:** `logos-selftest.sh` holds the header read (id, time, its own hash at bytes 40–72), six reset-rule cases, and the network rule — including a SIGNED transaction with no fee, which is a person's act (genesis carries one for real): the mutation "a signed transaction read as the network's" survived until that case was added. Four new mutations; 27 caught.
 
 **Seen** on an iPhone 17 Pro simulator: the Logos page drawing "The testnet was reset on Oct 1, so accounts from before then are empty." over three empty watched accounts. Built green for Mac Catalyst (Rewards, the custom symbol and this). The new chain's first 1,000 blocks all decode with the v0.3 reader, and carry 117 user transactions — the first real ones to measure token transfers against (§1016's "Used a program").
+
+## §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the catalogue (user: "shouldn't for each app that is 'connected' in the apps section NOT have a chevron b/c their room is where the settings are? … apple health for example has a chevron to disconnect", "ok", then on Apple Notes "i thought we got rid of apple notes from the catalogue b/c it doesn't actually connect", "it needs to go", 2026-10-01; amends §1033, extends §998)
+
+**The defect.** §1033 drew a connected row as a status only when its room stood in the tray, read off `chrome.categoryVenues`. A seat earns a tray room by LANDING rows, so Apple Health connected with no workout had no room, kept its chevron, and was the one way to its page — while Logos, with rows, was a status. Two connected apps, two behaviours, for a reason nobody could see.
+
+**Ruling.**
+- **Every connected seat earns a room** (`LiveRoomSources.earnsEmptyRoom`, read by `MainSurface.assembleChips`), empty or not — §998's Calendar/Reminders rule for everyone. An empty one draws `quietState` ("Apple Health is connected. Nothing has landed here yet…") with the room's sliders door. A seat already reached through a landed source (an alias: "Privacy Pools" for "0xBow Privacy Pools") gains no second room; a seat whose rows land in another seat's room (`BridgeRouter.roomSource(forID:)`) is placed there.
+- **The exceptions are named** (`LiveRoomSources.landsNothing`): Apple Intelligence, ETH Validators and the four exchanges land no row under a source of their own, so they never have a room, and their Apps rows KEEP their chevron — the one honest way to their page. Long-press Disconnect in Apps was raised and declined: disconnect is rare and destructive, and its page says what is deleted and confirms.
+- **Apps reads the same rule** (`AppsScreen.isStatusOnly`), not the tray's live venues.
+- **Apple Notes is deleted from the catalogue** — offer, route (`Destination.appleNotes`), `NotesShareScreen`, the taste signal, the company pack, the website's marquee tile, shelf cell, docs line and `.ai-applenotes`. It was share-sheet instructions with nothing to connect; a note shared in still lands under `You`, unchanged. The Notes category's exemplar is Obsidian.
+
+**Open:** whether tapping a status row should land in its room (recommended) or stay static (§1033's "go nowhere") — asked, not yet ruled.
+
+**Seen** on a fresh iPhone 17 Pro simulator (iOS 27, no demo): Apple Health connected through Apps' Allow with no data — its row "Synced just now" with no chevron; the tray's Life › Apple Health; the room's quiet state with the sliders disc. Not seen: an aliased or wallet-riding seat with no rows, the Mac.
