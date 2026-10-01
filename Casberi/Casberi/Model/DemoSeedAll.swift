@@ -2870,10 +2870,15 @@ enum DemoSeedAll {
             ("Uma shared a file with you", "Uma Patel <uma@studio.example>", 10),
             ("Re: joinery quote (v2)", "Nils Berg <nils@joinery.example>", 16),
         ]
+        // One mail in each room came with a file, so the Attachments tile
+        // (prd §1019) has something to show in the demo — the fact the real
+        // ingest writes, under the label the tile reads.
+        let gmailAttached: [Int: String] = [4: "Brief v3.pdf"]
         out += gmail.enumerated().map { i, m in
             row(.mail, m.0, source: "Gmail", ref: "demo:gmail:\(i)", days: m.2, hour: 9,
                 content: "Thanks — see the thread for the details.") { t in
                 t.authorHandle = m.1
+                if let file = gmailAttached[i] { t.facts = [ThingFact(MailScope.attachedLabel, file).encoded] }
             }
         }
         let icloud: [(String, String, Double)] = [
@@ -2883,10 +2888,12 @@ enum DemoSeedAll {
             ("Re: book club", "Mia Rowe <mia@example.com>", 14),
             ("Your order has shipped", "Receipts <receipts@shop.example>", 21),
         ]
+        let icloudAttached: [Int: String] = [0: "Receipt 4471.pdf"]
         out += icloud.enumerated().map { i, m in
             row(.mail, m.0, source: "iCloud Mail", ref: "demo:icloud:\(i)", days: m.2, hour: 11,
                 content: "Opened on this device.") { t in
                 t.authorHandle = m.1
+                if let file = icloudAttached[i] { t.facts = [ThingFact(MailScope.attachedLabel, file).encoded] }
             }
         }
         return out

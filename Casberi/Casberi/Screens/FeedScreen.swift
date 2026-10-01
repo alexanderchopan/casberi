@@ -2407,6 +2407,8 @@ struct FeedScreen: View {
         // read never happens, the body observes nothing, and a tile picked
         // over an empty list lit nothing and changed nothing.
         let remindersPick = source == "Reminders" ? chrome.remindersScope : .all
+        // The mail rooms' pick (prd §1019), read once for the same reason.
+        let mailPick = MailScope.rooms.contains(source) ? chrome.mailScope : .all
         return base.filter { thing in
             // The pinned room's membership is decided entirely by the `@Query`
             // above (`pinnedAt != nil`), so there is no source to match against
@@ -2428,6 +2430,10 @@ struct FeedScreen: View {
                 && githubScopeAllows(thing)
                 && notesScopeAllows(thing)
                 && remindersPick.allows(done: thing.mark == .done, dueAt: thing.dueAt)
+                // The Attachments tile reads the row's fact labels (prd §1019);
+                // under All the facts are never decoded.
+                && (mailPick == .all
+                    || mailPick.allows(factLabels: thing.facts.compactMap { ThingFact(encoded: $0)?.label }))
                 // The kind tile (prd §815), which COMBINES with the GitHub
                 // face rail above rather than replacing it.
                 && (census.map {
@@ -3094,7 +3100,9 @@ struct FeedScreen: View {
     /// door is the fix: an empty box there would claim a list it cannot see.
     ///
     /// Calendar joins by the same rule (prd §998): a quiet month is a real
-    /// state of a calendar, and its month grid is the lead.
+    /// state of a calendar, and its month grid is the lead. The mail rooms
+    /// too (prd §1019): an empty inbox is a state of a mailbox, and their New
+    /// tile stands under the held lead.
     private var connectedHoldsLead: Bool {
         guard LiveRoomSources.keepsEmptyRoom.contains(source) else { return false }
         return bridges.bridges.first { $0.name == source }?.status == .connected
@@ -3250,6 +3258,25 @@ struct FeedScreen: View {
                 if let url = URL(string: "x-apple-reminderkit://") { openExternal(url) }
             } else {
                 withAnimation(DS.Motion.standard) { chrome.remindersScope = picked }
+            }
+        }
+    }
+
+    /// The mail rooms' tiles (prd §1019): All · Attachments · New, in Gmail
+    /// and iCloud Mail alike. New composes in the app `SourceActions` names
+    /// for the seat (Gmail's own when installed, else `mailto:`) and is drawn
+    /// only where that action resolves — a tile that opens nothing is a dead
+    /// control (§83).
+    private var mailTiles: DSScopeTiles<MailScope> {
+        let compose = SourceActions.action(forSource: source)
+        return DSScopeTiles(sections: MailScope.allCases.filter { !$0.isVerb || compose != nil },
+                            active: chrome.mailScope,
+                            attention: [],
+                            verbs: [.new]) { picked in
+            if picked.isVerb {
+                if let compose, case .openURL(let url) = compose.run { openExternal(url) }
+            } else {
+                withAnimation(DS.Motion.standard) { chrome.mailScope = picked }
             }
         }
     }
@@ -5814,8 +5841,10 @@ struct FeedScreen: View {
             // verb: "New event" / "New task" leaves for another app, which
             // the catalogue is not a door to. See `sourceComposeRow`.
             // Calendar's compose is its New TILE since prd §994 — the row
-            // stood above the lead, at the top of the screen (§752).
+            // stood above the lead, at the top of the screen (§752). The mail
+            // rooms' since prd §1019, for the same reason.
             if let bridge = activeSourceBridge, source != "Reminders", bridge.name != "Calendar",
+               !MailScope.rooms.contains(bridge.name),
                let action = SourceActions.action(forSource: bridge.name),
                case .openURL = action.run {
                 sourceComposeRow(action)
@@ -6259,6 +6288,8 @@ struct FeedScreen: View {
             // The Reminders room's tiles, for the kind tile's reason, and its
             // empty list, which is a state of the list (prd §993).
             || (source == "Reminders" && chrome.remindersScope != .all)
+            // And the mail rooms' Attachments pick (prd §1019).
+            || (MailScope.rooms.contains(source) && chrome.mailScope != .all)
             || connectedHoldsLead
     }
 
@@ -7896,11 +7927,17 @@ struct FeedScreen: View {
             // The newest mail is the cover, and what is waiting on you stands
             // under it (prd §911): the waiting section is a list section, and a
             // room that led with it — or with nothing — was the one Life room
-            // with no lead. The cover is drawn by hand so the waiting section
-            // can stand between it and the days.
+            // with no lead. The tiles stand between the cover and the waiting
+            // section (prd §1019), and with nothing under the pick the lead
+            // box is held over them, the Reminders shape (§993).
             let days = chronoGroups(visible)
             let mailCoverID = heroShown ? nil : ledeThingID(in: days)
-            if let mailCover = coverThing(mailCoverID, in: visible) { Section { ledeListRow(mailCover) } }
+            let mailScope = chrome.mailScope
+            standaloneLead(cover: coverThing(mailCoverID, in: visible),
+                           tiles: heroShown ? nil : mailTiles,
+                           listEmpty: visible.isEmpty,
+                           emptyWords: Text(mailScope.summary),
+                           emptyHeadline: Text(mailScope.emptyHeadline))
             if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
             groupedSections(liftingCover(days, id: mailCoverID), nextEventID: nextEventID,
                             boundary: boundaryThingID(in: days))

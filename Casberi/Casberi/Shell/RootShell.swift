@@ -217,6 +217,8 @@ struct RootShell: View {
                 if let s = RemindersScope(rawValue: raw), !s.isVerb { chrome.remindersScope = s }
                 // The Calendar room's spans too (prd §994); New is a verb.
                 if let s = CalendarScope(rawValue: raw), !s.isVerb { chrome.calendarScope = s }
+                // The mail rooms' Attachments too (prd §1019); New is a verb.
+                if let s = MailScope(rawValue: raw), !s.isVerb { chrome.mailScope = s }
                 // And a Tokens company pack, by its category name ("Work").
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
             }

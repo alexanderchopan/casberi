@@ -79,10 +79,14 @@ enum LiveRoomSources {
     /// Both rooms already draw their lead over nothing (§993, §994); this is
     /// the dock's half, so the room can be reached.
     ///
+    /// The mail rooms join (prd §1019): an empty inbox is a real state of a
+    /// mailbox, and the room's New tile stands under the held lead whether or
+    /// not a mail has landed — the Reminders shape (§993).
+    ///
     /// SEPARATE from `all` for the keyed agents' reason: these rooms land
     /// rows, they just have none now. Read by the dock's connected-seat door
     /// and by `FeedScreen.connectedHoldsLead`.
-    static let keepsEmptyRoom: Set<String> = ["Calendar", "Reminders"]
+    static let keepsEmptyRoom: Set<String> = ["Calendar", "Reminders", "Gmail", "iCloud Mail"]
 
     /// **The prediction venues, and ONLY them — now EMPTY, and kept.**
     ///

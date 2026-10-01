@@ -544,6 +544,11 @@ final class ShellChrome {
     /// Today or Scheduled; never New. Cleared on every source change.
     var remindersScope: RemindersScope = .all
 
+    /// Which of the mail rooms' tiles is standing (prd §1019) — All or
+    /// Attachments; never New, which is a verb. One pick for Gmail and iCloud
+    /// Mail, cleared on every source change like `remindersScope`.
+    var mailScope: MailScope = .all
+
     /// Which of the Tokens room's tiles is standing — the Watchlist, or one
     /// catalogue category's company pack (`CompanyPacks`). Cleared on every
     /// source change.

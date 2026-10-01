@@ -62752,3 +62752,22 @@ The Logos team asked for mining: more exposure for Logos, and a way to see it as
 **Ruling.** The link is a `DataRepresentation(exportedContentType: .url)` returning `url.dataRepresentation`, with the same exporting condition. Two items still (the card, then the link), the spec's section 2 is unchanged; what changed is the link's encoding. A `Transferable` handed to the system sheet exports a URL as `public.url` DATA, never as a proxied `URL`.
 
 **Not seen.** Fixed from the screenshot's bytes in a session with no device or simulator; the device check is the share tray on an RSS thing → X, the post's text reading as the article's URL alone.
+
+## §1019 — The mail rooms carry All · Attachments · New, Gmail and iCloud Mail alike (user: "I thought we updated the mail rooms to have buttons", "I think the room would look weird with one tile", "I only wanna add those to Apple Mail if we could do the same to Gmail, can we" → "yes do it", 2026-10-01)
+
+**What it did.** Gmail and iCloud Mail opened on the newest mail's cover (§911) with no tiles: every mail row is one kind, so a kind tile would never change the list (§822). The "+ New email" compose row stood above the cover at the top of the screen — the one control §911 named that §752 would move, and the only room left with one after Reminders (§993) and Calendar (§994) turned theirs into a New tile.
+
+**Why not one tile.** A lone New under the cover picks nothing (user: "would look weird with one tile"; §994 dropped All for the same reason). The ingest reads the envelope and the attachment names, no flags and no seen state, so the one fact a mail scope can stand on is whether a file came with it.
+
+**Ruling.** Both rooms draw the tiles **All · Attachments · New** (`Model/MailScope.swift`) under the cover, through `standaloneLead`, the "Waiting on you" section and the days under them.
+- **One scope for both seats.** They are one room shape (`.gmail`) over one IMAP ingest (`MailBridge`), so `MailScope.rooms` names both and nothing reaches one without the other.
+- **Attachments reads the fact the ingest writes.** `MailBridge` writes the row's `Attached` fact under `MailScope.attachedLabel`, and the tile reads that label back from the row's decoded facts — one spelling at the write and the read, so the tile cannot drift from the ingest. A mail landed before the ingest named attachments (2026-08-14) carries no fact and stands under All alone. The label is localized at write time like every fact, so a mail landed under one language and read under another also stands under All alone; stated here, not hidden.
+- **New is a verb**, like Notes', Reminders' and Calendar's. Its tap resolves through `SourceActions.action(forSource:)`, the one place that already decides Gmail's own app over `mailto:`, and the tile is drawn only where that action resolves (§83). The compose row no longer draws in either mail room.
+- **A connected mail seat keeps its room empty** (`LiveRoomSources.keepsEmptyRoom`, §998's set): an empty inbox is a state of a mailbox, and the lead box is held over the tiles with "Nothing in your inbox." (All) or "Nothing attached." (Attachments) so New always stands under something.
+- **No unread tile, no flagged tile.** The client fetches neither flag, and the 2026-07-06 ruling draws no unread badge anywhere.
+
+**Hooks.** `-openSection attachments` with `-openRoom "Gmail"` or `"iCloud Mail"` lands the tile. The demo pours one attached mail in each room ("Uma shared a file with you" · Brief v3.pdf; "Your receipt from the hardware store" · Receipt 4471.pdf) so the tile has something to show.
+
+**Guarded** in `scripts/mail-scope-selftest.sh`: the scope compiled whole (both seats named, the verb, the fact-label read in every case), and grep guards on the ingest's label, the feed's once-read pick, its fact filter, the tiles through `standaloneLead`, the compose-row exclusion, the empty gate, the source-change reset and the held-room set. `room-kind-tiles-selftest.sh` holds the clip glyph to one meaning.
+
+**UNRUN.** No Swift toolchain on the host that made this pass: nothing here has compiled, and the harness was checked only to its grep guards. First real run is the next `verify.sh`.

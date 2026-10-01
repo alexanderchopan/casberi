@@ -123,6 +123,21 @@ enum ScopeTileGlyph {
     static let songs        = "music.note"
     static let albums       = "square.stack"
     static let artists      = "music.mic"
+    /// The mail rooms' Attachments (prd §1019). The note sheet's attach tool
+    /// wears the same clip for the same meaning; no tile or dock seat does.
+    static let attachments  = "paperclip"
+}
+
+/// The mail rooms' tiles (prd §1019). New is the Notes room's plus: the same
+/// verb, so the same glyph.
+extension MailScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:         return ScopeTileGlyph.all
+        case .attachments: return ScopeTileGlyph.attachments
+        case .new:         return ScopeTileGlyph.new
+        }
+    }
 }
 
 /// The Calendar room's tiles (prd §994). New is the Notes room's plus: the

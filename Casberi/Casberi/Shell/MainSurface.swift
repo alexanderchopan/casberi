@@ -2142,6 +2142,8 @@ struct MainSurface: View {
             chrome.notesFolder = nil
             // And the Reminders room (prd §993).
             chrome.remindersScope = .all
+            // And the mail rooms (prd §1019).
+            chrome.mailScope = .all
             // The Calendar room opens on Week (prd §994).
             chrome.calendarScope = .week
             // The music rooms open on Activity (prd §995).

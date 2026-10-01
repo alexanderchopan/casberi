@@ -200,8 +200,10 @@ enum MailIngest {
             //
             // Never phrased as "no attachments" anywhere: an empty list also
             // means the body fetch failed, and those are different facts.
+            // The label is `MailScope.attachedLabel`: the room's Attachments
+            // tile reads it back (prd §1019), so write and read spell it once.
             if !m.attachments.isEmpty {
-                thing.facts = [ThingFact(String(localized: "Attached"),
+                thing.facts = [ThingFact(MailScope.attachedLabel,
                                          m.attachments.joined(separator: ", "))].map(\.encoded)
                 thing.enrichedText = [thing.enrichedText, m.attachments.joined(separator: "\n")]
                     .compactMap { $0 }.joined(separator: "\n")
