@@ -381,7 +381,7 @@ struct IntroCover: View {
         // is what the screen draws — not `This is a demo.`, which is the feed
         // lead's string and would drift from this cover the first time the
         // lead-in is revised (the drift this property was written to stop).
-        [String(localized: "One inbox for all your accounts."),
+        [String(localized: "One inbox for all your apps."),
          String(localized: "Here's a") + " " + String(localized: "Demo").lowercased() + "."]
             .joined(separator: " ")
     }
@@ -425,7 +425,7 @@ struct IntroCover: View {
                     // noun and fit a notes app, a launcher or a bank equally.
                     // Both strings were already in the catalog, so the swap
                     // carried no translation debt.
-                    DSProse.text("One inbox for all your accounts.")
+                    DSProse.text("One inbox for all your apps.")
                         .dsText(.heading40)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)

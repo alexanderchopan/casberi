@@ -11920,7 +11920,7 @@ struct FeedScreen: View {
             // or account details" — for "one inbox for all your accounts").
             // The headline says what the empty screen BECOMES, in the app's
             // own noun, rather than naming the container it already is.
-            Text("One inbox for all your accounts.")
+            Text("One inbox for all your apps.")
                 .dsText(.heading40)
                 .foregroundStyle(DS.textPrimary)
                 .settleIn()
@@ -11934,7 +11934,7 @@ struct FeedScreen: View {
             // carries §299's diagnosis (a broken room says it is broken), which
             // no verb can state. A sentence that RESTATES the door goes; a
             // sentence that DIAGNOSES stays.
-            emptyDoor(String(localized: "Open the catalog"))
+            emptyDoor(String(localized: "Browse apps"))
             // The "or paste a link, share in, snap a screenshot" line is
             // DELETED (user, 2026-08-07). It was added to teach the capture
             // verbs the headline only claimed, but it teaches them to someone

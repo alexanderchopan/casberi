@@ -3261,7 +3261,7 @@ struct RootShell: View {
         }
         return ["root = Stack([ins, door])",
                 "ins = Insight(\"\(genSafe(line))\")",
-                "door = AppsInvite(\"\(genSafe(String(localized: "Browse the catalog")))\", \"\")"]
+                "door = AppsInvite(\"\(genSafe(String(localized: "Browse apps")))\", \"\")"]
     }
 
     /// Names as a sentence — "A, B, and C", folding overflow into "N more"

@@ -51654,34 +51654,6 @@
         }
       }
     },
-    "Browse the catalog" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Explorar el catálogo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "カタログを見る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "카탈로그 둘러보기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "浏览目录"
-          }
-        }
-      }
-    },
     "Browse the catalog instead" : {
       "localizations" : {
         "es" : {
@@ -105835,30 +105807,30 @@
         }
       }
     },
-    "One inbox for all your accounts." : {
+    "One inbox for all your apps." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Una bandeja de entrada para todas tus cuentas."
+            "value" : "Una bandeja de entrada para todas tus apps."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "すべてのアカウントを、ひとつの受信箱に。"
+            "value" : "すべてのアプリを、ひとつの受信箱に。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "모든 계정을 하나의 받은편지함에."
+            "value" : "모든 앱을 하나의 받은편지함에."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "所有账户，一个收件箱。"
+            "value" : "所有应用，一个收件箱。"
           }
         }
       }
@@ -107943,30 +107915,30 @@
         }
       }
     },
-    "Open the catalog" : {
+    "Browse apps" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Abrir el catálogo"
+            "value" : "Explorar apps"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "カタログを開く"
+            "value" : "アプリを見る"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "카탈로그 열기"
+            "value" : "앱 둘러보기"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "打开目录"
+            "value" : "浏览应用"
           }
         }
       }
