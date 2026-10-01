@@ -785,6 +785,62 @@
         }
       }
     },
+    "%@ · %lld tickets" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %lld boletos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %lldチケット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 티켓 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %lld 张票"
+          }
+        }
+      }
+    },
+    "%@ · 1 ticket" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 1 boleto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 1チケット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 티켓 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 1 张票"
+          }
+        }
+      }
+    },
     "Manage account" : {
       "localizations" : {
         "es" : {
@@ -809,6 +865,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "管理账户"
+          }
+        }
+      }
+    },
+    "Mine with your own Logos node, added on the Logos page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mina con tu propio nodo de Logos, añadido en la página de Logos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logosページで追加した自分のLogosノードでマイニングします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 페이지에서 추가한 자신의 Logos 노드로 채굴하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使用在 Logos 页面添加的你自己的 Logos 节点进行挖矿。"
+          }
+        }
+      }
+    },
+    "Mining" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Minería"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マイニング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채굴"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "挖矿"
+          }
+        }
+      }
+    },
+    "Mining not reported" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Minería no informada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マイニングは未報告"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채굴 보고 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未报告挖矿"
+          }
+        }
+      }
+    },
+    "Mining · this network pays no rewards" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Minería · esta red no paga recompensas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マイニング · このネットワークは報酬を支払いません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채굴 · 이 네트워크는 보상을 지급하지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "挖矿 · 此网络不支付奖励"
           }
         }
       }
@@ -83579,6 +83747,34 @@
         }
       }
     },
+    "Not mining" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin minar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マイニングしていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채굴 안 함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未挖矿"
+          }
+        }
+      }
+    },
     "Pinned to Notes" : {
       "localizations" : {
         "es" : {
@@ -83663,6 +83859,34 @@
         }
       }
     },
+    "Rewards" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recompensas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "報酬"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보상"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "奖励"
+          }
+        }
+      }
+    },
     "Share the note" : {
       "localizations" : {
         "es" : {
@@ -83719,6 +83943,34 @@
         }
       }
     },
+    "This node doesn't report mining." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este nodo no informa la minería."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このノードはマイニングを報告しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 노드는 채굴을 보고하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此节点不报告挖矿。"
+          }
+        }
+      }
+    },
     "What you pinned" : {
       "localizations" : {
         "es" : {
@@ -83743,6 +83995,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你置顶的内容"
+          }
+        }
+      }
+    },
+    "What your node earns: mining tickets and reward vouchers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que gana tu nodo: boletos de minería y vales de recompensa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードの収益：マイニングチケットと報酬バウチャー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드가 버는 것: 채굴 티켓과 보상 바우처"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的节点所得：挖矿票和奖励凭证"
           }
         }
       }
@@ -83799,6 +84079,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "写下或录制笔记，或对任何内容%@以置顶到这里。"
+          }
+        }
+      }
+    },
+    "Your node's sync and peers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La sincronización y los pares de tu nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードの同期とピア"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드의 동기화와 피어"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的节点的同步和对等节点"
           }
         }
       }
@@ -90721,6 +91029,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "移动…"
+          }
+        }
+      }
+    },
+    "mining ticket ready" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "boleto de minería listo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マイニングチケットの準備完了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채굴 티켓 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "挖矿票已就绪"
+          }
+        }
+      }
+    },
+    "mining tickets ready" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "boletos de minería listos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マイニングチケットの準備完了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채굴 티켓 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "挖矿票已就绪"
           }
         }
       }
