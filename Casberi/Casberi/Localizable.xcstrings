@@ -77547,7 +77547,7 @@
       }
     },
     "Here's a" : {
-      "comment" : "Lead-in on the first-launch cover. The word 'demo' follows it, spelled out in falling letter tiles, so translate only the lead-in.",
+      "comment" : "Lead-in on the first-launch cover. The word 'demo' follows it on the same line, spelled out in falling letter tiles, so translate only the lead-in.",
       "localizations" : {
         "es" : {
           "stringUnit" : {

@@ -143,19 +143,33 @@ struct IntroCover: View {
     private static var demoLetters: [String] {
         String(localized: "Demo").lowercased().map(String.init)
     }
-    private static let demoTile: CGFloat = 60
-    private static let demoGap: CGFloat = DS.Space.s2
+    /// THE WORD ENDS THE SENTENCE, ON ITS LINE (prd §1028, user: a person
+    /// read the cover as a typo — "Here's a" with no word after it). The
+    /// tiles were 60pt on a row of their own under the lead-in, the shape and
+    /// size of the app icons heaped below them, so they read as more icons.
+    /// At 36pt they stand in the lead-in's line and the glyph takes the
+    /// lead-in's own rung (`TileDropGlyph`), so the five pieces read as one
+    /// sentence. The widest lead-in ("Esto es una") plus four tiles is ~310pt,
+    /// inside an SE's 343pt column.
+    private static let demoTile: CGFloat = 36
+    private static let demoGap: CGFloat = DS.Space.s1
     private static var demoRowWidth: CGFloat {
         let n = CGFloat(demoLetters.count)
         return n * demoTile + max(0, n - 1) * demoGap
     }
-    /// Each letter's resting tilt, degrees — the heap's own jitter range.
-    private static let demoTilt: [Double] = [-7, 4, -3, 6]
-    /// The letters let go one after another while the heap's top rows are
-    /// still arriving, and are at rest a full second before `autoLift` — the
-    /// word has to be READ, not just seen landing.
-    private static let demoReleaseBase: Double = 1.4
-    private static let demoReleaseStep: Double = 0.13
+    /// Each letter's resting tilt, degrees. NOT the heap's ±7 (§1028): a
+    /// tilted row reads as part of the pile, a straight one as a word.
+    private static let demoTilt: [Double] = [-2, 1, -1, 2]
+    /// THE WORD FALLS FIRST (§1028). It let go at 1.4s, under a lead-in drawn
+    /// on the first frame, so for more than half the cover's 3.4s the screen
+    /// said "Here's a" and nothing after it — and a tap in that time lifted
+    /// the cover with the word never shown. At 0.2s the word is at rest by
+    /// ~0.9s, before the heap (0.7s) has drawn the eye. Not 0: the deal is
+    /// REPLAYED only while nothing has let go, and the band's anchors travel
+    /// a frame after mount — a release inside that frame would snap the word
+    /// to rest instead of dropping it.
+    private static let demoReleaseBase: Double = 0.2
+    private static let demoReleaseStep: Double = 0.1
     /// Seconds from appear to the cover lifting on its own — the fall's last
     /// landing (≈2.5s) plus a beat at rest.
     private static let autoLift: Double = 3.4
@@ -327,8 +341,9 @@ struct IntroCover: View {
                         .init(color: .clear, location: 1),
                     ], startPoint: .leading, endPoint: .trailing)
                 }
-            // THE WORD, on its own layer: the heap's edge fade above would
-            // eat the first letter, which rests 16pt from the leading edge.
+            // THE WORD, on its own layer, outside the heap's edge fade: a
+            // lead-in that wraps under a large type size can push the seat's
+            // last letter into the fade's trailing 7%.
             if let seat = bounds.letters.map({ geo[$0] }) {
                 let letters: [TileDrop] = Self.demoLetters.enumerated().map { i, letter in
                     let x = seat.minX + Self.demoTile / 2
@@ -420,25 +435,31 @@ struct IntroCover: View {
                     // fun"). The subtext this replaces restated the headline
                     // and the demo shows it anyway. The line is static like
                     // every word on this cover; the WORD is four letter tiles
-                    // `demoRain` drops into the seat below — CoreAnimation,
+                    // the rain drops into the seat beside it — CoreAnimation,
                     // so it cannot stutter under the launch.
-                    Text("Here's a", comment: "Lead-in on the first-launch cover. The word 'demo' follows it, spelled out in falling letter tiles, so translate only the lead-in.")
-                        .dsText(.heading24)
-                        .foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s6)
-                    // The letters' seat. A fixed box, so the copy block — the
-                    // pile's ceiling — never moves when they land.
-                    Color.clear
-                        .frame(width: Self.demoRowWidth, height: Self.demoTile)
-                        // The anchor is on the BOX, not the padded box — the
-                        // letters rest on its midY, and asymmetric padding
-                        // inside the anchor would sit the word off its seat.
-                        .anchorPreference(key: PileBoundsKey.self, value: .bounds) {
-                            PileBounds(letters: $0)
-                        }
-                        .padding(.top, DS.Space.s3)
-                        .padding(.bottom, DS.Space.s2)
+                    // ONE LINE, lead-in then the word's seat (§1028). Centre
+                    // alignment IS baseline alignment here: the seat's glyphs
+                    // are the lead-in's rung, centred in the tile, so both
+                    // line boxes share a centre. A type size that wraps the
+                    // lead-in centres the word on the block, which still
+                    // reads as the sentence's end.
+                    HStack(alignment: .center, spacing: DS.Space.s2) {
+                        Text("Here's a", comment: "Lead-in on the first-launch cover. The word 'demo' follows it on the same line, spelled out in falling letter tiles, so translate only the lead-in.")
+                            .dsText(.heading24)
+                            .foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        // The letters' seat. A fixed box, so the copy block —
+                        // the pile's ceiling — never moves when they land.
+                        Color.clear
+                            .frame(width: Self.demoRowWidth, height: Self.demoTile)
+                            // The anchor is on the BOX, not a padded box — the
+                            // letters rest on its midY.
+                            .anchorPreference(key: PileBoundsKey.self, value: .bounds) {
+                                PileBounds(letters: $0)
+                            }
+                    }
+                    .padding(.top, DS.Space.s6)
+                    .padding(.bottom, DS.Space.s2)
                 }
                 // A fixed seat, not "whatever is above the heap" (spec
                 // 2026-09-05): the copy block starts a tenth of the way

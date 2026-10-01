@@ -453,8 +453,11 @@ final class TileDropView: UIView {
 }
 
 /// A letter tile's face: one character on the demo's amber (`DS.attention`,
-/// the capsule's own signal, prd §679), at the lead's words rung. Rendered
-/// once into a `CALayer`'s contents — never mounted as a view.
+/// the capsule's own signal, prd §679), at the cover lead-in's own rung
+/// (`heading24`, prd §1028) — the tiles stand in the lead-in's line, and a
+/// letter a size larger than the words beside it reads as a different
+/// sentence. Rendered once into a `CALayer`'s contents — never mounted as a
+/// view.
 private struct TileDropGlyph: View {
     let glyph: String
     let size: CGFloat
@@ -462,7 +465,7 @@ private struct TileDropGlyph: View {
 
     var body: some View {
         Text(verbatim: glyph)
-            .dsText(.heading40)
+            .dsText(.heading24)
             // The tile is a fixed brand shape, as the heap's are: an
             // accessibility type size may not push the letter out of it. The
             // whole rain is `accessibilityHidden` and the cover speaks its own
