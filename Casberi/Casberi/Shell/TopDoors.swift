@@ -263,8 +263,8 @@ private struct DoorAlarm: ViewModifier {
         let broken = !isBack && bridges.attentionCount > 0
         let spoken = isBack
             ? String(localized: "Back")
-            : (broken ? String(localized: "Accounts, needs attention")
-                      : String(localized: "Accounts"))
+            : (broken ? String(localized: "Apps, needs attention")
+                      : String(localized: "Apps"))
         content
             .overlay {
                 if broken {

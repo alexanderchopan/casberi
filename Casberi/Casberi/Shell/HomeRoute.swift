@@ -219,6 +219,15 @@ final class HomeRoute {
     /// own doors would open behind a sheet.
     @MainActor func openSetup(forOffer name: String) {
         guard let dest = BridgeRouter.destination(forOffer: name) else { return }
+        openAccount(dest)
+    }
+
+    /// An account page, by the same rule Connect takes (prd §1033): raised
+    /// over where you stand, or pushed for the wallet room. The room's own
+    /// door opens a CONNECTED seat's page (`destination(forID:)`), which for
+    /// Peer and the pools is their own screen rather than the wallet manager
+    /// their Connect leads to.
+    @MainActor func openAccount(_ dest: BridgeRouter.Destination) {
         if dest.raisedByConnect {
             connectForm = dest
         } else {

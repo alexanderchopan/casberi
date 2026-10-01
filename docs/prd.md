@@ -382,6 +382,11 @@ marks chronological position within the pair.
 | §640 (a glyphless act row is inset to the title column) | the entry well started at the title column, a disc wider on the left than the right | amended by §1027 — the entry well spans the column, discs' edge to the page's; every other glyphless row keeps the inset |
 | §1030 (GitHub's watch verb is a row under the menu) | `Watch a repo or person` stood as a `DevnetVerbRow` under the tiles and menu | amended by §1031 — the verb is the Watch tile, last in the room's grid, as Reminders' New is; the tray and its one-time rise after a connect stand |
 | §729 (the commit is a row under the field) | an account page's entry committed from a check disc and its verb's word on a row of its own under the well | superseded by §1032 — the commit is a check disc inside the well, taking Paste's place once the field holds something; a second verb (§212) keeps its row |
+| §812 (Manage holds what you connected, Connect what you have not) | the catalogue split in two behind a Connect \| Manage switcher | superseded by §1033 — Manage and the switcher are deleted; Apps is the whole catalogue, a connected row with a room is a status, its room's door manages it |
+| §937 (the tray's Manage is a room's one door) | no door in the room; the rooms tray reached a room's account page | amended by §1033 — a room's sliders disc stands beside its name, in the list (never floating); §937's deletion of the floating `RoomGear` and `gearColumn` stands |
+| §1015 (hold is Manage account) | a hold on a tray mark raised one verb, Manage account | superseded by §1033 — the hold is deleted; the room's own door is that verb |
+| §796 (the face opens Accounts) | the screen was named Accounts, with a Connect \| Manage switcher | amended by §1033 — the screen is Apps, with no switcher |
+| §958 (Connect opens Accounts, whose switcher holds Manage) | the tray's door opened Accounts on Connect, Manage one switch away | amended by §1033 — the door is worded Apps and opens the one catalogue |
 
 ## 1. Thesis
 
@@ -62952,3 +62957,19 @@ Drawn first as a canvas (claude.ai artifact "Five things to do", `design/mockups
 
 **Verified** on an iPhone 18 Pro simulator, Logos: empty (wrapped placeholder, Paste), then pasted (id, a filled check, no row under the well).
 
+
+## §1033 — A room's account door stands beside its name, Accounts is Apps with no Manage, and a tray mark has no hold (user: "to go from room to settings you have to open tray and then hit the icon for accounts", "i think the reality is that you need a settings button or soemthing", "ya i think it has to be A", "i think we get rid of the tray's hold menu", on a connected row "lets make it go nowhere. it's just a status", "remove 'manage' in accounts' switcher", then "make 'Accounts' be 'Apps' … it isn't a list of accounts. it's a list of apps", 2026-10-01; amends §937, §1015, §812, §796, §958)
+
+**The problem.** §1029 lands a connect in its room; the way back to the room's account page was the tray's hold (§1015), which nobody finds, or Accounts › Manage, a second place. Room and settings read as two places with a trip between them, and the Connect screen confused people.
+
+**Ruling.**
+- **The room's door returns, NOT floating** (`Shell/RoomAccountDoor.swift`). A 46pt disc (`DS.Face.seat`, §1017) on the room title's row, inside the list, so it scrolls with the name and nothing reserves a column — §937's reasons for deleting the floating corner gear all stand. Drawn only where the room has a seat or an offer with a page; never in Home or Notes. A broken seat's glyph wears the attention hue.
+- **The sliders, never the gear.** `gearshape` is the app's Settings in the tray's You row; this door is one account's page and wears `slider.horizontal.3`, the glyph the corner door wore.
+- **It RAISES the page over the room** (`HomeRoute.openAccount`, which `openSetup(forOffer:)` now calls): a connected seat opens its own page (`destination(forID:)`); the wallet room's pages still push, as their Connect does.
+- **The tray's hold is deleted** (the `.contextMenu` and `manage(_:)`); a mark only lands you in a room.
+- **Accounts is "Apps"** — the screen's name, the tray door's word and the face's spoken name ("Apps, needs attention"). They are sources with an account status, not accounts. The wallet rooms' own "Accounts" tiles are real accounts and keep the word.
+- **Manage is deleted.** `AccountsHeld`, the switcher and §812's split are gone: Apps is the whole catalogue, connected rows in it wearing their state. A connected app WITH a room in the tray is a status — no chevron, no tap; its room's door manages it. One with NO room (an agent key, an exchange, Apple Intelligence) keeps its door, or nothing would reach its page. Fix (a broken seat) is unchanged.
+
+**Guards.** `dock-selftest.sh` §13: the door is in the room's title row, wears the sliders and not the gear, raises through `openAccount`; no `.contextMenu` on the tray; `AccountsHeld` never returns (its old "Connect | Manage alone" check is inverted).
+
+**Seen** on a private iPhone 17 Pro simulator (iOS 27), the furnished demo, dark: the Stripe room's sliders disc beside its name; a tap raised Stripe's account page over the room; Apps with no switcher, connected rows green with no chevron, addable rows with their verb. Not seen: a room-less connected seat (none in the demo), the Mac.

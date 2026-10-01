@@ -479,7 +479,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - **No controls at the top of the screen, anywhere (user, prd §752).** A picker, a scope or a back control sits in the content (under the head or figure) or in the bottom band. → docs/hooks/design.md · prd §752 · §752b
 - **The wallet family has NO BAR (prd §747, supersedes §547).** The account is a card you page (`DSAccountDeck`/`DSAccountSlot`), carrying the room's crown and its acts. → docs/hooks/design.md · prd §747
 - **A room's acts ride every page since §774 (§747's "ALL card only" is superseded).** → docs/hooks/design.md · prd §747 · §774
-- **The dock's face opens ACCOUNTS — search, then `Connect | Manage` on one switcher, nothing pushed (prd §796; the order, the demo's Exit landing here, and the first run's three `Start here` rows are §863).** → docs/hooks/design.md · prd §796 · §933
+- **The dock's face opens APPS (was Accounts) — search, then the one catalogue; Manage is deleted, a connected row with a room is a status, and a room's own sliders disc beside its name raises its account page (prd §1033; §796, §863).** → docs/hooks/design.md · prd §796 · §933 · §1033
 - **SETTINGS HOLDS NO KEY (prd §871).** "Your key", `AccountDetail.key` and `AgentKeyPicker` are deleted. → docs/hooks/design.md · prd §871
 - **The face is the ONLY door to Accounts, and the dock's catalogue tile is deleted (prd §798).** → docs/hooks/design.md · prd §798
 - **The dock's leading seat is the back door on every pushed screen, and nothing stands at the top edge (prd §767).** → docs/hooks/design.md · prd §767

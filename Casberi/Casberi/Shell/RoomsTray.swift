@@ -45,11 +45,9 @@ import SwiftUI
 /// the same hop every other room-to-room door takes, so a category label
 /// resolves through `CategoryFold.landing` exactly as a chip tap did.
 ///
-/// **The hold is the system's (prd §1015).** Hold a mark and it lifts with
-/// the one verb every seat has, Manage account. §1002's press-and-slide is
-/// deleted: it compensated for 28pt marks packed in a column, which §1013
-/// replaced with 46pt buttons on a grid, and a second meaning on the same
-/// hold was two gestures nobody could tell apart.
+/// **A mark has no hold (prd §1033).** §1015 gave it one verb, Manage
+/// account, and nobody finds a hold; the room's own door beside its name
+/// (`RoomAccountDoor`) is that verb now, so a mark only lands you in a room.
 ///
 /// **Search and the pinned row (prd §1015).** A search field leads the tray
 /// as it leads Accounts; typing narrows the grid in place — hits stay under
@@ -484,9 +482,9 @@ struct RoomsTray: View {
                  lit: home) { pick("All") },
             Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
                  lit: notes) { pick(Pinboard.room) },
-            // "Accounts", the screen it opens (§1012): Connect is one half of
-            // that screen's switcher, and a verb in a row of places.
-            Door(word: String(localized: "Accounts"), glyph: "square.grid.2x2") { connect() },
+            // "Apps", the screen it opens (§1012, renamed §1033): a place,
+            // like its neighbours, never a verb.
+            Door(word: String(localized: "Apps"), glyph: "square.grid.2x2") { connect() },
             Door(word: String(localized: "Addresses"), glyph: "at") { screen(.addresses) },
             Door(word: String(localized: "Settings"), glyph: "gearshape") { screen(.settings) },
         ]
@@ -541,8 +539,7 @@ struct RoomsTray: View {
     }
 
     /// One account's mark: tap lands in its room, and the mark flies to the
-    /// room's head (§932); hold lifts it with the one verb every seat has,
-    /// Manage account (§1015). `key` tells a Recent mark from the same seat's
+    /// room's head (§932); no hold since §1033. `key` tells a Recent mark from the same seat's
     /// mark in its category, so the flight starts from the one touched. A
     /// search's hit carries its name (`named`): a hit is read, not scanned.
     private func markButton(_ venue: String, key: MarkKey, named: Bool) -> some View {
@@ -567,15 +564,6 @@ struct RoomsTray: View {
                 }
             }
             .contentShape(Rectangle())
-            // On the label, not the Button: every menu in the app stands on
-            // a plain view, and on the Button the hold fired the tap.
-            .contextMenu {
-                Button {
-                    manage(venue)
-                } label: {
-                    Label(String(localized: "Manage account"), systemImage: "gearshape")
-                }
-            }
         }
         .buttonStyle(PressSpring())
         .dsTapTarget(Circle())
@@ -686,14 +674,6 @@ struct RoomsTray: View {
         if !route.path.isEmpty { route.path = [] }
         chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
         chrome.sourceRequest = target
-    }
-
-    /// A seat's own account page (prd §1015): the hold's one verb.
-    private func manage(_ venue: String) {
-        guard let offer = BridgeCatalog.offer(forSource: venue)?.name else { return }
-        DSHaptic.selection()
-        close()
-        route.openSetup(forOffer: offer)
     }
 
     /// Open Accounts on Connect; its switcher holds Manage (§933, §958).

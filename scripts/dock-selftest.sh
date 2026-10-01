@@ -343,13 +343,11 @@ grep -q 'route.toggle(.apps)' "$TMP/main.nc" \
   || { echo "✗ the iPad rail's avatar no longer toggles Accounts — the two seats are"; \
        echo "  one door and must behave identically."; fail=1; }
 strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
-# TWO sections again since prd §933: Settings and Addresses are screens of
-# their own (`HomeRoute.Node.settings` / `.addresses`, reached from the rooms
-# tray's You row and the three direct doors), because a switcher may only
-# switch views of ONE thing and neither was a view of the catalog. §796's
-# `openSettings` hand-off is deleted with the section it landed.
-grep -q 'case all, yours$' "$TMP/apps.nc" \
-  || { echo "✗ the Accounts switcher is not Connect | Manage alone (prd §933)."; fail=1; }
+# NO switcher since prd §1033: Manage is deleted, Apps is the one catalogue,
+# and a connected row with a room is a status (its room's own door manages it).
+# A returning `AccountsHeld` is §1033 undone.
+! grep -q 'AccountsHeld' "$TMP/apps.nc" \
+  || { echo "✗ Apps has a switcher again (prd §1033 deleted Manage)."; fail=1; }
 grep -q 'SettingsRows()' "$TMP/apps.nc" \
   && { echo "✗ the Accounts screen draws SettingsRows again — Settings is its own screen (prd §933)."; fail=1; }
 grep -rq 'openSettings = ' Casberi/Casberi --include='*.swift' \
@@ -410,7 +408,7 @@ grep -q 'bridges.attentionCount > 0' "$TMP/topdoors.nc" \
 grep -q 'dash: \[3, 3\]' "$TMP/topdoors.nc" \
   || { echo "✗ the alarm ring is not DASHED (2026-07-21) — solid means selected and dashed"; \
        echo "  means broken; the same hue in both jobs is indistinguishable."; fail=1; }
-grep -q 'Accounts, needs attention' "$TMP/topdoors.nc" \
+grep -q 'Apps, needs attention' "$TMP/topdoors.nc" \
   || { echo "✗ the face's spoken name no longer says a connection needs attention."; fail=1; }
 
 # --- 6. a CATEGORY still springs its folder out of its own chip -------------
@@ -816,6 +814,22 @@ grep -q 'static let swipeTableInk = Color.fixed("#ffffff")' "$TMP/tokens.nc" \
   || { echo "✗ swipeTableInk is not white — both tables are dark since prd §898e."; fail=1; }
 [ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \
   || { echo "✗ RoomSnapshots.swift is back — a store with no reader (prd §723, §898)."; fail=1; }
+
+# --- 13. A ROOM'S ACCOUNT DOOR STANDS BESIDE ITS NAME, AND A TRAY MARK HAS NO HOLD (prd §1033) --
+# The hold §1015 gave a mark was undiscoverable; the door is the room's own,
+# in the title row (in the list, never floating), wearing the sliders —
+# `gearshape` is the app's Settings and means nothing else.
+strip_comments "Casberi/Casberi/Shell/RoomAccountDoor.swift" > "$TMP/door.nc"
+strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
+grep -q 'RoomAccountDoor(source: source)' "$TMP/feed.nc" 2>/dev/null \
+  || grep -q 'RoomAccountDoor(source: source)' Casberi/Casberi/Screens/FeedScreen.swift \
+  || { echo "✗ the room's title row lost its account door (prd §1033)."; fail=1; }
+grep -q '"slider.horizontal.3"' "$TMP/door.nc" && ! grep -q 'gearshape' "$TMP/door.nc" \
+  || { echo "✗ the room's account door is not the sliders — the gear is Settings' (prd §1033)."; fail=1; }
+grep -q 'route.openAccount(' "$TMP/door.nc" \
+  || { echo "✗ the room's account door no longer RAISES the page over the room (prd §1033)."; fail=1; }
+! grep -q '\.contextMenu' "$TMP/tray.nc" \
+  || { echo "✗ a tray mark has a hold again — §1033 deleted it for the room's door."; fail=1; }
 
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"

@@ -4,8 +4,9 @@ import SwiftData
 /// Apps — ONE catalog (ruling 2026-07-10: the Connected strip died; the feed
 /// is where connected apps live, and this page is where you add and manage
 /// them from a single grid). Every app sits in its category shelf; a
-/// connected app's tile wears its status dot and opens MANAGEMENT, a
-/// broken one wears Fix, an available one wears Connect, a coming one Soon.
+/// connected app's row is its STATUS and goes nowhere when it has a room —
+/// the room's own door manages it (prd §1033) — a broken one wears Fix, an
+/// available one wears Connect, a coming one Soon.
 /// The strip's hairline died with it — the app now draws no lines at all.
 ///
 /// LAYOUT LAW (the doc's): no fixed heights anywhere — every card, pill, and
@@ -43,13 +44,6 @@ struct AppsScreen: View {
     /// catalog is a directory you consult, and arriving on a three-week-old
     /// filter hides nine tenths of it with nothing on screen saying why.
     @State private var scope = CatalogScope(name: nil)
-    /// Yours | All (user ruling 2026-09-06, the Accounts door): Yours shows
-    /// only connected accounts, still under the same chips; All is the whole
-    /// catalog with connected rows wearing their state in place. Seeded once
-    /// per mount from whether anything is connected at all — a first run has
-    /// nothing to manage, so it opens on the catalog.
-    @State private var section: AccountsHeld = .all
-    @State private var scopeSeeded = false
     /// Bumped when a category's LAST addable app connects — the section header
     /// glows once in the category's own color and a toast names the set now
     /// complete.
@@ -62,6 +56,9 @@ struct AppsScreen: View {
     /// name lifts as it takes its connected seat. `connectLiftToken` fires one
     /// lift; the name gates which row.
     @State private var justConnectedName: String?
+    /// The offers whose room stands in the rooms tray (prd §1033), read off
+    /// `chrome.categoryVenues` once per change rather than per row.
+    @State private var roomed: Set<String> = []
     @State private var connectLiftToken = 0
     /// Connect-count milestones (5 / 10 / 25 seats): the highest threshold
     /// already celebrated, persisted so each fires once, forever. Seeded to the
@@ -95,8 +92,6 @@ struct AppsScreen: View {
         let bridge: BridgeApp?
         let tier: Int
         var id: String { offer.name }
-        /// Connected, healthy or broken: the row belongs on Manage.
-        var isHeld: Bool { tier == 0 || tier == 2 }
     }
 
     private func actionable(_ offer: BridgeCatalog.Offer) -> Bool {
@@ -107,21 +102,10 @@ struct AppsScreen: View {
     /// tier 0 = connected but broken (Fix leads — it needs you), tier 1 =
     /// ready to connect, tier 2 = connected and healthy (Open → manage),
     /// tier 3 = coming (Soon). Every app appears exactly once.
-    /// `rankedAll` narrowed to the Yours | All scope. Everything downstream
-    /// (chips, sections, search, the attention dots) reads THIS, so a category
-    /// with nothing connected drops its chip under Yours rather than filtering
-    /// to an empty list behind a selected chip.
-    ///
-    /// The two lists SPLIT the catalogue (prd §812, user: "should it operate by
-    /// having only the items you have not connected?"): Manage holds what you
-    /// have connected, Connect only what you have not. Connect is a verb, so a
-    /// row there always has something to do; an account is on exactly one of
-    /// the two. Search reads `rankedAll`, so it finds an app on either side.
-    private var ranked: [Ranked] {
-        section == .yours
-            ? rankedAll.filter(\.isHeld)
-            : rankedAll.filter { !$0.isHeld }
-    }
+    /// The whole catalogue, connected rows included (prd §1033, retiring
+    /// §812's split): Manage is deleted, so an account you hold stands in the
+    /// directory wearing its state, and managing it is the room's own door.
+    private var ranked: [Ranked] { rankedAll }
 
     private var rankedAll: [Ranked] {
         BridgeCatalog.offers.compactMap { offer in
@@ -153,24 +137,17 @@ struct AppsScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.s6) {
                         // The screen's name, in the content (prd §767).
-                        DSScreenHead(title: Text("Accounts"))
+                        DSScreenHead(title: Text("Apps"))
                             .id(Self.topAnchor)
                         // The search field leads the page (user ruling,
                         // 2026-07-23: "make sure the search bar is at the
                         // top") — a visible slab, not the nav bar's
                         // pull-down `.searchable` field, which the App Store
                         // shape hid a scroll below the fold.
-                        // Search, then Manage | Connect | Settings (user, prd
-                        // §796): the face in the dock opens THIS screen, and
-                        // Settings is its third section, not a screen of its own.
-                        // The three sections are big words and search has
-                        // its own row (user, 2026-09-17: search sharing a
-                        // row with three chips left it too short to type in,
-                        // and the head read as grey words on grey glass).
-                        VStack(alignment: .leading, spacing: DS.Space.s4) {
-                            scopeSegment
-                            searchField
-                        }
+                        // Search alone under the name (prd §1033): the
+                        // Connect | Manage switcher is deleted, and the
+                        // catalogue is the one list.
+                        searchField
                         sections(proxy)
                     }
                     .padding(.horizontal, DS.Space.s4)
@@ -272,13 +249,8 @@ struct AppsScreen: View {
             // threshold so arriving past one never fires a late toast.
             let passed = Self.connectMilestones.filter { $0 <= connectedCount }.max() ?? 0
             if passed > connectMilestoneReached { connectMilestoneReached = passed }
-            if !scopeSeeded {
-                scopeSeeded = true
-                section = connectedCount > 0 ? .yours : .all
-            }
-            // The rooms tray's Connect door names its section outright (prd
-            // §930, §958); consumed after the seed, so it wins. Settings and Addresses are
-            // screens of their own since §933, so no door lands them here.
+            // The rooms tray's Connect door (prd §930, §958) lands on the
+            // whole catalogue.
             landRequestedSection()
         }
         // The store's shape after any connect/disconnect — drives the promote
@@ -287,6 +259,10 @@ struct AppsScreen: View {
         // just-connected row can be identified.
         .onChange(of: connectedNames) { old, new in
             handleConnectChange(old: old, new: new)
+        }
+        .onAppear { roomed = Self.roomedOffers(chrome.categoryVenues) }
+        .onChange(of: chrome.categoryVenues) { _, venues in
+            roomed = Self.roomedOffers(venues)
         }
         // The tray can be raised OVER this screen and a second door tapped, so
         // a request made while it is already up still lands (prd §930).
@@ -302,7 +278,7 @@ struct AppsScreen: View {
         .dsSoftScrollEdges()
         // The name is in the content and the way back is the dock's seat, so
         // nothing stands at the top edge (prd §767).
-        .navigationTitle(Text("Accounts"))
+        .navigationTitle(Text("Apps"))
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $pairing) { PairClientSheet() }
         #if DEBUG
@@ -567,12 +543,9 @@ struct AppsScreen: View {
     /// path (one-tap AND setup-screen) lands here identically.
     private func handleConnectChange(old: [String], new: [String]) {
         let added = Set(new).subtracting(Set(old))
-        // (4) Promote-lift the row that just took its seat. Since §812 that
-        // seat is on Manage, not further down the same list, so a connect
-        // made from Connect takes the switcher with it: the row leaves the
-        // list you were on and lifts in on the one it joined.
+        // (4) Promote-lift the row that just took its seat — it stays in the
+        // list it was on, now wearing its state (§1033).
         if let name = added.first {
-            if section == .all { section = .yours }
             justConnectedName = name
             connectLiftToken += 1
         }
@@ -604,85 +577,12 @@ struct AppsScreen: View {
     }
 
 
-    // MARK: - Manage | Connect (the Accounts door's scope, 2026-09-06; renamed from Yours | All, prd §793)
-
-    /// Two words, both always visible, the chosen one filled — never a lone
-    /// toggle whose off state has to be inferred ("a gray Yours isn't
-    /// clear"), and never a third chip in the category strip, whose first
-    /// chip is A–Z on purpose so this pair can say All without a collision.
-    /// Flipping it resets the category to A–Z: a chip picked under one scope
-    /// may have no rows under the other, and a selected chip over an empty
-    /// list reads as a broken screen.
-    private var scopeSegment: some View {
-        // Three words, the chosen one in primary and the others secondary
-        // (user, 2026-09-17: "manage and connect big … settings should be a
-        // third word big there too"). A word, not a pill: §746 allows two
-        // pills, and this is neither a choice among filters nor a fact, it is
-        // which page of the screen you are on. **A step under the screen's
-        // name since prd §915**: at `heading24` the switcher was as loud as
-        // "Accounts" above it, so the screen had a name and three names; the
-        // words take `heading17` now, the rung a headline takes under a title.
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
-            ForEach(AccountsHeld.allCases) { picked in
-                let isOn = picked == section
-                Button {
-                    guard !isOn else { return }
-                    DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) {
-                        section = picked
-                        scope = CatalogScope(name: nil)
-                    }
-                } label: {
-                    Text(picked.label)
-                        .dsText(.heading17)
-                        .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-                .dsHover()
-                .accessibilityAddTraits(isOn ? [.isSelected] : [])
-            }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Which accounts"))
-    }
-
-    /// The screen's three sections (prd §796): what you hold, what you could
-    /// add, and the app's own settings. Settings is a SECTION and not a door
-    /// (user, 2026-09-17: "it should be a button that says settings … or can
-    /// it toggle? like manage and connect"): the same switcher, the same
-    /// screen, the list below swaps — so the dock's face toggles one screen in
-    /// and out, and nothing is pushed.
-    /// Consume `HomeRoute.openConnect` — the rooms tray's door to Connect
-    /// (prd §930, §958) — and stand on it. Cleared on read, so the next plain
-    /// visit opens on the seed again.
+    /// Consume `HomeRoute.openConnect` — the rooms tray's door to Accounts
+    /// (prd §930, §958) — and land on the whole catalogue. Cleared on read.
     private func landRequestedSection() {
         guard route.openConnect else { return }
         route.openConnect = false
-        section = .all
         scope = CatalogScope(name: nil)
-    }
-
-    private enum AccountsHeld: String, CaseIterable, DSSectionScope {
-        // Connect, Manage (user, 2026-09-20): read left to right it is the
-        // journey, and the first word cues the first act. Where the screen
-        // OPENS is still the seed's — this is only the reading order.
-        // TWO words since prd §933: Settings (§796's third) and Addresses
-        // (§916's fourth) are screens of their own, reached from the rooms
-        // tray, because a switcher switches views of ONE thing and these two
-        // were never views of the catalog.
-        case all, yours
-        var id: String { rawValue }
-        var label: String {
-            // "Manage" and "Connect" (user, 2026-09-16, prd §793): what you do
-            // on each side — look after what you hold, add what you don't.
-            switch self {
-            case .yours: String(localized: "Manage")
-            case .all:   String(localized: "Connect")
-            }
-        }
     }
 
     // MARK: - Search field (prd §200 — leads the page, not a nav-bar pull-down)
@@ -730,9 +630,9 @@ struct AppsScreen: View {
         /// learnable but not self-explaining, and the useful second fact here
         /// is how much sits behind it.
         var summary: String {
-            guard let name else { return String(localized: "Every account, A to Z") }
+            guard let name else { return String(localized: "Every app, A to Z") }
             let n = Self.counts[name] ?? 0
-            return n == 1 ? String(localized: "1 account") : String(localized: "\(n) accounts")
+            return n == 1 ? String(localized: "1 app") : String(localized: "\(n) apps")
         }
 
         /// Counted ONCE off the static catalog, not per chip per body pass.
@@ -866,20 +766,7 @@ struct AppsScreen: View {
     /// wrapping a lazy grid inside each.
     private var catalogList: some View {
         Group {
-            if section == .yours && ranked.isEmpty {
-                // Reachable only by choosing Manage with nothing connected —
-                // the seed opens a first run on Connect. One sentence, and the
-                // way out is the control the person just used.
-                DSEmptyState(headline: DSProse.text("Nothing connected yet"),
-                             words: Text("Everything you can add is under Connect."))
-                    .padding(.vertical, DS.Space.s4)
-            } else if section == .all && ranked.isEmpty {
-                // Every app in the catalogue is connected (prd §812): Connect
-                // holds only what you have not added, so this is its honest end.
-                DSEmptyState(headline: DSProse.text("Everything is connected"),
-                             words: Text(verbatim: ""))
-                    .padding(.vertical, DS.Space.s4)
-            } else if scope.name == nil {
+            if scope.name == nil {
                 flatCatalogList
             } else {
                 LazyVStack(alignment: .leading, spacing: DS.Space.s6) {
@@ -920,7 +807,7 @@ struct AppsScreen: View {
     /// Resolved through `ranked`, so a name this platform's catalogue lacks
     /// draws no row rather than a dead one (§83).
     private var startHereRows: [Ranked] {
-        guard section == .all, connectedCount == 0 else { return [] }
+        guard connectedCount == 0 else { return [] }
         return Self.startHere.compactMap { name in ranked.first { $0.offer.name == name } }
     }
 
@@ -1057,7 +944,22 @@ struct AppsScreen: View {
         FramesIdentity.source, PrivacyDevnetIdentity.source,
     ]
 
+    /// The offer names behind every room the tray draws.
+    private static func roomedOffers(_ venues: [String: [String]]) -> Set<String> {
+        Set(venues.values.joined().map { BridgeCatalog.seatName(forSource: $0) })
+    }
+
+    /// A connected account with a room is a STATUS here (prd §1033, user:
+    /// "lets make it go nowhere. it's just a status"): the room's own door
+    /// beside its name manages it. One with no room — an agent key, an
+    /// exchange, Apple Intelligence — keeps its door, or nothing would reach
+    /// its page.
+    private func isStatusOnly(_ entry: Ranked) -> Bool {
+        entry.tier == 2 && roomed.contains(entry.offer.name)
+    }
+
     private func rowOpen(_ entry: Ranked) -> (() -> Void)? {
+        if isStatusOnly(entry) { return nil }
         if Self.devnetRooms.contains(entry.offer.name) {
             let room = entry.offer.name
             return { DSHaptic.tap(); route.path = []; chrome.sourceRequest = room }
@@ -1099,7 +1001,8 @@ struct AppsScreen: View {
     private func appRow(_ entry: Ranked) -> some View {
         let soon = entry.tier == 3
         let isConnected = entry.tier == 0 || entry.tier == 2
-        let destination: HomeRoute.Node? = isConnected && entry.bridge != nil
+        let statusOnly = isStatusOnly(entry)
+        let destination: HomeRoute.Node? = isConnected && entry.bridge != nil && !statusOnly
             ? .bridge(BridgeRouter.destination(forID: entry.bridge!.id))
             : nil
         return HStack(spacing: DS.Space.s3) {
@@ -1145,9 +1048,10 @@ struct AppsScreen: View {
                     // `rowAction`, so it was one act drawn twice.
                     if let rowVerb = verb(entry) {
                         DSPushRowTrail(verb: rowVerb)
-                    } else if entry.tier == 2, entry.bridge != nil {
-                        // A connected account is a door, and the chevron says
-                        // so; "Open" in green on every one said nothing (§767).
+                    } else if entry.tier == 2, entry.bridge != nil, !statusOnly {
+                        // A connected account with no room is a door, and the
+                        // chevron says so; one with a room is a status and
+                        // draws none (§1033).
                         DSPushRowTrail()
                     }
                 }

@@ -6556,9 +6556,15 @@ struct FeedScreen: View {
             // THE ROOM NAMES ITSELF (prd §930). Until the strip folded into
             // the rooms tray the dock's lit tile said which room this was;
             // now the room says so, first in its list, on the screen-head
-            // rung a pushed screen already uses (§767, §915). Nothing shares
-            // the line: the room's own door is the tray's Manage (§937).
-            DSScreenHead(title: Text(roomName))
+            // rung a pushed screen already uses (§767, §915). The room's own
+            // account door shares the line (§1033): in the list, so it
+            // scrolls with the name and reserves nothing.
+            HStack(alignment: .center, spacing: DS.Space.s3) {
+                DSScreenHead(title: Text(roomName))
+                if source != "All", source != Pinboard.room {
+                    RoomAccountDoor(source: source)
+                }
+            }
                 // THE TOP OF THE ROOM IS ITS TITLE (user: "the wallet buttons
                 // still move"). A scope change scrolled to the head BELOW the
                 // title, so every tile tap slid the title off and the tiles up
