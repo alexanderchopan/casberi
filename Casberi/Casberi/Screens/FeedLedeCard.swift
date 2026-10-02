@@ -862,8 +862,13 @@ struct FeedLedeCard: View {
         // A conversation's cover ends on its LATEST messages, the row's own
         // line (prd §1005): the transcript is stored oldest first, and a chat
         // carries no summary, so "Chat with Ada" stood over an empty well.
-        if thing.kind == .chat {
+        // A network's post is a `.chat` too, and its `content` is the post's
+        // link (a bsky.app permalink, an at:// URI in the old demo), never a
+        // transcript: the cover printed it as the post's words (prd §1070).
+        // Its words are the title; the quote and facts rungs say the rest.
+        if thing.kind == .chat, thing.postText == nil {
             let messages = thing.content.split(separator: "\n").map(String.init)
+                .filter { !Self.isBareLink($0) }
             return messages.isEmpty ? nil : messages.suffix(3).joined(separator: "\n")
         }
         // **THE THING'S OWN WORDS, when it has no summary (prd §1006).** A note
@@ -876,6 +881,12 @@ struct FeedLedeCard: View {
         let body = NoteSheetSource.body(for: thing).text
         guard !body.isEmpty, body != thing.title else { return nil }
         return String(body.prefix(Self.excerptCeiling))
+    }
+
+    /// A line that is only an address — nothing a person would read.
+    static func isBareLink(_ line: String) -> Bool {
+        let t = line.trimmingCharacters(in: .whitespaces)
+        return !t.contains(" ") && (t.hasPrefix("http://") || t.hasPrefix("https://") || t.hasPrefix("at://"))
     }
 
     /// More than the largest spelling's six `body17` lines can draw.

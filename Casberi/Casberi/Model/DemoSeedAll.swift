@@ -2993,7 +2993,9 @@ enum DemoSeedAll {
             row(.chat, p.0, source: "Bluesky",
                 ref: p.1 == "you" ? "bsky:demo:\(i)" : "demo:bsky:\(i)", days: p.3,
                 hour: 16 - (i % 3),
-                content: "at://did:plc:demo/app.bsky.feed.post/\(i)") { t in
+                // The web permalink, as `BlueskyIngest` stores it (prd §1070);
+                // the old at:// URI was drawn on the cover as the post's words.
+                content: "https://bsky.app/profile/\(p.1).bsky.social/post/demo\(i)") { t in
                 t.postText = p.0
                 t.authorHandle = p.1
                 t.authorAvatarURL = avatarArt(p.1)
