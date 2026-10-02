@@ -150,31 +150,16 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     }
 
     @ViewBuilder
-    /// **THE ACCOUNT PICKER IS A MENU UNDER THE TILES (prd §936).** The line
-    /// named the account on screen and changed nothing; the faces capsule in
-    /// the band did the picking, and with the dock gone that capsule was the
-    /// last piece of it on the phone (user: "it's still here on wallet").
-    /// Apple's answer to "which one of several" is a pull-down: the faces and
-    /// the name, a chevron, and every account in the menu, "All" first. It
-    /// stands on Home and every section alike.
+    /// **THE PICKER MOVED TO THE TITLE ROW (prd §1066)**: a glass pill beside
+    /// the room's name, drawn by `FeedScreen.titleAccountsPill` from the rail
+    /// this chrome publishes. What stays under the tiles is the one thing the
+    /// pill cannot say: a picked address, one tap from copying. A slot id is
+    /// the address; "All" is "" and an app (`seat:`, prd §1048b) is not an
+    /// address, so neither has one to copy.
     private var accountLine: some View {
-        if accounts.count > 1 {
-            let showing = accounts.first { $0.isShowing(scope) } ?? accounts.first
-            if let showing {
-                // The one pull-down (prd §936), shared with GitHub and
-                // Pinterest since §959 — `Design/DSScopeMenu.swift`.
-                HStack(spacing: DS.Space.s2) {
-                    DSScopeMenu(slots: accounts, showing: showing,
-                                onPick: onPickAccount)
-                    // One account showing: its address, one tap from the
-                    // picker that named it. A slot id is the address; "All" is
-                    // "" and an app the menu lists (`seat:`, prd §1048b) is
-                    // not an address, so neither has one to copy.
-                    if !showing.id.isEmpty, !RoomAccounts.isSeat(showing.id) {
-                        CopyAddressButton(address: showing.id)
-                    }
-                }
-            }
+        if let showing = accounts.first(where: { $0.isShowing(scope) }),
+           !showing.id.isEmpty, !RoomAccounts.isSeat(showing.id) {
+            CopyAddressButton(address: showing.id)
         }
     }
 }

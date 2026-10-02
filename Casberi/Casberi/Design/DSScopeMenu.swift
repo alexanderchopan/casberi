@@ -1,15 +1,13 @@
 import SwiftUI
 
 /// **WHOSE VIEW THIS IS, PICKED FROM A MENU** (prd §936 item 5, extended by
-/// §959) — the showing slot's faces, its name and `chevron.up.chevron.down`,
-/// every slot in a pull-down with a check on the current one.
+/// §959; in the title row since §1066) — a glass pill naming the pick, every
+/// slot in a pull-down with a check on the current one.
 ///
-/// The Wallet family's account line, lifted out of `DSRoomScopeChrome` so a
-/// room that picks a SOURCE — a watched repo or person on GitHub, a board or
-/// person on Pinterest — draws the same control in the same place: under the
-/// tiles, or under the cover where a room has none. The social rooms keep a
-/// row of faces instead (§959): there the face and its ring ARE the news, and
-/// a menu would hide both behind a tap.
+/// The wallet family's and the merged rooms' account picker, drawn by
+/// `FeedScreen.titleAccountsPill` beside the room's name. The social rooms
+/// keep a row of faces instead (§959): there the face and its ring ARE the
+/// news, and a menu would hide both behind a tap.
 ///
 /// `slots` includes "All" as the slot whose `id` is `""`; the caller decides
 /// whether the control draws at all.
@@ -27,38 +25,135 @@ struct DSScopeMenu: View {
     /// drop. Off in the wallet family, whose `sub` is a tooltip.
     var subtitles: Bool = false
     let onPick: (String?) -> Void
-    @Environment(\.displayScale) private var displayScale
+    @State private var open = false
+    /// A row tapped, applied once the list has closed.
+    @State private var pending: String?
 
     var body: some View {
-        Menu {
-            // One plain list, no section headers (user: "don't categorize
-            // these"): "All" first, then each group's slots in the order the
-            // room listed them — the faces say what kind each one is.
-            ForEach(slots.filter { $0.group == nil }) { slot in item(slot) }
-            ForEach(groups, id: \.self) { group in
-                ForEach(slots.filter { $0.group == group }) { slot in item(slot) }
-            }
+        Button {
+            DSHaptic.selection()
+            open = true
         } label: {
-            HStack(spacing: DS.Space.s2) {
-                HStack(spacing: -(DS.Face.row / 3.5)) {
-                    ForEach(Array(showing.faces.prefix(2).enumerated()), id: \.offset) { pair in
-                        RailFace(face: pair.element, size: DS.Face.row)
+            pillLabel
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text(verbatim: spoken(showing.name)))
+        // OUR OWN LIST, NOT A SYSTEM `Menu` (prd §1066, user: "put the check
+        // on the right justified not before the logo icon"): a system menu
+        // puts its checkmark before the row's image, always. A popover kept
+        // a popover on the phone too, so it drops from the pill.
+        .popover(isPresented: $open, arrowEdge: .top) {
+            list
+                .presentationCompactAdaptation(.popover)
+        }
+        .onChange(of: open) { _, isOpen in
+            guard !isOpen, let id = pending else { return }
+            pending = nil
+            #if DEBUG
+            NSLog("[Casberi] accountsPill: picked \(id.isEmpty ? "all" : id)")
+            #endif
+            withAnimation(DS.Motion.standard) { onPick(id.isEmpty ? nil : id) }
+        }
+    }
+
+    /// One plain list, no section headers (user: "don't categorize these"):
+    /// "All" first, then each group's slots in the order the room listed
+    /// them — the faces say what kind each one is.
+    private var ordered: [DSAccountSlot] {
+        slots.filter { $0.group == nil } + groups.flatMap { g in slots.filter { $0.group == g } }
+    }
+
+    private var list: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                ForEach(ordered) { slot in row(slot) }
+            }
+            .padding(.vertical, DS.Space.s2)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(width: Self.listWidth)
+        .frame(maxHeight: Self.listMaxHeight)
+    }
+
+    /// A row: its face (an address's identicon, an app's own mark), its name,
+    /// and the checkmark at the trailing edge on the one showing. "All" draws
+    /// no face: it stands for every face below it.
+    private func row(_ slot: DSAccountSlot) -> some View {
+        let picked = slot.id == showing.id
+        return Button {
+            DSHaptic.selection()
+            // The pick rebuilds the room under the list, and a popover whose
+            // host rebuilds as it closes stays open (measured): close first,
+            // and pick when it has closed (`onChange(of: open)`).
+            pending = slot.id
+            open = false
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                Group {
+                    if !slot.id.isEmpty, let face = slot.faces.first {
+                        MenuFace(face: face)
+                    } else {
+                        Color.clear
                     }
                 }
-                Text(showing.name)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
-                    .dsGlyph(.caption)
-                    .foregroundStyle(DS.textTertiary)
+                .frame(width: Self.faceSize, height: Self.faceSize)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(slot.name)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    if subtitles, let sub = slot.sub {
+                        Text(sub)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: DS.Space.s2)
+                if picked {
+                    Image(systemName: "checkmark")
+                        .dsGlyph(.subhead)
+                        .foregroundStyle(DS.textPrimary)
+                }
             }
+            .padding(.horizontal, DS.Space.s4)
             .frame(minHeight: DS.Hit.min)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: spoken(showing.name)))
+        .buttonStyle(RowPress())
+        .accessibilityAddTraits(picked ? .isSelected : [])
     }
+
+    static let listWidth: CGFloat = 260
+    static let listMaxHeight: CGFloat = 480
+    static let faceSize: CGFloat = 24
+
+    /// **A GLASS PILL IN THE TITLE ROW (prd §1066, user: "a glass pill … in
+    /// top right corner same axis as the category title, and it should say
+    /// 'Accounts'").** "Accounts" while everything shows, the pick's name once
+    /// one is picked: the title names the room, the pill what is in it. It
+    /// was faces, a 12pt name and a chevron under the tiles, which read as a
+    /// caption rather than a control.
+    private var pillLabel: some View {
+        HStack(spacing: DS.Space.s1) {
+            Text(showing.id.isEmpty ? String(localized: "Accounts") : showing.name)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .dsGlyph(.caption)
+                .foregroundStyle(DS.textSecondary)
+        }
+        .padding(.horizontal, DS.Space.s3)
+        .frame(height: Self.pillHeight)
+        .dsGlass(cornerRadius: Self.pillHeight / 2)
+        // The hand gets the full 44pt; the row does not (user: "the glass
+        // pill should not touch the card"). A 44pt frame made the title row
+        // taller than its title, and the drawn pill sat on the box below.
+        .contentShape(Rectangle().inset(by: -(DS.Hit.min - Self.pillHeight) / 2))
+    }
+
+    static let pillHeight: CGFloat = 32
 
     private var groups: [String] {
         var seen: [String] = []
@@ -67,57 +162,17 @@ struct DSScopeMenu: View {
         }
         return seen
     }
-
-    /// A row: its face (an address's identicon, an app's own mark) beside
-    /// its name, and the checkmark on the one showing (user: "this needs to
-    /// show the icons of the app"). A `Toggle` is what gives a menu row a
-    /// checkmark AND an image; a `Label` carries only one of the two. "All"
-    /// draws no face: it stands for every face below it.
-    private func item(_ slot: DSAccountSlot) -> some View {
-        Toggle(isOn: Binding(
-            get: { slot.id == showing.id },
-            set: { _ in
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) {
-                    onPick(slot.id.isEmpty ? nil : slot.id)
-                }
-            }
-        )) {
-            if let image = slot.id.isEmpty ? nil : menuImage(slot.faces.first) {
-                Label { Text(slot.name) } icon: { image }
-            } else {
-                Text(slot.name)
-            }
-            if subtitles, let sub = slot.sub {
-                Text(sub)
-            }
-        }
-    }
-
-    /// A menu draws images, not views, so the face is rendered once to a
-    /// bitmap, round and in its own colours (`.alwaysOriginal`, or the menu
-    /// tints it). A face read from the network (an avatar) has no bitmap yet,
-    /// so it draws its source's mark instead.
-    @MainActor
-    private func menuImage(_ face: FaceScopeRail.Item.Face?) -> Image? {
-        guard let face else { return nil }
-        let renderer = ImageRenderer(content: MenuFace(face: face))
-        renderer.scale = displayScale
-        guard let image = renderer.uiImage else { return nil }
-        return Image(uiImage: image.withRenderingMode(.alwaysOriginal))
-    }
 }
 
-/// A face as a menu row draws it: round, at the badge tier, from what is on
-/// the device (`DSScopeMenu.menuImage`).
+/// A face as a menu row draws it: round, from what is on the device.
 private struct MenuFace: View {
     let face: FaceScopeRail.Item.Face
     var body: some View {
         switch face {
         case .wallet(let address):
-            WalletFace(address: address, size: DS.Face.badge, circular: true)
+            WalletFace(address: address, size: DSScopeMenu.faceSize, circular: true)
         case .avatar(_, let source), .mark(_, let source):
-            BridgeIcon(name: source, size: DS.Face.badge, circular: true)
+            BridgeIcon(name: source, size: DSScopeMenu.faceSize, circular: true)
         }
     }
 }

@@ -9,7 +9,8 @@ import SwiftUI
 // column, and scrolls with the feed. They pick a PERSON whose own face, and
 // the ring saying they posted since you looked, is the news: a row of faces
 // (`FaceScopeRail`, standing alone). iPad and Mac keep the shell's rail. A
-// merged room picks its app from `mergedRoomMenu`. (GitHub's and Pinterest's
+// merged room picks its app from the title row's pill (`titleAccountsPill`,
+// prd §1066). (GitHub's and Pinterest's
 // pull-downs left with their rooms, prd §1060.)
 extension FeedScreen {
     /// The phone. Everywhere the shell's rail stands, the band keeps the faces.
@@ -24,13 +25,27 @@ extension FeedScreen {
         return SocialRoom.hasRoster(source) && chrome.personScope != nil
     }
 
+    /// **THE ACCOUNTS PILL, IN THE TITLE ROW (prd §1066).** A merged room's
+    /// apps, or the wallet family's accounts from the rail its chrome
+    /// publishes (`ShellChrome.accountRail`) — the Testnets room hosts a
+    /// network's chrome, so its rail is a network's source, not the room's.
+    /// Nothing where there is nothing to pick between.
+    @ViewBuilder
+    var titleAccountsPill: some View {
+        if mergedMenuDraws {
+            mergedAccountsPill
+        } else if let rail = chrome.accountRail, rail.slots.count > 1,
+                  rail.source == source || source == RoomAccounts.testnetsRoom {
+            let showing = rail.slots.first { $0.isShowing(rail.scope) } ?? rail.slots[0]
+            DSScopeMenu(slots: rail.slots, showing: showing, onPick: rail.onPick)
+        }
+    }
+
     /// The control, as its own List section. Draws nothing where the room
     /// has nothing to pick between, or off the phone.
     @ViewBuilder
     var roomScopeSection: some View {
-        if mergedMenuDraws {
-            mergedRoomMenu
-        } else if roomScopeInRoom, SocialRoom.hasRoster(source) {
+        if roomScopeInRoom, SocialRoom.hasRoster(source) {
             socialFaceRow
         }
     }

@@ -19,10 +19,9 @@ extension FeedScreen {
 
     var mergedMenuDraws: Bool { !mergedMenuSeats.isEmpty }
 
-    /// The menu, under the lead in the rows' column, on every size class, as
-    /// the Wallet's is.
+    /// The menu, a glass pill in the title row (prd §1066), as the Wallet's is.
     @ViewBuilder
-    var mergedRoomMenu: some View {
+    var mergedAccountsPill: some View {
         let seats = mergedMenuSeats
         let all = DSAccountSlot(id: "", name: String(localized: "All apps"), sub: nil,
                                 faces: seats.prefix(2).map { .mark(url: nil, source: $0.mark) })
@@ -33,21 +32,13 @@ extension FeedScreen {
         let picked = selectedSeat.map(RoomAccounts.scopeID)
         let showing = slots.first { !$0.id.isEmpty && $0.id == picked } ?? all
         let room = source
-        Section {
-            DSScopeMenu(slots: slots, showing: showing,
-                        spoken: { String(localized: "Showing: \($0)") },
-                        onPick: { id in
-                            withAnimation(DS.Motion.standard) {
-                                chrome.mergedScope[room] = (id?.isEmpty ?? true) ? nil : id
-                            }
-                        })
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.leadGap,
-                                          trailing: DSRoomChassis.inset))
-        }
+        DSScopeMenu(slots: slots, showing: showing,
+                    spoken: { String(localized: "Showing: \($0)") },
+                    onPick: { id in
+                        withAnimation(DS.Motion.standard) {
+                            chrome.mergedScope[room] = (id?.isEmpty ?? true) ? nil : id
+                        }
+                    })
     }
 }
 

@@ -1393,6 +1393,8 @@ struct FeedScreen: View {
                 DSScreenHead(title: Text(roomName))
                 // NO ROOM DRAWS A SLIDERS DISC (prd §1050f, amending §1033): an
                 // app's settings open from its row in Apps, the one door.
+                Spacer(minLength: 0)
+                titleAccountsPill
             }
                 // THE TOP OF THE ROOM IS ITS TITLE (user: "the wallet buttons
                 // still move"). A scope change scrolled to the head BELOW the
