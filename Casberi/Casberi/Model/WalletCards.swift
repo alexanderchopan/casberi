@@ -25,19 +25,6 @@ enum WalletCards {
         privacySource,
     ]
 
-    /// Whether a row of `source` belongs in `room` as a card seat's row —
-    /// the Wallet's query and its row filter read this one rule, so the two
-    /// can never disagree about which rows the room holds.
-    static func rides(room: String, source: String) -> Bool {
-        room == CategoryFold.walletRoom && seats.contains(source)
-    }
-
-    /// Every source a room's query and its safety-net probe fetch: the room
-    /// alone, or the Wallet with its card seats.
-    static func roomSources(_ room: String) -> [String] {
-        room == CategoryFold.walletRoom ? [room] + seats : [room]
-    }
-
     /// Whether a row is a card spend. The three onchain cards go through
     /// `CardSpendSeat`, which already knows that ether.fi's room also holds
     /// unstake and credit-line rows (§868). Apple Wallet's room holds bank

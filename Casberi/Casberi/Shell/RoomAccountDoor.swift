@@ -32,16 +32,24 @@ struct RoomAccountDoor: View {
     /// The seat registered for this room, matched on the source name or its
     /// offer name (the two differ for an aliased seat: "Privacy Pools" lands
     /// rows, "0xBow Privacy Pools" is the seat).
-    private var seat: BridgeApp? {
+    private var seat: BridgeApp? { Self.seat(forSource: source, in: store) }
+
+    private var destination: BridgeRouter.Destination? {
+        Self.destination(forSource: source, in: store)
+    }
+
+    static func seat(forSource source: String, in store: BridgeStore) -> BridgeApp? {
         let offerName = BridgeCatalog.seatName(forSource: source)
         return store.bridges.first { $0.name == source || $0.name == offerName }
     }
 
     /// A connected seat opens its own page (`destination(forID:)`, which also
     /// gives the demo's unrouted seats their detail screen); a room with no
-    /// seat yet opens what its Connect would.
-    private var destination: BridgeRouter.Destination? {
-        if let seat { return BridgeRouter.destination(forID: seat.id) }
+    /// seat yet opens what its Connect would. Shared with the rooms tray,
+    /// whose app circles open these same pages once their room has folded
+    /// into a merged one (prd §1048b).
+    static func destination(forSource source: String, in store: BridgeStore) -> BridgeRouter.Destination? {
+        if let seat = seat(forSource: source, in: store) { return BridgeRouter.destination(forID: seat.id) }
         guard let offer = BridgeCatalog.offer(forSource: source) else { return nil }
         return BridgeRouter.destination(forOffer: offer.name)
     }

@@ -243,8 +243,9 @@ mutate "home's empty copy promises a load state it cannot know (§83)" \
 # these files DOCUMENT the rules by naming what they must not do, so a guard
 # grepping raw source scores prose as compliance (the Obsidian/Cursor lesson).
 strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
+HISTORY="Casberi/Casberi/Screens/WalletHistoryScreen.swift"
 for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$CHROMEVIEW" "$SCOPEHEAD" \
-         "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG"; do
+         "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG" "$HISTORY"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -453,8 +454,10 @@ guard FeedScreen.swift "walletComingUpSections(upcoming, nextEventID: nextEventI
   "Coming up no longer lists what's ahead (prd §1041)"
 deny FeedScreen.swift "ahead: upcoming" \
   "what's ahead is back on Home — Home is only what happened (prd §1041)"
-guard FeedScreen.swift "!promoted.contains(\$0.id) && (\$0.source == source || seatPicked)" \
-  "Home's stream no longer drops the rows Coming up holds, or now lists card spends its history door cannot open (prd §1041, §1048)"
+guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) }" \
+  "Home's stream no longer drops the rows Coming up holds — a deadline would read as a move (prd §1041)"
+guard WalletHistoryScreen.swift "RoomAccounts.roomSources(CategoryFold.walletRoom)" \
+  "the history screen no longer reads every source Home counts — its door opens a shorter list than it promises (prd §837, §1048)"
 
 # ── the Cards tile and NFTs under Holdings (prd §1048) ───────────────────────
 # The Wallet's query carries the card seats, and three places must agree on
@@ -462,9 +465,9 @@ guard FeedScreen.swift "!promoted.contains(\$0.id) && (\$0.source == source || s
 # the probe forgets them, every pass reads the card rows as rows the query
 # invented and swaps in a Wallet-only fetch, and the tile goes empty with
 # nothing failing (measured on the simulator, 2026-10-01).
-guard FeedScreen.swift "WalletCards.roomSources(source)" \
-  "the Wallet's query or its probe no longer reads WalletCards.roomSources — the Cards tile empties (prd §1048)"
-guard FeedScreen.swift "WalletCards.rides(room: source, source: thing.source)" \
+guard FeedScreen.swift "RoomAccounts.roomSources(source)" \
+  "the Wallet's query or its probe no longer reads RoomAccounts.roomSources — the Cards tile empties (prd §1048)"
+guard FeedScreen.swift "RoomAccounts.rides(room: source, source: thing.source)" \
   "the room filter drops the card seats' rows — the Cards tile empties (prd §1048)"
 guard FeedScreen.swift "WalletCards.compose(things: visible)" \
   "the Cards tile's figure lost its reading (prd §1048)"

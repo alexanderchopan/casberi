@@ -35,6 +35,32 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.seat("seat:Gnosis Pay", in: "Markets") == nil)
     }
 
+    /// Step 4's fold: a folded app's room name lands in the Wallet, scoped to
+    /// it; the Wallet itself and the rooms that stay apart are their own.
+    @Test func aFoldedAppHasTheWalletAsItsRoom() {
+        let gnosis = RoomAccounts.host(ofSource: GnosisPayBridge.sourceName)
+        #expect(gnosis?.room == CategoryFold.walletRoom)
+        #expect(gnosis?.seat.name == "Gnosis Pay")
+        #expect(RoomAccounts.host(ofSource: SafeBridge.sourceName)?.room == CategoryFold.walletRoom)
+        // The source and the catalogue name both resolve (Privacy Pools lands
+        // rows as "Privacy Pools"; its seat is "0xBow Privacy Pools").
+        #expect(RoomAccounts.host(ofSource: PrivacyPoolsBridge.sourceName)?.seat.name == "0xBow Privacy Pools")
+        #expect(RoomAccounts.host(ofSource: "0xBow Privacy Pools") != nil)
+        for room in [CategoryFold.walletRoom, "Markets", "Hegotá Frames", "Logos", "Stripe"] {
+            #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
+        }
+    }
+
+    /// The query, the history screen and the row filter read one list.
+    @Test func theWalletReadsEveryFoldedSourceAndItsOwn() {
+        let sources = RoomAccounts.roomSources(CategoryFold.walletRoom)
+        #expect(sources.first == CategoryFold.walletRoom)
+        #expect(sources.contains(SafeBridge.sourceName))
+        #expect(sources.contains(GnosisPayBridge.sourceName))
+        #expect(!RoomAccounts.rides(room: CategoryFold.walletRoom, source: CategoryFold.walletRoom))
+        #expect(RoomAccounts.rides(room: CategoryFold.walletRoom, source: PeerBridge.sourceName))
+    }
+
     @Test func onlyConnectedAppsAreListed() {
         let listed = RoomAccounts.connected(in: CategoryFold.walletRoom, names: ["Wise", "Gnosis Pay"])
         #expect(Set(listed.map(\.name)) == ["Wise", "Gnosis Pay"])

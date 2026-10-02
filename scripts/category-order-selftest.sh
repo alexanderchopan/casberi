@@ -206,10 +206,10 @@ func rawStored() -> [String]? { UserDefaults.standard.stringArray(forKey: "chips
 // became a note of yours with no source of its own (§972). Pinned as a count
 // AND as the absences, so either slot creeping back fails here rather than
 // drawing a folder for a band nothing fills.
-check("the default order is the 2026-08-11 ruling minus Markets (§638) and Voice (§972)", d.count == 9)
-check("Markets is not a slot (the category is deleted, §638)", !d.contains("Markets"))
-check("a stored order from before §638 sheds its Markets slot",
-      !CategoryOrder.reconcile(["Wallet", "Markets", "Work"]).contains("Markets"))
+check("the default order is the 2026-08-11 ruling minus Voice (§972), plus Markets and Testnets (§1050)", d.count == 11)
+check("Markets and Testnets follow Wallet (§1050)", Array(d.prefix(3)) == ["Wallet", "Markets", "Testnets"])
+check("a stored order keeps its Markets slot again (§1050)",
+      CategoryOrder.reconcile(["Wallet", "Markets", "Work"]).contains("Markets"))
 check("Voice is not a slot (no source carries it, §972)", !d.contains("Voice"))
 check("a stored order from before §972 sheds its Voice slot",
       !CategoryOrder.reconcile(["Notes", "Voice", "Wallet"]).contains("Voice"))

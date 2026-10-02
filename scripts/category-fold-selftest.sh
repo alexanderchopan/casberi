@@ -1208,8 +1208,12 @@ if failures:
 # and an empty group is what the loop above already refuses for every other
 # category, so it is checked here by name rather than left to creep back as
 # the one exception.
-if any(n == "Markets" for n, _ in entries):
-    sys.exit('✗ BridgeCatalog.categories has a "Markets" category again — it was deleted (prd §638)')
+# MARKETS IS A CATEGORY AGAIN (prd §1050, reversing §638's deletion): once
+# the Wallet folded its money apps in, every tray entry is a category, and a
+# watchlist is not money you hold. It must hold its seat and nothing else.
+markets = next((re.findall(r'"([^"]+)"', g) for n, g in entries if n == "Markets"), None)
+if markets != ["Markets"]:
+    sys.exit('✗ the Markets category is missing or holds more than its one group (prd §1050)')
 wallet_groups = next((re.findall(r'"([^"]+)"', g) for n, g in entries if n == "Wallet"), None)
 if wallet_groups is None:
     sys.exit("✗ BridgeCatalog.categories has no Wallet category")

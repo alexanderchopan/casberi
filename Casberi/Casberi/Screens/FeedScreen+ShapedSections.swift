@@ -468,18 +468,13 @@ extension FeedScreen {
             // read twice on one screen — once as what's coming and once as
             // whenever it happened to land.
             let promoted = Set(upcoming.map(\.id))
-            // **HOME STAYS THE WALLET'S OWN MOVES UNTIL THE ROOMS FOLD (prd
-            // §1048).** The room's query now carries the card seats' rows for
-            // the Cards tile (and their dues reach Coming up, which is the
-            // ruling). Home's list and its door to the full history still count
-            // only the Wallet's rows: the history screen reads only those, and
-            // a count that included card spends would open a list without them
-            // (§837). Step 4 merges Home when the separate rooms go.
-            // With an app picked (prd §1048b) Home is that app's own rows.
+            // **HOME IS EVERYTHING THAT HAPPENED, ACROSS EVERY APP THE WALLET
+            // FOLDED IN (prd §1048, step 4).** The history screen behind its
+            // door reads the same sources (`RoomAccounts.roomSources`), so its
+            // count opens the list it counts (§837). An app pick (§1048b)
+            // narrows both to that app.
             let seatPicked = selectedSeat != nil
-            let all = visible.live.filter {
-                !promoted.contains($0.id) && ($0.source == source || seatPicked)
-            }
+            let all = visible.live.filter { !promoted.contains($0.id) }
             // WHICH READING IS ON SCREEN (prd §483). Resolved rather than read
             // raw: a scope remembered from a wallet that has since closed its
             // last position falls back to the feed instead of rendering an
@@ -561,7 +556,7 @@ extension FeedScreen {
             // The Cards tile's reading (prd §1048), composed only while it is
             // the page — a fold over every card row is not paid on every scope.
             let cards = section == .cards ? WalletCards.compose(things: visible) : nil
-            walletScopeChromeSection(section, visible: seatPicked ? visible : visible.filter { $0.source == source },
+            walletScopeChromeSection(section, visible: visible,
                                      upcoming: upcoming, cards: cards, streamTotal: all.count)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you

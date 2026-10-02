@@ -84,7 +84,9 @@ enum ChipOrderCache {
         var sources: [String]
     }
 
-    private static let key = "dock.order.cache"
+    /// `.v2` since the Wallet folded its apps in (prd §1048, step 4): the old
+    /// cache holds their rooms and would paint them on the first frame.
+    private static let key = "dock.order.cache.v2"
 
     static func load() -> Snapshot? {
         guard let data = ScratchDefaults.standard.data(forKey: key) else { return nil }

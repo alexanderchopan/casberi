@@ -124,6 +124,10 @@ enum CategoryFold {
 
     private static let glyphs: [String: String] = [
         "Wallet":   "creditcard.fill",
+        // Markets wears its seat's own glyph (`KindGlyph`, prd §1050);
+        // Testnets a flask (prd §1050a).
+        "Markets":  "chart.line.uptrend.xyaxis",
+        "Testnets": "flask",
         "Work":     "laptopcomputer",
         "Life":     "calendar",
         "Agents":   "terminal",

@@ -55,13 +55,49 @@ enum RoomAccounts {
         seats(for: room).filter { names.contains($0.name) }
     }
 
+    /// Whether `source` is an app folded into a merged room, and which room
+    /// (prd §1048, step 4): its rows ride that room, it has no room of its
+    /// own, and every door that named its room lands in the merged room
+    /// scoped to it. Nil for a source that is its own room.
+    static func host(ofSource source: String) -> (room: String, seat: Seat)? {
+        for room in mergedRooms {
+            if let seat = seats(for: room).first(where: { $0.source == source || $0.name == source }) {
+                return (room, seat)
+            }
+        }
+        return nil
+    }
+
+    /// Every room that has absorbed apps. The rooms tray draws these as rooms
+    /// (a header that opens the room, circles that open settings).
+    static let mergedRooms: [String] = [CategoryFold.walletRoom]
+
+    /// Every source a room's query, its row filter and its safety-net probe
+    /// fetch: the room alone, or the room with every app it folded in.
+    static func roomSources(_ room: String) -> [String] {
+        [room] + seats(for: room).compactMap(\.source)
+    }
+
+    /// Whether a row of `source` belongs in `room` as a folded app's row.
+    static func rides(room: String, source: String) -> Bool {
+        source != room && roomSources(room).contains(source)
+    }
+
+    private static let safes = String(localized: "Safes")
     private static let appWallets = String(localized: "App wallets")
     private static let exchanges = String(localized: "Exchanges and banks")
+    private static let staking = String(localized: "Staking")
     private static let cards = String(localized: "Cards")
+    private static let trades = String(localized: "Trades and privacy")
+    private static let names = String(localized: "Names")
+    private static let teams = String(localized: "Teams")
 
-    /// The Wallet's (prd §1048). Safe is not here: a Safe you watch is an
-    /// address, and already a row of the menu's address half.
+    /// The Wallet's (prd §1048). L2BEAT and Walletbeat are not folded yet:
+    /// their rooms are rating directories, and §1048 puts them in Risk, which
+    /// is its own piece of work. Bitrefill moves with the categories ruling.
     private static let wallet: [Seat] = [
+        Seat(name: "Safe", source: SafeBridge.sourceName,
+             holder: nil, group: safes, mark: "Safe"),
         Seat(name: "Privy", source: PrivyHomeFeed.source,
              holder: WalletPortfolio.privyHolderPrefix, group: appWallets, mark: "Privy"),
         Seat(name: ExchangeBridge.Venue.coinbase.display, source: nil,
@@ -73,8 +109,12 @@ enum RoomAccounts {
         Seat(name: ExchangeBridge.Venue.geminiExchange.display, source: nil,
              holder: ExchangeBridge.Venue.geminiExchange.rawValue, group: exchanges,
              mark: "Gemini Exchange"),
-        Seat(name: "Wise", source: nil,
+        Seat(name: "Wise", source: WiseShape.source,
              holder: WalletCash.holderPrefix + "wise", group: exchanges, mark: "Wise"),
+        Seat(name: "Acorns", source: AcornsLive.source,
+             holder: nil, group: exchanges, mark: "Acorns"),
+        Seat(name: "ETH Validators", source: nil,
+             holder: WalletPortfolio.validatorHolderID, group: staking, mark: "ETH Validators"),
         Seat(name: "Apple Wallet", source: AppleWalletBridge.sourceName,
              holder: WalletCash.holderPrefix + "applewallet:", group: cards, mark: "Apple Wallet"),
         Seat(name: "Gnosis Pay", source: GnosisPayBridge.sourceName,
@@ -85,5 +125,19 @@ enum RoomAccounts {
              holder: nil, group: cards, mark: "ether.fi"),
         Seat(name: "Privacy", source: WalletCards.privacySource,
              holder: nil, group: cards, mark: "Privacy"),
+        Seat(name: "CardPointers", source: CardPointersIngest.source,
+             holder: nil, group: cards, mark: "CardPointers"),
+        Seat(name: "Rocket Money", source: RocketMoneyLive.source,
+             holder: nil, group: cards, mark: "Rocket Money"),
+        Seat(name: "Peer", source: PeerBridge.sourceName,
+             holder: nil, group: trades, mark: "Peer"),
+        Seat(name: "0xBow Privacy Pools", source: PrivacyPoolsBridge.sourceName,
+             holder: nil, group: trades, mark: "0xBow Privacy Pools"),
+        Seat(name: "Railgun", source: RailgunBridge.sourceName,
+             holder: nil, group: trades, mark: "Railgun"),
+        Seat(name: "ENS", source: ENSWatch.source,
+             holder: nil, group: names, mark: "ENS"),
+        Seat(name: "Splits", source: SplitsShape.source,
+             holder: nil, group: teams, mark: "Splits"),
     ]
 }

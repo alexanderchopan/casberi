@@ -258,7 +258,7 @@ struct FeedScreen: View {
             // light-columned as the source rooms below are, and `lightColumns`
             // already names every field `WalletCards` reads. Home still lists
             // only the Wallet's own moves until the separate rooms fold.
-            let members = WalletCards.roomSources(source)
+            let members = RoomAccounts.roomSources(source)
             var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { members.contains($0.source) },
                                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
             d.fetchLimit = min(Self.sourceRoomFetchLimit, rowBudget ?? .max)
@@ -529,6 +529,10 @@ struct FeedScreen: View {
     /// what decides between the shelf's invitation line and nothing. Owned by
     /// the room, filled by `loadWalletLive`; see there for why not by the card.
     @State var nftHasCollections = false
+    /// Safe transactions still in the queue, by row ref (prd §1048, step 4):
+    /// read off `SafeBridge.pendingSnapshot()` in `loadWalletLive`, never in a
+    /// body (§628), and read by Coming up.
+    @State var walletSafePending: Set<String> = []
     /// A card the risk strip asked to be walked to (prd §417), consumed and
     /// cleared by `listCore`.
     ///
@@ -1653,7 +1657,7 @@ struct FeedScreen: View {
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
                 descriptor.fetchLimit = Self.allRoomFetchLimit
                 guard let raw = try? modelContext.fetch(descriptor) else { return }
-                let members = WalletCards.roomSources(source)
+                let members = RoomAccounts.roomSources(source)
                 let scoped = raw.filter { members.contains($0.source) }
                 #if DEBUG
                 NSLog("[Casberi] roomNet| source=%@ query=empty plain=%d %@", source, scoped.count,
@@ -1680,7 +1684,7 @@ struct FeedScreen: View {
             // probe counts the same sources, or every pass would read the card
             // rows as rows the query invented and swap in a Wallet-only fetch.
             // Every other room keeps the plain equality this net was built on.
-            let members = WalletCards.roomSources(source)
+            let members = RoomAccounts.roomSources(source)
             let predicate = members.count > 1
                 ? #Predicate<Thing> { members.contains($0.source) }
                 : #Predicate<Thing> { $0.source == source }

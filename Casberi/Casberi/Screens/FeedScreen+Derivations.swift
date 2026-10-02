@@ -140,7 +140,7 @@ extension FeedScreen {
             // handed over, and the room drew its own "nothing pinned" line over
             // a list that wasn't.
             (source == "All" || Pinboard.isPinnedRoom(source) || thing.source == source
-             || WalletCards.rides(room: source, source: thing.source))
+             || RoomAccounts.rides(room: source, source: thing.source))
                 // A bulk import (Instagram, Snapchat) keeps its own room but
                 // stays OUT of All — thousands of things dated across years
                 // would bury the day's real captures. All sees its receipt

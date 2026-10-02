@@ -27,14 +27,21 @@ struct WalletHistoryScreen: View {
     /// nothing saying so. The feed already holds every Thing in memory, so the
     /// cap bought no memory back either; the five-row preview is what keeps
     /// the common case cheap.
+    /// Every source the Wallet room reads (prd §1048, step 4) — its own rows
+    /// and every app it folded in — so the door's count and this list agree.
     private static var descriptor: FetchDescriptor<Thing> {
-        FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Wallet" },
+        let members = RoomAccounts.roomSources(CategoryFold.walletRoom)
+        return FetchDescriptor<Thing>(
+            predicate: #Predicate { members.contains($0.source) },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
     }
 
     private var visible: [Thing] {
         guard let scope else { return all }
+        // An app the Wallet's menu picked: its own rows.
+        if let seat = RoomAccounts.seat(scope, in: CategoryFold.walletRoom) {
+            return all.filter { $0.source == seat.source }
+        }
         // Through the resolution cache, not a raw compare — things carry the
         // resolved hex, the scope is the watched spelling (2026-07-20).
         return all.filter { wallet.scopeMatches($0.walletAddress, scope: scope) }
@@ -62,6 +69,7 @@ struct WalletHistoryScreen: View {
     }
 
     private var title: String {
+        if let seat = RoomAccounts.seat(scope, in: CategoryFold.walletRoom) { return seat.name }
         guard let scope, let label = wallet.label(forAddress: scope) else {
             return String(localized: "Transactions")
         }

@@ -296,7 +296,7 @@ enum BridgeCatalog {
         // One watchlist of stocks and tokens, and a company pack per
         // catalogue category (`CompanyPacks`). An offer, never a category:
         // the Markets CATEGORY stays deleted (prd §638).
-        Offer(name: "Markets",     tagline: "Track any stock or token",              group: "Wallet",    connectable: true,
+        Offer(name: "Markets",     tagline: "Track any stock or token",              group: "Markets",    connectable: true,
               needsSetup: true),
         // Wallet, not Markets (2026-07-25, prd §210 — amending the 2026-07-17
         // ruling below, kept for the record). A Peer fill is the person's OWN
@@ -476,7 +476,7 @@ enum BridgeCatalog {
         // may be reset without notice, and a seat that let somebody keep
         // something here without saying so would be the §83 failure on the
         // page where they decide whether to connect.
-        Offer(name: "Hegotá Frames", tagline: "Try Ethereum's new frame transactions", group: "Wallet", connectable: true,
+        Offer(name: "Hegotá Frames", tagline: "Try Ethereum's new frame transactions", group: "Testnets", connectable: true,
               needsSetup: true, added: day(2026, 9, 1)),
         // Logos (prd §988, 2026-09-29) — the network Nomos/Codex/Waku became,
         // whose desktop suite is Basecamp. Wallet group beside the devnets,
@@ -484,7 +484,7 @@ enum BridgeCatalog {
         // test coins, never joined to the wallet total, and the network has
         // been reset from genesis before. Keyless (the LEZ sequencer answers
         // anyone), so it is a no-account seat in the Radicle grade.
-        Offer(name: "Logos", tagline: "Watch accounts on the Logos testnet", group: "Wallet", connectable: true,
+        Offer(name: "Logos", tagline: "Watch accounts on the Logos testnet", group: "Testnets", connectable: true,
               needsSetup: true, added: day(2026, 9, 29)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               needsSetup: true),
@@ -788,6 +788,13 @@ enum BridgeCatalog {
         // heading waiting to render blank — the reason "Home" is gone from
         // this list too, three rows down.
         ("Wallet",  "Wallet",      ["Wallet"]),
+        // MARKETS AND TESTNETS ARE CATEGORIES OF THEIR OWN (prd §1050): once
+        // the Wallet folded its money apps into one room, every tray entry is
+        // a category, so Markets (a watchlist, not money you hold) stands
+        // alone, and the two devnets share Testnets, never inside Wallet: real
+        // money moves in Wallet, and test money must never share its room.
+        ("Markets", "Markets",     ["Markets"]),
+        ("Testnets", "Hegotá Frames", ["Testnets"]),
         ("Work",    "GitHub",      ["Work"]),
         // "Home" is GONE from this list, not merely empty (2026-09-04). Life
         // absorbed it on 2026-07-23 because HomeKit was the lone app in its

@@ -306,4 +306,15 @@ extension FeedScreen {
         }
     }
     var shape: Shape { Shape(source: source) }
+
+    /// The design a row draws in. A merged room's own rows take the room's
+    /// shape; a folded app's row (prd §1048, step 4) keeps its own where its
+    /// own says something the room's does not — CardPointers' offer terms and
+    /// deadline. Every other folded row reads as the room's ledger, which is
+    /// already how card spends and transfers want to look.
+    func rowShape(_ thing: Thing) -> Shape {
+        guard RoomAccounts.rides(room: source, source: thing.source) else { return shape }
+        if case .cardPointers = Shape(source: thing.source) { return .cardPointers }
+        return shape
+    }
 }

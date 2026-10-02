@@ -64,10 +64,10 @@ struct WalletCardsTests {
     }
 
     @Test func onlyTheWalletCarriesTheCardSeats() {
-        #expect(WalletCards.rides(room: CategoryFold.walletRoom, source: GnosisPayBridge.sourceName))
-        #expect(!WalletCards.rides(room: "Markets", source: GnosisPayBridge.sourceName))
-        #expect(WalletCards.roomSources("Markets") == ["Markets"])
-        #expect(WalletCards.roomSources(CategoryFold.walletRoom).first == CategoryFold.walletRoom)
+        #expect(RoomAccounts.rides(room: CategoryFold.walletRoom, source: GnosisPayBridge.sourceName))
+        #expect(!RoomAccounts.rides(room: "Markets", source: GnosisPayBridge.sourceName))
+        #expect(RoomAccounts.roomSources("Markets") == ["Markets"])
+        #expect(RoomAccounts.roomSources(CategoryFold.walletRoom).first == CategoryFold.walletRoom)
     }
 
     /// `isLive` needs a context, so a test on bare `Thing()`s would hand

@@ -1484,6 +1484,18 @@ struct MainSurface: View {
         //
         // `ChipMemory` still RECORDS visits — the daily brief and the agent
         // panel rank by them — but nothing about the dock reads it.
+        //
+        // **THE APPS A MERGED ROOM FOLDED IN ARE NOT ROOMS (prd §1048, step
+        // 4).** Their rows ride the merged room, so they leave the list here —
+        // and with it the tray, Recent, search and the swipe, which all read
+        // these venues — and the merged room stands in for them even when
+        // nothing has landed under its own name (Gnosis Pay alone still opens
+        // a Wallet).
+        let hosts = Set(ordered.compactMap { RoomAccounts.host(ofSource: $0)?.room })
+        ordered.removeAll { RoomAccounts.host(ofSource: $0) != nil }
+        for room in RoomAccounts.mergedRooms where hosts.contains(room) && !ordered.contains(room) {
+            ordered.append(room)
+        }
         let learned = ordered
         // Notes sits second, right after All, and does NOT enter the learned
         // sort above (2026-08-10, as Pinned). Two reasons it is placed rather
@@ -2078,6 +2090,15 @@ struct MainSurface: View {
         // source that belongs to no catalog category, so this costs a
         // dictionary lookup on every source switch and nothing else.
         .onChange(of: filter.source, initial: true) { _, source in
+            // The doors that write `filter.source` directly (a deep link, a
+            // bundle row in All, ⌘1–9, the composer) never pass through
+            // `go(to:)`, so a folded app's name is caught here too and sent on
+            // to its merged room, scoped (prd §1048, step 4).
+            if let fold = RoomAccounts.host(ofSource: source) {
+                chrome.walletScope = RoomAccounts.scopeID(fold.seat)
+                filter.source = fold.room
+                return
+            }
             CategoryFold.remember(source)
             // A person scope belongs to ONE network, so it dies with the room
             // (prd §362) — unlike the wallet scope, which spans its category on
@@ -2202,6 +2223,13 @@ struct MainSurface: View {
             guard let landing = CategoryFold.landing(category: label, present: categoryVenues[label] ?? [])
             else { return }
             target = landing
+        } else if let fold = RoomAccounts.host(ofSource: label) {
+            // **AN APP FOLDED INTO A MERGED ROOM HAS NO ROOM (prd §1048, step
+            // 4).** Every door that named it lands in the merged room, scoped
+            // to it — set BEFORE the same-room guard, so a door taken while
+            // already standing in the Wallet still narrows it.
+            chrome.walletScope = RoomAccounts.scopeID(fold.seat)
+            target = fold.room
         } else {
             target = label
         }

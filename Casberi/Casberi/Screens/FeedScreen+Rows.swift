@@ -454,7 +454,7 @@ extension FeedScreen {
             // Reminders are the band too — read-only (ruling 2026-07-25), so
             // no check circle: a done reminder is just struck through, its
             // state grouped by section, never a control that does nothing.
-            switch shape {
+            switch rowShape(thing) {
             case .calendar:  BandRow(thing: thing, emphasized: thing.id == nextEventID)
             case .reminders: BandRow(thing: thing)
             // A CardPointers offer is three facts, not one (prd §487): who it
@@ -514,6 +514,10 @@ extension FeedScreen {
             // The wallet room reads as a ledger (prd §157): the band, with the
             // moved amount pulled out of the sentence into a right-aligned
             // figure. Same anatomy as every other row — one opt-in flag.
+            // An app wallet folded into the Wallet (prd §1048, step 4) keeps
+            // its own row: its logo, when it was last used, what it holds.
+            case .wallet where thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true:
+                PrivyAppRow(thing: thing)
             case .wallet: BandRow(thing: thing, moneyColumn: true, rippleIndex: index)
             // The same ledger reading for the wallet-riding money rooms
             // (prd §485, 2026-08-26) — one flag, one anatomy. See `Shape.init`.

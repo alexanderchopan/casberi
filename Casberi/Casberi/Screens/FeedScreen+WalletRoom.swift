@@ -1061,11 +1061,31 @@ extension FeedScreen {
     /// three-row cap was for the head of a history feed, and this is a scope
     /// of its own — soonest first, which is the point of the scope. They
     /// leave Home's stream whole, so a deadline is never read as a move.
+    ///
+    /// **WHAT IS STILL PENDING LEADS IT (prd §1048, step 4).** The folded apps
+    /// carry things that are waiting with no date to wait for: a Safe
+    /// transaction still in the queue (`SafeBridge.pendingSnapshot`, the
+    /// loop-closer's own state, because a queued row keeps its old tags after
+    /// it executes) and a Privacy Pools deposit not yet cleared. They are
+    /// "now", so they come before anything dated, newest first. Peer's open
+    /// trades and Rocket Money's bills are not here: neither stores a pending
+    /// item or a due date the room could read.
     func walletUpcoming(_ visible: [Thing]) -> [Thing] {
         let now = Date.now
-        return visible.live
+        let live = visible.live
+        let pending = live.filter { thing in
+            guard let ref = thing.sourceRef else { return false }
+            if thing.source == SafeBridge.sourceName { return walletSafePending.contains(ref) }
+            if thing.source == PrivacyPoolsBridge.sourceName, ref.hasPrefix(PrivacyPoolsRoom.depositPrefix) {
+                return PrivacyPoolsRoom.state(tags: thing.tags).map { !$0.resolved } ?? false
+            }
+            return false
+        }
+        .sorted { $0.capturedAt > $1.capturedAt }
+        let dated = live
             .filter { ($0.dueAt ?? .distantPast) > now }
             .sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
+        return pending + dated
     }
 
     /// **COMING UP'S BOX (prd §1041): the next one, and the spread.** No new
@@ -1147,7 +1167,7 @@ extension FeedScreen {
                 // the one that changes every sync.
                 trailingTitle: hasMore ? String(localized: "See activity") : nil,
                 onTapTrailing: hasMore
-                    ? { route.pushBridge(.walletHistory(scope: selectedWallet.map(AddressBook.key(for:)))) }
+                    ? { route.pushBridge(.walletHistory(scope: walletHistoryScope)) }
                     : nil)
             ForEach(Array(rows.keyed.enumerated()), id: \.element.id) { i, item in
                 // `live` INSIDE the closure, before any read (corollary 3):
@@ -1374,8 +1394,16 @@ extension FeedScreen {
     func walletComingUpDays(_ upcoming: [Thing]) -> [(String, [FeedRow])] {
         var order: [String] = []
         var groups: [String: [FeedRow]] = [:]
+        // What is pending with no date (a Safe transaction in the queue, a
+        // deposit under review, prd §1048 step 4) is waiting NOW, so it leads
+        // under a time word rather than dropping off the list it heads.
+        let now = String(localized: "Now")
+        for thing in upcoming.live where thing.dueAt == nil || (thing.dueAt ?? .distantFuture) <= .now {
+            if groups[now] == nil { order.append(now) }
+            groups[now, default: []].append(.single(thing))
+        }
         for thing in upcoming.live {
-            guard let due = thing.dueAt else { continue }
+            guard let due = thing.dueAt, due > .now else { continue }
             let label = dayLabel(due)
             if groups[label] == nil { order.append(label) }
             groups[label, default: []].append(.single(thing))
@@ -1400,12 +1428,18 @@ extension FeedScreen {
 
     /// The stream's door — only when there's more behind it than the preview
     /// showed (no dead control when five rows is the whole history).
+    /// The history screen's scope: an app the menu picked (`seat:<name>`), an
+    /// address's book key, or nil for every row (prd §1048, step 4).
+    var walletHistoryScope: String? {
+        selectedSeat.map(RoomAccounts.scopeID) ?? selectedWallet.map(AddressBook.key(for:))
+    }
+
     @ViewBuilder
     func walletSeeAllSection(total: Int) -> some View {
         if total > Self.walletPreviewRows {
             Section {
                 WalletSeeAllRow(count: total) {
-                    route.pushBridge(.walletHistory(scope: selectedWallet.map(AddressBook.key(for:))))
+                    route.pushBridge(.walletHistory(scope: walletHistoryScope))
                 }
                 .listRowSeparator(.hidden)
                 // On the page itself, not in a card — a quiet continuation
