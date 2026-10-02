@@ -400,8 +400,13 @@ struct MoneyReceipt: Equatable {
                 ?? (onchain ? .absent(.merchantOffchain) : .named(f.source)),
             // No second face: a card spend has one party and it is the shop.
             mine: nil,
-            lead: refund ? String(localized: "Refunded by")
-                         : String(localized: "Spent at"),
+            // An onchain card names no shop (the chain carries none), so the
+            // lead completes itself with the card rather than dangling as
+            // "Spent at" over nothing (prd §1074).
+            lead: merchant == nil && onchain
+                ? (refund ? String(localized: "Refunded to \(f.source)")
+                          : String(localized: "Spent with \(f.source)"))
+                : (refund ? String(localized: "Refunded by") : String(localized: "Spent at")),
             party: merchant ?? (onchain ? nil : f.source),
             titleFallback: money.isEmpty ? f.title : nil,
             amount: money.isEmpty ? nil
