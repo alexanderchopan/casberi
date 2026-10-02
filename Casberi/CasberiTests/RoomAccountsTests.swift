@@ -163,7 +163,9 @@ struct RoomAccountsTests {
     @Test func testnetsIsItsCategory() {
         #expect(BridgeCatalog.category(forSource: RoomAccounts.testnetsRoom) == "Testnets")
         #expect(RoomAccounts.room(ofCategory: "Testnets") == RoomAccounts.testnetsRoom)
-        #expect(RoomAccounts.room(ofCategory: "Social") == nil)
+        // Social became one room too (prd §1068).
+        #expect(RoomAccounts.room(ofCategory: "Social") == RoomAccounts.socialRoom)
+        #expect(SocialRoom.mergedRoom == RoomAccounts.socialRoom)
     }
 
     /// The room shows the picked network's screen, the first connected one

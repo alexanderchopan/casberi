@@ -68,6 +68,7 @@ enum RoomAccounts {
         case lifeRoom: return life
         case dayRoom: return day
         case workRoom: return work
+        case socialRoom: return social
         default: return []
         }
     }
@@ -100,7 +101,7 @@ enum RoomAccounts {
     /// so the category's tray row and the room are one name (the Wallet's
     /// balance room always was).
     static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, readingRoom, agentsRoom, mediaRoom,
-                                          lifeRoom, dayRoom, workRoom]
+                                          lifeRoom, dayRoom, workRoom, socialRoom]
 
     /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
     /// the room exists while Hegotá Frames or Logos is connected.
@@ -121,6 +122,10 @@ enum RoomAccounts {
 
     /// The Work room (prd §1049, built §1057).
     static let workRoom = "Work"
+
+    /// The Social room (prd §1068): the networks fold in, the last category
+    /// to become one room.
+    static let socialRoom = "Social"
 
     /// The merged room a category opens, nil while the category still opens
     /// its apps' own rooms.
@@ -198,6 +203,10 @@ enum RoomAccounts {
 
     /// Work's (prd §1049): every builder seat, Dodo Payments included.
     private static let work = catalogSeats(workRoom)
+
+    /// Social's (prd §1068): X, Instagram, TikTok, Snapchat, Telegram,
+    /// Farcaster, Bluesky and Nostr.
+    private static let social = catalogSeats(socialRoom)
 
     /// The testnets (prd §1050): test money, never in the Wallet's menu or
     /// total (§83).

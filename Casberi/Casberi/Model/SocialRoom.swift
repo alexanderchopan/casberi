@@ -115,10 +115,17 @@ enum SocialRoom {
         facts(for: source)?.foldsThreads == true
     }
 
-    /// The one predicate behind prd §821 — see `Facts.leadsWithNewest`.
+    /// The one predicate behind prd §821 — see `Facts.leadsWithNewest`. The
+    /// merged Social room leads the same way (prd §1068): its networks'
+    /// newest thing, never a figure over all of them.
     static func leadsWithNewest(_ source: String) -> Bool {
-        facts(for: source)?.leadsWithNewest == true
+        source == mergedRoom || facts(for: source)?.leadsWithNewest == true
     }
+
+    /// The Social room every network folds into (prd §1068) —
+    /// `RoomAccounts.socialRoom`, spelled here so this file stays
+    /// Foundation-only for `social-room-selftest.sh`.
+    static let mergedRoom = "Social"
 
     // MARK: - One row, one anatomy
 
