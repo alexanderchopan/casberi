@@ -63486,3 +63486,15 @@ An unlit You door is `surfaceRaised` charcoal, the categories' own tile, with it
 **Not done here.** The website's catalogue shelves still carry the old categories (L2BEAT, Walletbeat and NerdWallet under Wallet; no Markets or Testnets shelf); moving them is a website deploy.
 
 **Checked.** `RoomAccountsTests` (the seats, A to Z, the fold, NerdWallet's category), `nerdwallet-selftest.sh`, `category-fold-selftest.sh`, `catalog-sync.sh`, `dock-selftest.sh`, `wallet-total-audit.py`. On the simulator: `-openRoom Reading` leads with NerdWallet's newest article over Walletbeat's rows; the menu lists the nine apps A to Z; Bookmarks narrows to bookmarks; Walletbeat puts its ratings head in the box.
+
+## §1053 — The rooms tray is ONE LIST: four You rows led by a tile, then Categories as plain rows (user: "would they just put the whole thing in a list?", "i worry with the grid we look android", then "yes D", and of the selected door, a pink fill "is a bit overkill … maybe white with pink", 2026-10-02; rules on the "Tray, the Apple way" canvas, artboard D; supersedes §1050l's grid, keeps §1050m's charcoal door)
+
+**Why a list.** Apple draws a grid for things you launch or toggle by their icon (the Home Screen, Control Center, the share sheet's app row) and a list for places you go into by name (Music's Library, Files' Browse, Mail's mailboxes, Settings). The categories wear generic symbols and are picked by their word, and a four-up grid of rounded squares read as an Android drawer.
+
+**The You rows.** Home, Notes, Addresses and Settings, untitled — first place and the tile say they are the app's own, as in Settings' first block. Each leads with a 34pt app-icon tile (`DS.Radius.appIcon`) in `surfaceRaised` with the glyph in `DS.brand`; the standing door's tile turns white behind the same pink glyph, no sheen. The word is `heading17`, no chevron, the row 52pt.
+
+**Categories.** A `heading20` header, then a row per category in Dock order: the glyph bare at the body size, centred in the tiles' 34pt column so every word starts on one edge, the word in `body17`, a `DSChevron`, the row 48pt. The standing category takes its filled glyph; a broken app inside puts the attention hue on the glyph. §1050l's rule that the tray draws no app marks stands.
+
+**Only the search is pinned.** The You rows scroll with the list (amends §1015's pinned row): four pinned rows would take half the tray at rest. `MarkGrid` is deleted.
+
+**Checked.** `category-fold-selftest.sh`, `dock-selftest.sh`, `ds-template-audit.py`, `dead-closure-audit.py`, `footnote-audit.py`. On the simulator (`-openTray YES`, demo): the four You rows with Home's tile white, the Categories header and rows with chevrons, glyphs in one column.
