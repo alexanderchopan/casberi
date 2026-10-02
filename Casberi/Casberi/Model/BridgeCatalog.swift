@@ -374,9 +374,10 @@ enum BridgeCatalog {
         // goes is following a chain for other people's new drops.
         // Its code was deleted with the other retired seats' (§638's third
         // amendment).
-        // Shopping, not Markets (2026-07-17): Bitrefill is your own commerce
-        // account — orders and receipts — not a market you watch.
-        Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Shopping",  connectable: true,
+        // Wallet (prd §1049, §1051a): the last Shopping seat once Deals and
+        // Shopify left, and money you spend from a balance you hold — so it
+        // folds into the One Wallet, and the Shopping category goes with it.
+        Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Wallet",  connectable: true,
               needsSetup: true, added: day(2026, 7, 17)),
         // Shopping, beside Bitrefill: Privacy.com is your own card-spending
         // record — receipts across every merchant — not a market you watch.
@@ -817,7 +818,6 @@ enum BridgeCatalog {
         // seats, prd §638; Shopify and Deals followed someone else's catalogue
         // and were deleted 2026-10-01, prd §1049).
         ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Shopping", "Bitrefill",  ["Shopping"]),
         ("Notes",   "Obsidian",    ["Notes"]),
     ]
 

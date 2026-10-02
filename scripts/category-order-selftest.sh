@@ -206,7 +206,7 @@ func rawStored() -> [String]? { UserDefaults.standard.stringArray(forKey: "chips
 // became a note of yours with no source of its own (§972). Pinned as a count
 // AND as the absences, so either slot creeping back fails here rather than
 // drawing a folder for a band nothing fills.
-check("the default order is the 2026-08-11 ruling minus Voice (§972), plus Markets and Testnets (§1050)", d.count == 11)
+check("the default order is the 2026-08-11 ruling minus Voice (§972) and Shopping (§1051a), plus Markets and Testnets (§1050)", d.count == 10)
 check("Markets and Testnets follow Wallet (§1050)", Array(d.prefix(3)) == ["Wallet", "Markets", "Testnets"])
 check("a stored order keeps its Markets slot again (§1050)",
       CategoryOrder.reconcile(["Wallet", "Markets", "Work"]).contains("Markets"))
@@ -254,10 +254,11 @@ check("…and the list is still complete", Set(dupes) == Set(d) && dupes.count =
 // The forward-compatibility case, and the one nobody would ever see reported:
 // somebody rearranges their strip, a later build adds a category, and their
 // stored list has no opinion about it.
-let older = CategoryOrder.reconcile(d.filter { $0 != "Shopping" && $0 != "Notes" })
-check("a category missing from a stored order still appears", older.contains("Shopping") && older.contains("Notes"))
+// Testnets and Notes stand in (Shopping, the old stand-in, left with §1051a).
+let older = CategoryOrder.reconcile(d.filter { $0 != "Testnets" && $0 != "Notes" })
+check("a category missing from a stored order still appears", older.contains("Testnets") && older.contains("Notes"))
 check("…at the tail, in default order",
-      Array(older.suffix(2)) == d.filter { $0 == "Notes" || $0 == "Shopping" })
+      Array(older.suffix(2)) == d.filter { $0 == "Testnets" || $0 == "Notes" })
 
 // --- rank -------------------------------------------------------------------
 check("rank follows the order given", CategoryOrder.rank(of: "Wallet", in: d) == 0)
@@ -268,14 +269,14 @@ check("…and reads the ORDER, not the default",
 check("an unknown label sorts last, not first",
       CategoryOrder.rank(of: "Gopher", in: d) == Int.max)
 check("…so it really does sort behind a category",
-      CategoryOrder.rank(of: "Gopher", in: d) > CategoryOrder.rank(of: "Shopping", in: d))
+      CategoryOrder.rank(of: "Gopher", in: d) > CategoryOrder.rank(of: "Notes", in: d))
 
 // The sort as the strip performs it, over a mixed list — categories plus one
 // uncategorized source that has no slot anywhere.
-let mixed = ["Shopping", "Gopher", "Wallet", "Media"]
+let mixed = ["Notes", "Gopher", "Wallet", "Media"]
 let sorted = mixed.sorted { CategoryOrder.rank(of: $0, in: d) < CategoryOrder.rank(of: $1, in: d) }
 check("the strip's own sort puts categories in order and strangers last",
-      sorted == ["Wallet", "Media", "Shopping", "Gopher"])
+      sorted == ["Wallet", "Media", "Notes", "Gopher"])
 
 // --- set / reset / isCustom -------------------------------------------------
 CategoryOrder.reset()

@@ -72,7 +72,7 @@ enum CategoryOrder {
     static let defaultOrder: [String] = [
         // Markets and Testnets follow Wallet (prd §1050).
         "Wallet", "Markets", "Testnets", "Work", "Agents", "Life", "Social",
-        "Media", "Reading", "Notes", "Shopping",
+        "Media", "Reading", "Notes",
     ]
 
     /// The order in force — the stored one reconciled against `defaultOrder`,

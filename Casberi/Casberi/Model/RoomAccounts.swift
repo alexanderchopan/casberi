@@ -99,9 +99,8 @@ enum RoomAccounts {
     private static let names = String(localized: "Names")
     private static let teams = String(localized: "Teams")
 
-    /// The Wallet's (prd §1048). L2BEAT and Walletbeat are not folded yet:
-    /// their rooms are rating directories, and §1048 puts them in Risk, which
-    /// is its own piece of work. Bitrefill moves with the categories ruling.
+    /// The Wallet's (prd §1048; Bitrefill since §1051a). L2BEAT and Walletbeat
+    /// are Reading's (§1051a), not the Wallet's.
     private static let wallet: [Seat] = [
         Seat(name: "Safe", source: SafeBridge.sourceName,
              holder: nil, group: safes, mark: "Safe"),
@@ -136,6 +135,8 @@ enum RoomAccounts {
              holder: nil, group: cards, mark: "CardPointers"),
         Seat(name: "Rocket Money", source: RocketMoneyLive.source,
              holder: nil, group: cards, mark: "Rocket Money"),
+        Seat(name: "Bitrefill", source: "Bitrefill",
+             holder: WalletCash.holderPrefix + "bitrefill", group: cards, mark: "Bitrefill"),
         Seat(name: "Peer", source: PeerBridge.sourceName,
              holder: nil, group: trades, mark: "Peer"),
         Seat(name: "0xBow Privacy Pools", source: PrivacyPoolsBridge.sourceName,

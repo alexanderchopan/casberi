@@ -82,22 +82,6 @@ extension FeedScreen {
         return CompanyQuotes.shared.quote(.stock(symbol))?.change
     }
 
-    /// Bitrefill's lede: the account at a glance — the balance its API last
-    /// reported, and how many orders landed this month (from the same rows
-    /// below, so the two can't disagree). Connected-only: a disconnected
-    /// seat must not wear yesterday's balance as if it were current.
-    @ViewBuilder
-    func bitrefillLedeSection(_ visible: [Thing]) -> some View {
-        if TokenBridge.bitrefill.connected, let balance = BitrefillBalance.formatted {
-            let month = visible.filter {
-                BitrefillFetch.isOrderRef($0.sourceRef)
-                    && Self.groupingCalendar.isDate($0.capturedAt, equalTo: .now,
-                                                    toGranularity: .month)
-            }.count
-            ledeSection(BitrefillLede(balance: balance, monthCount: month))
-        }
-    }
-
     /// The watchlist's OWN order, not chronology (2026-07-15) — day headers
     /// answer "when did I watch this", a question that stops mattering once
     /// there's more than a couple of tokens; what you actually want is what

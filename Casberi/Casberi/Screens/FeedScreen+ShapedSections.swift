@@ -604,14 +604,6 @@ extension FeedScreen {
             let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
                             cover: heroShown ? nil : ledeThingID(in: days))
-        case .bitrefill:
-            bitrefillLedeSection(visible)
-            let days = chronoGroups(visible)
-            // Disconnected, or no balance known yet: the newest order is the
-            // cover instead (prd §911), so the room never opens on a row.
-            let ledeStands = TokenBridge.bitrefill.connected && BitrefillBalance.formatted != nil
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            cover: heroShown || ledeStands ? nil : ledeThingID(in: days))
         default:
             if Pinboard.isPinnedRoom(source) {
                 notesSections(visible, nextEventID: nextEventID)

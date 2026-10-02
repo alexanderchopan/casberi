@@ -33,6 +33,13 @@ enum WalletCash {
                                 holderID: holderPrefix + "wise", label: "Wise"))
             }
         }
+        // Bitrefill's balance (prd §1051a): money held to spend on gift cards,
+        // read only while the seat is connected, as its room's lede was.
+        if TokenBridge.bitrefill.connected, let balance = BitrefillBalance.reading,
+           balance.amount > 0, balance.currency.count == 3 {
+            out.append(Held(currency: balance.currency, amount: balance.amount,
+                            holderID: holderPrefix + "bitrefill", label: "Bitrefill"))
+        }
         if AppleWalletBridge.connected {
             for (name, balance) in AppleWalletBridge.cash.sorted(by: { $0.key < $1.key }) {
                 guard balance.value > 0, balance.currency.count == 3 else { continue }

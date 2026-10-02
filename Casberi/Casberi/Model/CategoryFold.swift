@@ -134,7 +134,6 @@ enum CategoryFold {
         "Media":    "play.circle",
         "Social":   "bubble.left.and.bubble.right",
         "Reading":  "book",
-        "Shopping": "cart",
         "Notes":    "note.text",
         // "All" is a tile since prd §767: the inbox, since the room is
         // every account's newest in one place.

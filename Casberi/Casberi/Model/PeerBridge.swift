@@ -799,6 +799,21 @@ enum PeerBridge {
 
             let landed = await sellThings(signals: signals, fulfilled: fulfilled,
                                           wallet: wallet, depositId: depositId, existing: existing)
+            // A settling sale's row leaves once its outcome is known — the
+            // sale landed, or the window closed (prd §1048f). Positive
+            // evidence, never an absence: only an intent this pass resolved.
+            let nowSeconds = Date.now.timeIntervalSince1970
+            let resolved = signals.filter {
+                fulfilled[$0.intentHash] != nil || nowSeconds - $0.timestamp > intentExpirySeconds
+            }.map { pendingRef($0.intentHash) }
+            if !resolved.isEmpty {
+                let stored = IngestSupport.thingsByRef(context, source: "Peer")
+                var removed = false
+                for ref in resolved {
+                    if let row = stored[ref] { context.delete(row); removed = true }
+                }
+                if removed, landed.isEmpty { context.saveHonestly() }
+            }
             if !landed.isEmpty {
                 for thing in landed {
                     context.insert(thing)
@@ -901,10 +916,40 @@ enum PeerBridge {
                     source: "Peer", capturedAt: .now, sourceRef: ref)
                 thing.walletAddress = wallet
                 out.append(thing)
+            } else {
+                // **A SALE STILL SETTLING (prd §1048f).** A buyer has committed
+                // and is paying off-chain, so this is not news yet — it never
+                // reaches Home — but it is what is AHEAD, so it lands dated at
+                // the deadline the escrow enforces (`intentExpirySeconds`) and
+                // the Wallet's Coming up holds it. Removed when the sale or
+                // the fall-through lands (`pendingRef`, in `sync`).
+                let ref = pendingRef(signal.intentHash)
+                guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
+                let title = signal.method.map {
+                    String(localized: "A buyer is paying for \(what) with \($0) on Peer")
+                } ?? String(localized: "A buyer is paying for \(what) on Peer")
+                let thing = Thing(
+                    kind: .transaction, title: title,
+                    content: signal.transactionHash.map { "https://basescan.org/tx/\($0)" }
+                        ?? "https://basescan.org/address/\(escrow)",
+                    source: "Peer",
+                    capturedAt: Date(timeIntervalSince1970: signal.timestamp),
+                    sourceRef: ref)
+                thing.walletAddress = wallet
+                thing.dueAt = Date(timeIntervalSince1970: signal.timestamp + intentExpirySeconds)
+                if let symbol = token?.symbol, token?.decimals != nil {
+                    thing.priceValue = tokenAmount
+                    thing.priceCurrency = symbol
+                }
+                out.append(thing)
             }
         }
         return out
     }
+
+    /// A settling sale's row (prd §1048f), one per intent.
+    static let pendingPrefix = "peer:pending:"
+    static func pendingRef(_ intentHash: String) -> String { pendingPrefix + intentHash }
 
     // MARK: - RPC reads (Base public host, the wallet bridge's measured one)
 

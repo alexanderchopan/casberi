@@ -381,6 +381,15 @@ enum RocketMoneyIngest {
                 let ref = RocketMoneyLive.refPrefix + key
                 let money = value.map { LooseJSON.money($0, currency: LooseJSON.currency(in: record)) }
                 let title = money.map { "\(label) — \($0)" } ?? label
+                // **A FUTURE DATE IS THE NEXT CHARGE (prd §1048f).** The
+                // upcoming page dates each bill by when it will hit, and only
+                // a charge still to come can carry a date after today, so that
+                // date becomes `dueAt` and the bill reaches the Wallet's
+                // Coming up. A record with no date leaves `dueAt` alone: the
+                // same bill lands from several pages, and the undated ones
+                // must not clear what the upcoming page set.
+                let date = LooseJSON.date(in: record)
+                let due = date.flatMap { $0 > .now ? $0 : nil }
 
                 if existing.contains(ref) {
                     // A subscription is a STATE: its price changes, it does not
@@ -388,6 +397,10 @@ enum RocketMoneyIngest {
                     if let thing = stored(ref), thing.title != title {
                         thing.title = title
                         thing.embedding = nil
+                        touched = true
+                    }
+                    if date != nil, let thing = stored(ref), thing.dueAt != due {
+                        thing.dueAt = due
                         touched = true
                     }
                     landedHere += 1
@@ -398,9 +411,10 @@ enum RocketMoneyIngest {
                     title: title,
                     content: "",
                     source: RocketMoneyLive.source,
-                    capturedAt: LooseJSON.date(in: record) ?? .now,
+                    capturedAt: date ?? .now,
                     sourceRef: ref)
                 thing.authorHandle = RocketMoneyLive.source
+                thing.dueAt = due
                 context.insert(thing)
                 existing.insert(ref)
                 indexed.append(thing)

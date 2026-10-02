@@ -377,7 +377,6 @@ struct RoomsTray: View {
         "Media":    "play.circle.fill",
         "Social":   "bubble.left.and.bubble.right.fill",
         "Reading":  "book.fill",
-        "Shopping": "cart.fill",
         "Testnets": "flask.fill",
     ]
 
@@ -555,6 +554,9 @@ struct RoomsTray: View {
                 }
             }
         }
+        // A header with no marks under it would shrink to its own width and
+        // centre; the row keeps the column's leading edge.
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Recent (prd §1013): the rooms you opened last, newest first, on one

@@ -295,6 +295,15 @@ enum BitrefillBalance {
         UserDefaults.standard.removeObject(forKey: bucketKey)
     }
 
+    /// The balance as a number and its currency, for the Wallet total (prd
+    /// §1049, §1051a: Bitrefill folded into the One Wallet, and this balance
+    /// had no other place to be read once its room went).
+    static var reading: (amount: Double, currency: String)? {
+        guard UserDefaults.standard.object(forKey: amountKey) != nil else { return nil }
+        return (UserDefaults.standard.double(forKey: amountKey),
+                UserDefaults.standard.string(forKey: currencyKey) ?? "USD")
+    }
+
     static var formatted: String? {
         guard UserDefaults.standard.object(forKey: amountKey) != nil else { return nil }
         let amount = UserDefaults.standard.double(forKey: amountKey)

@@ -31,7 +31,11 @@ enum PeerRoomSource {
         // Filtered live at the BOUNDARY before any stored property is read
         // (corollary 4) — the caller's array may be a debounced snapshot, and
         // the foreground sweep deletes rows while it is held.
-        let rows = things.live.filter { $0.source == source }
+        // A sale still settling (prd §1048f) is ahead, not a trade: it would
+        // read as a purchase off its bare `peer:` prefix.
+        let rows = things.live.filter {
+            $0.source == source && !($0.sourceRef?.hasPrefix(PeerBridge.pendingPrefix) ?? false)
+        }
         guard !rows.isEmpty else { return nil }
         let room = PeerRoom.compose(fills: rows.map(sighting))
         return room.isEmpty ? nil : room
@@ -79,7 +83,9 @@ enum PeerRoomSource {
     /// truncation lesson: one NSLog per line, never a joined document).
     @MainActor
     static func probeLines(things: [Thing], now: Date = .now) -> [String] {
-        let rows = things.live.filter { $0.source == source }
+        let rows = things.live.filter {
+            $0.source == source && !($0.sourceRef?.hasPrefix(PeerBridge.pendingPrefix) ?? false)
+        }
         var out: [String] = [
             "peerRoom| source=\(source) handed=\(things.count) peerRows=\(rows.count)"
                 + " rowCap=\(rowCap) minimumFills=\(PeerRoom.minimumFills)",

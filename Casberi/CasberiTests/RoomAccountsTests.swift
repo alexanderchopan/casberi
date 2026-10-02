@@ -46,6 +46,10 @@ struct RoomAccountsTests {
         // rows as "Privacy Pools"; its seat is "0xBow Privacy Pools").
         #expect(RoomAccounts.host(ofSource: PrivacyPoolsBridge.sourceName)?.seat.name == "0xBow Privacy Pools")
         #expect(RoomAccounts.host(ofSource: "0xBow Privacy Pools") != nil)
+        // Bitrefill folded in with §1051a; L2BEAT and Walletbeat went to Reading.
+        #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)
+        #expect(RoomAccounts.host(ofSource: "L2BEAT") == nil)
+        #expect(RoomAccounts.host(ofSource: "Walletbeat") == nil)
         for room in [CategoryFold.walletRoom, "Markets", "Hegotá Frames", "Logos", "Stripe"] {
             #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
         }

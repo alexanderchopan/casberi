@@ -29,7 +29,7 @@ extension FeedScreen {
 
     /// The shape a source takes when its chip is in force.
     enum Shape {
-        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, snapchat, files, instagram, tiktok, x, appStoreConnect, cardPointers, walletbeat, l2beat, telegram, plain
+        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, snapchat, files, instagram, tiktok, x, appStoreConnect, cardPointers, walletbeat, l2beat, telegram, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -56,7 +56,7 @@ extension FeedScreen {
         /// deadlines). Where nothing can carry the line, the head stands.
         var carriesCover: Bool {
             switch self {
-            case .ledger, .calendar, .gmail, .reminders, .tokens, .bitrefill,
+            case .ledger, .calendar, .gmail, .reminders, .tokens,
                  .cardPointers, .walletbeat, .l2beat, .wallet: return false
             default: return true
             }
@@ -294,7 +294,6 @@ extension FeedScreen {
             // rather than a new behaviour.
             case _ where MediaShape.isMediaFeed(source): self = .media
             case "Markets":             self = .tokens
-            case "Bitrefill":           self = .bitrefill
             default:                    self = .plain
             }
         }
