@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1173 of 1231 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1174 of 1232 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1378,12 +1378,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1045 — "Start here" leads Apps while nothing is connected
 - §1046 — §1006's items 4 and 7 are declined
 - §1047 — The ask is deleted: the on-device model reads and no longer answers, and the composer keeps Find and the agents you c…
-- §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050)
+- §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050, §1051a)
 - §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats
 - §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e)
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
 - §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room…
-- §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b; part superseded by §1050e)
+- §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a; part superseded by §1050e)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a)
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
 - §1050b — Photos moves from Life to Media
@@ -1394,6 +1394,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050g — Apps and Settings become one door, Settings: Casberi's own settings first, then your apps, then the catalogue (amended by §1050h)
 - §1050h — Settings is one list: Casberi first, then every app in its category, connected or not
 - §1051 — Deals, Shopify and Cursor leave the catalogue, and their stored rows, settings and key go with them
+- §1051a — L2BEAT and Walletbeat move to Reading; Bitrefill still folds into the One Wallet
 
 ## Dead rulings → what replaced them (generated)
 

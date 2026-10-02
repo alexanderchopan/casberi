@@ -429,6 +429,7 @@ marks chronological position within the pair.
 | §933 / §1033 (two doors: Apps for the catalogue, Settings for Casberi's own) | the tray carried an Apps door and a Settings door | amended by §1050g — one door, Settings: Casberi pinned first, then your apps, then the catalogue |
 | §1012 (the doors row: Home, Notes, Apps, Addresses, Settings) | five doors | amended by §1050g — four: Home, Notes, Addresses, Settings |
 | §1050g (Settings as your apps, then the catalogue) | two lists on the Settings screen | amended by §1050h — one list: Casberi first, then every app in its category, connected ones marked on |
+| §1048 (L2BEAT and Walletbeat fold into the One Wallet) | the two rating directories were listed among the Wallet's folded apps | amended by §1051a — they join Reading |
 
 ## §1 — Thesis
 
@@ -63413,4 +63414,9 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 **What stays.** Bitrefill, alone in Shopping until §1049 moves it into the One Wallet. Historical mentions in comments and in `docs/hooks`, marked retired.
 
 **Checked.** iOS build and the Mac Catalyst compile pass, on main after §1048d. Every self-test that the change touched passes (category-fold, category-order, room-kind-tiles, purchase-stage, notify, work-stage, agent-sheet, legible-ink, dock), as do `catalog-sync.sh`, `network-reach-audit.sh`, `harness-exists-audit.py` and `source-alias-audit.py`. The full `verify.sh` was not run.
+
+## §1051a — L2BEAT and Walletbeat move to Reading; Bitrefill still folds into the One Wallet (user: "we are moving l2beat and walletbeat into reading", then "but need to tell it about bitrefill", 2026-10-01; amends §1048 and §1049)
+
+- **L2BEAT and Walletbeat join Reading.** They are rating directories: what an independent reviewer says about the rails and the wallets you use (§428), and their rows are rating changes and reviews, which is something to read, not money you hold. §1048 listed them among the apps folding into the One Wallet (and `RoomAccounts` held them back as "not folded yet"); they leave the Wallet catalogue group and fold into Reading's room, in its account menu as apps (§1050d). Reading becomes RSS, Substack, Readwise, Kindle, Bookmarks, Raindrop, NerdWallet, L2BEAT and Walletbeat.
+- **Bitrefill folds into the One Wallet**, as §1049 ruled: gift cards bought with crypto are money spent, and its rows join Wallet's like the cards' do. With Deals and Shopify removed (§1051) it is Shopping's last seat, so the Shopping category goes with it.
 
