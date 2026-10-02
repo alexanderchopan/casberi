@@ -131,7 +131,9 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The Wallet has no Accounts or Activity tile: the menu under the tiles picks the account, and Home's list is only what happened, one row per move in time, with no in/out blocks (§942, §1039). What's ahead is its own tile, Coming up, soonest first (§1041). The connections reading is deleted with its model (§1041).
 - The Wallet's tiles are Home · Cards · Coming up · Holdings · Permissions · Positions · Risk · Follow. Cards is every card's spends (`WalletCards`), counted per currency and never summed; NFTs read as rows under Holdings, and their drawing is deleted (§1048a).
 - The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b).
-- In the rooms tray a category's header (glyph and name, in blue) opens its room, and an app's circle opens that app's settings; blue is for the headers alone. The circle turns into the settings door when its room is deleted (§1048b).
+- In the rooms tray a category's header (glyph and name, in blue) opens its room, and an app's circle opens that app's settings; blue is for the headers alone. Built: keyed on `RoomAccounts.mergedRooms`, so an unmerged category keeps today's tray (§1048c).
+- A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Coming up leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under "Now" (§1048c).
+- Markets is its own category; Testnets (Hegotá Frames, Logos, `flask`) is its own, never inside Wallet (§1050, §1050a).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
 - Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows: the verbs are the last tiles, on every page, per §774's rule (§1039). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
@@ -217,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1167 of 1224 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1168 of 1225 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1380,6 +1382,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050)
 - §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats
 - §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a…
+- §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door…
 - §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a)
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
