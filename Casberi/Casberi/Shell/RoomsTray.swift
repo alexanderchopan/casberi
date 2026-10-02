@@ -338,6 +338,7 @@ struct RoomsTray: View {
         "Social":   "bubble.left.and.bubble.right.fill",
         "Reading":  "book.fill",
         "Testnets": "flask.fill",
+        "Life":     "face.smiling.inverse",
     ]
 
     private func glyph(for category: String, lit: Bool) -> String {

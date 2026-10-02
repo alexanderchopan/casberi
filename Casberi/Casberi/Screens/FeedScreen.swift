@@ -678,6 +678,9 @@ struct FeedScreen: View {
     /// New was tapped in the Agents room with no agent picked and several
     /// that can answer (prd §1054).
     @State var askingWhichAgent = false
+    /// New was tapped in the Day room with more than one thing to make
+    /// (prd §1056).
+    @State var dayMakeOpen = false
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State var openProject: ProjectRoute?
@@ -1907,6 +1910,7 @@ struct FeedScreen: View {
             }
         }
         .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
+        .modifier(DayMakeDialog(open: $dayMakeOpen, makes: dayMakes, onPick: makeInDay))
         .modifier(WhichAgentDialog(open: $askingWhichAgent, agents: answeringAgents) { provider in
             pickAgent(provider)
             chrome.beginConversation(with: provider.agent)
@@ -1923,6 +1927,23 @@ struct FeedScreen: View {
     /// screen: it must not collapse when a thing lands, or scrolling back would
     /// undo itself every sync.
     @State var windowSteps = Self.initialWindowSteps
+}
+
+/// What New makes in the Day room (prd §1056).
+private struct DayMakeDialog: ViewModifier {
+    @Binding var open: Bool
+    let makes: [DayMake]
+    let onPick: (DayMake) -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(String(localized: "New"), isPresented: $open,
+                                   titleVisibility: .hidden) {
+            ForEach(makes) { make in
+                Button(make.label) { onPick(make) }
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        }
+    }
 }
 
 /// Which agent New talks to, when the Agents room has no pick (prd §1054).

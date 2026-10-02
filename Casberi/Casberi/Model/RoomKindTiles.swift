@@ -67,7 +67,6 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     case alarms, costs
     case incidents, resolved
     case deprecations
-    case workouts, sleep, mood
 
     var id: String { rawValue }
 
@@ -114,9 +113,6 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .incidents:     return String(localized: "Incidents")
         case .resolved:      return String(localized: "Resolved")
         case .deprecations:  return String(localized: "Deprecations")
-        case .workouts:      return String(localized: "Workouts")
-        case .sleep:         return String(localized: "Sleep")
-        case .mood:          return String(localized: "Mood")
         }
     }
 
@@ -160,9 +156,6 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .incidents:     return String(localized: "Incidents that triggered")
         case .resolved:      return String(localized: "Incidents that resolved")
         case .deprecations:  return String(localized: "Packages marked deprecated")
-        case .workouts:      return String(localized: "Workouts")
-        case .sleep:         return String(localized: "Nights of sleep")
-        case .mood:          return String(localized: "Moods you logged")
         }
     }
 }
@@ -176,7 +169,9 @@ enum RoomKindTiles {
     enum Room: String, CaseIterable, Sendable {
         case safe, github, stripe, appStoreConnect, huggingFace, posthog, l2beat, walletbeat, splits
         // prd §911.
-        case polar, dodoPayments, gitlab, radicle, sentry, vercel, pagerduty, npm, pypi, aws, appleHealth
+        // Apple Health's Workouts · Sleep · Mood are deleted: Health folds
+        // into Life, which draws no tiles (prd §1050c, §1056).
+        case polar, dodoPayments, gitlab, radicle, sentry, vercel, pagerduty, npm, pypi, aws
 
         init?(source: String) {
             switch source {
@@ -199,7 +194,6 @@ enum RoomKindTiles {
             case "npm":               self = .npm
             case "PyPI":              self = .pypi
             case "AWS":               self = .aws
-            case "Apple Health":      self = .appleHealth
             default:                  return nil
             }
         }
@@ -225,7 +219,6 @@ enum RoomKindTiles {
             case .npm:             return "npm"
             case .pypi:            return "PyPI"
             case .aws:             return "AWS"
-            case .appleHealth:     return "Apple Health"
             }
         }
 
@@ -259,7 +252,6 @@ enum RoomKindTiles {
             case .pagerduty:       return [.all, .incidents, .resolved]
             case .npm, .pypi:      return [.all, .releases, .deprecations]
             case .aws:             return [.all, .alarms, .deploys, .costs]
-            case .appleHealth:     return [.all, .workouts, .sleep, .mood]
             }
         }
     }
@@ -347,9 +339,6 @@ enum RoomKindTiles {
     static let awsAlarm          = "aws:alarm:"
     static let awsPipeline       = "aws:pipeline:"
     static let awsCost           = "aws:costanomaly:"
-    static let healthWorkout     = "hkworkout:"
-    static let healthSleep       = "hksleep:"
-    static let healthMood        = "hkmood:"
 
     // MARK: - The census
 
@@ -498,12 +487,6 @@ enum RoomKindTiles {
                 if ref?.hasPrefix(RoomKindTiles.awsAlarm) == true || tags.contains("Alarm") { return .alarms }
                 if ref?.hasPrefix(RoomKindTiles.awsPipeline) == true || tags.contains("Deploy") { return .deploys }
                 if ref?.hasPrefix(RoomKindTiles.awsCost) == true || tags.contains("Cost") { return .costs }
-                return nil
-            case .appleHealth:
-                guard let ref else { return nil }
-                if ref.hasPrefix(RoomKindTiles.healthWorkout) { return .workouts }
-                if ref.hasPrefix(RoomKindTiles.healthSleep) { return .sleep }
-                if ref.hasPrefix(RoomKindTiles.healthMood) { return .mood }
                 return nil
             }
         }

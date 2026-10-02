@@ -99,7 +99,14 @@ struct FeedLedeCard: View {
         // no catalog seat: the Notes room's cover drew a title over an empty
         // box for every note of yours. Locked, it has no words to read (§982).
         let ownNote = Pinboard.isNote(thing) && thing.kind == .note && !NoteLock.isLocked(thing)
-        let category = ownNote ? "Notes" : BridgeCatalog.category(forSource: thing.source)
+        // A journal reads as prose, as a note of yours does. It was the Notes
+        // category's; Notes is no category since §1056, so it is the shape's.
+        let journal: Bool = {
+            if ownNote { return true }
+            if case .notes = FeedScreen.Shape(source: thing.source) { return true }
+            return false
+        }()
+        let category = journal ? "Notes" : BridgeCatalog.category(forSource: thing.source)
         // The three batch-two facts (prd §908), each read only where its
         // category could use it — a note body is a string walk and a work
         // reading a table lookup, neither owed to a song.

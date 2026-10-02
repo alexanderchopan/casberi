@@ -481,13 +481,6 @@ final class ShellChrome {
     /// reason, and cleared on every source change like it.
     var notesScope: NotesScope = .all
 
-    /// Which of the Calendar room's tiles is standing (prd §994) — Today,
-    /// Week or Month; never New, which is a verb. Week, the span the room
-    /// held before it had tiles, and cleared back to it on every source
-    /// change like `notesScope`.
-    var calendarScope: CalendarScope = .week
-
-
     /// The folder standing open under the Folders tile (prd §980), by name;
     /// nil is the folder list. Only ever set while `notesScope == .folders`,
     /// and cleared with it on every source change and every tile pick — the

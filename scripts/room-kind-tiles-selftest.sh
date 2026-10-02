@@ -211,7 +211,7 @@ else:
                  "versions", "reviews", "builds", "models", "datasets", "papers",
                  "metrics", "annotations", "milestones", "chains", "wallets", "news", "revisions", "accounts",
                  "sales", "subscriptions", "errors", "regressions", "deploys", "failed",
-                 "alarms", "costs", "incidents", "resolved", "deprecations", "workouts", "sleep", "mood",
+                 "alarms", "costs", "incidents", "resolved", "deprecations",
                  "watch"]:
         if not re.search(r'case \.%s:\s+return ScopeTileGlyph\.%s\b' % (case, case), body):
             fails.append(f"RoomKindTile.{case} does not wear ScopeTileGlyph.{case}")
@@ -324,10 +324,6 @@ AWSB="Casberi/Casberi/Model/AWSBridge.swift"
 for r in 'static let source = "AWS"' 'sourceRef: "aws:alarm:' 'sourceRef: "aws:pipeline:\(id)"' 'sourceRef: "aws:costanomaly:\(day)"'; do
   grep -qF "$r" "$AWSB" || { echo "✗ AWS's shape moved: $r"; exit 1; }
 done
-HKI="Casberi/Casberi/Model/HealthIngest.swift"
-for r in 'source: "Apple Health"' '"hkworkout:\(record.activityID)"' 'let ref = "hksleep:\(night.dayKey)"' 'let ref = "hkmood:\(mood.uuid.uuidString)"'; do
-  grep -qF "$r" "$HKI" || { echo "✗ Apple Health's shape moved: $r"; exit 1; }
-done
 # Walletbeat's and L2BEAT's tiles stand alone when their head is nil (prd §911).
 # Generic over the tile scope since prd §969 (Notes' tiles ride it too).
 grep -qF 'func standaloneLead<Scope: DSTileScope>(' "$FEED" \
@@ -364,8 +360,7 @@ check(RoomKindTiles.Room(source: "Safe") == .safe
 for (source, room) in [("Polar", RoomKindTiles.Room.polar), ("Dodo Payments", .dodoPayments),
                        ("GitLab", .gitlab), ("Radicle", .radicle), ("Sentry", .sentry),
                        ("Vercel", .vercel), ("PagerDuty", .pagerduty), ("npm", .npm),
-                       ("PyPI", .pypi), ("AWS", .aws),
-                       ("Apple Health", .appleHealth)] {
+                       ("PyPI", .pypi), ("AWS", .aws)] {
     check(RoomKindTiles.Room(source: source) == room, "\(source) resolves to its room (§911)")
 }
 check(RoomKindTiles.Room(source: "Wallet") == nil && RoomKindTiles.Room(source: "All") == nil,
@@ -587,11 +582,8 @@ check(awsc.kind(ref: "aws:pipeline:1", url: nil, tags: ["Deploy", "Failed"]) == 
 check(awsc.kind(ref: "aws:costanomaly:2026-09-24", url: nil, tags: ["Cost"]) == .costs, "AWS: a cost anomaly")
 check(awsc.kind(ref: "demo:aws:1", url: nil, tags: ["Alarm"]) == .alarms, "AWS: the demo's row sorts by its tag")
 check(RoomKindTiles.Room(source: "Cursor") == nil, "Cursor grows no tiles — the seat is deleted (prd §1049)")
-let hk = RoomKindTiles.Census(room: .appleHealth, refs: [])
-check(hk.kind(ref: "hkworkout:1", url: nil, tags: []) == .workouts, "Health: a workout")
-check(hk.kind(ref: "hksleep:2026-09-24", url: nil, tags: []) == .sleep, "Health: a night")
-check(hk.kind(ref: "hkmood:ABC", url: nil, tags: []) == .mood, "Health: a mood")
-check(hk.kind(ref: "demo:health:1", url: nil, tags: []) == nil, "Health: the demo's rows are All only")
+check(RoomKindTiles.Room(source: "Apple Health") == nil,
+      "Apple Health grows no tiles — it folds into Life, which has none (prd §1056)")
 
 // ── Open disputes ───────────────────────────────────────────────────────
 let d1 = "https://dashboard.stripe.com/disputes/dp_1"

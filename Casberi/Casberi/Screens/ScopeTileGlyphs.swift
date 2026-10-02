@@ -98,9 +98,6 @@ enum ScopeTileGlyph {
     static let incidents    = "light.beacon.max"
     static let resolved     = "checkmark.circle"
     static let deprecations = "archivebox"
-    static let workouts     = "figure.run"
-    static let sleep        = "bed.double"
-    static let mood         = "face.smiling"
     /// Logos' Node scope (prd §991) — the node you run.
     static let node         = "server.rack"
     /// Logos' Rewards scope (prd §1016) — what that node earns. The app's own
@@ -117,11 +114,6 @@ enum ScopeTileGlyph {
     /// The Reminders room's date scope (prd §993), Apple's own Today.
     /// Not `calendar`: that is the event kind's glyph and the Calendar seat's.
     static let today        = "sun.max"
-    /// The Calendar room's spans (prd §994); Today is Reminders' `today`
-    /// above. Month is a grid of days, not `calendar`: that is the dock's
-    /// Life glyph, and one glyph carries one meaning (prd §999).
-    static let week         = "calendar.day.timeline.left"
-    static let month        = "tablecells"
     /// The mail rooms' Attachments (prd §1019). The note sheet's attach tool
     /// wears the same clip for the same meaning; no tile or dock seat does.
     static let attachments  = "paperclip"
@@ -143,26 +135,22 @@ enum ScopeTileGlyph {
 
 /// The mail rooms' tiles (prd §1019). New is the Notes room's plus: the same
 /// verb, so the same glyph.
+/// The Day room's tiles (prd §1056).
+extension DayScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all: return ScopeTileGlyph.all
+        case .new: return ScopeTileGlyph.new
+        }
+    }
+}
+
 extension MailScope: DSTileScope {
     var glyph: String {
         switch self {
         case .all:         return ScopeTileGlyph.all
         case .attachments: return ScopeTileGlyph.attachments
         case .new:         return ScopeTileGlyph.new
-        }
-    }
-}
-
-/// The Calendar room's tiles (prd §994). New is the Notes room's plus: the
-/// same verb, so the same glyph.
-extension CalendarScope: DSTileScope {
-    static var readsInTime: Bool { true }
-    var glyph: String {
-        switch self {
-        case .today: return ScopeTileGlyph.today
-        case .week:  return ScopeTileGlyph.week
-        case .month: return ScopeTileGlyph.month
-        case .new:   return ScopeTileGlyph.new
         }
     }
 }
@@ -241,9 +229,6 @@ extension RoomKindTile: DSTileScope {
         case .incidents:     return ScopeTileGlyph.incidents
         case .resolved:      return ScopeTileGlyph.resolved
         case .deprecations:  return ScopeTileGlyph.deprecations
-        case .workouts:      return ScopeTileGlyph.workouts
-        case .sleep:         return ScopeTileGlyph.sleep
-        case .mood:          return ScopeTileGlyph.mood
         }
     }
 }

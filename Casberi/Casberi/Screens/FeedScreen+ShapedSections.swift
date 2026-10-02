@@ -622,6 +622,8 @@ extension FeedScreen {
                 bundledSections(visible, nextEventID: nextEventID,
                                 heroShown: heroShown)
                 corpusFloorSection(visible)
+            } else if source == RoomAccounts.dayRoom {
+                dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if agentRoomShown {
                 agentRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if RoomKindTiles.Room(source: source) != nil {

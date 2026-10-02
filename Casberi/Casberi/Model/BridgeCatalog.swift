@@ -800,9 +800,13 @@ enum BridgeCatalog {
         // "Learning" joins Life 2026-09-16 with Duolingo (prd §776) rather
         // than earning a category of its own: a category is a dock chip with
         // a glyph and a room, and one seat does not fill one.
-        // Photos moved to Media (prd §1050b, built §1055): the square grid
-        // Media draws is the one Photos already had.
-        ("Life",    "Calendar",    ["Schedule", "Fitness", "People", "Storage", "Mail", "Learning"]),
+        // LIFE SPLITS IN TWO (prd §1049, built §1056). Day is what needs you
+        // next — the calendar, to-dos and mail; Life is what you made, kept
+        // or did — journals, files, workouts, lessons. Photos moved to Media
+        // (§1050b), and Notes' seats moved here when Notes stopped being a
+        // category (§1049).
+        ("Day",     "Calendar",    ["Schedule", "Mail"]),
+        ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Notes"]),
         ("Agents",  "Claude",      ["Agent"]),
         ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images", "Photos"]),
         ("Social",  "Bluesky",     ["Network"]),
@@ -817,7 +821,6 @@ enum BridgeCatalog {
         // seats, prd §638; Shopify and Deals followed someone else's catalogue
         // and were deleted 2026-10-01, prd §1049).
         ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Notes",   "Obsidian",    ["Notes"]),
     ]
 
     static func category(of offer: Offer) -> String {

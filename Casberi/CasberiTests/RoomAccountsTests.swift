@@ -110,6 +110,26 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: "Spotify")?.room == RoomAccounts.mediaRoom)
     }
 
+    // MARK: - Life and Day (prd §1056)
+
+    /// Life is what you made, kept or did; Day what needs you next; Notes is
+    /// no category, its journals Life's.
+    @Test func lifeAndDaySplit() {
+        let life = Set(RoomAccounts.seats(for: RoomAccounts.lifeRoom).map(\.name))
+        let day = Set(RoomAccounts.seats(for: RoomAccounts.dayRoom).map(\.name))
+        for app in ["Apple Journal", "Day One", "Obsidian", "Files", "Dropbox", "Apple Health",
+                    "Duolingo"] {
+            #expect(life.contains(app), "\(app) is in Life")
+        }
+        for app in ["Calendar", "Reminders", "Todoist", "Cal.com", "Calendly", "Gmail", "iCloud Mail"] {
+            #expect(day.contains(app), "\(app) is in Day")
+        }
+        #expect(life.isDisjoint(with: day))
+        #expect(!life.contains("Photos"))
+        #expect(!BridgeCatalog.categories.map(\.name).contains("Notes"))
+        #expect(CategoryOrder.defaultOrder.contains("Day"))
+    }
+
     // MARK: - Testnets (prd §1050k)
 
     /// The two networks fold into Testnets, never into the Wallet: test money

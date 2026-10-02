@@ -129,12 +129,13 @@ enum CategoryFold {
         "Markets":  "chart.line.uptrend.xyaxis",
         "Testnets": "flask",
         "Work":     "laptopcomputer",
-        "Life":     "calendar",
+        // Day is what needs you next, Life what you made (prd §1049, §1050a).
+        "Day":      "calendar.day.timeline.left",
+        "Life":     "face.smiling",
         "Agents":   "terminal",
         "Media":    "play.circle",
         "Social":   "bubble.left.and.bubble.right",
         "Reading":  "book",
-        "Notes":    "note.text",
         // "All" is a tile since prd §767: the inbox, since the room is
         // every account's newest in one place.
         "All":      "tray.full",

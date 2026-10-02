@@ -1717,7 +1717,6 @@ harness "Row-window self-test" "row-window self-test" "scripts/row-window-selfte
 # The Calendar room's tiles and month grid (prd §994): the spans roll from
 # today, the grid holds all of Month, and the ingest fetches far enough for
 # Month to be true — a grid over a week of data would draw empty weeks.
-harness "Calendar-scope self-test" "calendar-scope self-test" "scripts/calendar-scope-selftest.sh" "the calendar-scope self-test failed — run scripts/calendar-scope-selftest.sh"
 
 # The mail rooms' tiles (prd §1019): All · Attachments · New in Gmail and
 # iCloud Mail alike, the Attachments tile reading the fact the ingest writes

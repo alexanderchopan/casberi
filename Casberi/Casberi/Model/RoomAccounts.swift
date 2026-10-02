@@ -65,6 +65,8 @@ enum RoomAccounts {
         case readingRoom: return reading
         case agentsRoom: return agents
         case mediaRoom: return media
+        case lifeRoom: return life
+        case dayRoom: return day
         default: return []
         }
     }
@@ -96,7 +98,8 @@ enum RoomAccounts {
     /// Every room that has absorbed apps. Each is named for its category,
     /// so the category's tray row and the room are one name (the Wallet's
     /// balance room always was).
-    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, readingRoom, agentsRoom, mediaRoom]
+    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, readingRoom, agentsRoom, mediaRoom,
+                                          lifeRoom, dayRoom]
 
     /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
     /// the room exists while Hegotá Frames or Logos is connected.
@@ -110,6 +113,10 @@ enum RoomAccounts {
 
     /// The Media room (prd §1049, §1050b, built §1055).
     static let mediaRoom = "Media"
+
+    /// The Life and Day rooms (prd §1049, §1050c, built §1056).
+    static let lifeRoom = "Life"
+    static let dayRoom = "Day"
 
     /// The merged room a category opens, nil while the category still opens
     /// its apps' own rooms.
@@ -175,6 +182,15 @@ enum RoomAccounts {
     /// Media's (prd §1049, §1050b): YouTube, Twitch, Apple Music, Spotify,
     /// Podcasts, Steam, Pinterest and Photos.
     private static let media = catalogSeats(mediaRoom)
+
+    /// Life's (prd §1049): Apple Journal, Day One, Obsidian, Files, Dropbox,
+    /// Apple Health with Strava and Garmin, Duolingo, Contacts. Contacts
+    /// lands no row (§916), so it never reaches the menu.
+    private static let life = catalogSeats(lifeRoom)
+
+    /// Day's (prd §1049): Calendar, Reminders, Todoist, Cal.com, Calendly,
+    /// Gmail and iCloud Mail.
+    private static let day = catalogSeats(dayRoom)
 
     /// The testnets (prd §1050): test money, never in the Wallet's menu or
     /// total (§83).
