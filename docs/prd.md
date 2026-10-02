@@ -63594,3 +63594,11 @@ Amends §1058's rows. §1058 drew each category as a round glyph and its name, w
 **The card** widens from 70% to 73% of the screen (cap 300pt) so "Testnets" fits beside five discs.
 
 **Checked.** The app builds; `category-fold-selftest.sh`, `dock-selftest.sh`, `ds-template-audit.py`. On the simulator with the demo: every row draws its disc, apps and count; Linear opens Work scoped to Linear.
+
+## §1062 — A swipe right on Home opens the tray (a user: on Home "there is nothing to swipe right onto", wishing it raised the tray instead of only the face; user: "ok", 2026-10-02) — BUILT
+
+Home is the one screen with nothing before it in the walk (§663), so a swipe right there rubber-banded and sprang back: a gesture that answered the hand and did nothing. It now opens the rooms tray once the swipe commits. The tray grows out of the bottom-left corner (§1058), so pulling right from Home pulls it out, and the gesture and the result point the same way. A list of apps there instead was weighed and declined: a second way to get around would duplicate the tray, and it is 1.0's wall again.
+
+Only Home, only at the root (no pushed screen), and only while the tray is shut; every other end of the walk still springs home, and the rubber band during the drag is unchanged.
+
+**Checked.** The app builds. On the simulator with the demo, a swipe right on Home raises the tray with Home's disc white.
