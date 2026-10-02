@@ -43,8 +43,17 @@ extension FeedScreen {
     /// Gnosis Pay, which holds nothing in the total). `scoped` is idempotent.
     var portfolioShown: WalletPortfolio? {
         guard let seat = selectedSeat else { return portfolio }
-        guard let slice = portfolio?.scoped(to: seat), !slice.isEmpty else { return nil }
+        guard let slice = portfolio.map({ Self.slice($0, for: seat) }), !slice.isEmpty else { return nil }
         return slice
+    }
+
+    /// An app's share of the Wallet's money. A Safe is an account (prd
+    /// §1069): its money is what its addresses hold, which no holder prefix
+    /// names.
+    static func slice(_ whole: WalletPortfolio, for seat: RoomAccounts.Seat) -> WalletPortfolio {
+        seat.source == SafeBridge.sourceName
+            ? whole.scoped(toAddresses: SafeBridge.detectedAddresses())
+            : whole.scoped(to: seat)
     }
 
     /// The catalogue names of every connected or attention-needing seat.

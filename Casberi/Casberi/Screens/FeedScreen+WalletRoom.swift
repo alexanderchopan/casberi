@@ -222,15 +222,17 @@ extension FeedScreen {
                         if slot.isShowing(chrome.walletScope) {
                             // An app the menu picked draws its own head here
                             // when it has one (prd §1048d); else the balance.
-                            if let head = seatHead {
+                            if selectedSeat != nil, !walletScopeIsEmpty(.holdings) {
+                                // An app with money (an exchange, prd §1067;
+                                // a Safe, §1069, user: "Safe should still show
+                                // balance on home shouldn't it?") leads with
+                                // what it holds, the figure its Holdings tile
+                                // draws. A Safe's waiting signatures stand in
+                                // Coming up, where they already are.
+                                holdingsBlockSection
+                            } else if let head = seatHead {
                                 sourceHeadCard(head, visible: visible)
                                     .environment(\.dsRoomHeadInWell, true)
-                            } else if selectedSeat != nil, !walletScopeIsEmpty(.holdings) {
-                                // An app with money and no head (an exchange,
-                                // prd §1067) has no line of its own to draw,
-                                // so Home draws what it holds: the figure its
-                                // Holdings tile draws, one number between them.
-                                holdingsBlockSection
                             } else if selectedSeat != nil, let newest = visible.first {
                                 // An app with no money and no head (a Wise
                                 // with nothing priced, Peer, Splits) leads

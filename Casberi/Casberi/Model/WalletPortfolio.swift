@@ -226,8 +226,18 @@ struct WalletPortfolio: Equatable {
     /// The menu's app pick reads it, so the box, the map and the list all
     /// state that app's money and nothing else.
     func scoped(to seat: RoomAccounts.Seat) -> WalletPortfolio {
+        scoped { seat.holds($0) }
+    }
+
+    /// The slice held by the given addresses (a Safe's, prd §1069), matched
+    /// without regard to case.
+    func scoped(toAddresses addresses: Set<String>) -> WalletPortfolio {
+        scoped { addresses.contains($0.lowercased()) }
+    }
+
+    private func scoped(_ keeps: (String) -> Bool) -> WalletPortfolio {
         let kept = positions.compactMap { position -> Position? in
-            let holders = position.holders.filter { seat.holds($0.address) }
+            let holders = position.holders.filter { keeps($0.address) }
             let usd = holders.reduce(0) { $0 + $1.usd }
             guard usd > 0 else { return nil }
             return Position(symbol: position.symbol, usd: usd, route: position.route, holders: holders)

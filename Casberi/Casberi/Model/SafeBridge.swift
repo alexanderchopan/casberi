@@ -423,6 +423,13 @@ enum SafeBridge {
         guard known.insert(entry).inserted else { return }
         UserDefaults.standard.set(Array(known), forKey: detectedKey)
     }
+    /// Every detected Safe's address, lowercased, across chains — what the
+    /// Wallet's Safe pick slices the total by (prd §1069).
+    static func detectedAddresses() -> Set<String> {
+        let entries = (UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []
+        return Set(entries.compactMap { $0.split(separator: ":").last.map { $0.lowercased() } })
+    }
+
     static func detectedCount() -> Int {
         ((UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []).count
     }

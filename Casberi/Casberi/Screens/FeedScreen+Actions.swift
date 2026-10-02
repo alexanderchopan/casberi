@@ -342,7 +342,7 @@ extension FeedScreen {
             // guard `loadWalletLive` keeps).
             guard scope == selectedWallet, scopeKey == chrome.walletScope else { return }
             if let seat, let whole = read?.portfolio {
-                let slice = whole.scoped(to: seat)
+                let slice = Self.slice(whole, for: seat)
                 read = slice.isEmpty ? nil : (WalletIngest.holdingsDoc(slice), slice)
             }
             if let read {
