@@ -63602,3 +63602,11 @@ Home is the one screen with nothing before it in the walk (§663), so a swipe ri
 Only Home, only at the root (no pushed screen), and only while the tray is shut; every other end of the walk still springs home, and the rubber band during the drag is unchanged.
 
 **Checked.** The app builds. On the simulator with the demo, a swipe right on Home raises the tray with Home's disc white.
+
+## §1063 — The Wallet category wears the dollar sign (user: "do we have two icons the same", "is 'wallet' category icon same as apple card?", "maybe we change wallet to dollar sign", "do dollar sign", 2026-10-02) — BUILT
+
+Amends §662's glyph table. The Wallet category wore `creditcard.fill`, and so does Apple Wallet's mark (`KindGlyph`), so §1061's tray drew the same card twice on the Wallet row: the category's disc first, Apple Wallet's fourth. `dollarsign` was the alternative §662 declined, because the room holds EVM, Solana and Bitcoin and a currency sign claims one of them; the user takes it now. `wallet.bifold` was weighed and is the Wallet seat's own glyph, a clash of its own. Nothing else wears a bare `dollarsign`.
+
+The standing Wallet keeps the same glyph (no fill variant). `tile-glyph-audit.py` reserves `dollarsign` for the Wallet in place of the two credit cards; the Cards tile keeps `creditcard.and.123`.
+
+**Checked.** The app builds; `tile-glyph-audit.py` and its self-test (nine mutations), `category-fold-selftest.sh`. On the simulator the tray's Wallet row leads with the dollar sign.
