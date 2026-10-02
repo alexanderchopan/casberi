@@ -334,6 +334,12 @@ final class ShellChrome {
     /// remounts when its pick changes the screen it shows.
     var mergedScope: [String: String] = [:]
 
+    /// The pick a merged room's menu holds: an address or an app in the
+    /// Wallet, an app anywhere else.
+    func roomScope(_ room: String) -> String? {
+        room == CategoryFold.walletRoom ? walletScope : mergedScope[room]
+    }
+
     /// A door that named a folded app lands in its merged room, scoped to it.
     func pickSeat(_ seat: RoomAccounts.Seat, in room: String) {
         let id = RoomAccounts.scopeID(seat)

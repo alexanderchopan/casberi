@@ -258,7 +258,8 @@ struct FeedScreen: View {
             // reason: there is no corpus-scale materialisation to defer.
             _things = Query(filter: #Predicate<Thing> { $0.pinnedAt != nil || $0.source == "You" },
                             sort: \Thing.capturedAt, order: .reverse)
-        } else if source == CategoryFold.walletRoom {
+        } else if RoomAccounts.mergedRooms.contains(source) {
+            // **A MERGED ROOM READS EVERY APP IT FOLDED IN (prd §1048, §1050m).**
             // **THE WALLET CARRIES THE CARDS (prd §1048).** Its Cards tile reads
             // the card seats' spends (`WalletCards`), so the room's one query
             // takes their rows beside its own: one fetch, live like every other

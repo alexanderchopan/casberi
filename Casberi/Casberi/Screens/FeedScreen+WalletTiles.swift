@@ -31,7 +31,7 @@ extension FeedScreen {
     /// Nil once the app is disconnected: a pick that is no longer in the menu
     /// reads as All, as an unwatched address does (`onChange(of: wallet.addresses)`).
     var selectedSeat: RoomAccounts.Seat? {
-        guard let seat = RoomAccounts.seat(chrome.walletScope, in: source),
+        guard let seat = RoomAccounts.seat(chrome.roomScope(source), in: source),
               RoomAccounts.isConnected(seat, names: connectedSeatNames) else { return nil }
         return seat
     }

@@ -23,6 +23,7 @@ extension FeedScreen {
     /// empty result must keep the room (and the control) rather than hand it
     /// to the generic empty state — whose only door leaves the room (§538).
     var roomScopePicked: Bool {
+        if mergedMenuDraws && selectedSeat != nil { return true }
         guard roomScopeInRoom else { return false }
         return (SocialRoom.hasRoster(source) && chrome.personScope != nil)
             || (source == "GitHub" && chrome.githubScope != nil)
@@ -31,6 +32,7 @@ extension FeedScreen {
 
     /// Whether `roomScopeSection` draws anything — the three rails' own gates.
     var roomScopeDraws: Bool {
+        if mergedMenuDraws { return true }
         guard roomScopeInRoom else { return false }
         return GitHubScopeRail.shows(source: source, watched: GitHubWatchStore.shared.watches.count)
             || PinterestScopeRail.shows(source: source, follows: PinterestStore.shared.follows.count)
@@ -41,7 +43,9 @@ extension FeedScreen {
     /// has nothing to pick between, or off the phone.
     @ViewBuilder
     var roomScopeSection: some View {
-        if roomScopeInRoom {
+        if mergedMenuDraws {
+            mergedRoomMenu
+        } else if roomScopeInRoom {
             if source == "GitHub" {
                 githubScopeMenu
             } else if source == "Pinterest" {

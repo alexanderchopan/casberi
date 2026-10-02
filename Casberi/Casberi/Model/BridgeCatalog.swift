@@ -672,14 +672,11 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Kindle",      tagline: "Import your highlights",                group: "Reading",   connectable: true,
               needsSetup: true),
-        // WALLET, not Reading (user, prd §780c: "acorns and rocket and nerd go
-        // in wallet"), reversing §780's placement. The original argument was
-        // that a money shelf promises an account this seat has no door to —
-        // the ruling is that a person looking for their finance apps looks in
-        // one place, and the tagline ("news") is what keeps the promise
-        // honest. See `NerdWalletBridge` for why it is one switch and not a
-        // follow list.
-        Offer(name: "NerdWallet",  tagline: "Personal-finance news, as it lands", group: "Wallet",   connectable: true,
+        // READING (prd §1049, built §1050m), reversing §780c's Wallet: news
+        // has no dollar figure, so it cannot sit in the One Wallet, and
+        // finance is its topic, not its kind. See `NerdWalletBridge` for why
+        // it is one switch and not a follow list.
+        Offer(name: "NerdWallet",  tagline: "Personal-finance news, as it lands", group: "Reading",  connectable: true,
               needsSetup: true, added: day(2026, 9, 15)),
         // Reading group, beside Kindle (2026-07-28, prd §224, corrected same
         // day from an initial Notes placement) — both are import-only, no

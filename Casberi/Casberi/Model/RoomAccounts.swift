@@ -28,6 +28,13 @@ enum RoomAccounts {
         /// verbs and accounts are its own, and no view adds the two networks.
         var ownScreen = false
 
+        /// Whether a row of `source` is this app's: its own source, its
+        /// catalogue name, or a name it was renamed from (`Corpus.renamedSources`).
+        func owns(_ source: String) -> Bool {
+            source == self.source || source == name
+                || Corpus.renamedSources[source]?.current == name
+        }
+
         func holds(_ holderID: String) -> Bool {
             guard let holder else { return false }
             return holder.hasSuffix(":") ? holderID.hasPrefix(holder) : holderID == holder
@@ -55,6 +62,7 @@ enum RoomAccounts {
         switch room {
         case CategoryFold.walletRoom: return wallet
         case testnetsRoom: return testnets
+        case readingRoom: return reading
         default: return []
         }
     }
@@ -76,7 +84,7 @@ enum RoomAccounts {
     /// scoped to it. Nil for a source that is its own room.
     static func host(ofSource source: String) -> (room: String, seat: Seat)? {
         for room in mergedRooms {
-            if let seat = seats(for: room).first(where: { $0.source == source || $0.name == source }) {
+            if let seat = seats(for: room).first(where: { $0.owns(source) }) {
                 return (room, seat)
             }
         }
@@ -86,11 +94,14 @@ enum RoomAccounts {
     /// Every room that has absorbed apps. Each is named for its category,
     /// so the category's tray row and the room are one name (the Wallet's
     /// balance room always was).
-    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom]
+    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, readingRoom]
 
     /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
     /// the room exists while Hegotá Frames or Logos is connected.
     static let testnetsRoom = "Testnets"
+
+    /// The Reading room (prd §1049, §1050d, §1051a, built §1050m).
+    static let readingRoom = "Reading"
 
     /// The merged room a category opens, nil while the category still opens
     /// its apps' own rooms.
@@ -112,7 +123,11 @@ enum RoomAccounts {
     /// Every source a room's query, its row filter and its safety-net probe
     /// fetch: the room alone, or the room with every app it folded in.
     static func roomSources(_ room: String) -> [String] {
-        [room] + seats(for: room).compactMap(\.source)
+        let seats = seats(for: room)
+        let names = Set(seats.map(\.name))
+        // Rows stamped under a seat's old name still belong to it (§647).
+        let renamed = Corpus.renamedSources.filter { names.contains($0.value.current) }.keys.sorted()
+        return [room] + seats.compactMap(\.source) + renamed
     }
 
     /// Whether a row of `source` belongs in `room` as a folded app's row.
@@ -129,6 +144,21 @@ enum RoomAccounts {
     private static let names = String(localized: "Names")
     private static let teams = String(localized: "Teams")
     private static let networks = String(localized: "Networks")
+
+    /// A category's catalogue members as seats, A to Z (§995's order for a
+    /// room's picks): a room whose apps have no money to slice and no screen
+    /// of their own needs no table of its own, so a new app in the category
+    /// joins the menu with nothing to add here. `group` is empty: the menu
+    /// draws flat.
+    private static func catalogSeats(_ category: String) -> [Seat] {
+        BridgeCatalog.allOffers.filter { BridgeCatalog.category(of: $0) == category }
+            .map { Seat(name: $0.name, source: $0.name, holder: nil, group: "", mark: $0.name) }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// Reading's (prd §1049): RSS, Substack, Readwise, Kindle, Bookmarks,
+    /// Raindrop, NerdWallet, L2BEAT and Walletbeat (§1051a).
+    private static let reading = catalogSeats(readingRoom)
 
     /// The testnets (prd §1050): test money, never in the Wallet's menu or
     /// total (§83).

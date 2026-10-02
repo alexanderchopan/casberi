@@ -107,17 +107,15 @@ grep -qE 'TokenVault|WKWebView|Authorization|bearer' "$STRIPPED" "$SCREEN_STRIPP
 # --- guard 8: the catalog and the registry agree ----------------------------
 grep -q '"NerdWallet"' "$CATALOG" \
   || note "NerdWallet left the catalog but the seat is still here"
-# WALLET since §780c (user: "acorns and rocket and nerd go in wallet"),
-# reversing §780's Reading placement. The original guard read the other way and
-# said "a money shelf promises the account this seat has no door to" — a fair
-# design argument the user overruled: a person looking for their finance apps
-# looks in one place. What still has to hold is the honesty half, and that is
-# the TAGLINE — "news", not a balance — which is checked below. A red guard
-# after a ruling is a guard to amend, not delete.
-grep -q 'group: "Wallet"' <(grep 'Offer(name: "NerdWallet"' "$CATALOG") \
-  || note "NerdWallet left the Wallet shelf — §780c put all three finance seats on one shelf"
+# READING since §1049 (built §1050m), reversing §780c's Wallet: news has no
+# dollar figure, so it cannot sit in the One Wallet, whose box is one total.
+# The guard was amended, not deleted (a red guard after a ruling is a guard to
+# amend): back on the Wallet shelf, NerdWallet would join the Wallet's menu
+# beside money it does not hold. The tagline still says "news".
+grep -q 'group: "Reading"' <(grep 'Offer(name: "NerdWallet"' "$CATALOG") \
+  || note "NerdWallet left the Reading shelf — §1049 moved it out of the One Wallet, which counts money"
 grep -qi 'news' <(grep 'Offer(name: "NerdWallet"' "$CATALOG") \
-  || note "NerdWallet's tagline no longer says 'news' — on a money shelf that word is what keeps it honest (§780c)"
+  || note "NerdWallet's tagline no longer says 'news' — it is what says the seat holds no account (§780c)"
 grep -q 'www.nerdwallet.com' "$REACH" \
   || note "the host left NetworkReach — it is fetched on every foreground (ship gate, prd §205)"
 grep -q 'NerdWalletIngest.refresh' "$REFRESH" \

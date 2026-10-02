@@ -131,7 +131,7 @@ extension FeedScreen {
                 // **AN APP PICK IN A MERGED ROOM (prd §1048d).** `selectedWallet`
                 // reads nil for one, so the pick re-keys here, and a Privy pick
                 // carries Privy's store revision as its own room did.
-                RoomAccounts.isSeat(chrome.walletScope) ? (chrome.walletScope ?? "") : "",
+                RoomAccounts.isSeat(chrome.roomScope(source)) ? (chrome.roomScope(source) ?? "") : "",
                 chrome.walletScope == "seat:Privy" ? PrivyHomeStore.identity : "",
                 // **AND ITS SCOPE** (2026-09-02). The face rail scopes this
                 // room's head from today, so it belongs in the memo key for
@@ -344,7 +344,7 @@ extension FeedScreen {
             feedHealth: FeedRoomHealthSource.standing(for: source),
             quietHead: quiet ? head : nil)
         if let seat = selectedSeat, let seatSource = seat.source {
-            computed.seatHead = sourceHead(rows.filter { $0.source == seatSource }, for: seatSource)
+            computed.seatHead = sourceHead(rows.filter { seat.owns($0.source) }, for: seatSource)
         }
         if let kindRoom = RoomKindTiles.Room(source: source) {
             let kinds = kindRoomReading(kindRoom, rows: rows)

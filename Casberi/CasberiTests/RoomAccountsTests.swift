@@ -48,11 +48,38 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: "0xBow Privacy Pools") != nil)
         // Bitrefill folded in with §1051a; L2BEAT and Walletbeat went to Reading.
         #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)
-        #expect(RoomAccounts.host(ofSource: "L2BEAT") == nil)
-        #expect(RoomAccounts.host(ofSource: "Walletbeat") == nil)
+        #expect(RoomAccounts.host(ofSource: "L2BEAT")?.room == RoomAccounts.readingRoom)
+        #expect(RoomAccounts.host(ofSource: "Walletbeat")?.room == RoomAccounts.readingRoom)
         for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom, "Stripe"] {
             #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
         }
+    }
+
+    // MARK: - Reading (prd §1050m)
+
+    /// Reading's menu is the catalogue's Reading members, A to Z, with
+    /// NerdWallet, L2BEAT and Walletbeat among them and no Wallet app.
+    @Test func readingListsItsCatalogueAppsAToZ() {
+        let names = RoomAccounts.seats(for: RoomAccounts.readingRoom).map(\.name)
+        for app in ["RSS", "Substack", "Readwise", "Kindle", "Bookmarks", "Raindrop",
+                    "NerdWallet", "L2BEAT", "Walletbeat"] {
+            #expect(names.contains(app), "\(app) is in Reading")
+        }
+        #expect(!names.contains("Safe"))
+        #expect(names == names.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
+        #expect(BridgeCatalog.category(forSource: "NerdWallet") == "Reading")
+    }
+
+    /// A folded reading app lands in Reading, scoped to it, and its rows ride
+    /// the room; an app's own rows are its own and nobody else's.
+    @Test func aReadingAppFoldsIntoReading() throws {
+        let host = try #require(RoomAccounts.host(ofSource: "L2BEAT"))
+        #expect(host.room == RoomAccounts.readingRoom)
+        #expect(host.seat.owns("L2BEAT"))
+        #expect(!host.seat.owns("Walletbeat"))
+        #expect(RoomAccounts.rides(room: RoomAccounts.readingRoom, source: "RSS"))
+        #expect(!RoomAccounts.rides(room: RoomAccounts.readingRoom, source: "GitHub"))
+        #expect(BridgeCatalog.category(forSource: RoomAccounts.readingRoom) == "Reading")
     }
 
     // MARK: - Testnets (prd §1050k)

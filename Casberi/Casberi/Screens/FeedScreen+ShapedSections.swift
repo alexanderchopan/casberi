@@ -110,7 +110,10 @@ extension FeedScreen {
         // re-stated conditions rather than five independent lets (2026-08-04).
         // A nil `heads` is a head that has not been computed yet and draws
         // exactly what a head that DECLINED draws.
-        let sourceHead = liveStream == nil && anniversary == nil ? heads?.sourceHead : nil
+        // In a merged room an app pick shows that app's own head, or none —
+        // never the room's, which describes every app (prd §1048d, §1050m).
+        let roomHead = selectedSeat != nil ? heads?.seatHead : heads?.sourceHead
+        let sourceHead = liveStream == nil && anniversary == nil ? roomHead : nil
         // (The All feed's cross-source "thread" head lived here for one day and
         // was DELETED, prd §333. It ranked a shared WORD as a subject, so its
         // headline read "Wallet" over a Files row, an x402 blurb containing

@@ -307,6 +307,9 @@ extension FeedScreen {
     /// already how card spends and transfers want to look.
     func rowShape(_ thing: Thing) -> Shape {
         guard RoomAccounts.rides(room: source, source: thing.source) else { return shape }
+        // Outside the Wallet a folded app's row keeps its own design: a
+        // rating change reads as one in Reading, an article as an article.
+        guard source == CategoryFold.walletRoom else { return Shape(source: thing.source) }
         if case .cardPointers = Shape(source: thing.source) { return .cardPointers }
         return shape
     }
