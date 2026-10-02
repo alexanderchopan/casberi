@@ -63610,3 +63610,17 @@ Amends §662's glyph table. The Wallet category wore `creditcard.fill`, and so d
 The standing Wallet keeps the same glyph (no fill variant). `tile-glyph-audit.py` reserves `dollarsign` for the Wallet in place of the two credit cards; the Cards tile keeps `creditcard.and.123`.
 
 **Checked.** The app builds; `tile-glyph-audit.py` and its self-test (nine mutations), `category-fold-selftest.sh`. On the simulator the tray's Wallet row leads with the dollar sign.
+
+## §1064 — In the demo, no pick opens an empty page (user: "in the demo i shouldn't be able to pick something and it go to empty (i clicked gemini and saw this", 2026-10-02) — BUILT
+
+The demo connects seats it pours no rows for: Coinbase, Kraken, Binance and Gemini Exchange in the Wallet, and others in other rooms. Each sat in its room's account menu and in the tray, and picking one opened "Nothing from Wallet yet" with the box gone — an empty page in a mode where nothing is waiting to arrive.
+
+**The rule.** In the demo, a merged room's menu (the Wallet's and `mergedMenuSeats`) and the tray's app icons list a folded app only if it has a row (`ShellChrome.seatShows`). Money alone does not count: a picked app with no rows opens the empty page even when it holds money (measured: Coinbase). A testnet draws its own screen from live reads (`ownScreen`) and always stays. Outside the demo nothing changes: an app you just connected is a pick before its first row, and its page says it is waiting.
+
+**Where the answer comes from.** `ChipWalker`'s walk, off main, now also reports every folded app that has a row (`Walk.folded`, one indexed fetch each), published as `ShellChrome.landedSources`. Folded apps earn no room, so the strip's own sources never named them. Until the first walk lands the set is empty and filters nothing.
+
+**The empty page names the app.** A merged room narrowed to one app says "Nothing from Coinbase yet", not "Nothing from Wallet yet".
+
+**Follow-up, not done.** The better demo pours rows for the exchanges, which are worth showing; until then they are left out rather than shown empty.
+
+**Checked.** The app builds. On the simulator with the demo: the Wallet menu drops the four exchanges and keeps Safe, Privy, Wise, Acorns, Apple Wallet, Gnosis Pay and MetaMask Card; the tray's Wallet row reads +13 where it read +17, Testnets keeps both networks; Coinbase picked by launch argument says "Nothing from Coinbase yet".
