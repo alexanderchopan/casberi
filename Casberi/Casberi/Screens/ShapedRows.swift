@@ -2892,14 +2892,16 @@ struct WatchlistLede: View {
             header
             if !movers.isEmpty {
                 let widest = movers.map { abs($0.change) }.max() ?? 1
-                ForEach(Array(movers.enumerated()), id: \.offset) { _, mover in
-                    moverRow(mover, widest: widest)
+                ForEach(Array(movers.enumerated()), id: \.offset) { index, mover in
+                    moverRow(mover, widest: widest, index: index)
                 }
             }
         }
     }
 
-    private func moverRow(_ mover: (name: String, change: Double), widest: Double) -> some View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private func moverRow(_ mover: (name: String, change: Double), widest: Double, index: Int) -> some View {
         // A change that rounds to zero has no sign and no colour (§83).
         let flat = TokenChartStyle.isFlat(mover.change)
         let up = mover.change > 0
@@ -2909,14 +2911,11 @@ struct WatchlistLede: View {
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .frame(width: 104, alignment: .leading)
-            GeometryReader { g in
-                Capsule()
-                    .fill(hue)
-                    .frame(width: max(6, g.size.width * abs(mover.change) / max(widest, 0.0001)),
-                           height: 8)
-                    .frame(maxHeight: .infinity, alignment: .center)
-            }
-            .frame(height: 20)
+            // The shared bar (`ShareBar`), so the moves arrive as every
+            // other proportional drawing does, and hold still under Reduce
+            // Motion.
+            ShareBar(fraction: abs(mover.change) / max(widest, 0.0001),
+                     index: index, fill: hue, reduceMotion: reduceMotion)
             Text(TokenChartStyle.changeText(mover.change))
                 .dsText(.subhead12)
                 .foregroundStyle(flat ? DS.textTertiary : (up ? DS.confirmInk : DS.destructiveInk))

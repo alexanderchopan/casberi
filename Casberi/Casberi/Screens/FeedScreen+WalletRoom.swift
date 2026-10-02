@@ -242,6 +242,7 @@ extension FeedScreen {
                                 WalletSeatLatestLead(thing: newest)
                                     .contentShape(Rectangle())
                                     .onTapGesture { openThing(newest) }
+                                    .dsTapCard()
                             } else {
                                 walletTilesSection(visible, streamTotal: streamTotal,
                                                    drawsChart: true)
@@ -1600,7 +1601,13 @@ extension FeedScreen {
 struct WalletSeatLatestLead: View {
     let thing: Thing
 
+    /// Liveness guard (build 188, `ThingRowKeying.swift`): a heal can delete
+    /// the thing while this is on screen.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
                 BridgeIcon(name: BridgeCatalog.seatName(forSource: thing.source),

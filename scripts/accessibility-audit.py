@@ -169,6 +169,13 @@ TOKENS = os.path.join(ROOT, "Casberi", "Casberi", "Design", "DesignTokens.swift"
 
 # A conscious ruling per entry, never a snooze. "file:symbol — why".
 KNOWN_EXEMPT = {
+    # The rooms tray's category disc (prd §1061, §1071, user: "turn everything
+    # else to 30"). A row is a name and five 30pt discs 6pt apart; 44pt each
+    # would leave no width for the category's name. Each disc takes the full
+    # 52pt row height and every point to its neighbours (`contentShape` inset
+    # by half the gap, no layout change), and the category is also reachable
+    # from its name, which spans the row's left half.
+    "RoomsTray.swift:304",
     # An entry here is a statement that the control is genuinely
     # unreachable-by-design or genuinely decorative, with the reason written out.
     #

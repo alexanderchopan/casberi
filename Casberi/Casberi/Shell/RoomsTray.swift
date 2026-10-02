@@ -298,6 +298,7 @@ struct RoomsTray: View {
                               bounces: lit)
                 }
                 .buttonStyle(PressSpring())
+                .contentShape(Rectangle().inset(by: -Self.iconGap / 2))
                 .accessibilityLabel(Text("All of \(category)"))
                 ForEach(shown, id: \.name) { app in
                     Button {
@@ -306,6 +307,7 @@ struct RoomsTray: View {
                         BridgeIcon(name: app.mark, size: Self.icon, circular: true)
                     }
                     .buttonStyle(PressSpring())
+                    .contentShape(Rectangle().inset(by: -Self.iconGap / 2))
                     .accessibilityLabel(Text(app.name))
                 }
                 if more > 0 {
