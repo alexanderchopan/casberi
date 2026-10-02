@@ -920,6 +920,24 @@ final class ShellChrome {
     /// reader now goes through `CategoryFold.switcherFloor`.)
     var categoryVenues: [String: [String]] = [:]
 
+    /// Every source with at least one row, from the same walk as
+    /// `categoryVenues` (prd §1064). The demo's menus and tray read it so a
+    /// seat the demo connects but pours nothing for is never a pick that
+    /// opens an empty room. Empty until the first walk lands, and an empty
+    /// set filters nothing.
+    var landedSources: Set<String> = []
+
+    /// Whether a folded app has anything to show — always, outside the demo:
+    /// a real app you just connected is a pick even before its first row,
+    /// and its room says it is waiting. In the demo nothing is waiting, so a
+    /// seat with no rows is left out (prd §1064, user: "in the demo i
+    /// shouldn't be able to pick something and it go to empty").
+    func seatShows(_ seat: RoomAccounts.Seat) -> Bool {
+        // A testnet draws its own screen from live reads, not stored rows.
+        guard DemoMode.isActive, !landedSources.isEmpty, !seat.ownScreen else { return true }
+        return landedSources.contains { seat.owns($0) }
+    }
+
     /// A room switch asked for from INSIDE a room — first the folded Markets
     /// room's venue switcher (2026-08-10), now any open folder's venue row.
     ///

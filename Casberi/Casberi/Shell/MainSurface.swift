@@ -1085,6 +1085,8 @@ struct MainSurface: View {
             liveChips = computed.labels
             if freeze { frozenChips = computed.labels }
             categoryVenues = computed.venues
+            let landed = Set(computed.sources + walk.folded)
+            if chrome.landedSources != landed { chrome.landedSources = landed }
             ChipOrderCache.save(.init(labels: computed.labels, venues: computed.venues,
                                       sources: computed.sources))
             #if DEBUG

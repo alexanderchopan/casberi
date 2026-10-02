@@ -334,7 +334,7 @@ struct RoomsTray: View {
         let seats: [RoomAccounts.Seat]
         if let room = mergedRoom(in: category) {
             let names = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
-            seats = RoomAccounts.connected(in: room, names: names)
+            seats = RoomAccounts.connected(in: room, names: names).filter(chrome.seatShows)
         } else {
             seats = self.seats(in: category).filter { $0 != category }.map {
                 RoomAccounts.Seat(name: $0, source: $0, holder: nil, group: "",

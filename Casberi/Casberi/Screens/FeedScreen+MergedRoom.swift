@@ -13,7 +13,7 @@ extension FeedScreen {
         guard source != CategoryFold.walletRoom, RoomAccounts.mergedRooms.contains(source)
         else { return [] }
         let seats = RoomAccounts.connected(in: source, names: connectedSeatNames)
-            .filter { !$0.ownScreen }
+            .filter { !$0.ownScreen && chrome.seatShows($0) }
         return seats.count > 1 ? seats : []
     }
 

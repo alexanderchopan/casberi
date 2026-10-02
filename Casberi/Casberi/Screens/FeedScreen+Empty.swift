@@ -313,9 +313,11 @@ extension FeedScreen {
                 return String(localized: "Write or record a note, or \(DS.secondaryGesture) anything to pin it here.")
             }
         }
+        // A merged room narrowed to one app names the app, not the room.
+        let from = selectedSeat?.name ?? source
         switch (source != "All", filter.tag != "All") {
-        case (true, true):   return "Nothing from \(source) under \(tagLabel) yet."
-        case (true, false):  return "Nothing from \(source) yet."
+        case (true, true):   return "Nothing from \(from) under \(tagLabel) yet."
+        case (true, false):  return "Nothing from \(from) yet."
         case (false, true):  return "No \(tagLabel.lowercased()) yet."
         default:             return "Nothing here yet."
         }

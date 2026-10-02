@@ -33,6 +33,10 @@ actor ChipWalker {
     struct Walk: Sendable {
         /// Every seat with a row, newest first — the order the strip wears.
         var newest: [String]
+        /// Every app folded into a merged room that has a row (prd §1064).
+        /// Such an app earns no room, so `newest` never names it; the demo's
+        /// menus read this to leave out a seat with nothing to show.
+        var folded: [String] = []
     }
 
     /// One walk against the shared container, or nil when no container has
@@ -54,6 +58,18 @@ actor ChipWalker {
             candidates.insert(thing.source)
         }
         var out: [(String, Date)] = []
+        var folded: [String] = []
+        // A seat's rows can land under a source other than its catalogue
+        // name ("0xBow Privacy Pools" lands "Privacy Pools").
+        for name in seeds {
+            if let source = RoomAccounts.host(ofSource: name)?.seat.source { candidates.insert(source) }
+        }
+        for name in candidates where RoomAccounts.host(ofSource: name) != nil {
+            var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == name })
+            d.fetchLimit = 1
+            d.propertiesToFetch = [\.source]
+            if let row = (try? modelContext.fetch(d))?.first, row.isLive { folded.append(name) }
+        }
         for name in candidates where Corpus.earnsRoom(name) {
             var d = FetchDescriptor<Thing>(
                 predicate: #Predicate { $0.source == name },
@@ -69,7 +85,7 @@ actor ChipWalker {
         let ordered = out.sorted { $0.1 > $1.1 }.map(\.0)
         // The Notes room's door is always drawn (prd §969), so the walk no
         // longer asks whether anything is pinned.
-        return Walk(newest: ordered)
+        return Walk(newest: ordered, folded: folded)
     }
 }
 
