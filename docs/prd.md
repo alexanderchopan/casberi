@@ -63309,3 +63309,7 @@ Nothing is built in this entry; it is the ruling only.
 
 Casberi's Photos lands mostly screenshots ("Screenshots, straight to your feed"): a thing you saw, which is Media's unit, media you consumed. Media already draws §1049's square picture grid, and Photos already draws square cells today, so it joins with no new shape. Life keeps words and stats: Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health (with Strava and Garmin), Duolingo.
 
+## §1050c — Life is one list by day, with no tiles (user: of "one list, newest first, grouped under day headers… no extra tiles, just the list", "yes", 2026-10-01; settles §1049's open Life question)
+
+Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava and Garmin, Duolingo) draws as the All feed draws: one list, newest first, under day headers, every row in §744's anatomy. It has no tiles but All. The account menu (§1048b) narrows it to one app. "On this day", the same date in earlier years, was offered as a tile and declined.
+
