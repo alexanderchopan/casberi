@@ -42,32 +42,36 @@ Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
   a reviewer scans on an app that was just rejected under Guideline 3.1.5;
   reordering costs nothing, since keyword order does not affect search ranking)
 
-### iOS description (2,119 chars)
+### iOS description (1,641 chars) — 2.0, no third-party product names (4.1(a), 2026-10-02)
 
-Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app that puts all your accounts in one private feed, so you read them in one place. No account, no servers, no tracking.
+Everything you build, run and owe is scattered across apps. Casberi brings it into one private place on your iPhone, iPad and Mac. No account, no servers, no tracking.
 
-TRY IT BEFORE YOU CONNECT ANYTHING
-One tap fills Casberi with sample data, so you can feel the whole app first.
+Everything new, in one place.
+Home is your daily brief: a deploy that failed, a payment that landed, a meeting coming up, a note you saved. Newest first, in one feed.
 
-ONE FEED
-A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your workouts and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Apple Card, Apple Cash and Savings in the US — and the bank accounts connected to Wallet in the UK — land with the merchant's real name, read on this iPhone and never uploaded.
+Know what needs you.
+Work gathers issues, reviews, releases, incidents, payouts and disputes from the tools you build with. Deadlines rise to the top, soonest first. Pick one account to see only that.
 
-SEE WHAT'S HAPPENING
-Every app opens shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Home Screen widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.
+All your money, one number.
+Follow any wallet address without a key or a signature, alongside your exchanges, cards and bank balances. See what you hold, how it moved and what is at risk. Casberi can read, never spend.
 
-CONNECT HONESTLY
-Over 90 apps across work, wallet, social, reading, notes, schedule, fitness, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.
+What's next, soonest first.
+Day puts your calendar, to-dos and mail in one list that reads forward: what is next, then what already happened.
 
-CAPTURE WITHOUT FRICTION
-Share from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.
+Your notes, and everything you keep.
+Write, record or sketch a note. Share anything from any app and it lands instantly. Screenshots are searchable by the words inside them.
 
-YOUR OWN AGENT
-Bring your own key for Claude, ChatGPT, Gemini, Grok, Venice, OpenRouter, NEAR AI, Muse or Bankr. Open an agent to talk to it, and every conversation lands beside the history you imported from it. Your words go from this iPhone straight to that provider, on your key. Nothing routes through us.
+Every category, one screen.
+Wallet, Work, Day, Life, Media, Social, Reading and Agents each open as one screen. Pick an account to narrow it, or see them all together.
 
-YOURS, ACTUALLY
-There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
+Connect with confidence.
+More than 100 apps. Apple's apps connect with one tap. Other services connect with a read-only key, so Casberi can see but never change.
 
-Your own things in one feed, with your own agent beside them.
+Try it first.
+Casberi opens with a demo you can browse. Clear it when you are ready and connect your own.
+
+Yours.
+No server, no account, no ads. Sync through your own iCloud. Export everything to one file, or delete it all for good.
 
 ### iOS What's New — append these two bullets
 
