@@ -63638,3 +63638,21 @@ Amends §1064. Swept, not room by room: the demo's 92 connected seats against th
 **Not done.** ETH Validators is a catalogue seat the demo does not connect, because its fixture holds no validators. Coinbase's box shows its figure over an empty well; its holdings could fill it.
 
 **Checked.** The app builds; `demo-selftest.py` and its self-test. On the simulator after a re-pour: Coinbase's page, Agents +7 in the tray where it read +1, Apple Intelligence's chat in the Agents list.
+
+## §1066 — The account picker is a glass pill in the title row (user: "for the account switcher, i think it needs to be this, a glass pill or whatever in top right corner same axis as the category title, and it should say 'Accounts' and you select there"; "the glass pill should not touch the card"; "put the check on the right justified not before the logo icon", 2026-10-02) — BUILT
+
+**Amends §752 and §936, the user's own rules.** §752 kept every control off the top of the screen and §936 put the account menu under the tiles: faces, a 12pt name and a chevron, which read as a caption, not a control ("is it pronounced enough? clear what it is and where?"). The picker is now a glass pill at the trailing end of the room's title row, on the title's axis.
+
+**What it says.** "Accounts" while everything shows; the pick's name once one is picked ("Coinbase"). The title keeps the room's name, so the title says where you are and the pill what you are looking at (Photos' and Mail's split).
+
+**What it opens.** Our own list in a popover, not a system `Menu`, because a system menu always draws its check before the row's image. Each row is the face (24pt), the name and the check at the trailing edge; "All accounts" leaves the face column empty so the names align. One plain list, no section headers (§1064's "don't categorize these"). The pick applies once the list has closed (`onChange(of: open)`): picked while it was closing, the room rebuilt under the popover and the popover stayed up (measured).
+
+**Where.** Every room that picks an account: the Wallet, Frames and Logos (from the rail `DSRoomScopeChrome` already published, `ShellChrome.accountRail`) and the merged rooms (`mergedAccountsPill`). Under the tiles only the copy-address control stays, for a picked address. The social rooms keep their row of faces (§959).
+
+**Size.** The pill draws at 32pt and its 44pt tap area overhangs without taking room (`contentShape`): a 44pt frame made the title row taller than the title and the pill sat on the box.
+
+**Glass on content** is the design law's exception made here by the user, as the tray's was (§1058).
+
+**Found, not fixed.** The Wallet's other tiles do not narrow to a picked app: with Kraken picked, Risk still draws Morpho and Aave. Left for the room sweep.
+
+**Checked.** The app builds; `ds-template-audit.py`, `splits-selftest.sh`. On the simulator with the demo: "Accounts" on All; "Coinbase" picked by launch argument; the list opens from the pill with the check at the right of Coinbase; Kraken picked from it closes the list and the pill reads Kraken (`accountsPill: picked seat:Kraken`).
