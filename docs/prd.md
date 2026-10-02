@@ -418,6 +418,7 @@ marks chronological position within the pair.
 | §1048 (Splits unruled) | Splits, Stripe, Dodo Payments and NerdWallet were left out of the Wallet merge, unruled | amended by §1049 — Splits joins the One Wallet; the other three wait on Work and Reading |
 | §1048 (Markets, Hegotá Frames and Logos stay their own rooms) | three standalone rooms inside the Wallet category | amended by §1050 — every tray entry is a category: Markets is its own category, Frames and Logos fold into one Testnets category |
 | §1049 (the tray's rooms) | Markets, Frames and Logos drew as room rows under the Wallet category | amended by §1050 — Markets and Testnets are categories |
+| §322 / §1049 (Life's glyph `calendar`) | Life wore `calendar` | amended by §1050a — Life wears `face.smiling`; Day keeps `calendar.day.timeline.left` |
 
 ## §1 — Thesis
 
@@ -63297,3 +63298,9 @@ Nothing is built in this entry; it is the ruling only.
 **Why Markets is not a door or a Wallet tile.** The doors row is exactly five (Home, Notes, Apps, Addresses, Settings) on the tray's five-column grid, and its doors are app-wide places, not one feed. A Wallet tile would be one app's rows (§1049's bundle rule), would change Wallet ("wallet is not changing leave it alone"), and a watchlist is not money you hold (§1048).
 
 **For the build.** Testnets needs a row in `CategoryFold.glyphs` and in `BridgeCatalog.categories` (`category-fold-selftest.sh` holds the two together), and Markets, Hegotá Frames and Logos leave the Wallet catalogue group. Under §1049's tray paragraph, Markets' and Testnets' blue headers open their rooms and their marks open each app's settings. The glyph is not ruled.
+
+## §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling` (user: "flask is fine", then of Life "a smiley face could be good, but a heart is also good… ok do smiley for now", 2026-10-01; amends §1049 and §1050)
+
+- **Testnets** wears `flask`, `flask.fill` when lit (`RoomsTray.filledGlyphs`): it says experiment, not money. `testtube.2` was thinner at 20pt with no fill; `cube.transparent` said chain, not test, and could read as a second Wallet.
+- **Life** wears `face.smiling`, `face.smiling.inverse` when lit, replacing `calendar`, which §1049's split left beside Day's `calendar.day.timeline.left` as a near twin. `heart` is declined because it is Apple Health's own glyph (`KindGlyph`), a member of Life, the case that kept `person.2` (the People seat's glyph) off Social in `CategoryFold.glyphs`. `leaf` and `house` were offered; `house` reads as the Home door. "For now": the user may revisit it once it is drawn in the tray.
+
