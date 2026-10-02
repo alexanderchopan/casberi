@@ -874,6 +874,11 @@ struct RootShell: View {
             // first, then every app).
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 sceneState.route.present(.apps)
+                // `-accountDetail` reads in `SettingsRows`, on the Casberi
+                // page one level in since Settings became one list (§1050g).
+                if UserDefaults.standard.string(forKey: "accountDetail") != nil {
+                    sceneState.route.openCasberiSettings()
+                }
             }
             if UserDefaults.standard.bool(forKey: "openAddresses") {
                 sceneState.route.present(.addresses)
@@ -2500,6 +2505,12 @@ struct RootShell: View {
         case "settings":
             // Settings, the one list (prd §1050g): Casberi first, then every app.
             sceneState.route.present(.apps)
+            #if DEBUG
+            // The `-accountDetail` probe's sheet stands on the Casberi page.
+            if UserDefaults.standard.string(forKey: "accountDetail") != nil {
+                sceneState.route.openCasberiSettings()
+            }
+            #endif
         // casberi://note — a new note (prd §982), the Quick Note's door by
         // link: the New tile's own raise, wherever the shell stands.
         case "note":
