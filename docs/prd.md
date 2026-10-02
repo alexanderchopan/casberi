@@ -63498,3 +63498,13 @@ An unlit You door is `surfaceRaised` charcoal, the categories' own tile, with it
 **Only the search is pinned.** The You rows scroll with the list (amends §1015's pinned row): four pinned rows would take half the tray at rest. `MarkGrid` is deleted.
 
 **Checked.** `category-fold-selftest.sh`, `dock-selftest.sh`, `ds-template-audit.py`, `dead-closure-audit.py`, `footnote-audit.py`. On the simulator (`-openTray YES`, demo): the four You rows with Home's tile white, the Categories header and rows with chevrons, glyphs in one column.
+
+## §1054 — Agents is one room, built: every agent folds in, New starts a conversation with the agent the menu picked (user: "when you are done with reading move to the next section", 2026-10-02; builds §1049's Agents)
+
+**The room.** ChatGPT, Claude, Claude Code, Gemini, Venice, Bankr, Apple Intelligence, OpenRouter, Grok, NEAR AI and Muse are seats of one room named Agents (catalogue-derived, §1052's shape). Every conversation, imported or keyed, is one list, newest first, each row in its agent's design; the box leads with the newest; the menu ("All apps", A to Z) narrows to one agent.
+
+**All · New.** The agent room's two tiles stay, and Chat is renamed New (`AgentRoomScope.chat`, the `plus` glyph). New talks to the agent the menu picked; with no pick it goes straight to the only agent that can answer, or asks which when several can (`WhichAgentDialog`). It opens an empty thread — the conversation begins at the tap (`ShellChrome.beginConversation`, `agentNewAt`), never on the last one — and the composer row under the tiles asks that agent; the session lands as a row here (§839). New draws only while an agent that can answer is connected (`answeringAgents`, a key per `AgentKey.configured`, every agent in the demo): with importers alone it would be a dead control (§83).
+
+**Where this departs from §1049.** §1049 said New "never offers ChatGPT, Claude or Gemini, which are read-only history". With an OpenAI, Anthropic or Google key those three answer (§841 lit their Chat tile on a key), so New offers them when keyed and not otherwise. Apple Intelligence is not offered yet: it answers through the composer (§833), not an agent provider, so it lands in the list but New cannot pick it.
+
+**Checked.** `RoomAccountsTests` (every provider has a seat, Claude folds into Agents, the tile reads New), `agent-landing-selftest.sh` (amended to `agentRoomShown`/`agentSource`, each guard's claim unchanged), `bankr-selftest.sh`. On the simulator: `-openRoom Agents` leads with ChatGPT's newest over every agent's rows, All · New, "All apps"; New with no pick asks Claude, ChatGPT or Gemini; a pick opens an empty thread over "Ask Gemini" with the menu on Gemini.
