@@ -475,7 +475,11 @@ extension FeedScreen {
             // only the Wallet's rows: the history screen reads only those, and
             // a count that included card spends would open a list without them
             // (§837). Step 4 merges Home when the separate rooms go.
-            let all = visible.live.filter { !promoted.contains($0.id) && $0.source == source }
+            // With an app picked (prd §1048b) Home is that app's own rows.
+            let seatPicked = selectedSeat != nil
+            let all = visible.live.filter {
+                !promoted.contains($0.id) && ($0.source == source || seatPicked)
+            }
             // WHICH READING IS ON SCREEN (prd §483). Resolved rather than read
             // raw: a scope remembered from a wallet that has since closed its
             // last position falls back to the feed instead of rendering an
@@ -557,7 +561,7 @@ extension FeedScreen {
             // The Cards tile's reading (prd §1048), composed only while it is
             // the page — a fold over every card row is not paid on every scope.
             let cards = section == .cards ? WalletCards.compose(things: visible) : nil
-            walletScopeChromeSection(section, visible: visible.filter { $0.source == source },
+            walletScopeChromeSection(section, visible: seatPicked ? visible : visible.filter { $0.source == source },
                                      upcoming: upcoming, cards: cards, streamTotal: all.count)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you
@@ -607,10 +611,13 @@ extension FeedScreen {
                 // is great").** Cards took their tile; the collections you
                 // picked read under the tokens, and "Choose collections" stays
                 // the door while none are picked.
-                if nftShelfEntry == nil {
-                    walletNFTDoorSection
+                // An app the menu picked holds no collections (prd §1048b).
+                if !seatPicked {
+                    if nftShelfEntry == nil {
+                        walletNFTDoorSection
+                    }
+                    walletNFTListSection
                 }
-                walletNFTListSection
             case .positions:
                 if walletScopeIsEmpty(.positions) { walletSkeletonRowsSection }
                 walletDeFiSection

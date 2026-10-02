@@ -298,6 +298,9 @@ extension FeedScreen {
     /// is the WATCHED spelling, so a raw compare empties an ENS/SNS-watched
     /// wallet's scoped feed entirely.
     private func walletScopeAllows(_ thing: Thing) -> Bool {
+        // An app the menu picked (prd §1048b) keeps its own rows, and an app
+        // whose rows don't ride this room keeps none: its money is in the box.
+        if let seat = selectedSeat { return seat.source == thing.source }
         guard roomTakesWalletScope, let scope = selectedWallet else { return true }
         return wallet.scopeMatches(thing.walletAddress, scope: scope)
     }

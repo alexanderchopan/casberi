@@ -205,6 +205,15 @@ struct RootShell: View {
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
             }
         }
+        // `-walletScope <address | seat:Name>` picks an account in the Wallet's
+        // menu at launch (prd §1048b), so an app pick is captured with no tap.
+        if let raw = UserDefaults.standard.string(forKey: "walletScope"), !raw.isEmpty {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(4))
+                NSLog("[Casberi] walletScope: %@", raw)
+                chrome.walletScope = raw
+            }
+        }
         #endif
     }
 

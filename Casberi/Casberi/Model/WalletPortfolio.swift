@@ -221,6 +221,22 @@ struct WalletPortfolio: Equatable {
     ///
     /// Scoped the same way the live read is: filtered AFTER gathering, so every
     /// wallet still contributes to the combined shape.
+    /// The part of this portfolio one app holds (prd §1048b): each position
+    /// cut to that app's holders, empty positions dropped, the total re-summed.
+    /// The menu's app pick reads it, so the box, the map and the list all
+    /// state that app's money and nothing else.
+    func scoped(to seat: RoomAccounts.Seat) -> WalletPortfolio {
+        let kept = positions.compactMap { position -> Position? in
+            let holders = position.holders.filter { seat.holds($0.address) }
+            let usd = holders.reduce(0) { $0 + $1.usd }
+            guard usd > 0 else { return nil }
+            return Position(symbol: position.symbol, usd: usd, route: position.route, holders: holders)
+        }
+        .sorted { $0.usd > $1.usd }
+        return WalletPortfolio(totalUSD: kept.reduce(0) { $0 + $1.usd }, positions: kept,
+                               walletCount: 0, asOf: asOf)
+    }
+
     static func demoFixture(scopeTo address: String? = nil,
                             privy: [(symbol: String, usd: Double, holderID: String, label: String)] = [])
     -> WalletPortfolio {

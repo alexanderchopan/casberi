@@ -100,6 +100,10 @@ struct WalletBalanceHeadline: View {
     /// `Text` still draws a line box, so without this the room shows a gap
     /// where the words used to be.
     var hidesEmptyCaption: Bool = false
+    /// Whether a line can ever come (prd §1048b). An app the Wallet's menu
+    /// picked has no recorded samples of its own, so "the line starts once a
+    /// second reading lands" would promise a line that never lands.
+    var awaitsLine: Bool = true
     /// "Mostly ETH · +$310" — WHY the line moved, from the same per-token
     /// snapshots the combined sheet's "What moved" reads. nil when the record
     /// can't attribute the move yet.
@@ -357,7 +361,7 @@ struct WalletBalanceHeadline: View {
                     .onChange(of: chart.closes) { draw(redraw: true) }
                     .padding(.top, DS.Space.s1)
                 if ranges.count > 1 { rangeChips }
-            } else if chart == nil {
+            } else if chart == nil, awaitsLine {
                 // No line yet — say why, rather than leaving the number
                 // hanging over empty space. The total above it is already
                 // real; this is only about the SHAPE not existing yet.

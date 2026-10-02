@@ -29,7 +29,7 @@ extension FeedScreen {
     /// here rather than behind a door.
     @ViewBuilder
     var walletTokenListSection: some View {
-        if let portfolio, !portfolio.isEmpty {
+        if let portfolio = portfolioShown, !portfolio.isEmpty {
             Section {
                 ForEach(portfolio.positions) { position in
                     Button {
@@ -256,13 +256,24 @@ extension FeedScreen {
             // the one you want is in here.
             sub: named.isEmpty ? nil : ListFormatter.localizedString(byJoining: named),
             faces: watched.prefix(2).map { .wallet(address: $0.address) })
-        return [all] + watched.map { addr in
+        // **THE APPS THE WALLET FOLDED IN (prd §1048b)**, each under its
+        // kind, after the addresses. The addresses take a section of their
+        // own only once an app stands beside them; alone, the menu reads as
+        // it always did.
+        let seats = RoomAccounts.connected(in: source, names: connectedSeatNames)
+        let addresses = watched.map { addr in
             DSAccountSlot(
                 id: addr.address,
                 name: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label,
                 sub: addr.label.isEmpty ? nil : WalletStore.shortAddress(addr.address),
-                faces: [.wallet(address: addr.address)])
+                faces: [.wallet(address: addr.address)],
+                group: seats.isEmpty ? nil : String(localized: "Addresses"))
         }
+        let apps = seats.map { seat in
+            DSAccountSlot(id: RoomAccounts.scopeID(seat), name: seat.name, sub: nil,
+                          faces: [.mark(url: nil, source: seat.mark)], group: seat.group)
+        }
+        return [all] + addresses + apps
     }
 
     /// The composition strip, lifted OUT of the crown card and into the

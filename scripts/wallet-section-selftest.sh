@@ -453,7 +453,7 @@ guard FeedScreen.swift "walletComingUpSections(upcoming, nextEventID: nextEventI
   "Coming up no longer lists what's ahead (prd §1041)"
 deny FeedScreen.swift "ahead: upcoming" \
   "what's ahead is back on Home — Home is only what happened (prd §1041)"
-guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) && \$0.source == source }" \
+guard FeedScreen.swift "!promoted.contains(\$0.id) && (\$0.source == source || seatPicked)" \
   "Home's stream no longer drops the rows Coming up holds, or now lists card spends its history door cannot open (prd §1041, §1048)"
 
 # ── the Cards tile and NFTs under Holdings (prd §1048) ───────────────────────

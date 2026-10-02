@@ -320,12 +320,21 @@ extension FeedScreen {
         // is (prd §128) — the doc generator filters its groups to that address;
         // nil paints the combined map.
         let scope = selectedWallet
+        // An app the menu picked (prd §1048b) reads the combined portfolio and
+        // keeps its own slice; the guard below compares the whole scope, so a
+        // pick that moves between two apps is caught as well.
+        let seat = selectedSeat
+        let scopeKey = chrome.walletScope
         Task { @MainActor in
-            let read = await WalletIngest.portfolioRead(scopeTo: scope)
+            var read = await WalletIngest.portfolioRead(scopeTo: scope)
             // The scope may have moved while the read was in flight — a late
             // answer for a wallet we've since left must not paint (the same
             // guard `loadWalletLive` keeps).
-            guard scope == selectedWallet else { return }
+            guard scope == selectedWallet, scopeKey == chrome.walletScope else { return }
+            if let seat, let whole = read?.portfolio {
+                let slice = whole.scoped(to: seat)
+                read = slice.isEmpty ? nil : (WalletIngest.holdingsDoc(slice), slice)
+            }
             if let read {
                 // Same animated landing as `loadWalletLive` — the treemap is
                 // the tallest late-arriving block, so ITS unanimated insert

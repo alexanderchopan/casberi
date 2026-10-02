@@ -167,9 +167,10 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
                     DSScopeMenu(slots: accounts, showing: showing,
                                 onPick: onPickAccount)
                     // One account showing: its address, one tap from the
-                    // picker that named it. Every slot id in the family is the
-                    // address; "All" is "" and has none to copy.
-                    if !showing.id.isEmpty {
+                    // picker that named it. A slot id is the address; "All" is
+                    // "" and an app the menu lists (`seat:`, prd §1048b) is
+                    // not an address, so neither has one to copy.
+                    if !showing.id.isEmpty, !RoomAccounts.isSeat(showing.id) {
                         CopyAddressButton(address: showing.id)
                     }
                 }

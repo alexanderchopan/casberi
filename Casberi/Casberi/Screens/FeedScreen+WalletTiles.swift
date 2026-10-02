@@ -16,9 +16,40 @@ extension FeedScreen {
     /// bit of its state — which is why the scope silently evaporated on a room
     /// change and why no wallet room but the balance room could be narrowed at
     /// all. Held on the shell, one scope now spans the whole category.
+    ///
+    /// **An ADDRESS only (prd §1048b).** The menu also picks an app the Wallet
+    /// folded in (`RoomAccounts`), scoped as `seat:<name>`; every reader of
+    /// this property means an address, so a seat reads as nil here and as
+    /// `selectedSeat` below.
     var selectedWallet: String? {
-        get { chrome.walletScope }
+        get { RoomAccounts.isSeat(chrome.walletScope) ? nil : chrome.walletScope }
         nonmutating set { chrome.walletScope = newValue }
+    }
+
+    /// The app the menu picked, when it picked an app rather than an address.
+    ///
+    /// Nil once the app is disconnected: a pick that is no longer in the menu
+    /// reads as All, as an unwatched address does (`onChange(of: wallet.addresses)`).
+    var selectedSeat: RoomAccounts.Seat? {
+        guard let seat = RoomAccounts.seat(chrome.walletScope, in: source),
+              connectedSeatNames.contains(seat.name) else { return nil }
+        return seat
+    }
+
+    /// The portfolio the box and Holdings state: the whole read, or the picked
+    /// app's slice of it (prd §1048b). Sliced HERE as well as when the read
+    /// lands, because a read that landed before the pick would otherwise put
+    /// the whole Wallet's total under one app's name (measured: "$44K" over
+    /// Gnosis Pay, which holds nothing in the total). `scoped` is idempotent.
+    var portfolioShown: WalletPortfolio? {
+        guard let seat = selectedSeat else { return portfolio }
+        guard let slice = portfolio?.scoped(to: seat), !slice.isEmpty else { return nil }
+        return slice
+    }
+
+    /// The catalogue names of every connected or attention-needing seat.
+    var connectedSeatNames: Set<String> {
+        Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
     }
 
     /// WHAT IS NOT IN THE WALLET TOTAL, in words (prd §827, §828) — nil when
@@ -125,19 +156,24 @@ extension FeedScreen {
         // portfolio line (prd §128). Both start honest — nil until two aligned
         // samples exist (TokenChart.from guards ≥2) — but the NUMBER no longer
         // waits on them (prd §155): the live total leads, the line joins.
-        let samples = selectedWallet.map { wallet.valueSamples(forAddress: $0) }
-            ?? wallet.combinedValueSamples()
+        // An app the menu picked has no recorded line of its own (samples are
+        // per watched address), so its box states the number and draws no
+        // line rather than the whole Wallet's under one app's name.
+        let samples = selectedSeat != nil ? []
+            : selectedWallet.map { wallet.valueSamples(forAddress: $0) }
+                ?? wallet.combinedValueSamples()
         let ranges = WalletRange.offered(for: samples)
         let active = ranges.contains(balanceRange) ? balanceRange
             : WalletRange.remembered(offered: ranges)
         let windowed = active.clip(samples)
         let chart = TokenChart.from(samples: windowed)
-        let total = portfolio.map(\.totalUSD).flatMap { $0 > 0 ? $0 : nil }
-        let warnings = walletLive.warnings
-        let chips = walletFaceChipEntries
+        let total = portfolioShown.map(\.totalUSD).flatMap { $0 > 0 ? $0 : nil }
+        // The addresses' readings say nothing about an app the menu picked.
+        let warnings = selectedSeat == nil ? walletLive.warnings : []
+        let chips = selectedSeat == nil ? walletFaceChipEntries : []
         // Gathered ONCE — the gate below and the strip inside both read it,
         // and a computed property would re-walk every book on each body pass.
-        let composition = walletComposition
+        let composition = selectedSeat == nil ? walletComposition : WalletComposition()
         // The composition earns the card on its own (prd §240): a wallet whose
         // money is entirely in protocols — everything supplied to Aave, or a
         // Hyperliquid account with an empty EVM wallet — has no priced
@@ -248,7 +284,7 @@ extension FeedScreen {
                             // "Balance" survives for the single-wallet install,
                             // which has no rail at all (`WalletScopeRail.shows`
                             // wants > 1) and so has nothing else naming it.
-                            caption: scoped?.name
+                            caption: scoped?.name ?? selectedSeat?.name
                                 ?? (hasBreakdown ? "" : String(localized: "Balance")),
                             captionAddress: selectedWallet,
                             captionDetail: scoped?.detail,
@@ -256,6 +292,7 @@ extension FeedScreen {
                             // the word leaves its row behind — a 20pt gap under
                             // the venue rail with nothing in it.
                             hidesEmptyCaption: true,
+                            awaitsLine: selectedSeat == nil,
                             // No mover line and a shorter chart — see the
                             // parameters' own docs (prd §483).
                             mover: nil,

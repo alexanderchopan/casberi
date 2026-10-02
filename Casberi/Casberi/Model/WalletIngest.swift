@@ -1933,10 +1933,7 @@ enum WalletIngest {
             // The line carries the total the room's crown reads (prd §953) —
             // it was "" and the true-area treemap (§939) never drew for the
             // combined portfolio; `GenTagMap` hides it where the crown draws.
-            let line = subline(totalUSD: portfolio.totalUSD, tokenCount: portfolio.tokenCount,
-                               stale: portfolio.asOf)
-            let doc = ["root = TagMap(\(q("")), \(q(line)), [\(portfolio.treemapCells.joined(separator: ", "))], \(q("token")))"]
-            return (doc, portfolio)
+            return (holdingsDoc(portfolio), portfolio)
         }
 
         let ids = groups.indices.map { "w\($0)" }
@@ -1945,6 +1942,14 @@ enum WalletIngest {
             doc.append("w\(i) = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
         }
         return (doc, portfolio)
+    }
+
+    /// One map over a whole portfolio — the combined read's, and an app's
+    /// slice of it when the menu picks one (prd §1048b).
+    static func holdingsDoc(_ portfolio: WalletPortfolio) -> [String] {
+        let line = subline(totalUSD: portfolio.totalUSD, tokenCount: portfolio.tokenCount,
+                           stale: portfolio.asOf)
+        return ["root = TagMap(\(q("")), \(q(line)), [\(portfolio.treemapCells.joined(separator: ", "))], \(q("token")))"]
     }
 
     private static func q(_ s: String) -> String {
