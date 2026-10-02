@@ -63508,3 +63508,15 @@ An unlit You door is `surfaceRaised` charcoal, the categories' own tile, with it
 **Where this departs from §1049.** §1049 said New "never offers ChatGPT, Claude or Gemini, which are read-only history". With an OpenAI, Anthropic or Google key those three answer (§841 lit their Chat tile on a key), so New offers them when keyed and not otherwise. Apple Intelligence is not offered yet: it answers through the composer (§833), not an agent provider, so it lands in the list but New cannot pick it.
 
 **Checked.** `RoomAccountsTests` (every provider has a seat, Claude folds into Agents, the tile reads New), `agent-landing-selftest.sh` (amended to `agentRoomShown`/`agentSource`, each guard's claim unchanged), `bankr-selftest.sh`. On the simulator: `-openRoom Agents` leads with ChatGPT's newest over every agent's rows, All · New, "All apps"; New with no pick asks Claude, ChatGPT or Gemini; a pick opens an empty thread over "Ask Gemini" with the menu on Gemini.
+
+## §1055 — Media is one room, built: its apps and Photos fold in, its list is one square grid, and the music shelf is deleted (user: "when you are done with reading move to the next section", 2026-10-02; builds §1049's Media, §1050b and §1050d)
+
+**The room.** YouTube, Twitch, Apple Music, Spotify, Podcasts, Steam, Pinterest and Photos are seats of one room named Media (catalogue-derived, §1052's shape). Photos' group moves from Life to Media (§1050b); Life's exemplar becomes Calendar.
+
+**The grid.** One list by day, as every room's; under each day every row with a picture tiles square, three to a row (`isMediaTile`: a remote picture or stored pixels — a photo, a screenshot, a pin, a video's or an album's art), and a row with none stays a row, because a tile promises a picture (§910's rule). No tiles above it (§1049: All alone); the box leads with the newest; the menu ("All apps", A to Z) narrows to one app. A screenshot tiles square here, not cropped from the top as Photos' own room drew it.
+
+**The music shelf is deleted (§1050d).** Activity · Albums · Artists · Songs went with the music rooms: `MusicShelf`, `FeedScreen+MusicRoom`, `ShellChrome.musicScope`/`musicGroup`, their three glyphs, `music-shelf-selftest.sh` and its line in `verify.sh` (the deleted-surface-deleted-model rule). Music rows keep their own design (`MusicRow`).
+
+**One rename.** The agent tile's case is `new` (§1054 renamed its word): `room-kind-tiles-selftest.sh` holds that a case wears its own name's glyph.
+
+**Checked.** `RoomAccountsTests` (Media's members, Photos in Media), `DemoSpreadTests`, `category-fold-selftest.sh`, `category-order-selftest.sh`, `catalog-sync.sh`, `room-kind-tiles-selftest.sh`, `harness-exists-audit.py`. On the simulator: `-openRoom Media` leads with a photo, "All apps", then a day of square tiles (Factorio, a match-day picture, a stream).
