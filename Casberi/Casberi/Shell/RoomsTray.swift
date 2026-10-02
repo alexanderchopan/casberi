@@ -157,7 +157,6 @@ struct RoomsTray: View {
     /// the HIG reserves for selection. Categories whose glyph has no fill
     /// keep the one they have.
     private static let filledGlyphs: [String: String] = [
-        "Wallet":   "creditcard.fill",
         "Agents":   "terminal.fill",
         "Media":    "play.circle.fill",
         "Social":   "bubble.left.and.bubble.right.fill",

@@ -107,8 +107,10 @@ enum CategoryFold {
     /// further… icons with the words under them"). A category has no brand to
     /// wear (§351), so these are the system's own glyphs, each chosen by the
     /// user from three rendered options against the alternatives:
-    /// `creditcard.fill` over a dollar sign because the Wallet room holds EVM,
-    /// Solana and Bitcoin and a currency sign claims one of them;
+    /// `dollarsign` for the Wallet since prd §1063 (it was `creditcard.fill`,
+    /// chosen over the dollar sign because the room holds EVM, Solana and
+    /// Bitcoin, until Apple Wallet's card and the category's sat side by side
+    /// in the tray);
     /// `laptopcomputer` over `briefcase`; `calendar` over `sun.max` for a
     /// category whose members are Photos, Schedule, Fitness, People, Storage
     /// and Mail; `cart` because `bag` read as a padlock at 20pt; the two
@@ -123,7 +125,7 @@ enum CategoryFold {
     }
 
     private static let glyphs: [String: String] = [
-        "Wallet":   "creditcard.fill",
+        "Wallet":   "dollarsign",
         // Markets wears its seat's own glyph (`KindGlyph`, prd §1050);
         // Testnets a flask (prd §1050a).
         "Markets":  "chart.line.uptrend.xyaxis",

@@ -16,10 +16,9 @@ enum ScopeTileGlyph {
     static let accounts    = "person.2"
     static let permissions = "key"
     static let positions   = "building.columns"
-    /// The Wallet's Cards tile (prd §1048). Not the bare `creditcard`: the
-    /// user reserved that, and `creditcard.fill`, for the Wallet itself
-    /// (`tile-glyph-audit.py`), and a tile inside the Wallet wearing the
-    /// Wallet's own mark would read as a second door to the room it is in.
+    /// The Wallet's Cards tile (prd §1048). Not the bare `creditcard`, which
+    /// was the Wallet's own mark when this was chosen (the Wallet wears the
+    /// dollar sign since §1063); kept so the tile does not change under you.
     static let cards       = "creditcard.and.123"
     static let risk        = "shield"
     static let frames      = "square.stack.3d.down.right"

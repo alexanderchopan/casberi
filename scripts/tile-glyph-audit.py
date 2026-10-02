@@ -61,9 +61,10 @@ ALIASES = {
     ("WalletSection", "follow"): "watch",
 }
 
-# Symbols the user named as one meaning's own (2026-09-18).
-RESERVED = [("building.columns", "positions"), ("creditcard", "wallet"),
-            ("creditcard.fill", "wallet"), ("checkmark.shield", "review"),
+# Symbols the user named as one meaning's own (2026-09-18; the Wallet's
+# moved from the credit card to the dollar sign, prd §1063).
+RESERVED = [("building.columns", "positions"), ("dollarsign", "wallet"),
+            ("checkmark.shield", "review"),
             ("shield", "risk"), ("key", "permissions")]
 
 ALL_READ = 'static var all: String { CategoryFold.glyph(for: "All") }'
@@ -253,7 +254,7 @@ extension NotesScope: DSTileScope {
 CLEAN_FOLD = '''import Foundation
 enum CategoryFold {
     private static let glyphs: [String: String] = [
-        "Wallet":   "creditcard.fill",
+        "Wallet":   "dollarsign",
         "Work":     "laptopcomputer",
         "All":      "tray.full",
     ]
@@ -289,7 +290,7 @@ MUTATIONS = [
     ("a constant takes a dock category's symbol",
      "glyphs", 'static let new         = "plus"', 'static let new         = "laptopcomputer"', "D"),
     ("a reserved symbol takes another meaning",
-     "glyphs", 'static let home        = "chart.xyaxis.line"', 'static let home        = "creditcard"', "E"),
+     "glyphs", 'static let home        = "chart.xyaxis.line"', 'static let home        = "dollarsign"', "E"),
     ("All retypes the dock's glyph",
      "glyphs", 'static var all: String { CategoryFold.glyph(for: "All") }',
      'static var all: String { "tray.full" }', "F"),
