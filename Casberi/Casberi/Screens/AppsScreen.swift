@@ -883,25 +883,6 @@ struct AppsScreen: View {
     /// Tier 2 ONLY — a tier-0 cell is a BROKEN seat whose tap means Fix, and
     /// fixing happens in the manager. Routing that to a room would be a
     /// control that looks like it repairs something and doesn't (§83).
-    private func roomSeat(_ entry: Ranked) -> String? {
-        guard entry.tier == 2, let bridge = entry.bridge,
-              BridgeRouter.roomSource(forID: bridge.id) != nil else { return nil }
-        return bridge.id
-    }
-
-    /// A catalog cell's tap. ONE DESTINATION PER ROW (prd §641): until the
-    /// product page was deleted a row had two — the row itself pushed
-    /// `AppDetailScreen` while the capsule beside it opened setup, so the same
-    /// tile meant two things depending on which half of it you hit. Both
-    /// halves run `rowAction` now.
-    ///
-    /// A connected seat with a screen of its own still PUSHES, as a plain
-    /// `NavigationLink` value. Everything else is a `Button`: a wallet-riding
-    /// seat opens the room its rows land in (`BridgeRouter.roomSource`), which
-    /// is a POP and cannot be a link value; an addable seat runs the connect
-    /// where it stands. A row with nowhere to go (a Soon offer, whose capsule
-    /// already says so) is inert rather than pushing a page that only repeated
-    /// the tagline it is sitting on.
     @ViewBuilder
     private func catalogTap<Label: View>(destination: HomeRoute.Node?,
                                          action: (() -> Void)?,
@@ -931,50 +912,23 @@ struct AppsScreen: View {
     /// always draws now, and its first act is Create account.
     private static let devnetRooms: Set<String> = [FramesIdentity.source]
 
-    /// A connected account with a room is a STATUS here (prd §1033): no
-    /// chevron, and the room's own door beside its name manages it. **A TAP
-    /// LANDS IN ITS ROOM (prd §1040, user, 2026-10-01: "yes it should take you
-    /// to its room", answering §1036's open question; amends §1033's "go
-    /// nowhere")** — the devnet rows' landing (`statusRoom`). One with no room
-    /// — an agent key, an exchange, Apple Intelligence — keeps its chevron and
-    /// its page, or nothing would reach that page.
-    ///
-    /// Read off the SAME rule the dock gives a connected seat its room by
-    /// (`LiveRoomSources.earnsEmptyRoom`, prd §1036), not off the tray's
-    /// current venues: a seat that had landed nothing yet had no venue, so
-    /// its row kept a chevron the user called out (Apple Health).
-    private func isStatusOnly(_ entry: Ranked) -> Bool {
-        guard entry.tier == 2, let bridge = entry.bridge,
-              LiveRoomSources.earnsEmptyRoom(bridge.name) else { return false }
-        return Corpus.earnsRoom(BridgeRouter.roomSource(forID: bridge.id) ?? bridge.name)
-    }
-
-    /// The room a status row lands in: the room its rows land in, else its own.
-    private func statusRoom(_ entry: Ranked) -> String? {
-        guard isStatusOnly(entry), let bridge = entry.bridge else { return nil }
-        return BridgeRouter.roomSource(forID: bridge.id) ?? bridge.name
-    }
-
+    /// **A CONNECTED ROW OPENS ITS ACCOUNT PAGE (prd §1050f, reversing
+    /// §1040's land-in-room and §1033's status row).** An app's settings live
+    /// here and nowhere else: no room draws a sliders disc, and a merged room's
+    /// apps have no room of their own to land in. So every connected row is a
+    /// door again, chevron and all.
     private func rowOpen(_ entry: Ranked) -> (() -> Void)? {
-        // A status row OPENS ITS ROOM (prd §1040) — the devnet rows' landing,
-        // the same pop and the same request — and stays a status: no chevron.
-        if let room = statusRoom(entry) {
-            return { DSHaptic.tap(); route.path = []; chrome.sourceRequest = room }
+        if entry.tier == 0 || entry.tier == 2, let bridge = entry.bridge {
+            let destination = BridgeRouter.destination(forID: bridge.id)
+            return { DSHaptic.tap(); route.openAccount(destination) }
         }
+        // A devnet row with no account yet still opens its room, where its
+        // own create verb lives.
         if Self.devnetRooms.contains(entry.offer.name) {
             let room = entry.offer.name
             return { DSHaptic.tap(); route.path = []; chrome.sourceRequest = room }
         }
-        if let id = roomSeat(entry) {
-            return { DSHaptic.tap(); BridgeRouter.open(seatID: id, route: route, chrome: chrome) }
-        }
         switch entry.tier {
-        case 0:
-            guard let bridge = entry.bridge else { return nil }
-            return { route.pushBridge(BridgeRouter.destination(forID: bridge.id)) }
-        case 2:
-            guard let bridge = entry.bridge else { return nil }
-            return { BridgeRouter.open(seatID: bridge.id, route: route, chrome: chrome) }
         case 1:
             // A seat that needs input goes to its setup page; a one-tap seat
             // has no page to go to and fires the system ask where it stands.
@@ -1002,8 +956,7 @@ struct AppsScreen: View {
     private func appRow(_ entry: Ranked) -> some View {
         let soon = entry.tier == 3
         let isConnected = entry.tier == 0 || entry.tier == 2
-        let statusOnly = isStatusOnly(entry)
-        let destination: HomeRoute.Node? = isConnected && entry.bridge != nil && !statusOnly
+        let destination: HomeRoute.Node? = isConnected && entry.bridge != nil
             ? .bridge(BridgeRouter.destination(forID: entry.bridge!.id))
             : nil
         return HStack(spacing: DS.Space.s3) {
@@ -1049,7 +1002,7 @@ struct AppsScreen: View {
                     // `rowAction`, so it was one act drawn twice.
                     if let rowVerb = verb(entry) {
                         DSPushRowTrail(verb: rowVerb)
-                    } else if entry.tier == 2, entry.bridge != nil, !statusOnly {
+                    } else if entry.tier == 2, entry.bridge != nil {
                         // A connected account with no room is a door, and the
                         // chevron says so; one with a room is a status and
                         // draws none (§1033).
@@ -1064,7 +1017,8 @@ struct AppsScreen: View {
             // takes the row's own press (`RowPress`, prd §965) instead: it
             // lands in its room, and a status should not spring like a verb
             // (prd §1040).
-            .modifier(AppRowPress(status: statusOnly))
+            // Every row is a door or a verb now (prd §1050f): the spring.
+            .buttonStyle(PressSpring())
             // (The long-press peek retired with the product page, prd §641 —
             // it painted a `StorePreview` doc only 74 of 97 offers had, and a
             // hand-authored preview of a generated surface reads as a ceiling
@@ -1081,19 +1035,6 @@ struct AppsScreen: View {
         // The just-connected row lifts as the list re-sorts it into its
         // connected seat — a promotion you can feel, not a silent re-order.
         .connectPromote(isTarget: entry.offer.name == justConnectedName, token: connectLiftToken)
-    }
-
-    /// The press a catalogue row wears: the spring for a door or a verb, the
-    /// row's own highlight for a status row that lands in its room.
-    private struct AppRowPress: ViewModifier {
-        let status: Bool
-        func body(content: Content) -> some View {
-            if status {
-                content.buttonStyle(RowPress())
-            } else {
-                content.buttonStyle(PressSpring())
-            }
-        }
     }
 
     /// The line under a row's name says its STATE in colour (prd §811, user:

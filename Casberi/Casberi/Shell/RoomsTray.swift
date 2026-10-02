@@ -47,7 +47,8 @@ import SwiftUI
 ///
 /// **A mark has no hold (prd §1033).** §1015 gave it one verb, Manage
 /// account, and nobody finds a hold; the room's own door beside its name
-/// (`RoomAccountDoor`) is that verb now, so a mark only lands you in a room.
+/// was that verb, and since §1050f an app's settings open from Apps, so a
+/// mark only lands you in a room.
 ///
 /// **Search and the pinned row (prd §1015).** A search field leads the tray
 /// as it leads Accounts; typing narrows the grid in place — hits stay under
@@ -407,13 +408,20 @@ struct RoomsTray: View {
         seats(in: category).first { RoomAccounts.mergedRooms.contains($0) }
     }
 
-    /// A row's marks. An unmerged category's are its rooms. A merged room's
-    /// are its own seat and every app it folded in that is connected, each a
-    /// door to that app's settings (prd §1048b): the room has the header.
+    /// A row's marks. An unmerged category's are its rooms, each landing in
+    /// its own. A merged category draws NONE (prd §1050e, user: "settings are
+    /// things folks won't use much"): its header opens the room, and an app's
+    /// settings stand beside the room's name once the account menu picks it.
     private func trayMarks(in category: String) -> [String] {
-        guard let room = mergedRoom(in: category) else { return seats(in: category) }
+        mergedRoom(in: category) == nil ? seats(in: category) : []
+    }
+
+    /// The names a search may find a merged category by: its own, and every
+    /// app it folded in that is connected (a search for Gnosis finds Wallet).
+    private func mergedSearchNames(in category: String) -> [String] {
+        guard let room = mergedRoom(in: category) else { return [] }
         let names = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
-        return [room] + RoomAccounts.connected(in: room, names: names).map { $0.source ?? $0.name }
+        return RoomAccounts.connected(in: room, names: names).map(\.name)
     }
 
     // MARK: - Search (§1015)
@@ -443,6 +451,12 @@ struct RoomsTray: View {
                 .contains { $0.range(of: q, options: [.caseInsensitive, .diacriticInsensitive, .anchored]) != nil }
         }
         return categories.compactMap { category in
+            // A merged category has no marks to narrow (prd §1050e); it is a
+            // hit, header alone, when its name or a folded app's name matches.
+            if mergedRoom(in: category) != nil {
+                let hit = starts(category) || mergedSearchNames(in: category).contains(where: starts)
+                return hit ? (category: category, seats: []) : nil
+            }
             let all = trayMarks(in: category)
             let kept = starts(category) ? all : all.filter { starts(BridgeCatalog.seatName(forSource: $0)) }
             return kept.isEmpty ? nil : (category: category, seats: kept)
@@ -516,15 +530,12 @@ struct RoomsTray: View {
                              headInset: CGFloat, named: Bool) -> some View {
         let lit = standingCategory == category
         let needsYou = broken(present)
-        // A merged room's header is its door, drawn in the tint; its marks
-        // open settings (prd §1048b).
-        let merged = mergedRoom(in: category) != nil
         return VStack(alignment: .leading, spacing: 0) {
             Button {
                 pick(category)
             } label: {
                 header(glyph: glyph(for: category, lit: lit), word: category,
-                       lit: lit, broken: needsYou, opens: true, door: merged)
+                       lit: lit, broken: needsYou, opens: true)
             }
             .buttonStyle(RowPress())
             .padding(.leading, headInset)
@@ -532,11 +543,15 @@ struct RoomsTray: View {
                 ? Text("\(category), needs your attention")
                 : Text(category))
             .accessibilityAddTraits(lit ? .isSelected : [])
-            MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
-                ForEach(Array(present.enumerated()), id: \.element) { slot, venue in
-                    markButton(venue, key: .source(venue), named: named, opensSettings: merged)
-                        .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+            // A merged category has no marks (prd §1050e), and an empty grid
+            // would still hold its line's air under the header.
+            if !present.isEmpty {
+                MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
+                    ForEach(Array(present.enumerated()), id: \.element) { slot, venue in
+                        markButton(venue, key: .source(venue), named: named)
+                            .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
+                            .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    }
                 }
             }
         }
@@ -564,28 +579,14 @@ struct RoomsTray: View {
     /// room's head (§932); no hold since §1033. `key` tells a Recent mark from the same seat's
     /// mark in its category, so the flight starts from the one touched. A
     /// search's hit carries its name (`named`): a hit is read, not scanned.
-    private func markButton(_ venue: String, key: MarkKey, named: Bool,
-                            opensSettings: Bool = false) -> some View {
+    private func markButton(_ venue: String, key: MarkKey, named: Bool) -> some View {
         Button {
-            if opensSettings {
-                // A folded app has no room; its circle is its settings (prd
-                // §1048b), the page the room's sliders disc opened.
-                guard let destination = RoomAccountDoor.destination(forSource: venue, in: bridges)
-                else { return }
-                DSHaptic.selection()
-                close()
-                route.openAccount(destination)
-            } else {
-                pick(venue, flying: true, from: key)
-            }
+            pick(venue, flying: true, from: key)
         } label: {
             VStack(spacing: DS.Space.s2) {
                 BridgeIcon(name: venue, size: Self.mark, circular: true)
                     .overlay {
-                        // The ring says "the room you stand in"; a circle that
-                        // opens settings names no room, and in a merged row the
-                        // tint belongs to the header alone.
-                        if !opensSettings, filter.source == venue {
+                        if filter.source == venue {
                             Circle()
                                 .strokeBorder(DS.tint, lineWidth: 1.5)
                                 .padding(-2)
@@ -603,10 +604,8 @@ struct RoomsTray: View {
         }
         .buttonStyle(PressSpring())
         .dsTapTarget(Circle())
-        .accessibilityLabel(opensSettings
-            ? Text("\(BridgeCatalog.seatName(forSource: venue)) settings")
-            : Text(BridgeCatalog.seatName(forSource: venue)))
-        .accessibilityAddTraits(!opensSettings && filter.source == venue ? .isSelected : [])
+        .accessibilityLabel(Text(BridgeCatalog.seatName(forSource: venue)))
+        .accessibilityAddTraits(filter.source == venue ? .isSelected : [])
         // Where this mark stands, for the flight.
         .markFrame(key, in: frames)
     }
@@ -621,22 +620,23 @@ struct RoomsTray: View {
     /// plate (§746, §782). Tint says selected; the attention colour says a
     /// seat inside needs you (the label says it too).
     ///
-    /// **A merged room's header is a DOOR, and wears the tint (prd §1048b).**
-    /// Its glyph and its word open the room, and its circles open settings, so
-    /// the header takes the one colour that means "tap here" in this tray —
-    /// and nothing else in the tray wears it. The standing room keeps its
-    /// filled glyph (`glyph(for:lit:)`), now in the tint too.
+    /// **Primary ink, never the tint (prd §1050f, user: "no they shouldn't be
+    /// blue anymore").** A category entry is the room's door and its label at
+    /// once, so it reads in the page's own ink; the standing room says so with
+    /// its filled glyph (`glyph(for:lit:)`), and a broken seat with the
+    /// attention hue on the glyph.
     private func header(glyph: String, word: String, lit: Bool, broken: Bool,
-                        opens: Bool, door: Bool = false) -> some View {
+                        opens: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: glyph)
                 .dsGlyph(.subhead, weight: .medium)
                 .frame(width: Self.glyphSlot)
-                .foregroundStyle(broken ? DS.attention : (lit || door ? DS.tint : DS.textSecondary))
+                .foregroundStyle(broken ? DS.attention : (opens ? DS.textPrimary : DS.textSecondary))
                 .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
+            // Recent opens nothing, so it stays the secondary label it was.
             Text(word)
                 .dsText(.heading17)
-                .foregroundStyle(lit || door ? DS.tint : DS.textSecondary)
+                .foregroundStyle(opens ? DS.textPrimary : DS.textSecondary)
                 .lineLimit(1)
             if opens { DSChevron() }
         }

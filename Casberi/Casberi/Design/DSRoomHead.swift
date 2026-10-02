@@ -730,7 +730,20 @@ private struct DSHeadRowLimitKey: EnvironmentKey {
     static let defaultValue: Int? = nil
 }
 
+/// A room head drawn INSIDE another room's box (prd §1048d: a folded app's
+/// head in the Wallet's box when the menu picks it). The host already draws
+/// the well and its placement, so the head draws neither, or it is a box in a
+/// box.
+private struct DSRoomHeadInWellKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
 extension EnvironmentValues {
+    var dsRoomHeadInWell: Bool {
+        get { self[DSRoomHeadInWellKey.self] }
+        set { self[DSRoomHeadInWellKey.self] = newValue }
+    }
+
     /// How many rows each `DSRoomChassis.Rows` draws; nil draws them all. Set
     /// only by `DSRoomChassis.LeadFit` (prd §760).
     var dsHeadRowLimit: Int? {
@@ -782,20 +795,38 @@ extension View {
     /// a hero, the cover — ends `leadGap` above the first day, so the divider
     /// lands at one y in every room.
     func dsRoomHeadPlacement(top: CGFloat = DS.Space.s2) -> some View {
-        padding(.horizontal, DS.Space.s4)
-            .padding(.top, top)
-            .padding(.bottom, DSRoomChassis.leadGap)
+        modifier(DSRoomHeadPlacement(top: top))
+    }
+}
+
+struct DSRoomHeadPlacement: ViewModifier {
+    let top: CGFloat
+    @Environment(\.dsRoomHeadInWell) private var inWell
+    func body(content: Content) -> some View {
+        if inWell {
+            content
+        } else {
+            content
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, top)
+                .padding(.bottom, DSRoomChassis.leadGap)
+        }
     }
 }
 
 /// `dsRoomHeadBlock`'s body, as a modifier so it can read where it stands.
 struct DSRoomHeadWell: ViewModifier {
+    @Environment(\.dsRoomHeadInWell) private var inWell
     func body(content: Content) -> some View {
-        content
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWell(cornerRadius: DS.Radius.widget)
+        if inWell {
+            content.frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            content
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.top, DS.Space.s4)
+                .padding(.bottom, DS.Space.s4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .dsWell(cornerRadius: DS.Radius.widget)
+        }
     }
 }

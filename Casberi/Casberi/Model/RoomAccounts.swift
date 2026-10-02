@@ -51,8 +51,15 @@ enum RoomAccounts {
         room == CategoryFold.walletRoom ? wallet : []
     }
 
+    /// Matched on the catalogue name or the row source: a seat can register
+    /// under either ("0xBow Privacy Pools" is the offer, "Privacy Pools" lands
+    /// the rows).
     static func connected(in room: String, names: Set<String>) -> [Seat] {
-        seats(for: room).filter { names.contains($0.name) }
+        seats(for: room).filter { names.contains($0.name) || ($0.source.map(names.contains) ?? false) }
+    }
+
+    static func isConnected(_ seat: Seat, names: Set<String>) -> Bool {
+        names.contains(seat.name) || (seat.source.map(names.contains) ?? false)
     }
 
     /// Whether `source` is an app folded into a merged room, and which room

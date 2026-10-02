@@ -186,6 +186,10 @@ extension FeedScreen {
                                   upcoming: [Thing],
                                   cards: WalletCards.Reading? = nil,
                                   streamTotal: Int) -> some View {
+        // Read HERE, in this body, and captured by the crown below: read only
+        // inside the crown's closure, the head's arrival never re-drew the box
+        // (measured: computed, then the box stayed on "No balance yet").
+        let seatHead = selectedSeat != nil ? heads?.seatHead : nil
         Section {
             DSRoomScopeChrome(
                 source: "Wallet",
@@ -216,8 +220,15 @@ extension FeedScreen {
                     // Home is where it was taken from, so Home keeps it.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
                         if slot.isShowing(chrome.walletScope) {
-                            walletTilesSection(visible, streamTotal: streamTotal,
-                                               drawsChart: true)
+                            // An app the menu picked draws its own head here
+                            // when it has one (prd §1048d); else the balance.
+                            if let head = seatHead {
+                                sourceHeadCard(head, visible: visible)
+                                    .environment(\.dsRoomHeadInWell, true)
+                            } else {
+                                walletTilesSection(visible, streamTotal: streamTotal,
+                                                   drawsChart: true)
+                            }
                         }
                     }
                 },

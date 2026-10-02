@@ -170,162 +170,7 @@ extension FeedScreen {
             // lookup happens HERE, against the live corpus, in the view that
             // owns the sheet.
             insightSection {
-                switch sourceHead {
-                case .runway(let runway):
-                    CloudflareRunwayCard(runway: runway) { item in
-                        openBySourceRef(item.id, in: visible)
-                    }
-                case .stripe(let room):
-                    StripeRoomCard(room: room, tiles: kindTilesInHead) { item in
-                        openBySourceRef(item.id, in: visible)
-                    }
-                case .polar(let room):
-                    PolarRoomCard(room: room, tiles: kindTilesInHead) { item in
-                        openBySourceRef(item.id, in: visible)
-                    }
-                case .dodoPayments(let room):
-                    DodoPaymentsRoomCard(room: room, tiles: kindTilesInHead) { currency in
-                        // A currency owns many payments, so the honest landing
-                        // is its most recent one — the Gnosis Pay rule, matched
-                        // on the same `priceCurrency` field the room groups by.
-                        openNewest(source: DodoPaymentsRoomSource.source, in: visible) { thing in
-                            thing.priceCurrency == currency.code
-                        }
-                    } onOpenRetry: { retry in
-                        openBySourceRef(retry.id, in: visible)
-                    }
-                case .posthog(let room):
-                    PostHogRoomCard(room: room, tiles: kindTilesInHead) { event in
-                        openBySourceRef(PostHogWatch.metricRef(event), in: visible)
-                    }
-                case .cardPointers(let room):
-                    // No callback since §487: the head stopped naming a single
-                    // offer, so it has nothing to open — every offer is its own
-                    // row a scroll below, and each of those is its own door.
-                    CardPointersRoomCard(room: room)
-                case .walletbeat(let room):
-                    WalletbeatRoomCard(room: room, tiles: kindTilesInHead) { ref in
-                        // The card names a real row's `sourceRef`, so this lands
-                        // exactly — the card itself holds no `Thing` (corollary 5)
-                        // and the lookup happens here, against the live corpus.
-                        openBySourceRef(ref, in: visible)
-                    } onBrowse: {
-                        // Pushed, not raised: this is navigation to a place, not a
-                        // connect act (§219 — Connect raises, Open pushes). Straight to
-                        // the directory, never via the connect screen: §234's ruling is
-                        // that a browse is mounted by the room, and routing through the
-                        // setup screen made reading the list a trip into the catalog
-                        // plus a second tap (prd §421).
-                        route.path.append(.walletbeatDirectory)
-                    }
-                case .l2beat(let room):
-                    L2beatRoomCard(room: room, tiles: kindTilesInHead) { ref in
-                        openBySourceRef(ref, in: visible)
-                    } onBrowse: {
-                        // Pushed, not raised (§219 — Connect raises, Open pushes), and
-                        // straight to the directory rather than via the connect screen
-                        // (§234 — a browse is mounted by the room).
-                        route.path.append(.l2beatDirectory)
-                    }
-                case .peer(let room):
-                    PeerRoomCard(room: room) { rail in
-                        // A rail owns many fills, so the honest landing is its
-                        // most recent one, matched on the funding rail §311
-                        // stamps on `authorHandle` (the Cursor repo rule).
-                        openNewest(source: PeerRoomSource.source, in: visible) { thing in
-                            thing.authorHandle == rail.name
-                        }
-                    }
-                case .privacyPools(let room):
-                    // Computed once and read three times: presence decides the
-                    // strip, the dot and the row gate, and three separate reads
-                    // are three chances for them to describe different rooms.
-                    let poolScopes = privacyPoolsSections(room)
-                    PrivacyPoolsRoomCard(
-                        room: room,
-                        onOpen: { slice in
-                            // Matched on the DEPOSIT ref as well as the tag: an
-                            // alert row about a cleared deposit carries no state
-                            // tag, but a future one might, and landing on the
-                            // announcement instead of the deposit it announces
-                            // is the wrong row by one hop.
-                            //
-                            // The UNKNOWN slice is the same match with the test
-                            // inverted — a deposit wearing none of the bridge's
-                            // state tags (prd §486). It is a real door rather
-                            // than a label for the same reason every other
-                            // legend row is one: these are deposits you can go
-                            // and look at, and the one thing this card cannot
-                            // say about them is on the row itself.
-                            openNewest(source: PrivacyPoolsRoomSource.source, in: visible) { thing in
-                                guard thing.sourceRef?.hasPrefix(PrivacyPoolsRoom.depositPrefix) ?? false
-                                else { return false }
-                                switch slice {
-                                case .state(let state): return thing.tags.contains(state.rawValue)
-                                case .unknown: return PrivacyPoolsRoom.state(tags: thing.tags) == nil
-                                }
-                            }
-                        },
-                        // WHICH READING IS ON SCREEN (prd §486). Resolved
-                        // rather than read raw: a scope remembered from a room
-                        // whose last deposit has since been reclaimed falls
-                        // back to Activity instead of rendering an empty page
-                        // claiming to be a section — `WalletSection.resolve`'s
-                        // rule, two rooms over.
-                        section: PrivacyPoolsSection.resolve(
-                            chrome.privacyPoolsSection, present: poolScopes),
-                        scopes: poolScopes,
-                        scopeAttention: PrivacyPoolsSection.attention(
-                            needsProof: room.needsYou != nil,
-                            declined: room.needsReclaim != nil,
-                            present: poolScopes),
-                        onPickScope: { picked in
-                            withAnimation(DS.Motion.standard) {
-                                chrome.privacyPoolsSection = picked
-                            }
-                        })
-                case .cardSpend(let room, let seat):
-                    CardSpendRoomCard(room: room, seat: seat) { currency in
-                        // A currency owns many spends, so the honest landing is
-                        // its most recent one — and it must be a SPEND, asked
-                        // through the same rule the head composed with (prd
-                        // §868). Matching on `priceCurrency` alone was right
-                        // only by coincidence: ether.fi's room also holds
-                        // unstake and risk rows, and none of them happens to
-                        // carry a currency today.
-                        openNewest(source: seat, in: visible) { thing in
-                            CardSpendSeat.isSpend(thing, seat: seat)
-                                && thing.priceCurrency == currency.code
-                        }
-                    }
-                case .privy(let room):
-                    PrivyRoomCard(room: room) { ref in
-                        openBySourceRef(ref, in: visible)
-                    }
-                case .railgun(let room):
-                    RailgunRoomCard(room: room) { token in
-                        // A token owns many moves, so the honest landing is
-                        // its most recent one, matched on the same
-                        // `priceCurrency` field the room groups by (the
-                        // Gnosis Pay currency rule, one field over).
-                        openNewest(source: RailgunRoomSource.source, in: visible) { thing in
-                            thing.priceCurrency == token.symbol
-                        }
-                    }
-                case .safe(let room):
-                    // `fallbackRef` is what the card opens when nothing is
-                    // pending and only a module warning stands — without it
-                    // that card announced a door and had none (2026-08-17).
-                    SafeRoomCard(room: room,
-                                 fallbackRef: SafeRoomSource.fallbackRef(things: visible),
-                                 tiles: kindTilesInHead) { ref in
-                        // Unlike its siblings, a Safe entry OWNS a single row
-                        // — the tracking snapshot is keyed by the pending
-                        // thing's own `sourceRef` — so this is a direct
-                        // lookup, not a newest-of-many match.
-                        openBySourceRef(ref, in: visible)
-                    }
-                }
+                sourceHeadCard(sourceHead, visible: visible)
             }
         } else if let anniversary {
             insightSection {
@@ -1197,4 +1042,172 @@ extension FeedScreen {
         guard let first = all.first, first.capturedAt > newSince else { return nil }
         return all.first(where: { $0.capturedAt <= newSince })?.id
     }
+
+    /// A source's own head card (prd §298 onward), for its room — and, since
+    /// the Wallet folded its apps in, for the Wallet's box when the menu picks
+    /// one of them (prd §1048d: the precedent §1049 set for Work's Stripe).
+    /// Each card holds no `Thing` — it hands back its own value and the lookup
+    /// happens HERE, against the live corpus, in the view that owns the sheet.
+    @ViewBuilder
+    func sourceHeadCard(_ sourceHead: SourceHead, visible: [Thing]) -> some View {
+        switch sourceHead {
+        case .runway(let runway):
+            CloudflareRunwayCard(runway: runway) { item in
+                openBySourceRef(item.id, in: visible)
+            }
+        case .stripe(let room):
+            StripeRoomCard(room: room, tiles: kindTilesInHead) { item in
+                openBySourceRef(item.id, in: visible)
+            }
+        case .polar(let room):
+            PolarRoomCard(room: room, tiles: kindTilesInHead) { item in
+                openBySourceRef(item.id, in: visible)
+            }
+        case .dodoPayments(let room):
+            DodoPaymentsRoomCard(room: room, tiles: kindTilesInHead) { currency in
+                // A currency owns many payments, so the honest landing
+                // is its most recent one — the Gnosis Pay rule, matched
+                // on the same `priceCurrency` field the room groups by.
+                openNewest(source: DodoPaymentsRoomSource.source, in: visible) { thing in
+                    thing.priceCurrency == currency.code
+                }
+            } onOpenRetry: { retry in
+                openBySourceRef(retry.id, in: visible)
+            }
+        case .posthog(let room):
+            PostHogRoomCard(room: room, tiles: kindTilesInHead) { event in
+                openBySourceRef(PostHogWatch.metricRef(event), in: visible)
+            }
+        case .cardPointers(let room):
+            // No callback since §487: the head stopped naming a single
+            // offer, so it has nothing to open — every offer is its own
+            // row a scroll below, and each of those is its own door.
+            CardPointersRoomCard(room: room)
+        case .walletbeat(let room):
+            WalletbeatRoomCard(room: room, tiles: kindTilesInHead) { ref in
+                // The card names a real row's `sourceRef`, so this lands
+                // exactly — the card itself holds no `Thing` (corollary 5)
+                // and the lookup happens here, against the live corpus.
+                openBySourceRef(ref, in: visible)
+            } onBrowse: {
+                // Pushed, not raised: this is navigation to a place, not a
+                // connect act (§219 — Connect raises, Open pushes). Straight to
+                // the directory, never via the connect screen: §234's ruling is
+                // that a browse is mounted by the room, and routing through the
+                // setup screen made reading the list a trip into the catalog
+                // plus a second tap (prd §421).
+                route.path.append(.walletbeatDirectory)
+            }
+        case .l2beat(let room):
+            L2beatRoomCard(room: room, tiles: kindTilesInHead) { ref in
+                openBySourceRef(ref, in: visible)
+            } onBrowse: {
+                // Pushed, not raised (§219 — Connect raises, Open pushes), and
+                // straight to the directory rather than via the connect screen
+                // (§234 — a browse is mounted by the room).
+                route.path.append(.l2beatDirectory)
+            }
+        case .peer(let room):
+            PeerRoomCard(room: room) { rail in
+                // A rail owns many fills, so the honest landing is its
+                // most recent one, matched on the funding rail §311
+                // stamps on `authorHandle` (the Cursor repo rule).
+                openNewest(source: PeerRoomSource.source, in: visible) { thing in
+                    thing.authorHandle == rail.name
+                }
+            }
+        case .privacyPools(let room):
+            // Computed once and read three times: presence decides the
+            // strip, the dot and the row gate, and three separate reads
+            // are three chances for them to describe different rooms.
+            // A Privacy Pools head drawn in the Wallet's box (prd §1048d)
+            // carries no scope tiles of its own: the Wallet's are under it.
+            let poolScopes = source == PrivacyPoolsRoomSource.source ? privacyPoolsSections(room) : []
+            PrivacyPoolsRoomCard(
+                room: room,
+                onOpen: { slice in
+                    // Matched on the DEPOSIT ref as well as the tag: an
+                    // alert row about a cleared deposit carries no state
+                    // tag, but a future one might, and landing on the
+                    // announcement instead of the deposit it announces
+                    // is the wrong row by one hop.
+                    //
+                    // The UNKNOWN slice is the same match with the test
+                    // inverted — a deposit wearing none of the bridge's
+                    // state tags (prd §486). It is a real door rather
+                    // than a label for the same reason every other
+                    // legend row is one: these are deposits you can go
+                    // and look at, and the one thing this card cannot
+                    // say about them is on the row itself.
+                    openNewest(source: PrivacyPoolsRoomSource.source, in: visible) { thing in
+                        guard thing.sourceRef?.hasPrefix(PrivacyPoolsRoom.depositPrefix) ?? false
+                        else { return false }
+                        switch slice {
+                        case .state(let state): return thing.tags.contains(state.rawValue)
+                        case .unknown: return PrivacyPoolsRoom.state(tags: thing.tags) == nil
+                        }
+                    }
+                },
+                // WHICH READING IS ON SCREEN (prd §486). Resolved
+                // rather than read raw: a scope remembered from a room
+                // whose last deposit has since been reclaimed falls
+                // back to Activity instead of rendering an empty page
+                // claiming to be a section — `WalletSection.resolve`'s
+                // rule, two rooms over.
+                section: PrivacyPoolsSection.resolve(
+                    chrome.privacyPoolsSection, present: poolScopes),
+                scopes: poolScopes,
+                scopeAttention: PrivacyPoolsSection.attention(
+                    needsProof: room.needsYou != nil,
+                    declined: room.needsReclaim != nil,
+                    present: poolScopes),
+                onPickScope: { picked in
+                    withAnimation(DS.Motion.standard) {
+                        chrome.privacyPoolsSection = picked
+                    }
+                })
+        case .cardSpend(let room, let seat):
+            CardSpendRoomCard(room: room, seat: seat) { currency in
+                // A currency owns many spends, so the honest landing is
+                // its most recent one — and it must be a SPEND, asked
+                // through the same rule the head composed with (prd
+                // §868). Matching on `priceCurrency` alone was right
+                // only by coincidence: ether.fi's room also holds
+                // unstake and risk rows, and none of them happens to
+                // carry a currency today.
+                openNewest(source: seat, in: visible) { thing in
+                    CardSpendSeat.isSpend(thing, seat: seat)
+                        && thing.priceCurrency == currency.code
+                }
+            }
+        case .privy(let room):
+            PrivyRoomCard(room: room) { ref in
+                openBySourceRef(ref, in: visible)
+            }
+        case .railgun(let room):
+            RailgunRoomCard(room: room) { token in
+                // A token owns many moves, so the honest landing is
+                // its most recent one, matched on the same
+                // `priceCurrency` field the room groups by (the
+                // Gnosis Pay currency rule, one field over).
+                openNewest(source: RailgunRoomSource.source, in: visible) { thing in
+                    thing.priceCurrency == token.symbol
+                }
+            }
+        case .safe(let room):
+            // `fallbackRef` is what the card opens when nothing is
+            // pending and only a module warning stands — without it
+            // that card announced a door and had none (2026-08-17).
+            SafeRoomCard(room: room,
+                         fallbackRef: SafeRoomSource.fallbackRef(things: visible),
+                         tiles: kindTilesInHead) { ref in
+                // Unlike its siblings, a Safe entry OWNS a single row
+                // — the tracking snapshot is keyed by the pending
+                // thing's own `sourceRef` — so this is a direct
+                // lookup, not a newest-of-many match.
+                openBySourceRef(ref, in: visible)
+            }
+        }
+    }
+
 }

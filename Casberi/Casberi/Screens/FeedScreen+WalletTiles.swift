@@ -32,7 +32,7 @@ extension FeedScreen {
     /// reads as All, as an unwatched address does (`onChange(of: wallet.addresses)`).
     var selectedSeat: RoomAccounts.Seat? {
         guard let seat = RoomAccounts.seat(chrome.walletScope, in: source),
-              connectedSeatNames.contains(seat.name) else { return nil }
+              RoomAccounts.isConnected(seat, names: connectedSeatNames) else { return nil }
         return seat
     }
 

@@ -37,6 +37,11 @@ extension FeedScreen {
         /// read off the narrowed list would leave only the picked kind, and
         /// the tiles would vanish the moment one was tapped. Empty draws none.
         var kindTiles: [RoomKindTile] = []
+        /// The picked app's own head, when the Wallet's menu picks an app that
+        /// has one (prd §1048d): drawn in the Wallet's box in place of the
+        /// balance, so Safe's co-signers or a card's spending stay one pick
+        /// away after their rooms folded in.
+        var seatHead: SourceHead? = nil
         /// Which of those tiles carry the attention dot: Safe's Queue while a
         /// transaction awaits your signature, Stripe's Disputes while one is
         /// open.
@@ -123,6 +128,11 @@ extension FeedScreen {
                 // Privy's balances land no row either (prd §803c), so its
                 // store's revision re-keys its head and nobody else's.
                 source == PrivyHomeFeed.source ? PrivyHomeStore.identity : "",
+                // **AN APP PICK IN A MERGED ROOM (prd §1048d).** `selectedWallet`
+                // reads nil for one, so the pick re-keys here, and a Privy pick
+                // carries Privy's store revision as its own room did.
+                RoomAccounts.isSeat(chrome.walletScope) ? (chrome.walletScope ?? "") : "",
+                chrome.walletScope == "seat:Privy" ? PrivyHomeStore.identity : "",
                 // **AND ITS SCOPE** (2026-09-02). The face rail scopes this
                 // room's head from today, so it belongs in the memo key for
                 // this property's own stated reason: a head that survived a
@@ -333,6 +343,9 @@ extension FeedScreen {
             // verdict derived from the room's contents could not see it.
             feedHealth: FeedRoomHealthSource.standing(for: source),
             quietHead: quiet ? head : nil)
+        if let seat = selectedSeat, let seatSource = seat.source {
+            computed.seatHead = sourceHead(rows.filter { $0.source == seatSource }, for: seatSource)
+        }
         if let kindRoom = RoomKindTiles.Room(source: source) {
             let kinds = kindRoomReading(kindRoom, rows: rows)
             computed.kindTiles = kinds.tiles
@@ -672,8 +685,8 @@ extension FeedScreen {
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
     /// per-source head is one case here rather than an edit to five gates.
-    private func sourceHead(_ visible: [Thing]) -> SourceHead? {
-        switch source {
+    private func sourceHead(_ visible: [Thing], for headSource: String? = nil) -> SourceHead? {
+        switch headSource ?? source {
         case "Cloudflare":
             return CloudflareRunwaySource.compose(things: visible).map { .runway($0) }
         case "Stripe":

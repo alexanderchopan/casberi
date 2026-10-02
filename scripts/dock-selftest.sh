@@ -812,21 +812,20 @@ grep -q 'static let swipeTableInk = Color.fixed("#ffffff")' "$TMP/tokens.nc" \
 [ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \
   || { echo "✗ RoomSnapshots.swift is back — a store with no reader (prd §723, §898)."; fail=1; }
 
-# --- 13. A ROOM'S ACCOUNT DOOR STANDS BESIDE ITS NAME, AND A TRAY MARK HAS NO HOLD (prd §1033) --
-# The hold §1015 gave a mark was undiscoverable; the door is the room's own,
-# in the title row (in the list, never floating), wearing the sliders —
-# `gearshape` is the app's Settings and means nothing else.
-strip_comments "Casberi/Casberi/Shell/RoomAccountDoor.swift" > "$TMP/door.nc"
+# --- 13. AN APP'S SETTINGS OPEN FROM APPS, NO ROOM DRAWS A SLIDERS DISC, AND A
+# TRAY MARK HAS NO HOLD (prd §1050f, amending §1033) ---------------------------
+# §1033 put a sliders disc beside each room's name; once rooms merged, the disc
+# no longer named one app, and the user ruled one door: a connected row in
+# Apps opens that app's account page. A hold on a tray mark stays deleted.
 strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
-grep -q 'RoomAccountDoor(source: source)' "$TMP/feed.nc" 2>/dev/null \
-  || grep -q 'RoomAccountDoor(source: source)' Casberi/Casberi/Screens/FeedScreen*.swift \
-  || { echo "✗ the room's title row lost its account door (prd §1033)."; fail=1; }
-grep -q '"slider.horizontal.3"' "$TMP/door.nc" && ! grep -q 'gearshape' "$TMP/door.nc" \
-  || { echo "✗ the room's account door is not the sliders — the gear is Settings' (prd §1033)."; fail=1; }
-grep -q 'route.openAccount(' "$TMP/door.nc" \
-  || { echo "✗ the room's account door no longer RAISES the page over the room (prd §1033)."; fail=1; }
+strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
+[ ! -f "Casberi/Casberi/Shell/RoomAccountDoor.swift" ] \
+  && ! grep -q 'RoomAccountDoor' Casberi/Casberi/Screens/FeedScreen*.swift \
+  || { echo "✗ a room draws a sliders disc again — settings open from Apps (prd §1050f)."; fail=1; }
+grep -q 'route.openAccount(destination)' "$TMP/apps.nc" \
+  || { echo "✗ a connected row in Apps no longer opens its account page (prd §1050f)."; fail=1; }
 ! grep -q '\.contextMenu' "$TMP/tray.nc" \
-  || { echo "✗ a tray mark has a hold again — §1033 deleted it for the room's door."; fail=1; }
+  || { echo "✗ a tray mark has a hold again — §1033 deleted it."; fail=1; }
 
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"
