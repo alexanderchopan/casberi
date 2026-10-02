@@ -2451,6 +2451,15 @@ struct MainSurface: View {
         guard let target = neighbour(delta) else {
             // Nothing that way: the rubber-banded room springs home.
             dragCancel()
+            // **Home's left edge opens the tray (prd §1062, a user: on Home
+            // "there is nothing to swipe right onto"; user: "ok").** Home is
+            // the one screen with nothing before it, and the tray grows out
+            // of the bottom-left corner, so pulling right from Home pulls it
+            // out. Every other end of the walk still springs home.
+            if delta < 0, filter.source == "All", route.path.isEmpty, !chrome.roomsTray {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.folder) { chrome.roomsTray = true }
+            }
             return
         }
         // The card leaving is the heaviest thing the dock does, and it felt
