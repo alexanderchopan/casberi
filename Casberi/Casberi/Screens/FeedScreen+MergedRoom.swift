@@ -114,7 +114,7 @@ extension FeedScreen {
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
         let cover = heroShown ? nil : (next ?? visible.first { $0.isLive })
         if let cover {
-            Section { ledeListRow(cover, top: 0, bottom: DSRoomChassis.contentGap) }
+            Section { ledeListRow(cover) }
         } else if !heroShown {
             Section {
                 emptyLeadRow(headline: DSProse.text("Nothing ahead"),
@@ -178,7 +178,7 @@ extension FeedScreen {
         let comingUp = chrome.workScope == .comingUp
         let cover = heroShown ? nil : (deadlines.first ?? visible.first { $0.isLive })
         if let cover {
-            Section { ledeListRow(cover, top: 0, bottom: DSRoomChassis.contentGap) }
+            Section { ledeListRow(cover) }
         } else if !heroShown {
             // A head already holds the box (a picked app's own, prd §1067):
             // a second, empty box under it pushed the tiles off the screen.

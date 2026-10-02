@@ -933,6 +933,9 @@ final class ShellChrome {
     /// seat with no rows is left out (prd §1064, user: "in the demo i
     /// shouldn't be able to pick something and it go to empty").
     func seatShows(_ seat: RoomAccounts.Seat) -> Bool {
+        // A source that never surfaces a row (Contacts, §916) is no pick in
+        // any mode: it opened "Nothing here yet" (prd §1072).
+        guard Corpus.earnsRoom(seat.source ?? seat.name) else { return false }
         // A testnet draws its own screen from live reads, not stored rows;
         // a seat with money in the total (an exchange) draws its balance,
         // which is all it lands (prd §1065).

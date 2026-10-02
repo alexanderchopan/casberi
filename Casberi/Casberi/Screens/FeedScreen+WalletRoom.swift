@@ -1607,7 +1607,8 @@ struct WalletSeatLatestLead: View {
                 .dsText(.heading28)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(3)
-            if !thing.content.isEmpty {
+            // A link is no line to read (prd §1070's rule, kept here too).
+            if !thing.content.isEmpty, !FeedLedeCard.isBareLink(thing.content) {
                 Text(thing.content)
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)

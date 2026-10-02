@@ -793,6 +793,7 @@ enum DemoSeedAll {
         // the person's own until a real read ran — and none runs with no key
         // and no watch.
         FramesLiveState.teardownDemo()
+        LogosStore.shared.remove(demoLogosAccount)
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -942,23 +943,6 @@ enum DemoSeedAll {
                 thing.enrichedText = transcript.text
                 thing.messageCount = transcript.messages
             }
-        }
-    }
-
-    /// Apple Intelligence's one conversation (prd §1065). It is no
-    /// `AgentProvider` (no key, Apple's model), so the loop above never
-    /// pours one, and its seat stood in the Agents room with nothing behind it.
-    private static func appleIntelligenceChat() -> Thing {
-        let question = "What did I save about the Zagreb trip?"
-        let answer = "Three things: the dinner booking at Ilica 42, a screenshot of the train times, and Sam's message about the museum on Saturday."
-        let transcript = ChatTranscript.make([(AgentSheet.readerLabel, question),
-                                              ("Apple Intelligence", answer)])
-        return row(.chat, IngestSupport.titleLine(question),
-                   source: "Apple Intelligence",
-                   ref: AgentConversationLanding.refPrefix + "demo-appleintelligence",
-                   days: 2, hour: 18, content: "") { thing in
-            thing.enrichedText = transcript.text
-            thing.messageCount = transcript.messages
         }
     }
 
@@ -1532,7 +1516,6 @@ enum DemoSeedAll {
         out += l2beat()
         out += cardPointers()
         out += agentChats()
-        out.append(appleIntelligenceChat())
         out += appleWallet()
         out += cards()
         out += work()
@@ -4957,6 +4940,9 @@ enum DemoSeedAll {
     /// address to find and shift the wallet curve it seeds below — a second
     /// copy of the literal is how that drifts silently.
     static let demoWallet = "0x1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
+    /// The Logos account the demo watches (prd §1072) — a real-shaped public
+    /// id, the one `logos-selftest.sh` parses.
+    static let demoLogosAccount = "CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r"
 
     /// Every wallet the demo watches, in shelf order. The FIRST is
     /// `demoWallet` — the one every seeded row, the balance curve, the Safe
@@ -5188,6 +5174,12 @@ enum DemoSeedAll {
         // sweep would answer with an empty account and draw the seat as a
         // room with nothing in it.
         FramesLiveState.seedDemo()
+        // 5c' · Logos' watched account (prd §1072): the rows below name it
+        // (`CbgR…Sr2r`), and with no account watched the room's box said
+        // "No account watched yet." over its own moves. A fixture balance,
+        // never a read.
+        LogosStore.shared.add(demoLogosAccount)
+        LogosStore.shared.rememberBalances([demoLogosAccount: 110], at: .now)
         // 5b · The anonymity sets behind the Privacy Pools deposits seeded in
         // `wallet()` (prd §397). Two numbers, and the pair is the point: the
         // CURRENT set, plus the set at the moment the oldest deposit in each
@@ -5492,7 +5484,6 @@ enum DemoSeedAll {
         ("Grok", "Key on this phone", "Answers with your things, on your key."),
         ("NEAR AI", "Key on this phone", "Answers with your things, on your key."),
         ("Muse", "Key on this phone", "Answers with your things, on your key."),
-        ("Apple Intelligence", "No key needed", "Answers with your things on Apple's model."),
         ("Railgun", "Synced 45m ago", "Reads your wallet's shielded moves."),
         ("Safe", "Synced 15m ago", "Reads your Safe's pending signatures."),
         ("Linear", "Synced 15m ago", "Reads the work assigned to you."),
