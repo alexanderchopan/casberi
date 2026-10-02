@@ -419,6 +419,7 @@ marks chronological position within the pair.
 | §1048 (Markets, Hegotá Frames and Logos stay their own rooms) | three standalone rooms inside the Wallet category | amended by §1050 — every tray entry is a category: Markets is its own category, Frames and Logos fold into one Testnets category |
 | §1049 (the tray's rooms) | Markets, Frames and Logos drew as room rows under the Wallet category | amended by §1050 — Markets and Testnets are categories |
 | §322 / §1049 (Life's glyph `calendar`) | Life wore `calendar` | amended by §1050a — Life wears `face.smiling`; Day keeps `calendar.day.timeline.left` |
+| §1049 (Photos in Life) | Photos was a member of Life | amended by §1050b — Photos is a member of Media, in its square grid |
 
 ## §1 — Thesis
 
@@ -63303,4 +63304,8 @@ Nothing is built in this entry; it is the ruling only.
 
 - **Testnets** wears `flask`, `flask.fill` when lit (`RoomsTray.filledGlyphs`): it says experiment, not money. `testtube.2` was thinner at 20pt with no fill; `cube.transparent` said chain, not test, and could read as a second Wallet.
 - **Life** wears `face.smiling`, `face.smiling.inverse` when lit, replacing `calendar`, which §1049's split left beside Day's `calendar.day.timeline.left` as a near twin. `heart` is declined because it is Apple Health's own glyph (`KindGlyph`), a member of Life, the case that kept `person.2` (the People seat's glyph) off Social in `CategoryFold.glyphs`. `leaf` and `house` were offered; `house` reads as the Home door. "For now": the user may revisit it once it is drawn in the tray.
+
+## §1050b — Photos moves from Life to Media (user: "we can put photos in media wdyt?", then "we already use squares for photos today in the app. lets move photos to media", 2026-10-01; amends §1049)
+
+Casberi's Photos lands mostly screenshots ("Screenshots, straight to your feed"): a thing you saw, which is Media's unit, media you consumed. Media already draws §1049's square picture grid, and Photos already draws square cells today, so it joins with no new shape. Life keeps words and stats: Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health (with Strava and Garmin), Duolingo.
 
