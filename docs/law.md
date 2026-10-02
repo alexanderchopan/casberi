@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1178 of 1236 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1179 of 1237 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1313,7 +1313,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §974 — A note can hold ONE picture
 - §975 — The Notes room's sentinel is not the word on its door
 - §976 — The You doors are pink app tiles (amended by §976a)
-- §976a — The You doors are black circles with pink glyphs, and the standing door fills pink (amended by §1012, §1014)
+- §976a — The You doors are black circles with pink glyphs, and the standing door fills pink (amended by §1012, §1014, §1050l)
 - §977 — A category is a tray row only while it holds a connected seat
 - §978 — A note of yours can be deleted from its long press, and it wears the note, not the person (amended by §985)
 - §979 — The Notes room covers whatever it holds, so its tiles never rise
@@ -1344,7 +1344,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1009 — While the tray is up the face is the octopus, photo or not
 - §1010 — The tray's sections put the name above the marks, five to a line from the name's edge (amended by §1011)
 - §1012 — The tray's You doors are a labelled row across the top, and every mark is 28pt (amended by §1013, §1050g)
-- §1013 — The tray is one grid: headers above, every button the face's size, and a Recent line (amended by §1014, §1015, §1016a; part superseded by §1050j)
+- §1013 — The tray is one grid: headers above, every button the face's size, and a Recent line (amended by §1014, §1015, §1016a, §1050l; part superseded by §1050j)
 - §1014 — The tray is solid black, its doors the room head's charcoal, and its first column is the face's axis
 - §1015 — The tray searches in place, pins the You row, and a hold is Manage account (part superseded by §1033)
 - §1016 — Logos: a Rewards tile, mining read off your node, and the app's first own symbol
@@ -1395,8 +1395,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050g — Apps and Settings become one door, Settings: Casberi's own settings first, then your apps, then the catalogue (amended by §1050h)
 - §1050h — Settings is one list: Casberi first, then every app in its category, connected or not
 - §1050i — Settings as one door and one list, built
-- §1050j — The rooms tray is a list of rooms with no counts and no Recent, and every glass category bar follows Dock order
+- §1050j — The rooms tray is a list of rooms with no counts and no Recent, and every glass category bar follows Dock order (amended by §1050l)
 - §1050k — Testnets is one room, built: it shows one network at a time, and the account menu crosses to the other
+- §1050l — The rooms tray is a Home Screen: the You doors and the categories are one tile, four to a line, in two sections
 - §1051 — Deals, Shopify and Cursor leave the catalogue, and their stored rows, settings and key go with them
 - §1051a — L2BEAT and Walletbeat move to Reading; Bitrefill still folds into the One Wallet
 

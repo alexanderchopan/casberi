@@ -63458,3 +63458,15 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 **The menu.** Each network's account menu ends with a Networks section naming the other network; a pick switches the screen. It is drawn only while both networks are connected — with one, the room is that network.
 
 **Checked.** `RoomAccountsTests` (the fold, the category, the screen shown); `category-fold-selftest.sh`, `dock-selftest.sh`. On the simulator: `-openRoom Logos` and `-openRoom Testnets` land in Testnets titled so, the menu's Networks › Hegotá Frames switches to Frames, and the tray's Testnets entry opens the room.
+
+## §1050l — The rooms tray is a Home Screen: the You doors and the categories are one tile, four to a line, in two sections (user: "mock this up in a way that the list of wallet etc are same size and shape as the row of icons above home etc but in their own section", "still four per row", then, of three Apple treatments, "ok lets do A", 2026-10-02; rules on the "Tray, the Apple way" canvas and `design/mockups/tray-category-discs.html`; amends §1050j's rows, §1013's five columns and §976a's door)
+
+**The tile.** Every door in the tray is one shape: a 62pt rounded square at the app-icon ratio (`DS.Radius.appIcon`, brief §8's 22.37%), its glyph at 0.43 of the tile, its word under it in `label12`. Four to a line, on one set of columns for both sections (`MarkGrid`, flush with the tray's insets).
+
+**You.** Home, Notes, Addresses and Settings, pinned under the search. The standing door fills `DS.brand` with a white glyph and the sheen; the rest are the brand at a fifth with a pink glyph (was a charcoal circle, §976a).
+
+**Categories.** A `heading20` header, then a tile per category in Dock order: `surfaceRaised` charcoal, the category's glyph in primary ink (the attention hue when an app inside needs you), the word in secondary ink. The standing category takes its filled glyph and a primary word. A tile lands in its category's room, as the row did.
+
+**No app marks.** An unmerged category's app circles (§1050j kept them until each merge) leave the tray: a tile lands in the category, whose room scopes to each app. The search narrows the categories, keeping a tile when its name or an app inside matches (a search for Stripe keeps Work). With the marks went the pick flight (`RoomPickFlight`, `ShellChrome.roomPick`, `roomHeadFrame`, `MarkKey`, `TrayFrames`), per §723.
+
+**Checked.** `category-fold-selftest.sh`, `dock-selftest.sh`, `ds-template-audit.py`, `dead-closure-audit.py`, `footnote-audit.py`. On the simulator (`-openTray YES`, demo): the You row and four-up Categories draw as the canvas's A; the face covers the first tile of the last line at rest, as it covered the first mark before.
