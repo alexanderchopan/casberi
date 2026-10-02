@@ -675,6 +675,9 @@ struct FeedScreen: View {
     /// The agent whose room this is, when its key is present (prd §840) —
     /// resolved in `onAppear` by `resolveRoomAgent`, never in a body.
     @State var roomAgent: AgentProvider?
+    /// New was tapped in the Agents room with no agent picked and several
+    /// that can answer (prd §1053).
+    @State var askingWhichAgent = false
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State var openProject: ProjectRoute?
@@ -1042,7 +1045,7 @@ struct FeedScreen: View {
         // tile is how an empty one stops being empty, and the generic state
         // told a first-time writer to open the catalog instead. Nor is a
         // connected Reminders room (prd §993).
-        if !roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil
+        if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
             && !Pinboard.isPinnedRoom(source) && !connectedHoldsLead {
             Group { emptyState }
                 .listRowBackground(Color.clear)
@@ -1117,7 +1120,7 @@ struct FeedScreen: View {
         // just see a black screen"*. `LiveRoomSources`' own doc names this
         // exact shape — it is why Frames and Logos each have an arm above
         // rather than a flag.
-        } else if roomHasContent || roomAgent != nil || Pinboard.isPinnedRoom(source)
+        } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
                     || connectedHoldsLead {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
@@ -1189,7 +1192,7 @@ struct FeedScreen: View {
             // room `RoomKindTiles.Room(source:)` does not know, which is every
             // agent room by construction — the very condition that routes them
             // to `agentRoomSections`.
-            || roomAgent != nil
+            || agentRoomShown
             // A person, repo or board picked from the control IN the room
             // (prd §959): the generic state would take that control with it,
             // and its one door leaves the room.
@@ -1784,6 +1787,8 @@ struct FeedScreen: View {
         // the signal; `AgentKey.configured` is memoised on `TokenVault
         // .generation`, so re-asking is a dictionary hit.
         .onChange(of: bridges.bridges.count) { _, _ in resolveRoomAgent() }
+        // The Agents room's menu decides whom New talks to (prd §1053).
+        .onChange(of: chrome.mergedScope[source]) { _, _ in resolveRoomAgent() }
         .onDisappear { if visitFrozen { leave() } }
         .onChange(of: isActive) { _, now in
             if now { land() } else { leave() }
@@ -1902,6 +1907,11 @@ struct FeedScreen: View {
             }
         }
         .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
+        .modifier(WhichAgentDialog(open: $askingWhichAgent, agents: answeringAgents) { provider in
+            pickAgent(provider)
+            chrome.beginConversation(with: provider.agent)
+            withAnimation(DS.Motion.standard) { chrome.agentScope = .chat }
+        })
         .modifier(NoteTrashSheet(open: $trashOpen, onRecover: recoverNote,
                                  onErase: { NoteTrash.shared.erase($0) }))
         .modifier(NoteFolderAlert(prompt: $folderPrompt, draft: $folderDraft,
@@ -1913,6 +1923,24 @@ struct FeedScreen: View {
     /// screen: it must not collapse when a thing lands, or scrolling back would
     /// undo itself every sync.
     @State var windowSteps = Self.initialWindowSteps
+}
+
+/// Which agent New talks to, when the Agents room has no pick (prd §1053).
+/// A modifier for `NoteDeleteDialog`'s reason: the chain is long.
+private struct WhichAgentDialog: ViewModifier {
+    @Binding var open: Bool
+    let agents: [AgentProvider]
+    let onPick: (AgentProvider) -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(String(localized: "Start a conversation with"),
+                                   isPresented: $open, titleVisibility: .visible) {
+            ForEach(agents) { provider in
+                Button(provider.agent) { onPick(provider) }
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        }
+    }
 }
 
 /// The confirmation for a note's Delete. A MODIFIER rather than an inline

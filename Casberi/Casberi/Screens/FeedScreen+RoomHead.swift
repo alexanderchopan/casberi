@@ -427,16 +427,60 @@ extension FeedScreen {
     /// dead.
     func resolveRoomAgent() {
         let candidates = DemoMode.isActive ? AgentProvider.allCases : AgentKey.configured
+        // THE AGENTS ROOM (prd §1053): the agent New talks to is the one the
+        // menu picked, and none with no pick — New then asks which.
+        if source == RoomAccounts.agentsRoom {
+            let picked = selectedSeat?.name
+            roomAgent = candidates.first { $0.agent == picked }
+            return
+        }
         roomAgent = candidates.first { $0.agent == source }
+    }
+
+    /// The agents that can answer in the Agents room — a key, or every one
+    /// in the demo (`resolveRoomAgent`'s reason) — among the connected seats.
+    var answeringAgents: [AgentProvider] {
+        guard source == RoomAccounts.agentsRoom else { return [] }
+        let candidates = DemoMode.isActive ? AgentProvider.allCases : AgentKey.configured
+        let seats = Set(RoomAccounts.connected(in: source, names: connectedSeatNames).map(\.name))
+        return candidates.filter { seats.contains($0.agent) }
+    }
+
+    /// Whether the room is an agent room: one agent's, or the Agents room
+    /// while any agent there can answer.
+    var agentRoomShown: Bool { roomAgent != nil || !answeringAgents.isEmpty }
+
+    /// New in the Agents room: straight in on the picked agent, on the one
+    /// agent that can answer, or a question when there are several.
+    func startNewConversation() {
+        if roomAgent == nil {
+            let answering = answeringAgents
+            guard answering.count == 1 else { askingWhichAgent = true; return }
+            pickAgent(answering[0])
+        }
+        if let roomAgent { chrome.beginConversation(with: roomAgent.agent) }
+        withAnimation(DS.Motion.standard) { chrome.agentScope = .chat }
+    }
+
+    /// Pick an agent in the Agents room's menu.
+    func pickAgent(_ provider: AgentProvider) {
+        guard let seat = RoomAccounts.seats(for: source).first(where: { $0.name == provider.agent })
+        else { return }
+        chrome.mergedScope[source] = RoomAccounts.scopeID(seat)
+        roomAgent = provider
     }
 
     /// The agent room's two tiles (prd §840). One tile is never drawn — the
     /// grid's own rule (§752) and §83's: All alone offers no choice.
     var agentTiles: DSScopeTiles<AgentRoomScope>? {
-        guard roomAgent != nil else { return nil }
+        guard agentRoomShown else { return nil }
         return DSScopeTiles(sections: AgentRoomScope.allCases,
-                            active: chrome.agentScope,
+                            active: roomAgent == nil ? .all : chrome.agentScope,
                             attention: []) { picked in
+            if picked == .chat, source == RoomAccounts.agentsRoom {
+                startNewConversation()
+                return
+            }
             withAnimation(DS.Motion.standard) { chrome.agentScope = picked }
         }
     }

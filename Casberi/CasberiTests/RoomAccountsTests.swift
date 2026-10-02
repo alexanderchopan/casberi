@@ -82,6 +82,20 @@ struct RoomAccountsTests {
         #expect(BridgeCatalog.category(forSource: RoomAccounts.readingRoom) == "Reading")
     }
 
+    // MARK: - Agents (prd §1053)
+
+    /// Every agent is a seat of Agents, keyed or imported, and each agent
+    /// provider's name is one of them — so New's pick always has a seat.
+    @Test func agentsHoldsEveryAgent() {
+        let names = Set(RoomAccounts.seats(for: RoomAccounts.agentsRoom).map(\.name))
+        for provider in AgentProvider.allCases {
+            #expect(names.contains(provider.agent), "\(provider.agent) is in Agents")
+        }
+        #expect(names.contains("Claude Code"))
+        #expect(RoomAccounts.host(ofSource: "Claude")?.room == RoomAccounts.agentsRoom)
+        #expect(AgentRoomScope.chat.label == "New")
+    }
+
     // MARK: - Testnets (prd §1050k)
 
     /// The two networks fold into Testnets, never into the Wallet: test money

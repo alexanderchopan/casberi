@@ -64,8 +64,9 @@ struct AgentChatThread: View {
     /// conversation being replaced. Deliberately not the transcript itself:
     /// comparing 8,000 characters every pass is the cost this avoids.
     private var key: String {
-        guard let thing = live.first, thing.isLive else { return "" }
-        return "\(thing.id)-\(thing.messageCount ?? 0)"
+        let since = chrome.agentNewAt[source]?.timeIntervalSince1970 ?? 0
+        guard let thing = live.first, thing.isLive else { return "\(since)" }
+        return "\(thing.id)-\(thing.messageCount ?? 0)-\(since)"
     }
 
     var body: some View {
@@ -139,6 +140,8 @@ struct AgentChatThread: View {
     private func reparse() {
         guard let thing = live.first, thing.isLive,
               thing.sourceRef != closed,
+              // Begun after New was tapped, in the Agents room (prd §1053).
+              thing.capturedAt >= (chrome.agentNewAt[source] ?? .distantPast),
               let body = thing.enrichedText,
               let assistant = AgentSheet.assistant(for: source)
         else { turns = []; return }

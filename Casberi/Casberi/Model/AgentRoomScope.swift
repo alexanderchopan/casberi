@@ -29,7 +29,9 @@ enum AgentRoomScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var label: String {
         switch self {
         case .all:  return String(localized: "All")
-        case .chat: return String(localized: "Chat")
+        // NEW since §1053: in the Agents room it starts a conversation with
+        // the agent the menu picked, which lands as a row there (§1049).
+        case .chat: return String(localized: "New")
         }
     }
 
@@ -40,7 +42,7 @@ enum AgentRoomScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .all:  return String(localized: "Conversations you have had")
-        case .chat: return String(localized: "Ask something now")
+        case .chat: return String(localized: "Start a conversation")
         }
     }
 }

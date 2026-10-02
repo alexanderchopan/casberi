@@ -589,6 +589,17 @@ final class ShellChrome {
     /// off every surface but this one.
     var roomNewConversation = 0
 
+    /// When New was last tapped for each agent in the Agents room (prd
+    /// §1053): its thread shows only conversations begun since, so New opens
+    /// on an empty thread, never on the last one.
+    var agentNewAt: [String: Date] = [:]
+
+    /// Start a new conversation with `agent`, from the Agents room's New.
+    func beginConversation(with agent: String) {
+        roomNewConversation += 1
+        agentNewAt[agent] = .now
+    }
+
     /// Which watched account a SOCIAL room is scoped to — nil = all of them
     /// (prd §362, 2026-08-11). The handle as the account's own store spells it
     /// (`SocialAccount.key`), matched against `Thing.authorHandle`.

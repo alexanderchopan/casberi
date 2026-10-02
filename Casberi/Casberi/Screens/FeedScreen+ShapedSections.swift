@@ -624,7 +624,7 @@ extension FeedScreen {
                 bundledSections(visible, nextEventID: nextEventID,
                                 heroShown: heroShown)
                 corpusFloorSection(visible)
-            } else if roomAgent != nil {
+            } else if agentRoomShown {
                 agentRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if RoomKindTiles.Room(source: source) != nil {
                 kindTileSections(visible, nextEventID: nextEventID, heroShown: heroShown)
@@ -753,7 +753,10 @@ extension FeedScreen {
     @ViewBuilder
     private func agentRoomSections(_ visible: [Thing], nextEventID: UUID?,
                                    heroShown: Bool) -> some View {
-        let chatting = chrome.agentScope == .chat
+        let chatting = chrome.agentScope == .chat && roomAgent != nil
+        // The thread and the entry are the agent's own: its source, not the
+        // Agents room's (prd §1053).
+        let agentSource = roomAgent?.agent ?? source
         let days = chronoDays(visible)
         let coverID = heroShown ? nil : ledeThingID(in: days)
         let coverThing: Thing? = coverID.flatMap { id in
@@ -765,7 +768,7 @@ extension FeedScreen {
         let leadHeld = chatting || coverThing != nil || visible.isEmpty
         if chatting, roomAgent != nil {
             Section {
-                AgentChatThread(source: source)
+                AgentChatThread(source: agentSource)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
@@ -776,7 +779,7 @@ extension FeedScreen {
             Section {
                 ledeListRow(coverThing, top: 0, bottom: DSRoomChassis.contentGap)
             }
-        } else if roomAgent != nil, visible.isEmpty {
+        } else if agentRoomShown, visible.isEmpty {
             // AN EMPTY ROOM STILL HOLDS THE LEAD SLOT (user, 2026-09-20: "the
             // buttons are on the top until you press chat"). With no cover the
             // tiles rode up to the top edge on All and dropped 316pt on Chat —
@@ -806,10 +809,12 @@ extension FeedScreen {
                                               trailing: DSRoomChassis.inset))
             }
         }
+        // Under the tiles, as every merged room's menu is (prd §1053).
+        roomScopeSection
         if chatting, let roomAgent {
             // The composer row, BELOW the tiles — where the list would be.
             Section {
-                AgentChatEntry(source: source, provider: roomAgent)
+                AgentChatEntry(source: agentSource, provider: roomAgent)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,

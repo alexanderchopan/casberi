@@ -150,14 +150,14 @@ guard "the agent scope is cleared on a source change" \
 # conversation is deleted, taking the Chat tile — the only way to start
 # another — with it.
 guard "an agent room keeps its tiles when empty" \
-  '\|\| roomAgent != nil' "$FEED"
+  '\|\| agentRoomShown' "$FEED"
 guard "an agent room is not replaced by the generic empty state" \
-  'roomAgent == nil' "$FEED"
+  '!agentRoomShown' "$FEED"
 # §845: taking a room OUT of the empty-state arm without putting it INTO a
 # drawing one renders NOTHING — the black screen LiveRoomSources' own doc names
 # twice. The two clauses are one move and must be read together.
 guard "an agent room reaches the room body with no rows" \
-  'roomHasContent \|\| roomAgent != nil' "$FEED"
+  'roomHasContent \|\| agentRoomShown' "$FEED"
 python3 - "$FEED" <<'ARMS' || fail=1
 import sys
 src = "\n".join("" if l.strip().startswith("//") else l
@@ -165,8 +165,10 @@ src = "\n".join("" if l.strip().startswith("//") else l
 # The escape arm must not run without a matching entry arm. Anything that can
 # exclude a room from `emptyState` has to appear in the final `else if`, or
 # that room matches no arm at all.
-esc = "!roomHasContent && !LiveRoomSources.has(source) && roomAgent == nil"
-body = "} else if roomHasContent || roomAgent != nil"
+# `agentRoomShown` since §1053: one agent's room, or the Agents room while an
+# agent there can answer.
+esc = "!roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown"
+body = "} else if roomHasContent || agentRoomShown"
 if esc not in src:
     print("  \u2717 the empty-state arm's shape changed — this guard is blind")
     sys.exit(1)
@@ -217,9 +219,9 @@ guard "the room draws the agent sections" \
 # where the cover sits, the entry below the tiles. One block replacing the list
 # is what put the tiles at the top of the screen on Chat and at 316pt on All.
 guard "the thread fills the room's lead slot" \
-  'AgentChatThread\(source: source\)' "$FEED"
+  'AgentChatThread\(source: agentSource\)' "$FEED"
 guard "the composer row is drawn below the tiles" \
-  'AgentChatEntry\(source: source, provider: roomAgent\)' "$FEED"
+  'AgentChatEntry\(source: agentSource, provider: roomAgent\)' "$FEED"
 python3 - "$FEED" <<'SLOTS' || fail=1
 import sys
 src = open(sys.argv[1]).read()
@@ -239,7 +241,7 @@ if not (thread < tiles < entry):
 print("  \u2713 thread, then tiles, then entry — the tiles never move")
 # An EMPTY room has no cover, so without its own lead the tiles ride to the top
 # edge on All and drop on Chat — the one state \u00a7841 never drew (2026-09-20).
-empty = body.find("roomAgent != nil, visible.isEmpty")
+empty = body.find("agentRoomShown, visible.isEmpty")
 # The well's height moved into `emptyLeadRow` (\u00a7862), which both this room and
 # the kind-tile rooms draw through — so the assertion follows it there rather
 # than looking for a literal this arm no longer spells.
@@ -249,9 +251,11 @@ if not (0 <= empty < tiles) or "emptyLeadRow(" not in body[empty:tiles]:
     sys.exit(1)
 print("  \u2713 an empty room still holds the lead slot")
 SLOTS
-# The §83 half: a Chat tile over a seat with no key cannot answer.
+# The §83 half: a New tile over a seat with no key cannot answer.
+# `agentRoomShown` is a keyed `roomAgent` or a keyed agent in the Agents room
+# (`answeringAgents`, §1053) — both read `AgentKey.configured`.
 guard "the tiles stand only where a key is present" \
-  'guard roomAgent != nil else \{ return nil \}' "$FEED"
+  'guard agentRoomShown else \{ return nil \}' "$FEED"
 guard "the agent is resolved outside the body (build 525)" \
   'func resolveRoomAgent' "$FEED"
 

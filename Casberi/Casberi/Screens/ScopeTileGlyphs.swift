@@ -285,7 +285,7 @@ extension AgentRoomScope: DSTileScope {
     var glyph: String {
         switch self {
         case .all:  return ScopeTileGlyph.all
-        case .chat: return ScopeTileGlyph.chat
+        case .chat: return ScopeTileGlyph.new
         }
     }
 }
