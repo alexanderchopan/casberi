@@ -1392,6 +1392,14 @@ extension FeedScreen {
                     // §1067) wears its app's mark, not a "?" monogram.
                     BridgeIcon(name: BridgeCatalog.seatName(forSource: thing.source),
                                size: DS.Face.list, circular: true)
+                } else if symbol.isEmpty {
+                    // No address and no token (a transfer named only in its
+                    // title, "from sam.eth"): the way it moved, never
+                    // AssetMark's "?" for an empty name (prd §1076).
+                    WalletMarkView(mark: .symbol(thing.transferDirection == "sent"
+                                                    ? "arrow.up.right" : "arrow.down.left",
+                                                 tint: DS.textSecondary),
+                                   size: DS.Face.list)
                 } else {
                     AssetMark(name: symbol, size: DS.Face.list)
                 }
