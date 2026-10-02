@@ -227,6 +227,10 @@ KNOWN_PROPER: set[str] = {
     # Addresses" walks to the Accounts screen's Addresses segment, the way
     # "Show in Receipts" names that screen — a destination, not a header.
     "Addresses",
+    # The app's own Notes, the tray's door (prd §969): "Kept in Notes",
+    # "Pinned to Notes" name where a note went. It passed as a catalog word
+    # while Apple Notes was a seat, and stopped when that seat left.
+    "Notes",
     # Protocols, chains and companies with no catalog seat of their own.
     "Morpho", "Uniswap", "Aave", "Spark", "Hyperliquid", "Aerodrome",
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",
