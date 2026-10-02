@@ -412,6 +412,10 @@ marks chronological position within the pair.
 | §522 / §526 / §530 / §552d / §553b / §629 / §680 (rulings the two or three devnets shared) | notifications, signing, write-path refusals, the empty scope, the in-app top up, the two seats' names and the Holdings treemap, ruled across Vibenet and the two Hegotá seats | deleted by §1038 for those seats — what Frames took from them (the send console, `DevnetNotify`'s reset notice, the treemap) stands, narrowed to Frames |
 | §826 (Privy is out of the wallet total) | an app wallet's money is stated only in Privy's own room; nothing in `portfolioRead` reads `PrivyHomeStore` | reversed by §1048 — Privy's shown apps count in the Wallet total with no toggle, and never ALONE: the no-portfolio guard may not name Privy |
 | §1039 (Wallet's tiles) | Home · Coming up · Holdings · NFTs · Permissions · Positions · Risk · Follow | amended by §1048 — Cards takes NFTs' tile and NFTs fold into Holdings (step 2 of the merge) |
+| §59 (Notes is its own category) | Apple Journal, Day One and Obsidian were the Notes category | amended by §1049 — Notes is not a category; its seats join Life, and the person's own notes keep their tray door |
+| §326 (Mail folds into Life) | Gmail and iCloud Mail were members of Life | amended by §1049 — Life splits; Mail joins Day with Calendar, Reminders, Todoist, Cal.com and Calendly |
+| §780c (NerdWallet on the Wallet shelf) | NerdWallet sat in the Wallet group, its tagline guarded as news | amended by §1049 — NerdWallet joins Reading's Articles; the One Wallet holds only what has a dollar figure |
+| §1048 (Splits unruled) | Splits, Stripe, Dodo Payments and NerdWallet were left out of the Wallet merge, unruled | amended by §1049 — Splits joins the One Wallet; the other three wait on Work and Reading |
 
 ## §1 — Thesis
 
@@ -63228,3 +63232,51 @@ The confusion it answers: three ids from the Logos team, all reading 0, with not
 **Hook.** `-walletScope <address | seat:Name>` picks an account at launch (DEBUG), so an app pick is captured with no tap.
 
 **Tests.** `CasberiTests/RoomAccountsTests` (the scope round trip, an address is never a seat, an unmerged room lists nothing, only connected apps list, the prefix holder, and the measured failure: a card slices to nothing, never to the whole portfolio). Measured on the simulator: Apple Wallet picked, the box reads "Apple Wallet $11K" over its own rows; Gnosis Pay picked, Cards narrows to €123.20 and its three spends, and Home's box is empty.
+
+## §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet merge, every category is one room, a tile is never a bundle of apps, Cursor is removed (user: "we are consolidating rooms into categories… perhaps we even have too many categories", then "i agree on life", "i agree we can dissolve shopping in the way you say. Also Splits is part of wallet not work.", "i would put mail with the schedule stuff.", "i agree duoling and health go to you", "simpler is better, what woudl apple do? i think theyd' call it day", then "tbh i don' think anyone will be using either" of Deals and Shopify, "highlights and saved seem like the same thing", "i think we can keep nerdwallet… yes in reading", then of Agents "why is 'code' it's own thing?" and of Cursor "ya omit it", then of Media "i don't think liistening and watching are different, it is media you are consuming" and "the output of all these things is a visual tile people want to see", then of Work "we need to be shrewd about this b/c it is most important category since builders are target audience. AWS for example is very important", "your list of 'kind' is probably the wrong way to view these", "we don't want to have tiles that just become mini categories themselves or we arent' really solving the problem we are just repackaging it", "there still may be tiles tho!", "wallet is not changing leave it alone", then "ok on the tiles. okon the account menu… day's glph not the sun", 2026-10-01; amends §59, §326, §780c and §1048)
+
+**The test every merge is held to.** §1048 worked because Wallet has one unit, dollars, so its box says one thing about every member and its tiles are KINDS (Holdings, Positions, Cards), never seats; the seats sit in the account menu. A category becomes one room only if its box can say one thing about every member. A category whose tiles would come out one per seat is a drawer, and is split, not merged.
+
+**A tile is never a bundle of apps.** A tile that is a few seats' rows is a category inside a category: the merge repackaged, not solved. A tile may be a VIEW across every seat in the room (Wallet's Holdings, Permissions, Positions, Risk, Coming up) or a VERB (New, Follow, Watch). Wallet's tiles stand as §1048 and §1048a ruled; this rule is applied to the rooms that follow, not back to Wallet.
+
+**Every merged room has the account menu.** Wallet's (§936, built generic by §1048b) lists every merged seat; each room reuses it by adding its own `seats(for:)` entry to `Model/RoomAccounts.swift`, and a pick narrows every tile and the list to that one app. It is the only way to see one app once its own room is gone.
+
+**The rooms tray (§1048b's option B).** A category's header, its glyph and name, opens its room and is drawn in the tint (`DS.tint`), the only tinted thing in the tray; the same header elsewhere (Markets, Apps, What this reaches) keeps the primary ink, because there it is a label, not a door. An app's mark under the header opens that app's settings, and a room draws no sliders disc. Built once, it turns on per category as that category gains a `RoomAccounts` entry, so an unmerged category's marks keep landing in each app's own room.
+
+**Shopping is dissolved.** Bitrefill joins Wallet (cards bought with crypto, and it folds into the One Wallet with the rest). **Deals and Shopify are removed**, on §1038's pattern: both follow someone else's catalogue (Deals three aggregators we chose, Shopify the public `products.json` of stores you paste, never your own store or orders), the biggest Shopify stores refuse the fetch, and nobody is expected to use either. A seat nobody uses still costs a catalogue row, a website cell, a declared host, a demo row and every audit's share. The category, its band and its glyph (`cart`) go.
+
+**Splits joins the One Wallet.** §1048 left it unruled beside Stripe, Dodo Payments and NerdWallet; it is money the person holds, so it folds into the Wallet room. Stripe, Dodo Payments and NerdWallet stay as §1048 left them, to be ruled with Work and Reading.
+
+**Life splits in two.** The old Life had no unit: Photos, Calendar, Health and Mail share nothing a box could state.
+- **Life** is what you made, kept or did: Apple Journal, Day One, Obsidian, Photos, Files, Dropbox, Apple Health (Strava and Garmin ride it, one activity one row), Duolingo. Contacts stays in Life's catalogue group and draws no room (§916).
+- **Day** is what needs you next: Calendar, Reminders, Todoist, Cal.com, Calendly, Gmail, iCloud Mail. Mail joins the dated things because a reply owed is part of the day. Named Day over Agenda because a name is what a person says aloud (Calendar's own view is "Day"); "Inbox" is the product's own word and "Calendar" a seat's.
+
+**Notes is not a category.** Its seats (Apple Journal, Day One, Obsidian) move into Life. The person's own notes keep their door in the tray's top row (§969), which is unchanged.
+
+**Reading is one room.** RSS, Substack, Readwise, Kindle, Bookmarks, Raindrop and NerdWallet.
+- Tiles: All alone. Articles (RSS, Substack) and Saved (highlights, bookmarks) were proposed and dropped by the bundle rule: each is a few seats' rows.
+- NerdWallet moves from the Wallet shelf into Articles (amends §780c): news has no dollar figure, so it cannot sit in the One Wallet, and finance is its topic, not its kind.
+- The box leads with the newest article (§749), never an unread count the app does not track. Proposed, not yet ruled: the account menu lists each feed and publication as well as each app (§455's board, generalised).
+
+**Agents is one room.** ChatGPT, Claude, Gemini, Claude Code, Venice, Bankr, Apple Intelligence, OpenRouter, Grok, NEAR AI and Muse. Every seat lands one kind of thing, a conversation: the importers their history, the keyed agents and Apple Intelligence each composer session (§839), Claude Code its sessions. So the room has no content tiles.
+- Tiles: All · New. All is every conversation, newest first; the account menu narrows it to one agent. New opens the composer on the menu's agent (or asks which, with no pick), and the session lands as a row here. New draws only while an agent that can answer is connected (a keyed seat or Apple Intelligence); with importers alone it would be a dead control (§83), and it never offers ChatGPT, Claude or Gemini, which are read-only history.
+- **Cursor is removed**, on §1038's pattern. Its runs were the only rows that were not a conversation, so it was the one reason for a Code tile, and it is a keyed seat no nightly check watches, for a product the user expects to change hands.
+
+**Media is one room, and its list is a picture grid.** YouTube, Twitch, Apple Music, Spotify, Podcasts, Steam, Pinterest. Listening and watching are one kind, media you consumed, so there are no content tiles: All alone, the account menu narrowing it to one app.
+- Every seat's output is art (a cover, a thumbnail, game art, a pin), so the list is §910's picture grid, three to a row under each day, caption under the picture, not rows.
+- One cell shape, SQUARE: music's and podcasts' own shape; a video or stream thumbnail crops to its centre, a pin or a Steam capsule to its middle. The box leads with the newest thing's art whole, uncropped.
+- Pinterest, Steam and Twitch stay: under the grid they are pictures like every other seat.
+- Proposed, not yet ruled: the music shelf's orders (Activity · Albums · Artists · Songs, §995) are dropped, since they apply to two seats of seven.
+
+**Work is one room, and every seat stays.** GitHub, GitLab, Radicle, Hugging Face, Linear, Jira, Trello, Notion, Slack, Sentry, Vercel, PagerDuty, Cloudflare, AWS, npm, PyPI, App Store Connect, PostHog, Stripe, Polar (and Dodo Payments). Builders are the target, so no seat is cut for being niche. Sorted by what a row IS rather than what the service is, almost every Work row is one kind: an event about something you build (an error regressed, a deploy failed, an alarm tripped, a build was rejected, a dispute opened, a token expires, a release went out, a patch merged).
+- Tiles: All · Coming up · Watch. Coming up is every deadline from every seat, soonest first (disputes, expiring certs and tokens, due tickets, expiring builds), the Wallet's Coming up for work. Watch is the verb, last: follow a repo or person, a package, an author, one door over the watches GitHub, npm, PyPI and Hugging Face each have.
+- The box leads with the most urgent thing: a deadline, an unresolved failure, an open ask. Rows keep their state ink. A pick of Stripe, PostHog, Polar or Dodo in the account menu brings that seat's own figure back into the box.
+
+**Day.** Tiles: All · New, sorted by when; Mail and Lists tiles were proposed and dropped by the bundle rule. Its glyph is `calendar.day.timeline.left`; `sun.max` is declined.
+
+**What this amends.** §59's "notes stand alone" and §326's "Mail folds into Life": Mail is a category member again, as a tile inside Day, never a band of its own, so §326's half-empty band does not return.
+
+**Not ruled yet.**
+- Life's tiles and list shape: it holds pictures, journals, files and workouts, so it is the one room the test may not pass as drawn.
+
+Nothing is built in this entry; it is the ruling only.
