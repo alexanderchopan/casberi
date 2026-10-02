@@ -261,20 +261,8 @@ enum DemoCensus {
             AWSRoomSource.compose(things: all.filter { $0.source == "AWS" }) != nil
                 ? .ok("composed") : .empty("compose returned nil")
         })
-        out.append(Surface(name: "altanaRoom", gate: .required) {
-            let lines = AltanaRoom.probeLines()
-            let readings = lines.first.flatMap { Int($0.split(separator: ":").last?.trimmingCharacters(in: .whitespaces) ?? "") } ?? 0
-            return readings > 0 ? .ok("\(readings) readings") : .empty(lines.first ?? "no lines")
-        })
         out.append(Surface(name: "framesRoom", gate: .required) {
             FramesRoomSource.compose() != nil ? .ok("composed") : .empty("compose returned nil")
-        })
-        out.append(Surface(name: "hegotaRoom", gate: .required) {
-            HegotaRoomSource.compose() != nil ? .ok("composed") : .empty("compose returned nil")
-        })
-        out.append(Surface(name: "privacyDevnetRoom", gate: .required) {
-            let head = PrivacyDevnetRoomSource.compose()
-            return head.watching > 0 ? .ok("watching=\(head.watching)") : .empty("watching=0")
         })
         out.append(Surface(name: "walletbeat.cards", gate: .required) {
             let n = WalletbeatState.cards().count

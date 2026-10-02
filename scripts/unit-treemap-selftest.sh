@@ -49,8 +49,7 @@ cd "$(dirname "$0")/.."
 TREEMAP="Casberi/Casberi/Design/UnitTreemap.swift"
 GENUI="Casberi/Casberi/GenUI/GenRenderer.swift"
 LEADER="Casberi/Casberi/Design/DSTreemapLeader.swift"
-HEG="Casberi/Casberi/Screens/HegotaRoomCard.swift"
-for f in "$TREEMAP" "$GENUI" "$LEADER" "$HEG"; do
+for f in "$TREEMAP" "$GENUI" "$LEADER"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -60,7 +59,7 @@ trap 'rm -rf "$TMP"' EXIT
 cat > "$TMP/check.py" <<'PY'
 import os, re, sys
 
-treemap, genui, leader, heg, scan_root, owner = sys.argv[1:7]
+treemap, genui, leader, scan_root, owner = sys.argv[1:6]
 bad = 0
 def fail(msg):
     global bad
@@ -167,9 +166,6 @@ def code(path):
 if "DSTreemapLeader" in code(genui):
     fail("GenRenderer.swift reaches DSTreemapLeader — it draws the WORD maps "
          "(TopicMapHero, GenTagMap); a term at price40 is a headline (prd §565)")
-if "DSTreemapLeader" in code(heg):
-    fail("HegotaRoomCard.swift reaches DSTreemapLeader — that map's leader is a "
-         "BALANCE, which §374 withholds")
 lsrc = open(leader).read()
 if "let figure: String" not in lsrc or "let name: String" not in lsrc:
     fail("DSTreemapLeader no longer splits figure from name — one title lets a "
@@ -178,12 +174,12 @@ if "let figure: String" not in lsrc or "let name: String" not in lsrc:
 sys.exit(bad)
 PY
 
-run_check() {  # treemap genui leader heg scan-root
-  python3 "$TMP/check.py" "$1" "$2" "$3" "$4" "$5" "$TREEMAP"
+run_check() {  # treemap genui leader scan-root
+  python3 "$TMP/check.py" "$1" "$2" "$3" "$4" "$TREEMAP"
 }
 
 echo "UnitTreemap's table, its one owner, and the leader lockup"
-run_check "$TREEMAP" "$GENUI" "$LEADER" "$HEG" Casberi || exit 1
+run_check "$TREEMAP" "$GENUI" "$LEADER" Casberi || exit 1
 echo "  ✓ frames(1…6): one cell per count, area never rises with rank, all twelve units, no overlap"
 echo "  ✓ evenFrames(1…6): one cell per count, all twelve units, no overlap"
 echo "  ✓ maxCells is the table's ceiling"
@@ -195,14 +191,13 @@ echo "  ✓ the leader lockup is numeric-only, and the word maps are out"
 # passes means nothing was testing that behaviour; an anchor that no longer
 # matches fails loudly rather than "passing" a mutation that never ran.
 EMPTY="$TMP/empty-root"; mkdir -p "$EMPTY"
-mutate() {  # name, which (treemap|genui|leader|heg), from, to
+mutate() {  # name, which (treemap|genui|leader), from, to
   local name="$1" which="$2" from="$3" to="$4"
-  local t="$TREEMAP" g="$GENUI" l="$LEADER" h="$HEG" src target="$TMP/mut-$which.swift"
+  local t="$TREEMAP" g="$GENUI" l="$LEADER" src target="$TMP/mut-$which.swift"
   case "$which" in
     treemap) src="$TREEMAP"; t="$target" ;;
     genui)   src="$GENUI";   g="$target" ;;
     leader)  src="$LEADER";  l="$target" ;;
-    heg)     src="$HEG";     h="$target" ;;
   esac
   MUT_FROM="$from" MUT_TO="$to" python3 - "$src" "$target" <<'PY' || { echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1; }
 import os, sys
@@ -213,7 +208,7 @@ if src.count(frm) != 1 or frm == to:
 open(sys.argv[2], "w").write(src.replace(frm, to, 1))
 PY
   # The scan is proven separately below, so these walk an empty root.
-  if run_check "$t" "$g" "$l" "$h" "$EMPTY" > "$TMP/mut.log" 2>&1; then
+  if run_check "$t" "$g" "$l" "$EMPTY" > "$TMP/mut.log" 2>&1; then
     echo "  ✗ $name — the checker still passed, so nothing was testing this"; exit 1
   fi
   # A crash is not a catch: the failure must be a check's own ✗ line.
@@ -268,13 +263,13 @@ mutate "the leader folds figure and name into one title" leader \
 # of quadruples and a table in a comment do not (the scan's own bounds).
 SCAN="$TMP/scan-root"; mkdir -p "$SCAN"
 print -r -- 'let layout = [(0, 0, 2, 3), (2, 0, 2, 3)]' > "$SCAN/Second.swift"
-if run_check "$TREEMAP" "$GENUI" "$LEADER" "$HEG" "$SCAN" > /dev/null 2>&1; then
+if run_check "$TREEMAP" "$GENUI" "$LEADER" "$SCAN" > /dev/null 2>&1; then
   echo "  ✗ a second 4×3 table elsewhere — the checker still passed"; exit 1
 fi
 echo "  ✓ a second 4×3 table elsewhere"
 { print -r -- 'let insets = [(0, 0, 1, 1), (1, 0, 1, 1)]'
   print -r -- '// [(0, 0, 2, 3), (2, 0, 2, 3)] was the old layout'; } > "$SCAN/Second.swift"
-if ! run_check "$TREEMAP" "$GENUI" "$LEADER" "$HEG" "$SCAN" > /dev/null 2>&1; then
+if ! run_check "$TREEMAP" "$GENUI" "$LEADER" "$SCAN" > /dev/null 2>&1; then
   echo "  ✗ the scan fires on a two-unit array or a comment — it would cry wolf"; exit 1
 fi
 echo "  ✓ a two-unit array and a commented table are not a second table"

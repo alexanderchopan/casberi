@@ -23,10 +23,6 @@ enum BridgeRouter {
         /// watching a wallet (§207), and Connect for the "Safe" offer routes
         /// straight to the wallet manager (see `destination(forOffer:)`).
         case safe
-        /// Altana's keystore. A `walletSeats` member that owns addresses too
-        /// (2026-08-28, amending §465) — the registry's own accounts, free and
-        /// uncapped, because they are not your wallets and the read is keyless.
-        case altana
         case exchange(ExchangeBridge.Venue)
         case ethValidators
         /// ENS (prd §534) — keyless with a FOLLOW list on screen, Walletbeat's
@@ -56,22 +52,15 @@ enum BridgeRouter {
         case huggingFace
         case radicle
         /// Logos (prd §988) — a watch list of LEZ accounts, its own
-        /// destination for vibenet's reason: riding `.token` would dismiss the
+        /// destination for L2BEAT's reason: riding `.token` would dismiss the
         /// raised sheet the moment the first watched account registered it.
         case logos
-        /// Base's vibenet devnet — a WATCH LIST of addresses on
-        /// screen with no single credential to paste, so it needs its own
-        /// destination for the reason L2BEAT/Walletbeat do: riding `.token`
-        /// would give it `finishesOnConnect == true` and dismiss the raised
-        /// sheet the moment the first watched address registered the seat.
-        case vibenet
-        /// Ethrex Hegotá — a WATCH LIST like vibenet's, and its own
-        /// destination for the same reason: riding `.token` would give it
+        /// The Frames devnet — a WATCH LIST of addresses on screen with no
+        /// single credential to paste, so it needs its own destination for
+        /// the reason L2BEAT/Walletbeat do: riding `.token` would give it
         /// `finishesOnConnect == true` and dismiss the raised sheet the
         /// moment the first watched address registered the seat.
-        case hegota
         case frames
-        case privacyDevnet
         case shopify
         case deals
         case icloudMail
@@ -126,7 +115,6 @@ enum BridgeRouter {
         case slack
         case substack
         case nerdwallet
-        case reddit
         case youtube
         case podcasts
         case telegram
@@ -312,7 +300,6 @@ enum BridgeRouter {
             case .privacyPools:   "privacypools"
             case .railgun:        "railgun"
             case .safe:           "safe"
-            case .altana:         "altana"
             // The venue's own raw value IS the seat id ("kraken", "coinbase"),
             // so the Row above and this can't drift apart.
             case .exchange(let venue): venue.rawValue
@@ -324,9 +311,6 @@ enum BridgeRouter {
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
             case .logos:          "logos"
-            case .vibenet:        VibenetIdentity.seatID
-            case .hegota:         HegotaIdentity.seatID
-            case .privacyDevnet:  PrivacyDevnetIdentity.seatID
             case .frames:         FramesIdentity.seatID
             case .shopify:        "shopify"
             case .deals:          "deals"
@@ -367,7 +351,6 @@ enum BridgeRouter {
             case .slack:          "slack"
             case .substack:       "substack"
             case .nerdwallet:     NerdWalletBridge.seatID
-            case .reddit:         "reddit"
             case .youtube:        "youtube"
             case .podcasts:       "podcasts"
             case .telegram:       "telegram"
@@ -411,7 +394,6 @@ enum BridgeRouter {
         Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
         Row(offer: "Railgun", id: "railgun", destination: .railgun),
-        Row(offer: "Altana", id: "altana", destination: .altana),
         Row(offer: "Safe", id: "safe", destination: .safe),
         // Gnosis Pay has no screen of its own (prd §222). CONNECT routes to
         // the wallet manager, because watching the wallet is the only real
@@ -452,9 +434,6 @@ enum BridgeRouter {
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
         Row(offer: "Logos",      id: "logos",      destination: .logos),
-        Row(offer: "Base Vibenet", id: VibenetIdentity.seatID, destination: .vibenet),
-        Row(offer: "Hegotá UTXO", id: HegotaIdentity.seatID, destination: .hegota),
-        Row(offer: "Hegotá Privacy", id: PrivacyDevnetIdentity.seatID, destination: .privacyDevnet),
         Row(offer: "Hegotá Frames", id: FramesIdentity.seatID, destination: .frames),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
         Row(offer: "Deals",      id: "deals",      destination: .deals),
@@ -492,7 +471,6 @@ enum BridgeRouter {
         Row(offer: "Slack",    id: "slack",   destination: .slack),
         Row(offer: "Substack",  id: "substack", destination: .substack),
         Row(offer: "NerdWallet", id: NerdWalletBridge.seatID, destination: .nerdwallet),
-        Row(offer: "Reddit",    id: "reddit",   destination: .reddit),
         Row(offer: "YouTube",   id: "youtube",  destination: .youtube),
         Row(offer: "Podcasts",  id: "podcasts", destination: .podcasts),
         Row(offer: "Telegram",  id: "telegram", destination: .telegram),
@@ -533,20 +511,6 @@ enum BridgeRouter {
         // (recent fills) is unaffected: it's the OPEN/manage path, which resolves
         // through `destination(forID:)` below, and still returns `.peer`/
         // `.privacyPools` once a wallet is watched and the seat reads connected.
-        //
-        // ALTANA IS NOT IN THIS LIST, and the reason is the bug that started
-        // the session. It shipped (prd §403) with no row in `rows` and no
-        // `Destination` of its own, so this returned nil for it — and Connect,
-        // for a `needsSetup` offer, is `HomeRoute.openSetup`, whose first line
-        // is `guard let dest else { return }`. The button was therefore a
-        // SILENT NO-OP on every tap: the dead control the honesty rule forbids,
-        // invisible to every check here because a missing switch case is not a
-        // compile error and the screen sweep proves a page painted, never that
-        // its button did anything. It has a `Row` and an `AltanaScreen` now
-        // (2026-08-28) — routing it here instead would land Connect on the
-        // wallet manager, which for this seat is the wrong screen twice over:
-        // `WalletIngest.allChains` has no BNB entry, and the accounts worth
-        // watching are the registry's, not your wallets'.
         if name == "Peer" || name == "0xBow Privacy Pools" || name == "Safe"
             || name == "Railgun" { return .wallet }
         return rows.first { $0.offer == name }?.destination
@@ -604,17 +568,6 @@ enum BridgeRouter {
     /// owns a screen carrying something the room can't (a fill history, a
     /// signature queue, this phone's signer key), so pushing it is not a step
     /// short of anything.
-    ///
-    /// Altana joined them on 2026-08-28 and is NOT here either, though it took
-    /// a wrong turn on the way. It shipped (§403) with no row and no
-    /// `Destination`, so Open fell to `.detail(id:)` — the generic page — while
-    /// the keys the tile advertises sat one room away. The first fix routed it
-    /// HERE, to its room, on Gnosis Pay's terms. `setup-copy-audit.py` caught
-    /// that: it now owns `AltanaScreen`, and a seat whose room is opened
-    /// directly makes its own screen unreachable, since the catalog offers
-    /// Open and nothing else once connected. So it opens the SCREEN, which
-    /// carries a `RoomDoor` — Peer's and vibenet's shape, one door deeper and
-    /// no dead end.
     static func roomSource(forID id: String) -> String? {
         switch id {
         // NOTHING MAY ANSWER "Wallet" HERE (prd §515). A seat whose rows land
@@ -663,7 +616,6 @@ struct BridgeDestinationView: View {
         case .privacyPools:   PrivacyPoolsScreen()
         case .railgun:        RailgunScreen()
         case .safe:           SafeScreen()
-        case .altana:         AltanaScreen()
         case .ethValidators:  EthValidatorScreen()
         case .ens:            ENSScreen()
         case .walletbeat:     WalletbeatScreen()
@@ -672,9 +624,6 @@ struct BridgeDestinationView: View {
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()
         case .logos:          LogosScreen()
-        case .vibenet:        VibenetScreen()
-        case .hegota:         HegotaScreen()
-        case .privacyDevnet:  PrivacyDevnetScreen()
         case .frames:         FramesScreen()
         case .shopify:        ShopifyScreen()
         case .deals:          DealsScreen()
@@ -713,7 +662,6 @@ struct BridgeDestinationView: View {
         case .slack:          SlackScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)
         case .nerdwallet:     NerdWalletScreen()
-        case .reddit:         HandleSetupScreen(bridge: .reddit)
         case .youtube:        HandleSetupScreen(bridge: .youtube)
         case .podcasts:       HandleSetupScreen(bridge: .podcasts)
         case .telegram:       HandleSetupScreen(bridge: .telegram)

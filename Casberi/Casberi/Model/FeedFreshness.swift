@@ -185,7 +185,7 @@ enum FeedFreshness {
 
     /// The agent every feed path sends. Shared with `FeedDiscovery` so a
     /// speculative crawl introduces itself exactly the way the fetch that
-    /// follows it will — Reddit answers the default `URLSession` agent with a
+    /// follows it will — some hosts answer the default `URLSession` agent with a
     /// 429, and a crawl that gets throttled reports "no feed" for a site that
     /// has one.
     static let userAgent = "Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)"
@@ -271,7 +271,7 @@ enum FeedFreshness {
     /// One feed GET, conditional when we hold validators for it, with the
     /// outcome recorded against the feed's health.
     ///
-    /// The User-Agent matches `FeedFetch.data`'s (Reddit answers the default
+    /// The User-Agent matches `FeedFetch.data`'s (some hosts answer the default
     /// URLSession agent with a 429). RSS used to send no agent at all; sending
     /// one is strictly better and makes all five feed paths identical.
     ///

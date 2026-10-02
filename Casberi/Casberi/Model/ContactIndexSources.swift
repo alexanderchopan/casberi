@@ -115,7 +115,7 @@ enum ContactIndexSources {
         for feed in RSSStore.shared.feeds {
             out.append(.init(Identity.make(.feed, feed.url), name: feed.displayName, kind: .publication))
         }
-        for store in [FeedFollowStore.substack, .reddit, .youtube, .podcasts, .telegram] {
+        for store in [FeedFollowStore.substack, .youtube, .podcasts, .telegram] {
             for entry in store.entries where !entry.feedURL.isEmpty {
                 out.append(.init(Identity.make(.feed, entry.feedURL), name: entry.displayName, kind: .publication))
             }

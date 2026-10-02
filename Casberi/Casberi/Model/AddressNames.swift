@@ -14,7 +14,7 @@ import Foundation
 /// which is right for a transfer counterparty — transient, re-derived every
 /// sweep. A book entry is durable and the book is UNCAPPED (naming is free by
 /// §169, and entries land by themselves from counterparties, Safes, and the
-/// vibenet/Hegotá/Frames/Altana signers), so a per-launch cache means the same
+/// Frames signers), so a per-launch cache means the same
 /// hundreds of addresses are re-asked on every cold start, three services
 /// each. This persists, misses included.
 ///

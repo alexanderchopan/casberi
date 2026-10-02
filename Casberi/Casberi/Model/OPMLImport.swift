@@ -83,13 +83,13 @@ enum OPMLImport {
 
     /// The same off-ramp for the feed-follow bridges (2026-08-06).
     ///
-    /// Substack, Reddit, YouTube and Podcasts follows are RSS underneath —
+    /// Substack, YouTube and Podcasts follows are RSS underneath —
     /// each one resolves to a feed URL and is fetched by the same parser — but
     /// they were one-way in: OPML import and export lived on the RSS screen
     /// alone, so a person who had spent a year collecting forty YouTube
     /// channels could not take that list anywhere. §309 made "reversible" the
     /// standard for the import rooms; a follow list is the same promise, and
-    /// every reader on the other side reads a YouTube or Reddit feed URL
+    /// every reader on the other side reads a YouTube or Substack feed URL
     /// perfectly well.
     ///
     /// A follow whose feed URL hasn't resolved yet is left out rather than

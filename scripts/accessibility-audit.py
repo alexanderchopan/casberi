@@ -212,19 +212,8 @@ KNOWN_EXEMPT = {
     "WalletFlowBand.swift:494",
     "WalletFlowBand.swift:611",
     #
-    # Vibenet's change flow (2026-08-26, prd §491) — the same figure-speaks-as-
-    # one-sentence treatment (§299), and with a STRONGER claim than the band
-    # above: there the press surfaces nothing the spoken sentence lacks, so it
-    # is simply hidden; HERE the tap scopes the room to that account, which is
-    # a real destination — so it is published as a named
-    # `.accessibilityActions` Button on the combined element ("Open …9a0b").
-    # The gesture is therefore reachable to VoiceOver by the route the platform
-    # prefers, and a trait on the face would add a stray label for a figure
-    # that already speaks in full.
-    "VibenetChangeFlowCard.swift:131",
-    #
-    # The wallet Risk floor's columns (2026-08-26, prd §493) — same treatment
-    # and same strength of claim as the change flow above: the figure speaks as
+    # The wallet Risk floor's columns (2026-08-26, prd §493) — the same
+    # figure-speaks-as-one-sentence treatment (§299): the figure speaks as
     # ONE combined sentence in its ranked order (§299), and each column's tap
     # is published as a named `.accessibilityActions` Button ("Open Aave"), so
     # the gesture is reachable by the route the platform prefers. A trait on
@@ -588,10 +577,9 @@ def audit_text(path: str, raw: str, floor: int, label_names=None):
         # which is not a thing a lint may do on its own.
         #
         # It is NOT a claim that every face button is labelled. Measured the same
-        # day: widening check 1 reports 2 — `VibenetEventCard` and
-        # `VibenetKeySheet`, both `WalletFace` discs that ARE the whole button and
-        # do open something, so both look like real gaps rather than decorative
-        # marks. That is a ruling for whoever owns those sheets, recorded here and
+        # day: widening check 1 reported 2 — two devnet sheets' `WalletFace`
+        # discs that WERE the whole button and did open something, so both
+        # looked like real gaps rather than decorative marks. That is a ruling for whoever owns those sheets, recorded here and
         # in §541 rather than enforced by a check that was widened for a different
         # reason. `KNOWN_EXEMPT` is keyed `basename:line` and both are already
         # above the floor, so neither is silenced by anything below.

@@ -7,8 +7,6 @@
 #
 #   • a rung ordered by anything but reach, so a capped grant draws above a
 #     Safe module that can move funds with no signature at all
-#   • `scopedSigner` demoted below a cap, which draws a bound nobody can read
-#     as though it were a small one (§293's ceiling rule, inverted)
 #   • a PARTIAL sum printed as a rung's total — the one wrong number here that
 #     looks completely right, because a total quietly missing a grant is more
 #     misleading than no total
@@ -53,18 +51,16 @@ func h(_ p: P, _ name: String, _ usd: Double? = nil, _ note: String? = nil) -> W
 
 // ── the order IS the claim ───────────────────────────────────────────────────
 check(P.allCases == [.actsAsWallet, .movesWithoutSignature, .unlimitedToken,
-                     .wholeCollection, .scopedSigner, .cappedAmount],
+                     .wholeCollection, .cappedAmount],
       "rungs run unbounded → bounded")
 check(P.actsAsWallet < P.movesWithoutSignature, "acting as the wallet outranks a module")
 check(P.movesWithoutSignature < P.unlimitedToken, "no-signature outranks an unlimited allowance")
 check(P.unlimitedToken < P.wholeCollection, "a whole token outranks a whole collection")
-// §293's ceiling rule: an unreadable bound is never drawn as a small one.
-check(P.scopedSigner < P.cappedAmount, "an unreadable scope outranks a stated cap")
+check(P.wholeCollection < P.cappedAmount, "a whole collection outranks a stated cap")
 
 check(P.actsAsWallet.isUnbounded && P.wholeCollection.isUnbounded,
       "the top four are unbounded")
-check(!P.scopedSigner.isUnbounded && !P.cappedAmount.isUnbounded,
-      "a stated cap and a scoped key are not alarms")
+check(!P.cappedAmount.isUnbounded, "a stated cap is not an alarm")
 
 // An amount is IMPOSSIBLE on three rungs and merely absent on the others —
 // the difference is what keeps "no amount to state" off rows where it reads
@@ -137,14 +133,14 @@ check(WalletPermissions.hasUnbounded([h(.wholeCollection, "OpenSea")]),
       "a collection grant is unbounded")
 
 // ── the fold counts HOLDERS, not rows ────────────────────────────────────────
-let six = WalletPermissions.rungs([
+let five = WalletPermissions.rungs([
     h(.actsAsWallet, "d"), h(.movesWithoutSignature, "m"),
     h(.unlimitedToken, "u", 1), h(.wholeCollection, "o"),
-    h(.scopedSigner, "s"), h(.cappedAmount, "c1", 1), h(.cappedAmount, "c2", 1),
+    h(.cappedAmount, "c1", 1), h(.cappedAmount, "c2", 1),
 ])
-check(six.count == 6, "six rungs")
-check(WalletPermissions.foldedCount(six) == 3, "the fold counts the 3 holders below the cut, not the 2 rows")
-check(WalletPermissions.foldedCount(Array(six.prefix(4))) == nil, "nothing folded is nil")
+check(five.count == 5, "five rungs")
+check(WalletPermissions.foldedCount(five) == 2, "the fold counts the 2 holders below the cut, not the 1 row")
+check(WalletPermissions.foldedCount(Array(five.prefix(4))) == nil, "nothing folded is nil")
 check(WalletPermissions.rungsShown == 4, "four rungs drawn")
 
 // ── ONE HOLDER PER THING THAT CAN ACT (prd §514) ─────────────────────────────
@@ -251,8 +247,8 @@ PY
   print "  ok   catches  $what"
 }
 
-mutate "a stated cap ranked above an unreadable scope" \
-  "case scopedSigner = 4" "case scopedSigner = 6"
+mutate "a stated cap ranked above everything unbounded" \
+  "case cappedAmount = 4" "case cappedAmount = -1"
 mutate "a Safe module demoted below an unlimited allowance" \
   "case movesWithoutSignature = 1" "case movesWithoutSignature = 9"
 mutate "a capped grant painted as an alarm" \
@@ -280,7 +276,7 @@ mutate "a rung of several carries the first holder's note as if it described the
 # SURVIVED — a flaky mutation, which is worse than none: it passes on the
 # machine you test on and fails a nightly nobody is watching. Reversing is
 # deterministically wrong and pins the same rule. (Second instance of this exact
-# trap in one day; see hegota-selftest's frame-mix tie-break.)
+# trap in one day.)
 mutate "the rungs come back in the data's order instead of the type's" \
   "return Power.allCases.compactMap { power in" \
   "return Power.allCases.reversed().compactMap { power in"
@@ -418,8 +414,6 @@ grep -q 'holder.accounts.map' "$ROWS" \
 # empty list and an unreadable one look identical.
 grep -q 'modulesUnreadable' "$ROWS" \
   || fail "the unreadable-modules ceiling is no longer stated in the list"
-grep -q 'keystorePartial' "$ROWS" \
-  || fail "the capped-keystore ceiling is no longer stated in the list"
 
 # THE PAIR, BOTH DIRECTIONS (2026-08-31). The two Permissions lists sit one
 # above the other and must never look alike: the acting list is inert by the

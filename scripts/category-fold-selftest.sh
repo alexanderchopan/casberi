@@ -570,7 +570,7 @@ grep -q 'guard roomTakesWalletScope' "$FEED" \
 # `roomControls`. As a section either would scroll away with the room it
 # scopes, and its glass would blur nothing.
 # **`walletScopeRail` IS `socialScopeRail` SINCE §483** (2026-08-27). The rail
-# stopped being Wallet's alone when the room became seven scopes and vibenet
+# stopped being Wallet's alone when the room became seven scopes and a devnet
 # took the same chassis, so it was renamed for what it is. The RULING is
 # untouched — both room controls still live in `roomControls`, which is the
 # whole of what §357 asked — and this guard was naming the identifier rather
@@ -1239,6 +1239,27 @@ if back:
 for name in ("Kalshi", "Polymarket", "GeckoTerminal", "Circle x402", "1Claw", "Open Food Facts", "OpenSea", "Stocktwits"):
     if name not in retired:
         sys.exit(f'✗ "{name}" is no longer in Corpus.retiredSources — its rows would earn a chip and a room for a seat the catalog does not offer')
+# The five seats deleted 2026-10-01 (prd §1038), and the two devnets' earlier
+# names. Their rows are DROPPED at every launch by `SourceRename.sweepRetiredSeats`;
+# `retiredSources` is what keeps a row that syncs in mid-session from earning a
+# chip before then, so every name the sweep drops must be retired too — a name
+# in one list and not the other is a row that either lingers or flashes a room.
+for name in ("Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit"):
+    if name not in retired:
+        sys.exit(f'✗ "{name}" is no longer in Corpus.retiredSources — a deleted seat\'s row would earn a chip and a room (prd §1038)')
+sweep_src = open("Casberi/Casberi/Model/SourceRename.swift").read()
+dropped_block = re.search(r'static let droppedSources: Set<String> = \[(.*?)\n    \]', sweep_src, re.S)
+if not dropped_block:
+    sys.exit("✗ SourceRename.droppedSources not found — the deleted seats' rows are never swept (prd §1038)")
+dropped = set(re.findall(r'"([^"]+)"', dropped_block.group(1)))
+if dropped != set(retired) & dropped or not dropped:
+    sys.exit(f"✗ SourceRename.droppedSources names {sorted(dropped - set(retired))} that Corpus.retiredSources does not — a row that syncs in mid-session earns a room (prd §1038)")
+for name in ("Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit"):
+    if name not in dropped:
+        sys.exit(f'✗ "{name}" left SourceRename.droppedSources — its rows outlive the seat (prd §1038)')
+shell_src = open("Casberi/Casberi/Shell/RootShell.swift").read()
+if "SourceRename.sweepRetiredSeats(" not in shell_src:
+    sys.exit("✗ RootShell never calls SourceRename.sweepRetiredSeats — the deleted seats' rows, keys and defaults stay (prd §1038)")
 print(f"  ✓ real catalog: {len(entries)} categories, every one names ≥1 real offer; no Markets; {len(retired)} retired seats offered nowhere")
 
 # "Voice" is filed NOWHERE (prd §972). It was the one seatless source, kept in
@@ -1619,7 +1640,7 @@ mutate "members reads only the first group instead of every group the category n
 # fixture's expected order often enough that this mutation SURVIVED at random
 # and reddened a Mac run (the cache-free loop) while iOS held a cached green.
 # Reverse-alphabetical is a real order and never the catalog's. Third instance
-# of this trap in one day — see wallet-permissions and hegota-selftest.
+# of this trap in one day — see wallet-permissions.
 mutate "scopes follows the caller's order instead of catalog order" \
   'return filtered.sorted {
             let ra = rank($0), rb = rank($1)

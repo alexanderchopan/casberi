@@ -1,24 +1,24 @@
 import Foundation
 
-/// What the two devnet seats have to say to a lock screen (2026-08-29, prd §522).
+/// What the devnet seat has to say to a lock screen (2026-08-29, prd §522;
+/// the Frames devnet since §728).
 ///
 /// **THE GATHERING HALF ONLY.** Every rule — what is news, how long it stays
 /// news, what may be said about it — is `NotifyDevnet` in `NotifyPlan.swift`,
 /// the Foundation-only file `scripts/notify-selftest.sh` compiles WHOLE. This
 /// file reads app state and hands it over as values, and makes no decision it
 /// could get wrong on its own. The split is `StripeRoom`/`PostHogRoom`'s and it
-/// earns itself the same way: nothing in this repo can make a devnet reset or
-/// a timelock elapse on demand, so the harness is the only proof these two
-/// notifications are right.
+/// earns itself the same way: nothing in this repo can make a devnet reset on
+/// demand, so the harness is the only proof this notification is right.
 ///
 /// **IT REACHES NOTHING.** Every read below is of state a foreground sweep
-/// already wrote — `VibenetSeenChain`'s sticky reset, `HegotaLiveState`'s
-/// genesis record, the unlock book. No request, no new `Thing` field, no
-/// CloudKit deploy. The cost is a handful of `UserDefaults` reads.
+/// already wrote — the seat's stored genesis record. No request, no new
+/// `Thing` field, no CloudKit deploy. The cost is a handful of `UserDefaults`
+/// reads.
 @MainActor
 enum DevnetNotify {
 
-    /// Everything the three seats would tell you right now.
+    /// Everything the seat would tell you right now.
     ///
     /// Composed, never submitted: `WalletBackgroundRefresh.runNotifySweep` adds
     /// these to the corpus sweep's own plans and submits ONCE, so a devnet
@@ -26,82 +26,29 @@ enum DevnetNotify {
     /// a second buzz beside a dispute. That is also what keeps
     /// `notify-selftest.sh`'s "only one file submits" guard true.
     static func plans(now: Date = .now) -> [NotifyPlan] {
-        NotifyDevnet.plans(resets: resets(), unlocks: unlocks(), now: now)
+        NotifyDevnet.plans(resets: resets(), now: now)
     }
 
-    /// Housekeeping the sweep runs AFTER it has composed and submitted — never
-    /// before, or an entry would be pruned in the same pass that would have
-    /// announced it.
-    static func prune(now: Date = .now) {
-        VibenetUnlockBook.prune(now: now)
-    }
-
-    /// Why the seats said nothing, when they said nothing — for
-    /// `-notifyProbe` only.
+    /// Why the seat said nothing, when it said nothing — for `-notifyProbe`
+    /// only.
     ///
     /// **Silence is the healthy answer here almost every day**, and it has
-    /// several causes per seat that are indistinguishable from outside: nobody
+    /// several causes that are indistinguishable from outside: nobody
     /// watching, no reset observed, an observation older than the week it stays
-    /// sayable, nobody having turned unlock tracking on, or the gathering
-    /// having drifted. Only the last is a bug, and a bare `devnet=0` cannot
-    /// separate them — `-kalshiBookProbe`'s reason, on a feature nothing else
-    /// in this repo can exercise.
+    /// sayable, or the gathering having drifted. Only the last is a bug, and a
+    /// bare `devnet=0` cannot separate them — `-kalshiBookProbe`'s reason, on a
+    /// feature nothing else in this repo can exercise.
     static func census() -> [String] {
-        var out: [String] = []
-
-        let vWatching = VibenetWatch.shared.addresses.count
-        let vReset = VibenetSeenChain.observedReset()
-        out.append("vibenet watching=\(vWatching) reset=" +
-                   (vReset.map { "\($0.key) observed \($0.at)" } ?? "none observed"))
-
-        let book = VibenetUnlockBook.all()
-        out.append("vibenet tracked-unlocks=\(book.count)" +
-                   (book.isEmpty ? " (nobody turned tracking on — §473's control)" : ""))
-        for entry in book {
-            let due = entry.unlocksAt
-            out.append("vibenet unlock \(entry.name) at \(due) " +
-                       (due > .now ? "still counting" : "elapsed"))
-        }
-
-        let pWatching = PrivacyDevnetWatch.shared.addresses.count
-        let pReset = PrivacyDevnetLiveState.observedRelaunch()
-        out.append("privacy watching=\(pWatching) accounts=\(PrivacyDevnetLiveState.shared.accounts.count) relaunch=" +
-                   (pReset.map { "\($0.key) observed \($0.at)" } ?? "none observed"))
-
-        let hWatching = HegotaWatch.shared.addresses.count
-        let hRestart = HegotaLiveState.observedRestart()
-        out.append("hegota watching=\(hWatching) accounts=\(HegotaLiveState.shared.accounts.count) restart=" +
-                   (hRestart.map { "\($0.key) observed \($0.at)" } ?? "none observed"))
-
         let fWatching = FramesWatch.shared.addresses.count + (FramesKey.address() == nil ? 0 : 1)
         let fReset = FramesLiveState.observedRelaunch()
-        out.append("frames watching=\(fWatching) relaunch=" +
-                   (fReset.map { "\($0.key) observed \($0.at)" } ?? "none observed"))
-
-        return out
+        return ["frames watching=\(fWatching) relaunch=" +
+                (fReset.map { "\($0.key) observed \($0.at)" } ?? "none observed")]
     }
 
     // MARK: - What was reset
 
     private static func resets() -> [NotifyDevnet.Reset] {
         var out: [NotifyDevnet.Reset] = []
-        if let seen = VibenetSeenChain.observedReset() {
-            out.append(.init(seat: .vibenet, key: seen.key, observedAt: seen.at,
-                             watching: VibenetWatch.shared.addresses.count))
-        }
-        if let seen = HegotaLiveState.observedRestart() {
-            out.append(.init(seat: .hegota, key: seen.key, observedAt: seen.at,
-                             watching: HegotaWatch.shared.addresses.count))
-        }
-        // Ethrex Privacy (prd §593d). Its relaunch signal is GENESIS ALONE and
-        // compared against a SHIPPED constant rather than a stored baseline —
-        // §594's finding one seat over is that the chain id survived a measured
-        // reset unchanged and the tip climbed past its old high-water in the
-        // same one, so neither of those is a signal.
-        if let seen = PrivacyDevnetLiveState.observedRelaunch() {
-            out.append(.init(seat: .privacy, key: seen.key, observedAt: seen.at,
-                             watching: PrivacyDevnetWatch.shared.addresses.count))
-        }
         // Hegotá Frames (prd §728). **The key counts as something watched**:
         // the seat reads this phone's own account whether or not it is on the
         // watch list, and a relaunch takes its balance just the same.
@@ -111,24 +58,5 @@ enum DevnetNotify {
                                  + (FramesKey.address() == nil ? 0 : 1)))
         }
         return out
-    }
-
-    // MARK: - What finished unlocking
-
-    /// **The book is the whole gate.** An entry exists only because somebody
-    /// turned tracking on (§473's control), so `tracked` is true for every one
-    /// of them — and it is passed explicitly rather than defaulted, because the
-    /// pure half asserts that rule and a caller silently agreeing with it is
-    /// how a rule stops being tested.
-    private static func unlocks() -> [NotifyDevnet.Unlock] {
-        VibenetUnlockBook.all().map { entry in
-            // The name is re-resolved rather than trusted: an account renamed
-            // after tracking began should be announced under the name it has
-            // now, not the one it had when the countdown started.
-            .init(address: entry.address,
-                  name: VibenetWatch.shared.name(for: entry.address) ?? entry.name,
-                  unlocksAt: entry.unlocksAt,
-                  tracked: true)
-        }
     }
 }

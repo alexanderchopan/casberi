@@ -3,18 +3,17 @@
 # EIP-8141 chain 81410 (2026-09-01, prd §548):
 #
 #   Casberi/Casberi/Model/FramesTransaction.swift  — the 7-field envelope
-#   Casberi/Casberi/Model/RLP.swift                — shared with vibenet/Hegotá
+#   Casberi/Casberi/Model/RLP.swift                — the RLP the envelope is built of
 #
 # Both Foundation-only BY DESIGN and compiled WHOLE AND UNMODIFIED here.
 #
-# WHY A SECOND HARNESS RATHER THAN A PARAMETER ON HEGOTÁ'S. Both chains run
-# ethrex, both serve type 0x06, both call it EIP-8141 — and they hash
-# DIFFERENT LISTS. Hegotá: eleven flat fields with keyed nonces and recent-root
-# references. Frames: seven, with the three fee fields nested. Signing with the
-# wrong one produces a well-formed signature over a different digest that
-# recovers to a real address. The build is happy, the screen is right, and the
-# money goes somewhere else — the `safetx-selftest.sh` argument, on a chain
-# that cannot be reached from a harness.
+# WHY THE ENVELOPE IS PINNED. Every ethrex devnet serves type 0x06 and calls it
+# EIP-8141, and they do not all hash the same list: this one is seven fields,
+# with the three fee fields nested. Signing with the wrong list produces a
+# well-formed signature over a different digest that recovers to a real
+# address. The build is happy, the screen is right, and the money goes
+# somewhere else — the `safetx-selftest.sh` argument, on a chain that cannot be
+# reached from a harness.
 #
 # THE FIXTURES ARE REAL TRANSACTIONS. Measured 2026-09-01 against the whole
 # type-0x06 population of this chain (5 transactions — it opened 2026-08-28):
@@ -82,7 +81,7 @@ PYM
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.9x faster).
   # Re-probe before trusting it again after adding mutations.
-  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift FramesNetwork.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift FramesNetwork.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift RoomValueHistory.swift RoomPermissions.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -106,6 +105,13 @@ RFRAMES="Casberi/Casberi/Model/RoomFrames.swift"
 # Stubbing it would let the harness disagree with the app about a type the app
 # stores; it is Foundation-only by design for exactly this.
 TOKENS="Casberi/Casberi/Model/DevnetTokens.swift"
+# **The room's balance line and its Permissions headline (prd §684, §692)** —
+# shared, Foundation-only and compiled whole. The line is DERIVED by walking
+# each move back from the balance, and its one rule worth a harness is that a
+# walk that goes below zero, or meets an unreadable amount or an undated move,
+# draws nothing rather than a line off a floor nobody observed.
+HISTORY="Casberi/Casberi/Model/RoomValueHistory.swift"
+PERMS="Casberi/Casberi/Model/RoomPermissions.swift"
 # **What the chain itself is doing (prd §728)** — relaunch, stall, finality and
 # where a pending send is. Foundation-only, compiled whole: nothing on this
 # machine can make a devnet stall or relaunch on demand.
@@ -119,7 +125,7 @@ PASSKEY="Casberi/Casberi/Model/FramesPasskeyAccount.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
-for f in "$TX" "$NET" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW" "$SPONSOR" "$PASSKEY"; do
+for f in "$TX" "$NET" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE" "$CHAINW" "$SPONSOR" "$PASSKEY" "$HISTORY" "$PERMS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -596,7 +602,7 @@ src = io.open(sys.argv[1], encoding="utf-8").read()
 # there could only ever see two of the three doors and would pass while one was
 # missing.
 i = src.find("source == FramesIdentity.source,")
-j = src.find("} else if source == HegotaIdentity.source", i)
+j = src.find("} else if source == LogosRoom.source", i)
 if i < 0 or j < 0:
     print("✗ FeedScreen no longer mounts the Frames room"); sys.exit(1)
 body = src[i:j]
@@ -773,6 +779,28 @@ sys.exit(0)
 PYSCOPE
 echo "  ok   drift guards: the rows open, the verdict has one home, and the face rail really scopes"
 
+# THE SHARED FRAMES FIGURE (prd §698, §925, §936). The legend is a census over
+# EVERY framed transaction while the bars are capped, so the card must say which
+# population each covers — without it the legend totals nineteen steps above six
+# bars carrying nine. And the figure derives its own height: a written-down row
+# cap is what clipped the note at 185pt.
+strip_comments "Casberi/Casberi/Model/RoomFrames.swift" > "$WORK/roomframes.nc"
+strip_comments "Casberi/Casberi/Screens/RoomFramesFigure.swift" > "$WORK/roomframesfigure.nc"
+grep -qF 'step counts cover all' "$WORK/roomframes.nc" \
+  || { echo "✗ the frames drawing no longer names its population — the legend and the bars count different things in silence"; exit 1; }
+if grep -qF 'slices.first?.modeName' "$WORK/roomframes.nc"; then
+  echo "✗ the frames caption is built from the drawing's head again, never a superlative"; exit 1
+fi
+{ grep -q "DSRoomChassis.figureSlot" "$WORK/roomframesfigure.nc" ||
+  { grep -q "GeometryReader" "$WORK/roomframesfigure.nc" &&
+    grep -q "maxHeight: .infinity" "$WORK/roomframesfigure.nc"; } ||
+  grep -q "DSBarFigure(" "$WORK/roomframesfigure.nc"; } \
+  || { echo "✗ the frames figure stopped deriving its own height (§698; a flow since §925; a fitted bar figure since §936)"; exit 1; }
+if grep -qF "let rowsShown = " "$WORK/roomframesfigure.nc"; then
+  echo "✗ the frames figure's row cap is a constant again — derive it or the sum goes stale"; exit 1
+fi
+echo "  ok   drift guards: the frames figure names its population and derives its height"
+
 cp "$TX" "$WORK/FramesTransaction.swift"
 cp "$NET" "$WORK/FramesNetwork.swift"
 cp "$RLPF" "$WORK/RLP.swift"
@@ -785,6 +813,8 @@ cp "$TOKENS" "$WORK/DevnetTokens.swift"
 cp "$CHAINW" "$WORK/FramesChainWatch.swift"
 cp "$SPONSOR" "$WORK/FramesSponsor.swift"
 cp "$PASSKEY" "$WORK/FramesPasskeyAccount.swift"
+cp "$HISTORY" "$WORK/RoomValueHistory.swift"
+cp "$PERMS" "$WORK/RoomPermissions.swift"
 mkdir -p "$WORK/m"
 
 cat > "$WORK/m/main.swift" <<'SWIFT'
@@ -794,6 +824,14 @@ func check(_ l: String, _ ok: Bool) { if !ok { print("  ✗ \(l)"); fails += 1 }
 func hx(_ s: String) -> Data { RLP.data(fromHex: s) ?? Data() }
 func keccakHex(_ d: Data) -> String {
     "0x" + Keccak256.hash([UInt8](d)).map { String(format: "%02x", $0) }.joined()
+}
+// The one type `RoomValueHistory` needs from the app's wallet half, which is
+// SwiftUI-bound and cannot be compiled here. Its shape is the whole contract.
+enum WalletStore {
+    struct ValueSample: Codable, Equatable {
+        let at: Date
+        let usd: Double
+    }
 }
 
 // ============ VECTOR 1 — real, and the ONLY one on chain with a non-zero
@@ -865,10 +903,10 @@ let v1r = FramesTransaction.Fields(
 check("vector 1R's keccak is the POST-RESTART chain's own transaction hash",
       keccakHex(FramesTransaction.encoded(v1r))
         == "0x7b75f255ab1ecc85bd7bb4610606ee92204688b6a902c2a0a7834c06e7b7be63")
-// The signer is written LITERALLY here where HegotaSend writes it EMPTY. That
-// divergence survived the restart, and it is the one an encoder shared between
-// the two chains would get silently wrong.
-check("vector 1R still carries a literal signer, not Hegota's empty one",
+// The signer is written LITERALLY here, where the other convention writes it
+// EMPTY. That survived the restart, and it is the one an encoder shared with
+// another chain would get silently wrong.
+check("vector 1R still carries a literal signer, not an empty one",
       RLP.hex(FramesTransaction.encoded(v1r)).contains("942c835d53b4c19cb1dd6c7cf28c4b87240f7e5a1580b841"))
 
 // ============ VECTOR D0 — frames-devnet-0, the chain this seat is on (prd
@@ -1171,14 +1209,14 @@ check("home and activity are the constants",
 // (prd §688).** The older ruling was "frames leads the conditional tail,
 // because frame transactions are the reason this chain exists" — true, and
 // written when Holdings did not exist here. It does now, and the rail's order
-// is a FAMILY fact rather than this room's: Wallet, Hegotá and vibenet all put
-// Holdings third, so a person moving between rooms finds the same chip in the
+// is a FAMILY fact rather than this room's: Wallet puts Holdings third too,
+// so a person moving between rooms finds the same chip in the
 // same place. What the old ruling protected is intact and is asserted below:
 // nothing about frames has moved relative to the scopes it outranks.
 check("holdings leads the conditional tail, as it does in every other room",
       FramesSection.order[firstConditional] == .holdings)
 // **ACCOUNTS SITS WHERE THE FAMILY PUTS IT (prd §689)** — straight after
-// Holdings, as Wallet, Hegotá and vibenet all have it.
+// Holdings, as Wallet has it.
 check("accounts follows holdings",
       FramesSection.order.firstIndex(of: .accounts)!
         == FramesSection.order.firstIndex(of: .holdings)! + 1)
@@ -2232,12 +2270,56 @@ let namedRuns = FramesFrames.runs([FramesMove(
 check("the census counts a send's expiry check and its deploy apart from verification",
       namedRuns.first?.steps.map(\.modeName) == ["Expiry", "Deploy", "Verify", "Send"])
 
+// ───────────────── the derived line (prd §684) ─────────────────
+let unit = Decimal(string: "1000000000000000000")!
+let walkT0 = Date(timeIntervalSince1970: 1_700_000_000)
+func sample(_ undo: String, _ minutesAgo: Double) -> (undo: Decimal?, at: Date?) {
+    (Decimal(string: undo)!, walkT0.addingTimeInterval(-minutesAgo * 60))
+}
+// A clean walk: 1 ETH in, two spends of 0.1 — undoing them from 0.8 lands on 0.
+let clean = RoomValueHistory.derived(
+    balance: Decimal(string: "800000000000000000")!,
+    undoNewestFirst: [sample("100000000000000000", 10),
+                      sample("100000000000000000", 20),
+                      sample("-1000000000000000000", 30)],
+    unit: unit, now: walkT0)
+check("a clean walk keeps every point", clean.count == 4)
+check("the walk lands on zero, oldest first", clean.first.map { abs($0.usd) < 1e-12 } ?? false)
+check("the newest point is the balance", clean.last.map { abs($0.usd - 0.8) < 1e-12 } ?? false)
+check("the line never goes backwards in time", zip(clean, clean.dropFirst()).allSatisfy { $0.at <= $1.at })
+// **A NEGATIVE POINT ABANDONS THE WHOLE SERIES** — a history truncated by the
+// read leaves the oldest steps with nothing to subtract from, and a clamp to
+// zero would report the climb off a floor nobody observed as a real percentage.
+check("a walk that goes below zero draws nothing at all",
+      RoomValueHistory.derived(balance: Decimal(string: "60000000000000000")!,
+                               undoNewestFirst: [sample("-1000000000000000000", 10)],
+                               unit: unit, now: walkT0).isEmpty)
+check("an unreadable amount abandons the walk",
+      RoomValueHistory.derived(balance: unit, undoNewestFirst: [(nil, walkT0)], unit: unit, now: walkT0).isEmpty)
+check("an undated move abandons the walk",
+      RoomValueHistory.derived(balance: unit, undoNewestFirst: [(0, nil)], unit: unit, now: walkT0).isEmpty)
+check("an unreadable move in the MIDDLE abandons the whole walk, never just its own step",
+      RoomValueHistory.derived(balance: Decimal(string: "800000000000000000")!,
+                               undoNewestFirst: [sample("100000000000000000", 10), (nil, walkT0),
+                                                 sample("100000000000000000", 30)],
+                               unit: unit, now: walkT0).isEmpty)
+
+// ───────────────── the Permissions headline (prd §692) ─────────────────
+// The count a headline states must be the count that decides whether the
+// scope is empty: no kinds is no headline, so the scope's own empty line shows.
+check("no kinds, no headline", RoomPermissions.headline([]) == nil)
+check("one is singular",
+      RoomPermissions.headline([.init(label: "Sponsors", count: 1)]) == "1 permission")
+check("the headline adds the kinds — one unit for the whole scope",
+      RoomPermissions.headline([.init(label: "Sponsors", count: 2),
+                                .init(label: "Keys", count: 1)]) == "3 permissions")
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 4 real vectors byte-exact, keccak == the chain's own hash (1 on frames-devnet-0)")
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift FramesNetwork.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift FramesNetwork.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift DevnetTokens.swift RoomFrames.swift FramesReading.swift FramesChainWatch.swift FramesSponsor.swift FramesPasskeyAccount.swift RoomValueHistory.swift RoomPermissions.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -2274,7 +2356,7 @@ mutate() {
 }
 
 F=FramesTransaction.swift
-mutate "the fee list flattened to Hegotá's shape" $F \
+mutate "the fee list flattened to a scalar" $F \
   '.list([.bytes(RLP.quantity(f.maxPriorityFeePerGas)),
                 .bytes(RLP.quantity(f.maxFeePerGas)),
                 .bytes(RLP.quantity(f.maxFeePerBlobGas))])' \
@@ -2625,6 +2707,11 @@ mutate "an empty signer kept as an address" $F6 \
   'let signer = entry["signer"] as? String'
 mutate "a skip counted as a failure" RoomFrames.swift \
   'case .skipped:     skipped += 1' 'case .skipped:     failed += 1'
+mutate "a walk below zero clamped instead of abandoned" RoomValueHistory.swift \
+  'if running < 0 { return [] }' 'if running < 0 { running = 0 }'
+mutate "an unreadable move skipped instead of abandoning the walk" RoomValueHistory.swift \
+  'guard let undo = move.undo, let at = move.at else { return [] }' \
+  'guard let undo = move.undo, let at = move.at else { continue }'
 
 # --- the fan-out must be LAST, and this proves it -----------------------------
 # **A mutation recorded AFTER this block is never dispatched, and the run still

@@ -6,7 +6,7 @@ import SwiftUI
 /// "move the other 22 onto the shared template, so every room's top looks like
 /// it came from the same hand").
 ///
-/// Four rooms — vibenet, Hegotá, Frames and the Privacy devnet — compose the
+/// The devnet rooms (four then, Frames today) compose the
 /// chassis above: a fixed `visualSlot`, a rail, a switcher. The other
 /// twenty-two drew their heads by hand the day their source landed, and read
 /// side by side they were one anatomy spelled twenty-two ways: a `heading24`

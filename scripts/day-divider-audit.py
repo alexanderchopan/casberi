@@ -71,7 +71,6 @@ SHEET_HEADS = (
     "Casberi/Casberi/Screens/PostSheetHead.swift",   # prd §884
     "Casberi/Casberi/Screens/PictureSheetHead.swift",   # prd §885
     "Casberi/Casberi/Screens/MoneyReceiptCard.swift",   # prd §887
-    "Casberi/Casberi/Screens/VibenetEventCard.swift",   # prd §891
     "Casberi/Casberi/Screens/SheetPartyHead.swift",   # prd §892
 )
 BRAND_HEX = "FF2D87"

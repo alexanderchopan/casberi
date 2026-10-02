@@ -361,8 +361,8 @@ struct FramesRoomFigure: View {
 
     /// **WHAT THIS ADDRESS HOLDS BESIDES THE COIN (prd §688).**
     ///
-    /// The same `UnitTreemap` Hegotá and the Privacy devnet draw their Holdings
-    /// with, over the same subject the Wallet and vibenet use: ASSETS. The
+    /// The same `UnitTreemap` the other rooms draw their Holdings with, over
+    /// the same subject the Wallet uses: ASSETS. The
     /// native coin is a cell like any other — it is the largest holding on
     /// nearly every account here, and leaving it out would draw a map of the
     /// small change while Home stated the rest.

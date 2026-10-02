@@ -72,25 +72,7 @@ final class HomeRoute {
         /// a catalog seat, and this is a room. `.bridge(.wallet)` still opens
         /// the roster — the five addresses the app reads — which is the only
         /// thing on that side of the line now.
-        ///
-        /// Vibenet's own address book — the devnet accounts you watch, and
-        /// every verb that manages them (prd §465).
-        ///
-        /// Its OWN node, and never `.bridge(.vibenet)`, for exactly the
-        /// reason `addressBook` gives one line up: a bridge destination is
-        /// the SETUP screen for a catalog seat, and this is a room. Since
-        /// §465 that distinction is load-bearing rather than tidy —
-        /// `.bridge(.vibenet)` now opens a page holding the first address
-        /// and the disconnect and nothing else, so routing the roster
-        /// through it would land on a screen that no longer has a roster.
-        ///
-        /// Separate from `addressBook` rather than parameterised by source:
-        /// Wallet's book is an unlimited ledger of NAMES beside a capped
-        /// watch list, and this is the watch list itself, uncapped. Same
-        /// word, different contents.
-        // `vibenetAddressBook` was HERE and is deleted with its screen
-        // (prd §545) — the roster's verbs live on the Accounts scope's
-        // own rows, and the shared book is still `addressBook`.
+
         /// One page of Settings, drawn in the Accounts pane (prd §876). Only
         /// ever placed in `accountsPane`: on a layout with no pane the same
         /// rows raise their sheets, as they always have.

@@ -204,13 +204,6 @@ enum DemoSeedAll {
                               // demo-specific (they carry `demo`), so a real
                               // notification (`gh:notif:<id>`) is never touched.
                               "gh:demo", "gh:notif:demo",
-                              // Vibenet's demo rows carry the REAL bridge's
-                              // ref shape for the same reason Peer's do
-                              // below — so its own dedupe recognises them —
-                              // which means teardown needs this entry or
-                              // they outlive the demo, indistinguishable
-                              // from a real landed key authorization.
-                              "vibenet:",
                               // The three finance seats of §780b/§780c. Their
                               // demo rows carry the REAL bridges' ref shapes
                               // (`AcornsLive.refPrefix`, `RocketMoneyLive`'s,
@@ -225,7 +218,7 @@ enum DemoSeedAll {
                               // too (prd §803g).
                               "privy:app:", "privy:tx:",
                               // AWS/Polar/Dodo (2026-08-31, prd §484's check
-                              // G) — same reasoning as vibenet above: their
+                              // G) — same reasoning as GitHub above: their
                               // rows carry the REAL bridges' ref shapes,
                               // because each head matches on them literally,
                               // so exit() and the freshness re-stamp both
@@ -454,14 +447,6 @@ enum DemoSeedAll {
         // `cardpointers:offer:` shape, so nothing a real account could land
         // collides with it.
         "cardpointers:offer:demo",
-        // Altana's keys carry the REAL `altana:key:<chain>:<address>:<keyid>`
-        // shape (the seed's own comment says why), so the scope here is the
-        // ADDRESS — built by the bridge's own function with an empty key id
-        // rather than spelled by hand, since a prefix re-typed beside the
-        // builder is where the two start disagreeing.
-        AltanaKeystore.ref(chain: demoAltanaChain, address: demoWallet, keyID: ""),
-        AltanaKeystore.ref(chain: demoAltanaChain,
-                           address: demoAltanaSecondAccount, keyID: ""),
         // The wallet's three reconciling deadlines (2026-08-17) — landed under
         // `source: "Wallet"` with the real bridges' shapes so each bridge
         // reconciles its own row. Two are scoped by the demo WALLET, which is
@@ -487,7 +472,7 @@ enum DemoSeedAll {
     ///
     /// **`refPrefixes` has only ever known the CURRENT spelling**, and this
     /// seeder has re-spelled refs repeatedly — every time for a good reason
-    /// (§349's Peer/Privacy Pools, §401's Radicle, §495's vibenet hashes: a
+    /// (§349's Peer/Privacy Pools, §401's Radicle: a
     /// gate keyed on a real ref shape cannot be satisfied by a `demo:` row).
     /// Each of those renames orphaned whatever the PREVIOUS build had already
     /// landed: `clear` walks today's list, the old rows match nothing in it,
@@ -697,28 +682,11 @@ enum DemoSeedAll {
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
         "Farcaster": 4, "Apple Wallet": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5,
-        // Base Vibenet (2026-08-23) — a landless seat like Cloudflare and
-        // Apple Wallet, so its chip needs its OWN visit weight rather than
-        // riding a landed row's — `ChipMemory` ranks the source chip strip,
-        // not the corpus, and a seat with no Things would otherwise sort
-        // to the back of the strip despite reading as "connected".
-        "Base Vibenet": 3,
-        // Ethrex Hegotá (prd §500) — landless for the same reason, and more
-        // completely: it lands no `Thing` at all, so its chip has no row to
-        // ride and needs its own weight or it sorts to the back of the strip
-        // while reading as connected.
-        "Hegotá UTXO": 3,
         // Hegotá Frames (prd §548) — landless for exactly Hegotá's reason,
         // one line above: it lands no `Thing` at all, so its chip has no row
         // to ride and needs its own weight or it sorts to the back of the
         // strip while reading as connected.
         "Hegotá Frames": 3,
-        // Ethrex Privacy (prd §593) — rowless for exactly the reason above,
-        // and it is the same ruling rather than a third one: it lands no
-        // `Thing` at all, so its chip has no row to ride and needs its own
-        // weight or it sorts to the back of the strip while reading as
-        // connected.
-        "Hegotá Privacy": 3,
         // Cloudflare (2026-08-08) — the `runway` figure kind had NO room
         // above the panel's 20-card cap, and the reason wasn't affinity, it
         // was that `runway` could not draw at all: `CloudflareRunwaySource
@@ -798,9 +766,6 @@ enum DemoSeedAll {
         for key in ["x402.state.v1", "x402.categories.v1"] {
             UserDefaults.standard.removeObject(forKey: key)
         }
-        // The keystore snapshot and its seat evidence (prd §403).
-        AltanaState.clear()   // takes the seeded ghosts with it (§410)
-        AltanaKeystore.evidence.forget(demoWallet)
         // The other eleven wallet-riding seats' marks (prd §484). BY WALLET,
         // never a blanket clear of the key: a dev install may have real
         // evidence for the same protocol at a real address, and this is the
@@ -823,44 +788,11 @@ enum DemoSeedAll {
         // "Cloudflare" too, indistinguishable by name).
         CloudflareEstateStore.clear()
 
-        // Base Vibenet — the four demo-seeded addresses, by NAME, never a
-        // blanket `removeAll()`: a real vibenet watch this device already
-        // held before entering the demo (implausible, but the rule the
-        // other bridges above already keep) must survive exiting it.
-        for address in demoVibenetWatches { VibenetWatch.shared.remove(address) }
-        // `VibenetWatch.remove` no longer touches the shared book (2026-08-27
-        // — a single unwatch keeps the name, same as the mainnet side), so
-        // the four book entries it landed must be forgotten HERE explicitly,
-        // by address, same rule as everything else in this teardown — plus
-        // the `.key` entry and its note, seeded above and nowhere else.
-        for address in (demoVibenetWatches + [demoVibenetKeySigner]) {
-            AddressBook.shared.remove(address)
-        }
-        // The balance curve goes with them. Unlike the watch list above there
-        // is no "kept it themselves" case to protect: the store holds ONE
-        // series for the room, so a real watcher's readings and the demo's
-        // seeded ones cannot be told apart once mixed — and the seeded shape
-        // ends on the fixture's total, which is not their balance. Dropped
-        // whole, and it refills from their own next sweep.
-        VibenetValueStore.forget()
-        // …and the contracts the demo cached (prd §476), or a real install
-        // that has never connected vibenet keeps a demo's faucet address
-        // behind its own undeployed accounts. A live install re-fetches on its
-        // next sweep, so this can only ever cost a cache miss.
-        VibenetConfig.forgetCache()
-        // And the seen-keys ledger, for the same reason and one step
-        // stronger: the demo fixture's four addresses are not theirs, so a
-        // ledger left behind would diff a real roster against a demo's.
-        VibenetKeysSeen.forget()
-        // And Hegotá's fixture account — forgotten BY ADDRESS, never a
-        // blanket clear, since a dev install may be watching a real one.
-        HegotaLiveState.forgetDemo()
-        // Frames and Privacy had a `teardownDemo` each and nothing called
-        // either: Frames PERSISTS its fixture, so after Exit the room drew the
-        // demo's 17.99 test ETH as the person's own until a real read ran —
-        // and none runs with no key and no watch.
+        // Frames had a `teardownDemo` and nothing called it: it PERSISTS its
+        // fixture, so after Exit the room drew the demo's 17.99 test ETH as
+        // the person's own until a real read ran — and none runs with no key
+        // and no watch.
         FramesLiveState.teardownDemo()
-        PrivacyDevnetLiveState.teardownDemo()
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -976,7 +908,7 @@ enum DemoSeedAll {
     /// `AgentAnswer.makeRequest` buys with its explicit case.
     ///
     /// **The ref joins the REAL namespace** (`AgentConversationLanding.refPrefix`,
-    /// never a second literal), for the reason the GitHub and vibenet rows give
+    /// never a second literal), for the reason the GitHub rows give
     /// above: `AgentChatView` fences its query on that prefix, so a `demo:` ref
     /// would land a row the Chat tile cannot see. The `demo-` infix keeps it
     /// scoped to rows this file wrote, so `clear` can never reach a
@@ -1248,100 +1180,6 @@ enum DemoSeedAll {
                 // A finished offer keeps no deadline, exactly as
                 // `CardPointersIngest.heal` leaves it.
                 if dueInDays > 0, mark != .done { thing.dueAt = at(-dueInDays, 12) }
-            }
-        }
-    }
-
-    /// Base Vibenet's landed events (R4.2, 2026-08-23). The seat used to be
-    /// LANDLESS — it drew a chip and a room head and nothing in the room —
-    /// which stopped being tenable the moment the room got a `Shape` of its
-    /// own: `demo-selftest.py`'s check F proves every shape has a seeded
-    /// source, and a room nobody can see in the demo is exactly the gap that
-    /// check exists to catch.
-    ///
-    /// Addresses match `VibenetRoom.demoFixture()`'s own, so the head above
-    /// and the rows beneath it describe the same accounts rather than two
-    /// unrelated sets. `authorHandle` is the account and `summary` the event
-    /// without the address — the two fields `VibenetEventRow` reads.
-    private static func vibenet() -> [Thing] {
-        [
-            // **`actor:`, NOT `auth:` — the REAL bridge's own ref segment**
-            // (`VibenetEventKind.refSegment`), corrected 2026-08-25. The demo
-            // invented its own spelling, and the moment anything downstream
-            // matched on the real one — the event sheet asks `vibenet:actor`
-            // to decide whether an event is about a KEY (§467) — every demo
-            // authorization silently failed the test and drew no permissions
-            // and no expiry. Same class as §349's Peer/Privacy Pools demo
-            // refs: the rows land, the room renders, and the one reading that
-            // needed the ref is quietly absent.
-            //
-            // **THE REFS CARRY A REAL-SHAPED HASH** (prd §495). They were
-            // `vibenet:actor:demo1` — three components — and the event sheet's
-            // transaction door reads the hash POSITIONALLY out of the real
-            // bridge's own four-component ref, so every demo event failed the
-            // shape and drew no door. The §349 class again, one field over:
-            // the rows land, the sheet renders, and the one control it has is
-            // silently absent from the corpus the demo exists to show.
-            //
-            // The hashes are invented and could not be otherwise — nothing
-            // here reaches a chain — so tapping one opens an explorer page
-            // that says no such transaction. That is the honest failure for a
-            // demo and the same one every other demo permalink here makes; a
-            // real hash would send somebody to a stranger's transaction and
-            // imply it was theirs.
-            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New passkey authorized",
-             "actor:0x7c1d4e9a2b6f83c05d17e4a9b820f36cd15e7a48b93c206df41e85a7cb90d24f:0", 1.0),
-            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New secp256k1 key authorized",
-             "actor:0x3f8b25c6d017a94e5b83f2016cd74a9e8b520371fc6ad9e04b18752c3ae6f091:1", 1.0),
-            ("0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c", "Locked on vibenet",
-             "locked:0x9e04a71b3c8d526f0a94e7128bd35c6f807a1e29d4b60358cf9a2e714d80b365:0", 2.0),
-            ("0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d", "Key revoked",
-             "actor:0x5a2c9e18b7043fd61c85920ae3b47d6f0c19a5e8347b26df10a95c8e2b4713a9:0", 4.0),
-        ].map { address, phrase, ref, days in
-            let short = VibenetRoom.shortAddress(address)
-            // The TITLE keeps naming the account — it is what the All feed,
-            // search and Spotlight show, where no face is present.
-            let title = phrase == "Locked on vibenet"
-                ? "\(short) locked on vibenet"
-                : "\(phrase) for \(short)"
-            return row(.event, title, source: "Base Vibenet",
-                       ref: "vibenet:\(ref)", days: days, hour: 11) { thing in
-                thing.authorHandle = address
-                thing.summary = phrase
-                // ONE authorization carries the expiry of a real key in the
-                // fixture, so the event sheet's permission chips and its
-                // "Expires" row are exercised by the demo (§467). The value is
-                // `demoFixture`'s own actor-1 expiry on this account, and that
-                // is the whole requirement: `VibenetEventFacts` names a key's
-                // permissions only when EXACTLY ONE key on the account matches
-                // the event's expiry, so a number invented here would silently
-                // match nothing and the chips would never draw. The account's
-                // other two actors carry expiry 0 ("never"), which is what
-                // makes this match unique.
-                //
-                // Keyed on the PHRASE rather than the ref since §495 gave the
-                // refs real transaction hashes: a ref is now a 70-character
-                // string nobody can match by eye, and a demo whose branches
-                // are keyed to one is a demo that breaks silently the next
-                // time a hash is regenerated.
-                if phrase == "New secp256k1 key authorized" {
-                    thing.dueAt = Date(timeIntervalSince1970: 4_102_444_800)
-                }
-                // The §308 facets the real bridge stamps (prd §468) — without
-                // them the demo's four vibenet rows are the only rows in this
-                // room a facet ask can never reach, which is exactly the demo
-                // parity §349 made a standing rule.
-                switch phrase {
-                case "Locked on vibenet": thing.tags = ["Locked"]
-                case "Key revoked":       thing.tags = ["Key", "Revoked"]
-                default:                  thing.tags = ["Key"]
-                }
-                // ONE demo authorization is an ADMIN key, so the row that
-                // reaches the lock screen (`NotifySweep.classify`) exists in
-                // the demo at all. `demoFixture`'s own scope-0 actor lives on
-                // a different account, and that is fine: the tag is the whole
-                // gate and nothing joins the two.
-                if phrase == "New passkey authorized" { thing.tags.append("Admin key") }
             }
         }
     }
@@ -1678,7 +1516,6 @@ enum DemoSeedAll {
         out += l2beat()
         out += cardPointers()
         out += agentChats()
-        out += vibenet()
         out += appleWallet()
         out += cards()
         out += work()
@@ -1807,24 +1644,6 @@ enum DemoSeedAll {
     /// twelve identical rows. Assigned by what each counterparty really IS: a
     /// person or an exchange deposit address is a wallet, a router or an
     /// orchestrator is a contract, and Gnosis Pay settles through a Safe.
-    /// The demo's one `.key`-kind address-book entry (2026-08-27, the
-    /// address-book unification) — a synthetic vibenet session-key signer,
-    /// distinct from the four watched account addresses seeded below, so the
-    /// demo exercises a key filed as an entry rather than a watched account.
-    static let demoVibenetKeySigner = "0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f"
-
-    /// The four vibenet accounts the demo watches. Spelled ONCE (2026-09-01,
-    /// prd §549) — `teardown` carried this list twice as inline literals, and
-    /// `AddressBook.fixtureKeys` now needs it a third time. A rail that has to
-    /// be kept in step with a seed by hand fails silently in the leaking
-    /// direction, which is the whole reason §549 exists.
-    static let demoVibenetWatches = [
-        "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
-        "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
-        "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
-        "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
-    ]
-
     static let demoCounterparties: [(name: String, kind: AddressBook.Kind)] = [
         ("Sam", .wallet), ("Mia", .wallet), ("Coinbase", .wallet),
         ("Stripe", .wallet), ("Bitrefill", .wallet),
@@ -2917,21 +2736,6 @@ enum DemoSeedAll {
 
     private static func saves() -> [Thing] {
         var out: [Thing] = []
-        // Reddit groups on the subreddit; Raindrop on the saved URL's host.
-        let reddit: [(String, String, Double)] = [
-            ("My monstera, three years apart", "r/houseplants", 1),
-            ("Propagating pothos in water — what worked", "r/houseplants", 6),
-            ("What I learned rewriting our sync layer", "r/programming", 3),
-            ("A design review checklist that stuck", "r/userexperience", 12),
-            ("Tempelhof at sunset is still the best park", "r/berlin", 8),
-            ("The whole Ringbahn loop in one go", "r/berlin", 20),
-        ]
-        out += reddit.enumerated().map { i, r in
-            row(.link, r.0, source: "Reddit", ref: "demo:reddit:\(i)", days: r.2, hour: 22) { t in
-                t.authorHandle = r.1
-                t.previewImageURL = art("reddit-\(i)")
-            }
-        }
         // Every bookmark is a real, stable page — not `example.com`
         // (2026-08-08, P4) — and carries the TITLE Raindrop stores for it.
         // Titles were derived from the URL's last path component until
@@ -3673,51 +3477,6 @@ enum DemoSeedAll {
                 t.walletAddress = demoWallet
             }
         }
-        // Altana's keystore rides the watched wallet (prd §403). The refs must
-        // carry the REAL `altana:key:<chain>:<address>:<keyid>` shape
-        // `AltanaKeystore.ref` builds — a `"demo:"`-prefixed ref is the miss
-        // that silently zeroed the Peer and Privacy Pools cards on their own
-        // first coverage run, twice.
-        //
-        // These MIRROR `seedAltanaKeystore()`'s snapshot on purpose: the room
-        // HEAD composes from that snapshot and the rows are what sits beneath
-        // it, so a demo where the two disagree shows a card describing keys
-        // the room does not list.
-        let keys: [(String, Int, Bool, Double)] = [
-            ("A root key can sign as \(WalletStore.shortAddress(demoWallet))", 0, true, 62),
-            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until tomorrow", 1, false, 0.6),
-            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until next month", 2, false, 4),
-            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until last week", 3, false, 6),
-        ]
-        out += keys.map { k in
-            row(.link, k.0, source: "Altana",
-                ref: AltanaKeystore.ref(chain: demoAltanaChain, address: demoWallet,
-                                        keyID: demoAltanaKeyIDValue(k.1)),
-                days: k.3, hour: 10,
-                content: AltanaKeystore.explorerURL(address: demoWallet),
-                tags: [k.2 ? "Root key" : "Session key", "BNB Smart Chain"]) { t in
-                t.walletAddress = demoWallet
-                t.externalLink = AltanaKeystore.explorerURL(address: demoWallet)
-            }
-        }
-        // …and the SECOND account's rows (§407a): its tokens are tap targets
-        // like any others, and a token whose sheet never opens is §83's dead
-        // control hiding in the demo. Same ref shape, the second address.
-        let keys2: [(String, Int, Bool, Double)] = [
-            ("A root key can sign as …160f", 4, true, 30),
-            ("A session key was granted for …160f, until next month", 2, false, 4),
-        ]
-        out += keys2.map { k in
-            row(.link, k.0, source: "Altana",
-                ref: AltanaKeystore.ref(chain: demoAltanaChain, address: demoAltanaSecondAccount,
-                                        keyID: demoAltanaKeyIDValue(k.1)),
-                days: k.3, hour: 11,
-                content: AltanaKeystore.explorerURL(address: demoAltanaSecondAccount),
-                tags: [k.2 ? "Root key" : "Session key", "BNB Smart Chain"]) { t in
-                t.walletAddress = demoAltanaSecondAccount
-                t.externalLink = AltanaKeystore.explorerURL(address: demoAltanaSecondAccount)
-            }
-        }
         // Railgun ranks by token, read as DATA off `priceValue`/`priceCurrency`
         // — never parsed back out of the title. Ref must carry the real
         // `"railgun:shield:"`/`"railgun:unshield:"` prefix (`RailgunRoom
@@ -4228,184 +3987,6 @@ enum DemoSeedAll {
     /// ids exactly, so `item()`'s `estate.zoneNames[id]` lookup resolves a
     /// real name instead of falling back to the row's own title.
     @MainActor
-    /// Altana's keystore snapshot (prd §403).
-    ///
-    /// The room head composes from `AltanaState`, NOT from rows — it is chain
-    /// state, and re-reading it on every draw would spend an `eth_call` per
-    /// scroll. So a demo that seeded only rows would furnish the room and
-    /// leave its head permanently empty, which is the Cloudflare `runway` gap
-    /// (2026-08-08) in a new seat: a card that cannot draw, looking exactly
-    /// like a card with nothing to say.
-    ///
-    /// The shape mirrors what was MEASURED on BNB: one root key with no
-    /// expiry, 24-hour session grants, and — deliberately — one session key
-    /// already past its expiry while the registry still lists it, so the
-    /// demo exercises the hygiene line rather than pre-baking it away.
-    /// A demo key id that is REAL HEX.
-    ///
-    /// The first cut spelled these `0xdem0…`, which reads nicely and is not a
-    /// hex string — `m` is not a hex digit, and it was 63 characters rather
-    /// than 64. `AltanaKeySheet.parse` refuses both, correctly, so every demo
-    /// key row fell back to the generic link sheet while the room head (which
-    /// never validates an id) rendered perfectly. A demo that furnishes one
-    /// surface and silently starves another is exactly the §349 class, one
-    /// layer down — and no static check covers a sheet anatomy.
-    ///
-    /// Shared by the snapshot and the rows deliberately: they must agree, or
-    /// the sheet composes for an id the room does not list.
-
-    /// The demo's second Altana account — snapshot-only, never watched.
-    private static let demoAltanaSecondAccount = "0x9e8d7c6b5a49382716059483726150493827160f"
-
-    /// The chain the demo's Altana keys sit on. Hoisted because `refPrefixes`
-    /// builds its teardown scope from the SAME `AltanaKeystore.ref`, and a
-    /// chain name spelled twice is a slug that eventually differs — which
-    /// here means the rows silently outlive the demo again.
-    static let demoAltanaChain = "BNB Smart Chain"
-
-    private static func seedAltanaKeystore() {
-        let now = Date.now
-        // A REAL secp256k1 point, measured off BNB 2026-08-18 — so the demo's
-        // curve label ("secp256k1 key") is computed by the shipped detector from
-        // key material that genuinely lies on the curve, not asserted. A made-up
-        // point would satisfy neither equation and render as `.unknown`, which
-        // is exactly the demo silently under-showing a feature.
-        let realPoint = "04a376e7011da0888af6a46b1803c93760db185736229fbcf96d2c9750f9e3eacb"
-                      + "021abf6eeffcd4f7645c343e2d43c3dc5e2a352ee7ab15c7b8f16649531ba940"
-        func key(_ id: String, root: Bool, registeredDaysAgo: Double,
-                 grantHours: Double?, signatures: Int = 0,
-                 publicKey: String? = nil) -> AltanaKeystore.Key {
-            let registered = now.addingTimeInterval(-registeredDaysAgo * 86_400)
-            return AltanaKeystore.Key(
-                id: id, isRoot: root,
-                expiry: grantHours.map { registered.addingTimeInterval($0 * 3600) },
-                signatureCount: signatures, publicKey: publicKey,
-                registeredAt: registered, chainLabel: "BNB Smart Chain")
-        }
-        // A REAL P-256 point (the curve's own base point), so the demo shows
-        // the word the whole label exists for — "Passkey" — computed by the
-        // shipped detector rather than asserted.
-        let realP256 = "046b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"
-                     + "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"
-        // SEEDED OUT OF ORDER, deliberately (§405). Expired first, root last —
-        // the exact arrangement that used to reach the card untouched, because
-        // `compose` mapped whatever it was handed. Now the card sorts its own
-        // rows, so the demo proves the fix instead of hiding it: whatever order
-        // this array is in, the head must draw root → live → expired.
-        AltanaState.save([
-            AltanaKeystore.Reading(address: demoWallet, keys: [
-                // EXPIRED but still listed — the reading nothing else has.
-                key(demoAltanaKeyIDValue(3), root: false,
-                    registeredDaysAgo: 6, grantHours: 24),
-                // Live, a 30-day grant with most of its runway left, and never
-                // used — the notable state a count can say and a Bool cannot.
-                key(demoAltanaKeyIDValue(2), root: false,
-                    registeredDaysAgo: 4, grantHours: 24 * 30,
-                    signatures: 0, publicKey: realP256),
-                // Live, a little over halfway through a 24-hour grant — and the
-                // one that puts a clock in the headline.
-                key(demoAltanaKeyIDValue(1), root: false,
-                    registeredDaysAgo: 0.6, grantHours: 24,
-                    signatures: 47, publicKey: realPoint),
-                key(demoAltanaKeyIDValue(0), root: true,
-                    registeredDaysAgo: 62, grantHours: nil,
-                    signatures: 128, publicKey: realPoint),
-            ], truncated: false),
-            // A SECOND account (§407a): the keyring's whole point is the
-            // aggregate the old card footnoted, and a one-account demo would
-            // hide the grouping exactly the way the sorted-input demo hid the
-            // ordering defect. Its passkey shares demoAltanaKeyIDValue(2)'s id
-            // with the first account ON PURPOSE — the same credential under
-            // two accounts is the link-badge fact, otherwise unreachable in a
-            // demo. Not a watched wallet, which is fine: the head composes
-            // from the snapshot, and the demo banner already says none of
-            // this is yours.
-            AltanaKeystore.Reading(address: demoAltanaSecondAccount, keys: [
-                key(demoAltanaKeyIDValue(4), root: true,
-                    registeredDaysAgo: 30, grantHours: nil,
-                    signatures: 12, publicKey: realPoint),
-                key(demoAltanaKeyIDValue(2), root: false,
-                    registeredDaysAgo: 4, grantHours: 24 * 30,
-                    signatures: 0, publicKey: realP256),
-            ], truncated: false),
-        ])
-        // A GHOST (§410): a credential revoked while watching, so the demo
-        // shows the severed tie rather than leaving the whole reading
-        // invisible until somebody's real key is revoked — which for this
-        // registry could be months. Noticed 3 days ago, inside `ghostLifetime`.
-        AltanaState.rememberGone(.init(
-            address: demoWallet,
-            keyID: demoAltanaKeyIDValue(5),
-            isRoot: false,
-            kindLabel: String(localized: "Passkey"),
-            chainLabel: "BNB Smart Chain",
-            noticedAt: now.addingTimeInterval(-3 * 86_400)))
-        AltanaKeystore.evidence.remember(demoWallet)
-    }
-
-    /// The vibenet room's balance curve — see `seedBridgeState`'s 5c-i. The
-    /// SHAPE is `VibenetDemoHistoryShape`, pure and harness-held; this only
-    /// writes it into the store the shipped app records into.
-    private static func seedVibenetHistory() {
-        // THE CONTRACTS FIRST (prd §476). The fixture's undeployed account
-        // states its explainer from `VibenetRoom.undeployedExplainer`, which
-        // needs nothing — but the faucet door beside it is gated on the cached
-        // config naming a faucet, and a demo install has never fetched one. So
-        // the demo drew the problem and withheld the button that answers it.
-        // See `VibenetConfig.seedDemo`.
-        VibenetConfig.seedDemo()
-        // Hegotá's fixture account (prd §500). A FIXTURE and never a read:
-        // `DemoMode` reaches no network by ruling, and a live sweep would
-        // answer with an empty account and draw the seat as a room with
-        // nothing in it — the "flat curve reads as went to zero" failure by a
-        // different route.
-        HegotaLiveState.seedDemo()
-        FramesLiveState.seedDemo()
-        PrivacyDevnetLiveState.seedDemo()
-        VibenetValueStore.replace(VibenetDemoHistoryShape.samples(now: .now))
-        // Per account too, or picking a face on the rail drops the curve the
-        // aggregate just showed — the scoped room reads its OWN series (see
-        // `VibenetValueStore.recordAccounts` for why it must not borrow the
-        // room's). Each is scaled to end on that account's own balance, so
-        // every line ends on the figure its own crown states.
-        var book: [String: [VibenetValueSample]] = [:]
-        for item in VibenetRoom.demoFixture().items {
-            guard let native = item.nativeBalance else { continue }
-            book[item.address.lowercased()] =
-                VibenetDemoHistoryShape.samples(endingOn: native, now: .now)
-        }
-        VibenetValueStore.replaceAccounts(book)
-    }
-
-    /// The vibenet room's "since you last looked" ledger (prd §468).
-    ///
-    /// A first sight seeds SILENTLY by design — otherwise a newly-watched
-    /// account reports every key it has ever had as new — so a demo with no
-    /// ledger can never draw that line, and the one reading in this room that
-    /// answers "did anything change while I wasn't looking" would be invisible
-    /// in the tour.
-    ///
-    /// DERIVED FROM THE FIXTURE, never a hand list of ids: the book is the
-    /// fixture's own advanced state with one real key removed (so it reads as
-    /// NEW) and one phantom added (so it reads as REVOKED). A fixture edit
-    /// therefore cannot leave this seeding a set of ids that match nothing —
-    /// the §349 demo-ref lesson, avoided by construction rather than by care.
-    private static func seedVibenetSeenKeys() {
-        let items = VibenetRoom.demoFixture().items
-        var book = VibenetKeySeenDiff.advanced(seen: [:], items: items)
-        guard let account = items.first(where: { $0.actors.count > 1 }) else { return }
-        let bookKey = account.address.lowercased()
-        var set = book[bookKey] ?? []
-        // SORTED before dropping, so the same key is chosen on every run —
-        // a `Set`'s iteration order is not stable across launches, and a demo
-        // whose card says "1 key new" about a different key each time is a
-        // demo nobody can screenshot twice.
-        if let dropped = set.sorted().first { set.remove(dropped) }
-        set.insert(VibenetKeySeenDiff.keyID(address: account.address, actorId: "0xdemorevokedkey"))
-        book[bookKey] = set
-        VibenetKeysSeen.seed(book)
-    }
-
     private static func seedCloudflareEstate() {
         CloudflareEstateStore.save(CloudflareEstate(
             zoneNames: ["demo0": "quillmark.app", "demo1": "api.quillmark.app"],
@@ -5691,48 +5272,11 @@ enum DemoSeedAll {
         // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
         // doc for why the two cert rows alone don't reach the runway figure.
         seedCloudflareEstate()
-        // 5b · Altana's keystore snapshot — see `seedAltanaKeystore`.
-        seedAltanaKeystore()
-        // 5c-i · Base Vibenet's balance history — the crown's sparkline.
-        //
-        // This seeds the REAL store the shipped app records into
-        // (`VibenetValueStore`), never a demo-only curve. The distinction is
-        // the whole reason the history exists: a demo drawing a chart the app
-        // cannot draw is a promise about the product made on the screen people
-        // judge it by. Live, this store fills from the sweep at one point
-        // every four hours; here it is handed the same shape it would have
-        // reached after a fortnight of watching, so the line the demo draws is
-        // the line a real watcher gets.
-        //
-        // The walk is deterministic — no randomness, so two demo entries draw
-        // the identical curve — and ends on `demoFixture`'s own native total
-        // (2.514), because the crown states that number directly above the
-        // line and a chart ending anywhere else would contradict it.
-        seedVibenetHistory()
-        seedVibenetSeenKeys()
-        // 5c · Base Vibenet — the watch list, not the room's content.
-        // `VibenetRoomSource.compose()` returns `VibenetRoom.demoFixture()`
-        // whole under `DemoMode.isActive` and never touches these addresses
-        // for what it DRAWS (this room keeps no persistence layer of its own
-        // to seed a snapshot into, unlike Cloudflare/Altana above) — but
-        // `VibenetScreen.connected` reads `VibenetWatch.shared` directly, so
-        // without this the setup screen would show the empty "watch an
-        // address" state over a catalog that claims the seat is connected.
-        // The four addresses match the fixture's own, so a person who opens
-        // the setup screen sees the same accounts the card already named.
-        for address in demoVibenetWatches { _ = VibenetWatch.shared.add(address) }
-        // 5c-ii · A KEY entry and a NOTED entry (2026-08-27, the address-book
-        // unification) — demo parity for the two kinds `AddressBook` gained,
-        // per §484's doctrine ("go through each category to make sure we
-        // have a demo room"). `VibenetWatch.add` above already lands the
-        // four watch addresses into the shared book tagged `vibenet` — this
-        // is only the two facts nothing else exercises: a `.key`-kind entry
-        // (the "Add to Address Book" door on `VibenetKeySheet`), and a note.
-        AddressBook.shared.setName("Session key", for: demoVibenetKeySigner,
-                                   provenance: "Vibenet key · Vibe Wallet",
-                                   kind: .key, networks: [AddressBook.Network.vibenet])
-        AddressBook.shared.setNote("Ask before spending more than 50 VIBE.",
-                                   for: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b")
+        // 5c · The Frames devnet's fixture account (prd §548). A FIXTURE and
+        // never a read: `DemoMode` reaches no network by ruling, and a live
+        // sweep would answer with an empty account and draw the seat as a
+        // room with nothing in it.
+        FramesLiveState.seedDemo()
         // 5b · The anonymity sets behind the Privacy Pools deposits seeded in
         // `wallet()` (prd §397). Two numbers, and the pair is the point: the
         // CURRENT set, plus the set at the moment the oldest deposit in each
@@ -5875,8 +5419,7 @@ enum DemoSeedAll {
     /// that the demo really does furnish each one's book
     /// (`WalletDemoState.state`): a seat is a claim about what is connected,
     /// and every one of those five draws a card in the demo's own Positions
-    /// scope. Altana already did this one seat at a time (§403); this is the
-    /// same act for the other eleven, in one place, so the next wallet-riding
+    /// scope. This marks them all in one place, so the next wallet-riding
     /// bridge has an obvious line to add itself to.
     ///
     /// **It marks and does not reconcile.** `reconcileWalletSeats()` needs a
@@ -5944,7 +5487,6 @@ enum DemoSeedAll {
         ("Snapchat", "Imported 248 items", "Holds the export you pointed at."),
         ("Telegram", "4 channels · imported 214 items", "Follows public channels, read-only."),
         ("YouTube", "3 channels", "Follows channels without an account."),
-        ("Reddit", "3 subreddits", "Follows subreddits, read-only."),
         ("RSS", "4 feeds", "Follows any feed you add."),
         ("Substack", "2 publications", "Follows writers you read."),
         ("Podcasts", "3 shows", "Follows shows you listen to."),
@@ -5970,15 +5512,7 @@ enum DemoSeedAll {
         ("Deals", "4 sources", "Reads public deal feeds."),
         ("Peer", "Rides your wallet", "Lands settled fills, never trades."),
         ("Privacy Pools", "Rides your wallet", "Reads your deposits' review status."),
-        ("Altana", "Rides your wallet", "Reads which keys can sign for you."),
-        // NOT "Rides your wallet" like its neighbours above — vibenet has
-        // nothing to do with a watched mainnet wallet, it's its own address
-        // list (`VibenetWatch`), the Farcaster/Bluesky/Stocktwits "N watched"
-        // shape instead.
-        ("Base Vibenet", "4 accounts watched", "Reads which keys can act for a watched account."),
-        ("Hegotá UTXO", "1 address watched", "Reads an address's coins, transfers and who paid for them."),
         ("Hegotá Frames", "An account on this phone", "Reads what each frame of a transaction did."),
-        ("Hegotá Privacy", "1 address watched", "Reads the one-time spend keys an address used, and which snapshot each proof named."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("MetaMask Card", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
@@ -6074,18 +5608,4 @@ enum DemoSeedAll {
         // connected at all.
         ("Contacts", "Synced 6m ago", "Reads the people you know."),
     ]
-}
-
-/// A demo Altana key id that is REAL HEX — file-scope so both the (MainActor)
-/// seeder and the nonisolated row builder can reach it.
-///
-/// The first cut spelled these `0xdem0…`, which reads nicely and is not hex:
-/// `m` is not a hex digit, and the string was 63 characters rather than 64.
-/// `AltanaKeySheet.parse` refuses both, correctly — so every demo key row fell
-/// back to the generic link sheet while the room head, which never validates
-/// an id, rendered perfectly. A demo that furnishes one surface and silently
-/// starves another is the §349 class one layer down, and no static check
-/// covers a sheet anatomy.
-func demoAltanaKeyIDValue(_ n: Int) -> String {
-    "0xde" + String(n) + String(repeating: "0", count: 61)
 }

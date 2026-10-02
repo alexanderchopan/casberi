@@ -12,7 +12,7 @@ import Foundation
 /// `DemoSeedAll.seedAddressBook` through `seedBridgeStateForDemo`, and every
 /// `setName` pushes — meaning anyone who tapped "Try the demo" with iCloud sync
 /// on wrote Sam, Mia, Coinbase, Stripe, Bitrefill, Uniswap, Peer, Gnosis Pay
-/// and "Session key" into their iCloud and onto their other devices.
+/// into their iCloud and onto their other devices.
 ///
 /// **Why that is worse than the ~400 demo rows `DemoMode` already accepts.**
 /// That cost is written down and bounded by the standing banner: the demo says
@@ -41,8 +41,6 @@ extension AddressBook {
         for party in DemoSeedAll.demoCounterparties {
             out.insert(key(for: DemoSeedAll.counterpartyAddress(for: party.name)))
         }
-        for address in DemoSeedAll.demoVibenetWatches { out.insert(key(for: address)) }
-        out.insert(key(for: DemoSeedAll.demoVibenetKeySigner))
         return out
     }()
 

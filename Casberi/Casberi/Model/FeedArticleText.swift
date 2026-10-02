@@ -35,14 +35,14 @@ import SwiftData
 ///
 /// **And what is NOT fair, which is the half that decides future seats: a page
 /// that arrived because SOMEBODY ELSE linked it.** A link in a social post, a
-/// Slack message, a Reddit thread's target. The person chose the PERSON, not
+/// Slack message, a forum thread's target. The person chose the PERSON, not
 /// that host, and reaching it on the strength of a stranger's action is a
 /// request they did not ask for. That rules out most of the catalog on
 /// purpose, and it is a rule rather than a taste: a new seat joins this set
 /// only if it can be read as limb 1 or limb 2.
 ///
-/// THE THREE ABSTENTIONS BELOW ARE A DIFFERENT QUESTION and survive
-/// unchanged — YouTube, Reddit and Podcasts all pass limb 2, and abstain
+/// THE TWO ABSTENTIONS BELOW ARE A DIFFERENT QUESTION and survive
+/// unchanged — YouTube and Podcasts both pass limb 2, and abstain
 /// because their pages are not articles:
 ///   * RSS and Substack land ARTICLES — a page whose whole point is prose.
 ///   * YouTube's link is a watch page. Its description is in `summary`,
@@ -53,9 +53,6 @@ import SwiftData
 ///     did not match until 2026-08-06, so every video really did land with an
 ///     empty `summary` and nothing else to search. The abstention was right
 ///     for the wrong reason and is now right for the stated one.
-///   * Reddit's link is a reddit.com permalink. The selftext is already in
-///     `summary`; the page's prose is the COMMENTS, which are strangers'
-///     words filed under a row that is not theirs (§83's shape).
 ///   * Podcasts' link is an episode page that is usually the show notes the
 ///     feed already handed us, and often a player with no prose at all.
 ///

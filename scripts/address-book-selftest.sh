@@ -75,7 +75,6 @@ PEOPLE="Casberi/Casberi/Model/AddressBookPeople.swift"
 # rulings that outlive it (the shared row, the move sheet) are still guarded
 # on $VIEWS below. Groups are DELETED (prd §691) and guarded nowhere.
 VIEWS="Casberi/Casberi/Screens/AddressBookViews.swift"
-BAR="Casberi/Casberi/Screens/AddressIndexBar.swift"
 FLIGHT="Casberi/Casberi/Screens/AddressFlight.swift"
 REVEAL="Casberi/Casberi/Screens/AddressReveal.swift"
 SOURCE="Casberi/Casberi/Model/AddressConnectionsSource.swift"
@@ -84,7 +83,7 @@ CONN="Casberi/Casberi/Model/AddressConnections.swift"
 # The shell — where the rail is built and the route node resolved (§461).
 SHELL_MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$VIEWS" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$VIEWS" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -429,9 +428,8 @@ grep -q 'rows: rows,' "$SCREEN" \
 grep -q 'onRemoveRow: forget,' "$SCREEN" \
   || { echo "✗ a directory row lost its one verb (§690)"; exit 1; }
 for f in Casberi/Casberi/Shell/FaceScopeRail.swift Casberi/Casberi/Shell/MainSurface.swift \
-         Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift \
-         Casberi/Casberi/Screens/VibenetRoomCard.swift; do
-  # Comment-stripped: VibenetRoomCard's history NAMES the callback it lost
+         Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift; do
+  # Comment-stripped: a file's history may NAME the callback it lost
   # (the Obsidian/Cursor lesson — a guard on raw source fires on the prose).
   sed 's|//.*$||' "$f" | grep -q 'onOpenBook' \
     && { echo "✗ $f grew a rail/room book door back — the rails lost theirs by ruling (2026-09-06): addresses live in the catalog entry"; exit 1; }
@@ -452,7 +450,7 @@ grep -q 'AddressBookScreen()' "$SHELL_MAIN" \
 # §461's own "steps aside at the cap" — watching a new wallet and seeing the
 # whole roster are the same screen now that the roster moved into the book,
 # so a second slot pointing at the identical destination was chrome, not a
-# choice; the same move Vibenet's rail made the same day). The arithmetic
+# choice; the same move a devnet rail made the same day). The arithmetic
 # that motivated the original cap-only rule still applies at fewer slots: two
 # trailing doors plus five faces plus All is 402pt against a 393pt phone.
 grep -q 'addTitle: nil,' "$SHELL_MAIN" \
@@ -548,7 +546,7 @@ grep -q 'guard !reduceMotion, token > 0 else { return }' "$TMP/reveal-bare.swift
 # frame.
 #
 # Nothing here could catch it and that is the point of guarding it statically:
-# it needs a device with iCloud sync ON and older vibenet data to migrate, so a
+# it needs a device with iCloud sync ON and older devnet data to migrate, so a
 # signed-out simulator with empty defaults no-ops through the migration and
 # every build, audit, harness and launch sweep passes green.
 #
@@ -750,7 +748,7 @@ typealias Filter = AddressBookShape.BookFilter
 
 // WALLETS TAKES THREE KINDS, and each one is a real population this book holds.
 // `unknown` is the sharpest: detection is gated off for devnets (§496), so
-// EVERY vibenet account sits in it for life — drop it and the wallet chip hides
+// EVERY devnet account sits in it for life — drop it and the wallet chip hides
 // an entire network's accounts while looking perfectly correct.
 check("wallets takes a plain wallet", Filter.wallets.matches(kind: "wallet"))
 check("wallets takes a smart account", Filter.wallets.matches(kind: "smartAccount"))
@@ -861,7 +859,7 @@ check("a verified provenance keeps an unnamed row",
 // A network tag records a MEETING, and meetings do not repeat — nothing would
 // ever put it back.
 check("a network tag keeps an unnamed row",
-      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, networks: ["vibenet"]))
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, networks: ["frames"]))
 // Blank is not authorship. Without these a whitespace note pins an unnamed
 // address in the book forever, with nothing on screen to say why.
 check("a whitespace note is not authorship",
@@ -989,7 +987,7 @@ mutate "an unlettered order starts sectioning" \
 
 # ── The filter chips (prd §498) ─────────────────────────────────────────────
 # The Wallets chip hides an entire network. `unknown` is the resting state of
-# EVERY vibenet account for life — detection is gated off for devnets (§496) —
+# EVERY devnet account for life — detection is gated off for devnets (§496) —
 # so dropping it from this arm files a whole chain's accounts outside the chip
 # that claims to hold the wallets, and the strip looks perfectly correct.
 mutate "the wallets chip stops taking unchecked addresses" \
@@ -1098,8 +1096,7 @@ grep -q 'Self.keepsFixtures ? merged' "$TMP/book-model-bare.swift" \
 # a counterparty is added, and a stale rail leaks rather than over-blocking.
 grep -qE '"0x[0-9a-fA-F]{6,}"' "$TMP/fixtures-bare.swift" \
   && { echo "✗ AddressBookFixtures hardcodes an address — derive it from DemoSeedAll so the rail and the seed cannot drift (prd §549)"; exit 1; }
-for named in 'WalletStore.fixtureAddresses' 'DemoSeedAll.demoCounterparties' \
-             'DemoSeedAll.demoVibenetWatches' 'DemoSeedAll.demoVibenetKeySigner'; do
+for named in 'WalletStore.fixtureAddresses' 'DemoSeedAll.demoCounterparties'; do
   grep -q "$named" "$TMP/fixtures-bare.swift" \
     || { echo "✗ AddressBookFixtures no longer derives from $named — a seeded address it stops naming leaks to iCloud (prd §549)"; exit 1; }
 done
@@ -1110,13 +1107,6 @@ grep -q 'static var keepsFixtures: Bool { WalletStore.keepsFixtures }' "$TMP/fix
   || { echo "✗ AddressBook.keepsFixtures stopped forwarding to WalletStore — one question, one answer (prd §549)"; exit 1; }
 grep -q 'DemoState.seedsDemoData' "$TMP/fixtures-bare.swift" \
   && { echo "✗ AddressBookFixtures re-spelled the entitlement test instead of forwarding to WalletStore.keepsFixtures (prd §549)"; exit 1; }
-
-# The vibenet fixtures are declared ONCE. `teardown` carried them twice as
-# inline literals and the rail needs them a third time.
-DEMOSEED="Casberi/Casberi/Model/DemoSeedAll.swift"
-count=$(grep -c '"0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e"' "$DEMOSEED")
-[[ "$count" == "1" ]] \
-  || { echo "✗ the vibenet demo addresses are spelled $count times in DemoSeedAll — declare them once as demoVibenetWatches (prd §549)"; exit 1; }
 
 echo ""
 echo "address-book-selftest: OK — assertions pass and every mutation is caught."

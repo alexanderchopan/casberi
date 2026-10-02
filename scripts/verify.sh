@@ -325,8 +325,8 @@ run_harnesses() {
                ${_H_SCRIPT[@]/#/$ROOT/} 2>/dev/null || true)
   fi
 
-  # A harness may fan its OWN mutations out concurrently (hegota, vibenet,
-  # wallet-rooms, privacy, frames-tx). Nested at full width that is ncpu x ncpu —
+  # A harness may fan its OWN mutations out concurrently (wallet-rooms,
+  # frames-tx). Nested at full width that is ncpu x ncpu —
   # 64 `swiftc` on 8 cores against 16 GB — and the failure mode is memory pressure
   # and swap, which reads as the machine hanging rather than as a slow test. Three
   # keeps the tail of this swarm (one long harness alone on one core, which is
@@ -350,7 +350,7 @@ run_harnesses() {
   # REGISTRATION order — so a harness whose name sorts late started late, and
   # the phase ended with it running alone while every other core sat idle.
   # Measured on the full uncached suite the day the mutation ports landed:
-  # 739s wall, of which the last 127s was `vibenet-selftest` on its own, having
+  # 739s wall, of which the last 127s was one devnet harness on its own, having
   # started near the end. Starting the long ones first is the classic fix and
   # costs nothing: the short ones fill the gaps around them.
   #
@@ -505,8 +505,7 @@ if [[ -r "$NIGHTLY_LOG" ]] && [[ -s "$NIGHTLY_LOG" ]]; then
 fi
 
 # ── Last nightly LIVE verdict (REPORTS, never gates — 2026-09-08, prd §654) ──
-# The devnet drift detectors — Hegotá's frame-shape census, vibenet's contracts
-# diff, Frames' and Privacy's genesis + envelope rows — all live in
+# The devnet drift detectors — Frames' genesis and envelope rows — live in
 # `live-integrations.sh`, which by contract stays out of this pass and which,
 # until §654, NOTHING RAN. `scripts/nightly-live.sh` (a 02:45 LaunchAgent)
 # runs it and writes one row per night to this ledger, with the flagged rows
@@ -1192,10 +1191,10 @@ print -P "%F{green}✓ background launch audit%f"
 # assigns `chrome.x` and reads it back in the same pass invalidates itself for
 # as long as the room is on screen. Mechanical because the rule was ALREADY
 # WRITTEN DOWN — `FeedScreen.memo`'s own doc states it, which is why `memo` is a
-# plain class — and it still reached two rooms: Hegotá wrote its sections from
-# inside `roomBody`, Frames copied Hegotá three weeks later, and both shipped
-# while Wallet and Vibenet did the same publish correctly from `.onChange` in
-# the same file. Invisible to everything else here: it compiles, it renders
+# plain class — and it still reached two rooms: one devnet wrote its sections
+# from inside `roomBody`, Frames copied it three weeks later, and both shipped
+# while Wallet did the same publish correctly from `.onChange` in the same
+# file. Invisible to everything else here: it compiles, it renders
 # perfectly, and the screen sweep photographs a correct screen. Its second check
 # guards the swipe budget's own one-line guard on the two `@Query`-staleness
 # safety nets, whose absence puts an unbounded main-actor fetch inside every
@@ -1321,8 +1320,8 @@ print -P "%F{green}✓ delete-guard audit%f"
 # its Open to the room its rows land in. Both live in `BridgeRouter` and NEITHER
 # is a compile-time requirement: `destination(forOffer:)` returns an Optional
 # and `HomeRoute.openSetup` guards out on nil, so a seat missing from that list
-# has a Connect button that does NOTHING AT ALL, silently. Altana shipped
-# exactly that on 2026-08-18 and it was reported ten days later; nothing here
+# has a Connect button that does NOTHING AT ALL, silently. A wallet-riding seat
+# shipped exactly that on 2026-08-18 and it was reported ten days later; nothing here
 # could see it, because a missing switch case is not an error, catalog-sync
 # checks the catalog against the WEBSITE, and the screen sweep proves a page
 # painted, never that its button did anything. Mutation-proven three ways
@@ -2203,7 +2202,7 @@ harness "Readable-body self-test" "readable-body self-test" "scripts/readable-bo
 # somebody's diary); the All room walking into a bulk import's dump, which that
 # list deliberately hides; a kind-filtered room walking rows of every other
 # kind; a room narrowed by something no `source ==` predicate can rebuild
-# (pinned, a wallet, a person, a vibenet account) drawing doors at all; and the
+# (pinned, a wallet, a person) drawing doors at all; and the
 # scope left out of the route's `id`, so the same thing opened from two rooms
 # is ONE identity to SwiftUI and the second open reuses the first's doors. Its
 # drift half pins what the pure file cannot see: that the route carries the
@@ -2386,17 +2385,6 @@ harness "L2BEAT pure-logic self-test" "l2beat self-test" "scripts/l2beat-selftes
 # identically.
 harness "CardPointers wire self-test" "cardpointers self-test" "scripts/cardpointers-selftest.sh" "the CardPointers wire self-test failed — run scripts/cardpointers-selftest.sh"
 
-# Altana's keystore room (`Model/AltanaKeystore.swift`, `Model/AltanaRoom.swift`).
-# Nothing on this host can register a key, revoke one, or make a grant expire —
-# there are 39 keys on Earth and this project owns none of them — so no device
-# check can ever exercise this room and the harness is the ONLY proof its
-# readings are right. Its sharpest case is the witnessed registration date: the
-# `getKey` struct layout is inferred, so a shifted field would render a
-# confident wrong date on a security screen, and the harness proves the witness
-# refuses rather than guesses. It also carries the conduct guard that keeps the
-# catalog's "never registers, revokes, or signs" true.
-harness "Altana keystore self-test" "altana self-test" "scripts/altana-selftest.sh" "the Altana keystore self-test failed — run scripts/altana-selftest.sh"
-
 # The four bridges added 2026-08-04. Three of them (Sentry, Vercel, PagerDuty)
 # have never run against a live account from this host, so these harnesses are
 # the only proof their shaping is right — and every failure in them is a silent
@@ -2457,45 +2445,6 @@ harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-s
 # day an approval is revoked, or a strip drawn over a single scope, which is a
 # label wearing a control's clothes (§83). None of that fails a build or a sweep.
 harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selftest.sh" "the wallet section self-test failed — run scripts/wallet-section-selftest.sh"
-
-# Pure-logic self-test for the Ethrex Hegotá seat (the scope strip and the UTXO
-# arithmetic). Nothing on this host can make a coin get spent or a nonce key get
-# used, so this harness is not the best proof these numbers are right, it is the
-# only one. It catches a scope that never appears (indistinguishable from an
-# address that owns no coins), a remembered scope resolving to one nobody
-# picked, the spent bitmap read one storage region over so EVERY coin reads
-# unspent, a missing bit treated as "not spent" — money already gone, drawn as
-# held — and a fee derived from a bad parse, which renders as confidently as a
-# real one. None of that fails a build or a sweep.
-harness "Hegota scopes and coins" "hegota" "scripts/hegota-selftest.sh" "the hegota self-test failed — run scripts/hegota-selftest.sh"
-
-# Pure-logic self-test for the FOURTH devnet seat, ethrex Privacy (prd §593).
-# Its chain cannot be reached from a harness or from CI, and no simulator has a
-# seat to open, so this is the only proof these rules are right. Every failure
-# renders as a perfectly ordinary room: a scope that never appears, a remembered
-# scope resolving to one nobody picked, a root reported live when it aged out
-# hours ago, or a source list that reshuffles between opens. The two sharpest
-# are invisible even to daily use — the 8192-slot window boundary (off by one
-# expires a root a slot early, visible only to somebody watching the boundary,
-# who is the only person the card is for) and the slot-vs-block confusion, which
-# is silently correct on a chain that has never missed a slot and wrong by
-# thousands on one that has (frames runs 5,223 slots ahead of its own height).
-harness "Privacy scopes and the 8272 window" "privacy" "scripts/privacy-selftest.sh" "the privacy self-test failed — run scripts/privacy-selftest.sh"
-
-# The shielded-pool Poseidon and note math (prd §593e). BN254 field + Poseidon
-# + the note/commitment/nullifier chain, compiled WHOLE and checked against
-# circomlibjs's vectors AND the exact values that landed a real shield on chain
-# 8141. A wrong hash here is invisible to every other check and renders as a
-# deposit nobody can spend, so this is the only proof these numbers are right.
-harness "Hegotá Privacy shielded-note math" "poseidon, note chain, shield calldata vs a real on-chain shield" "scripts/privacy-poseidon-selftest.sh" "the privacy Poseidon/note self-test failed — run scripts/privacy-poseidon-selftest.sh"
-
-# The ethrex Privacy type-0x6 envelope (prd §593a). Its own harness rather than
-# a block in the one above, because the failure class is different in kind: a
-# wrong field order, a flattened fee triple or a mis-applied elision rule
-# produces a signature that is well-formed, recovers to a real address, and
-# AUTHORISES A DIFFERENT TRANSACTION. Nothing else here can see that — the build
-# is happy, and this chain is unreachable from a harness and from CI.
-harness "Privacy transaction envelope" "privacy-tx" "scripts/privacy-tx-selftest.sh" "the privacy transaction self-test failed — run scripts/privacy-tx-selftest.sh"
 
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
@@ -2644,21 +2593,6 @@ harness "Room-perf invariants self-test" "room-perf self-test" "scripts/room-per
 # wiring, and a correct composer with no caller is green to this one alone.
 harness "Figure-voice pure-logic self-test" "figure-voice self-test" "scripts/figure-voice-selftest.sh" "the figure-voice self-test failed — run scripts/figure-voice-selftest.sh"
 
-# Base "vibenet" — an experimental EIP-8130 devnet whose Keystore/authenticator
-# addresses are redeployed on no fixed schedule (2026-08-23). Nothing on this
-# host can make a devnet account authorize an actor, revoke one, or lock
-# itself, so this harness is not the best proof the composition is right, it
-# is the ONLY one. What it catches: a revoked actorId reading as still live
-# (the sharpest possible failure here — it would claim a key can act for an
-# account when it can't), a revoke-then-reauthorize sequence reading as dead
-# because the union trusted array order over the log's own chronology, a
-# reserved scope bit silently folded into the five known ones, a locked
-# account failing to lead the one alarm this room can raise, and "established
-# with no live actors" collapsing into the different, wrong claim "not
-# established at all". Its drift guards also fail the build on a hardcoded
-# vibenet contract address (0x8130…) outside the two the Keystore contract
-# itself declares fixed, and on any write-shaped RPC method or signing type
-# ever reaching this feature.
 # WHO CAN ACT FOR YOU — the wallet Permissions scope's rungs (prd §490),
 # compiled whole. It exists because the failure class is invisible to every
 # other check here: a Safe module and an EIP-7702 delegate have NO dollar
@@ -2672,60 +2606,19 @@ harness "Figure-voice pure-logic self-test" "figure-voice self-test" "scripts/fi
 # No simulator can install a Safe module or make a delegate appear, so this is
 # the only proof these rungs are ordered right.
 harness "Wallet Permissions rungs self-test" "11 mutations, 10 drift guards" "scripts/wallet-permissions-selftest.sh" "the wallet Permissions self-test failed — run scripts/wallet-permissions-selftest.sh"
-harness "Vibenet pure-logic self-test" "vibenet self-test" "scripts/vibenet-selftest.sh" "the vibenet logic self-test failed — run scripts/vibenet-selftest.sh"
-# The refusal ladder that decides whether this phone may SIGN on vibenet (prd
-# §523) — the first path in this app that can produce a signature, and the one
-# nothing else here can see: no simulator has a Secure Enclave, so every path
-# in VibenetDeviceKey runs its unavailable branch and a sim sweep exercises
-# none of it. Each rung is a silent wrong answer that renders as an ordinary
-# screen — a DESTROYED key reported as absent (so the app offers a new one
-# while an account still authorizes a key this phone can never produce), "we
-# could not simulate" read as permission, or a nil derivation read as "no",
-# which says "this account doesn't list your key" about an account it can sign
-# for. The sharpest is the chain rail: it is what makes signing on a real
-# network impossible rather than merely unintended.
-harness "Vibenet signer ladder self-test" "13 mutations, 6 drift guards" "scripts/vibenet-signer-selftest.sh" "the vibenet signer self-test failed — run scripts/vibenet-signer-selftest.sh"
-# The EIP-8141 frame transaction, for the one chain here whose transactions are
-# not ordinary transactions (prd §525). A wrong field order, a stray leading
-# zero, the wrong `limits` shape or a mis-applied elision rule produces a
-# signature that is well-formed and authorises a DIFFERENT transaction — and
-# nothing else can see it: the build is happy and no harness can reach that
-# chain. So the fixtures are real transactions taken off the wire, and the
-# assertions are the three a wrong encoder cannot pass — byte-identical raw
-# bytes, a keccak that IS the RPC's own transaction hash, and a signing hash
-# matching one computed from the chain's data rather than from ours.
-#
-# It also holds the FAUCET's verdict (prd §531) — what the service said when it
-# refused. The claim cannot be exercised from a harness (it allows one per
-# source IP per hour), so the classification of what came back is the only part
-# of it that can ever be proven, and it is where half the 2026-08-30 report
-# lived: the rate limit, this faucet's one expected refusal, arrived at the
-# screen as "no answer" and the sheet's own branch for it could never fire.
-# The signed BROADCAST's guards are §530's and live in `hegota-selftest.sh`;
-# they are deliberately not duplicated here.
-harness "Hegota frame transaction self-test" "11 mutations, real on-chain vectors, and the faucet verdict" "scripts/hegota-tx-selftest.sh" "the hegota transaction self-test failed — run scripts/hegota-tx-selftest.sh"
 
-# The LANE a send takes (EIP-8250). `sendValue` hardcoded `nonceKeys: [0]` from
-# §525 until 2026-09-24, so every send queued in one lane and the mechanism's
-# whole point was unreachable. The cost of getting a lane wrong is a send the
-# chain REFUSES — invisible to the build, to every static audit and to the
-# transaction harness, whose fixtures are real transactions and so already
-# correct. 18 assertions, 10 mutations, all on copies in $WORK.
-harness "Hegota lanes" "keyed nonces: the lane, its counter, and the rotation" "scripts/hegota-lane-selftest.sh" "the hegota lane self-test failed — run scripts/hegota-lane-selftest.sh"
-
-# THE OTHER DEVNET'S ENCODER, and it is a separate harness because the two
-# chains hash DIFFERENT LISTS (prd §548). Both run ethrex, both serve type
-# 0x06, both call it EIP-8141 — Hegotá's envelope is eleven flat fields with
-# keyed nonces and recent-root references, the Frames devnet's is seven with
-# the fees nested. Signing with the wrong one produces a well-formed signature
-# over a different digest that recovers to a real address: green build, correct
-# screen, refused chain. Its vectors are real transactions off chain 81410 —
-# two byte-exact with their keccak matching the RPC's own hash — plus one
-# synthetic with every field distinct, because the five real transactions on
-# that four-day-old chain are too alike to catch a field swap. It also carries
-# the send path's conduct guards: exactly one signed write verb, a LITERAL
-# signer (empty is Hegotá's convention and is refused here, measured 5/5
-# against 0/5), and the signature entry seeded BEFORE the digest is taken.
+# THE FRAMES DEVNET'S ENCODER (prd §548) — the EIP-8141 frame transaction, seven
+# fields with the fees nested. A wrong field order or elision rule produces a
+# well-formed signature over a different digest that recovers to a real
+# address: green build, correct screen, refused chain. Its vectors are real
+# transactions off chain 81410 — two byte-exact with their keccak matching the
+# RPC's own hash — plus one synthetic with every field distinct, because the
+# five real transactions on that four-day-old chain are too alike to catch a
+# field swap. It also carries the send path's conduct guards: exactly one
+# signed write verb, a LITERAL signer (an empty one is refused here, measured
+# 5/5 against 0/5), and the signature entry seeded BEFORE the digest is taken;
+# and the shared devnet pieces it compiles — RLP, the room's tokens and
+# frames, the derived balance line and the permissions headline.
 harness "Frames devnet transaction self-test" "21 mutations, real on-chain vectors, and the send path's conduct" "scripts/frames-tx-selftest.sh" "the frames transaction self-test failed — run scripts/frames-tx-selftest.sh"
 # The Frames tile's FLOW (prd §925): steps by position, links between
 # consecutive positions, ends where runs stop. Catches a step landing in two
@@ -2734,19 +2627,6 @@ harness "Frames devnet transaction self-test" "21 mutations, real on-chain vecto
 # mode, and the biggest-first order breaking — four mutations, each proven to
 # have changed the source before it is trusted to fail.
 harness "Zerion lane self-test" "one request at a time, spaced, a 429 waited out on schedule, 4 mutations" "scripts/zerion-lane-selftest.sh" "the zerion lane self-test failed — run scripts/zerion-lane-selftest.sh"
-# The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
-# change flow, compiled whole. Separate from the harness above because that one
-# is four minutes over the whole room and these run in one, so a change to
-# either drawing is answered while somebody is still looking at it.
-#
-# Every failure it catches renders as an ordinary card and none of it fails a
-# build: the unwatched sub-account sorted last (burying the only row that can
-# offer to do anything), an undated authorization ranked as the oldest fact,
-# ribbons scaled ACROSS kinds so one revocation draws as a hairline beside forty
-# grants, a lock counted as a key moment it has no block for, and a headline
-# apologising with "0 unwatched".
-harness "Vibenet scope drawings self-test" "8 mutations, 9 drift guards" "scripts/vibenet-scopes-selftest.sh" "the vibenet scope drawings self-test failed — run scripts/vibenet-scopes-selftest.sh"
-
 # The ask capsule (prd §543) — the one control that says who will answer, and
 # the deletions that made it the only one. Every failure renders as a perfectly
 # ordinary capsule: an agent silently missing (a stale recency entry outranking
@@ -2935,10 +2815,9 @@ print -P "%F{green}✓ design-motion audit%f"
 
 # A SHEET'S HEAD MUST NOT REPEAT ITS TRAY'S TITLE (prd §538/§539, 2026-08-31).
 # Mechanical because memory lost FOUR TIMES in one afternoon, across two
-# products: VibenetKeySheet and VibenetAuthorizeSheet each passed the
-# byte-identical expression to `DSTray(title:)` and `DSSheetHead(title:)`,
-# VibenetCreateSheet said its noun in three tiers, and HegotaKeySheet said it
-# reordered. The cost is never cosmetic — the head is `heading24` under a
+# products: two devnet key sheets each passed the byte-identical expression
+# to `DSTray(title:)` and `DSSheetHead(title:)`, a create sheet said its noun
+# in three tiers, and a third key sheet said it reordered. The cost is never cosmetic — the head is `heading24` under a
 # `heading40` saying the same thing, so whatever the sheet exists to show is
 # pushed down, and in two of the four it was pushed below the fold.
 #
@@ -3569,50 +3448,6 @@ else
   fi
 fi
 
-# ── 6a. Vibenet's FOUR cards (headless, HARD FAIL) ───────────────────
-# prd §468. The map above is keyed on `FeedScreen.SourceHead` cases reached
-# through `-roomInsightProbe`; vibenet's head is a `FeedScreen.Shape` case
-# instead, so it has never been in that map and has never been covered by
-# anything — while §467 split it from ONE surface into FOUR independently
-# gated ones (balance, holdings, keys, linked).
-#
-# That is exactly the class step 6 exists for, one door over: each of those
-# four gates can decline over a demo corpus that cannot furnish it, and a card
-# that draws nothing looks identical to a card that was never built. HARD FAIL
-# for step 6's own reason — one candidate per card, nothing to rank against,
-# so a demo corpus that can make a card compose makes it compose every run.
-#
-# `linked` is asserted too and that is deliberate rather than incidental: the
-# demo fixture's delegate mapping is what makes the fourth card exist at all,
-# and it is the card most easily lost to a fixture edit.
-step "Demo vibenet cards"
-VIBE_LOG="$OUT/vibenet-cards.log"
-if [[ -z "$POURED" ]]; then
-  print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping vibenet cards%f"
-else
-  xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "vibenetCard"' \
-    --style compact > "$VIBE_LOG" 2>/dev/null &
-  VBPID=$!
-  sleep 1
-  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
-  xcrun simctl launch "$DEVICE_ID" "$BUNDLE" -onboarded YES -vibenetRoomProbe YES >/dev/null 2>&1 || true
-  for i in {1..10}; do
-    sleep 1
-    grep -q "vibenetCard| linked" "$VIBE_LOG" 2>/dev/null && break
-  done
-  kill $VBPID 2>/dev/null || true
-  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
-  MISSING_CARDS=()
-  for card in balance holdings keys linked; do
-    grep -q "vibenetCard| $card DRAWS" "$VIBE_LOG" 2>/dev/null || MISSING_CARDS+=("$card")
-  done
-  if (( ${#MISSING_CARDS[@]} == 0 )); then
-    print -P "%F{green}✓ demo vibenet cards (4/4)%f"
-  else
-    fail "vibenet card(s) never draw over the demo: ${MISSING_CARDS[*]} — see $VIBE_LOG"
-  fi
-fi
-
 # ── 6b. THE DEMO REACHES NOTHING, measured (headless, HARD FAIL) ─────
 # The empirical half of `demo-selftest.py`'s check J, and the reason it exists
 # is that J is a HAND LIST. J names five per-view reads somebody thought to
@@ -4072,7 +3907,7 @@ else
   grep -o "demoCensus: begin.*" "$CENSUS_LOG" | head -1 || true
   # A PLAIN room that leads with rows is a gap only if the app defines an
   # insight for that source — the sources named in `FeedInsight.swift`'s own
-  # switches (`case "Reddit":`) and the head map `roomInsightReport` carries
+  # switches (`case "Steam":`) and the head map `roomInsightReport` carries
   # (`source == "Stripe"`). A source named in neither leads with rows in the
   # real app too, so the demo is faithful and the row is INFO, not a failure.
   # Derived from the two files each run, never a hand list.

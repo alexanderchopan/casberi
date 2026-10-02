@@ -770,7 +770,7 @@ SWIFT
 # Re-probe before trusting it again after adding mutations.
 # ONE compile line, written once and run by both the assertion build and every
 # mutation child. Two copies drift, and the drift is invisible in the direction
-# that prints a tick — vibenet's §468 bug, where a mutation variant quietly
+# that prints a tick — §468's bug, where a mutation variant quietly
 # compiled a different file set and scored thirty-four type errors as catches.
 cat > "$TMP/build.zsh" <<'BUILDSH'
 MW="$1"

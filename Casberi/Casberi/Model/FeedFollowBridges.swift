@@ -2,17 +2,16 @@ import Foundation
 import Observation
 import SwiftData
 
-/// The feed-follow bridges (2026-07-12) — Substack, Reddit, YouTube, Podcasts.
+/// The feed-follow bridges (2026-07-12) — Substack, YouTube, Podcasts.
 /// Each is Pinterest's move at heart: a public name (a publication, a
-/// subreddit or user, a channel, a show) becomes a feed URL this iPhone
+/// channel, a show) becomes a feed URL this iPhone
 /// fetches directly, and new posts land as link things. No account, no token,
 /// no server — the same fetch → parse → dedupe → things path RSS established,
 /// with FeedParser doing the parsing. Every bridge watches a LIST, the way
 /// Bluesky and Farcaster do, so you can follow several of each.
 ///
-/// The four differ only in how a name becomes a feed URL:
+/// They differ only in how a name becomes a feed URL:
 ///   • Substack — `<pub>.substack.com/feed`, or a custom domain's `/feed`.
-///   • Reddit   — `reddit.com/r/<sub>/.rss` or `/user/<name>/.rss`.
 ///   • YouTube  — `…/feeds/videos.xml?channel_id=<UC…>`, the id resolved once
 ///     from the channel page (people paste an @handle, not a UC id).
 ///   • Podcasts — the show's own RSS, found through Apple's keyless iTunes
@@ -36,7 +35,6 @@ struct FeedFollowEntry: Codable, Identifiable, Equatable {
 @Observable
 final class FeedFollowStore {
     static let substack = FeedFollowStore(key: "feed.substack")
-    static let reddit   = FeedFollowStore(key: "feed.reddit")
     static let youtube  = FeedFollowStore(key: "feed.youtube")
     static let podcasts = FeedFollowStore(key: "feed.podcasts")
     static let telegram = FeedFollowStore(key: "feed.telegram")
@@ -154,7 +152,6 @@ final class FeedFollowStore {
 
 enum FeedFollowKind: String, CaseIterable {
     case substack = "Substack"
-    case reddit   = "Reddit"
     case youtube  = "YouTube"
     case podcasts = "Podcasts"
     /// Public CHANNELS only (prd §456) — broadcast media with a public web
@@ -169,7 +166,6 @@ enum FeedFollowKind: String, CaseIterable {
     var store: FeedFollowStore {
         switch self {
         case .substack: FeedFollowStore.substack
-        case .reddit:   FeedFollowStore.reddit
         case .youtube:  FeedFollowStore.youtube
         case .podcasts: FeedFollowStore.podcasts
         case .telegram: FeedFollowStore.telegram
@@ -182,7 +178,6 @@ enum FeedFollowKind: String, CaseIterable {
     var nameNoun: String {
         switch self {
         case .substack: "publication"
-        case .reddit:   "subreddit or user"
         case .youtube:  "channel"
         case .podcasts: "show"
         case .telegram: "channel"
@@ -192,7 +187,6 @@ enum FeedFollowKind: String, CaseIterable {
     var placeholder: String {
         switch self {
         case .substack: "read.substack.com or a name"
-        case .reddit:   "r/swift or u/name"
         case .youtube:  "@handle or channel URL"
         case .podcasts: "Search a show"
         case .telegram: "@channel or t.me link"
@@ -202,7 +196,7 @@ enum FeedFollowKind: String, CaseIterable {
     /// What lands, for proof lines: "3 posts in".
     var noun: String {
         switch self {
-        case .substack, .reddit: "posts"
+        case .substack:          "posts"
         case .youtube:           "videos"
         case .podcasts:          "episodes"
         case .telegram:          "posts"
@@ -211,7 +205,7 @@ enum FeedFollowKind: String, CaseIterable {
 
     var recentHeader: String {
         switch self {
-        case .substack, .reddit: "Posts"
+        case .substack:          "Posts"
         case .youtube:           "Videos"
         case .podcasts:          "Episodes"
         case .telegram:          "Posts"
@@ -221,7 +215,6 @@ enum FeedFollowKind: String, CaseIterable {
     var fieldFooter: String {
         switch self {
         case .substack: "Paste a Substack URL or its name — new posts land as links. No account, no algorithm in between."
-        case .reddit:   "Follow a subreddit (r/name) or a person (u/name) — new posts land as links, through Reddit's own feed."
         case .youtube:  "Paste a channel URL or its @handle — new uploads land as links, through YouTube's own feed."
         case .podcasts: "Search for a show — new episodes land as links, through the show's own feed. No account."
         case .telegram: "Name a public channel — its posts land as they are broadcast, read from the channel's own public page. No account."
@@ -231,7 +224,6 @@ enum FeedFollowKind: String, CaseIterable {
     var canLine: String {
         switch self {
         case .substack: "Reads the Substacks you follow."
-        case .reddit:   "Reads the subreddits and people you follow."
         case .youtube:  "Reads the channels you follow."
         case .podcasts: "Reads the shows you follow."
         case .telegram: "Reads the public channels you follow."
@@ -242,7 +234,6 @@ enum FeedFollowKind: String, CaseIterable {
     func normalize(_ raw: String) -> String {
         switch self {
         case .substack: FeedURL.substackInput(raw)
-        case .reddit:   FeedURL.redditInput(raw)
         case .youtube:  raw.trimmingCharacters(in: .whitespacesAndNewlines)
         case .podcasts: raw.trimmingCharacters(in: .whitespacesAndNewlines)
         case .telegram: TelegramChannel.normalizeHandle(raw)
@@ -255,7 +246,6 @@ enum FeedFollowKind: String, CaseIterable {
     func feedURL(for input: String) async -> String? {
         switch self {
         case .substack: FeedURL.substack(input)
-        case .reddit:   FeedURL.reddit(input)
         case .youtube:  await FeedURL.youtube(input)
         // Picking a search result already carries the feed; a typed show name
         // resolves through the same search — first match wins.
@@ -289,42 +279,18 @@ enum FeedURL {
         return "https://\(t).substack.com/feed"                  // a bare slug
     }
 
-    /// A Reddit input canonicalizes to "r/<sub>" or "u/<name>". A bare word is
-    /// read as a subreddit — the common follow.
-    static func redditInput(_ raw: String) -> String {
-        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        for junk in ["https://", "http://", "www.", "old.reddit.com/", "reddit.com/"] where t.lowercased().hasPrefix(junk) {
-            t.removeFirst(junk.count)
-        }
-        t = t.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let lower = t.lowercased()
-        if lower.hasPrefix("r/") { let n = t.dropFirst(2); return n.isEmpty ? "" : "r/" + n }
-        if lower.hasPrefix("u/") { let n = t.dropFirst(2); return n.isEmpty ? "" : "u/" + n }
-        if lower.hasPrefix("user/") { let n = t.dropFirst(5); return n.isEmpty ? "" : "u/" + n }
-        // A bare word is a subreddit; empty input stays empty so the field's
-        // non-empty guard rejects it instead of storing "r/".
-        return t.isEmpty ? "" : "r/" + t
-    }
-
-    static func reddit(_ input: String) -> String? {
-        let t = redditInput(input)
-        if t.hasPrefix("r/") { return "https://www.reddit.com/r/\(t.dropFirst(2))/.rss" }
-        if t.hasPrefix("u/") { return "https://www.reddit.com/user/\(t.dropFirst(2))/.rss" }
-        return nil
-    }
-
     static func youtube(_ input: String) async -> String? {
         guard let id = await FeedFetch.resolveYouTubeChannelID(input) else { return nil }
         return "https://www.youtube.com/feeds/videos.xml?channel_id=\(id)"
     }
 }
 
-// MARK: - Fetch (a browser-ish UA — Reddit 429s the default one) + resolvers
+// MARK: - Fetch (a browser-ish UA — some hosts 429 the default one) + resolvers
 
 enum FeedFetch {
-    /// A feed GET with a real User-Agent. Reddit answers the default URLSession
-    /// agent with a 429; YouTube and Substack don't care, so one path serves
-    /// all four. A non-2xx is a failed fetch, not empty data.
+    /// A feed GET with a real User-Agent — some hosts answer the default
+    /// URLSession agent with a 429; YouTube and Substack don't care, so one
+    /// path serves them all. A non-2xx is a failed fetch, not empty data.
     ///
     /// `service` is which of the four asked (2026-08-03). Two of them fetch a
     /// host the reach registry structurally cannot name — a Substack on its
@@ -753,7 +719,7 @@ enum FeedFollowIngest {
             }
         }
 
-        // YouTube retitle detection + Reddit postAuthor backfill (2026-07-28)
+        // YouTube retitle detection + the postAuthor backfill (2026-07-28)
         // — both need the STORED row for an already-landed ref, lazily
         // fetched once per refresh the same way `handleless` above is.
         var byRef: [String: Thing]?
@@ -774,29 +740,22 @@ enum FeedFollowIngest {
         }
 
         // Who wrote the item, per bridge — `Thing.postAuthor`, never
-        // `authorHandle` (that is the FEED's identity: the subreddit, the
-        // channel, the publication). Reddit's `/u/name` is always a person and
-        // never the feed's own name, so it lands as it arrives; everywhere
-        // else `FeedParser.author` drops an author that only repeats the feed
-        // — a YouTube entry names its own channel there, and filing that as a
-        // person would make a channel read as one.
+        // `authorHandle` (that is the FEED's identity: the channel, the
+        // publication). `FeedParser.author` drops an author that only repeats
+        // the feed — a YouTube entry names its own channel there, and filing
+        // that as a person would make a channel read as one.
         func itemAuthor(_ raw: String, feedName: String) -> String? {
             guard !raw.isEmpty else { return nil }
-            guard kind != .reddit else {
-                let name = FeedFollowFields.normalizedRedditAuthor(raw)
-                return name.isEmpty ? nil : name
-            }
             return FeedParser.author(raw, feedName: feedName)
         }
 
         // Concurrent fetch, then processed back in the entries' own order
         // (the same ref landing from two entries should resolve the same
         // way it always did — first-in-list wins). Capped at 4 in flight —
-        // every entry under one bridge hits the SAME host (all Reddit, all
-        // YouTube, …), and this file's own FeedFetch comment notes Reddit
-        // already 429s a plain client under normal load; an uncapped burst
-        // made that far more likely than the old serial pacing (review
-        // 2026-07-13).
+        // every entry under one bridge hits the SAME host (all YouTube, all
+        // Substack, …), and a host that 429s a plain client under normal load
+        // is far likelier to under an uncapped burst than under the old
+        // serial pacing (review 2026-07-13).
         let entries = store.entries
         let fetched = await IngestSupport.boundedGather(entries, maxConcurrent: 4) { entry in
             await fetchAndParse(entry, kind: kind)
@@ -825,7 +784,7 @@ enum FeedFollowIngest {
             }
             // The feed's own name, carried onto each item as `authorHandle` (the
             // same field RSS sets, RSSIngest.swift) — it names which channel /
-            // publication / subreddit / show an item came from when more than one
+            // publication / show an item came from when more than one
             // is followed, and it's the grouping key the feed's "top …" bars rank
             // on (FeedLeaderboard). Feed-follow used to drop it, leaving every
             // YouTube video an indistinguishable `source:"YouTube"` row.
@@ -837,7 +796,7 @@ enum FeedFollowIngest {
             // item's own or nothing.
             let showTags = kind == .podcasts ? parsed.categories : []
             // The feed's OWN mark — a publication's logo, a show's cover art,
-            // a subreddit's icon (2026-08-14). RSS has led its rows with this
+            // a channel's icon (2026-08-14). RSS has led its rows with this
             // since the field existed and these four never stamped it, so four
             // rooms of somebody-else's-publication rows drew the app glyph
             // where the reading room draws the publisher.
@@ -877,19 +836,14 @@ enum FeedFollowIngest {
                     }
                     // Rows that landed before the fields below existed heal in
                     // place, within the feed's window — the bar the image and
-                    // handle backfills above already set. Reddit's postAuthor
+                    // handle backfills above already set. The postAuthor
                     // backfill (2026-07-28) is the same line, now that every
                     // bridge lands one.
                     if let thing = storedThing(ref) {
                         if thing.content.isEmpty, !openURL.isEmpty {
                             thing.content = openURL; extraPatched = true
                         }
-                        // Never on Reddit — see the insert branch below: that
-                        // kind's `externalLink` is the post's own outbound
-                        // link, and a later pass reads it to match against the
-                        // corpus. An enclosure URL there is a media file being
-                        // asked "is this something you saved?", forever.
-                        if kind != .reddit, (thing.externalLink ?? "").isEmpty, !item.mediaURL.isEmpty {
+                        if (thing.externalLink ?? "").isEmpty, !item.mediaURL.isEmpty {
                             thing.externalLink = item.mediaURL; extraPatched = true
                         }
                         if thing.postAuthor == nil,
@@ -930,7 +884,7 @@ enum FeedFollowIngest {
                 // `itunes:image` case), so a per-episode picture reaches the
                 // row without ever standing in as the publisher's mark.
                 thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
-                // Reddit's selftext, a Substack lede, a podcast's show notes —
+                // A Substack lede, a podcast's show notes —
                 // the feed's own `<description>`/`<summary>`, kept by the
                 // parser since 2026-07-22. A YouTube description rides
                 // `<media:description>`, which that pass never matched and
@@ -943,24 +897,10 @@ enum FeedFollowIngest {
                 if let author = itemAuthor(item.author, feedName: feedName) {
                     thing.postAuthor = author
                 }
-                // Reddit-only (2026-07-28): the post's own first outbound
-                // link. Nothing reads it today — the corpus-join pass that did
-                // went with the moment bus (2026-08-19) — but it is what a
-                // Reddit row's door would be built from, and it costs one
-                // already-parsed field to keep landing it.
-                if kind == .reddit {
-                    thing.externalLink = FeedFollowFields.firstExternalLink(item.links)
-                }
                 // The episode's own audio, when the feed declares one. Kept
                 // whether or not it stood in for `content` above: the row's
                 // bytes are its link, this is the media file itself.
-                //
-                // `else if`, NOT a second assignment — one field, two owners.
-                // Reddit items carry enclosures (any image or video post), so
-                // an unconditional write here CLOBBERED the outbound link set
-                // one line above — a silent regression the moment enclosures
-                // started being read (2026-08-06).
-                else if !item.mediaURL.isEmpty { thing.externalLink = item.mediaURL }
+                if !item.mediaURL.isEmpty { thing.externalLink = item.mediaURL }
                 context.insert(thing)
                 existing.insert(ref)
                 indexed.append(thing)

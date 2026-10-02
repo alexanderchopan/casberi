@@ -155,11 +155,6 @@ final class WalletStore {
                 // cursor would back-fill the unwatched gap into the feed on
                 // re-watch, instead of the silent fresh-baseline seed.
                 WalletApprovals.clearCursors(address: old.address)
-                // The Altana keystore snapshot leaves too (prd §402) — a
-                // stale snapshot would report every credential registered
-                // during the unwatched gap as news on re-watch, instead of
-                // the silent first-sight seed.
-                AltanaKeystore.clearSnapshot(address: old.address)
                 // The Peer fill cursor leaves with the watch for the same
                 // reason (prd §113).
                 PeerBridge.clearCursor(address: old.address)
@@ -239,7 +234,6 @@ final class WalletStore {
                 if let hex = self.resolvedForm(of: old.address),
                    hex.lowercased() != old.address.lowercased() {
                     WalletApprovals.clearCursors(address: hex)
-                    AltanaKeystore.clearSnapshot(address: hex)
                     PeerBridge.clearCursor(address: hex)
                     PrivacyPoolsBridge.clearState(address: hex)
                     RailgunBridge.clearState(address: hex)

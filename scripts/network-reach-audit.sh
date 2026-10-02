@@ -40,59 +40,27 @@ KNOWN_NON_REACH=(
   # World's own page for its grant-claim app (prd §795) — the permalink a World
   # ID grant row opens in the person's browser. The app never fetches world.org.
   world.org
-  # Hegota's EXPLORER only — a permalink the PERSON's browser opens on a
-  # transaction row.
-  #
-  # **The faucet used to sit here and no longer may** (prd §531, 2026-08-30).
-  # This entry said "the seat deliberately never touches it — the setup screen
-  # links out so the person claims their own", which was true when it was
-  # written and stopped being true on 2026-08-29, when §525 landed
-  # `HegotaSend.claimFaucet` and the key sheet grew a Claim button that POSTs
-  # to it. The audit stayed green throughout, because a denylist entry is
-  # believed and nothing re-reads its REASON when the code underneath it
-  # changes — so the privacy screen omitted a host the app really reaches,
-  # which is the build-214 `api.stripe.com` failure this whole gate exists to
-  # prevent (prd §205/§289). It is in the reach registry now.
-  #
-  # Standing lesson: a denylist entry is a claim about CONDUCT, and landing a
-  # write is exactly the moment to re-read every entry that says a host is
-  # never touched.
-  dora.hegota.ethrex.xyz
+  # **A denylist entry is a claim about CONDUCT** (prd §531, 2026-08-30): a
+  # devnet faucet sat here for a day after a Claim button began POSTing to it,
+  # and the audit stayed green because nothing re-reads an entry's REASON when
+  # the code underneath it changes. Landing a write is exactly the moment to
+  # re-read every entry that says a host is never touched.
   # The Frames devnet's explorer and faucet PAGE (prd §962): ethpandaops'
   # faucet is proof-of-work plus hCaptcha, which a person does in a browser,
   # so the app only opens it — `FramesSendCard.topUp` is `openURL`, no POST.
   # If an in-app claim ever lands, this entry is wrong the same day (§531).
   dora.frames-devnet-0.ethpandaops.io
   faucet.frames-devnet-0.ethpandaops.io
-  dora.privacy.ethrex.xyz
-  # The privacy devnet's faucet PAGE (prd §593). Here for a reason its two
-  # siblings' faucets no longer qualify for: this seat is WATCH-ONLY while its
-  # type-0x6 envelope is unreproduced (§593a), so the app makes no key and has
-  # no address to fund, and the only use of this host is a browser door. The
-  # day sending lands, this entry is wrong — faucet.hegota.ethrex.xyz sat here
-  # for a day after §525 gave it a Claim button that POSTs to it, so the
-  # privacy screen omitted a host the app really reached. Move it to
-  # NetworkReach in the same commit that lands the claim, not after.
-  # vibenet's own explorer (VibenetExplorer) — a landed event's permalink
-  # and the room's "Explorer" door, both `Link(destination:)` the person's
-  # own browser opens; this app never fetches chain.base.org itself.
-  chain.base.org
   app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
-  dexscreener.com twitch.tv reddit.com stocktwits.com farcaster.xyz
+  dexscreener.com twitch.tv stocktwits.com farcaster.xyz
   privacy.com polymarket.com app.safe.global app.uniswap.org
   aerodrome.finance app.hyperliquid.xyz
-  explorer.altana.network
   cardpointers.com
   # CardPointers' own site (prd §420) — their sign-in page, which the device
   # flow opens in the person's browser, and their CardPointers+ page, offered
   # as the door when an account turns out not to have the subscription. NEVER
   # fetched: every request this app makes goes to `mcp.cardpointers.com`,
   # which IS declared, and that includes the device-flow endpoints.
-  # Altana's public explorer (prd §403) — where an account's keys open on tap,
-  # and the ONLY place a key can actually be revoked (§112: we read and state,
-  # they act). NEVER fetched: the seat reads the keystore CONTRACTS over
-  # JSON-RPC, and those hosts ARE disclosed in NetworkReach (the "Altana"
-  # entry names all four). The explorer is only ever a link written into a row.
   # Radicle's public explorer (prd §400) — where a patch or issue row opens on
   # tap. NEVER fetched: the bridge reads a SEED NODE's `radicle-httpd` API, and
   # those hosts ARE disclosed in NetworkReach (the "Radicle" entry names both

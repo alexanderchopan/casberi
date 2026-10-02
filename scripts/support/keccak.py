@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Keccak-256 for the harnesses, with no module to install (2026-09-16).
 
-**Why this file exists.** Three harnesses hash bytes in Python to check a Swift
-encoder's work: `hegota-tx-selftest.sh`, `vibenet-signer-selftest.sh` and
-`support/vibenet-tx-vectors.py`. All three imported `pysha3`, which is on the
+**Why this file exists.** Harnesses hash bytes in Python to check a Swift
+encoder's work, and the first of them imported `pysha3`, which is on the
 dev Mac and on no hosted runner — so `logic-selftests.yml` failed two harnesses
 with `ModuleNotFoundError: No module named 'sha3'` on every single run, on
 `main` and on every branch, for as long as that workflow has existed.

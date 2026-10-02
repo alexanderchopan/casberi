@@ -204,7 +204,7 @@ check(TokenChartStyle.changeText(0.042).hasPrefix("+"),
 
 // MARK: the other end of the same scale — a wipeout the balance denies (§837)
 //
-// The Privacy devnet's reported header: 983,580 ETH down to 1 ETH is
+// A devnet's reported header: 983,580 ETH down to 1 ETH is
 // -99.9999%, which the one decimal we print rounds to "-100.0%" — "all of it
 // is gone", over a crown reading 1.0000 ETH. `readsAsWipeout` is the caller's
 // gate on printing that ratio at all, and its threshold is `changeText`'s own

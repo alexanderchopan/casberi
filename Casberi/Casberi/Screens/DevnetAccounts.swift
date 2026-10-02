@@ -1,26 +1,14 @@
 import SwiftUI
 import SwiftData
 
-/// **THE FOUR DEVNET SETUP SCREENS SHARE ONE ANATOMY (user, 2026-09-04:
+/// **THE DEVNET SETUP SCREENS SHARE ONE ANATOMY (user, 2026-09-04:
 /// "i think they should share common framework and also be better").**
 ///
-/// Base Vibenet, Ethrex Hegotá, Hegotá Frames and Ethrex Privacy all ask the
-/// same thing of somebody — *which addresses on this chain do you want to
-/// read?* — and until this file they asked it four different ways. Measured
-/// across the four screens as they stood:
-///
-/// * **Three affordances for one act.** Vibenet drew face rows carrying a
-///   `Watch` / `✓ Watching` state; Hegotá and Frames drew title-plus-address
-///   rows with a tint-coloured word at the end; Privacy drew `DSSlabDoor`s
-///   under a heading. One tap, three shapes.
-/// * **Two field components.** Vibenet used `DSSlabField` with a live address
-///   preview; the other three used `BridgeFieldRow` with a hand-rolled result
-///   line underneath. Three copies of "That isn't an address", three
-///   wordings.
-/// * **The field led on every screen** — and every one of those screens
-///   carries a doc comment saying, in its own words, that a pasted stranger's
-///   address shows a correct blank that reads like a broken feature. The
-///   examples are the answer to that and they sat at the bottom.
+/// Every devnet seat asks the same thing of somebody — *which addresses on
+/// this chain do you want to read?* — and until this file each asked it a
+/// different way: three affordances for one act, two field components, three
+/// copies of "That isn't an address" in three wordings, and the field leading
+/// on every screen above the examples that answered it.
 ///
 /// **THE FIELD IS AT THE TOP OF THE SLAB, ABOVE THE EXAMPLES (user ruling,
 /// 2026-09-04: "i think the watch / paste field should be at top not
@@ -28,26 +16,18 @@ import SwiftData
 /// put in it if you have none of your own. One card, one act, no hunting
 /// below the fold for the thing that makes the screen usable.
 ///
-/// **Why a shared CONTROL and not a shared SCREEN.** `VibenetWatchViews`'s own
-/// header already draws this line and it holds here: `AddressBookScreen`'s
+/// **Why a shared CONTROL and not a shared SCREEN.** `AddressBookScreen`'s
 /// ruling is "copy the structure, not the type" for a screen's LAYOUT, and
-/// this is one control appearing four times. (The second reason this said —
-/// that four screen files keep four `BridgeSetupHeader` calls where
-/// `setup-copy-audit.py` can see them — went with §639: the four seats are on
-/// `AccountPage`, which has no header call to audit and takes the intro as a
-/// parameter. The first reason is the one that was load-bearing anyway.)
+/// this is one control.
 ///
-/// **ALL FOUR ARE ON `AccountPage` SINCE §639 (2026-09-06.)** The card is
-/// gone, the roster is the chassis's "Watching · N" — one list, one verb,
-/// "Remove" — and the field is the page's one bar, which filters that roster
-/// as well as adding to it. `DevnetWatchingSection` went with the move: it
-/// existed because three of the four seats had nowhere else to unwatch an
-/// address, which is the dead end the chassis's roster now closes for all
-/// four. That is a stated amendment to §465 ("setup keeps what you do ONCE"):
+/// **ON `AccountPage` SINCE §639 (2026-09-06.)** The card is gone, the roster
+/// is the chassis's "Watching · N" — one list, one verb, "Remove" — and the
+/// field is the page's one bar, which filters that roster as well as adding
+/// to it. That is a stated amendment to §465 ("setup keeps what you do ONCE"):
 /// there is no setup screen any more to keep it out of.
 ///
-/// **The watch list is a PROTOCOL rather than four closures.** The four
-/// `@Observable` singletons already carry byte-identical APIs; a generic over
+/// **The watch list is a PROTOCOL rather than closures.** A seat's
+/// `@Observable` singleton carries the API; a generic over
 /// them means the row reads the real list, so SwiftUI's observation still
 /// redraws a row the moment its address is watched. A closure bag would have
 /// broken exactly that, and the failure would be a `Watch` verb that never
@@ -73,10 +53,7 @@ protocol DevnetWatchList: AnyObject, Observable {
     static func isValidAddress(_ raw: String) -> Bool
 }
 
-extension VibenetWatch: DevnetWatchList {}
-extension HegotaWatch: DevnetWatchList {}
 extension FramesWatch: DevnetWatchList {}
-extension PrivacyDevnetWatch: DevnetWatchList {}
 
 // MARK: - What is there right now
 
@@ -92,9 +69,9 @@ extension PrivacyDevnetWatch: DevnetWatchList {}
 /// what the node says now. Where it lands it replaces the dated detail; where
 /// the node cannot be reached the dated detail stands, past tense and all.
 ///
-/// Two sequential calls rather than a batch because the four RPC helpers
-/// share a signature and none of them shares a batch, and the point of this
-/// type is to be handed any of them.
+/// Two sequential calls rather than a batch because a seat's RPC helper
+/// shares this signature and not a batch, and the point of this type is to be
+/// handed any of them.
 struct DevnetPeek: Equatable {
     /// The address's nonce — a count of what it SENT, never what it received.
     let sends: Int
@@ -144,15 +121,13 @@ struct DevnetPeek: Equatable {
 /// started the moment an address lands, reported on the screen the person is
 /// still looking at (prd §618, 2026-09-05).
 ///
-/// **The three jumping screens had nowhere to report it.** Hegotá, Frames and
-/// Privacy routed into the room on the first watch, and their rooms read for
-/// themselves on appear — which meant the common path was: tap Watch, land in
-/// an empty room, wait, with nothing saying a read was in flight. Vibenet had
-/// already solved this (2026-08-28: connecting is picking several, the
-/// `RoomDoor` is the only way on) and carried the read state in its own
-/// screen; this type is that mechanism lifted out so all four seats share it,
-/// and so the slab and a second section (vibenet's discovery list) can drive
-/// the same read.
+/// **The jumping screens had nowhere to report it.** A devnet seat routed into
+/// the room on the first watch, and the room read for itself on appear — which
+/// meant the common path was: tap Watch, land in an empty room, wait, with
+/// nothing saying a read was in flight. One seat had already solved this
+/// (2026-08-28: connecting is picking several, the `RoomDoor` is the only way
+/// on) in its own screen; this type is that mechanism lifted out so every seat
+/// shares it.
 ///
 /// Coalescing rather than queueing: a second watch during a read marks it
 /// pending and the loop runs once more when the current one lands, so five
@@ -204,8 +179,8 @@ final class DevnetReader {
 /// The row shape every devnet account wears: a face, a claim, the address,
 /// and a trailing word saying what the tap does — or that you already took it.
 ///
-/// **A row you have taken says so and stops being tappable** (the 2026-08-28
-/// vibenet ruling, generalised). `add` refuses a duplicate, so before this a
+/// **A row you have taken says so and stops being tappable** (a 2026-08-28
+/// ruling, generalised). `add` refuses a duplicate, so before this a
 /// second tap on a taken row did precisely nothing while looking exactly like
 /// a tap that worked. `.disabled` is enough because the whole control is text
 /// and the text changes — §83's corollary about a button painting its own
@@ -296,7 +271,7 @@ struct DevnetAccountRow: View {
 /// The worked examples that stood under it are deleted (prd §990, user: "i
 /// don't want them").
 ///
-/// It was `DevnetAccountsSlab` and it was a card. The four devnet seats moved
+/// It was `DevnetAccountsSlab` and it was a card. The devnet seats moved
 /// onto `AccountPage`, where the only filled element on the page is the input
 /// field, so the card is gone and the rows sit on the page's own ground. What
 /// did NOT change is the order the 2026-09-04 ruling fixed — the field first,
@@ -311,11 +286,10 @@ struct DevnetAccountRow: View {
 /// Generic over the seat's watch list so the rows read the real one — see the
 /// file header on why that is a protocol rather than a closure bag.
 ///
-/// The status line lives here rather than at the call site because all four
-/// seats had written their own version of the same three sentences (a
-/// malformed address, a duplicate, and — on vibenet — a chain that could not
-/// be reached), and three of the four disagreed on the wording of the first
-/// two.
+/// The status line lives here rather than at the call site because every
+/// seat had written its own version of the same sentences (a malformed
+/// address, a duplicate, a chain that could not be reached), and most of them
+/// disagreed on the wording.
 struct DevnetAccountsAct<W: DevnetWatchList>: View {
     let watch: W
     /// The seat's own colour, for the `Watch` verb only. Nothing else on the
@@ -523,13 +497,11 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
 /// What the chassis's "Watching · N" says about each address (prd §639).
 ///
 /// `DevnetWatchingSection` drew this list itself, in a card, with its own
-/// Remove button — three of the four seats carried it because they had nowhere
-/// else to unwatch an address. The list is the account page's now, so what is
-/// left is the part only this family knows: the SUBLINE. On a chain the app
-/// stamps per-address rows for (vibenet) that is a week count like every other
-/// seat's; on the three that do not it is what the node says right now — "3
-/// sends · 0.5 test ETH" — because a row reading "quiet this week" about a
-/// chain we never attribute rows on would be a claim we cannot make.
+/// Remove button, because the seats had nowhere else to unwatch an address.
+/// The list is the account page's now, so what is left is the part only this
+/// family knows: the SUBLINE — what the node says right now, "3 sends · 0.5
+/// test ETH" — because a row reading "quiet this week" about a chain we never
+/// attribute rows on would be a claim we cannot make.
 ///
 /// One read per address per visit, kicked from the screen's `onAppear` and
 /// again when the watch list changes.

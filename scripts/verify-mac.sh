@@ -261,8 +261,8 @@ else
 step "Logic self-tests (all $(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d ' ') discovered, up to $(sysctl -n hw.ncpu 2>/dev/null || print 4) at once)"
 typeset -a SELFTEST_FAILS
 export MST_OUT="$OUT"
-# A harness may fan its OWN mutations out concurrently (hegota, vibenet,
-# wallet-rooms, privacy, frames-tx). Nested at full width that is ncpu x ncpu —
+# A harness may fan its OWN mutations out concurrently (wallet-rooms,
+# frames-tx). Nested at full width that is ncpu x ncpu —
 # 64 `swiftc` on 8 cores against 16 GB — and the failure mode is memory pressure
 # and swap, which reads as the machine hanging rather than as a slow test. Three
 # keeps the tail of this swarm (one long harness alone on one core, which is
@@ -271,8 +271,8 @@ export MST_OUT="$OUT"
 # should take the whole machine.
 export HARNESS_INNER_JOBS=3
 # LONGEST FIRST (PERF, 2026-09-05). `xargs -P` starts jobs in the order it is
-# fed them, and a GLOB feeds them alphabetically — so `vibenet-selftest.sh`,
-# the longest in the suite, started near the end and ran alone for the last two
+# fed them, and a GLOB feeds them alphabetically — so the longest harness in
+# the suite, named late in the alphabet, started near the end and ran alone for the last two
 # minutes while seven cores idled (measured: 739s wall, the last 127s of it one
 # harness). The cost model is each harness's own last recorded wall time, kept
 # beside `verify.sh`'s skip stamps and refreshed by whichever pass ran it; a

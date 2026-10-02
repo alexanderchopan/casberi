@@ -382,7 +382,7 @@ def audit_door_table(name: str, body: str):
 #
 # THE CEILING, stated rather than implied: only a LITERAL can be resolved from
 # text. A `source:` forwarding a constant (`SafeBridge.sourceName`,
-# `VibenetIdentity.source`, `registry.displayName`) is skipped — and that is
+# `FramesIdentity.source`, `registry.displayName`) is skipped — and that is
 # the RIGHT answer, not a gap, because one constant used by both the stamp and
 # the door is the pattern that cannot drift at all (§311's own lesson: the
 # desync happened because a second file hardcoded the literal instead).

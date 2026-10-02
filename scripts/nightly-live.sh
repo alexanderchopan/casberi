@@ -10,9 +10,8 @@
 #   2. The full table kept per night (scripts/output/live-<ts>.log), pruned.
 #
 # WHY THIS EXISTS (2026-09-08, prd §654). live-integrations.sh grew drift rows
-# for all four devnet seats — Hegotá's frame-shape baseline and "what did the
-# chain add" census, vibenet's contracts-config diff, Frames' genesis and
-# envelope names, and now Privacy's — and NOTHING RAN IT. The Mac nightly's
+# for the devnet seats — Frames' genesis and envelope names among them — and
+# NOTHING RAN IT. The Mac nightly's
 # live block is three in-app probes (RSS, LinkTitle, oEmbed); verify.sh keeps
 # this script out by contract. So every devnet drift detector printed to a
 # terminal nobody opened, i.e. did not exist. The question that surfaced it:

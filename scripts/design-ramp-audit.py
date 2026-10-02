@@ -70,7 +70,7 @@ Four deliberate NON-checks, so this can't become a lint that cries wolf:
     rules were re-derived that day from thirteen and seven call sites that had
     quietly outgrown a prose "one caller, deliberately". A count per FILE is the
     only thing a grep could enforce and it is wrong in both directions —
-    `HegotaRoomCard` correctly takes `price64` four times because it holds four
+    a devnet room card correctly took `price64` four times because it held four
     cards, while two crowns on ONE card is the real defect and lives in the same
     file either way. Better to say so than to ship an exemption list that is a
     snooze wearing a registry's clothes.

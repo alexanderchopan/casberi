@@ -106,7 +106,7 @@ check(TransferTimes.healJob(ref: "wallet:zerion:\(hash):in:WLD::1", content: "ht
       "a Zerion row always carried its time — never re-timed")
 check(TransferTimes.healJob(ref: "wallet:0xdead:log:1", content: "https://basescan.org/tx/" + hash) == nil,
       "a chain whose Alchemy rows carried a time is left alone")
-check(TransferTimes.healJob(ref: "vibenet:1", content: "https://worldscan.org/tx/" + hash) == nil,
+check(TransferTimes.healJob(ref: "frames:1", content: "https://worldscan.org/tx/" + hash) == nil,
       "only wallet refs")
 check(TransferTimes.healJob(ref: nil, content: "https://worldscan.org/tx/" + hash) == nil, "no ref, no job")
 check(TransferTimes.healJob(ref: "wallet:x", content: "https://worldscan.org/tx/0x1234") == nil,

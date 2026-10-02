@@ -597,7 +597,7 @@ struct ThingContentView: View {
             } else if !thing.content.isEmpty, !Self.bareLinkBody(thing) {
                 // FOLDED AT A BLOCK, NOT CLAMPED AT TWELVE LINES (2026-08-21).
                 // §366 gave the note category a real disclosure and left every
-                // OTHER source on the silent cut — so a Reddit save, a Slack
+                // OTHER source on the silent cut — so a Raindrop save, a Slack
                 // message, a Linear description and a Notion block all still
                 // ended mid-sentence with no "more" and nothing to scroll, in
                 // the branch that catches every source without an anatomy of

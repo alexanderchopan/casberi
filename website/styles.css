@@ -209,18 +209,10 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 /* AWS's own real mark (the user's saved icon file, inlined per the site's
    no-hotlink rule), on AWS's own dark navy ("Squid Ink") ground. */
 .ai-aws { background: #232f3e; }
-/* Base's own documented blue — no bundled mark, the App Store Connect
-   shape: a lone letterform for a seat with no logo to inline. */
-.ai-basevibenet { background: #0052ff; font-size: 23px; }
-/* Ethrex Hegotá — ethrex's own LambdaClass mark, inlined as base64 like every
-   other icon here (a remote icon host renders as a blank slot the day it
-   hiccups). Black ground because the artwork carries its own. */
-.ai-ethrexhegota { background: #000; }
 .ai-framesdevnet { background: #fff; }
 /* Logos ships its λ on its own light-grey field — full-bleed, as Radicle. */
 .ai-logos { background: #dcdcd9; }
 .ai-logos img { width: 100%; height: 100%; border-radius: inherit; }
-.ai-ethrexprivacy { background: #000; }
 .ai-sentry    { background: #fff; }
 .ai-vercel    { background: #000; }
 .ai-pagerduty { background: #04ac38; }
@@ -229,7 +221,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-sentry img, .ai-vercel img, .ai-pagerduty img,
 .ai-npm img, .ai-pypi img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-notion    { background: #fff; color: #111; }
-.ai-reddit    { background: #ff4500; }
 .ai-youtube   { background: #ff0000; font-size: 17px; }
 .ai-music     { background: linear-gradient(160deg, #fb5c74, #fa233b); font-size: 22px; }
 .ai-spotify   { background: #1db954; }
@@ -1609,11 +1600,6 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 @media (max-width: 900px) {
   .why-card { padding: 32px 26px 34px; border-radius: 24px; }
 }
-
-/* Altana ships its mark on white — full-bleed square artwork, the same
-   treatment as Radicle and Hugging Face above. */
-.ai-altana { background: #fff; }
-.ai-altana img { width: 100%; height: 100%; border-radius: inherit; }
 
 
 /* ---------- plain story: three numbered beats (§why) ---------- */

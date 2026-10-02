@@ -108,8 +108,8 @@ INTERPOLATION = re.compile(r'\\\(.*?\)')
 # A conscious ruling per entry: "this literal is an initialism, not emphasis."
 #
 # "ETH" — a CURRENCY TICKER, the same class of thing as USDV or NFV beside it
-# on the very same card. Those two are never flagged only because they arrive
-# as `VibenetTokenBalance.symbol`, i.e. as data, while the native symbol is the
+# on the very same card. Those are never flagged only because they arrive
+# as a token's symbol, i.e. as data, while the native symbol is the
 # one written in the source; the difference is where the string comes from, not
 # what it is. Re-casing it to "Eth" would invent a spelling no exchange, wallet
 # or explorer uses, which is a worse §8 outcome than the shout it fixes. The

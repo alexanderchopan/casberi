@@ -17,7 +17,7 @@ block at a time, each after its own report:
   • §759  the remaining forty-four — every gen-UI module, L2BEAT and Walletbeat
           and their sheets, the settings list, the two wallet cards, the themes
           lede, the wallet's coming-up section, the naming prompt, the address
-          book's nudge, the X person card, Cloudflare's runway, vibenet's
+          book's nudge, the X person card, Cloudflare's runway, a devnet's
           roster ("more cards, these gotta go")
   • §782  the plates that survived under OTHER spellings (user, of the wallet's
           "Worth a look" tray: "these plates"): `dsInkFill` on every row of
@@ -90,8 +90,6 @@ WELL_ALLOWED = {
     "AgentChatView.swift": (1, "the agent room's entry field — the one thing §782 "
                                "leaves a well for, and the same shape the composer's "
                                "own draft field takes (prd §840)"),
-    "VibenetAuthorizeSheet.swift": (1, "the key or address entry field (the scope picker became switches)"),
-    "VibenetAccountSheet.swift": (1, "the note entry field"),
     "AddressBookViews.swift": (3, "the name entry field, the compact copy button's face, and an action tile's face"),
     "ConnectWalletRow.swift": (1, "the pairing URI, a monospaced value with its copy button"),
     "SafeScreen.swift": (2, "two entry fields: a pairing link, a pasted signing request (prd §913)"),

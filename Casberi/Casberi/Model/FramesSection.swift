@@ -90,8 +90,8 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// RULING rather than an accident of declaration, so it is stated where a
     /// reader will look and where a self-test can assert it.
     ///
-    /// **Home leads and is the fallback**, matching Wallet, vibenet and
-    /// Hegotá: Home is the crown and its line, and opening anywhere else puts
+    /// **Home leads and is the fallback**, matching Wallet: Home is the crown
+    /// and its line, and opening anywhere else puts
     /// a tap between the crown and its own breakdown.
     ///
     /// **`frames` leads the conditional tail** for Hegotá's reason, one step

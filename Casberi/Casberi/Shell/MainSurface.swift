@@ -17,18 +17,12 @@ import UIKit
 /// carries a stack of its own.
 // `WalletSection` is Foundation-only so `wallet-section-selftest.sh` can
 // compile it WHOLE; the SwiftUI protocol therefore lands here, beside the
-// only place that consumes it, rather than on the declaration. Vibenet's
-// own scope enum conforms the same way beside its own call site — one
-// control, two vocabularies, neither type dragging SwiftUI into a harness.
+// only place that consumes it, rather than on the declaration — one
+// control, several vocabularies, no type dragging SwiftUI into a harness.
 extension WalletSection: DSSectionScope {}
 
-// Conformed beside the call site rather than on the declaration, for the
-// reason Wallet's own does: `VibenetSection` stays Foundation-only so a
-// `swiftc` harness can compile it WHOLE, and a SwiftUI protocol on the
-// declaration ends that (prd §482).
-extension VibenetSection: DSSectionScope {}
-// The third room to take this control (prd §486), conformed beside the call
-// site for the reason the two above are: `PrivacyPoolsSection` stays
+// The second room to take this control (prd §486), conformed beside the call
+// site for the reason the one above is: `PrivacyPoolsSection` stays
 // Foundation-only so `wallet-rooms-selftest.sh` can compile it WHOLE beside
 // the room it scopes.
 extension PrivacyPoolsSection: DSSectionScope {}
@@ -2169,12 +2163,6 @@ struct MainSurface: View {
             // And the Tokens room's packs.
             chrome.tokensScope = .watchlist
             chrome.pinterestScope = nil
-            // Dies with the room like the person scope above, NOT spanning
-            // its category the way the wallet scope deliberately does: a
-            // vibenet devnet address matches no row in Peer, Safe or any
-            // other Wallet-category venue, so carried across it would paint
-            // an empty room with nothing able to explain why.
-            chrome.vibenetScope = nil
             chrome.freshHandles = []
         }
         // A room asking to move to another room — the Markets switcher. See

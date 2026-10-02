@@ -225,7 +225,7 @@ grep -q 'respondURL = URL(string: "https://app.0xbow.io")' "$CARD_POOLS" \
   || { echo "✗ the respond door no longer opens 0xBow — a door telling you to respond must land where responding happens"; exit 1; }
 
 # --- prd §486: the three scopes ---------------------------------------------
-# The card draws its OWN strip (Vibenet's shape, not Wallet's shell-mounted
+# The card draws its OWN strip (not Wallet's shell-mounted
 # one), so these are the only checks that the control exists at all.
 CARD_STRIPPED="$TMP/poolscard.swift"
 strip_comments "$CARD_POOLS" > "$CARD_STRIPPED"
@@ -1874,7 +1874,7 @@ echo "wallet-rooms-selftest: compiling the five heads and the scope enum WHOLE a
 # ONE compile line, written once and run by both the assertion build and every
 # mutation child. Two copies of an eight-file compile drift, and the drift is
 # invisible: the mutants would be measured against a different file set than the
-# assertions (vibenet's §468 bug, which scored thirty-four type errors as
+# assertions (§468's bug, which scored thirty-four type errors as
 # thirty-four catches).
 cat > "$TMP/build.zsh" <<'BUILDSH'
 MW="$1"

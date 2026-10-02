@@ -38,10 +38,6 @@ enum DSSkeleton {
         case holders
         /// Framed transactions, a row of steps each.
         case steps
-        /// The UTXO grid.
-        case grid
-        /// The snapshot rings.
-        case ring
         /// A to-do list: an open check circle beside each line (the
         /// Reminders room, prd §993). Reached by its caller, never a glyph —
         /// no wallet-family scope is a list of to-dos.
@@ -57,8 +53,6 @@ enum DSSkeleton {
             case ScopeTileGlyph.nfts:        self = .quad
             case ScopeTileGlyph.permissions: self = .holders
             case ScopeTileGlyph.frames:      self = .steps
-            case ScopeTileGlyph.utxos:       self = .grid
-            case ScopeTileGlyph.snapshots:   self = .ring
             default:                         self = .ranked
             }
         }
@@ -207,26 +201,6 @@ struct DSSkeletonFigure: View {
                     box(x, 10 + CGFloat(i) * 64, w, 44, radius: 10)
                     x += w + 8
                 }
-            }
-        case .grid:
-            for row in 0..<5 {
-                for col in 0..<6 {
-                    dot(25 + CGFloat(col) * 50, 26 + CGFloat(row) * 53, 16)
-                }
-            }
-        case .ring:
-            for (radius, trim) in [(100.0, 0.72), (64, 0.45)] {
-                let r = CGFloat(radius) * min(sx, sy)
-                let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                var track = Path()
-                track.addArc(center: center, radius: r, startAngle: .degrees(0),
-                             endAngle: .degrees(360), clockwise: false)
-                ctx.stroke(track, with: .color(DSSkeleton.track), lineWidth: 14 * min(sx, sy))
-                var arc = Path()
-                arc.addArc(center: center, radius: r, startAngle: .degrees(-90),
-                           endAngle: .degrees(-90 + 360 * trim), clockwise: false)
-                ctx.stroke(arc, with: .color(DSSkeleton.shape),
-                           style: StrokeStyle(lineWidth: 14 * min(sx, sy), lineCap: .round))
             }
         case .checklist:
             // Open circles, never a filled one: a checked circle would say

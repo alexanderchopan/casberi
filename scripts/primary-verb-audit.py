@@ -90,7 +90,7 @@ EXEMPT_FILES = {
 #
 # **`.borderedProminent` IS ONE, and leaving it out was this audit's real gap.**
 # Its first cut looked only for fills WE paint, so a full-width centered blue
-# button drawn by SwiftUI's OWN prominent style — `VibenetAccountSheet`'s note
+# button drawn by SwiftUI's OWN prominent style — a devnet account sheet's note
 # "Save" — passed clean while being exactly the species. Asked whether every
 # centered blue button was gone, the answer was no, and this is why. A native
 # style is the same block with the same problem and one fewer line of evidence.

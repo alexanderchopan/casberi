@@ -674,8 +674,8 @@ enum FeedParser {
         var viewCount: Int?
         /// The entry's own author — an Atom `<author><name>` or the
         /// `<dc:creator>` most RSS 2.0 publishers use. A channel's own name on
-        /// YouTube (the same name the feed title carries), a poster's
-        /// `/u/name` on Reddit, the WRITER on a multi-author Substack (the one
+        /// YouTube (the same name the feed title carries), the WRITER on a
+        /// multi-author Substack (the one
         /// thing FeedFollowKind's generic authorHandle-as-feed-identity can't
         /// carry). Lands on `Thing.postAuthor` through `FeedParser.author`,
         /// which drops the ones that only repeat the feed's own name. Empty
@@ -687,18 +687,11 @@ enum FeedParser {
         /// item declares none, which is every non-podcast feed.
         var mediaURL = ""
         /// What the item files itself under — an RSS `<category>`, an Atom
-        /// `<category term/label>`, an `<itunes:category text>`. On a Reddit
-        /// `u/name` feed this is the ONLY place the payload names which
-        /// subreddit a post is in. Cleaned and capped at `categoryCap`; lands
+        /// `<category term/label>`, an `<itunes:category text>`. Cleaned and
+        /// capped at `categoryCap`; lands
         /// on `Thing.tags`, which feeds §308 facet filtering, so junk here
         /// degrades search.
         var categories: [String] = []
-        /// Every `<a href>` found in the item's own body HTML, in document
-        /// order, capped at 5 — Reddit's crossing check reads this for the
-        /// post's first OUTBOUND (non-reddit.com) link; every other bridge
-        /// ignores it. Captured alongside `summary` so the raw HTML doesn't
-        /// need re-fetching later.
-        var links: [String] = []
     }
 
     struct Parsed {
@@ -742,7 +735,7 @@ enum FeedParser {
 
     /// The item's own author, when the feed names someone the feed itself
     /// isn't. `Thing.authorHandle` already carries the feed's identity (the
-    /// channel, publication, subreddit, show), and a YouTube entry's
+    /// channel, publication, show), and a YouTube entry's
     /// `<author><name>` is that same channel — filing it again as a person
     /// would make a publication read as one. A multi-author Substack is what
     /// this is for: its posts name their writer while the feed names the
@@ -830,9 +823,9 @@ enum FeedParser {
                 }
             // What the item (or the show) files itself under. Atom and iTunes
             // put the words in an attribute; RSS 2.0 puts them in the
-            // element's text, read at didEndElement below. Reddit's label
-            // reads "r/swift" where its term is the bare name, so the label
-            // wins.
+            // element's text, read at didEndElement below. Where an Atom
+            // category carries both, the label is the human-readable one, so
+            // the label wins.
             case "category", "itunes:category":
                 noteCategory(attributes["label"] ?? attributes["term"] ?? attributes["text"])
             // A YouTube entry's view count (2026-07-28) — only meaningful on
@@ -922,16 +915,9 @@ enum FeedParser {
                    !Self.looksLikeTracker(src) {
                     current?.imageURL = Self.normalizeImage(src)
                 }
-                // Every outbound <a href> in the raw body — Reddit's link-
-                // crossing check reads it later; every other bridge ignores
-                // it. Extracted here (once, from the same raw HTML the image
-                // pull already sees) rather than re-fetched at check time.
-                if current?.links.isEmpty == true {
-                    current?.links = Self.extractLinks(in: value)
-                }
                 // …and keep the WORDS too (2026-07-22). Until then this blob
                 // was mined for an image and thrown away, so every RSS,
-                // Reddit, YouTube, Substack, and Podcast thing landed with no
+                // YouTube, Substack, and Podcast thing landed with no
                 // body at all — its sheet re-fetched a link preview to show
                 // what the feed had already handed us. Publisher-authored, so
                 // it's display copy (`Thing.summary`), not `enrichedText`.
@@ -1025,22 +1011,6 @@ enum FeedParser {
                   m.numberOfRanges > 1,
                   let r = Range(m.range(at: 1), in: html) else { return nil }
             return String(html[r])
-        }
-
-        /// Every `<a href>` in a blob of feed HTML, in document order,
-        /// capped at 5 — a post body rarely needs more than a handful
-        /// checked for Reddit's crossing pass.
-        private static let linkRegex = try? NSRegularExpression(
-            pattern: #"<a\s+[^>]*href=["']([^"']+)["']"#, options: [.caseInsensitive])
-
-        private static func extractLinks(in html: String) -> [String] {
-            guard let linkRegex else { return [] }
-            let ns = html as NSString
-            let matches = linkRegex.matches(in: html, range: NSRange(location: 0, length: ns.length))
-            return matches.prefix(5).compactMap { m in
-                guard m.numberOfRanges > 1 else { return nil }
-                return ns.substring(with: m.range(at: 1))
-            }
         }
 
         /// Protocol-relative URLs (`//host/…`) become https so AsyncImage loads.

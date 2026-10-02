@@ -192,7 +192,7 @@ struct WalletLiveState: Equatable {
     /// no read of its own.
     var exposure: WalletApprovalExposure = WalletApprovalExposure()
     /// Everything that can act AS the account rather than spend a token of it
-    /// — Safe modules, an EIP-7702 delegate, Altana credentials (§293).
+    /// — Safe modules, an EIP-7702 delegate (§293).
     ///
     /// Read here rather than by the card, because the card is drawn inside a
     /// `List` and a chain read hung off a row's `.task` fires on every scroll

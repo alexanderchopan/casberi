@@ -932,10 +932,7 @@ struct AppsScreen: View {
     /// field and addresses worth watching, so making your own account meant
     /// watching a stranger first, then finding Activity, then Home. The room
     /// always draws now, and its first act is Create account.
-    private static let devnetRooms: Set<String> = [
-        VibenetIdentity.source, HegotaIdentity.source,
-        FramesIdentity.source, PrivacyDevnetIdentity.source,
-    ]
+    private static let devnetRooms: Set<String> = [FramesIdentity.source]
 
     /// A connected account with a room is a STATUS here (prd §1033, user:
     /// "lets make it go nowhere. it's just a status"): the room's own door

@@ -1,7 +1,7 @@
 """fam_ui.py — screens and documents for the demo (render.py's `ui` family).
 
 Phone screenshots (shot-5…12), drawings (file-0/1/2/4), a whiteboard and a
-checklist page (reddit-2/3), two channel graphics (tg-2/4), a photographed
+checklist page, two channel graphics (tg-2/4), a photographed
 laptop showing a design file (fc-0) and a paper figure (hf-paper-1). Every page is self-contained:
 inline CSS and SVG, system fonts only, no logos.
 
@@ -866,111 +866,6 @@ def file_4(p):
     return doc(p, svg, bg="#0E2D52")
 
 
-# ── saves: a whiteboard and a checklist ────────────────────────────────────
-
-def reddit_2(p):
-    """A whiteboard sequence diagram in marker: client, queue, server."""
-    M = "'Marker Felt',Noteworthy,cursive"
-    cols = {"Client": 170, "Queue": 400, "Server": 630}
-    blue, black, red, green = "#1F4FB5", "#23262B", "#C8322B", "#1F7A45"
-
-    def box(name, x, col):
-        return (f'<rect x="{x - 66}" y="70" width="132" height="54" rx="9" fill="none" stroke="{col}" stroke-width="3.2"/>'
-                f'<text x="{x}" y="106" text-anchor="middle" font-family="{M}" font-size="24" fill="{col}">{name}</text>'
-                f'<path d="M{x} 126V508" stroke="{col}" stroke-width="2" stroke-dasharray="3 11" stroke-linecap="round"/>')
-
-    def msg(a, b, y, label, col, dashed=False):
-        x1, x2 = cols[a], cols[b]
-        d = 1 if x2 > x1 else -1
-        dash = ' stroke-dasharray="12 9"' if dashed else ""
-        return (f'<path d="M{x1 + 6 * d} {y}Q{(x1 + x2) / 2} {y - 5} {x2 - 8 * d} {y + 1}" fill="none" stroke="{col}" stroke-width="2.8"{dash} stroke-linecap="round"/>'
-                f'<path d="M{x2 - 22 * d} {y - 9}L{x2 - 7 * d} {y + 1} {x2 - 22 * d} {y + 11}" fill="none" stroke="{col}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'
-                f'<text x="{(x1 + x2) / 2}" y="{y - 12}" text-anchor="middle" font-family="{M}" font-size="19" fill="{col}">{label}</text>')
-    svg = f'''<svg width="800" height="600" viewBox="0 0 800 600" filter="url(#pen)">
-<defs>{PENCIL_FILTER}</defs>
-{box("Client", 170, blue)}{box("Queue", 400, black)}{box("Server", 630, green)}
-{msg("Client", "Queue", 172, "1. enqueue(op)", blue)}
-{msg("Queue", "Client", 220, "2. ack (local)", blue, True)}
-{msg("Queue", "Server", 272, "3. flush batch", black)}
-{msg("Server", "Queue", 322, "4. 409 conflict", red, True)}
-<path d="M406 352c60-6 60 44 2 42" fill="none" stroke="{black}" stroke-width="2.8" stroke-linecap="round"/>
-<path d="M424 386 406 394 421 405" fill="none" stroke="{black}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="470" y="382" font-family="{M}" font-size="19" fill="{black}">5. rebase + retry</text>
-{msg("Queue", "Server", 432, "6. flush again", black)}
-{msg("Server", "Queue", 470, "200 OK", green, True)}
-{msg("Queue", "Client", 500, "7. confirm", blue, True)}
-<g transform="rotate(-6 150 400)"><ellipse cx="150" cy="392" rx="96" ry="40" fill="none" stroke="{red}" stroke-width="2.8"/>
-<text x="150" y="386" text-anchor="middle" font-family="{M}" font-size="18" fill="{red}">idempotency</text>
-<text x="150" y="408" text-anchor="middle" font-family="{M}" font-size="18" fill="{red}">key per op!</text></g>
-<path d="M240 378C290 360 300 340 334 330" fill="none" stroke="{red}" stroke-width="2.4" stroke-linecap="round"/>
-<text x="40" y="44" font-family="{M}" font-size="22" fill="{black}">sync v2 &mdash; happy path + conflict</text>
-</svg>'''
-    ghosts = "".join(f'<div class="abs" style="left:{x}px;top:{y}px;width:{w}px;height:{h}px;border-radius:40%;background:rgba(120,130,140,.045);filter:blur(10px)"></div>'
-                     for x, y, w, h in [(560, 40, 190, 28), (40, 520, 150, 24), (520, 170, 120, 20)])
-    body = f'''<div class="abs" style="inset:0;background:linear-gradient(160deg,#F4F6F7 0%,#FFFFFF 35%,#EEF1F3 60%,#FBFCFC 80%,#E9ECEF)"></div>
-{ghosts}
-<div class="abs" style="left:-60px;top:-40px;width:420px;height:700px;transform:rotate(20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent)"></div>
-{svg.replace('<svg ', '<svg class="abs" style="left:0;top:0" ', 1)}
-<div class="abs" style="left:0;right:0;top:0;height:10px;background:linear-gradient(#B9BEC4,#E3E6E9)"></div>
-<div class="abs" style="left:0;right:0;bottom:0;height:34px;background:linear-gradient(#CDD2D7,#9EA4AB);box-shadow:0 -2px 6px rgba(0,0,0,.15)"></div>
-{''.join(f'<div class="abs" style="left:{x}px;bottom:14px;width:118px;height:17px;border-radius:9px;background:linear-gradient({c1},{c2});box-shadow:0 3px 4px rgba(0,0,0,.25)"><div class="abs" style="right:0;top:0;width:34px;height:17px;border-radius:0 9px 9px 0;background:{cap}"></div></div>'
-         for x, c1, c2, cap in [(470, "#F5F5F5", "#CFCFCF", blue), (604, "#F5F5F5", "#CFCFCF", red)])}'''
-    return doc(p, body, bg="#F4F6F7")
-
-
-def reddit_3(p):
-    """A docs app, light: the 'Design review' checklist page, four of seven ticked."""
-    B = "#2F7CF6"
-    items = [("Every state drawn: empty, loading, error, full", True),
-             ("Works at the largest text size", True),
-             ("Contrast passes in light and dark", True),
-             ("Every control has a VoiceOver label", True),
-             ("Tap targets at least 44 pt", False),
-             ("Motion respects Reduce Motion", False),
-             ("Copy reads in one voice", False)]
-    box = lambda on: (f'<span style="width:18px;height:18px;border-radius:4px;flex:none;background:{B};display:grid;place-items:center">'
-                      f'<svg width="11" height="9" viewBox="0 0 12 10"><path d="M1.5 5l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
-                      if on else '<span style="width:18px;height:18px;border-radius:4px;flex:none;border:1.6px solid #A9A9A6;background:#fff"></span>')
-    checks = "".join(
-        f'<div style="display:flex;align-items:center;gap:12px;height:36px;font:400 16px {SANS};'
-        f'{"color:#787774" if on else "color:#37352F"}">{box(on)}{esc(t)}</div>'
-        for t, on in items)
-    side = [("Team wiki", 0, False), ("Process", 0, False), ("Design review", 1, True), ("Handoff notes", 1, False),
-            ("Release checklist", 1, False), ("Projects", 0, False), ("Meeting notes", 0, False)]
-    side_html = "".join(
-        f'<div style="height:28px;line-height:28px;margin:0 8px;border-radius:5px;padding-left:{10 + 14 * d}px;font:{"500" if sel else "400"} 13.5px {SANS};'
-        f'color:{"#37352F" if sel else "#6B6A66"};background:{"#E9E9E6" if sel else "transparent"}">'
-        f'{"&#9662; " if n == "Process" else ("&#9656; " if d == 0 else "")}{n}</div>' for n, d, sel in side)
-    page_icon = (f'<svg width="54" height="54" viewBox="0 0 54 54"><rect x="6" y="4" width="42" height="46" rx="7" fill="#E6F0FE"/>'
-                 f'<path d="M16 18l4 4 8-8M16 32l4 4 8-8" fill="none" stroke="{B}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'
-                 f'<path d="M33 19h8M33 33h8" stroke="#9DBEF8" stroke-width="3" stroke-linecap="round"/></svg>')
-    body = f'''<div class="abs" style="inset:0;background:#fff"></div>
-<div class="abs" style="left:0;top:0;bottom:0;width:200px;background:#F7F7F5;padding-top:40px">
-  <div style="display:flex;align-items:center;gap:8px;padding:0 16px 14px">
-    <span style="width:22px;height:22px;border-radius:5px;background:#37352F;color:#fff;font:700 12px {SANS};display:grid;place-items:center">S</span>
-    <span style="font:600 14px {SANS};color:#37352F">Studio team</span></div>
-  <div style="font:500 11.5px {SANS};color:#9B9A97;padding:6px 18px">Pages</div>{side_html}</div>
-<div class="abs" style="left:14px;top:13px;display:flex;gap:8px">
-  {''.join(f'<span style="width:12px;height:12px;border-radius:6px;background:{c}"></span>' for c in ("#FF5F57", "#FEBC2E", "#28C840"))}</div>
-<div class="abs" style="left:200px;right:0;top:0;height:44px;display:flex;align-items:center;padding:0 18px;gap:6px;font:400 13.5px {SANS};color:#6B6A66">
-  <span>Process</span><span style="color:#C4C3BF">/</span><span style="color:#37352F">Design review</span>
-  <span style="flex:1"></span><span>Edited 2 days ago</span><span style="width:12px"></span>
-  <span style="color:#37352F;font-weight:500">Share</span></div>
-<div class="abs" style="left:262px;right:60px;top:58px">
-  {page_icon}
-  <div style="font:700 38px {SANS};color:#37352F;letter-spacing:-.6px;margin-top:10px">Design review</div>
-  <div style="font:400 15px/1.5 {SANS};color:#6B6A66;margin-top:8px">Run it before every handoff. A screen ships when every box is ticked.</div>
-  <div style="display:flex;align-items:center;gap:10px;margin:20px 0 8px;font:500 13px {SANS};color:#6B6A66">
-    <div style="width:120px;height:6px;border-radius:3px;background:#EDECE9;overflow:hidden"><div style="width:57%;height:100%;background:{B}"></div></div>4 of 7 done</div>
-  {checks}
-  <div style="margin-top:18px;display:flex;gap:10px;background:#F1F1EF;border-radius:6px;padding:12px 14px;font:400 14.5px/1.45 {SANS};color:#37352F">
-    <span style="font:700 15px Georgia,serif;color:{B}">i</span>An empty box is a question for the room, not a reason to hold the release.</div>
-</div>'''
-    return doc(p, body, bg="#fff")
-
-
-# ── channel graphics ───────────────────────────────────────────────────────
-
 def tg_2(p):
     """Info channel graphic: scheduled messages — a phone and a calendar tile."""
     bubble = lambda text, out, extra="": (
@@ -1197,7 +1092,6 @@ BUILDERS = {
     "shot-5": shot_5, "shot-6": shot_6, "shot-7": shot_7, "shot-8": shot_8,
     "shot-9": shot_9, "shot-10": shot_10, "shot-11": shot_11, "shot-12": shot_12,
     "file-0": file_0, "file-1": file_1, "file-2": file_2, "file-4": file_4,
-    "reddit-2": reddit_2, "reddit-3": reddit_3,
     "tg-2": tg_2, "tg-4": tg_4,
     "fc-0": fc_0, "hf-paper-1": hf_paper_1,
 }

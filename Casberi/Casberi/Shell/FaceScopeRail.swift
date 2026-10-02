@@ -709,56 +709,11 @@ struct FaceScopeRail: View {
 
 /// The wallet adapter (prd §128, widened to the whole Wallet category by §356,
 /// hoisted to the shell by §357, folded into `FaceScopeRail` by §362).
-/// The vibenet room's own face rail (2026-08-23) — the third flavour of
-/// `FaceScopeRail`, beside `WalletScopeRail` and `SocialScopeRail`.
-///
-/// Reported: the Wallet category's rail was drawing your WALLET faces
-/// above the vibenet room, so the one control that says "which of my
-/// addresses am I looking at" was offering the wrong set of addresses
-/// entirely. The rail is right for this room; its contents were not.
-/// These three can never draw together — a source is in the Wallet
-/// category, or a social room, or vibenet.
-enum VibenetScopeRail {
-    static func shows(source: String, watched: Int) -> Bool {
-        source == VibenetIdentity.source && watched > 1
-    }
-
-    /// A watched devnet account per face, in the watch list's own order.
-    /// `WalletFace` draws a deterministic identicon for any hex address,
-    /// so these are the SAME faces the room card and the detail sheet
-    /// show — one account never reads as two different marks.
-    static func items(_ addresses: [String]) -> [FaceScopeRail.Item] {
-        addresses.map { address in
-            FaceScopeRail.Item(
-                id: address,
-                // **THE ELLIPSIS STAYS** (prd §495, reversing §482's
-                // amendment). The caption is the fallback half of a name, so
-                // the mark that says "this has no name, here is its tail" is
-                // exactly what it needs — see `WalletStore.shortAddress` for
-                // the full reasoning and for the measurement that retired the
-                // width argument.
-                caption: VibenetWatch.shared.name(for: address)
-                    ?? VibenetRoom.shortAddress(address),
-                face: .wallet(address: address))
-        }
-    }
-
-    static func matches(_ scope: String?, _ id: String) -> Bool {
-        guard let scope else { return false }
-        return scope.caseInsensitiveCompare(id) == .orderedSame
-    }
-}
-
-// **`HegotaScopeRail`, `FramesScopeRail` AND `PrivacyDevnetScopeRail`
-// ARE DELETED (prd §747, 2026-09-15).** Those three rooms draw no
-// `FaceScopeRail` any more — their accounts are the cards of
-// `DSAccountDeck`, built by each room's own `slots(_:)` — so the
-// adapters that existed only to feed a rail went with it, per §723.
-//
-// `VibenetScopeRail` survives because vibenet still draws a rail in its
-// single-account branch (`VibenetRoomCard.detailBranch`) and the shell
-// reads its `shows`; `WalletScopeRail.shows` survives for the same
-// reason its own note gives.
+// **`FramesScopeRail` IS DELETED (prd §747, 2026-09-15).** The Frames room
+// draws no `FaceScopeRail` any more — its accounts are the cards of
+// `DSAccountDeck`, built by the room's own `slots(_:)` — so the adapter
+// that existed only to feed a rail went with it, per §723.
+// `WalletScopeRail.shows` survives for the reason its own note gives.
 
 enum WalletScopeRail {
     /// Whether this room has a roster worth scoping at all. It outlived the
@@ -770,14 +725,6 @@ enum WalletScopeRail {
     /// is describing.
     static func shows(source: String, watched: Int) -> Bool {
         BridgeCatalog.category(forSource: source) == CategoryFold.walletCategory
-            // Base Vibenet is in the Wallet CATEGORY but its room is not
-            // about your wallets (2026-08-23). Without this it drew your
-            // wallet faces above a room of devnet accounts — a scope
-            // control whose faces have nothing to do with what is beneath
-            // it, and tapping one scoped to a wallet the room cannot
-            // describe. `VibenetScopeRail` below carries the addresses
-            // this room IS about.
-            && source != VibenetIdentity.source
             && watched > 1
     }
 

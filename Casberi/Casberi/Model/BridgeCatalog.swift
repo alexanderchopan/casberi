@@ -129,18 +129,6 @@ enum BridgeCatalog {
         // is a switch over the watched list.
         Offer(name: "0xBow Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 21)),
-        // Wallet group, beside Privacy Pools and Railgun (prd §403). Altana is
-        // an onchain KEYSTORE — a public registry of the credentials allowed
-        // to sign for an account — so it rides the watched wallets the Peer
-        // way: no account, no key, nothing to connect but a wallet you already
-        // watch.
-        //
-        // The summary names the two ceilings, because both would otherwise be
-        // assumed the other way. A session key's SCOPE is not published, so
-        // this says what a key may sign UNTIL and never what it may sign FOR;
-        // and revoking happens on Altana's own surface, never here (§112).
-        Offer(name: "Altana", tagline: "Which keys can sign as you", group: "Wallet", connectable: true,
-              needsSetup: true, added: day(2026, 8, 18)),
         // Wallet group, beside Privacy Pools — the same category for the same
         // reason (prd §268): Railgun trades nothing, it's your own funds
         // wearing a privacy status, and it rides the watched wallets with no
@@ -361,7 +349,7 @@ enum BridgeCatalog {
         // used to say naming them there would "sell the same thing twice"; it
         // was right that it was twice, and wrong about which half to keep.
         //
-        // Peer, 0xBow, Railgun, Safe, Altana, Gnosis Pay and ether.fi keep their
+        // Peer, 0xBow, Railgun, Safe, Gnosis Pay and ether.fi keep their
         // seats and pass the same test: every one lands rows under its own
         // source, so its icon is the only door to a room nothing else opens.
         Offer(name: "ether.fi",    tagline: "Your staked ETH, and the card",     group: "Wallet",    connectable: true,
@@ -465,64 +453,10 @@ enum BridgeCatalog {
         // read-only token there is nothing to mint and nothing to leak.
         Offer(name: "Radicle", tagline: "Peer-to-peer Git, as it happens", group: "Work", connectable: true,
               needsSetup: true, added: day(2026, 8, 18)),
-        // Base's own experimental devnet testing EIP-8130 native account
-        // abstraction (2026-08-23, moved to Wallet the same day). What it
-        // watches is account-abstraction STANDING — which keys can act for
-        // an address, its lock state — the same subject Safe and Altana
-        // already hold this group for ("your Safe's queue and this phone as
-        // a signer", "which keys can sign as you"), not developer tooling
-        // like Radicle/Cursor and not a market. The Radicle SHAPE still
-        // applies (no account, no key, watch an identifier and read its
-        // state) — only the category read differently at first. The one
-        // thing that makes this different from every other keyless watch
-        // here is stated in the summary rather than assumed — vibenet's
-        // contracts get redeployed on no fixed schedule, so nothing about it
-        // may ever be treated as permanent.
-        //
-        // 2026-08-24: the summary's middle paragraph ("Watch an address and
-        // see whether it's established, which keys can act for it, and
-        // whether it's locked") said, in one sentence, what the line under
-        // the icon and both feature rows already said — the tagline is
-        // "Watch an account on Base's devnet", and the checks below name the
-        // keys and the lock state in more detail than the paragraph could.
-        // §192's split is the point: the hook says what this IS, the checks
-        // carry the differentiated extras, and cramming them into both is
-        // the same defect `whatLands` was fixed for on 2026-07-23 (it echoed
-        // the tagline one line under itself). The paragraph's ONE unique
-        // fact — established-or-not, a real state the room reads first and
-        // no check named — became the first check rather than being trimmed
-        // away with the repetition; the checks now run in the read's own
-        // order (established, actors, lock).
-        Offer(name: "Base Vibenet", tagline: "Watch an account on Base's devnet", group: "Wallet", connectable: true,
-              // "no key" was true until 2026-08-29 and is not any more: the
-              // THE NEVER-SIGNS BULLET IS GONE, and it had to go (prd §523,
-              // 2026-08-29): `VibenetSend` gives `VibenetDeviceKey.sign` its
-              // first caller, so the seat can now make an account. Saying
-              // otherwise would be the §83 failure on the page where somebody
-              // decides whether to connect. What replaces it is the part that
-              // is still true and is the whole point — the key is made in the
-              // Secure Enclave, cannot leave it, and costs a Face ID every
-              // time it is used. `vibenet-selftest.sh` ties this bullet to the
-              // code both ways: it may not claim read-only while a signing
-              // path exists, and it may not give up the claim while none does.
-              needsSetup: true, added: day(2026, 8, 23)),
-        // THE NEVER-SIGNS BULLET IS GONE (prd §525, 2026-08-29), the same
-        // day and the same reason as vibenet's: `HegotaSend` gives
-        // `HegotaKey.sign` its first caller, so saying this seat only ever
-        // reads would be the §83 failure on the page where somebody decides
-        // whether to connect. What replaces it is the part that is different
-        // from vibenet and has to be SAID as different — this key is a plain
-        // secp256k1 scalar in the Keychain, not an Enclave key, on the user's
-        // own ruling that a devnet with worthless money does not need
-        // hardware-backed non-export. `hegota-selftest.sh` ties this bullet to
-        // the code both ways.
-        Offer(name: "Hegotá UTXO", tagline: "Explore UTXOs — coins as objects, not a balance", group: "Wallet", connectable: true,
-              needsSetup: true, added: day(2026, 8, 27)),
-        // The OTHER frame-transaction devnet, and a separate seat by ruling
-        // (user, 2026-09-01: "hegota is for hegota writ large" / "this one is
-        // for Frames specifically"). The features below are deliberately NOT
-        // Hegotá's: this chain implements no keyed nonces, so no bullet claims
-        // parallel sends, and no bullet claims coins — it has none. What it
+        // The frame-transaction devnet (prd §548, user, 2026-09-01: "this one
+        // is for Frames specifically"). This chain implements no keyed
+        // nonces, so no bullet claims parallel sends, and no bullet claims
+        // coins — it has none. What it
         // has that nothing else does is the SENDING, which is why that bullet
         // leads: EIP-8141 is a draft, so no released library encodes a frame
         // transaction at all.
@@ -552,35 +486,6 @@ enum BridgeCatalog {
         // anyone), so it is a no-account seat in the Radicle grade.
         Offer(name: "Logos", tagline: "Watch accounts on the Logos testnet", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 29)),
-        // The THIRD ethrex devnet (prd §593, 2026-09-04), and a chain of its
-        // own — 8141, distinct genesis — not a re-host of Hegotá. A separate
-        // seat on the same reasoning that split Frames from Hegotá: no chain
-        // here is a superset of the others. Hegotá alone has the UTXO vault,
-        // this one alone has EIP-8272's recent-roots predeploy, and Frames has
-        // neither. Naming follows the family grammar, operator then chain:
-        // Base Vibenet, Ethrex Hegotá, Ethrex Privacy.
-        //
-        // THE COPY MAY NOT SAY THIS CHAIN MAKES YOU PRIVATE, and the reason is
-        // measured rather than cautious: all 14 type-0x6 transactions on it
-        // carry `sender` in the clear, and EIP-8182's protocol-level shielded
-        // pool is NOT deployed — the pool that exists is an ordinary contract
-        // somebody deployed. What is shielded is the LINK between a commitment
-        // and its spend. Somebody who reads "privacy features" and infers
-        // shielded transfers has been misled on the page where they decide
-        // whether to connect, which is §83 in the domain where believing it is
-        // most expensive. Hence "the proposals" and "what it does and doesn't
-        // hide" rather than any promise.
-        //
-        // WATCH-ONLY, and the bullets say so rather than leaving it to be
-        // discovered. §593a could not reproduce this chain's type-0x6 envelope
-        // byte-exactly — the shipped Hegotá encoder matches its own chain and
-        // nothing here across every candidate encoding — so a send would sign
-        // a guessed layout, which yields a signature that is well-formed,
-        // recovers to a real address, and authorises something other than what
-        // the screen said. The last bullet is the honest version of that and
-        // must be removed in the same commit that lands sending, never before.
-        Offer(name: "Hegotá Privacy", tagline: "Try Ethereum's new privacy proposals", group: "Wallet", connectable: true,
-              needsSetup: true, added: day(2026, 9, 4)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               needsSetup: true),
         Offer(name: "Notion",      tagline: "Pages join your things",                group: "Work",      connectable: true,
@@ -617,8 +522,6 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 8, 30)),
         Offer(name: "Dodo Payments", tagline: "Every payment, the moment it lands", group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 8, 30)),
-        Offer(name: "Reddit",      tagline: "Follow subreddits and people",          group: "Saves",     connectable: true,
-              needsSetup: true),
         Offer(name: "YouTube",     tagline: "Follow any channel",                    group: "Watching",  connectable: true,
               needsSetup: true),
         Offer(name: "Apple Music", tagline: "What you play stays in reach",          group: "Listening", connectable: true),
@@ -904,9 +807,9 @@ enum BridgeCatalog {
         ("Social",  "Bluesky",     ["Network"]),
         // Reading sits AHEAD of Shopping (user ruling 2026-08-06, "should
         // reading come before shopping?"). Two reasons, both about the band
-        // rather than the taste: Reading is 7 seats to Shopping's 5, and every
+        // rather than the taste: Reading is 6 seats to Shopping's 5, and every
         // one of them is a live connect that fills the feed with something to
-        // READ (RSS, Substack, Reddit, Readwise, Raindrop, Kindle, Bookmarks)
+        // READ (RSS, Substack, Readwise, Raindrop, Kindle, Bookmarks)
         // — the app's own core loop. Shopping is the narrowest band in the
         // catalog: Privacy needs a paid plan, Bitrefill is crypto gift cards
         // (Open Food Facts, a barcode scanner rather than a feed, was retired
@@ -1153,10 +1056,7 @@ enum BridgeSetupMode {
 
     /// Reads the wallets already watched — no connection of its own (§515):
     /// `WalletSeatStanding.seats`, by offer name (that table is by seat id and
-    /// is not compiled by the harnesses that compile this file). Altana is
-    /// listed there too and is a `.noAccount` on its own screen — it rides
-    /// the wallets AND takes a key of its own, and the catalogue row asks
-    /// `WalletSeatStanding` first either way.
+    /// is not compiled by the harnesses that compile this file).
     static let walletRidingSeats: Set<String> = ["Peer", "0xBow Privacy Pools", "Railgun", "Safe",
         // MetaMask Card belongs here for Gnosis Pay's exact reason, and
         // leaving it out is not cosmetic (prd §857): `Offer.mode` falls
@@ -1167,11 +1067,11 @@ enum BridgeSetupMode {
         "Gnosis Pay", "MetaMask Card", "ether.fi"]
 
     /// A handle, an address, a feed URL — public reads, no key.
-    static let noAccountSeats: Set<String> = ["Wallet", "Markets", "Reddit", "YouTube",
+    static let noAccountSeats: Set<String> = ["Wallet", "Markets", "YouTube",
         "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
         "Telegram", "Shopify", "Deals", "Hugging Face", "Radicle",
-        "npm", "PyPI", "Altana", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames", "Hegotá UTXO",
-        "Base Vibenet", "ETH Validators", "Hegotá Privacy", "NerdWallet", "Logos",
+        "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames",
+        "ETH Validators", "NerdWallet", "Logos",
         // No key and no account — Apple's model, turned on (prd §833).
         "Apple Intelligence"]
 }

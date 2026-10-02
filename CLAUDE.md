@@ -169,7 +169,7 @@ deliberately does not check are in `docs/verify.md`.
 
 ## Dev keys (real secrets for keyed probes)
 
-- Real test keys for keyed probes (`-byokKey`, `-tokenBridge`, `-openSeaKey`, …) live in the macOS login Keychain under service `casberi-dev.<name>`, managed by `scripts/dev-keys.sh` (`set` prompts silently or reads stdin — the user stores once; `get`/`list`/`delete`). **RULE (user, 2026-07-16): fetch a key ONLY inline via command substitution** — e.g. `xcrun simctl launch booted com.casberi.app -byokKey "venice:$(scripts/dev-keys.sh get venice)"` — never `get` into echo/cat/a variable you print, so values never enter assistant context or session transcripts. `scripts/dev-keys.sh list` shows what's available (names only). This replaces asking the user to paste keys per session; if a needed key isn't stored, ask them to run `dev-keys.sh set <name>` once.
+- Real test keys for keyed probes (`-byokKey`, `-tokenBridge`, …) live in the macOS login Keychain under service `casberi-dev.<name>`, managed by `scripts/dev-keys.sh` (`set` prompts silently or reads stdin — the user stores once; `get`/`list`/`delete`). **RULE (user, 2026-07-16): fetch a key ONLY inline via command substitution** — e.g. `xcrun simctl launch booted com.casberi.app -byokKey "venice:$(scripts/dev-keys.sh get venice)"` — never `get` into echo/cat/a variable you print, so values never enter assistant context or session transcripts. `scripts/dev-keys.sh list` shows what's available (names only). This replaces asking the user to paste keys per session; if a needed key isn't stored, ask them to run `dev-keys.sh set <name>` once.
 
 ## DEBUG launch-arg hooks
 
@@ -200,7 +200,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-icloud.sync YES` — AppStorage override for the sync toggle copy.
 - `-onboarded YES` — AppStorage override that skips first-launch onboarding (fresh installs otherwise land on it, hiding the screen you deep-linked to).
 - `-pileTap "<Offer name>"` — fire an empty-feed pile tile's tap after the fall (NSLogs `pileTap:`). Stage it with `-fresh YES -onboarded YES`, terminate, then `-onboarded YES`.
-- `-openSetup "<Offer name>"` — push a bridge's setup screen; `-openProject "<Tag>"` — push a project detail (both need `casberi://account` opened after launch).
+- `-openSetup "<Offer name>"` — push a bridge's setup screen (needs `casberi://account` opened after launch).
 - `-theme.light` — AppStorage theme override; always pass explicitly for light/dark screenshots (the sim's stored value sticks) → docs/hooks/system.md · prd §204
 - `-howItWorksCTA <s>` — lift the first-launch cover after a delay (`Screens/IntroCover.swift`) → docs/hooks/system.md · prd §620
 - **The dock is CONTINUOUS — the fold tracks the scroll, folders open in place, the page follows the finger, press-and-slide picks (2026-09-05)** → docs/hooks/system.md · prd §621
@@ -285,8 +285,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-notifyProbe` — what would notify, WITHOUT notifying (prd §306, 2026-08-05, Model/NotifySweep.swift + Model/NotifyPlan.swift) → docs/hooks/system.md · prd §306
 - **Notifications are one digest per category, once a day at 18:00, one switch per category; only a dispute, a deadline, a liquidation or a Safe signature stands alone (`NotifyKind.standsAlone`)** → docs/hooks/system.md · prd §770 · §706
 - **A digest is the PLACE and one line (prd §883): `Social` / `25 new`, `Wallet` / `+$1,240`, `Work` / `App Review said no · 3 more`.** → docs/hooks/system.md · prd §809 · §809a · §881 · §883
-- `-vibenetCreateProbe` `-signerProbe` — what making a vibenet account WOULD do, without doing it (prd §530, 2026-08-30) → docs/hooks/devnets.md · prd §530
-- **The vibenet top up claims IN THE APP** (`-vibenetFaucetProbe`) → docs/hooks/devnets.md · prd §553b
 - **L2BEAT — the rails your money sits on, reviewed by somebody independent** → docs/hooks/bridges.md · prd §428
 - **The Safe CO-SIGNER — a key that can sign and can never spend** (`-signerProbe`) → docs/hooks/wallet.md · prd §425
 - **The signer's four doors, no funded wallet (prd §913)** → docs/hooks/wallet.md · prd §913
@@ -320,7 +318,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-igLiveProbe YES` `-igLiveSession` — Instagram's live door: notifications and saved posts with the person's own web-session cookies, and a live save FILLS the export's pointer by shortcode. Only a refusal clears the session; a checkpoint keeps it → docs/hooks/bridges.md · prd §726
 - `-tiktokLiveProbe YES` `-tiktokLiveSession` — TikTok's live door: the Activity inbox with the person's own cookies, no signatures (measured). A dead session is a 200 with `status_code` 8; a read never marks anything read (`tiktok-live-selftest.sh`) → docs/hooks/bridges.md · prd §731
 - **An X notice's post rides `quote`, NEVER `postText` (prd §704).** Row and sheet both LEAD with `postText`, so stamping it drops the news. `SocialSheet.Shape.notice`: after the words test, before the save fallback, gated on the RECORD → prd §704
-- **Feeds (RSS + the four feed-follow bridges)** (`-feedFollow` `-feedHealthProbe`) → docs/hooks/bridges.md · prd §312
+- **Feeds (RSS + the three feed-follow bridges)** (`-feedFollow` `-feedHealthProbe`) → docs/hooks/bridges.md · prd §312
 - **The reading rooms, past §312** → docs/hooks/rooms.md · prd §455
 - **The vault (Obsidian)** (`-obsidianVault` `-obsidianProbe`) → docs/hooks/imports.md · prd §320
 - **The folder a file is saved in (user feedback: "would be great to be able to press here and it takes you to folder where the file is saved") — the disc says the FOLDER since §736 (`Show in Receipts`), and the From row that carried it is deleted** (`-filesRevealProbe`) → docs/hooks/imports.md · prd §408 · §736
@@ -504,6 +502,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - **The Mac takes its own point scale — `DSTextStyle.macScale = 0.88`, one lever.** `DS.Face`/`DS.Mark` and the `widget*` rungs opt out (`design-ramp-audit.py` check 5) → docs/hooks/design.md · prd §631
 - **A walked row on the Mac can be taken with ⌘C, Space and drag-out, through one resolver (`Shell/MacRowHandoff.swift`)** → docs/hooks/design.md · prd §631
 - Product rulings live in docs/prd.md — check it before re-litigating a design decision; record new rulings there.
+- **Current law is `docs/law.md`** — the live rulings by area, each citing the § in force, over a generated index of every live ruling and its amendments; read it before the ledger. `docs/prd.md` stays the record: a new ruling goes there first, then run `python3 scripts/law-digest.py` (`--check` fails when law.md is stale or cites a dead ruling).
 
 ## Website (casberi.app)
 

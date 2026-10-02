@@ -2,7 +2,7 @@
 """Every wallet-riding seat must have a real Connect door and a real Open door.
 
 The class this catches shipped on 2026-08-18 and was reported on 2026-08-28:
-Altana was added to `BridgeStore.walletSeats` and to the catalog with
+a keystore seat was added to `BridgeStore.walletSeats` and to the catalog with
 `needsSetup: true`, and to NEITHER half of `BridgeRouter`. Connect for a
 `needsSetup` offer is `HomeRoute.openSetup`, whose first line is
 `guard let dest = BridgeRouter.destination(forOffer: name) else { return }` --
@@ -165,25 +165,25 @@ def selftest():
     # A clean pair passes.
     cases.append((not check(STORE_OK, ROUTE_OK), "a wired pair passes"))
     # A seat with neither door is flagged TWICE, once per direction -- the
-    # exact shape Altana shipped in.
-    store_bad = STORE_OK.replace('    ]', '''        WalletSeat(id: "altana", name: "Altana",
+    # exact shape a keystore seat shipped in on 2026-08-18.
+    store_bad = STORE_OK.replace('    ]', '''        WalletSeat(id: "keyring", name: "Keyring",
                    count: { x }, noun: "wallet", can: []),
     ]''')
     p = check(store_bad, ROUTE_OK)
     cases.append((any("NO Connect route" in x for x in p), "a seat with no Connect route is flagged"))
     cases.append((any("NO Open route" in x for x in p), "...and its missing Open route too"))
     # Connect wired, Open not: the half-fix.
-    route_half = ROUTE_OK.replace('if name == "Peer"', 'if name == "Peer" || name == "Altana"')
+    route_half = ROUTE_OK.replace('if name == "Peer"', 'if name == "Peer" || name == "Keyring"')
     p = check(store_bad, route_half)
     cases.append((not any("NO Connect route" in x for x in p), "naming it in the .wallet return fixes Connect")) 
     cases.append((any("NO Open route" in x for x in p), "...and does NOT silently fix Open"))
     # Open wired via roomSource.
     route_full = route_half.replace('case "gnosispay": GnosisPayBridge.sourceName',
-                                    'case "gnosispay": GnosisPayBridge.sourceName\n        case "altana": AltanaKeystore.source')
+                                    'case "gnosispay": GnosisPayBridge.sourceName\n        case "keyring": KeyringBridge.source')
     cases.append((not check(store_bad, route_full), "both doors wired passes"))
     # A seat carrying its own Row satisfies both.
     route_row = ROUTE_OK.replace('Row(offer: "Gnosis Pay"',
-                                 'Row(offer: "Altana", id: "altana", destination: .safe),\n        Row(offer: "Gnosis Pay"')
+                                 'Row(offer: "Keyring", id: "keyring", destination: .safe),\n        Row(offer: "Gnosis Pay"')
     cases.append((not check(store_bad, route_row), "a seat with its own Row satisfies both"))
     # A multi-id `case` line must count every id on it, or aave/morpho read as unrouted.
     store_multi = STORE_OK.replace('WalletSeat(id: "peer", name: "Peer"',

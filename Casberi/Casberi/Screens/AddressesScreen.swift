@@ -1550,7 +1550,7 @@ struct ContactSheet: View {
 
     /// The seat whose mark the row wears — the name `BridgeIcon` resolves,
     /// exactly as a dock chip does. A kind with no seat of its own borrows the
-    /// nearest mark: a Basename wears Base's, an email its provider's.
+    /// nearest mark: a Basename wears the Wallet's, an email its provider's.
     static func mark(_ identity: Identity) -> String {
         switch identity.kind {
         case .contact:   return "Contacts"
@@ -1558,7 +1558,7 @@ struct ContactSheet: View {
         case .github:    return "GitHub"
         case .wallet:    return "Wallet"
         case .ens:       return "ENS"
-        case .basename:  return "Base Vibenet"
+        case .basename:  return "Wallet"
         case .linea:     return "Linea"
         case .farcaster: return "Farcaster"
         case .lens:      return "Lens"

@@ -595,7 +595,7 @@ enum SocialTopics {
     /// Unfollowing a PERSON (or a feed) takes their posts with it — the same
     /// ruling as `pruneTopic`, one field over (user, 2026-08-02: "if you
     /// unfollow something it shouldn't show in your corpus"). Every social
-    /// account and every RSS/YouTube/Reddit feed-follow shared ONE
+    /// account and every RSS/YouTube feed-follow shared ONE
     /// `removeName`, and none of them touched the corpus.
     ///
     /// The exemption is `pruneTopic`'s mirror image: a post of theirs that

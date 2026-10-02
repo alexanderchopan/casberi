@@ -431,8 +431,8 @@ grep -q 'FeedRoomHealthSource.standing(for: source)' "$FEED" \
 grep -q 'route.pushBridge(destination)' "$TMP/feed.nocomment" \
   || { echo "✗ the health note is a label again — the one useful response is to"; \
        echo "  open the followed list, and nothing else on screen offers it"; exit 1; }
-# All five feed-following rooms, or a bridge silently loses the note.
-for room in RSS Substack Reddit YouTube Podcasts; do
+# All four feed-following rooms, or a bridge silently loses the note.
+for room in RSS Substack YouTube Podcasts; do
   grep -q "\"$room\"" "$SOURCE" \
     || { echo "✗ $room is not in FeedRoomHealthSource — its room can never say"; \
          echo "  that one of its feeds stopped answering"; exit 1; }

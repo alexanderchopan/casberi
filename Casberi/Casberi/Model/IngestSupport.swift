@@ -599,7 +599,7 @@ enum IngestSupport {
     /// order) — the shape every ingest's fetch-then-sequential-bookkeeping
     /// split needs. A wallet/RSS/feed-follow refresh used to fetch one item
     /// at a time; firing every item at once instead can out-burst a
-    /// provider's rate limit (Alchemy's key, Reddit's `.rss` endpoint) in a
+    /// provider's rate limit (Alchemy's key, a feed host's endpoint) in a
     /// way the old serial pacing never did. Capping keeps the concurrency
     /// win without the burst (2026-07-13).
     static func boundedGather<Item, Output>(

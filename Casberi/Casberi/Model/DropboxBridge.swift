@@ -25,7 +25,7 @@ import SwiftData
 /// replacement). An app key is not a secret — PKCE needs nothing else.
 /// `redirectURI` below is confirmed accepted verbatim in Dropbox's Redirect
 /// URIs field — no custom-scheme rejection, no forwarding-page trick needed
-/// (unlike `RedditAuth`'s form). Permissions must still be granted on THIS
+/// (unlike a password form). Permissions must still be granted on THIS
 /// app in its Permissions tab: `files.metadata.read` + `files.content.read`
 /// checked, nothing else.
 enum DropboxAuth {

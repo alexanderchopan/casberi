@@ -42,9 +42,8 @@ import SwiftUI
 /// (§450's caption, drawn by each room's crown), so the rail's word is a
 /// label and the head is the name — the §495 pairing, not a second truncation.
 ///
-/// Every room in the family (Wallet, Vibenet, Hegotá, Frames, the Privacy
-/// devnet) passes the same arguments it passed §747's chrome; only this file
-/// decides where they are drawn.
+/// Every room in the family (Wallet, Frames, Logos) passes the same arguments
+/// it passed §747's chrome; only this file decides where they are drawn.
 ///
 /// **The section TILES are on every page** (prd §752, §752b, user: "i don't
 /// want the app to have controls at the top of the screen anywhere", then "i
@@ -257,7 +256,7 @@ struct DSAccountSlot: Identifiable, Equatable {
     let name: String
     let sub: String?
     let faces: [FaceScopeRail.Item.Face]
-    /// The picker's section for this slot, nil for none. Vibenet splits "On
+    /// The picker's section for this slot, nil for none. A devnet splits "On
     /// this phone" from "Watching"; a room that sets none draws a flat menu.
     var group: String? = nil
 }
@@ -265,8 +264,7 @@ struct DSAccountSlot: Identifiable, Equatable {
 extension DSAccountSlot {
     /// **THE PICKER'S ON THIS PHONE / WATCHING SECTIONS (prd §964)** for a
     /// devnet, where this phone holds keys: "All" stays first and ungrouped,
-    /// this phone's accounts follow, then the ones you watch. Vibenet builds
-    /// its own (`VibenetThisPhone`) with the same two words.
+    /// this phone's accounts follow, then the ones you watch.
     static func groupedByPhone(_ slots: [DSAccountSlot],
                                onPhone: (String) -> Bool) -> [DSAccountSlot] {
         let accounts = slots.filter { !$0.id.isEmpty }.map { slot -> (DSAccountSlot, Bool) in

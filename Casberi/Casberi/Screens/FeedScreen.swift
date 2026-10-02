@@ -452,7 +452,7 @@ struct FeedScreen: View {
     // KNOWN AND DELIBERATE: `content` stays OUT. It is the heavy column for
     // the rooms this change is FOR — a note's whole body, a chat's transcript,
     // a screenshot's OCR. This note used to record a cost against it: three
-    // leaderboards (Steam hours, the `r/` subreddit, the host a link came
+    // leaderboards (Steam hours, a feed's group, the host a link came
     // from) read `content` per row, so those rooms faulted once per row where
     // the old unpredicated fetch had it loaded. §723 deleted all three boards,
     // so the omission now costs nothing at all.
@@ -460,7 +460,7 @@ struct FeedScreen: View {
     // UNMEASURED, and stated as such: the 26.6%-of-main-thread figure behind
     // the All room's own columns came from `scripts/main-thread-profile.sh` on
     // a 6,000-row corpus, and no equivalent profile has been run for a source
-    // room. If a Reddit or Steam room ever reads as slow to open, this comment
+    // room. If a feed or Steam room ever reads as slow to open, this comment
     // is the first place to look and `content` is the first thing to try.
 
     /// Only `tag` is read from here now — a kind filter is a cross-page state
@@ -495,41 +495,10 @@ struct FeedScreen: View {
         /// question here.
         case deposits(WalletComposition)
         case locks(WalletComposition)
-        /// A market from the live book, previewed BEFORE it's followed
-        /// (prd §234) — so it has no `Thing` yet and can't ride `.thing`.
-        /// One Hegotá movement, opened for its FRAME BREAKDOWN (prd §500).
-        ///
-        /// Routed here for `market`'s two reasons at once: the seat lands no
-        /// `Thing` so it cannot ride `.thing`, and its card lives inside this
-        /// List's rows — a `.sheet` there resolves to the same presenting
-        /// controller as this one and half-opens before closing again.
-        /// Carries the OWNING address beside the move: in the All scope
-        /// nothing else can say which of your addresses a transaction was.
-        case hegotaMove(HegotaMove, String)
-        /// One FRAME of a frame transaction — the chain's defining object, and
-        /// until §503 the one thing in this room that could not be opened.
-        /// Carries the whole move and an index rather than the frame alone, so
-        /// the sheet can draw the step in its sequence; a step out of its order
-        /// is a step without its meaning.
-        case hegotaFrame(HegotaMove, Int)
-        /// One watched Hegotá address, opened from the Accounts list — routed
-        /// here for `hegotaMove`'s two reasons: no `Thing` to ride, and a card
-        /// inside this List cannot present its own sheet.
-        case hegotaAccount(HegotaAccount)
-        /// This phone's own Hegotá key (prd §525/§526) — routed here for
-        /// `hegotaAccount`'s exact reason: the row lives in `HegotaRoomList`,
-        /// which is inside this List's rows, and cannot present its own sheet.
-        case hegotaKeySheet
         /// A web page in the in-app Safari sheet (prd §653) — a faucet page
         /// raised from a room's Top up, which sits inside this List's rows and
         /// cannot present its own sheet.
         case web(URL)
-        // `hegotaSendSheet` was HERE and is deleted (prd §539, 2026-08-31):
-        // sending is the Hegotá room's own Home scope now (`HegotaSendCard`),
-        // not a sheet raised from inside another sheet.
-        /// One UTXO, the spend that created it, and which of that spend's
-        /// outputs are still unspent.
-        case hegotaCoin(HegotaCoin, [HegotaCoin], Set<UInt64>)
         /// The NFT picker (prd §387). Routed here rather than presented by the
         /// shelf card, which lives inside this List's rows — a `.sheet` on a row
         /// resolves to the same presenting controller as this one and the picker
@@ -544,64 +513,13 @@ struct FeedScreen: View {
         /// Carries a handle and a source, so no `Thing` and no liveness
         /// question.
         case person(source: String, handle: String)
-        /// The vibenet key tray (2026-08-25, prd §468) — which keys are in
-        /// which permission category, opened from the keys card. Routed here
-        /// for the standing reason every case above it is: the card lives
-        /// inside this List's rows, and a `.sheet` on a row resolves to the
-        /// same presenting controller as this one — the half-open-then-close
-        /// bug (ruling 2026-07-28).
-        ///
-        /// Carries the ACCOUNT ITEMS by value rather than reading the room at
-        /// present time, the `deposits`/`locks` ruling: a composed read can
-        /// land under an open tray, and a tray that re-read mid-presentation
-        /// would renumber itself while being looked at. Value types
-        /// throughout, so no `Thing` and no liveness question.
-        case vibenetKeys([VibenetAccountItem], newKeyIDs: Set<String>)
-        /// One key's own sheet (prd §478) — the scoped vibenet account's key
-        /// rows present rather than expand in place. Actor + the account it
-        /// acts for + the room-wide shared-key facts, all value types
-        /// captured at tap time, the `vibenetKeys` reasoning exactly.
-        case vibenetKey(VibenetActor, VibenetAccountItem, [VibenetSharedKey])
-        /// Making an account whose only key is this phone (prd §523/§526).
-        /// Routed here for `vibenetKeys`' own reason: the create row lives in
-        /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
-        /// present its own sheet.
-        case vibenetCreate
-        /// **THE WATCH SHEET (prd §576).** Routed here for `vibenetCreate`'s
-        /// reason verbatim — the watch row is the create row's own sibling in
-        /// `VibenetRoomCard`, inside this List's rows, so it cannot present a
-        /// sheet of its own.
-        ///
-        /// It had NO case and no presenter at all: §545 moved the roster's
-        /// verbs onto its rows and this one arrived without its destination,
-        /// so `VibenetWatchSheet` sat in the tree constructed by nobody while
-        /// "Watch an account" stayed tappable and did nothing.
-        case vibenetWatch
-        /// **THE SEND FORM, ON A SHEET (prd §553).** Home holds the two verbs
+        /// **THE SEND FORM, ON A SHEET (prd §553, §548).** Home holds the verbs
         /// and the form holds the screen — routed here rather than presented by
-        /// the card for `hegotaMove`'s reason: a `.sheet` on a view inside this
-        /// List resolves to the same presenting controller as this one and
-        /// half-opens before closing again.
-        case hegotaSend
-        /// The Frames devnet's send, routed here for `hegotaSend`'s reason: a
-        /// `.sheet` inside a List row half-opens and closes (§548).
+        /// the card: a `.sheet` on a view inside this List resolves to the same
+        /// presenting controller as this one and half-opens before closing again.
         case framesSend
-        /// Ethrex Privacy's send, here for the same reason as its three
-        /// siblings: a `.sheet` inside a List row half-opens and closes.
-        case privacyDevnetSend
-        /// Ethrex Privacy's shield — a deposit into the pool (prd §593e). The
-        /// same amount console as send, in its destinationless mode.
-        case privacyDevnetShield
-        /// ONE PRIVACY TRANSACTION (prd §596) — `framesMove`'s two reasons at
-        /// once: the seat lands no `Thing` so nothing can ride `.thing`, and
-        /// the rows that open it live inside this List. Carries the OWNING
-        /// address beside the move (Hegotá's rule: in an unscoped room nothing
-        /// else can say whose transaction it is).
-        case privacyDevnetMove(PrivacyDevnetLiveState.Move, String)
-        /// One watched Ethrex Privacy address.
-        case privacyDevnetAccount(PrivacyDevnetAccount)
         /// ONE FRAMES TRANSACTION, and the three routes below it — all four
-        /// here for `hegotaMove`'s two reasons at once: the seat lands no
+        /// here for two reasons at once: the seat lands no
         /// `Thing` so nothing can ride `.thing`, and every card that opens one
         /// lives inside this List's rows, where a `.sheet` resolves to the same
         /// presenting controller as this one and half-opens before closing.
@@ -632,22 +550,6 @@ struct FeedScreen: View {
         /// Somebody asking this phone to pay their fee (prd §728c), opened by a
         /// `casberi://frames/sponsor` link through `chrome.framesSponsorRequest`.
         case framesSponsor(FramesSponsorRequest)
-        /// Carries the sending account, which only `signableVibenetAccounts()`
-        /// can resolve — the sheet must never re-derive it and disagree.
-        case vibenetSend(Data)
-        // `vibenetSend` was HERE and is deleted (prd §538, 2026-08-31):
-        // sending is not a presented surface any more, it is the Home scope's
-        // own content (`VibenetSendCard`). A route with no caller is a door
-        // onto a screen that no longer exists.
-        /// Authorizing a new key, or re-authorizing an existing one with a
-        /// different scope (prd §534) — the same route either way, since
-        /// `AuthorizeActor` is an upsert. `editing` is nil for a brand-new
-        /// key; carrying the actor being edited otherwise, so this route
-        /// never re-reads a value the caller already has on screen.
-        /// `replacing` with `editing`: a new key takes that key's place in one
-        /// transaction (`VibenetSend.replaceActor`).
-        case vibenetAuthorize(account: Data, localEpoch: UInt32, localSequence: UInt32,
-                             editing: VibenetActor?, replacing: Bool = false)
 
         var id: String {
             switch self {
@@ -661,34 +563,16 @@ struct FeedScreen: View {
             case .socialFaces: "socialFaces"
             case .deposits: "deposits"
             case .locks: "locks"
-            case .hegotaMove(let m, _): "hegotaMove:\(m.id)"
-            case .hegotaFrame(let m, let i): "hegotaFrame:\(m.id)#\(i)"
-            case .hegotaAccount(let a): "hegotaAccount:\(a.address)"
-            case .hegotaKeySheet: "hegotaKeySheet"
             case .web(let url): "web:\(url.absoluteString)"
-            case .hegotaCoin(let c, _, _): "hegotaCoin:\(c.index)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
-            case .vibenetKeys: "vibenetKeys"
-            case .vibenetKey(let actor, let item, _):
-                "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
-            case .vibenetCreate: "vibenetCreate"
-            case .vibenetWatch: "vibenetWatch"
-            case .hegotaSend: "hegotaSend"
             case .framesSend: "framesSend"
-            case .privacyDevnetSend: "privacyDevnetSend"
-            case .privacyDevnetShield: "privacyDevnetShield"
-            case .privacyDevnetMove(let m, _): "privacyDevnetMove:\(m.id)"
-            case .privacyDevnetAccount(let a): "privacyDevnetAccount:\(a.address)"
             case .framesMove(let m, _): "framesMove:\(m.id)"
             case .framesFrame(let m, let i): "framesFrame:\(m.id)#\(i)"
             case .framesPayer(let p, _): "framesPayer:\(p.id)"
             case .framesAccount(let a): "framesAccount:\(a.address)"
             case .framesSponsor(let r): "framesSponsor:\(r.id)"
             case .githubWatch: "githubWatch"
-            case .vibenetSend(let a): "vibenetSend:\(VibenetTransaction.hex(a))"
-            case .vibenetAuthorize(let account, _, _, let editing, let replacing):
-                "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")\(replacing ? ":replace" : "")"
             }
         }
     }
@@ -708,251 +592,8 @@ struct FeedScreen: View {
         guard !Task.isCancelled, feedSheet == nil else { return }
         feedSheet = .githubWatch
     }
-    /// Non-nil while the last-account confirm sits open for a vibenet
-    /// "Stop watching" tap — see `vibenetUnwatch`/`commitVibenetUnwatch`.
-    @State private var removingLastVibenet: String?
-    /// Non-nil while the vibenet naming alert sits open — the address it names
-    /// (prd §669). On the SCREEN rather than the card for the reason the card's
-    /// `onRename` gives: three shapes of that card offer "Name this account…"
-    /// and only one of them ever drew the alert, so the verb worked or did
-    /// nothing depending on which one you long-pressed.
-    @State private var renamingVibenet: String?
-    /// The naming alert's field — a text-entry alert needs its text in `@State`.
-    @State private var vibenetNameDraft = ""
 
-    /// "Name this account…" from any of the vibenet card's long-presses.
-    /// Seeded with the name it already has, so the alert opens on the current
-    /// answer rather than an empty box that reads as a fresh address.
-    private func vibenetRename(_ address: String) {
-        DSHaptic.tap()
-        vibenetNameDraft = VibenetWatch.shared.name(for: address) ?? ""
-        renamingVibenet = address
-    }
-
-    /// "Stop watching" from the card's own long-press (prd §472's guard,
-    /// copied from `VibenetAddressBookScreen.unwatch`): the ordinary case
-    /// removes immediately, the LAST address asks first, since removing it
-    /// tears down the whole seat rather than one row.
-    private func vibenetUnwatch(_ address: String) {
-        guard VibenetWatch.shared.addresses.count > 1 else {
-            removingLastVibenet = address
-            return
-        }
-        commitVibenetUnwatch(address)
-    }
-
-    /// The removal itself, past whatever asking was owed — the same
-    /// read-now-then-bump-the-pulse pattern `onWatched` uses right below,
-    /// so the card's memoised head actually recomputes instead of going on
-    /// showing an address that was just removed.
-    private func commitVibenetUnwatch(_ address: String) {
-        DSHaptic.tap()
-        VibenetWatch.shared.remove(address)
-        if VibenetWatch.shared.connected {
-            VibenetBridge.registerBridge(store: bridges)
-        } else {
-            VibenetBridge.disconnect(store: bridges)
-        }
-        // DROPPED FROM THE SNAPSHOT NOW, not after the next full chain read
-        // (2026-08-30, user report: "long press and unwatch has about a 30
-        // second lag" — the row stayed on screen until compose() below
-        // happened to finish). `VibenetRoomSource.compose()` re-reads EVERY
-        // remaining watched address against the chain, paced at 3 at once —
-        // genuinely slow with more than a couple of accounts, and none of
-        // that reading has anything to do with the one thing this tap needs
-        // to show: that this address is no longer in the list.
-        // `VibenetRoom.compose(items:…)` is the pure, local aggregator
-        // `compose()` itself calls after its network read; reused here over
-        // the filtered last-known items, it rebuilds the same room shape
-        // with nothing to wait on, so the row disappears on THIS tap.
-        if let saved = VibenetState.saved {
-            let trimmed = VibenetRoom.compose(
-                items: saved.items.filter { $0.address.caseInsensitiveCompare(address) != .orderedSame },
-                branch: saved.branch, commit: saved.commit, configReached: saved.configReached,
-                redeployedSinceLastSeen: saved.redeployedSinceLastSeen,
-                readAt: saved.readAt, pulse: saved.pulse)
-            VibenetState.save(trimmed)
-        }
-        // **NO SHOWER HERE, AND TWICE OVER (§655 amendment).** These two
-        // bumps exist to move the room's memoised head — nothing has arrived.
-        // While they went through `rain` they dealt TWO showers seconds apart
-        // (the local trim, then the chain read), which is the stutter "one
-        // gesture, one shower" forbids, over a REMOVAL, which is not a thing
-        // to celebrate at all. `refreshRooms` moves the head and draws nothing,
-        // so both calls are now free.
-        chrome.refreshRooms()
-        Task {
-            _ = await VibenetRoomSource.compose()
-            chrome.refreshRooms()
-        }
-    }
-
-    /// Scope the vibenet room to one account — the Accounts card's row tap
-    /// and the linked spine's node tap (prd §476), the same write
-    /// `VibenetScopeRail` makes.
-    ///
-    /// A stored closure rather than an inline one at the call site, for the
-    /// reason `roomHead`'s own note records: `listBody`'s List is one
-    /// expression and closure literals in it have already tipped the
-    /// type-checker's budget once.
-    private var vibenetScoper: (String) -> Void {
-        { address in
-            // EMPTY MEANS ALL (prd §482 amendment). The folded chip strip
-            // signals "unscoped" by passing "", because its callback is a
-            // plain `(String) -> Void` shared with the rail it replaced —
-            // mapping it to nil HERE rather than widening the signature keeps
-            // every other caller unchanged, and an empty string reaching
-            // `vibenetScope` would scope the room to an account that cannot
-            // exist and quietly empty it.
-            withAnimation(DS.Motion.standard) {
-                chrome.vibenetScope = address.isEmpty ? nil : address
-            }
-        }
-    }
-
-    /// THE ONE WRITE ACTION IN THE ROOM, in the slot the "Latest 3" preview
-    /// used to occupy (prd §533, 2026-08-31 — see the case above for why it
-    /// was replaced rather than kept).
-    ///
-    /// **IT IS THE FORM ITSELF NOW, NOT A DOOR TO ONE (prd §538, same day;
-    /// user: "it shouldn't have a door… it should be part of the screen").**
-    /// §533 shipped this as a row that presented `VibenetSendSheet`, and a
-    /// scope whose whole content is one row reading "Send ›" has restated its
-    /// question as a menu item rather than answered it. The sheet, its head and
-    /// the tap that raised it are all ceremony around two fields, so the fields
-    /// are the scope: `VibenetSendCard` draws under the crown, the face rail
-    /// and the section strip, which are untouched and still exactly where they
-    /// were. `VibenetSendSheet` and its `FeedSheetRoute` case are deleted.
-    ///
-    /// Gated on there being an account to send FROM, never drawn as a dead
-    /// control over nothing (§83). `signableVibenetAccounts` scans the last
-    /// saved read the same way `VibenetThisPhoneRow` already checks its own
-    /// presence, and answers empty rather than guessing when there is none,
-    /// same as every refusal `VibenetSigner` states rather than hides. Since
-    /// prd §774 the page decides which of them: All acts for the first, each
-    /// account's own page for itself.
-    /// **THE ROOM'S ACTS, HANDED TO THE CARD (prd §747).** It was a `Section`
-    /// mounted below `VibenetRoomCard`, which put the verbs under the list on
-    /// any Home with history — §682's complaint, one seat over. It is passed
-    /// in as `VibenetRoomCard.acts` now and draws on the account card beside
-    /// the crown. The `Section`s inside are gone with the move: a card is not
-    /// a List.
-    @ViewBuilder
-    private func vibenetSendRow(scope raw: String) -> some View {
-        // **EVERY PAGE (prd §774).** "" is the All page and acts for the first
-        // account this phone's key can act for; one of those accounts' own
-        // pages acts for itself; anybody else's page keeps Create account.
-        let scope: String? = raw.isEmpty ? nil : raw
-        let signable = Self.signableVibenetAccounts()
-        let account: Data? = scope == nil
-            ? signable.first
-            : signable.first { VibenetTransaction.hex($0).caseInsensitiveCompare(
-                String(scope!.dropFirst(2))) == .orderedSame }
-        if let account {
-                VibenetSendCard(account: account,
-                                onSend: { feedSheet = .vibenetSend(account) },
-                                // **CREATE IS A PEER NOW, NOT THE FALLBACK
-                                // BELOW (2026-09-04).** The `else` branch still
-                                // exists and still draws the create panel,
-                                // because with no signable account there is
-                                // nothing to send from, top up or authorize on
-                                // — one act is not a menu (§559), so that state
-                                // correctly keeps the single hero tile.
-                                onCreate: { feedSheet = .vibenetCreate },
-                                // **THE SUBJECT IS `account`** — the page's own
-                                // account, or the first signable one on All.
-                                // The picker this comment once asked for is the
-                                // account pages themselves (prd §774).
-                                onAuthorize: {
-                                    let seq = Self.vibenetChangeSequences(for: account)
-                                    feedSheet = .vibenetAuthorize(
-                                        account: account,
-                                        localEpoch: seq?.localEpoch ?? 0,
-                                        localSequence: seq?.localSequence ?? 0,
-                                        editing: nil)
-                                },
-                                from: scope == nil && signable.count > 1
-                                    ? WalletStore.shortAddress("0x" + VibenetTransaction.hex(account))
-                                    : nil)
-                .id(raw)
-            // The 2026-09-04 row chrome is gone with the Section it belonged
-            // to: this draws on the account card now (prd §747), and the card
-            // owns its own padding. Nothing here may add List row insets — a
-            // card is not a List, and the separator this was suppressing
-            // cannot exist inside one.
-        } else if scope != nil {
-            // Somebody else's page: nothing here can spend from it.
-            DevnetVerbRow(title: String(localized: "Create account"),
-                          glyph: "plus.rectangle.on.rectangle",
-                          tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
-                          act: { feedSheet = .vibenetCreate })
-        } else {
-            // **A SCOPE NEVER DRAWS NOTHING (prd §552d), NOW IN THE ROOM'S OWN
-            // LANGUAGE (§553).** §538 gated the console on an account this
-            // phone's key can act for, which is right about the form and wrong
-            // about the screen: Home's ENTIRE content is that card, so without
-            // one the scope rendered blank.
-            //
-            // §552d answered it with a sentence and no door. The sentence is
-            // gone: it claimed something about the ROOM ("no account here")
-            // that is false whenever you are watching addresses, which is most
-            // of the time. The verb says what it does and nothing else.
-            //
-            // The door is the EXISTING create sheet, not a one-tap mint like
-            // Hegotá's: a vibenet account is deployed by a sponsor, so it has a
-            // real flow with a payer check behind it and cannot be a keystroke.
-                // **FIND, AND CREATE BESIDE IT (prd §774, amending §681).**
-                // This scope draws when no WATCHED account lists this device's
-                // key as an actor — true for a phone that has never made one,
-                // for a phone whose account exists on chain but is not watched
-                // (§681's case: a reinstall drops the watch list while the
-                // Keychain key survives), AND for a phone that made a key and
-                // never an account, or wants a second. §681 let the key's
-                // presence pick ONE verb, so that third phone saw "Find my
-                // account", tapped it, was told no account uses this key, and
-                // had nowhere to go (user: "it has a link to find my account
-                // but not create account"). A key present is a reason to
-                // offer Find first; it was never a reason to withhold Create.
-                let tint = DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff")
-                if VibenetDeviceKey.presence() == .present {
-                    DevnetCreatePanel(tint: tint,
-                                      title: String(localized: "Find my\naccount"),
-                                      busy: vibenetFinding,
-                                      onCreate: findVibenetAccount)
-                    DevnetVerbRow(title: String(localized: "Create account"),
-                                  glyph: "plus.rectangle.on.rectangle", tint: tint,
-                                  act: { feedSheet = .vibenetCreate })
-                } else {
-                    DevnetCreatePanel(tint: tint,
-                                      title: String(localized: "Create\naccount"),
-                                      onCreate: { feedSheet = .vibenetCreate })
-                }
-        }
-    }
-
-    // MARK: - Sending, from the room's two devnets (prd §553)
-
-    /// Everything this devnet knows, minus this phone's own account — a picker
-    /// that offers you yourself is offering a self-send, which neither chain
-    /// forbids and nobody means.
-    private var hegotaSendCandidates: [(address: String, name: String?)] {
-        let me = HegotaKey.address()
-        return HegotaWatch.shared.addresses
-            .filter { me == nil || $0.caseInsensitiveCompare(me!) != .orderedSame }
-            .map { ($0, HegotaWatch.shared.name(for: $0)) }
-    }
-
-    /// What the sending account holds, off the last sweep — never a live read,
-    /// so a keystroke never spends a request. Nil when the sweep could not
-    /// reach the chain: a failed read and a real zero must not look alike
-    /// (§83), so the line is absent rather than claiming nothing is held.
-    private var hegotaHeldLine: String? {
-        guard let mine = HegotaKey.address(),
-              let account = HegotaLiveState.shared.accounts.first(where: {
-                  $0.address.caseInsensitiveCompare(mine) == .orderedSame
-              }), account.reached, let wei = account.balanceWei else { return nil }
-        return String(localized: "\(HegotaFormat.crown(wei)) available")
-    }
+    // MARK: - Sending, from the Frames devnet (prd §553)
 
     /// **The addresses you watch, and only those** (prd §990, user: "remove
     /// the suggested addresses data from the devnets"). The 2026-09-01 ruling's measured
@@ -997,140 +638,6 @@ struct FeedScreen: View {
             .map { framesSendsFromPasskey
                 ? String(localized: "\($0) available · passkey account")
                 : String(localized: "\($0) available") }
-    }
-
-    /// Who Ethrex Privacy can send to, watched addresses first.
-    ///
-    /// The same shape as `framesSendCandidates`: the addresses you watch (the
-    /// measured examples are deleted, prd §990), and never this phone's own
-    /// account, since sending to yourself is the one destination the picker
-    /// should never suggest.
-    private var privacyDevnetSendCandidates: [(address: String, name: String?)] {
-        let me = PrivacyDevnetKey.address()
-        var seen = Set<String>()
-        var out: [(address: String, name: String?)] = []
-        for address in PrivacyDevnetWatch.shared.addresses {
-            let key = address.lowercased()
-            guard !seen.contains(key) else { continue }
-            guard me == nil || address.caseInsensitiveCompare(me!) != .orderedSame else { continue }
-            seen.insert(key)
-            out.append((address, PrivacyDevnetWatch.shared.name(for: address)))
-        }
-        return out
-    }
-
-    /// What the sending account holds, off the last sweep — never a live read,
-    /// so a keystroke never spends a request. Nil when the sweep could not
-    /// reach the chain: a failed read and a real zero must not look alike
-    /// (§83), so the line is absent rather than claiming nothing is held.
-    private var privacyDevnetHeldLine: String? {
-        guard let mine = PrivacyDevnetKey.address(),
-              let account = PrivacyDevnetLiveState.shared.accounts.first(where: {
-                  $0.address.caseInsensitiveCompare(mine) == .orderedSame
-              }), account.reached, let wei = account.balanceWei else { return nil }
-        return String(localized: "\(PrivacyDevnetMoney.line(wei: wei)) available")
-    }
-
-    /// Watch one of the room's example addresses, from the room (prd §593d).
-    ///
-    /// **The room does not navigate away.** The whole point of the door is that
-    /// somebody standing in a quiet room gets something to read without leaving
-    /// it, so this watches and refreshes in place — where the connect screen's
-    /// own first watch routes here, because there the room IS the new place.
-    /// Send on Ethrex Privacy.
-    ///
-    /// **`freshKey` is this chain's own control and neither sibling has one**
-    /// (prd §593d): a spend on a brand-new 32-byte nonce key cannot be tied to
-    /// the last one, which is the unlinkability the seat is named for and which
-    /// the room could READ since it shipped without ever being able to make one.
-    private func sendPrivacyDevnet(to: String, amount: String, freshKey: Bool) async -> String? {
-        guard !DemoMode.isActive else {
-            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
-        }
-        guard DevnetSendParse.isValidAddress(to),
-              let wei = DevnetSendParse.weiData(from: amount),
-              PrivacyDevnetKey.address() != nil else {
-            return String(localized: "Couldn't send.")
-        }
-        // A fresh key that the system generator refused is DROPPED rather than
-        // sent weak: a predictable "unlinkable" key is worse than an honest
-        // linkable one, because the person believes it.
-        var key: Data?
-        if freshKey {
-            let made = PrivacyDevnetSend.freshNonceKey()
-            guard !made.isEmpty else {
-                return String(localized: "Couldn't make a one-time spend key on this phone — nothing was sent.")
-            }
-            key = made
-        }
-        do {
-            let hash = try await PrivacyDevnetSend.sendValue(
-                to: to, weiHex: "0x" + (wei.isEmpty ? "0" : RLP.hex(wei)), freshKey: key)
-            await PrivacyDevnetLiveState.shared.refresh()
-            // Returned at broadcast — read again once mined (Hegotá's case).
-            Task { @MainActor in
-                if await PrivacyDevnetSend.awaitInclusion(hash) {
-                    await PrivacyDevnetLiveState.shared.refresh()
-                }
-            }
-            return nil
-        } catch let failure as PrivacyDevnetSend.Failure {
-            switch failure {
-            case .noKey:            return String(localized: "There's no account on this phone yet.")
-            case .signingRefused:   return String(localized: "The signature was refused.")
-            case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was sent.")
-            // The node's OWN words (§530). This chain's refusals name the field
-            // they were decoding, which is what made its envelope findable at
-            // all — throwing that away would discard the most useful thing it
-            // says, on the screen where a refusal costs the most.
-            case .refused(let why): return String(localized: "The network refused it: \(why)")
-            case .faucet(let verdict): return verdict.sentence
-            }
-        } catch {
-            return String(localized: "Couldn't send.")
-        }
-    }
-
-    /// Shield onto Ethrex Privacy's pool (prd §593e).
-    ///
-    /// Mirrors `sendPrivacyDevnet`: it converts the typed amount to wei, makes
-    /// a fresh note secret on this phone — dropped rather than shielded weak if
-    /// the generator refuses, the `freshNonceKey` rule — and hands both to
-    /// `PrivacyDevnetSend.shield`, which builds the frame transaction this
-    /// project proved on chain. On success the shielded balance refreshes.
-    private func shieldPrivacyDevnet(amount: String) async -> String? {
-        guard !DemoMode.isActive else {
-            return String(localized: "Nothing is shielded in the demo — this is where your own key would sign it.")
-        }
-        guard let wei = DevnetSendParse.weiData(from: amount),
-              PrivacyDevnetKey.address() != nil else {
-            return String(localized: "Couldn't shield.")
-        }
-        let rho = PrivacyDevnetSend.freshNonceKey()
-        guard !rho.isEmpty else {
-            return String(localized: "Couldn't make a note on this phone — nothing was shielded.")
-        }
-        do {
-            let hash = try await PrivacyDevnetSend.shield(
-                weiHex: "0x" + (wei.isEmpty ? "0" : RLP.hex(wei)), rho: rho)
-            await PrivacyDevnetLiveState.shared.refresh()
-            Task { @MainActor in
-                if await PrivacyDevnetSend.awaitInclusion(hash) {
-                    await PrivacyDevnetLiveState.shared.refresh()
-                }
-            }
-            return nil
-        } catch let failure as PrivacyDevnetSend.Failure {
-            switch failure {
-            case .noKey:            return String(localized: "There's no account on this phone yet.")
-            case .signingRefused:   return String(localized: "The signature was refused.")
-            case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was shielded.")
-            case .refused(let why): return String(localized: "The network refused it: \(why)")
-            case .faucet(let verdict): return verdict.sentence
-            }
-        } catch {
-            return String(localized: "Couldn't shield.")
-        }
     }
 
     /// The batch being built, in the shape the ROOM reads a finished one.
@@ -1405,300 +912,6 @@ struct FeedScreen: View {
         } catch {
             return String(localized: "Couldn't send.")
         }
-    }
-
-    private var vibenetSendCandidates: [(address: String, name: String?)] {
-        VibenetWatch.shared.addresses.map { ($0, VibenetWatch.shared.name(for: $0)) }
-    }
-
-    /// Returns nil on success, or the sentence to show. **The demo refuses
-    /// before the key is touched** (prd §552b): a real signature raises Face ID
-    /// and a real broadcast puts a transaction on a public devnet, from a
-    /// screen whose own banner says none of this is yours.
-    private func sendHegota(to: String, amount: String) async -> String? {
-        guard !DemoMode.isActive else {
-            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
-        }
-        guard let target = RLP.data(fromHex: to),
-              let valueWei = DevnetSendParse.weiData(from: amount),
-              let address = HegotaKey.address() else {
-            return String(localized: "Couldn't send.")
-        }
-        do {
-            // A LANE PER SEND (EIP-8250, §509). Consecutive sends take
-            // different nonce keys, so the second does not wait for the first
-            // to mine — which is what a keyed nonce is for, and what this seat
-            // could not do while `sendValue` hardcoded lane 0.
-            guard let take = await HegotaSend.nextLaneAndSequence(for: address) else {
-                return String(localized: "Couldn't reach the chain to read this account's sequence.")
-            }
-            let hash: String
-            do {
-                hash = try await HegotaSend.sendValue(to: target, valueWei: valueWei,
-                                                      nonceSequence: take.sequence,
-                                                      nonceKey: take.lane)
-            } catch {
-                // Nothing was spent, so the lane reopens — otherwise every
-                // later send on it queues behind a sequence that never landed.
-                HegotaSend.forgetLanes(for: address)
-                throw error
-            }
-            HegotaSend.landReceipt(txHash: hash, kind: .sent(to: to, amount: amount), in: modelContext)
-            // `sendValue` returns at BROADCAST, so a read now is the balance
-            // before the send (measured: the crown kept the recipient's old
-            // figure until the next sweep). Read again once it is mined; the
-            // sheet does not wait for that.
-            await HegotaLiveState.shared.refresh()
-            Task { @MainActor in
-                if await HegotaSend.awaitInclusion(hash) {
-                    await HegotaLiveState.shared.refresh()
-                }
-            }
-            return nil
-        } catch let f as HegotaSend.Failure {
-            switch f {
-            case .broadcastRefused(let why): return String(localized: "The chain refused it: \(why)")
-            case .signingRefused: return String(localized: "Signing was cancelled or refused.")
-            case .noKey: return String(localized: "No key on this phone.")
-            case .chainUnreachable: return String(localized: "Couldn't reach the chain, so nothing was sent.")
-            default: return String(localized: "Couldn't send.")
-            }
-        } catch {
-            return String(localized: "Couldn't send.")
-        }
-    }
-
-    /// **REVOKING A KEY** (2026-09-04). The confirmation is `VibenetKeySheet`'s
-    /// and the last-admin guard is too — this only sends.
-    ///
-    /// **Reports through `chrome.flash`, not a returned string**, because
-    /// unlike a send there is no sheet left to show one: the key sheet was
-    /// dismissed before this ran (see the call site) and the room underneath
-    /// has no error slot. A revoke that failed silently would be the worst
-    /// outcome available here — somebody believing a key is gone when it is
-    /// still authorized — so the failure is spoken and the success is too.
-    private func revokeVibenetKey(account: Data, actorID: Data,
-                                  epoch: UInt32, sequence: UInt32) async {
-        guard !DemoMode.isActive else {
-            chrome.flash(String(localized: "Nothing is signed in the demo — this is where your own key would revoke it."))
-            return
-        }
-        do {
-            let sent = try await VibenetSend.revokeActor(on: account, actorID: actorID,
-                                                         localEpoch: epoch, localSequence: sequence)
-            VibenetSend.landRevokeReceipt(sent, actorHex: VibenetTransaction.hex(actorID),
-                                          in: modelContext)
-            chrome.flash(String(localized: "Key revoked."))
-            // The roster this room draws is read state, so it keeps showing the
-            // revoked key until a sweep replaces it — the same two halves the
-            // create branch needed (2026-08-30): read the chain now, then bump
-            // the term this screen's memoised head recomputes on.
-            _ = await VibenetRoomSource.compose()
-            chrome.refreshRooms()   // a revoke is a removal (§655 amendment)
-        } catch let f as VibenetSend.Failure {
-            chrome.flash(vibenetSendFailureText(f), tone: .failure)
-        } catch {
-            chrome.flash(String(localized: "Couldn't revoke the key."), tone: .failure)
-        }
-    }
-
-    /// **ONE SPELLING PER FAILURE** (2026-09-04). Extracted when the batch arm
-    /// landed: two `switch`es over one enum is two sets of sentences for one
-    /// set of facts, and the one that gets edited is whichever the next report
-    /// happens to come through.
-    private func vibenetSendFailureText(_ f: VibenetSend.Failure) -> String {
-        switch f {
-        case .noSponsor:
-            return String(localized: "Nobody is sponsoring right now, and this account has nothing to pay with. Try again later.")
-        case .sponsorUnreadable:
-            return String(localized: "Couldn't reach the sponsor to ask who pays, so nothing was signed.")
-        case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
-        case .payerRefused(let why): return String(localized: "The sponsor refused: \(why)")
-        case .signingRefused: return String(localized: "Face ID didn't confirm, so nothing was signed.")
-        case .chainUnreachable: return String(localized: "Couldn't reach the network, so nothing was sent.")
-        case .noKey: return String(localized: "This phone has no key yet.")
-        case .cannotCompose: return String(localized: "Couldn't put the transaction together.")
-        // Spelled once on the type: it must agree with the room's own empty
-        // note about the same fact (§530, and `emptyRoomNote`).
-        case .noAccountStack: return VibenetSend.Failure.noAccountStackSentence
-        // Its own sentence: each names a different field, and a generic
-        // "couldn't send" would send somebody looking at the amount.
-        case .advancedRefused(let why): return why
-        }
-    }
-
-    /// **SEVERAL SENDS UNDER ONE SIGNATURE** (2026-09-04). The stitch arm of the
-    /// same door `sendVibenet` is the one-leg arm of.
-    ///
-    /// **The failure copy is `sendVibenet`'s, reached through one door**: the
-    /// sheet renders whatever string comes back, so two spellings of "the
-    /// sponsor refused" would be two sentences for one fact depending on how
-    /// many rows were in the list.
-    ///
-    /// **What it deliberately does NOT do is land a receipt per leg.** One
-    /// transaction is one act with one hash, so `landSendReceipt` is called
-    /// once — N rows sharing a hash would collide on `sourceRef`, and the
-    /// bridge's dedupe would keep exactly one of them anyway, silently. The
-    /// receipt names the batch; each leg's own destination is on the chain.
-    private func sendVibenetBatch(from account: Data, legs: [DevnetSendLeg],
-                                  advanced: VibenetAdvanced = .default) async -> String? {
-        guard !DemoMode.isActive else {
-            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
-        }
-        // Parsed ALL AT ONCE before anything is signed: a batch that validates
-        // leg by leg as it composes would raise Face ID and then fail on row
-        // four, having already asked for the one thing that cannot be undone.
-        var parsed: [(recipient: Data, valueWei: Data)] = []
-        for leg in legs {
-            guard let target = VibenetTransaction.data(fromHex: leg.address), target.count == 20,
-                  let valueWei = DevnetSendParse.weiData(from: leg.amount) else {
-                return String(localized: "Couldn't send.")
-            }
-            parsed.append((recipient: target, valueWei: valueWei))
-        }
-        do {
-            let sent = try await VibenetSend.sendValueBatch(from: account, legs: parsed,
-                                                            advanced: advanced)
-            // The receipt's amount is the batch's TOTAL, which is what one
-            // transaction moved — `landSendReceipt` takes one recipient, so the
-            // first leg names it and the corpus row says how much left.
-            if let first = parsed.first {
-                VibenetSend.landSendReceipt(sent, to: first.recipient,
-                                            valueWei: VibenetSend.totalWei(parsed.map(\.valueWei)),
-                                            in: modelContext)
-            }
-            return nil
-        } catch let f as VibenetSend.Failure {
-            return vibenetSendFailureText(f)
-        } catch {
-            return String(localized: "Couldn't send.")
-        }
-    }
-
-    private func sendVibenet(from account: Data, to: String, amount: String,
-                             advanced: VibenetAdvanced = .default) async -> String? {
-        guard !DemoMode.isActive else {
-            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
-        }
-        guard let target = VibenetTransaction.data(fromHex: to), target.count == 20,
-              let valueWei = DevnetSendParse.weiData(from: amount) else {
-            return String(localized: "Couldn't send.")
-        }
-        do {
-            let sent = try await VibenetSend.sendValue(from: account, to: target,
-                                                       valueWei: valueWei, advanced: advanced)
-            VibenetSend.landSendReceipt(sent, to: target, valueWei: valueWei, in: modelContext)
-            return nil
-        } catch let f as VibenetSend.Failure {
-            return vibenetSendFailureText(f)
-        } catch {
-            return String(localized: "Couldn't send.")
-        }
-    }
-
-    @State private var vibenetFinding = false
-
-    /// **THE RECOVERY (prd §681).** Walks the keystore's `AccountCreated` log
-    /// for an account whose live actors include this phone's key, and watches
-    /// it. Says what happened either way — a verb that can silently do nothing
-    /// is the honesty rule's own example (§83).
-    private func findVibenetAccount() {
-        guard !vibenetFinding else { return }
-        vibenetFinding = true
-        Task { @MainActor in
-            defer { vibenetFinding = false }
-            guard let c = await VibenetConfig.current() else {
-                chrome.flash(String(localized: "Couldn't reach the chain."), tone: .failure)
-                return
-            }
-            guard let found = await VibenetDiscovery.accountForThisPhone(keystore: c.keystore) else {
-                chrome.flash(String(localized: "No account on this chain uses this phone's key."),
-                             tone: .failure)
-                return
-            }
-            if VibenetWatch.shared.add(found) {
-                DSHaptic.success()
-                chrome.flash(String(localized: "Found your account."))
-            } else {
-                chrome.flash(String(localized: "Already watching that account."))
-            }
-        }
-    }
-
-    /// Every account this phone's key can act for, in snapshot order (prd
-    /// §774) — the All page sends from the first, each one's own page from
-    /// itself.
-    private static func signableVibenetAccounts() -> [Data] {
-        if let demo = VibenetRoom.demoSignableAccount() { return [demo] }
-        guard let ours = VibenetDeviceKey.actorID()?.lowercased(),
-              let items = VibenetState.saved?.items else { return [] }
-        return items
-            .filter { $0.actors.contains(where: { $0.actorId.lowercased() == ours }) }
-            .compactMap { VibenetTransaction.data(fromHex: $0.address) }
-    }
-
-    /// The change sequences for one account, for Home's Authorize tile
-    /// (2026-09-04).
-    ///
-    /// **Read off the last saved snapshot, never a live call** — this runs on a
-    /// tap inside a view body, the same rail `signableVibenetAccounts` above
-    /// keeps. Nil is a real answer and the caller sends 0/0, which is what the
-    /// account-detail door has always done for an account whose sequences the
-    /// last read could not fetch: the Keystore refuses a stale sequence rather
-    /// than applying it, so a wrong guess costs a refusal and never a wrong
-    /// change.
-    private static func vibenetChangeSequences(for account: Data) -> VibenetChangeSequences? {
-        let hex = "0x" + VibenetTransaction.hex(account)
-        return VibenetState.saved?.items
-            .first { $0.address.caseInsensitiveCompare(hex) == .orderedSame }?
-            .changeSequences
-    }
-
-    /// **NOTHING IN THIS SCOPE, AS CONTENT (prd §538, 2026-08-31)** — the row
-    /// that replaces `filteredEmptyState` for this room. See
-    /// `keepsChromeWhenEmpty` for why the generic one could not stay.
-    ///
-    /// It says the two things that state genuinely has to say and no more: that
-    /// the room is EMPTY rather than broken, and that this is a scope rather
-    /// than the whole room — because the rails are still on screen above it,
-    /// which is the entire point, so a person can read the sentence and simply
-    /// tap somewhere else.
-    ///
-    /// **NO "Show everything" BUTTON, deliberately.** The one the generic state
-    /// offers writes `filter.source = "All"` — it leaves vibenet. Here the way
-    /// out is the strip and the rail directly above this line, both of which
-    /// are now still there; adding a control that duplicates them while meaning
-    /// something else is how the dead end got built in the first place.
-    ///
-    /// The wording NAMES THE SCOPE where it can, since "nothing here yet" over
-    /// a room whose crown is showing a balance reads as a contradiction. It
-    /// never claims WHY — an account we could not reach and an account that has
-    /// genuinely done nothing look identical from here, and §83 forbids
-    /// choosing between them on the reader's behalf.
-    @ViewBuilder
-    private var vibenetEmptyRow: some View {
-        Section {
-            // Rows drawn empty (prd §769); the sentence is what VoiceOver reads.
-            DSSkeletonRows(label: Text(vibenetEmptyLine))
-                .padding(.vertical, DS.Space.s2)
-            // The send panel's row chrome (see `vibenetSendRow`): a bare
-            // Section in this `.plain` List draws the default hairline
-            // separator, which nothing in this app may draw.
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: 0, trailing: DSRoomChassis.inset))
-        }
-    }
-
-    /// The empty sentence, naming the scoped account when one is scoped.
-    private var vibenetEmptyLine: String {
-        if let scope = chrome.vibenetScope, !scope.isEmpty {
-            let name = VibenetWatch.shared.name(for: scope)
-                ?? VibenetRoom.shortAddress(scope)
-            return String(localized: "Nothing has landed for \(name) yet.")
-        }
-        return String(localized: "Nothing has landed here yet.")
     }
 
     @State private var confirming: (Verb, Thing)?
@@ -2044,7 +1257,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     enum Shape {
-        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, snapchat, files, instagram, tiktok, x, appStoreConnect, cursor, cardPointers, walletbeat, l2beat, telegram, vibenet, plain
+        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, snapchat, files, instagram, tiktok, x, appStoreConnect, cursor, cardPointers, walletbeat, l2beat, telegram, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -2072,7 +1285,7 @@ struct FeedScreen: View {
         var carriesCover: Bool {
             switch self {
             case .ledger, .calendar, .gmail, .reminders, .tokens, .bitrefill,
-                 .cardPointers, .walletbeat, .l2beat, .vibenet, .wallet: return false
+                 .cardPointers, .walletbeat, .l2beat, .wallet: return false
             default: return true
             }
         }
@@ -2233,22 +1446,6 @@ struct FeedScreen: View {
             // and a room of broadcast posts drawn as chat bubbles is the §313
             // failure wearing the other coat.
             case "Telegram":            self = .telegram
-            // R4.2 (2026-08-23) — had NO case, so it fell to `.plain` and
-            // drew one identical glyph per row with the account's address
-            // truncated at the END of an 80-char title. Two accounts'
-            // events were indistinguishable at a glance, in a room whose
-            // whole subject is which account something happened to. Its
-            // own case rather than `.wallet`: that room's rows are money
-            // and its head is a balance, and a key authorization is
-            // neither.
-            // The LITERAL, not `VibenetIdentity.source`: `demo-selftest.py`'s
-            // check F reads this switch to prove every shape has a seeded
-            // source, and it resolves exactly three indirections by name.
-            // A fourth makes this room's shape UNVERIFIABLE rather than
-            // verified — the comment above `case "Instagram"` says so, and
-            // this case failed that check on its first run for exactly
-            // that reason.
-            case "Base Vibenet":        self = .vibenet
             // Its own case rather than joining `.chat` (2026-08-08, prd §340).
             // A Cursor row is a REPORT — an outcome, a repository and a
             // paragraph the agent wrote about what it did — where a chat row
@@ -2446,7 +1643,6 @@ struct FeedScreen: View {
                 && (source != "All" || Corpus.showsInAll(thing))
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletScopeAllows(thing)
-                && vibenetScopeAllows(thing)
                 && personScopeAllows(thing)
                 && githubScopeAllows(thing)
                 && notesScopeAllows(thing)
@@ -2753,13 +1949,6 @@ struct FeedScreen: View {
                 // belongs here for this property's own stated reason.
                 chrome.githubScope ?? "",
                 chrome.pinterestScope ?? "",
-                // The vibenet rail scopes the CARD (2026-08-23), so it
-                // belongs in the memo key for the reason this property's
-                // own doc gives: a head that survived a scope change is a
-                // card describing rows that are no longer on screen.
-                // Omitted at first, and the symptom was exactly that —
-                // the face lit and the card kept listing every account.
-                chrome.vibenetScope ?? "",
                 // Bridge state is the one input a corpus revision cannot see —
                 // `sourceHead` reads a Stripe balance, PostHog readings, an ASC
                 // standing, none of which is a `Thing`. A pull is when somebody
@@ -2770,42 +1959,27 @@ struct FeedScreen: View {
                 // almost always lands the row that changed it, and because the
                 // alternative is recomputing the whole chain on a timer.
                 String(chrome.roomRevision),
-                // **THE ONE SEAT THAT BREAKS THE RESIDUAL ABOVE.** That note
-                // is right about every other bridge: a sweep that changes a
-                // reading almost always lands the row that changed it, so the
-                // corpus revision moves and the head recomputes. Ethrex Hegotá
-                // lands NO row, ever — its whole room is live state — so its
-                // revision is frozen at zero and this key never changed. The
-                // head was therefore computed ONCE, while the sweep had not yet
-                // returned, memoised as nil, and never recomputed: a black
-                // room, permanently, with every other fix in place. Reported
-                // from a device three times before this was found, because
-                // nothing static can see a memo that never invalidates.
+                // **THE SEAT THAT BREAKS THE RESIDUAL ABOVE** (prd §548). That
+                // note is right about every other bridge: a sweep that changes
+                // a reading almost always lands the row that changed it, so the
+                // corpus revision moves and the head recomputes. The Frames
+                // devnet lands NO row, ever — its whole room is live state — so
+                // its revision is frozen at zero and this key would never
+                // change. Without its `identity` the head composed once while
+                // the demo fixture was still pouring, memoised empty, and the
+                // room said "Reading the chain…" forever. Found on a simulator,
+                // not by a check: nothing static can see a memo that never
+                // invalidates.
                 //
                 // SCOPED TO ITS OWN ROOM (PERF 2026-09-01). Read
-                // unconditionally this was correct and expensive in the wrong
-                // place: `identity` touches `HegotaLiveState.shared`, an
+                // unconditionally this is correct and expensive in the wrong
+                // place: `identity` touches the devnet's live state, an
                 // `@Observable`, and this property is evaluated from EVERY
-                // room's body through `headKey` — so All, X and Wallet each
-                // took an observation dependency on devnet state, and a sweep
-                // tick invalidated whichever room you were actually standing
-                // in. The term is only ever load-bearing for the room whose
-                // own revision cannot move, so asking it only there loses
-                // nothing the note above describes.
-                source == HegotaIdentity.source ? HegotaRoomSource.identity : "",
-                // **AND THE SECOND SEAT OF THAT KIND** (prd §548). The note
-                // above was written for Hegotá and applies to the Frames
-                // devnet word for word — it lands no row either, so its
-                // revision is frozen and this key would never change. Its
-                // `identity` was written for exactly this and then not added
-                // here, so the head composed once while the demo fixture was
-                // still pouring, memoised empty, and the room said "Reading
-                // the chain…" forever. Found on a simulator, not by a check:
-                // nothing static can see a memo that never invalidates, which
-                // is the whole reason the note above exists.
-                // Scoped for the same reason as Hegotá's above, and with the
-                // same nothing lost — this key matters only in the room whose
-                // revision is frozen.
+                // room's body through `headKey` — so All, X and Wallet would
+                // each take an observation dependency on devnet state, and a
+                // sweep tick would invalidate whichever room you were actually
+                // standing in. The term is only ever load-bearing for the room
+                // whose own revision cannot move.
                 source == FramesIdentity.source ? FramesRoomSource.identity : "",
                 // Privy's balances land no row either (prd §803c), so its
                 // store's revision re-keys its head and nobody else's.
@@ -2814,20 +1988,10 @@ struct FeedScreen: View {
                 // room's head from today, so it belongs in the memo key for
                 // this property's own stated reason: a head that survived a
                 // scope change is a card describing rows that are no longer on
-                // screen. `chrome.vibenetScope` is here for exactly this, two
-                // rooms over — and the symptom there was exactly this too, the
-                // face lighting while the card kept listing every account.
-                // Scoped to the room for the perf reason the Hegotá term
-                // above gives, and with the same nothing lost.
+                // screen — the face lighting while the card kept listing every
+                // account. Scoped to the room for the perf reason the Frames
+                // term above gives, and with the same nothing lost.
                 source == FramesIdentity.source ? (chrome.framesScope ?? "") : "",
-                // **AND THE THIRD SEAT OF THAT KIND** (prd §593). Same
-                // reasoning as the two above, word for word — it lands no row,
-                // so its revision is frozen — plus one this room has and they
-                // do not: its headline is a COUNTDOWN, so a head memoised
-                // across a slot change keeps claiming a stale number of slots
-                // remaining. `identity` carries the head slot for that.
-                source == PrivacyDevnetIdentity.source ? PrivacyDevnetRoomSource.identity : "",
-                source == PrivacyDevnetIdentity.source ? (chrome.privacyDevnetScope ?? "") : "",
                 String(revision.count), String(revision.signal)]
             .joined(separator: "|")
     }
@@ -2965,7 +2129,7 @@ struct FeedScreen: View {
     /// query's own `init` documents at length, and this is the same known-good
     /// configuration a source room's `@Query` itself carried from 2026-08-31.
     /// The rows go through `liveVisible(rawOverride:)`, so the tag, wallet,
-    /// person and vibenet scopes apply exactly as they do to the list — a head
+    /// and person scopes apply exactly as they do to the list — a head
     /// must describe the rows the room is showing, only more of them.
     ///
     /// **NEVER FEWER ROWS THAN THE LIST ALREADY HAS.** If this predicate is the
@@ -3658,18 +2822,6 @@ struct FeedScreen: View {
         return thing.authorHandle == scope
     }
 
-    /// The vibenet room's account scope (2026-08-23) — the same shape as
-    /// the two above, gated on the ROOM rather than the scope's nil-ness
-    /// for the same reason: every vibenet event stamps its account on
-    /// `authorHandle`, and an ungated compare would empty every other
-    /// room where that field means something else entirely. Case-
-    /// insensitive because a watched address may be stored in any case
-    /// while the landed row carries the lowercased form the log gave.
-    private func vibenetScopeAllows(_ thing: Thing) -> Bool {
-        guard shape == .vibenet, let scope = chrome.vibenetScope else { return true }
-        guard let handle = thing.authorHandle else { return false }
-        return handle.caseInsensitiveCompare(scope) == .orderedSame
-    }
     private var filterLabel: String {
         let tagLabel = filter.tag == "All" ? nil
             : (ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag)
@@ -4620,39 +3772,21 @@ struct FeedScreen: View {
             // Every room writes this, so a stale non-empty list would leave the
             // toggle drawn over whichever room you moved to — and because the
             // list is also the control's own gate, clearing it is what makes
-            // "the toggle cannot appear over a Vibenet room" true by
+            // "the toggle cannot appear over another room" true by
             // construction rather than by a source test in two files.
             .onDisappear {
                 guard shape == .wallet else { return }
                 chrome.walletSections = []
                 chrome.walletSectionAttention = []
             }
-            // §482 — the same contract for the vibenet room. `initial: true`
-            // for the same reason: a room whose read had already landed before
-            // mount would otherwise publish nothing and draw no control.
-            .onChange(of: vibenetSectionPublication, initial: true) { _, now in
-                chrome.vibenetSections = now.sections
-                chrome.vibenetSectionAttention = now.attention
-            }
-            .onDisappear {
-                guard shape == .vibenet else { return }
-                chrome.vibenetSections = []
-                chrome.vibenetSectionAttention = []
-            }
-            // The two devnet rooms' half of the same contract (PERF
+            // The two testnet rooms' half of the same contract (PERF
             // 2026-09-01), replacing writes made from inside `roomBody` — see
-            // `hegotaSectionPublication`. `initial: true` for the reason the two
-            // above give: both rooms' live state is usually already loaded by
+            // `framesSectionPublication`. `initial: true` for the reason the
+            // one above gives: both rooms' live state is usually already loaded by
             // the time the room mounts, so a room that never changes afterwards
             // would publish nothing and draw no switcher at all.
-            .onChange(of: hegotaSectionPublication, initial: true) { _, now in
-                chrome.hegotaSections = now
-            }
             .onChange(of: framesSectionPublication, initial: true) { _, now in
                 chrome.framesSections = now
-            }
-            .onChange(of: privacyDevnetSectionPublication, initial: true) { _, now in
-                chrome.privacyDevnetSections = now
             }
             .onChange(of: logosSectionPublication, initial: true) { _, now in
                 chrome.logosSections = now
@@ -4664,41 +3798,10 @@ struct FeedScreen: View {
             // switcher cannot appear over another room" true by construction
             // rather than by a source test in two files.
             .onDisappear {
-                if source == HegotaIdentity.source { chrome.hegotaSections = [] }
                 if source == FramesIdentity.source { chrome.framesSections = [] }
-                if source == PrivacyDevnetIdentity.source { chrome.privacyDevnetSections = [] }
                 if source == LogosRoom.source { chrome.logosSections = [] }
             }
     }
-
-    // MARK: - Hegotá's three room sections
-
-    /// Above the figure, because it governs everything below it: on a relaunched
-    /// devnet every reading still draws, and every one of them describes a
-    /// history the chain no longer has. Draws nothing in the ordinary case.
-    @ViewBuilder private var hegotaChainNoticeSection: some View {
-        if HegotaRoomSource.compose() != nil {
-            Section {
-                HegotaChainNotice(verdict: HegotaLiveState.shared.genesis)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: 0, trailing: DSRoomChassis.inset))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
-
-    /// THE HEGOTÁ ROOM'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
-    ///
-    /// Was `hegotaRailSection`, the fused slab (§547) this room copied from
-    /// Wallet byte for byte. It follows Wallet out of the bar for the same
-    /// reason, and the conversion fixes a defect it was hiding:
-    ///
-    /// **The Send tile has been inert since the room shipped.**
-    /// `HegotaRoomList` declares `onOpenSend` and `FeedScreen` passes it, but
-    /// the `.home` arm called `HegotaSendCard()` with no arguments, so the
-    /// card kept its `= {}` default. A tile that highlights and does nothing
-    /// is §83's dead control. The card mounts here now, wired.
 
     /// THE FRAMES ROOM'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
     ///
@@ -4984,101 +4087,6 @@ struct FeedScreen: View {
         }
     }
 
-    /// THE PRIVACY DEVNET'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
-    ///
-    /// The crown is this room's own card pinned to `.home` — `home` is where
-    /// `PrivacyDevnetRoomCard` already draws the `RoomHomeCrown`, the ring and
-    /// the activity fallback, so the deck mounts that rather than growing a
-    /// second crown. §682's ruling (the verbs sit under the rail, never under
-    /// the list) is now kept by construction: they are ON the card.
-    ///
-    /// The readings come from a card built for the purpose, which is this
-    /// room's own idiom — `PrivacyDevnetRoomList` builds one to reach
-    /// `scopeList` for exactly the same reason: every input is already derived
-    /// there, and a second derivation is free to disagree with `isEmpty`.
-    @ViewBuilder
-    private func privacyDevnetScopeChromeSection(_ active: PrivacyDevnetSection,
-                                                 head: PrivacyDevnetRoom.Head) -> some View {
-        // Every account, never the scoped list: this is the control that SETS
-        // the scope, so the narrowed set would leave one card and no way back.
-        let roster = PrivacyDevnetRoomSource.accounts(scope: nil)
-        let scoped = PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope)
-        let readings = PrivacyDevnetRoomCard(
-            head: head,
-            section: active,
-            accounts: scoped,
-            headSlot: PrivacyDevnetLiveState.shared.headSlot,
-            walkCut: PrivacyDevnetLiveState.shared.walkCut,
-            shielded: PrivacyDevnetLiveState.shared.shielded,
-            mine: PrivacyDevnetLiveState.shared.mine)
-            .readings(chrome.privacyDevnetSections)
-        Section {
-            DSRoomScopeChrome(
-                source: PrivacyDevnetIdentity.source,
-                sections: chrome.privacyDevnetSections,
-                active: active,
-                home: .home,
-                attention: PrivacyDevnetSection.attention(),
-                onPick: { chrome.privacyDevnetSection = $0 },
-                accounts: PrivacyDevnetRoomCard.slots(roster),
-                scope: chrome.privacyDevnetScope,
-                onPickAccount: privacyPickAccount,
-                reading: { readings[$0] },
-                crown: { slot in
-                    // The room figure carries its own slot (prd §953); a second
-                    // one inset the Home crown 12pt past every other crown.
-                    Group {
-                        if slot.isShowing(chrome.privacyDevnetScope) {
-                            PrivacyDevnetRoomCard(
-                                head: head,
-                                section: .home,
-                                accounts: scoped,
-                                headSlot: PrivacyDevnetLiveState.shared.headSlot,
-                                walkCut: PrivacyDevnetLiveState.shared.walkCut,
-                                shielded: PrivacyDevnetLiveState.shared.shielded,
-                                mine: PrivacyDevnetLiveState.shared.mine,
-                                onOpenMove: { move, owner in
-                                    feedSheet = .privacyDevnetMove(move, owner)
-                                })
-                        }
-                    }
-                },
-                figure: { scope in
-                    PrivacyDevnetRoomCard(
-                        head: head,
-                        section: scope,
-                        accounts: scoped,
-                        headSlot: PrivacyDevnetLiveState.shared.headSlot,
-                        walkCut: PrivacyDevnetLiveState.shared.walkCut,
-                        shielded: PrivacyDevnetLiveState.shared.shielded,
-                        mine: PrivacyDevnetLiveState.shared.mine,
-                        onOpenMove: { move, owner in
-                            feedSheet = .privacyDevnetMove(move, owner)
-                        },
-                        everyAccount: roster,
-                        scope: chrome.privacyDevnetScope,
-                        onPickAccount: privacyPickAccount)
-                },
-                acts: { slot in
-                    // **EVERY PAGE (prd §774)** — Frames' rule: All acts for
-                    // the current account, your own account for itself, and
-                    // anybody else's page keeps Create account only.
-                    PrivacyDevnetSendCard(
-                        account: slot.id.isEmpty ? nil : slot.id,
-                        stranger: !(slot.id.isEmpty || PrivacyDevnetKey.holds(slot.id)),
-                        onSend: { feedSheet = .privacyDevnetSend },
-                        onShield: { feedSheet = .privacyDevnetShield })
-                        .id(slot.id)
-                }
-            )
-            .listRowInsets(EdgeInsets(top: 0, leading: 0,
-                                      bottom: DSRoomChassis.contentGap, trailing: 0))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-        }
-        .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
-    }
-
     // MARK: - Picking a devnet account (prd §948)
     //
     // One function per room, read by BOTH doors to the pick — the account
@@ -5095,139 +4103,26 @@ struct FeedScreen: View {
         }
     }
 
-    /// The account Send, Shield and Top up act for (prd §774), and the live
-    /// state's `mine` follows so the first-transaction moment watches the
-    /// right address.
-    func privacyPickAccount(_ picked: String?) {
-        if PrivacyDevnetKey.select(picked) {
-            PrivacyDevnetLiveState.shared.setMine(picked)
-        }
-        withAnimation(DS.Motion.standard) {
-            chrome.privacyDevnetScope = (picked?.isEmpty ?? true) ? nil : picked
-        }
-    }
-
-    /// The account Send and Top up act for (prd §774).
-    func hegotaPickAccount(_ picked: String?) {
-        HegotaKey.select(picked)
-        withAnimation(DS.Motion.standard) {
-            chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
-        }
-    }
-
-    @ViewBuilder private var hegotaScopeChromeSection: some View {
-        let active = HegotaSection.resolve(chrome.hegotaSection,
-                                           present: chrome.hegotaSections)
-        // Every account, never the scoped list: this is the control that SETS
-        // the scope, so the narrowed set would leave one card and no way back.
-        let roster = HegotaRoomSource.accounts()
-        // ONE pass, read once per row — see `HegotaRoomReadings`.
-        let readings = HegotaRoomReadings.of(accounts: roster,
-                                             scoped: chrome.hegotaScope,
-                                             sections: chrome.hegotaSections)
-        if let head = HegotaRoomSource.compose() {
-            Section {
-                DSRoomScopeChrome(
-                    source: HegotaIdentity.source,
-                    sections: chrome.hegotaSections,
-                    active: active,
-                    home: .home,
-                    attention: HegotaSection.attention(),
-                    onPick: { picked in chrome.hegotaSection = picked },
-                    accounts: HegotaRoomReadings.slots(roster),
-                    scope: chrome.hegotaScope,
-                    onPickAccount: hegotaPickAccount,
-                    reading: { readings[$0] },
-                    crown: { slot in
-                        // The room figure carries its own slot (prd §953); a second
-                        // one inset the Home crown 12pt past every other crown.
-                        Group {
-                            if slot.isShowing(chrome.hegotaScope) {
-                                HegotaRoomFigure(head: head,
-                                                 accounts: roster,
-                                                 scoped: chrome.hegotaScope,
-                                                 section: .home)
-                            }
-                        }
-                    },
-                    figure: { scope in
-                        HegotaRoomFigure(head: head,
-                                         accounts: roster,
-                                         scoped: chrome.hegotaScope,
-                                         section: scope,
-                                         onPickAccount: hegotaPickAccount)
-                    },
-                    acts: { slot in
-                        // **EVERY PAGE (prd §774)** — Frames' rule. The demo's
-                        // owner counts as yours, the way `sender` borrows it.
-                        let mine = slot.id.isEmpty || HegotaKey.holds(slot.id)
-                            || (DemoMode.isActive
-                                && slot.id.caseInsensitiveCompare(HegotaLiveState.demoOwnerAddress) == .orderedSame)
-                        HegotaSendCard(account: slot.id.isEmpty ? nil : slot.id,
-                                       stranger: !mine,
-                                       onSend: { feedSheet = .hegotaSend })
-                            .id(slot.id)
-                    }
-                )
-                .listRowInsets(EdgeInsets(top: 0, leading: 0,
-                                          bottom: DSRoomChassis.contentGap, trailing: 0))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-        }
-    }
-
-    /// What the vibenet room publishes to the shell for §482's toggle — the
-    /// scopes that have something, and which of them want you.
-    ///
-    /// Guarded on `shape` for the same reason Wallet's is: this computed
-    /// property is read by a room that may not be vibenet, and an unguarded
-    /// version would publish a vibenet strip over whatever room is on screen.
-    private var vibenetSectionPublication: VibenetSectionPublication {
-        guard shape == .vibenet else {
-            return .init(sections: [], attention: [])
-        }
-        let room = VibenetRoomSource.roomOrEmpty()
-        // `hasEvents` is asked of the ROWS rather than of the room, because
-        // "Recent" is the only scope whose content is not the card's: an
-        // account watched today has a full roster and no events at all, and a
-        // chip opening an empty day list is the dead control §83 bans.
-        let sections = VibenetSection.present(room)
-        // The dots are `VibenetAttention`'s ranking, one layer down — the same
-        // set that used to draw the strip. **Not presence**: a room HAS keys
-        // and HAS accounts at all times, so lighting on presence would be the
-        // §83 overclaim that retired "Needs attention" (the wallet room's own
-        // `warnings`-not-presence rule, arrived at independently). A key only
-        // lights Keys inside its urgency window, and an account only lights
-        // Accounts when it is locked, unlocking or unread.
-        return .init(sections: sections, attention: VibenetSection.attention(room))
-    }
-
     /// What the two DEVNET rooms publish to the shell — the scopes each one has
     /// (PERF 2026-09-01).
     ///
-    /// Guarded on `source` FIRST for the reason Wallet's and Vibenet's are
-    /// guarded on `shape`: these are read by every room as `onChange` keys, and
+    /// Guarded on `source` FIRST for the reason Wallet's is guarded on
+    /// `shape`: these are read by every room as `onChange` keys, and
     /// SwiftUI evaluates a key on every body pass — so the cheap term has to be
     /// the one that decides. Unguarded they would also publish a devnet strip
     /// over whatever room is on screen.
     ///
-    /// **These exist because both rooms used to write `chrome.*Sections` from
-    /// inside their own body**, and the same pass read the value back a few
-    /// lines later (the figure, the rail, the switcher's `present:`).
+    /// **These exist because the devnet rooms used to write `chrome.*Sections`
+    /// from inside their own body**, and the same pass read the value back a
+    /// few lines later (the figure, the rail, the switcher's `present:`).
     /// `ShellChrome` is `@Observable` and its generated setter mutates
     /// unconditionally — an equal-valued write still invalidates every
     /// observer — while `sections()` returns a fresh array per call, so the
     /// body invalidated itself for as long as the room was on screen. Wallet
-    /// and Vibenet published the identical kind of value correctly from
-    /// `onChange` the whole time; these two seats copied each other instead,
-    /// which is why the file states the rule against it in `memo`'s own doc and
-    /// it still reached two rooms.
-    private var hegotaSectionPublication: [HegotaSection] {
-        guard source == HegotaIdentity.source else { return [] }
-        return HegotaRoomSource.sections()
-    }
-
+    /// published the identical kind of value correctly from `onChange` the
+    /// whole time; the devnet seats copied each other instead, which is why the
+    /// file states the rule against it in `memo`'s own doc and it still
+    /// reached them.
     private var framesSectionPublication: [FramesSection] {
         guard source == FramesIdentity.source else { return [] }
         return FramesRoomSource.sections()
@@ -5236,22 +4131,6 @@ struct FeedScreen: View {
     private var logosSectionPublication: [LogosSection] {
         guard source == LogosRoom.source else { return [] }
         return LogosSection.present()
-    }
-
-    private var privacyDevnetSectionPublication: [PrivacyDevnetSection] {
-        guard source == PrivacyDevnetIdentity.source else { return [] }
-        return PrivacyDevnetRoomSource.sections(scope: chrome.privacyDevnetScope)
-    }
-
-    /// Whether the vibenet room is currently drawing its event rows — true for
-    /// every other room, so this reads as a plain pass-through everywhere it is
-    /// not vibenet. One derivation, so the footer and the rows can never
-    /// disagree about whether there is a list to be at the bottom of.
-    private var vibenetShowsRows: Bool {
-        guard shape == .vibenet else { return true }
-        let scopes = vibenetSectionPublication.sections
-        return !VibenetSection.shows(present: scopes)
-            || VibenetSection.resolve(chrome.vibenetSection, present: scopes) == .activity
     }
 
     /// Which of the Privacy Pools room's three readings have anything to show
@@ -5264,8 +4143,8 @@ struct FeedScreen: View {
     /// draws the untagged deposits as a legend row of their own, which is why
     /// a room with no state tags at all still earns that scope.
     ///
-    /// Derived here rather than published to the shell like Wallet's and
-    /// Vibenet's, because the CARD draws this strip: there is no shell-mounted
+    /// Derived here rather than published to the shell like Wallet's,
+    /// because the CARD draws this strip: there is no shell-mounted
     /// control to feed, so a published list would be state nothing reads.
     private func privacyPoolsSections(_ room: PrivacyPoolsRoom) -> [PrivacyPoolsSection] {
         // Every scope, always (prd §611): the card decides figure-or-empty
@@ -5273,8 +4152,9 @@ struct FeedScreen: View {
         PrivacyPoolsSection.present()
     }
 
-    /// Whether the Privacy Pools room's rows draw — `vibenetShowsRows`'s shape,
-    /// and true for every other room the `.ledger` shape serves.
+    /// Whether the Privacy Pools room's rows draw — true for every other room
+    /// the `.ledger` shape serves, so the footer and the rows can never
+    /// disagree about whether there is a list to be at the bottom of.
     ///
     /// Railgun shares that shape and has no scopes, so it must never be gated
     /// by one; the source test is what keeps this room's control from reaching
@@ -5288,11 +4168,6 @@ struct FeedScreen: View {
         let scopes = privacyPoolsSections(room)
         return !PrivacyPoolsSection.shows(present: scopes)
             || PrivacyPoolsSection.resolve(chrome.privacyPoolsSection, present: scopes) == .activity
-    }
-
-    struct VibenetSectionPublication: Equatable {
-        var sections: [VibenetSection]
-        var attention: Set<VibenetSection>
     }
 
     /// A source room's COMPOSE action — "New event", "New email", "New task" —
@@ -5403,38 +4278,6 @@ struct FeedScreen: View {
             WalletDepositsTray(composition: composition)
         case .locks(let composition):
             WalletLocksTray(composition: composition)
-        case .hegotaMove(let move, let owner):
-            HegotaMoveSheet(move: move, owner: owner,
-                            watched: HegotaRoomSource.accounts().map(\.address),
-                            // The pieces this transaction created — the join
-                            // the row's "became N UTXOs" already makes, handed
-                            // to the sheet so the number has something behind
-                            // it. Every coin the shown accounts have owned,
-                            // spent ones included: a spend that made four and
-                            // has since spent two still made four.
-                            minted: HegotaRoomSource.accounts()
-                                .flatMap(\.coins)
-                                .filter { $0.createdBy?.caseInsensitiveCompare(move.hash)
-                                            == .orderedSame }) { index in
-                // Frame-to-frame through the ONE sheet: replacing the route
-                // swaps the tray's content in place, so the frame rises where
-                // the move was rather than as a second sheet over it.
-                feedSheet = .hegotaFrame(move, index)
-            }
-        case .hegotaFrame(let move, let index):
-            HegotaFrameSheet(move: move, index: index,
-                             watched: HegotaRoomSource.accounts().map(\.address)) { next in
-                // Step-to-step, the same route swap that opened this one.
-                feedSheet = .hegotaFrame(move, next)
-            }
-        case .hegotaAccount(let account):
-            HegotaAccountSheet(account: account) { section in
-                // The sheet's facts are doors: scope the room to this account
-                // and open the list the fact names.
-                chrome.hegotaScope = account.address
-                chrome.hegotaSection = section
-                feedSheet = nil
-            }
         case .framesMove(let move, let owner):
             FramesMoveSheet(move: move, owner: owner) { index in
                 // Frame-to-frame through the ONE sheet: replacing the route
@@ -5464,22 +4307,8 @@ struct FeedScreen: View {
                 chrome.framesSection = section
                 feedSheet = nil
             }
-        case .privacyDevnetMove(let move, let owner):
-            PrivacyDevnetMoveSheet(move: move, owner: owner)
-        case .privacyDevnetAccount(let account):
-            PrivacyDevnetAccountSheet(account: account) { section in
-                // The sheet's facts are doors — Frames' own dispatch: scope
-                // the room to this account and open the list the fact names.
-                chrome.privacyDevnetScope = account.address
-                chrome.privacyDevnetSection = section
-                feedSheet = nil
-            }
-        case .hegotaKeySheet:
-            HegotaKeySheet()
         case .web(let url):
             DSWebSheet(url: url) { feedSheet = nil }
-        case .hegotaCoin(let coin, let all, let unspent):
-            HegotaCoinSheet(coin: coin, all: all, unspent: unspent)
         case .nftPicks(let address, let label):
             WalletNFTPickerSheet(wallet: address, label: label)
         case .person(let source, let handle):
@@ -5505,113 +4334,11 @@ struct FeedScreen: View {
             // Only on THIS door — pushed, the room is under the shell's copy
             // and a second listener would buzz twice.
             .background(DSHapticSink())
-        case .vibenetKeys(let items, let newKeyIDs):
-            // A tapped key SCOPES THE ROOM to its account (prd §470),
-            // which is the follow-up the tray previously dead-ended on.
-            //
-            // DISMISS FIRST, THEN SCOPE — the order matters and is the
-            // same one `RoomDoor` spells out for its own pop-then-ask
-            // move: `vibenetScope` re-composes the room BEHIND this
-            // sheet, and asking for that while the sheet is still up
-            // means the change lands under a covered screen. Setting
-            // `feedSheet = nil` here is the whole dismissal, since this
-            // screen owns the presentation.
-            //
-            // No animation on the scope write, deliberately: the room is
-            // behind a dismissing sheet, so an animation animates
-            // something nobody can see and lands mid-transition.
-            VibenetKeyTraySheet(items: items,
-                                onPick: { address in
-                                    feedSheet = nil
-                                    chrome.vibenetScope = address
-                                },
-                                // Dismiss, THEN send — `onPick`'s own order,
-                                // one line up, for the same reason: the room
-                                // re-composes behind this sheet.
-                                onRevoke: { address, revoking in
-                                    guard let account = VibenetTransaction.data(fromHex: address),
-                                          let actorID = VibenetTransaction.data(fromHex: revoking.actorId),
-                                          let item = items.first(where: {
-                                              $0.address.caseInsensitiveCompare(address) == .orderedSame
-                                          })
-                                    else { return }
-                                    let seq = item.changeSequences
-                                    feedSheet = nil
-                                    Task {
-                                        await revokeVibenetKey(account: account, actorID: actorID,
-                                                               epoch: seq?.localEpoch ?? 0,
-                                                               sequence: seq?.localSequence ?? 0)
-                                    }
-                                },
-                                // The same new-key set the room card read and
-                                // spent, so a key marked "New" on the card's
-                                // own detail is marked here too (prd §479).
-                                newKeyIDs: newKeyIDs)
-        case .vibenetKey(let actor, let item, let shared):
-            // A DIRECT swap, `onOpenSend`'s own precedent (Hegotá's key
-            // sheet routing straight to its send sheet) — both routes are
-            // bound through the same `feedSheet` item, so re-assigning it
-            // to a new identity is a replace, not a stacked present.
-            // `onScope` wired as the tray's `onPick` is: the head's account
-            // disc was drawn disabled on this route, so the account a key acts
-            // for could not be opened from its own sheet.
-            VibenetKeySheet(actor: actor, item: item, sharedKeys: shared, onScope: { address in
-                feedSheet = nil
-                chrome.vibenetScope = address
-            }, onEditScope: { editing in
-                guard let address = VibenetTransaction.data(fromHex: item.address) else { return }
-                let seq = item.changeSequences
-                feedSheet = .vibenetAuthorize(
-                    account: address, localEpoch: seq?.localEpoch ?? 0,
-                    localSequence: seq?.localSequence ?? 0, editing: editing)
-            }, onReplace: { replaced in
-                guard let address = VibenetTransaction.data(fromHex: item.address) else { return }
-                let seq = item.changeSequences
-                feedSheet = .vibenetAuthorize(
-                    account: address, localEpoch: seq?.localEpoch ?? 0,
-                    localSequence: seq?.localSequence ?? 0, editing: replaced, replacing: true)
-            }, onRevoke: { revoking in
-                guard let address = VibenetTransaction.data(fromHex: item.address),
-                      let actorID = VibenetTransaction.data(fromHex: revoking.actorId) else { return }
-                let seq = item.changeSequences
-                // **DISMISS FIRST**, the `.vibenetKeys` ruling this file already
-                // keeps: the room re-composes behind this sheet once the revoke
-                // lands, and asking for that while the sheet is still up puts
-                // the change under a covered screen. The confirmation has
-                // already been given, so nothing here is a surprise.
-                feedSheet = nil
-                Task {
-                    await revokeVibenetKey(account: address, actorID: actorID,
-                                           epoch: seq?.localEpoch ?? 0,
-                                           sequence: seq?.localSequence ?? 0)
-                }
-            })
-        // **THE SEND FORM (prd §553).** Both rooms share one sheet and differ
-        // only in what they hand it: who the book knows, what the account
-        // holds, whether a Max is honest, and the one closure that actually
-        // sends. Everything visual lives in `DevnetSendSheet`.
-        case .hegotaSend:
-            DevnetSendSheet(
-                venue: String(localized: "Hegot\u{00E1}"),
-                seat: HegotaIdentity.source,
-                tint: DS.tint,
-                unit: "ETH",
-                candidates: hegotaSendCandidates,
-                heldLine: hegotaHeldLine,
-                // **NO MAX HERE, and it is this chain's rule rather than an
-                // omission**: the sender pays its own gas, so an amount equal
-                // to the whole balance cannot pay for itself and is a
-                // guaranteed failure — the dead control §83 bans wearing a
-                // convenience's clothing. vibenet's gas is the faucet's when it
-                // sponsors, so Max is honest there and would be offered.
-                maxAmount: nil,
-                isValidAddress: DevnetSendParse.isValidAddress,
-                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                // `_` is the compiler recording that this venue was asked and has
-                // nothing to set — Hegotá's envelope carries no nonce channel,
-                // validity window or metadata.
-                perform: { to, amount, _, _ in await sendHegota(to: to, amount: amount) })
-                case .framesSend:
+        // **THE SEND FORM (prd §553).** The room hands the sheet what it
+        // knows: who the book knows, what the account holds, whether a Max is
+        // honest, and the one closure that actually sends. Everything visual
+        // lives in `DevnetSendSheet`.
+        case .framesSend:
             DevnetSendSheet(
                 venue: String(localized: "Frames"),
                 seat: FramesIdentity.source,
@@ -5619,21 +4346,19 @@ struct FeedScreen: View {
                 unit: String(localized: "test ETH"),
                 candidates: framesSendCandidates,
                 heldLine: framesHeldLine,
-                // **NO MAX**, Hegotá's rule and this chain's too: the sender
-                // pays its own gas, so an amount equal to the whole balance
-                // cannot pay for itself and is a guaranteed failure — the dead
-                // control §83 bans wearing a convenience's clothing.
+                // **NO MAX**: the sender pays its own gas, so an amount equal
+                // to the whole balance cannot pay for itself and is a
+                // guaranteed failure — the dead control §83 bans wearing a
+                // convenience's clothing.
                 maxAmount: nil,
                 isValidAddress: DevnetSendParse.isValidAddress,
                 isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: { to, amount, _, _ in await sendFrames(to: to, amount: amount) },
+                perform: { to, amount in await sendFrames(to: to, amount: amount) },
                 // The one thing neither neighbour can say — see
                 // `FramesSendPlanSteps`.
-                // **THE ONLY VENUE THAT STITCHES** (prd §548 sixth follow-up).
-                // vibenet and Hegotá pass nil and keep the two-screen send
-                // exactly as it was; this chain's whole capability is putting
-                // several frames under one signature, and until now the send
-                // built exactly two.
+                // **THE VENUE STITCHES** (prd §548 sixth follow-up): this
+                // chain's whole capability is putting several frames under one
+                // signature, and until then the send built exactly two.
                 stitch: DevnetStitch(
                     headName: String(localized: "Verify"),
                     headDetail: String(localized: "An expiry check, then your signature · always first"),
@@ -5655,7 +4380,7 @@ struct FeedScreen: View {
                     // size can show without scrolling past the control.
                     maxLegs: 8,
                     atCapacity: String(localized: "That's as many frames as one transaction can carry here."),
-                    send: { legs, atomic, _ in await sendFramesStitched(legs, atomic: atomic) },
+                    send: { legs, atomic in await sendFramesStitched(legs, atomic: atomic) },
                     // **THE SAME STRIP THE ROOM DRAWS.** Not a preview invented
                     // for this screen: `FramesSequenceStrip` is what the Frames
                     // scope uses to show what a transaction DID, so composing in
@@ -5709,158 +4434,6 @@ struct FeedScreen: View {
                     ask: { legs, atomic, payer in
                         await askFramesSponsor(legs, atomic: atomic, payer: payer)
                     }))
-        // **ETHREX PRIVACY'S SEND (prd §593d)** — the seat's first act. It
-        // shipped watch-only because §593a could not reproduce the type-`0x6`
-        // envelope; §593c settled that against the node and wrote the encoder,
-        // and then nothing in the app ever called it.
-        case .privacyDevnetSend:
-            DevnetSendSheet(
-                venue: String(localized: "Hegotá Privacy"),
-                seat: PrivacyDevnetIdentity.source,
-                tint: DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint,
-                unit: String(localized: "test ETH"),
-                candidates: privacyDevnetSendCandidates,
-                heldLine: privacyDevnetHeldLine,
-                // **NO MAX**, Hegotá's and Frames' rule and this chain's too:
-                // the sender pays its own gas, so an amount equal to the whole
-                // balance cannot pay for itself and is a guaranteed failure —
-                // the dead control §83 bans wearing a convenience's clothing.
-                maxAmount: nil,
-                isValidAddress: DevnetSendParse.isValidAddress,
-                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: { to, amount, _, fresh in
-                    await sendPrivacyDevnet(to: to, amount: amount, freshKey: fresh)
-                },
-                // **THE ONE THING NEITHER SIBLING CAN DO.** Both states are
-                // spelled because OFF is the one that matters: the ordinary
-                // channel is what every measured transaction on this chain uses
-                // and what links a person's sends to each other, and leaving
-                // that undescribed makes the control read as a feature rather
-                // than as the choice it is. OFF by default — a default that
-                // changes what gets signed without anybody choosing it is a
-                // setting pretending to be a behaviour, and this one also
-                // changes which nonce sequence the transaction claims.
-                choice: DevnetSendChoice(
-                    title: String(localized: "One-time spend key"),
-                    on: String(localized: "Spends on a fresh key, so this can't be tied to your last send."),
-                    off: String(localized: "Spends on your usual key, where each send follows the last.")),
-                // Two frames, and the first one is what makes the second legal
-                // — see `PrivacyDevnetSendPlanSteps`.
-                plan: PrivacyDevnetSendPlanSteps.steps)
-        case .privacyDevnetShield:
-            // The SAME amount console as send, in its destinationless mode: no
-            // recipient to pick (the money goes into the pool), and the verb
-            // says "Shield". `perform` ignores the fixed destination it is
-            // handed and shields the amount.
-            DevnetSendSheet(
-                venue: String(localized: "Hegotá Privacy"),
-                seat: PrivacyDevnetIdentity.source,
-                tint: DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint,
-                unit: String(localized: "test ETH"),
-                candidates: [],
-                heldLine: privacyDevnetHeldLine,
-                maxAmount: nil,
-                isValidAddress: DevnetSendParse.isValidAddress,
-                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: { _, amount, _, _ in await shieldPrivacyDevnet(amount: amount) },
-                fixedDestination: PrivacyDevnetPool.address,
-                verb: String(localized: "Shield"),
-                note: String(localized: "Shielded ETH can't be taken back out in Casberi yet."))
-        case .vibenetSend(let account):
-            DevnetSendSheet(
-                venue: String(localized: "vibenet"),
-                seat: VibenetIdentity.source,
-                tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
-                unit: "ETH",
-                candidates: vibenetSendCandidates,
-                heldLine: nil,
-                maxAmount: nil,
-                isValidAddress: DevnetSendParse.isValidAddress,
-                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: { to, amount, advanced, _ in
-                    await sendVibenet(from: account, to: to, amount: amount, advanced: advanced)
-                },
-                // **THE SECOND VENUE THAT BATCHES, and it batches a different
-                // thing (2026-09-04).** Frames stitches whole TRANSACTIONS
-                // joined by a flag the chain reads; vibenet puts several calls
-                // inside ONE transaction — `Fields.calls`, whose two-level
-                // shape has been part of the proven signing hash since §523 and
-                // had never had a caller build more than one.
-                stitch: DevnetStitch(
-                    // **NO HEAD ROW HERE.** Frames draws one because its verify
-                    // frame is a real leg the chain requires and you did not
-                    // add — leaving it out is what makes somebody ask whether
-                    // they were supposed to. A vibenet batch has no such
-                    // prefix: every row in the list is a call you wrote, so a
-                    // head row would be a picture of nothing.
-                    headName: nil,
-                    headDetail: nil,
-                    // NOT a toggle. One transaction, one nonce, one revert —
-                    // see `VibenetBatch`'s doc for why offering the choice
-                    // would be a control wired to a property of the chain.
-                    atomicity: .inherent(
-                        String(localized: "These send together under one signature. If one fails, none of them do.")),
-                    maxLegs: VibenetBatch.maxCalls,
-                    atCapacity: String(localized: "That's as many sends as one transaction carries here."),
-                    send: { legs, _, advanced in
-                        await sendVibenetBatch(from: account, legs: legs, advanced: advanced)
-                    },
-                    // **NO PREVIEW.** Frames passes its room's own sequence
-                    // strip so you compose in the shape you will read the
-                    // result in; this room draws no such figure for a batch,
-                    // and inventing one for this sheet alone would be a second
-                    // drawing of a thing the room does not draw — the drift
-                    // `preview`'s own doc exists to refuse.
-                    // **THE TIES ARE ASKED OF THE ENCODER**, that parameter's
-                    // standing rule: `VibenetBatch.joins` derives them from the
-                    // same `phases` the signer uses, so the list cannot promise
-                    // a shape the signature does not carry. `atomic` is ignored
-                    // because on this chain it is not a variable.
-                    joins: { legs, _ in VibenetBatch.joins(callCount: legs.count) }),
-                // **THE ONLY VENUE WHOSE ENVELOPE CARRIES THESE** — see
-                // `advancedSupported`. After `stitch:` because Swift orders
-                // arguments by declaration.
-                advancedSupported: true)
-        case .vibenetCreate:
-            // The sheet already watched the account (`create()`). Two halves:
-            // the room re-reads the chain the moment the account lands, however
-            // the sheet is closed afterwards — a swipe never reached the old
-            // single callback, so the room kept its one account — and "Done"
-            // dismisses first (the `.vibenetKeys` ruling: nothing lands under
-            // a covered screen) and rains for the arrival (§655 amendment).
-            VibenetCreateSheet(onCreated: { _ in
-                feedSheet = nil
-                chrome.rain(sources: [VibenetIdentity.source])
-            }, onLanded: { _ in
-                // Watching alone changes nothing this screen has READ: the room
-                // is composed from `VibenetState.saved`, a flat snapshot with
-                // no observation. Read the chain, then move the memoised head.
-                Task {
-                    _ = await VibenetRoomSource.compose()
-                    chrome.refreshRooms()
-                }
-            })
-        case .vibenetWatch:
-            VibenetWatchSheet {
-                // The create branch's own two halves, for its own stated
-                // reason: this room is composed from `VibenetState.saved`, a
-                // flat UserDefaults snapshot with no observation, so watching
-                // alone changes nothing this screen has READ. Read the chain
-                // now, then bump the term the memoised head recomputes on.
-                //
-                // No `feedSheet = nil` here, unlike the create branch: this
-                // sheet dismisses ITSELF the moment an address is really added
-                // (`VibenetWatchSheet.onWatched` calls `dismiss()` right after
-                // this closure), so clearing the route as well would be the
-                // same dismissal asked for twice.
-                Task {
-                    _ = await VibenetRoomSource.compose()
-                    chrome.refreshRooms()   // a watch list changed (§655 amendment)
-                }
-            }
-        case .vibenetAuthorize(let account, let epoch, let sequence, let editing, let replacing):
-            VibenetAuthorizeSheet(account: account, localEpoch: epoch, localSequence: sequence,
-                                  editing: editing, replacing: replacing)
         }
     }
 
@@ -6009,9 +4582,9 @@ struct FeedScreen: View {
         // materialises is empty. A room narrowed to empty by a tag or a scope
         // reads twice, which is what it read before.
         //
-        // THE EXCEPTION, stated rather than glossed: the three seats whose
-        // branches below return before they ever reach the rows (Frames,
-        // Hegotá, the privacy devnet) previously paid one short-circuiting
+        // THE EXCEPTION, stated rather than glossed: the seats whose branches
+        // below return before they ever reach the rows (Frames, Logos)
+        // previously paid one short-circuiting
         // `contains` and now pay `visible`'s `Corpus.surfaced` allocation too.
         // It is free in fact and not in principle — each of those seats lands
         // no `Thing` EVER, so the array it allocates over is empty — and it is
@@ -6107,144 +4680,6 @@ struct FeedScreen: View {
                 let days = chronoGroups(logosRows(rows, section: logosSection))
                 groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
             }
-        } else if source == PrivacyDevnetIdentity.source {
-            // **NO `if let`.** `compose` is non-Optional precisely so this arm
-            // cannot be skipped: the seat is in `LiveRoomSources`, so falling
-            // through here draws NOTHING rather than an empty state — a black
-            // screen, reproduced on a simulator when nothing was watched yet.
-            let head = PrivacyDevnetRoomSource.compose(scope: chrome.privacyDevnetScope)
-            // A ROOM WITH LIVE CONTENT AND NO ROWS — the same structural gap
-            // Hegotá's branch below documents. This seat lands no `Thing`
-            // EVER, so without this arm both arms above fall through and the
-            // room renders nothing at all.
-            // Published from `.onChange(of: privacyDevnetSectionPublication)` up
-            // in `body`, NOT written here — see that property for what a body
-            // writing its own observed state costs.
-            let privacyScope = PrivacyDevnetSection.resolve(
-                chrome.privacyDevnetSection, present: chrome.privacyDevnetSections)
-            // **ON HOME THE CHROME IS THE WHOLE ROOM; OFF HOME IT FOLLOWS THE
-            // FIGURE** (prd §750, §752). On Home the figure section is not
-            // emitted and the chrome draws the head (this room's card pinned
-            // to `.home`), the send console as Actions, and the Readings rows.
-            // Off Home the scope's figure draws first and the chrome under it
-            // is the section tiles.
-            // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
-            // that scopes the room is drawn at the top of the screen.
-            privacyDevnetScopeChromeSection(privacyScope, head: head)
-            // **THE ROWS AND THE ACTS, OUTSIDE THE CLIPPED SLOT (prd §593d).**
-            // `DSRoomSlot` is a hard 300pt box, so drawing the list inside it
-            // cut every row past the third off the bottom with no scroll and no
-            // sign — reported as the lists not showing at all. `FramesRoomList`
-            // is the same split one seat over.
-            Section {
-            // **THE VERBS SIT UNDER THE RAIL, NOT UNDER THE LIST (prd §682,
-            // user: "instead of a list below the rail should be whatever
-            // buttons go here like on the other wallets… somehow they
-            // disappeared").** They never disappeared: §664 gave the Send card
-            // its own List row and left it AFTER the room's rows, so on a Home
-            // with any history the verbs were below the fold and the first
-            // thing under the rail was a list. Every other wallet room leads
-            // with its verbs. So does this one now; the last few moves follow
-            // them.
-                PrivacyDevnetRoomList(
-                    head: head,
-                    section: privacyScope,
-                    accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
-                    headSlot: PrivacyDevnetLiveState.shared.headSlot,
-                    walkCut: PrivacyDevnetLiveState.shared.walkCut,
-                    shielded: PrivacyDevnetLiveState.shared.shielded,
-                    mine: PrivacyDevnetLiveState.shared.mine,
-                    // The Send card is its OWN row below (prd §664), not a
-                    // member of this VStack: a cell shared between the move
-                    // list and the verb grid took the grid's under-reported
-                    // height for both, and the tiles rode up over the last
-                    // transaction on a phone. Vibenet mounts its card the same
-                    // way (`vibenetSendRow`).
-                    onSend: nil,
-                    onShield: nil,
-                    // **THESE ROWS WERE TERMINAL BY CONSTRUCTION** (prd §596,
-                    // user: "none of the lists open thing sheets") — the seat
-                    // lands no `Thing`, so its sheets had to be built the way
-                    // Frames and Hegotá built theirs, and every row is a door
-                    // through the screen's ONE `.sheet`.
-                    onOpenMove: { move, owner in
-                        feedSheet = .privacyDevnetMove(move, owner)
-                    },
-                    onOpenAccount: { account in
-                        feedSheet = .privacyDevnetAccount(account)
-                    })
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            // The Wallet's row column (prd §950): a devnet list's icons centre
-            // on the same line as every other room's; its day headers step
-            // back to the tiles' edge themselves (`DSDayHeader`).
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                      bottom: DS.Space.s4, trailing: DS.Space.s4))
-            // The verbs, in their own cell (prd §664) — see the `onSend: nil`
-            // above for why they left the list's.
-            // **THE SWITCHER WAS MISSING ON THE FIRST BUILD**, found by opening
-            // the room on a simulator rather than by any check: the seven scopes
-            // existed, `present()` computed them correctly, and six of them were
-            // unreachable because nothing drew a control. Nothing static can see
-            // that — the scopes are right, the room draws, and the strip simply
-            // is not there.
-            // **THE RAIL LISTS EVERY ACCOUNT, NOT THE SCOPED ONE.** It is the
-            // control that SETS the scope, so feeding it the scoped list would
-            // leave one face on screen with no way back — a filter that can be
-            // entered and not left.
-
-        } else if source == HegotaIdentity.source, let head = HegotaRoomSource.compose() {
-            // **A ROOM WITH LIVE CONTENT AND NO ROWS.** Without this branch the
-            // `if/else if` above falls through BOTH arms and renders nothing at
-            // all — a black screen, which is how the Hegotá room reached a
-            // device four times.
-            //
-            // The gap is structural rather than an oversight: `LiveRoomSources`
-            // exists so a room with live content skips the corpus-shaped empty
-            // state, and until now its only members were Kalshi and Polymarket,
-            // whose `predictionBook` draws from a separate path — so for them
-            // the room is never really empty and the missing arm never showed.
-            // Hegotá lands no `Thing` EVER, so its rows are always zero and its
-            // entire content is this head.
-            // **THREE SECTIONS, exactly as Wallet emits them** — figure, rail,
-            // switcher — rather than one card holding all three. They are not
-            // children of a card in this app; the rail is FULL BLEED so it can
-            // scroll edge to edge, and the switcher takes the room's own inset.
-            // Nested inside a card they inherited the card's padding instead,
-            // which is what put this room's rails out of line with Wallet's.
-            // The room publishes what it HAS, so the switcher never offers a
-            // chip that opens nothing — derived from the composed room rather
-            // than the watch list (the face rail's own rule) — published from
-            // `.onChange(of: hegotaSectionPublication)` up in `body`, NOT
-            // written here. It was written here until 2026-09-01, and since
-            // `ShellChrome` is `@Observable` and the reads below are in this
-            // same pass, that was a body which invalidated itself continuously.
-            hegotaChainNoticeSection
-            // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
-            // that scopes the room is drawn at the top of the screen.
-            hegotaScopeChromeSection
-            Group {
-                HegotaRoomList(head: head,
-                               accounts: HegotaRoomSource.accounts(),
-                               scoped: chrome.hegotaScope,
-                               section: HegotaSection.resolve(chrome.hegotaSection,
-                                                              present: chrome.hegotaSections),
-                               onOpenMove: { move, owner in
-                    feedSheet = .hegotaMove(move, owner)
-                }, onOpenAccount: { account in
-                    feedSheet = .hegotaAccount(account)
-                }, onOpenCoin: { coin, all, unspent in
-                    feedSheet = .hegotaCoin(coin, all, unspent)
-                }, onOpenKeySheet: { feedSheet = .hegotaKeySheet })
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            // The Wallet's row column (prd §950): a devnet list's icons centre
-            // on the same line as every other room's; its day headers step
-            // back to the tiles' edge themselves (`DSDayHeader`).
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                      bottom: DS.Space.s4, trailing: DS.Space.s4))
         // **`|| roomAgent != nil` OR THIS CHAIN FALLS THROUGH BOTH ARMS AND
         // RENDERS A BLACK SCREEN (prd §845).** §842 added `roomAgent == nil`
         // to the first arm so an agent room would stop being replaced by the
@@ -6253,8 +4688,8 @@ struct FeedScreen: View {
         // connected agent with no conversation yet matched nothing here at all.
         // Reported the moment the dock fix worked: *"i press the bankr tile i
         // just see a black screen"*. `LiveRoomSources`' own doc names this
-        // exact shape twice — it is why Hegotá, Frames and the Privacy devnet
-        // each have an arm above rather than a flag.
+        // exact shape — it is why Frames and Logos each have an arm above
+        // rather than a flag.
         } else if roomHasContent || roomAgent != nil || Pinboard.isPinnedRoom(source)
                     || connectedHoldsLead {
             // Derived ONCE per render and threaded into everything below
@@ -6275,8 +4710,8 @@ struct FeedScreen: View {
                 populatedRoom(visible)
             }
         } else {
-            // A LIVE-CONTENT ROOM WHOSE HEAD IS NIL (prd §911) — Hegotá with
-            // nothing watched, Frames the same. Every arm above declined, and
+            // A LIVE-CONTENT ROOM WHOSE HEAD IS NIL (prd §911) — Frames with
+            // nothing watched. Every arm above declined, and
             // the chain used to fall through here and draw NOTHING: the black
             // screen each of those arms' notes describes. The corpus-shaped
             // empty state is the honest floor.
@@ -6296,13 +4731,13 @@ struct FeedScreen: View {
     ///
     /// `filteredEmptyState` replaces the WHOLE room — it is written for a
     /// source chip that matched nothing, where the room is its rows and the
-    /// honest answer is a line plus "Show everything". In vibenet the room is
-    /// not its rows: the crown, the face rail and the scope strip are the head,
-    /// they are how you got here and they are the only way back. Scoping to an
-    /// account with no activity therefore deleted the control you had just
-    /// used, and the one exit left (`filter.source = "All"`) throws you out of
-    /// vibenet altogether rather than back to the account you came from. A dead
-    /// end you can only leave by leaving.
+    /// honest answer is a line plus "Show everything". In a room whose head is
+    /// its navigation the room is not its rows: the tiles and the rails are how
+    /// you got here and they are the only way back. Scoping to something with
+    /// no activity therefore deleted the control you had just used, and the
+    /// one exit left (`filter.source = "All"`) throws you out of the room
+    /// altogether rather than back to where you came from. A dead end you can
+    /// only leave by leaving.
     ///
     /// So a room that draws a head takes the populated path with an empty row
     /// set instead, and says "nothing here" IN the room, under its own rails —
@@ -6310,15 +4745,14 @@ struct FeedScreen: View {
     ///
     /// Gated on the head actually COMPOSING, never on the source name alone:
     /// if there is no card to draw then the room really is its rows, and the
-    /// generic state is the right answer after all. Hegotá already has its own
+    /// generic state is the right answer after all. Frames already has its own
     /// arm above for the same structural reason (it lands no `Thing` ever, so
-    /// its rows are always zero) — this is that reasoning applied to the room
-    /// that lands rows but can legitimately have none of them in view.
+    /// its rows are always zero) — this is that reasoning applied to the rooms
+    /// that land rows but can legitimately have none of them in view.
     private var keepsChromeWhenEmpty: Bool {
-        shape == .vibenet
-            // A picked kind tile is this room's navigation too (prd §815):
-            // the tiles stay, and say "nothing here" under themselves.
-            || roomKindPick != .all
+        // A picked kind tile is this room's navigation too (prd §815):
+        // the tiles stay, and say "nothing here" under themselves.
+        roomKindPick != .all
             // **AN AGENT ROOM'S TILES ARE HOW IT STOPS BEING EMPTY (prd §841).**
             // Without this the generic state replaces the whole room the
             // moment its last conversation is deleted, taking the Chat tile
@@ -6411,20 +4845,11 @@ struct FeedScreen: View {
                 // room really is whole (prd §264). While a window is open
                 // the `olderRow` is what sits at the bottom instead.
                 // **A SCOPE WITH NO ROWS MUST NOT CLAIM TO BE CAUGHT UP
-                // (prd §482).** "That's everything from Base Vibenet · 4
-                // events" under a census of keys is a claim about a list that
-                // is not on screen — the §83 fake status, and it shipped for
-                // the length of one build because the footer's own gate knew
-                // about rooms and not about scopes. Vibenet draws its rows in
-                // `.recent` alone, so the line belongs there alone; Wallet
-                // sidesteps the same problem by opting out of the footer
-                // entirely one clause up.
+                // (prd §482, §486).** "You're all caught up" under a Shielded
+                // card with no stream on screen is a claim about a list that is
+                // not on screen — the §83 fake status. Wallet sidesteps the
+                // same problem by opting out of the footer entirely.
                 if shape != .reminders && shape != .wallet
-                    && vibenetShowsRows
-                    // The same gate for the Privacy Pools room's own scopes
-                    // (prd §486), and for the same reason: "you're all caught
-                    // up" under a Shielded card with no stream on screen is the
-                    // §83 fake status the clause above it was added to end.
                     && privacyPoolsShowsRows(visible)
                     && !hidesPastEvents(visible) && !memo.windowHasMore {
                     caughtUpFooter(visible)
@@ -6477,8 +4902,8 @@ struct FeedScreen: View {
             // you click any of the button on the toggle bar the bar jumps. we
             // need it fixed in place"*).
             //
-            // The strip is not pinned in either room — Wallet draws it as a
-            // `List` section and vibenet inside its room card — so it scrolls
+            // The strip is not pinned — Wallet draws it as a `List`
+            // section — so it scrolls
             // away with the crown, and measured on the device it goes ENTIRELY
             // off screen. What reads as a jump is the half-scrolled case: the
             // scope changes, the content below is a different height, the
@@ -6499,10 +4924,8 @@ struct FeedScreen: View {
             // than extending it, so it wants its own ruling rather than a
             // quiet diff.
             .onChange(of: chrome.walletSection) { _, _ in returnToRoomTop(proxy) }
-            .onChange(of: chrome.vibenetSection) { _, _ in returnToRoomTop(proxy) }
-            // **AND ON AN ACCOUNT PICK** (prd §495, user: *"clicking on an
-            // account in vibenet fucks up the screen… it makes the silhouette
-            // and toggle bar jump to the top"*).
+            // **AND ON AN ACCOUNT PICK** (prd §495, user: *"it makes the
+            // silhouette and toggle bar jump to the top"*).
             //
             // Same defect as the scope chips and the same fix: narrowing the
             // room to one account replaces its whole content, the list's
@@ -6511,7 +4934,6 @@ struct FeedScreen: View {
             // the strip up the screen. The SCOPE chips were hooked here and
             // the FACE rail was not, because the first report named the chips.
             .onChange(of: chrome.walletScope) { _, _ in returnToRoomTop(proxy) }
-            .onChange(of: chrome.vibenetScope) { _, _ in returnToRoomTop(proxy) }
     }
 
     /// The id the room's head carries, so a scope change can return to it.
@@ -7054,37 +5476,6 @@ struct FeedScreen: View {
                 Button("Cancel", role: .cancel) { confirming = nil }
             }
         }
-        // The vibenet card's own long-press "Stop watching" on the LAST
-        // watched account — `vibenetUnwatch`'s guard, mirroring
-        // `VibenetAddressBookScreen`'s identical dialog, since removing the
-        // last address tears down the whole seat rather than one row.
-        .confirmationDialog(
-            String(localized: "Stop watching your last account?"),
-            isPresented: Binding(get: { removingLastVibenet != nil },
-                                 set: { if !$0 { removingLastVibenet = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button(String(localized: "Stop watching"), role: .destructive) {
-                if let address = removingLastVibenet { commitVibenetUnwatch(address) }
-                removingLastVibenet = nil
-            }
-            Button(String(localized: "Cancel"), role: .cancel) { removingLastVibenet = nil }
-        } message: {
-            Text(String(localized: "Vibenet disconnects: its chip leaves the source strip, and the address leaves your Address book unless it's also a named account on another network."))
-        }
-        // The vibenet card's other long-press verb (prd §669). One alert for
-        // every shape of that card — the roster row, the one-account detail
-        // and the lead row each raise it through `onRename`, so the verb
-        // cannot work in one shape and do nothing in another again.
-        //
-        // A MODIFIER rather than a fourth presentation spelled out inline:
-        // this chain already carries a sheet, a translation presentation and
-        // two dialogs, and a text-entry alert's three nested builders inside
-        // one expression this size is how a body stops type-checking (the
-        // `KeyboardWalk` split's own lesson, one file over).
-        .modifier(VibenetNameAlert(address: $renamingVibenet,
-                                   draft: $vibenetNameDraft,
-                                   onSave: commitVibenetName))
         .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
         .modifier(NoteTrashSheet(open: $trashOpen, onRecover: recoverNote,
                                  onErase: { NoteTrash.shared.erase($0) }))
@@ -7131,17 +5522,6 @@ struct FeedScreen: View {
         }
         DSHaptic.success()
         chrome.flash(String(localized: "Recovered"), tone: .success)
-    }
-
-    /// Saves the name a vibenet account was just given (prd §669).
-    ///
-    /// `refreshRooms()` because the name is what every row of that room prints
-    /// and the room is a memoised VALUE — without it the alert closes onto the
-    /// old word and stays there until some unrelated change moves the head. It
-    /// moves the head and rains nothing (§655): naming is not an arrival.
-    private func commitVibenetName(_ address: String, _ name: String) {
-        VibenetWatch.shared.setName(name, for: address)
-        chrome.refreshRooms()
     }
 
     // MARK: - Shaped sections (one source in force = its native shape)
@@ -7372,185 +5752,6 @@ struct FeedScreen: View {
                         // stamps on `authorHandle` (the Cursor repo rule).
                         openNewest(source: PeerRoomSource.source, in: visible) { thing in
                             thing.authorHandle == rail.name
-                        }
-                    }
-                case .vibenet(let room):
-                    // The same card the setup screen draws. `onRemove` IS
-                    // wired here (it wasn't, and the dead "Stop watching" on
-                    // the single-account long-press — the card's own detail
-                    // branch draws that menu unconditionally once exactly one
-                    // account is watched, `VibenetRoomCard`'s
-                    // `VibenetDetailContextMenu` — read as "long-press to
-                    // stop watching does nothing" — reported and fixed
-                    // 2026-08-30): `vibenetUnwatch` mirrors
-                    // `VibenetAddressBookScreen.unwatch` including the last-
-                    // account confirm, then re-composes and bumps
-                    // `chrome.refreshPulse` the same way `onWatched` already
-                    // does below. `onRename` IS WIRED HERE TOO, and for the
-                    // same reason one release later (prd §669, user: "long
-                    // press ... offer to name this address but when i click it
-                    // nothing happens"): it shipped inert on the strength of
-                    // "nobody has reported that one as broken", which is what
-                    // this comment used to say and is not a test. The alert is
-                    // this screen's (`vibenetRename`), because the card draws
-                    // that verb in three shapes and could host it in one.
-                    // `onOpen` is left NIL here
-                    // (2026-08-24,
-                    // corrected — see `VibenetRoomCard`'s own header doc):
-                    // Wallet's own unscoped room has no per-wallet door
-                    // anywhere, only scoping, so a feed-room roster tap
-                    // must only scope too, never open a sheet. Scoping
-                    // itself is `VibenetScopeRail`'s alone (prd §469): the
-                    // card's `onScope` closure was deleted after being found
-                    // unreached — this call site passed a real closure into
-                    // a prop nothing called — and the rail above the card
-                    // already scopes every account with the toggle rule
-                    // (tap the scoped account again to return to "All").
-                    //
-                    // `onOpenKeys` routes through THIS screen's single
-                    // `.sheet` (prd §468) rather than being presented by the
-                    // card: the card is inside this List's rows, and a
-                    // `.sheet` there resolves to the same presenting
-                    // controller — the half-open-then-close bug. It carries
-                    // the ROOM's items, which are already scoped by the rail,
-                    // so a tray opened from a scoped room lists that
-                    // account's keys and a tray opened from All lists
-                    // everyone's — the same "click all you see all" rule the
-                    // cards above it follow.
-                    // WHICH READING IS ON SCREEN (prd §482). Resolved rather
-                    // than read raw: a scope remembered from a room whose
-                    // last key has since been revoked falls back to Holdings
-                    // instead of rendering an empty page claiming to be a
-                    // section — `WalletSection.resolve`'s rule, one room over.
-                    VibenetRoomCard(room: room, onRemove: vibenetUnwatch,
-                                    // An address just watched from THIS card's
-                                    // own empty-state discovery list (§479).
-                                    // The card is composed from a `VibenetRoom`
-                                    // VALUE this screen holds, off
-                                    // `VibenetState.saved` — a flat UserDefaults
-                                    // snapshot with no observation, unlike
-                                    // `VibenetWatch.shared` (@Observable). So
-                                    // watching alone (already done by the
-                                    // control itself) changes nothing this
-                                    // screen has read; the room needs both
-                                    // halves `VibenetScreen.watched()` does for
-                                    // the identical tap: read the chain now
-                                    // (`compose()` also writes the snapshot
-                                    // `card()` reads), then bump
-                                    // `chrome.refreshPulse` — the existing
-                                    // "bridge state changed, no row proves it"
-                                    // term `headIdentity` already keys on
-                                    // (`WalletFeedTiles`'s arrival-rain and the
-                                    // pull-to-refresh gesture use it the same
-                                    // way) — once the read lands, so this
-                                    // screen's memoised head actually
-                                    // recomputes instead of waiting on some
-                                    // unrelated change to move it.
-                                    onWatched: {
-                                        Task {
-                                            _ = await VibenetRoomSource.compose()
-                                            chrome.refreshRooms()
-                                        }
-                                    },
-                                    onRename: vibenetRename,
-                                    onOpenKeys: { newKeyIDs in
-                                        feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
-                                    },
-                                    onOpenKey: { actor, item, shared in
-                                        feedSheet = .vibenetKey(actor, item, shared)
-                                    },
-                                    onScope: vibenetScoper,
-                                    // WHICH READING IS ON SCREEN (prd §482).
-                                    // Resolved rather than read raw: a scope
-                                    // remembered from a room whose last key has
-                                    // since been revoked falls back to Holdings
-                                    // instead of rendering an empty page that
-                                    // claims to be a section.
-                                    section: VibenetSection.resolve(
-                                        chrome.vibenetSection,
-                                        present: vibenetSectionPublication.sections),
-                                    // The strip is drawn by the CARD now, under
-                                    // the crown (prd §482 amendment). Its inputs
-                                    // are handed down rather than read from the
-                                    // shell there, so `VibenetScreen` — which has
-                                    // no scope state — draws no strip for free.
-                                    scopes: vibenetSectionPublication.sections,
-                                    scopeAttention: vibenetSectionPublication.attention,
-                                    onPickScope: { picked in
-                                        // **THE SWAP IS NOT ANIMATED** (prd
-                                        // §495, user: *"it lands in place, but
-                                        // jumps"* — which is the whole
-                                        // diagnosis).
-                                        //
-                                        // §495's template fix made every
-                                        // scope's drawing START at the same y,
-                                        // so the bar lands where it belongs.
-                                        // What was left is the TRANSITION:
-                                        // each scope produces its own
-                                        // `DSRoomSlot`, so SwiftUI replaces
-                                        // one view with another rather than
-                                        // updating one in place, and under
-                                        // `withAnimation` it interpolates that
-                                        // replacement — two drawings of
-                                        // different natural heights briefly
-                                        // sharing the box, which moves the
-                                        // rail and the strip below and settles
-                                        // them back. A jump that no settled
-                                        // screenshot can see, which is exactly
-                                        // why four rounds of measuring stills
-                                        // reported "it does not move".
-                                        //
-                                        // The SELECTION still animates — that
-                                        // is `DSSectionSwitcher`'s own
-                                        // `matchedGeometryEffect`, and §-
-                                        // 2026-07-14's ruling that selection is
-                                        // an object travelling rather than two
-                                        // states blinking is untouched. It is
-                                        // only the CONTENT swap that is
-                                        // instant, which is also the honest
-                                        // reading: two scopes are two answers,
-                                        // not one answer moving.
-                                        chrome.vibenetSection = picked
-                                    },
-                                    // **THE ROOM'S ACTS (prd §747)** — what
-                                    // `vibenetSendRow` was, handed to the card
-                                    // so the verbs ride the account card
-                                    // rather than a Section below the list.
-                                    // Follow address closes the acts, as the
-                                    // Wallet's does (prd §954): watching left
-                                    // the Accounts list for Home.
-                                    acts: { scope in
-                                        AnyView(VStack(alignment: .leading, spacing: 0) {
-                                            vibenetSendRow(scope: scope)
-                                            DevnetVerbRow(title: String(localized: "Follow address"),
-                                                          glyph: "eye",
-                                                          tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
-                                                          act: { feedSheet = .vibenetWatch })
-                                        })
-                                    },
-                                    // The face rail's two halves, now the
-                                    // crown's (prd §482 amendment).
-                                    scopedAddress: chrome.vibenetScope)
-                case .altana(let card):
-                    AltanaRoomCard(card: card) {
-                        // The door is Altana's own explorer — the only place a
-                        // key can actually be revoked (§112: we read and
-                        // state, they act). Opened directly rather than
-                        // landing on a row, because the account page is the
-                        // whole subject and no single row is.
-                        if let url = URL(string: AltanaKeystore.explorerURL(address: card.address)) {
-                            openExternal(url)
-                        }
-                    } onPickKey: { row in
-                        // Matched on the KEY ID, the last segment of every ref
-                        // `AltanaKeystore.ref` builds. A SHARED credential is
-                        // one token signing for several accounts (§408a), so it
-                        // has several rows — the newest wins, which is
-                        // `openNewest`'s own rule and the honest answer when
-                        // one credential has more than one registration.
-                        let tail = ":" + row.id.lowercased()
-                        openNewest(source: AltanaKeystore.source, in: visible) { thing in
-                            thing.sourceRef?.hasSuffix(tail) ?? false
                         }
                     }
                 case .privacyPools(let room):
@@ -7966,7 +6167,7 @@ struct FeedScreen: View {
                 // it. It is also the half that had no list at all.
                 if walletScopeIsEmpty(.permissions), walletLive.exposure.isEmpty,
                    walletSignatureWarnings.isEmpty,
-                   !walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
+                   !walletLive.acting.contains(where: { $0.modulesUnreadable }) {
                     walletSkeletonRowsSection
                 }
                 // Signatures first (prd §947): what is waiting on you, then
@@ -8014,48 +6215,6 @@ struct FeedScreen: View {
             reminderSections(visible, nextEventID: nextEventID, heroShown: heroShown)
         case .music:
             musicSections(visible, nextEventID: nextEventID, heroShown: heroShown)
-        case .vibenet:
-            // THE EVENTS ARE A SCOPE NOW (prd §482) — "Recent", and the only
-            // one of vibenet's four that is rows rather than cards. Drawn when
-            // that scope is picked, or when the strip is not shown at all
-            // (`present` returned fewer than two, so there is no control and
-            // the room is one scroll again).
-            //
-            // Days, like most rooms: unlike CardPointers (where every row
-            // shares one sync timestamp) these are real events at real block
-            // times, so a chronological grouping is honest here.
-            // **HOME IS THE ONE DO; ACTIVITY IS THE STREAM (2026-08-31,
-            // amending the §482 ruling below).** Home used to repeat a
-            // "Latest 3" preview of the same rows Activity already shows in
-            // full one tap away — real duplication, not the half-a-scope
-            // problem it was built to answer. The fix isn't a better
-            // preview, it's a different second half: the one write action
-            // this room has, in the one slot with room for it.
-            //
-            // The §482 reasoning survives underneath — every scope is still
-            // one drawing and one list, and Activity's own full stream is
-            // untouched. What changed is which LIST answers Home's half.
-            let vScope = VibenetSection.resolve(chrome.vibenetSection,
-                                                present: vibenetSectionPublication.sections)
-            let vScoped = VibenetSection.shows(present: vibenetSectionPublication.sections)
-            if vScoped && vScope == .home {
-                // **HOME HAS NO LIST (prd §747).** Its half was the verb tiles
-                // (`vibenetSendRow`), which now ride the account card inside
-                // the room's own chrome — so §682's "the verbs sit under the
-                // rail, never under the list" holds by construction. Home's
-                // list is the scope door rows the chrome draws.
-                EmptyView()
-            } else if vibenetShowsRows {
-                if visible.isEmpty {
-                    // NOTHING IN THIS SCOPE, said under the rails that got you
-                    // here (prd §538) — see `keepsChromeWhenEmpty` for why this
-                    // is a row rather than a replacement for the room.
-                    vibenetEmptyRow
-                } else {
-                    let days = chronoGroups(visible)
-                    groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
-                }
-            }
         case .cardPointers:
             // Deadlines, not days — see `cardPointersGroups`. No `boundary:`,
             // because every offer carries the
@@ -9829,14 +7988,6 @@ struct FeedScreen: View {
         // readings are the Wallet room's balance card, DeFi tiles and
         // composition strip, which is where they belong.
         case peer(PeerRoom)
-        // Altana's keystore (2026-08-18, prd §403) — the only wallet-riding
-        // room whose subject is not money at all: which credentials can sign
-        // in this account's name, and when each of them stops.
-        case altana(AltanaRoom.Card)
-        // R4.1 (2026-08-23) — the room had NO head at all: `Base Vibenet`
-        // appeared nowhere in this file, so the one card this feature has
-        // was drawn only on the setup screen, which you visit once.
-        case vibenet(VibenetRoom)
         case privacyPools(PrivacyPoolsRoom)
         // ONE case for every onchain card (prd §858, was `gnosisPay`). The
         // seat rides along because `CardSpendRoomCard` needs it for the mark
@@ -9891,8 +8042,6 @@ struct FeedScreen: View {
                 return room.deadlines.isEmpty ? room.headline : nil
             case .peer(let room):
                 return room.rails.count <= 1 ? PeerRoom.headline(room) : nil
-            case .altana(let card):
-                return card.drawn.isEmpty ? card.headline : nil
             case .railgun(let room):
                 return room.tokens.isEmpty ? RailgunRoom.headline(room) : nil
             case .privy(let room):
@@ -9905,7 +8054,7 @@ struct FeedScreen: View {
             case .cardSpend(let room, _):
                 return room.months.isEmpty && room.currencies.count <= 1
                     ? CardSpendRoom.headline(room, mask: mask) : nil
-            case .posthog, .walletbeat, .l2beat, .vibenet, .privacyPools:
+            case .posthog, .walletbeat, .l2beat, .privacyPools:
                 return nil
             }
         }
@@ -9957,31 +8106,6 @@ struct FeedScreen: View {
             return L2beatRoomSource.compose(things: visible).map { .l2beat($0) }
         case CardPointersRoomSource.source:
             return CardPointersRoomSource.compose(things: visible).map { .cardPointers($0) }
-        // Reads no rows at all — this seat lands none. Its subject is chain
-        // state read live (`HegotaLiveState`), so there is nothing in `visible`
-        // for it to replay — and no head CARD either: its room is four sections
-        // of its own, Wallet's shape.
-        // Composed from the SNAPSHOT the sweep wrote, not from `visible` — the
-        // keys are chain state, not rows, and re-reading them on every draw
-        // would spend an `eth_call` per scroll (`AltanaState`).
-        case AltanaKeystore.source:
-            // Scoped by the face rail, exactly as the wallet crown and the
-            // vibenet card are (prd §488). Altana is in the Wallet CATEGORY,
-            // so `WalletScopeRail` has drawn your wallet faces above this room
-            // since §356 — and until now the card ignored the pick entirely,
-            // so ringing a face changed the rows beneath and left the head
-            // describing every account. A scope control the head does not obey
-            // is the dead control §83 bans.
-            return AltanaRoom.card(scope: selectedWallet).map { .altana($0) }
-        // Composed from the SNAPSHOT the sweep wrote, exactly like Altana
-        // above and for the same reason: this room's subject is chain
-        // state, and composing it live would spend an `eth_call` per
-        // scroll. See `VibenetState`.
-        case VibenetIdentity.source:
-            // Scoped by the face rail, exactly as the wallet crown is
-            // (2026-08-23): pick one and the card describes that account
-            // alone; pick All and it describes them all.
-            return .vibenet(VibenetRoomSource.roomOrEmpty().scoped(to: chrome.vibenetScope))
         case PeerRoomSource.source:
             return PeerRoomSource.compose(things: visible).map { .peer($0) }
         case PrivacyPoolsRoomSource.source:
@@ -11667,11 +9791,6 @@ struct FeedScreen: View {
                 socialRow(thing, replies: replies, index: index,
                           nextEventID: nextEventID,
                           imageOnly: imageOnly, wideArt: wideArt)
-            case .vibenet:
-                // Face-led (R4.2): the room's subject is WHICH ACCOUNT
-                // something happened to, and `.plain`'s band drew one
-                // identical glyph for every account.
-                VibenetEventRow(thing: thing)
             case .appStoreConnect:
                 if thing.tags.contains("Review") {
                     AppReviewRow(thing: thing)
@@ -11822,30 +9941,7 @@ struct FeedScreen: View {
         }
         return RoomQuiet.words(source: source, seat: mapped,
                                statusLine: seat?.statusLine ?? "",
-                               emptyRead: TokenBridge(rawValue: source)?.emptyReadNote
-                                   ?? vibenetEmptyNote)
-    }
-
-    /// vibenet's own reason for being empty (prd §515a).
-    ///
-    /// `RoomQuiet`'s `emptyRead` channel is declared on `TokenBridge` and
-    /// vibenet is not one, so this seat fell to the generic "it syncs on its
-    /// own" — on a devnet that had been wiped overnight, which is §299's own
-    /// failure in a room §299 could not reach. Read off the last saved
-    /// snapshot, never a live call: this runs in a view body.
-    private var vibenetEmptyNote: String? {
-        guard source == VibenetIdentity.source else { return nil }
-        let room = VibenetState.saved
-        return VibenetQuiet.emptyRoomNote(
-            watching: VibenetWatch.shared.addresses.count,
-            deployed: room?.items.filter(\.established).count ?? 0,
-            // No snapshot at all is not "unreachable" — it is a seat that has
-            // never completed a read here, which the sentence below covers.
-            reachedChain: room.map { $0.items.contains(where: \.reached) } ?? true,
-            sawReset: VibenetSeenChain.sawResetRecently(),
-            // A stored FACT the served config asserted, not a live call — this
-            // runs in a view body, same rail as the snapshot read above.
-            signingUnavailable: VibenetConfig.signingUnavailable)
+                               emptyRead: TokenBridge(rawValue: source)?.emptyReadNote)
     }
 
     /// The empty room.
@@ -12159,7 +10255,7 @@ struct FeedScreen: View {
     /// **`narrowed` is the whole safety of it.** `liveVisible` applies four
     /// more filters that no `source ==` predicate can rebuild: the pinned
     /// room's membership is `pinnedAt != nil` rather than a source, and the
-    /// wallet, vibenet and person scopes narrow to a subset the room's own
+    /// wallet and person scopes narrow to a subset the room's own
     /// chip chose. In any of those the doors are ABSENT, which A.3 rule 4
     /// says plainly: an absent door is honest, a door onto a row the list does
     /// not hold is not.
@@ -12171,8 +10267,7 @@ struct FeedScreen: View {
                            || (source == "GitHub" && chrome.githubScope != nil)
                            // A kind tile narrows the list too (prd §815).
                            || roomKindPick != .all
-                           || (source == "Pinterest" && chrome.pinterestScope != nil)
-                           || (shape == .vibenet && chrome.vibenetScope != nil))
+                           || (source == "Pinterest" && chrome.pinterestScope != nil))
     }
 
     /// A day group as a native section: the day's rows share ONE sheet card
@@ -12265,10 +10360,7 @@ struct FeedScreen: View {
                             .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
                     }
                     .textCase(nil)
-                    // In a wallet-family room the day stands on the tiles' edge,
-                    // as the Wallet's and every devnet's do (prd §950); the feed
-                    // keeps its own column.
-                    .padding(.leading, shape == .vibenet ? DSRoomChassis.inset : DSRoomChassis.rowInset)
+                    .padding(.leading, DSRoomChassis.rowInset)
                     // Days read as clusters: the gap ABOVE a day header is the
                     // feed's biggest (2026-07-13), and since 2026-07-21 the day's
                     // rows also share one card — the header's s6 plus the card's own
@@ -12828,45 +10920,9 @@ struct FeedScreen: View {
 /// Guarded on `isLive` at the top of the body, like `ThingShareLink` below
 /// it: a menu can be up when a heal's delete lands, and SwiftUI re-evaluates
 /// a leaf's body on the model's own observation (liveness corollary 5).
-/// The vibenet card's naming alert (prd §669) — ONE alert for every shape of
-/// that card.
-///
-/// It used to live on the card, on the one branch that could present it, while
-/// two of the three menus offering "Name this account…" called an inert
-/// closure. So the same verb worked or did nothing depending on which shape
-/// you long-pressed, which is what the user reported: *"long press on accounts
-/// … offer to name this address but when i click it nothing happens"*.
-///
-/// A `ViewModifier` rather than an inline `.alert` on `FeedScreen`'s chain:
-/// three nested view builders inside an expression that size is how a body
-/// stops type-checking.
-private struct VibenetNameAlert: ViewModifier {
-    @Binding var address: String?
-    @Binding var draft: String
-    /// (address, name) — the save, so this modifier owns no store and no
-    /// refresh, only the field.
-    let onSave: (String, String) -> Void
-
-    func body(content: Content) -> some View {
-        content.alert(String(localized: "Name this account"),
-                      isPresented: Binding(get: { address != nil },
-                                           set: { if !$0 { address = nil } })) {
-            TextField(String(localized: "Name"), text: $draft)
-            // An empty field CLEARS the name rather than storing it — the
-            // contract `VibenetWatch.setName` states and `AddressBook` keeps,
-            // so there is no separate "remove name" verb to look for.
-            Button(String(localized: "Save")) {
-                if let address { onSave(address, draft) }
-                address = nil
-            }
-            Button(String(localized: "Cancel"), role: .cancel) { address = nil }
-        }
-    }
-}
-
-/// The confirmation for a note's Delete. A MODIFIER for `VibenetNameAlert`'s
-/// reason: the screen's presentation chain is long enough already that a
-/// third dialog spelled inline risks the type-checker.
+/// The confirmation for a note's Delete. A MODIFIER rather than an inline
+/// dialog on `FeedScreen`'s chain: the screen's presentation chain is long
+/// enough already that a third dialog spelled inline risks the type-checker.
 private struct NoteDeleteDialog: ViewModifier {
     @Binding var note: Thing?
     let onDelete: (Thing) -> Void
@@ -12891,7 +10947,7 @@ private struct NoteDeleteDialog: ViewModifier {
     }
 }
 
-/// Recently Deleted's tray (prd §985). A MODIFIER for `VibenetNameAlert`'s
+/// Recently Deleted's tray (prd §985). A MODIFIER for `NoteDeleteDialog`'s
 /// reason.
 private struct NoteTrashSheet: ViewModifier {
     @Binding var open: Bool
@@ -12912,7 +10968,7 @@ private enum FolderPrompt {
     case rename(String)
 }
 
-/// The folder name prompt. A MODIFIER for `VibenetNameAlert`'s reason.
+/// The folder name prompt. A MODIFIER for `NoteDeleteDialog`'s reason.
 private struct NoteFolderAlert: ViewModifier {
     @Binding var prompt: FolderPrompt?
     @Binding var draft: String
@@ -13220,7 +11276,7 @@ private struct EmptyFeedPile: View {
     // replace claude and chatgpt with rss and folder picker") — the two
     // doors that need no account and land rows in one tap.
     static let pileApps = ["Notion", "Strava", "RSS", "Photos",
-                           "YouTube", "Reddit",
+                           "YouTube", "Substack",
                            "Gmail", "GitHub", "Farcaster", "Bluesky",
                            "Files", "Wallet"]
 

@@ -116,7 +116,7 @@ struct BridgeDetailScreen: View {
 
     /// The system's own "select more photos" sheet. Needs a presenting
     /// controller, which SwiftUI doesn't hand out — the key window's root is
-    /// the same anchor `RedditBridge`/`SpotifyBridge` use for their web auth.
+    /// the same anchor `SpotifyBridge` uses for its web auth.
     private func presentLimitedPicker() {
         guard let root = UIApplication.shared.connectedScenes
             .compactMap({ ($0 as? UIWindowScene)?.keyWindow })

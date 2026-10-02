@@ -208,11 +208,8 @@ struct RootShell: View {
                 try? await Task.sleep(for: .seconds(4))
                 NSLog("[Casberi] openSection: %@", raw)
                 if let s = WalletSection(rawValue: raw) { chrome.walletSection = s }
-                if let s = HegotaSection(rawValue: raw) { chrome.hegotaSection = s }
                 if let s = FramesSection(rawValue: raw) { chrome.framesSection = s }
                 if let s = LogosSection(rawValue: raw) { chrome.logosSection = s }
-                if let s = PrivacyDevnetSection(rawValue: raw) { chrome.privacyDevnetSection = s }
-                if let s = VibenetSection(rawValue: raw) { chrome.vibenetSection = s }
                 // The Reminders room's date tiles too (prd §993).
                 if let s = RemindersScope(rawValue: raw), !s.isVerb { chrome.remindersScope = s }
                 // The Calendar room's spans too (prd §994); New is a verb.
@@ -572,6 +569,9 @@ struct RootShell: View {
                 SourceRename.sweepVoice(context: modelContext)
                 // Stocktwits' watched tickers into Markets (2026-09-29).
                 SourceRename.sweepStockWatches(context: modelContext, store: bridges)
+                // The seats deleted 2026-10-01 (prd §1038): their rows, seat
+                // records, address-book tags, defaults and devnet keys.
+                SourceRename.sweepRetiredSeats(context: modelContext, store: bridges)
                 // Every voice note's length, and a few notes' words read back
                 // with their times (prd §987). Its own task: a read is seconds
                 // of on-device work, and nothing below waits on it.
@@ -717,7 +717,7 @@ struct RootShell: View {
                         // outlived every exit. Four families landed under real
                         // namespaces and were never added to
                         // `DemoSeedAll.refPrefixes`, so `clear` walked past
-                        // them: CardPointers' four offers, Altana's keys, and
+                        // them: CardPointers' four offers, a keystore's keys, and
                         // the wallet's three reconciling deadlines. Reported
                         // as a NEW install showing CardPointers offers for a
                         // seat that had never been connected — which is the

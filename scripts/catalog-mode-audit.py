@@ -53,11 +53,8 @@ EXPRESSION_SEATS = {
     "FramesScreen.swift": ["Hegotá Frames"],
     # Markets (was Tokens) names itself through `TokenWatch.source`, 2026-09-29.
     "TokenWatchScreen.swift": ["Markets"],
-    "HegotaScreen.swift": ["Hegotá UTXO"],
     "MailScreen.swift": ["Gmail", "iCloud Mail"],
     "PackageWatchScreen.swift": ["npm", "PyPI"],
-    "PrivacyDevnetScreen.swift": ["Hegotá Privacy"],
-    "VibenetScreen.swift": ["Base Vibenet"],
 }
 
 SET_NAMES = {

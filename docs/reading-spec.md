@@ -326,14 +326,11 @@ an opening is not the piece.
 
 Widen `FeedArticleText.sources` past `["RSS", "Substack"]`.
 
-**The three abstentions stay, with their reasons.** Membership stays a NAMED
+**The two abstentions stay, with their reasons.** Membership stays a NAMED
 list, never "any http URL":
 
 - **YouTube** — the link is a watch page; a scrape adds player chrome and
   recommendation titles, i.e. other people's video names in this video's text.
-- **Reddit** — the selftext is already in `summary`; the page's prose is the
-  COMMENTS, *"strangers' words filed under a row that is not theirs"* (§83's
-  shape).
 - **Podcasts** — an episode page is usually the show notes the feed already
   handed us, and often a player with no prose at all.
 
@@ -579,7 +576,7 @@ marker, paragraph 40 is the footer. So:
    (`LinkTitle.swift:101`). Both are read by three call sites and move together.
 3. Reconsider `thinSummary = 400` (`FeedArticleText.swift:77`) — its reasoning
    is a retrieval argument, and for reading an opening is not the piece.
-4. Then widen `FeedArticleText.sources` (`:53`). **Keep the three abstentions
+4. Then widen `FeedArticleText.sources` (`:53`). **Keep the two abstentions
    and their reasons** (§5.3), and answer in writing the question §455 never
    had to: which hosts a scrape is fair on.
 5. **Every widened call site names its service to

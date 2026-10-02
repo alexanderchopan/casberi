@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import SwiftData
 
 /// The corpus's convergence onto a renamed seat's current name (prd §647,
@@ -32,7 +33,7 @@ import SwiftData
 /// and that half is what makes a mid-session CloudKit merge render correctly.
 /// But a ROOM is entered by `Thing.source`, and the surfaces that decide what a
 /// room draws compare that string to a seat's own identity (`FeedScreen`'s room
-/// heads: `source == HegotaIdentity.source`; the venue switcher's scopes). Every
+/// heads: `source == FramesIdentity.source`; the venue switcher's scopes). Every
 /// one of those would have to learn the alias independently, which is the
 /// cross-file promise `Thing.swift`'s own corollary 4 was written about. So the
 /// strings converge instead, and only display is tolerant.
@@ -152,8 +153,6 @@ enum SourceRename {
     /// renamed need an entry; every other bridge record was written under its
     /// current name and has nothing to correct.
     private static let seatNames: [String: String] = [
-        HegotaIdentity.seatID: HegotaIdentity.source,
-        PrivacyDevnetIdentity.seatID: PrivacyDevnetIdentity.source,
         // Tokens became Markets (2026-09-29); the id stayed "tokens".
         "tokens": TokenWatch.source,
     ]
@@ -231,5 +230,103 @@ enum SourceRename {
         // launch, where the migration block that used to carry saves does not.
         if moved > 0 { _ = context.saveHonestly() }
         return moved
+    }
+
+    // MARK: - Seats that were deleted (prd §1038)
+
+    /// The seats the 2026-10-01 ruling deleted — Altana, Reddit and three
+    /// devnets (user: "devnets, lets get rid of these: altana, hegota utxo,
+    /// vibenet, hegota privacy", then "may as well get rid of reddit") — and
+    /// the two devnets' earlier names (§629, §685), so a row landed before a
+    /// rename goes with the rest. Every one is also in `Corpus.retiredSources`,
+    /// which keeps a row arriving mid-session from earning a chip before the
+    /// next launch sweeps it; `category-fold-selftest.sh` holds the two lists
+    /// together.
+    static let droppedSources: Set<String> = [
+        "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
+        "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
+    ]
+
+    /// The address-book network tags those seats wrote (`AddressBook.Network`
+    /// held all four until the same day).
+    private static let droppedNetworks = ["vibenet", "hegota", "altana", "privacydevnet"]
+
+    /// Every `UserDefaults` key those seats wrote begins with one of these —
+    /// their watch lists, live-state caches, signer addresses, the Privacy
+    /// devnet's sampled value history, Reddit's follows.
+    private static let droppedDefaultsPrefixes = [
+        "altana.", "vibenet.", "hegota.", "privacydevnet.",
+        "room.value.history.privacyDevnet", "feed.reddit",
+    ]
+
+    /// The Keychain services the devnets' signing keys lived under. Test money
+    /// only — a devnet faucet's — so nothing of value goes with them.
+    private static let droppedKeychainServices = [
+        "casberi-hegota-signer", "casberi-privacydevnet-signer",
+        "casberi-privacydevnet-notes", "casberi-vibenet-signer",
+    ]
+
+    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v1"
+
+    /// Drops what the deleted seats left behind, in `sweepVoice`'s shape: the
+    /// ROWS at every launch, because the store mirrors to CloudKit and a
+    /// device still on an older build keeps landing them; the seat records
+    /// and the address book's tags at every launch too, for the same reason
+    /// and because both are in-memory walks that write nothing when there is
+    /// nothing to drop. The device-local half — defaults and Keychain items,
+    /// which nothing syncs and nothing will write again — runs once.
+    ///
+    /// Deleted, not kept the way §638's retired seats' rows are: those seats
+    /// left the catalogue with their code still in the tree for a release,
+    /// and these left with it gone, so a kept row would be a row no room, no
+    /// sheet and no bridge can read.
+    @MainActor
+    @discardableResult
+    static func sweepRetiredSeats(context: ModelContext, store: BridgeStore) -> Int {
+        // The seat records, by NAME: Hegotá Privacy's id was "privacy", which
+        // Privacy.com's seat also answers to, so an id would take the wrong one.
+        let stale = store.bridges.filter { droppedSources.contains($0.name) }
+        if !stale.isEmpty {
+            for seat in stale { BridgeHealth.forget(seat.name) }
+            store.bridges.removeAll { droppedSources.contains($0.name) }
+        }
+        let book = AddressBook.shared
+        for entry in book.all {
+            for tag in droppedNetworks where (entry.networks ?? []).contains(tag) {
+                book.removeNetwork(tag, for: entry.address)
+            }
+        }
+        if !UserDefaults.standard.bool(forKey: droppedLocalKey) {
+            // Reddit's follows first: each feed's HTTP record is keyed on the
+            // feed URL, which only the follow list knows.
+            if let data = UserDefaults.standard.data(forKey: "feed.reddit"),
+               let follows = try? JSONDecoder().decode([FeedFollowEntry].self, from: data) {
+                FeedFreshness.forget(follows.map(\.feedURL).filter { !$0.isEmpty })
+            }
+            for key in UserDefaults.standard.dictionaryRepresentation().keys
+            where droppedDefaultsPrefixes.contains(where: { key.hasPrefix($0) }) {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+            for service in droppedKeychainServices {
+                let query: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: service,
+                    kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+                ]
+                SecItemDelete(query as CFDictionary)
+            }
+            UserDefaults.standard.set(true, forKey: droppedLocalKey)
+        }
+        var dropped: [Thing] = []
+        for name in droppedSources {
+            let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == name })
+            guard let count = try? context.fetchCount(descriptor), count > 0 else { continue }
+            dropped += ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+        }
+        guard !dropped.isEmpty else { return 0 }
+        SpotlightIndex.remove(ids: dropped.map(\.id))
+        for thing in dropped { context.delete(thing) }
+        _ = context.saveHonestly()
+        return dropped.count
     }
 }

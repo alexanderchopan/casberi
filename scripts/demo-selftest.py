@@ -154,9 +154,7 @@ DEMO_FILES = {
     # network verbs under check B.
     "WalletWarnings": CASBERI / "Model/WalletWarnings.swift",
     "ExchangeBridge": CASBERI / "Model/ExchangeBridge.swift",
-    "HegotaBridge": CASBERI / "Model/HegotaBridge.swift",
     "FramesBridge": CASBERI / "Model/FramesBridge.swift",
-    "PrivacyDevnetBridge": CASBERI / "Model/PrivacyDevnetBridge.swift",
     "WalletPortfolio": CASBERI / "Model/WalletPortfolio.swift",
 }
 
@@ -533,25 +531,12 @@ def check_l_seat_names_resolve_at_runtime(files_text):
 # which is the same assertion without the seat.
 KNOWN_ROWLESS_SEAT = {
     "Coinbase", "Kraken", "Binance", "Gemini Exchange",
-    # Ethrex Hegotá (prd §500) — rowless for a different reason from the nine
+    # Hegotá Frames (prd §548) — rowless for a different reason from the ones
     # above. Those ride the wallet and land under `source: "Wallet"`; this seat
     # lands NO `Thing` at all, by ruling: its readings are live chain state and
-    # a devnet test address has no news. So its whole furnishing is the fixture
-    # account `HegotaLiveState.seedDemo` installs, which is what check M holds
-    # it to.
-    "Hegotá UTXO",
-    # Hegotá Frames (prd §548) — rowless for exactly Hegotá's reason, and it
-    # is the same ruling rather than a second one: the seat lands NO `Thing`
-    # at all, because its readings are live chain state and a devnet test
-    # address has no news. Its whole furnishing is the fixture account
-    # `FramesLiveState.seedDemo` installs, which check M holds it to.
+    # a devnet test address has no news. Its whole furnishing is the fixture
+    # account `FramesLiveState.seedDemo` installs, which check M holds it to.
     "Hegotá Frames",
-    # Ethrex Privacy (prd §593) — rowless for exactly the same reason, and
-    # the same ruling rather than a third one: its readings are live chain
-    # state and a devnet test address has no news, so it lands no `Thing` at
-    # all. Its whole furnishing is the fixture `PrivacyDevnetLiveState.seedDemo`
-    # installs, which check M holds it to.
-    "Hegotá Privacy",
 }
 
 # What proves each rowless seat is really furnished: (file key, regex). Each
@@ -583,12 +568,6 @@ ROWLESS_SEAT_FIXTURE = {
     # half-wired state is exactly what a seat table would still claim as
     # connected. `installDemo` is the only door that writes accounts without a
     # read, so naming it pins the whole chain.
-    "Hegotá UTXO": ("HegotaBridge", r'HegotaLiveState\.shared\.installDemo\('),
-    # Same rule, same reason. Matched in `PrivacyDevnetBridge` rather than in
-    # `DemoSeedAll`, because the call there is only the trigger and would keep
-    # passing over a `seedDemo` that had been emptied.
-    "Hegotá Privacy": ("PrivacyDevnetBridge", r'PrivacyDevnetLiveState\.shared\.installDemo\('),
-    # Same rule, same reason: a fixture nothing installs furnishes nothing.
     # `installDemo` is the only door that writes accounts without a read, so
     # naming it pins the whole chain — and it is matched in `FramesBridge`
     # rather than `DemoSeedAll`, because the call in `DemoSeedAll` is only the
@@ -1220,13 +1199,6 @@ NON_REF_LABELS = ("content:", "externalLink", "previewImageURL",
 # Each entry names the prefix that covers the assembled form; a new one is a
 # conscious "this is a piece, not a ref".
 KNOWN_REF_FRAGMENT = {
-    # `vibenet()` writes `ref: "vibenet:\(ref)"` over these four event tails
-    # (prd §495 gave them real transaction hashes), and `"vibenet:"` covers the
-    # assembled ref.
-    "actor:0x7c1d4e9a2b6f83c05d17e4a9b820f36cd15e7a48b93c206df41e85a7cb90d24f:0": "vibenet:",
-    "actor:0x3f8b25c6d017a94e5b83f2016cd74a9e8b520371fc6ad9e04b18752c3ae6f091:1": "vibenet:",
-    "actor:0x5a2c9e18b7043fd61c85920ae3b47d6f0c19a5e8347b26df10a95c8e2b4713a9:0": "vibenet:",
-    "locked:0x9e04a71b3c8d526f0a94e7128bd35c6f807a1e29d4b60358cf9a2e714d80b365:0": "vibenet:",
     # The demo repository id, interpolated INTO `radicle:\(kind):\(rid):…`,
     # which `radicle:patch:rad:zDEMO`/`radicle:issue:rad:zDEMO` cover.
     "rad:zDEMOheartwood0000000000001": "radicle:",
@@ -1234,10 +1206,9 @@ KNOWN_REF_FRAGMENT = {
 
 # `ref:` arguments built by a function. The value is the prefix in
 # `refPrefixes`/`escapedPrefixes` that covers what the function returns — which
-# a text check cannot derive, and which is exactly why Altana's six rows sat
-# uncovered from the day they landed.
+# a text check cannot derive, and which is exactly why a function-built ref's
+# rows once sat uncovered from the day they landed.
 KNOWN_COMPUTED_REF = {
-    "AltanaKeystore.ref": "altana:key:",
     "Corpus.importReceiptRef": "import:receipt:",
     "L2beatWatch.chainRef": "l2beat:chain:",
     "WalletbeatWatch.walletRef": "walletbeat:wallet:",
@@ -1328,8 +1299,8 @@ def check_k_seeded_refs_are_cleared(files_text):
     # The scan above matches `ref:` followed by a LITERAL, which is how most of
     # the seeder writes a ref and is not how any of the four escaped families
     # wrote theirs. `cardPointers()` and the wallet's three deadlines put their
-    # refs in a TUPLE TABLE and pass `ref: ref` / `ref: d.ref`; Altana's are
-    # built by `AltanaKeystore.ref(...)`. All four were invisible here — the
+    # refs in a TUPLE TABLE and pass `ref: ref` / `ref: d.ref`; one was built
+    # by a function. All four were invisible here — the
     # check reported green over exactly the bug it exists to prevent — and the
     # cost was a user on a NEW install seeing four CardPointers offers for a
     # seat they had never connected, with no door to remove them.
@@ -1359,8 +1330,8 @@ def check_k_seeded_refs_are_cleared(files_text):
     # And the computed half. A `ref:` argument that is neither a literal nor a
     # plain local name cannot be resolved by a text check, so it must SAY which
     # prefix covers it — an entry here is a conscious "this builder's output
-    # starts with that". Without this, `AltanaKeystore.ref(...)` reads as an
-    # opaque expression and its six rows outlive every exit unnoticed.
+    # starts with that". Without this, a builder like `WalletbeatWatch.walletRef(...)`
+    # reads as an opaque expression and its rows outlive every exit unnoticed.
     unexplained = []
     for m in re.finditer(r"\bref:\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\(", body):
         expr = m.group(1)
@@ -1458,12 +1429,11 @@ def self_test():
 
     ok &= verify_fixture(
         "a ref built by a FUNCTION with no covering prefix is caught",
-        # Altana's six keys. Dropping both entries leaves `AltanaKeystore.ref`
-        # an opaque expression the literal scan cannot reach — which is the
-        # state it shipped in.
-        lambda f: f.__setitem__("DemoSeedAll", re.sub(
-            r"        AltanaKeystore\.ref\(chain: demoAltanaChain[\s\S]*?keyID: \"\"\),\n",
-            "", f["DemoSeedAll"])),
+        # Walletbeat's watched wallets, built by `WalletbeatWatch.walletRef`.
+        # Dropping the prefix that covers them leaves the builder claiming a
+        # prefix nothing lists — the state a function-built ref once shipped in.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '"walletbeat:wallet:", ', "", 1)),
         check_k_seeded_refs_are_cleared, True)
 
     ok &= verify_fixture(

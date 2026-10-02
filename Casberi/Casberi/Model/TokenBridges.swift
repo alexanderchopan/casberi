@@ -864,7 +864,7 @@ enum TrelloAuth {
 /// credential across two storage tiers for no reason.
 ///
 /// Auth is HTTP Basic — `email:token`, base64 — Jira Cloud's documented
-/// scheme for every REST call (the `ZerionAPI`/`RedditBridge` shape here,
+/// scheme for every REST call (the `ZerionAPI` shape here,
 /// not Trello's OAuth-flavoured header, since Jira issues no authorize link
 /// this app could build for you).
 ///

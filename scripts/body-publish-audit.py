@@ -10,11 +10,11 @@ It is not a slow body; it is a body that never stops running.
 **This is written down and it still reached two rooms.** `FeedScreen` states the
 rule in `memo`'s own doc — "writing to it during a body evaluation is
 memoization, not state, and must never itself schedule another render" — and
-that note is why `memo` is a plain class rather than an `@Observable` one. The
-Hegotá room wrote `chrome.hegotaSections` from inside `roomBody` anyway, the
-Frames room copied Hegotá three weeks later, and both shipped. Wallet and
-Vibenet published the identical kind of value correctly from `.onChange` the
-whole time, so there was a right answer in the same file to copy from.
+that note is why `memo` is a plain class rather than an `@Observable` one. A
+devnet room wrote its `chrome.*Sections` from inside `roomBody` anyway, the
+Frames room copied it three weeks later, and both shipped. Wallet published the
+identical kind of value correctly from `.onChange` the whole time, so there was
+a right answer in the same file to copy from.
 
 That is the case for a check rather than a comment: the failure is invisible
 (the room renders perfectly and merely burns the main actor), no build sees it,
@@ -83,7 +83,7 @@ def strip_comments(text: str) -> str:
     """Comments out, string literals blanked.
 
     Both files DOCUMENT this rule by naming the very symbols it governs — the
-    replacement lines say "published from `.onChange(of: hegotaSectionPublication)`
+    replacement lines say "published from `.onChange(of: framesSectionPublication)`
     … NOT written here" — so a check reading raw source scores the prose
     explaining the fix as the bug it describes. The Obsidian/Cursor lesson;
     earned again here on this check's own first run.
@@ -188,27 +188,27 @@ def self_test() -> bool:
 
     # --- check 1 fixtures ---
     check("the shipped bug", len(body_publishes(
-        'let _ = { chrome.hegotaSections = HegotaRoomSource.sections() }()')), 1)
-    check("its Frames twin", len(body_publishes(
         'let _ = { chrome.framesSections = FramesRoomSource.sections() }()')), 1)
+    check("its Logos twin", len(body_publishes(
+        'let _ = { chrome.logosSections = LogosSection.present() }()')), 1)
     # `memo` is a plain class on purpose — writing it during a body is the
     # sanctioned pattern, and flagging it would fire on correct code.
     check("memo is not a finding", len(body_publishes(
         'let _ = { memo.themes = computeThemes() }()')), 0)
     # An event handler is where this publish BELONGS.
     check("onChange is not a finding", len(body_publishes(
-        '.onChange(of: pub, initial: true) { _, now in chrome.hegotaSections = now }')), 0)
+        '.onChange(of: pub, initial: true) { _, now in chrome.framesSections = now }')), 0)
     check("onDisappear is not a finding", len(body_publishes(
-        '.onDisappear { chrome.hegotaSections = [] }')), 0)
+        '.onDisappear { chrome.framesSections = [] }')), 0)
     # A closure that is never CALLED is not body-evaluated.
     check("uncalled closure is not a finding", len(body_publishes(
-        'let handler = { chrome.hegotaSections = [] }')), 0)
+        'let handler = { chrome.framesSections = [] }')), 0)
     # Prose describing the rule must never score as the rule being broken.
     check("comment is not a finding", len(body_publishes(
-        '// let _ = { chrome.hegotaSections = HegotaRoomSource.sections() }()')), 0)
+        '// let _ = { chrome.framesSections = FramesRoomSource.sections() }()')), 0)
     # A comparison is not an assignment.
     check("equality is not a finding", len(body_publishes(
-        'let _ = { if chrome.hegotaSections == [] { ping() } }()')), 0)
+        'let _ = { if chrome.framesSections == [] { ping() } }()')), 0)
     check("compound-assign is still a finding", len(body_publishes(
         'let _ = { chrome.count = chrome.count + 1 }()')), 1)
 
@@ -267,8 +267,8 @@ def main() -> int:
                 findings.append(
                     f"{rel}:{line}: writes `{recv}` from a body-evaluated closure — "
                     f"an @Observable write during body invalidates the body that reads it. "
-                    f"Publish from .onChange(of:initial:) instead, the way the wallet and "
-                    f"vibenet rooms already do.")
+                    f"Publish from .onChange(of:initial:) instead, the way the wallet "
+                    f"room already does.")
             if path.name == "FeedScreen.swift":
                 for line in emptiness_ignores_fallback(text):
                     findings.append(

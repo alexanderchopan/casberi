@@ -196,10 +196,9 @@ enum AddressBookShape {
     /// still not worth a sixth capsule while `contacts` and `social` name the
     /// off-chain half directly.
     ///
-    /// **There is no VIBENET chip either** (user ruling, same day) — where an
-    /// address was met is a per-ROW fact, answered by the badge `AddressMark`
-    /// draws on the face, and a filter answers a different question than the
-    /// one you have while scanning.
+    /// **There is no network chip either** (user ruling, same day) — where an
+    /// address was met is a per-ROW fact, and a filter answers a different
+    /// question than the one you have while scanning.
     ///
     /// Kinds are matched by RAW STRING, not by `AddressBook.Kind`: this file
     /// is Foundation-only so the harness can compile it whole and unmodified,
@@ -231,7 +230,7 @@ enum AddressBookShape {
         /// as `wallet`: the unmarked "who" population is what somebody means
         /// by the word, `smartAccount` is somebody's own wallet made of code
         /// (§294 — the whole point of that case), and `unknown` is the resting
-        /// state EVERY vibenet entry sits in for life, since detection is
+        /// state EVERY devnet entry sits in for life, since detection is
         /// gated off for devnets (§496). Dropping either would file real
         /// wallets outside the wallet chip, which reads as rows going missing.
         /// **`watched` is passed APART from `kind`, and that separation is
@@ -415,7 +414,7 @@ enum AddressBookShape {
         if let provenance, !provenance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return true
         }
-        // Met somewhere that is not this roster — a vibenet watch, an import.
+        // Met somewhere that is not this roster — a devnet watch, an import.
         // Dropping the entry would drop that tag, and nothing would ever put
         // it back: the tag records a meeting, and meetings do not repeat.
         if (networks ?? []).contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {

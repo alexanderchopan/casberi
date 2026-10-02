@@ -114,7 +114,7 @@ Offer(name: "World ID",
       added: BridgeCatalog.day(2026, 9, 17))
 ```
 
-- **Group `Wallet`**, with Safe, Altana, ENS and the rest.
+- **Group `Wallet`**, with Safe, ENS and the rest.
 - **Mode `.watchedWallets`** — it comes from `BridgeSetupMode.walletRidingSeats`
   containing the name, not from a literal on the screen. Add `"World ID"` to that
   set (`BridgeCatalog.swift:1141`) and `catalog-mode-audit.py` resolves it.

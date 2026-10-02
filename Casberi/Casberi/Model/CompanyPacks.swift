@@ -169,7 +169,6 @@ enum CompanyPacks {
             "Kindle": amazon,
             "Raindrop": own("Raindrop"),
             "Readwise": own("Readwise"),
-            "Reddit": ("Reddit", .stock("RDDT")),
             "Substack": own("Substack"),
             // Shopping
             "Bitrefill": own("Bitrefill"),

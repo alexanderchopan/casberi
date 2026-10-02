@@ -31,9 +31,9 @@ enum AddressKind {
         guard let entry = AddressBook.shared.entry(for: address) else { return }
         // `.key` is ASSERTED by the door that filed it, never detected — a
         // key is an ordinary EOA on-chain, so a re-check here could only ever
-        // silently downgrade it. A devnet-only entry (vibenet) is gated the
-        // same way: every read below is a MAINNET RPC, and asking one about a
-        // vibenet keystore account answers "no code anywhere" and confidently
+        // silently downgrade it. A devnet-only entry is gated the same way:
+        // every read below is a MAINNET RPC, and asking one about a devnet
+        // account answers "no code anywhere" and confidently
         // mislabels it `.wallet` (prd, the address-book unification, 2026-08-27).
         guard entry.kind != .key, !entry.isDevnetOnly else { return }
         guard ENS.isHexAddress(address) else {

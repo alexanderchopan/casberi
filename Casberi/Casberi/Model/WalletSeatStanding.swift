@@ -3,8 +3,8 @@ import Foundation
 /// What a WALLET-RIDING seat's product page says before it lights up
 /// (prd §515, 2026-08-29).
 ///
-/// Seven seats have no connection of their own: Peer, 0xBow Privacy Pools,
-/// Railgun, Safe, Altana, Gnosis Pay and ether.fi. Watching an address is the
+/// These seats have no connection of their own: Peer, 0xBow Privacy Pools,
+/// Railgun, Safe, Gnosis Pay, MetaMask Card and ether.fi. Watching an address is the
 /// whole consent (§207), every one of their sweeps runs unconditionally inside
 /// `WalletIngest.refresh`, and the seat is pure display gated on evidence
 /// (§403) — so there is nothing to connect, and a Connect button was a control
@@ -43,14 +43,13 @@ enum WalletSeatStanding {
         let thing: String
     }
 
-    /// The eight, by catalog seat id. Anything not here is an ordinary bridge
+    /// The seven, by catalog seat id. Anything not here is an ordinary bridge
     /// with a connection of its own, and keeps its Connect.
     static let seats: [Seat] = [
         Seat(id: "peer",         thing: "Peer trade"),
         Seat(id: "privacypools", thing: "Privacy Pools deposit"),
         Seat(id: "railgun",      thing: "Railgun shield"),
         Seat(id: "safe",         thing: "Safe"),
-        Seat(id: "altana",       thing: "Altana key"),
         Seat(id: "gnosispay",    thing: "Gnosis Pay card"),
         // The noun is the CARD, not the spend, and the difference matters here
         // more than for its siblings: the sweep looks for a purchase, but what
@@ -108,9 +107,9 @@ enum WalletSeatStanding {
         return String(localized: "Found at \(found) of \(watched) addresses you watch.")
     }
 
-    /// "a Safe" / "an Altana key" — English, not a claim, but a page that says
-    /// "holds a Altana key" reads as machine-written, which is its own kind of
-    /// unbelievable.
+    /// "a Safe" / "an ether.fi stake" — English, not a claim, but a page that
+    /// says "holds a ether.fi stake" reads as machine-written, which is its own
+    /// kind of unbelievable.
     static func article(_ noun: String) -> String {
         let vowels: Set<Character> = ["a", "e", "i", "o", "u"]
         guard let first = noun.lowercased().first else { return noun }

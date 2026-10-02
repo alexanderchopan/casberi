@@ -142,6 +142,14 @@ enum Corpus {
         // stopped landing (user: "combine it as part of tokens and call that
         // app 'markets'", the takes dropped).
         "Stocktwits",
+        // Five seats left the catalogue 2026-10-01 — three devnets, Altana and
+        // Reddit — and, unlike the ones above, their rows go too:
+        // `SourceRename.sweepRetiredSeats` deletes them at every launch. Listed
+        // here as well so a row that syncs in from a device on an older build
+        // earns no chip or room before the next launch sweeps it. The two
+        // devnets' earlier names (§629, §685) are here for the same reason.
+        "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
+        "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now
@@ -201,28 +209,15 @@ enum Corpus {
     /// So an entry may carry the prefix pair, and `SourceRename.sweep` rewrites
     /// both in the one pass.
     static let renamedSources: [String: Rename] = [
-        // prd §629, 2026-09-06 — the two ethrex seats took the family grammar
-        // ("<chain> Devnet") and dropped the operator prefix. The NAME only —
-        // verified against f8a5eea9, which touches no ref literal: the rows
-        // are keyed `hegota:` and `privacydevnet:`, and no `ethrex…`
-        // namespace has ever existed, so there is nothing to move.
-        "Ethrex Hegot\u{00e1}": Rename(current: "Hegotá UTXO"),
-        "Ethrex Privacy": Rename(current: "Hegotá Privacy"),
-        // prd §685, 2026-09-10 — the three ethrex seats become one family
-        // under the chain that hosts them (user: "i'd like to change the names
-        // of the devnets to Hegota UTXO, Hegota Privacy, and Hegota Frames").
-        // The NAME only: the rows stay keyed `hegota:`, `privacydevnet:` and
-        // `frames:`, and no literal moved with this rename — the same check
-        // §629 made for the entries above. The 2026-09-06 pair above now
-        // points at the new names rather than at the intermediate ones, so a
-        // row saved under "Ethrex Hegotá" still resolves in one hop.
-        "Hegota Devnet": Rename(current: "Hegotá UTXO"),
-        "Privacy Devnet": Rename(current: "Hegotá Privacy"),
+        // prd §685, 2026-09-10 — the ethrex devnets became one family under
+        // the chain that hosts them, and the Frames devnet took the family's
+        // name. The NAME only: the rows stay keyed `frames:`, and no literal
+        // moved with this rename.
         "Frames Devnet": Rename(current: "Hegotá Frames"),
         // prd §650, 2026-09-08 — the token-watch seat became "Tokens" when its
         // chart stopped being one vendor's (commit a2618a2, 2026-07-13). That
         // commit moved the ref prefix in the same breath, which is why this
-        // entry has one and the two above do not.
+        // entry has one and the one above does not.
         "Dexscreener": Rename(current: "Markets",
                               refPrefix: .init(old: "dexscreener:", current: "tokens:")),
         // 2026-09-29 — Tokens took in Stocktwits' watched stocks and became
@@ -1102,27 +1097,21 @@ final class Thing {
 
     // MARK: - Feed-follow delight (2026-07-28, FeedFollowMoments.swift)
 
-    /// A Reddit post's actual human author (`/u/name`, decoded) — distinct
-    /// from `authorHandle`, which every feed-follow bridge (Substack/Reddit/
-    /// YouTube/Podcasts) already uses for the FEED's own identity (the
-    /// subreddit/channel/publication `FeedLeaderboard` groups by). Lets a
-    /// later corpus-wide pass notice the same person posting across two
-    /// subreddits you follow. Since 2026-08-06 an RSS/Substack item fills it
-    /// too, from `<dc:creator>` or an Atom `<author><name>` — so a multi-author
+    /// A feed item's actual human author — distinct from `authorHandle`,
+    /// which every feed-follow bridge (Substack/YouTube/Podcasts) already uses
+    /// for the FEED's own identity (the channel/publication `FeedLeaderboard`
+    /// groups by). Since 2026-08-06 an RSS/Substack item fills it from
+    /// `<dc:creator>` or an Atom `<author><name>` — so a multi-author
     /// publication no longer collapses onto the publication's own name. An
     /// author that merely repeats the feed's name is dropped rather than
     /// stored. nil when the feed names nobody, and for posts landed before
     /// this field.
     var postAuthor: String? = nil
 
-    /// A second URL a row carries beside its own permalink. Two fillers, and
-    /// the doc used to name only the first:
-    ///   · a Reddit post's first non-Reddit body link, captured at landing so
-    ///     a later pass can notice a subreddit discussing something already
-    ///     saved from elsewhere without re-parsing the post's HTML;
-    ///   · a podcast episode's `<enclosure>` audio URL (2026-08-06) — the
-    ///     episode itself, which the feed states and nothing else stores.
-    /// nil when the row carries neither.
+    /// A second URL a row carries beside its own permalink — a podcast
+    /// episode's `<enclosure>` audio URL (2026-08-06), the episode itself,
+    /// which the feed states and nothing else stores; a TikTok row's video, a
+    /// meeting URL, a memory's download. nil when the row carries none.
     var externalLink: String? = nil
 
     // MARK: - Mail (2026-09-15, prd §735)

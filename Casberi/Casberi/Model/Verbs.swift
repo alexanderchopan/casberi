@@ -94,40 +94,21 @@ enum VerbDerivation {
                     out.append(Verb(label: "Open in Calendar", icon: "calendar",
                                     action: .openURL(URL(string: "calshow://")!)))
                 }
-            } else if thing.source != VibenetIdentity.source, thing.source != PrivyHomeFeed.source,
+            } else if thing.source != PrivyHomeFeed.source,
                       thing.source != SplitsShape.source {
                 // Not a hand-off — EventKit writes into the local store, which
                 // works with no Calendar app present. Ungated on purpose for
                 // every OTHER `.event` source (a workout, a HomeKit-scheduled
                 // moment) — those are real-world moments a calendar entry
-                // legitimately describes. A key authorized or revoked on a
-                // devnet address is not: "Send to Calendar" would write a
-                // blockchain state change into the person's real calendar as
-                // though it were an appointment (2026-08-23, reported
-                // alongside the "on your calendar" copy bug above — same
-                // root cause, this file's `.event` default written for a
+                // legitimately describes. A chain event is not: "Send to
+                // Calendar" would write a state change into the person's real
+                // calendar as though it were an appointment (2026-08-23,
+                // reported alongside the "on your calendar" copy bug above —
+                // same root cause, this file's `.event` default written for a
                 // real calendar and never re-checked against a source that
                 // borrowed the kind for its clock alone).
                 out.append(Verb(label: "Send to Calendar", icon: "calendar.badge.plus",
                                 action: .addToCalendar))
-            }
-            if thing.source == VibenetIdentity.source,
-               // `content` is non-optional on `Thing` — one bare `URL(string:)`
-               // (fixed in passing by the §462 session; the optional bind was a
-               // compile error).
-               let url = URL(string: thing.content),
-               url.scheme == "https" {
-                // The one door this row has always deserved. Every vibenet
-                // event stamps its explorer permalink on `content` at landing
-                // time, and NOTHING could reach it: `ThingContentView`'s bare
-                // link body is scoped to `.transaction`, the `hasSite` spec
-                // row wants a `.link` kind, and `walletVerbs` requires a money
-                // receipt — so the app stored a URL for every key change on
-                // chain and offered no way to open it. A read, so it needs no
-                // consent; the same hand-off an approval already makes to
-                // Revoke.cash.
-                out.append(Verb(label: "Open in the explorer", icon: "arrow.up.forward.app",
-                                action: .openURL(url)))
             }
         case .reminder:
             // A real reminder (Reminders source) is READ-ONLY (ruling
@@ -222,21 +203,10 @@ enum VerbDerivation {
                 let isExplorer = WalletIngest.chainName(forContent: thing.content) != nil
                 let host = url.host()?.lowercased() ?? ""
                 let isRevoke = host == "revoke.cash" || host.hasSuffix(".revoke.cash")
-                // Hegotá's devnet explorer isn't in `WalletIngest.allChains`
-                // — that table drives the Zerion/Alchemy pipelines a devnet
-                // rides none of — so `isExplorer` above reads false for it
-                // and every Hegotá receipt (a send, a faucet claim) named its
-                // own permalink the generic "Open link". Matched against the
-                // exact prefix `HegotaSend.landReceipt` wrote the link from,
-                // the same discipline `chainName(forContent:)` uses for
-                // every other chain (user: "better if we write hegota
-                // explorer as the link").
-                let isHegota = thing.content.hasPrefix(HegotaIdentity.explorer)
                 let label = isRevoke ? "Revoke.cash"
-                    : isHegota ? "Hegotá Explorer"
                     : isExplorer ? "Explorer" : "Open link"
                 out.append(Verb(label: label,
-                                icon: isExplorer || isRevoke || isHegota ? "arrow.up.right" : "safari",
+                                icon: isExplorer || isRevoke ? "arrow.up.right" : "safari",
                                 action: .openURL(url)))
             }
             // A World ID grant's door is where you claim the next one (prd

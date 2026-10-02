@@ -28,12 +28,8 @@ enum ScopeTileGlyph {
     /// ways: one meaning is one glyph, so two meanings may not share one.
     ///
     /// A 3x2 grid of squares, which is the one affordance that says "apps"
-    /// without argument — and it is free: `square.grid.2x2` is spoken for,
-    /// and `circle.grid.3x3` is Hegota's UTXOs, circles rather than squares
-    /// and a different count.
+    /// without argument — and it is free: `square.grid.2x2` is spoken for.
     static let apps        = "square.grid.3x2"
-    static let utxos       = "circle.grid.3x3"
-    static let snapshots   = "camera.viewfinder"
     static let shielded    = "lock.shield"
     static let review      = "checkmark.shield"
     /// The kind tiles of the Safe, GitHub and Stripe rooms (prd §815). All is
@@ -328,42 +324,3 @@ extension FramesSection: DSTileScope {
     }
 }
 
-extension HegotaSection: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .home:        return ScopeTileGlyph.home
-        case .activity:    return ScopeTileGlyph.activity
-        case .holdings:    return ScopeTileGlyph.holdings
-        case .accounts:    return ScopeTileGlyph.accounts
-        case .frames:      return ScopeTileGlyph.frames
-        case .coins:       return ScopeTileGlyph.utxos
-        case .permissions: return ScopeTileGlyph.permissions
-        }
-    }
-}
-
-extension PrivacyDevnetSection: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .home:        return ScopeTileGlyph.home
-        case .activity:    return ScopeTileGlyph.activity
-        case .holdings:    return ScopeTileGlyph.holdings
-        case .accounts:    return ScopeTileGlyph.accounts
-        case .frames:      return ScopeTileGlyph.frames
-        case .permissions: return ScopeTileGlyph.permissions
-        case .roots:       return ScopeTileGlyph.snapshots
-        }
-    }
-}
-
-extension VibenetSection: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .home:        return ScopeTileGlyph.home
-        case .activity:    return ScopeTileGlyph.activity
-        case .holdings:    return ScopeTileGlyph.holdings
-        case .accounts:    return ScopeTileGlyph.accounts
-        case .permissions: return ScopeTileGlyph.permissions
-        }
-    }
-}

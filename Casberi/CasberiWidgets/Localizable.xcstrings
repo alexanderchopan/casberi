@@ -2397,34 +2397,6 @@
         }
       }
     },
-    "The delay has ended": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "La espera ha terminado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "待機時間が終了しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "대기 시간이 끝났습니다"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "延迟已结束"
-          }
-        }
-      }
-    },
     "Then %@, %@.": {
       "localizations": {
         "en": {
@@ -2741,34 +2713,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "呈上升趋势。"
-          }
-        }
-      }
-    },
-    "Unlock delay running": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Espera de desbloqueo en curso"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "ロック解除の待機中"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "잠금 해제 대기 중"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "解锁延迟进行中"
           }
         }
       }

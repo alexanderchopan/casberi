@@ -2460,7 +2460,7 @@ private struct PersonBadge: View {
                     .overlay(
                         // The SIGIL is not an initial (prd §386g, seen on the
                         // sim: a roster of "U N S @"). A handle may lead with
-                        // "@" on Bluesky, "u/" on Reddit or "/" on a channel;
+                        // "@" on Bluesky or "/" on a channel;
                         // the first LETTER OR DIGIT is the person's, the
                         // punctuation is the network's.
                         Text(String(handle.first(where: { $0.isLetter || $0.isNumber })

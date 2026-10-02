@@ -19,7 +19,7 @@ import Foundation
 ///    `IngestSupport`'s shared transport (~167 bridge call sites through one
 ///    funnel), `AgentAnswer` (the keyed agent — the request that carries
 ///    typed thought off the device), `LinkTitle`, and the ~27 bridges that
-///    hold their own `URLSession` (RSS, Reddit, Spotify, Dropbox, the
+///    hold their own `URLSession` (RSS, Spotify, Dropbox, the
 ///    exchanges, and the rest). NOT covered: images loaded straight into rows
 ///    as you scroll, the two WebSocket paths (`NostrRelay`,
 ///    `WalletConnectSocket`), and the WalletConnect SDK's own hosts, which
@@ -38,7 +38,7 @@ import Foundation
 ///
 ///    **This list shipped WRONG once** — it claimed "every bridge" while
 ///    those ~27 direct-`URLSession` bridges silently bypassed the funnel, so
-///    a person with RSS and Reddit connected would have opened the screen and
+///    a person with RSS and Spotify connected would have opened the screen and
 ///    seen neither. `scripts/receipts-coverage-audit.py` now fails the build
 ///    on a network call with no recorder above it, because the mistake is
 ///    invisible at runtime: the screen looks complete either way.

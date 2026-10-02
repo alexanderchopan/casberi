@@ -655,7 +655,7 @@ enum ExchangeBridge {
     }
 
     /// Clears a venue's stored key. Matches every OAuth sibling's
-    /// `disconnect()` (`SpotifyAuth`, `DropboxAuth`, `RedditBridge`) — the
+    /// `disconnect()` (`SpotifyAuth`, `DropboxAuth`) — the
     /// credential leaves the Keychain, so `allBalances()` stops seeing it on
     /// the very next read. Without this, removing the catalog seat alone left
     /// the key behind and the venue kept merging into the combined total.

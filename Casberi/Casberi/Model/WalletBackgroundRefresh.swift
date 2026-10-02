@@ -90,19 +90,16 @@ enum WalletBackgroundRefresh {
         guard let context = SharedStore.live?.mainContext else { return }
         guard let things = sweepCorpus(context) else { return }
         let (plans, photos) = NotifySweep.plans(things: things)
-        // **THE TWO DEVNETS SPEAK HERE TOO (prd §522).** Neither can be reached
-        // by a corpus sweep: Hegotá lands no `Thing` at all by design (§500),
-        // and vibenet's two chain-wide clocks — a timelock ending, the chain
-        // being wiped — belong to no row. Merged into the SAME submit rather
-        // than sent on their own, so a devnet alarm competes in one batch with
-        // every other alarm (since prd §770 neither devnet kind stands alone, so
-        // both wait for the digest as one line among the rest) instead of arriving as a second buzz beside a dispute — and
-        // so `notify-selftest.sh`'s "only one file submits" guard stays true.
+        // **THE DEVNET SPEAKS HERE TOO (prd §522, §728).** A corpus sweep
+        // cannot reach it: the Frames devnet lands no `Thing` at all by
+        // design, and a chain being wiped belongs to no row. Merged into the
+        // SAME submit rather than sent on its own, so a devnet alarm competes
+        // in one batch with every other alarm (since prd §770 a reset does not
+        // stand alone, so it waits for the digest as one line among the rest)
+        // instead of arriving as a second buzz beside a dispute — and so
+        // `notify-selftest.sh`'s "only one file submits" guard stays true.
         let devnet = DevnetNotify.plans()
         await Notifications.submit(plans + devnet, photos: photos)
-        // AFTER the submit, never before: pruning first would drop an entry in
-        // the same pass that was about to announce it.
-        DevnetNotify.prune()
         // The daily whisper used to be re-scheduled here on every sweep; cut
         // in prd §706 (`DayBrief.whisper` still composes the feed's day line).
         // This is the one place every install passes through on foreground AND

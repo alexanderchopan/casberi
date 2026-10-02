@@ -10,7 +10,7 @@ import Foundation
 ///
 /// **THERE WAS A THIRD, AND IT IS DELETED (prd §723, 2026-09-14.)** A
 /// ranked-bars leaderboard headed about fifteen rooms — "Your publishers",
-/// "Your top artists", "Who writes you", "Your subreddits" — and the user
+/// "Your top artists", "Who writes you", "Your channels" — and the user
 /// ruled it out entirely: *"i don't think it really matters … seems like we
 /// were trying to add visualization data just for the sake of it."* Gone with
 /// it: `Leaderboard`, `LeaderRow`, its `.publisher`/`.writer` `Scope` (§455's

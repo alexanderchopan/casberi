@@ -30,7 +30,6 @@ final class AddressBook {
     private static let key = "wallet.addressBook.v1"
     private static let migratedKey = "wallet.addressBook.migrated.v1"
     private static let kindRecheckKey = "wallet.addressBook.kindRecheck.7702"
-    private static let vibenetMigratedKey = "wallet.addressBook.migrated.vibenet.v1"
 
     /// What the app learned an address IS — detected, never asked (prd §169).
     /// The person supplies a name; the chain supplies the kind. `unknown` is
@@ -53,15 +52,13 @@ final class AddressBook {
         /// real.
         case smartAccount
         /// An address that signs FOR an account rather than holding funds of
-        /// its own — a vibenet authorized key today (a secp256k1 or delegate
-        /// authenticator IS an address, per `Keystore.sol`), and structurally
-        /// any future signer key (2026-08-27, the address-book unification).
+        /// its own — any signer key (2026-08-27, the address-book unification).
         ///
-        /// ASSERTED by the door that filed it (`VibenetKeySheet`'s "Add to
-        /// Address Book"), never DETECTED — `eth_getCode` sees an ordinary EOA
-        /// here (a key is just a keypair), so `AddressKind.detect` can neither
-        /// find nor refute it and skips `.key` entries entirely rather than
-        /// silently downgrading one to `.wallet`.
+        /// ASSERTED by the door that filed it, never DETECTED — `eth_getCode`
+        /// sees an ordinary EOA here (a key is just a keypair), so
+        /// `AddressKind.detect` can neither find nor refute it and skips `.key`
+        /// entries entirely rather than silently downgrading one to `.wallet`.
+        /// Kept for the entries a book already holds.
         case key
         /// Somebody in the phone's own address book (2026-08-27, prd §498).
         ///
@@ -156,38 +153,21 @@ final class AddressBook {
 
     /// Where an address has been MET — a tag on `Entry.networks`, never part
     /// of its identity. `AddressBook.key(for:)` is unchanged: the same hex
-    /// keypair on vibenet and mainnet is the same entry, unioned rather than
+    /// keypair on a devnet and mainnet is the same entry, unioned rather than
     /// split (2026-08-27, the address-book unification).
     enum Network {
-        static let vibenet = "vibenet"
-        static let hegota = "hegota"
-        /// An account in Altana's onchain keystore (2026-08-28). NOT a devnet
-        /// — these are real addresses on BNB Smart Chain — but it belongs in
-        /// the set below by that set's own definition, because BNB is not one
-        /// of the five chains `AddressKind.detect` reads. §403 gave Altana its
-        /// own registry table with its own hosts for exactly that reason.
-        static let altana = "altana"
-        /// The Frames devnet (prd §548, chain 81410). In the set below for
-        /// the same reason as the other two: `AddressKind.detect`'s five
-        /// reads are mainnet RPCs, and asking them about an address that
-        /// exists only on a devnet answers "no code anywhere" and confidently
-        /// labels it `.wallet` — a fake status on a screen about identity.
+        /// The Frames devnet (prd §548). In the set below because
+        /// `AddressKind.detect`'s five reads are mainnet RPCs, and asking them
+        /// about an address that exists only on a devnet answers "no code
+        /// anywhere" and confidently labels it `.wallet` — a fake status on a
+        /// screen about identity.
         static let frames = "frames"
-
-        /// The ethrex Privacy devnet (prd §593, chain 8141). In the set below
-        /// for the same reason as the other three, and one more: this chain
-        /// holds almost nothing, so a mainnet read would not merely mislabel
-        /// an address — it would label a devnet address that IS a contract
-        /// (the pool at 0x8fdab782…) as a plain wallet.
-        static let privacyDevnet = "privacydevnet"
 
         /// Chains `AddressKind.detect` must not ask about — its five reads
         /// are mainnet RPCs, and asking them about an account on a chain they
         /// do not cover answers "no code anywhere" and confidently mislabels
-        /// it `.wallet`. A smart account on BNB is the case that made this
-        /// wider than devnets alone; the name is kept because every caller
-        /// spells it, and the question it asks is unchanged.
-        private static let devnets: Set<String> = [vibenet, hegota, altana, frames, privacyDevnet]
+        /// it `.wallet`.
+        private static let devnets: Set<String> = [frames]
 
         static func isDevnet(_ tag: String) -> Bool { devnets.contains(tag) }
     }
@@ -247,7 +227,7 @@ final class AddressBook {
         /// cannot search reads as broken search, whichever field it is.
         var note: String? = nil
         /// Where this address has been MET — see `AddressBook.Network`. A
-        /// fill-in union, like `groups`: an address watched on vibenet and
+        /// fill-in union, like `groups`: an address watched on a devnet and
         /// later met on mainnet carries both tags. nil/empty means the
         /// mainnet family, which is every entry written before this field
         /// existed. Optional for the Codable reason `groups` documents.
@@ -281,15 +261,6 @@ final class AddressBook {
         /// documents.
         var accounts: [String]? = nil
         var id: String { AddressBook.key(for: address) }
-
-        /// The word this entry's network tags print as — "Vibenet" today,
-        /// nil for the (unmarked) mainnet family. Read by `subline` and
-        /// `kindLine` so a shared address prints where it was met without
-        /// either caller re-spelling the tag-to-word rule.
-        var networkBadge: String? {
-            guard let networks, networks.contains(AddressBook.Network.vibenet) else { return nil }
-            return String(localized: "Vibenet")
-        }
 
         /// True when every network tag on this entry is a devnet — the gate
         /// `AddressKind.detect`/`detectPending` use to skip an address whose
@@ -449,7 +420,7 @@ final class AddressBook {
         out.addedAt = min(standing.addedAt, alias.addedAt)
         if out.kind == .unknown { out.kind = alias.kind }
         if out.provenance == nil { out.provenance = alias.provenance }
-        // Networks UNION rather than pick a side — an address met on vibenet
+        // Networks UNION rather than pick a side — an address met on a devnet
         // under one spelling and mainnet under another is met on both. Ordered,
         // not a Set, so the list stays stable.
         out.networks = Self.unionNetworks(standing.networks, alias.networks ?? [])
@@ -482,7 +453,7 @@ final class AddressBook {
     ///
     /// It needs a device to reproduce, which is why nothing here caught it: the
     /// migration only writes when there is something to migrate, so a clean
-    /// simulator (no `vibenet.watch.addresses.v1`) no-ops through it and every
+    /// simulator (nothing to migrate) no-ops through it and every
     /// build, audit, harness and 10-cycle launch sweep passes. The people who
     /// crash are exactly the ones with the older build's data.
     ///
@@ -499,7 +470,6 @@ final class AddressBook {
             entries = [:]
         }
         migrateIfNeeded()
-        migrateVibenetIfNeeded()
         recheckContractKinds()
         // Heals books written before names were resolved (2026-07-25) — the
         // duplicate pair collapses on the next launch with no sync and no
@@ -599,8 +569,8 @@ final class AddressBook {
     }
 
     /// Fills in a network tag on an existing entry without touching its name
-    /// — the door `VibenetWatch.add`/the vibenet migration use to mark "this
-    /// address was also met on vibenet" for a row that already exists under
+    /// — the door a devnet watch uses to mark "this address was also met
+    /// here" for a row that already exists under
     /// another name. No-op for an address the book doesn't hold: filing a tag
     /// implies keeping the address (the rule the deleted group door had,
     /// prd §691), but unlike that door this one is never asked to invent a row — every
@@ -614,10 +584,10 @@ final class AddressBook {
     }
 
     /// The counterpart to `addNetwork` — retracts "this address was met on
-    /// <tag>" (2026-08-30, user ruling: unwatching a vibenet account removes
+    /// <tag>" (2026-08-30, user ruling: unwatching a devnet account removes
     /// it from the address book). Deletes the WHOLE entry only when this was
     /// the last tag it carried — `Network`'s own doc states a hex keypair on
-    /// vibenet and mainnet is one entry, unioned rather than split, so
+    /// a devnet and mainnet is one entry, unioned rather than split, so
     /// retracting one network must never erase a name still doing work on
     /// another (a watched mainnet wallet that also happens to hold devnet
     /// funds). No-op for an address the book doesn't hold or doesn't carry
@@ -1036,63 +1006,6 @@ final class AddressBook {
             }
         }
         UserDefaults.standard.set(true, forKey: Self.migratedKey)
-    }
-
-    /// Folds vibenet's own device-local name/watch stores into this book,
-    /// once (2026-08-27, the address-book unification).
-    ///
-    /// Vibenet kept a SEPARATE name dictionary
-    /// (`vibenet.watch.names.v1`, `VibenetWatch`'s own storage, never
-    /// iCloud-synced) — the exact split this book's own header calls out as
-    /// the reason it exists at all, one bridge later: "names lived in two
-    /// places that never met." A name typed on a vibenet account died with
-    /// the seat on disconnect and never reached a second device.
-    ///
-    /// Reads BOTH vibenet storage keys straight off `UserDefaults` rather
-    /// than through `VibenetWatch.shared`, the same no-mutual-init-ordering
-    /// rule `migrateIfNeeded` above already follows for `WalletStore` — and
-    /// `VibenetWatch` no longer reads its names key live once this has run,
-    /// so this is the one remaining reader of it. The storage key itself is
-    /// never deleted (downgrade safety, same rule as every migration here).
-    ///
-    /// A name FILLS IN only — it never overwrites an entry the wallet side
-    /// already named. A watched-but-unnamed address still lands (short form,
-    /// same fallback `WalletStore.add` uses), because watching implies the
-    /// book holds it (the same invariant `VibenetWatch.add` enforces for
-    /// network tags from today forward).
-    private func migrateVibenetIfNeeded() {
-        guard !UserDefaults.standard.bool(forKey: Self.vibenetMigratedKey) else { return }
-        var moved = 0
-        if let data = UserDefaults.standard.data(forKey: "vibenet.watch.names.v1"),
-           let names = try? JSONDecoder().decode([String: String].self, from: data) {
-            for (address, name) in names where !name.isEmpty {
-                let key = Self.key(for: address)
-                if entries[key] == nil {
-                    entries[key] = Entry(address: address, name: name, addedAt: .now,
-                                         networks: [Network.vibenet])
-                    moved += 1
-                } else if !(entries[key]?.networks ?? []).contains(Network.vibenet) {
-                    entries[key]?.networks = Self.unionNetworks(entries[key]?.networks, [Network.vibenet])
-                }
-            }
-        }
-        if let data = UserDefaults.standard.data(forKey: "vibenet.watch.addresses.v1"),
-           let addresses = try? JSONDecoder().decode([String].self, from: data) {
-            for address in addresses {
-                let key = Self.key(for: address)
-                if entries[key] == nil {
-                    entries[key] = Entry(address: address, name: WalletStore.shortAddress(address),
-                                         addedAt: .now, networks: [Network.vibenet])
-                    moved += 1
-                } else if !(entries[key]?.networks ?? []).contains(Network.vibenet) {
-                    entries[key]?.networks = Self.unionNetworks(entries[key]?.networks, [Network.vibenet])
-                }
-            }
-        }
-        UserDefaults.standard.set(true, forKey: Self.vibenetMigratedKey)
-        #if DEBUG
-        if moved > 0 { NSLog("[Casberi] addressBookMigrate| vibenet moved %d name(s)", moved) }
-        #endif
     }
 
     /// Forgets every cached `.contract` verdict, once (2026-07-25). Detection

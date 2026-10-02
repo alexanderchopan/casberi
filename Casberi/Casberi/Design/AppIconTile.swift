@@ -230,17 +230,6 @@ extension DS {
         // than the background — a gray "app" default here would read as a
         // seat whose art failed to load (report 2026-08-03).
         case "radicle":             return Color.fixed("#5555ff")
-        // Altana's own blue, sampled from its mark (prd §403). The mark is
-        // three fields — blue, yellow, orange — and the BLUE is the largest
-        // and the one that reads as the brand at chip size; picking the
-        // orange would make the seat read as an alert, which is precisely
-        // the wrong thing for a room about keys.
-        case "altana":              return Color.fixed("#3565e3")
-        // Base's own documented blue — no bundled mark (the App Store
-        // Connect/Cursor/Jira case: a real colour even without an asset).
-        // vibenet is Base's own devnet, so the hue says whose network this
-        // is rather than inventing an "experimental" colour of its own.
-        case "base vibenet":        return Color.fixed("#0052ff")
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")
         case "steam":               return Color.fixed("#1b2838")   // their dark navy
@@ -257,7 +246,6 @@ extension DS {
         // flat fill has to pick one. The magenta carries the brand where the
         // cyan reads as any tech blue. Moot once `brand-tiktok` is bundled.
         case "tiktok":              return Color.fixed("#ee1d52")
-        case "reddit":              return Color.fixed("#ff4500")
         case "youtube":             return Color.fixed("#ff0000")
         case "substack":            return Color.fixed("#ff6719")
         // Their brand green, read off nerdwallet.com itself (2026-09-15) — the

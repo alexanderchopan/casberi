@@ -17,18 +17,18 @@ so the mechanism that keeps it true is now checked rather than described.
 **Mechanical because memory lost four times in one afternoon**, which is this
 repo's standing bar for turning a rule into a check:
 
-  · `VibenetKeySheet`     — tray and head were passed the byte-identical
+  · a devnet key sheet   — tray and head were passed the byte-identical
                             expression `actor.kind.plainTitle`, twenty lines
                             apart. The block the sheet exists to show ("What it
                             can do") opened at or below the fold as a result.
-  · `VibenetAuthorizeSheet` — same, one expression further out: the tray built
+  · its authorize sheet   — same, one expression further out: the tray built
                             `editing == nil ? "Authorize a key" : "Edit
                             permissions"` and `headTitle` rebuilt it verbatim.
-  · `VibenetCreateSheet`  — "Create an account" over "A new account", with the
+  · its create sheet      — "Create an account" over "A new account", with the
                             network line under THAT repeating the head's own
                             secondary.
-  · `HegotaKeySheet`      — "This phone's account" over "Your account on this
-                            phone": the same sentence, reordered.
+  · a second devnet's key sheet — "This phone's account" over "Your account on
+                            this phone": the same sentence, reordered.
 
 Two checks, both OBJECTIVE, because a lint that cries wolf gets turned off
 within a week (this file's own §299 lesson):
@@ -58,7 +58,7 @@ is the point, because it went the OPPOSITE way to the guess twice.** Run it with
 `--measure`.
 
   · First run, before the fallback below was fixed: ONE finding, and it was a
-    TRUE POSITIVE nobody had spotted — `HegotaKeySheet.headTitle` still
+    TRUE POSITIVE nobody had spotted — a devnet key sheet's `headTitle` still
     returned "Your account on this phone" on its nil-address branch, so the
     hand fix for that sheet had missed a live path. The instrument paid for
     itself on its first run (§318's "build the cheap instrument before the
@@ -310,7 +310,7 @@ def rung_findings(tray_src: str, head_src: str) -> list[str]:
     paper" — true of a head standing alone, false inside a `DSTray`, which
     draws its own `heading40` four points above. **Five of the six heads in the
     app are inside a tray**, so that raise gave five sheets two heads: 120pt of
-    headline before the first fact, which on `VibenetCreateSheet` pushed the
+    headline before the first fact, which on a devnet's create sheet pushed the
     new account's address under the pinned action and sliced it through the
     middle. Nothing could see it — each rung is right on its own, and this
     file's own header prose went stale describing the pair.

@@ -34,12 +34,11 @@ enum WalletPermissionsSource {
                                  // card exists is that a money-ranked card
                                  // would have to invent a zero to place them.
                                  usd: nil,
-                                 note: note(for: party.kind),
+                                 note: nil,
                                  // THE ACTING ADDRESS, NOT THE NAME (prd
                                  // §514). `Party.address` is the contract for
-                                 // a module or a delegate and the 32-byte key
-                                 // id for a keystore credential — identity in
-                                 // both cases. `Party.id` would be wrong here:
+                                 // a module or a delegate — its identity.
+                                 // `Party.id` would be wrong here:
                                  // it embeds the network and the safe, so the
                                  // same delegate on two chains, which is the
                                  // ordinary case, would stay two holders.
@@ -71,19 +70,6 @@ enum WalletPermissionsSource {
         return WalletPermissions.merged(out)
     }
 
-    /// The one fact a rung's row can add that `Power.phrase` cannot carry: a
-    /// session key's expiry.
-    ///
-    /// Every other kind's sentence is exactly its rung's, so repeating it here
-    /// would print the same clause twice on one row. A key with NO expiry says
-    /// so — that is the notable half of §402's pair, and silence there would
-    /// read as "we did not look".
-    static func note(for kind: WalletActingParties.Party.Kind) -> String? {
-        guard case .altanaKey(false, let expiry) = kind else { return nil }
-        guard let expiry else { return String(localized: "No expiry") }
-        return String(localized: "Until \(expiry.formatted(date: .abbreviated, time: .omitted))")
-    }
-
     /// A grant's rung. `forAll` is tested BEFORE `unlimited` because an
     /// operator grant may legitimately be flagged both — it is unlimited in
     /// the sense that matters — and filing it under `unlimitedToken` would
@@ -104,12 +90,6 @@ enum WalletPermissionsSource {
         switch kind {
         case .safeModule:            .movesWithoutSignature
         case .delegate:              .actsAsWallet
-        // A ROOT credential holds permanent authority and belongs with the
-        // delegate; a SESSION key is scoped and the registry publishes no way
-        // to read that scope, which is exactly why `scopedSigner` sits above
-        // a capped grant rather than below it (§293's ceiling rule).
-        case .altanaKey(true, _):    .actsAsWallet
-        case .altanaKey(false, _):   .scopedSigner
         }
     }
 }

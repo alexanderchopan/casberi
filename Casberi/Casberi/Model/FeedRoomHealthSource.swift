@@ -46,7 +46,6 @@ enum FeedRoomHealthSource {
         switch source {
         case "RSS":      .rss
         case "Substack": .substack
-        case "Reddit":   .reddit
         case "YouTube":  .youtube
         case "Podcasts": .podcasts
         default:         nil

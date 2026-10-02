@@ -144,7 +144,7 @@ grep -qF 'releaseNotes' "$CODE" \
 # never on anyone's screen. It reads `NetworkReach`'s App Store Connect
 # purpose now, which Settings draws (§702), and the promise it names is one a
 # person can actually check. Scoped to this service's own Endpoint block for
-# the vibenet reason: a conduct guard keyed on prose must be anchored to the
+# the standing reason: a conduct guard keyed on prose must be anchored to the
 # thing it guards, never to a literal another seat also carries.
 ASC_COPY=$(awk '/service: "App Store Connect"/ { f = 1 } f && /purpose:/ { print; exit }' "$REACH")
 for pair in 'submit:submit a version' 'release:release one' 'remove:remove an app from sale' 'repl:reply to a review' 'upload:upload a build'; do

@@ -1108,7 +1108,7 @@ extension FeedScreen {
         let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
                                                       acting: walletLive.acting)
         if !WalletPermissions.actingHolders(holders).isEmpty
-            || walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
+            || walletLive.acting.contains(where: { $0.modulesUnreadable }) {
             Section {
                 DSGroupHeader(word: String(localized: "Delegations"))
                 WalletActingPartiesRows(holders: holders, acting: walletLive.acting)

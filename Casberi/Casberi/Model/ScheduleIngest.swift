@@ -332,8 +332,8 @@ enum ScheduleIngest {
     ///     retrieval-only `enrichedText` (2026-07-15).
     ///   · URL → `externalLink`. The video link on a meeting is the one thing
     ///     you want at the moment the row matters. Note nothing DRAWS this
-    ///     field today (it is read by the Reddit/Snapchat crossing passes,
-    ///     both source-scoped), so this is stored data waiting on a verb, not
+    ///     field today (it is read by the Snapchat crossing pass, which is
+    ///     source-scoped), so this is stored data waiting on a verb, not
     ///     a control that exists and does nothing.
     ///   · ATTENDEES → `enrichedText`. Names, so "the review with Ana" finds
     ///     it; never displayed, because a row full of names is a row you can't

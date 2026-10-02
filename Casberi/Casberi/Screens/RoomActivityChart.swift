@@ -32,9 +32,8 @@ struct RoomActivityChart: View {
     /// height.
     var box: CGFloat = DSRoomChassis.visualSlot
     /// **WHAT IS BEING COUNTED**, the one thing this template cannot share.
-    /// Every ethrex room counts transactions; vibenet's Activity is the record
-    /// of a key being authorised or revoked, which is the same drawing over a
-    /// different noun. Parameterised exactly as the crown's `format` is, and
+    /// Frames counts transactions; another room may count a different noun
+    /// with the same drawing. Parameterised exactly as the crown's `format` is, and
     /// for the same reason — the shape is shared, the unit never is.
     var countLabel: (Int) -> String = {
         $0 == 1 ? String(localized: "1 transaction")

@@ -15,7 +15,7 @@ import SwiftData
 /// into, and the only honest controls are on and off.
 ///
 /// **That is why this is not a `FeedFollowKind`.** All five of those seats
-/// watch a LIST of names the person supplies — a publication, a subreddit, a
+/// watch a LIST of names the person supplies — a publication, a
 /// channel, a show. Rendering that grammar over a fixed single feed would put
 /// a "follow a publication" field on the page that can hold exactly one value
 /// nobody chose, which is §83's dead control arriving as a text field.

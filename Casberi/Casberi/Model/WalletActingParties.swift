@@ -102,15 +102,9 @@ enum WalletActingParties {
             case safeModule(safe: String)
             /// The EOA's EIP-7702 delegate — the code the address runs.
             case delegate(network: String)
-            /// A credential registered in Altana's onchain keystore
-            /// (2026-08-18, prd §402) — a key authorized to sign as this
-            /// account. `expiry` is nil for a key that never expires, which
-            /// is ordinary for a root credential and notable for a session.
-            case altanaKey(root: Bool, expiry: Date?)
         }
         let kind: Kind
-        /// The acting contract, lowercased — or, for `.altanaKey`, the 32-byte
-        /// key id, which is what identifies a credential in that registry.
+        /// The acting contract, lowercased.
         let address: String
         /// Its name when something can name it — `WalletIngest.knownLabel`'s
         /// chain, or `WalletSafety`'s delegate registry. nil is left as nil
@@ -122,7 +116,6 @@ enum WalletActingParties {
             switch kind {
             case .safeModule(let safe): "module:\(safe):\(address)"
             case .delegate(let network): "delegate:\(network):\(address)"
-            case .altanaKey: "altana:\(address)"
             }
         }
 
@@ -137,18 +130,6 @@ enum WalletActingParties {
                 String(localized: "Can move funds without a signature")
             case .delegate:
                 String(localized: "Runs as your wallet")
-            // A ROOT credential holds permanent authority, so it gets the
-            // same plain sentence the delegate does. A SESSION key is scoped
-            // — and the registry publishes no way to read that scope, so the
-            // copy states the expiry it CAN read and declines to describe
-            // powers it cannot (§293's ceiling rule: a surface that listed
-            // nothing and looked complete is worse than one that says so).
-            case .altanaKey(true, _):
-                String(localized: "Can sign as your wallet")
-            case .altanaKey(false, .some(let expiry)):
-                String(localized: "A session key, until \(expiry.formatted(date: .abbreviated, time: .shortened))")
-            case .altanaKey(false, .none):
-                String(localized: "A session key with no expiry")
             }
         }
     }
@@ -164,13 +145,6 @@ enum WalletActingParties {
         /// structurally cannot enumerate (see the type doc). The copy says so
         /// rather than showing an empty list that reads as "nothing installed".
         let modulesUnreadable: Bool
-        /// This account holds more keystore credentials than one pass reads
-        /// (`AltanaKeystore.maxDetailedKeys`). Carried rather than dropped
-        /// because a capped list that looks complete is §307's silent
-        /// truncation — the same reason every importer in this app reports
-        /// what it refused. Defaulted so existing construction sites are
-        /// unchanged.
-        var keystorePartial: Bool = false
 
         var id: String { address }
         var isEmpty: Bool { parties.isEmpty && !modulesUnreadable && accountID == nil }
@@ -200,13 +174,6 @@ enum WalletActingParties {
         if DemoMode.isActive { return demoAccounts(addresses) }
         let safes = SafeBridge.knownModules()
         let delegations = await WalletSafety.currentDelegations(addresses: addresses)
-        // One `eth_call` per address, and for every wallet that exists today
-        // it answers an empty array and stops there (see `AltanaKeystore`).
-        // Read once up front rather than inside the loop so the shape matches
-        // the two reads above it.
-        let keystore = Dictionary(
-            await AltanaKeystore.read(addresses: addresses).map { ($0.address, $0) },
-            uniquingKeysWith: { first, _ in first })
 
         var out: [Account] = []
         for address in addresses {
@@ -231,20 +198,6 @@ enum WalletActingParties {
                                         ?? WalletIngest.knownLabel(for: d.delegate)))
             }
 
-            // Keystore credentials — a key that can sign in this account's
-            // name. Named by ROLE rather than by hex, because "Root key" is
-            // the fact worth reading and the id identifies nothing to a
-            // person (§239's rule that a name on a permissions notice must be
-            // one somebody can act on).
-            let reading = keystore[address.lowercased()]
-            for key in reading?.keys ?? [] {
-                parties.append(Party(
-                    kind: .altanaKey(root: key.isRoot, expiry: key.expiry),
-                    address: key.id,
-                    name: key.isRoot ? String(localized: "Root key")
-                                     : String(localized: "Session key")))
-            }
-
             let accountID = await self.accountID(address: address)
             // A 7579 account that isn't a Safe: we know what it is and
             // structurally can't list what's installed on it.
@@ -252,8 +205,7 @@ enum WalletActingParties {
             let unreadable = accountID != nil && !isSafe
 
             let account = Account(address: address, accountID: accountID,
-                                  parties: dedupe(parties), modulesUnreadable: unreadable,
-                                  keystorePartial: reading?.truncated ?? false)
+                                  parties: dedupe(parties), modulesUnreadable: unreadable)
             if !account.isEmpty { out.append(account) }
         }
         return out
@@ -320,8 +272,7 @@ enum WalletActingParties {
             lines.append("\(WalletStore.shortAddress(account.address))"
                 + " kind=\(account.accountID ?? "EOA")"
                 + " parties=\(account.parties.count)"
-                + " modulesUnreadable=\(account.modulesUnreadable ? "YES" : "NO")"
-                + " keystorePartial=\(account.keystorePartial ? "YES" : "NO")")
+                + " modulesUnreadable=\(account.modulesUnreadable ? "YES" : "NO")")
             for p in account.parties {
                 lines.append("  party| \(p.displayName) (\(p.address)) — \(p.capability)")
             }

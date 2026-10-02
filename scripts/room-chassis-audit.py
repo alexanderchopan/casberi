@@ -142,9 +142,9 @@ def card_bodies(src: str, stem: str):
     """(head name, what its body composes, or None) for the file's room head.
 
     The head is every top-level `struct …RoomCard`; a file that declares none is
-    a chassis room whose head is `<Stem>RoomFigure` (Frames, Hegotá). "What the
+    a chassis room whose head is `<Stem>RoomFigure` (Frames). "What the
     body composes" is the body plus the struct's own `some View` members the
-    body names — ONE hop, so `body → stackedRoom → DSRoomChassis` (vibenet)
+    body names — ONE hop, so `body → stackedRoom → DSRoomChassis`
     counts and a `CGFloat` helper holding a chassis constant does not. A nested
     helper view's body (Railgun's `DirectionPair`) is never read as the card's:
     only members at the head struct's own depth are considered."""

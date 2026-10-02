@@ -36,8 +36,8 @@ struct WalkScope: Hashable {
     /// The scope for a feed row, from the room's live filter state.
     ///
     /// `narrowed` is the caller's own answer to "is this list narrowed by
-    /// something I cannot express here" — the pinned room, a wallet, vibenet or
-    /// person scope. It is passed IN rather than read here so this stays pure
+    /// something I cannot express here" — the pinned room, a wallet, a devnet
+    /// or person scope. It is passed IN rather than read here so this stays pure
     /// and so the feed's own narrowings can grow without this file learning
     /// about them; a caller that forgets it gets doors that overshoot, which is
     /// why `feed-walk-selftest.sh` pins the call site.

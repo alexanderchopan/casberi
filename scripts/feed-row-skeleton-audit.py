@@ -66,8 +66,6 @@ FEED_ROWS = {
 NOT_ROWS = {
     "ApprovalCard": "a consent card: two buttons that sign or refuse, which a "
                     "row's single tap-to-open cannot carry (prd §83)",
-    "VibenetEventRow": "composes DSFeedRow in VibenetRoomCard.swift, checked by "
-                       "name below",
 }
 
 # A row that DRAWS a time in its trailing slot, and why (prd §902). The age
@@ -197,24 +195,20 @@ def check_complete(feedscreen: str) -> list[str]:
 MONEY_ROWS = {
     "BandRow": "Casberi/Casberi/Screens/ShapedRows.swift",
     "WalletHistoryRow": "Casberi/Casberi/Screens/WalletHistoryScreen.swift",
-    "HegotaMoveRow": "Casberi/Casberi/Screens/HegotaRoomCard.swift",
     "FramesMoveRow": "Casberi/Casberi/Screens/FramesRoomCard.swift",
 }
 
-# An activity row with no amount, and why. `VibenetEventRow` draws EVENTS — a
-# key added, an account created — not transfers, so it has no figure to state.
-# The same shape as `KNOWN_TIME` above: content, not drift.
-KNOWN_NO_AMOUNT = {
-    "VibenetEventRow": "draws events (a key added, an account created), not "
-                       "transfers — there is no amount to state",
-}
+# An activity row with no amount, and why — a row that draws EVENTS rather
+# than transfers has no figure to state. The same shape as `KNOWN_TIME` above:
+# content, not drift.
+KNOWN_NO_AMOUNT: "dict[str, str]" = {}
 
 
 def check_money(files: "dict[str, str]") -> "list[str]":
     """ONE RUNG FOR A SIGNED AMOUNT IN A ROW (prd §587).
 
     Measured when this landed: four activity surfaces drew the same fact three
-    ways — `price17` in the Wallet room, `subhead12` on Hegota, `body17` on
+    ways — `price17` in the Wallet room, `subhead12` on a devnet, `body17` on
     Frames, and buried INSIDE the title sentence on Wallet's own pushed history
     screen. A reader crossing from a room to its "See activity" screen met the
     same transaction in a different grammar.
@@ -364,10 +358,6 @@ if __name__ == "__main__":
     for name, path in FEED_ROWS.items():
         src = by_file.setdefault(path, pathlib.Path(path).read_text())
         bad += check(src, only=name)
-    vib = pathlib.Path("Casberi/Casberi/Screens/VibenetRoomCard.swift").read_text()
-    vb = body(vib, "VibenetEventRow")
-    if vb is None or "DSFeedRow(" not in strip_comments(vb):
-        bad.append("VibenetEventRow: does not compose DSFeedRow (prd §744)")
     bad += check_template(pathlib.Path(TEMPLATE).read_text())
     bad += check_complete(pathlib.Path(FEEDSCREEN).read_text())
     files = []

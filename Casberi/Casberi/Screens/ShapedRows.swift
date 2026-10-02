@@ -199,21 +199,20 @@ struct BandRow: View {
         // nobody (most of them) and for rows that landed before the name was
         // captured — no row loses its label.
         //
-        // ITS FOUR SIBLINGS JOINED 2026-08-14, and they are not four new rules
-        // — they are this one, finally applied where it always belonged.
-        // Substack, Reddit, Podcasts and YouTube are RSS wearing four
-        // different names: the same parser, the same `<image>` element, the
-        // same `authorHandle = feedName` stamped at creation
-        // (`FeedFollowBridges`). They landed that name for the FILTER and drew
-        // it nowhere, so four of the app's highest-traffic reading rooms said
-        // nothing at all in this slot — a wall of headlines with no way to
-        // tell which subreddit, channel, publication or show any of them came
-        // from.
+        // ITS SIBLINGS JOINED 2026-08-14, and they are not new rules — they
+        // are this one, finally applied where it always belonged. Substack,
+        // Podcasts and YouTube are RSS wearing different names: the same
+        // parser, the same `<image>` element, the same `authorHandle =
+        // feedName` stamped at creation (`FeedFollowBridges`). They landed
+        // that name for the FILTER and drew it nowhere, so the app's
+        // highest-traffic reading rooms said nothing at all in this slot — a
+        // wall of headlines with no way to tell which channel, publication or
+        // show any of them came from.
         //
         // Each lands on a different side of the author/publisher fork above,
-        // and the fork handles all four without a case of its own: a Reddit
-        // item names its redditor, a Substack post names its writer when the
-        // publication has several, and a YouTube entry names nobody (its
+        // and the fork handles them all without a case of its own: a Substack
+        // post names its writer when the publication has several, and a
+        // YouTube entry names nobody (its
         // `<author><name>` IS the channel, so `FeedParser.author` correctly
         // files nothing) and falls through to the channel — which is the one
         // fact those rows cannot otherwise carry, since YouTube advertises no
@@ -221,7 +220,7 @@ struct BandRow: View {
         // Telegram (prd §456): a channel post's `postAuthor` is set only
         // when the channel FORWARDED somebody, so this correctly names the
         // original author on a forward and the channel itself otherwise.
-        case "RSS", "Substack", "Reddit", "Podcasts", "YouTube", "Telegram":
+        case "RSS", "Substack", "Podcasts", "YouTube", "Telegram":
             if let author = thing.postAuthor?.trimmingCharacters(in: .whitespaces),
                !author.isEmpty { return author }
             let name = thing.authorHandle ?? ""; return name.isEmpty ? nil : name
@@ -392,17 +391,17 @@ struct BandRow: View {
     /// them and inventing one would be the §83 fake-status rule in the one
     /// place it is easiest to get away with.
     ///
-    /// THE FOUR FEED-FOLLOW ROOMS JOINED 2026-08-14 alongside a bridge change
+    /// THE FEED-FOLLOW ROOMS JOINED 2026-08-14 alongside a bridge change
     /// (`FeedFollowBridges` now keeps `parsed.iconURL`): a Substack's logo, a
-    /// show's cover art, a subreddit's icon. They are RSS wearing four
-    /// different names — the same parser, the same `<image>`/`<icon>` element
+    /// show's cover art. They are RSS wearing different names — the same
+    /// parser, the same `<image>`/`<icon>` element
     /// — and their absence here was the whole reason a reading room drew
     /// publishers while a Substack room drew four identical orange glyphs.
     /// YouTube is IN the set but its feed advertises no icon, so its rows keep
     /// the video thumbnail they already lead with; see `FeedFollowBridges` for
     /// why the favicon fallback is refused there.
     static let publisherMarkSources: Set<String> = [
-        "RSS", "Hugging Face", "Substack", "Reddit", "YouTube", "Podcasts",
+        "RSS", "Hugging Face", "Substack", "YouTube", "Podcasts",
         "Telegram",
     ]
 

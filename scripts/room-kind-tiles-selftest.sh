@@ -244,11 +244,6 @@ for sym, owner in [("building.columns", "positions"), ("creditcard", "wallet"),
 # not just RoomKindTile's, and a case may only wear the constant of its own
 # name - unless the pair is declared below, with its reason.
 ALIASES = {
-    # A Hegota coin IS a UTXO; the room says "Coins" and the vocabulary says
-    # utxos - one meaning under two words.
-    ("HegotaSection", "coins"): "utxos",
-    # A privacy root is the snapshot of the tree it was taken from.
-    ("PrivacyDevnetSection", "roots"): "snapshots",
     # GitLab's merge request and Radicle's patch ARE pull requests - one
     # meaning under three words (prd §911), so one glyph.
     ("RoomKindTile", "mergeRequests"): "pullRequests",

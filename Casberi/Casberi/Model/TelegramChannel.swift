@@ -10,7 +10,7 @@ import Foundation
 /// but is a client-grade dependency behind a platform wall. What that ruling
 /// did not consider is that a public CHANNEL is not a chat at all — it is
 /// broadcast media with a public web page, so following one is the §312
-/// feed-follow shape (Substack/Reddit/YouTube/Podcasts), not the MTProto
+/// feed-follow shape (Substack/YouTube/Podcasts), not the MTProto
 /// problem. No account, no key, no server, nothing to mint.
 ///
 /// **THE PARSE IS SCRAPE-GRADE AND HAS NO CONTRACT** — this is somebody's web

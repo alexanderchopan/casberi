@@ -52,7 +52,7 @@ should not be dealing a shower at all.
 **STATED CEILINGS.**
 
   * It cannot tell whether the seat a caller names is the RIGHT seat. A Frames
-    card raining `[HegotaIdentity.source]` compiles, renders, and passes here.
+    card raining `[LogosRoom.source]` compiles, renders, and passes here.
     What it can prove is that some seat was named on purpose.
   * Check 3 is a text match on `refreshPulse` followed by an assignment or
     increment. A writer reaching the property through a computed alias, a
@@ -206,7 +206,7 @@ private func unwatch() {
 
 CLEAN_CALLER = """
 private func pour() {
-    chrome.rain(sources: [HegotaIdentity.source])
+    chrome.rain(sources: [FramesIdentity.source])
 }
 """
 

@@ -179,12 +179,6 @@ enum BridgeGlyph {
         // host — repos replicate between nodes, and the seed you name is only
         // one of them. The GitLab reasoning one line up, for the same reason.
         case "radicle":   return "point.3.filled.connected.trianglepath.dotted"
-        // A KEY, plainly — this is the one seat in the catalog whose whole
-        // subject is signing credentials, so the literal symbol is the right
-        // one and any cleverer choice would say less. "key.horizontal" rather
-        // than "lock": nothing here is locked or unlocked, and a padlock would
-        // imply a control this seat deliberately doesn't have (§112).
-        case "altana":    return "key.horizontal"
         case "linear":    return "list.bullet.rectangle"
         // The lists ARE the mark — a board read as columns. Both this and the
         // hue exist so a seat whose bundled art ever fails to load still reads
@@ -200,7 +194,6 @@ enum BridgeGlyph {
         case "x", "twitter": return "bookmark"
         case "instagram": return "camera"
         case "tiktok":    return "music.note"
-        case "reddit":    return "text.bubble"
         case "youtube":   return "play.rectangle"
         case "substack":  return "doc.text.image"
         case "podcasts":  return "mic"
@@ -384,36 +377,15 @@ enum BridgeGlyph {
         // Defensive only — `brand-muse` is bundled, so `BridgeIcon` never
         // reaches this.
         case "muse":         return "scribble"
-        // Base's own real mark is bundled now (`brand-base-vibenet`), so
-        // `BridgeIcon` never reaches this fallback in practice — kept
-        // defensive, in the neutral-letterform shape (the App Store Connect
-        // precedent) rather than an invented theme icon, in case the asset
-        // ever fails to load.
-        case "base vibenet": return "character"
-        // Hegotá bundles its own mark too (`brand-hegota-devnet`), so this is
-        // the same defensive fallback for the same reason — and the same
-        // ANSWER: a neutral letterform rather than an invented theme icon.
-        // A frame or a vault glyph would name one of the chain's readings and
-        // silently rank it above the others, which is a claim a fallback has
+        // The Frames devnet bundles its own mark (`brand-hegota-frames`), so
+        // `BridgeIcon` never reaches this in practice — kept defensive, in the
+        // neutral-letterform shape (the App Store Connect precedent) rather
+        // than an invented theme icon. A frame glyph would name one of the
+        // chain's readings and silently rank it above the others, which is a
+        // claim a fallback that only appears when an asset FAILED TO LOAD has
         // no business making. The literal carries the accent in the catalog's
         // own normalization: Swift compares canonically, the harness does not.
-        case "hegotá utxo": return "character"
-        // The Frames devnet bundles its own mark (`brand-frames-devnet`), so
-        // this is the same defensive fallback for the same reason — and the
-        // same ANSWER: a neutral letterform, never an invented theme icon. A
-        // frame glyph would name one of the chain's readings and silently
-        // rank it above the others, which is a claim a fallback that only
-        // appears when an asset FAILED TO LOAD has no business making.
         case "hegotá frames": return "character"
-        // Hegotá Privacy bundles its own mark (`brand-privacy-devnet`), so
-        // this is the third instance of the same defensive fallback and the
-        // same ANSWER: a neutral letterform. A key or a shield glyph would
-        // name one of the chain's readings — and on THIS seat it would do
-        // worse than rank them, because a shield says the chain hides who
-        // transacted, which it does not (§593): every transaction here names
-        // its sender in the open. A fallback that only appears when an asset
-        // failed to load has no business making that claim.
-        case "hegotá privacy": return "character"
         // Logos bundles the λ its team sent (`brand-logos`), so this is the
         // same defensive fallback, and the same neutral letterform.
         case "logos":     return "character"

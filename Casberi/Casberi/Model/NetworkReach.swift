@@ -359,62 +359,7 @@ enum NetworkReach {
                  // §289 case: every node request names this service to
                  // `NetworkLedger`, so a self-chosen address is attributed.
                  hosts: ["testnet.lez.logos.co", "the node address you give it"]),
-        // Base Vibenet (2026-08-23) — an experimental devnet whose contracts
-        // are redeployed on no fixed schedule, so unlike every other entry
-        // here the CONTRACT addresses this app calls aren't listed, only the
-        // two stable hosts: the RPC node and the config document that names
-        // the current contracts. See `VibenetConfig`'s own standing
-        // constraint against ever hardcoding one of those addresses.
-        Endpoint(service: "Base Vibenet",
-                 reach: .whenConnected(bridge: "Base Vibenet"),
-                 purpose: "Reads a watched address's keystore state — is it established, which keys can act for it, is it locked — from vibenet, Base's devnet for testing native account abstraction (EIP-8130). A read carries only the address you watch. Making an account also sends one signed transaction: what leaves is a signature, never the key that made it — that key is held in this phone's Secure Enclave and cannot be exported by anything, including us. Asking the faucet for test ETH sends the address you are asking for, and nothing else; it needs no key and no signature.",
-                 hosts: ["rpc.vibes.base.org", "api.vibes.base.org"]),
-        // Ethrex Hegotá (2026-08-27) — a frame-transaction devnet. Unlike
-        // vibenet above, the contracts this app reads are PREDEPLOYS at fixed
-        // spec-assigned addresses rather than redeployable ones, so there is
-        // no config document to fetch and no second host. Three RPC nodes are
-        // listed because the read walks them in order: one being down is a
-        // retry, not an outage.
-        Endpoint(service: "Hegotá UTXO",
-                 reach: .whenConnected(bridge: "Hegotá UTXO"),
-                 purpose: "Reads a watched address's balance, its transfers, the unspent UTXOs it holds in the chain's vault and who paid for its transactions, from Hegot\u{00e1} — a public devnet testing frame transactions. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because Hegot\u{00e1}'s money has no value to protect. Asking the faucet for test ETH sends the address you are asking for, and nothing else; it needs no key and no signature.",
-                 hosts: ["rpc1.hegota.ethrex.xyz", "rpc2.hegota.ethrex.xyz",
-                         "rpc3.hegota.ethrex.xyz",
-                         // Added 2026-08-30 (prd §531). It had been in the
-                         // reach audit's non-reach denylist since the seat
-                         // shipped, on the then-true reasoning that this app
-                         // only ever linked out to it — and stayed there for a
-                         // day after §525 gave the key sheet a Claim button
-                         // that POSTs to it, so the privacy screen omitted a
-                         // host the app really reaches.
-                         "faucet.hegota.ethrex.xyz"]),
-        // Ethrex Privacy (prd §593, 2026-09-04) — the THIRD ethrex devnet
-        // and a chain of its own (8141, distinct genesis), not a re-host of
-        // Hegotá. The purpose below is deliberately narrower than its
-        // neighbours' in one respect and must stay that way: this chain
-        // carries `sender` in the clear on every transaction and EIP-8182's
-        // protocol-level shielded pool is NOT deployed, so nothing here may
-        // describe a read as private. What is shielded is the link between a
-        // commitment and its spend, which is a fact about the chain's own
-        // pool contract rather than about what this app sends.
-        //
-        // NO LONGER WATCH-ONLY (prd §593d). This entry said the seat made no
-        // key and signed nothing, on §593a's then-true reasoning that the
-        // type-0x6 envelope could not be reproduced. §593c settled the envelope
-        // against the node and §593d gave the room the acts, so the purpose now
-        // carries the signature and faucet sentences its two siblings already
-        // had, and faucet.privacy.ethrex.xyz is in the host list — which is the
-        // day it belongs there and not before (§531's lesson, one seat over,
-        // where a faucet the app really posted to sat in the reach audit's
-        // denylist for a day and the privacy screen omitted it).
-        Endpoint(service: "Hegotá Privacy",
-                 reach: .whenConnected(bridge: "Hegotá Privacy"),
-                 purpose: "Reads a watched address's balance, its transfers, the steps each transaction ran, the one-time spend keys it used and which recent snapshot a proof named, from a public devnet testing Ethereum's privacy proposals. A read carries only the address you watch. If you make an account here, asking the faucet for test ETH sends its address, and a send you make carries the transaction you signed on this device — both to the same devnet, and only when you tap.",
-                 hosts: ["rpc1.privacy.ethrex.xyz", "rpc2.privacy.ethrex.xyz",
-                         "rpc3.privacy.ethrex.xyz",
-                         "faucet.privacy.ethrex.xyz"]),
-        // Frames devnet (prd §548, 2026-09-01). A SEPARATE seat from Hegotá
-        // and therefore a separate entry: different chain, different hosts,
+        // Frames devnet (prd §548, 2026-09-01) — a chain with its own hosts
         // and a signing key of its own. Since prd §962 the chain is ethpandaops'
         // `frames-devnet-0` (`FramesNetwork.current`), reached through ONE
         // public endpoint. Its faucet is proof-of-work plus a captcha, so the
@@ -424,21 +369,6 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Hegotá Frames"),
                  purpose: "Reads a watched address's balance and its frame transactions — what each frame did, what it spent of its two gas budgets, and who paid for it — from frames-devnet-0, the public test network for EIP-8141 frame transactions, run by the Ethereum Foundation's devops team. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because this chain's money has no value to protect and the network itself may be reset without notice. Top up opens the network's faucet page in the browser; the app sends it nothing.",
                  hosts: ["rpc.frames-devnet-0.ethpandaops.io"]),
-        // Altana (prd §403). Reach is WALLET, not "Altana": the seat rides the
-        // watched wallets and its sweep runs whenever a wallet is watched, so
-        // gating the disclosure on the seat being "connected" would understate
-        // when the request really happens — the same reasoning Railgun and
-        // Gnosis Pay use below. BNB Smart Chain leads because that is where
-        // the keys are (38 of 39, measured 2026-08-18).
-        Endpoint(service: "Altana",
-                 reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads which keys are allowed to sign for the wallets you watch — and for any keystore account you watch here — from Altana's public keystore contracts. Carries only the address you asked about; there is no account and no key, and nothing is ever registered, revoked or signed. The explorer is read once, for the list of accounts the setup screen offers to watch; that request carries nothing of yours.",
-                 hosts: ["bsc-rpc.publicnode.com", "bsc-dataseed.binance.org",
-                         "ethereum-rpc.publicnode.com", "rpc.mevblocker.io",
-                         // The setup screen's account list (2026-08-28). A
-                         // GET of one page with no address in it — §403's own
-                         // door, since public BSC RPCs gate ranged eth_getLogs.
-                         "explorer.altana.network"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you watch.",
@@ -621,10 +551,6 @@ enum NetworkReach {
                  hosts: ["api.farcaster.xyz", "client.farcaster.xyz", "snap.farcaster.xyz",
                          "api.warpcast.com", "media.firefly.land", "imagedelivery.net",
                          "wrpcd.net"]),
-        Endpoint(service: "Reddit",
-                 reach: .whenConnected(bridge: "Reddit"),
-                 purpose: "Reads the newest public posts of the subreddits and people you follow, through Reddit's own RSS feed. No account, no sign-in.",
-                 hosts: ["www.reddit.com"]),
         // Nostr's own hosts are WebSocket relays, so no `https://` literal
         // exists for the audit to find and this entry — like WalletConnect's
         // above — is hand-written. The NIP-05 check is the person-named half:

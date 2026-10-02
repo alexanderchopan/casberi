@@ -31,7 +31,7 @@ Both halves of that sentence are load-bearing:
     does not make judgement calls.
   · **SUPPLIED.** `onRename: onRename` does NOT count. Forwarding a property
     into a child view moves the same nothing one level down, and that exact
-    line is in the tree today: `VibenetDetailContextMenu(onRename: onRename)`
+    line was in the tree: a devnet card's `DetailContextMenu(onRename: onRename)`
     is what made this bug look wired to a grep. A supply is an argument whose
     VALUE is not the parameter's own name.
 

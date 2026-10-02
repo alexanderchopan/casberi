@@ -4,8 +4,8 @@ import SwiftData
 /// The name-only bridges — connect by a public name alone (no password, no
 /// token, nothing stored but the name), so their screens are the same shape.
 /// Two families ride this one enum: the people bridges (Bluesky, Farcaster,
-/// Pinterest), and the feed-follow bridges (Substack, Reddit, YouTube,
-/// Podcasts), whose per-bridge words and URL rules live in `FeedFollowKind`.
+/// Pinterest), and the feed-follow bridges (Substack, YouTube, Podcasts,
+/// Telegram), whose per-bridge words and URL rules live in `FeedFollowKind`.
 /// This enum carries the words that differ, the way TokenBridge does for the
 /// paste-a-token screens; the feed cases delegate to their kind.
 enum HandleBridge: String {
@@ -14,7 +14,6 @@ enum HandleBridge: String {
     case nostr     = "Nostr"
     case pinterest = "Pinterest"
     case substack  = "Substack"
-    case reddit    = "Reddit"
     case youtube   = "YouTube"
     case podcasts  = "Podcasts"
     case telegram  = "Telegram"
@@ -27,7 +26,7 @@ enum HandleBridge: String {
     /// rather than as two catalog tiles for the same app.
     var importsArchive: Bool { self == .telegram }
 
-    /// The feed-follow kind behind the five feed cases, nil for the people
+    /// The feed-follow kind behind the four feed cases, nil for the people
     /// bridges — the join that lets each switch below fall through to one place.
     var feedKind: FeedFollowKind? { FeedFollowKind(rawValue: rawValue) }
 
@@ -85,7 +84,7 @@ enum HandleBridge: String {
 
     /// The bridges whose field doubles as a finder: Bluesky/Farcaster people
     /// search, and Podcasts show search. Pinterest and the templated feeds
-    /// (Substack/Reddit/YouTube) have no such surface — you type the name.
+    /// (Substack/YouTube) have no such surface — you type the name.
     var supportsSearch: Bool {
         self == .bluesky || self == .farcaster || self == .podcasts
     }
@@ -246,7 +245,6 @@ enum HandleBridge: String {
         switch self {
         case .youtube:   String(localized: "a channel")
         case .substack:  String(localized: "a publication")
-        case .reddit:    String(localized: "a subreddit")
         case .podcasts:  String(localized: "a show")
         case .pinterest: String(localized: "a board")
         case .farcaster: String(localized: "someone or a channel")

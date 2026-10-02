@@ -11,7 +11,7 @@ import Foundation
 /// account which have been granted."*
 ///
 /// **Two TENSES under one roof, and the row is what tells them apart.** A
-/// standing grant (a token approval, a vibenet key, a keyed nonce lane) is
+/// standing grant (a token approval, a signer on a Safe) is
 /// authority that survives until somebody revokes it. An exercised one (a
 /// spend key used once, a sponsor who paid) is authority that was granted and
 /// spent. Both belong to the question "what is allowed on this account" and
@@ -72,13 +72,11 @@ enum RoomPermissions {
 
     /// **THREE COLUMNS ONLY WHEN TWO CANNOT HOLD IT.** Four cells fit two rows
     /// of two at a rung a number can be read at; the fifth is what forces the
-    /// narrower cell. Vibenet's census (six classes) has been three-wide since
-    /// 2026-09-02 for exactly this reason and keeps that shape; a devnet with
-    /// two kinds gets one row of two.
+    /// narrower cell; a room with two kinds gets one row of two.
     /// A LONE KIND TAKES THE WHOLE WIDTH rather than sitting in half of a
     /// two-column grid with nothing beside it — Hegotá Frames grants exactly
     /// one kind of permission, and a half-empty row is the "one number adrift"
-    /// §551 spent a whole pass removing from vibenet.
+    /// §551 spent a whole pass removing.
     static func columns(_ kinds: [Kind]) -> Int {
         kinds.count > 4 ? 3 : min(2, max(1, kinds.count))
     }
@@ -115,10 +113,9 @@ enum RoomPermissions {
     /// **THE COUNT IS NOT ALWAYS THE CELLS ADDED UP, which is why the headline
     /// takes it rather than deriving it.** Wallet's rungs and the devnets'
     /// kinds PARTITION their permissions — every grant is in exactly one cell,
-    /// so the sum is the total. Vibenet's census does not: one key holding
-    /// Send and Receive is counted in both cells, and adding them would report
-    /// more permissions than the account has keys. A room whose kinds
-    /// partition passes this; vibenet passes its key count.
+    /// so the sum is the total. A census where one grant can sit in two cells
+    /// does not, and adding them would report more permissions than the
+    /// account has; such a room passes its own count.
     static func headline(_ kinds: [Kind]) -> String? { headline(count: total(kinds)) }
 
     /// What a whole figure says aloud, in one sentence rather than as N cells

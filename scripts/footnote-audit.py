@@ -99,7 +99,7 @@ ALLOWANCE = {
     "AddressBookViews.swift": (3, "three surfaces; consequence of an edit (b)"),
     # Three sheets in one file: Advanced (what is signed, (b)), who pays the
     # fee (b), and the pay link's expiry (b).
-    "DevnetSendConsole.swift": (4, "three sheets; signing disclosures (b); Shield's money line — nothing brings it back out (b)"),
+    "DevnetSendConsole.swift": (2, "the payer row's and the sponsor link's signing disclosures (b)"),
     # The quote's two lines never show together: "sign there" is the ready
     # state, the price drift is the quote.
     "ENSRenewCard.swift": (2, "exclusive states; signing and money (b)"),

@@ -202,17 +202,7 @@ steam = ["Factorio", "Balatro", "Outer Wilds", "Slay the Spire", "Tunic"]
 for i, g in enumerate(steam):
     pic(f"steam-{i}", "sleeve", (736, 344), f"Steam library header for '{g}' — a made capsule evoking the game's world with its name in type, NOT the real key art or logo")
 
-# ── Saves: Reddit, Raindrop, Pinterest (DemoSeedAll.saves) ────────────────
-reddit = [
-    ("My monstera, three years apart", "scene_home", "the same room corner twice, side by side: a small monstera in a pot, then a huge one filling the corner"),
-    ("Propagating pothos in water — what worked", "scene_home", "five glass jars on a sunny windowsill, pothos cuttings with white roots in water"),
-    ("What I learned rewriting our sync layer", "ui", "a whiteboard-style sequence diagram: client, queue, server, arrows"),
-    ("A design review checklist that stuck", "ui", "a document screenshot: a checklist titled 'Design review', seven ticked and unticked items, light theme"),
-    ("Tempelhof at sunset is still the best park", "scene_out", "a vast old airfield runway at sunset, people walking and cycling, kites in the sky, flat horizon"),
-    ("The whole Ringbahn loop in one go", "scene_out", "a red-and-ochre S-Bahn train curving along an elevated track past apartment blocks, late afternoon"),
-]
-for i, (t, fam, s) in enumerate(reddit):
-    pic(f"reddit-{i}", fam, (800, 600), f"Reddit post image for '{t}': {s}")
+# ── Saves: Raindrop, Pinterest (DemoSeedAll.saves) ────────────────
 raindrop = [
     "Human Interface Guidelines — a documentation cover: soft UI shapes, layered panels",
     "SwiftUI documentation — a cover: stacked view rectangles and a layout grid",

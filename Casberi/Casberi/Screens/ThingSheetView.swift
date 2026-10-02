@@ -120,22 +120,18 @@ struct ThingSheetView: View {
     enum FaceTarget: Identifiable {
         case person(SocialProfile)
         case address(AddressBook.Entry)
-        /// A vibenet account, by address (prd §476). A CASE on the existing
-        /// face route rather than a `.sheet` of its own: this view already
-        /// carries three sibling `.sheet` modifiers and a fourth is the
+        /// A held checklist item's reminder tray (prd §1022). A CASE on the
+        /// existing face route rather than a `.sheet` of its own: this view
+        /// already carries three sibling `.sheet` modifiers and a fourth is the
         /// half-open-then-close failure the file's own `fullScreenCover`
         /// comment goes out of its way to avoid — caught by
-        /// `money-receipt-selftest`'s own guard when the first cut added one.
-        case vibenet(String)
-        /// A held checklist item's reminder tray (prd §1022) — the same
-        /// reason as `vibenet`: a case on this route, never a fourth sheet.
+        /// `money-receipt-selftest`'s own guard when one was first added.
         case remind(ordinal: Int, text: String)
 
         var id: String {
             switch self {
             case .person(let profile): return "person:\(profile.id)"
             case .address(let entry):  return "address:\(entry.id)"
-            case .vibenet(let address): return "vibenet:\(address)"
             case .remind(let ordinal, _): return "remind:\(ordinal)"
             }
         }
@@ -157,9 +153,6 @@ struct ThingSheetView: View {
     /// re-evaluated many times per open. Recomputed when `safeCheck` answers,
     /// since a Safe receipt's stamp and its signer sentence both read it.
     @State private var moneyReceipt: MoneyReceipt?
-    /// The Altana credential head (prd §404). Populated from the snapshot on
-    /// mount, then re-stamped once the live `isValidKey` answers.
-    @State private var altanaKey: AltanaKeySheet.Model?
     @State private var moneySays: MoneyCommentary?
     /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
     /// re-labels itself the moment it is used.
@@ -362,9 +355,6 @@ struct ThingSheetView: View {
                 let agentShape = self.agentShape
                 let agentConversation = agentShape == .conversation ? self.agentConversation : nil
                 let agentGrant = agentShape == .grant ? self.agentGrant : nil
-                // A vibenet transfer that is a receipt draws as money, never
-                // also as an event card (prd §888).
-                let vibenetEventFacts = moneyReceipt == nil ? self.vibenetEventFacts : nil
                 let linkOnlyBody = self.linkOnlyBody
                 let framedShot = moneyReceipt == nil
                     && (thing.kind == .screenshot
@@ -384,7 +374,7 @@ struct ThingSheetView: View {
                     && workReading == nil && agentGrant == nil
                     && agentConversation == nil && l2beatShape == nil
                     && privyApp == nil && walletbeatShape == nil
-                    && noteShape == nil && vibenetEventFacts == nil
+                    && noteShape == nil
                 // THE POST HEAD (prd §884) — a post that leads with its person
                 // gets the article head's shape: who, the pink day, the words.
                 let postHead = isSocialPost
@@ -393,7 +383,7 @@ struct ThingSheetView: View {
                 // A MOMENT (prd §892): an event, a workout, a reminder — its
                 // head, its title, and WHEN, which the sheet never drew.
                 let momentHead = (thing.kind == .event || thing.kind == .reminder)
-                    && moneyReceipt == nil && vibenetEventFacts == nil
+                    && moneyReceipt == nil
                     && ThingChart.kind(for: thing) == nil && !articleHead && !postHead
                 // A CONVERSATION, A MAIL, A CHAT (prd §894): the shared head,
                 // the dial under it, the words after — they are read for pages.
@@ -405,7 +395,7 @@ struct ThingSheetView: View {
                     || mediaHead || chartHead
                     || workReading != nil
                     || (purchaseReading.map { $0.archetype != .watch } ?? false)
-                    || vibenetEventFacts != nil || momentHead || noteShape != nil || talkHead
+                    || momentHead || noteShape != nil || talkHead
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
@@ -453,20 +443,6 @@ struct ThingSheetView: View {
                 // unframed and untappable. `FilesIngest.isStoredPicture` says
                 // why the test is on the ref rather than on the bytes.
                 // (`framedShot` is read above, where the article head needs it.)
-                if let altanaKey {
-                    AltanaKeyCard(model: altanaKey) {
-                        if let url = URL(string: AltanaKeystore.explorerURL(address: altanaKey.address)) {
-                            openURL(url)
-                        }
-                    } onWallet: { address in
-                        if let url = URL(string: AltanaKeystore.explorerURL(address: address)) {
-                            openURL(url)
-                        }
-                    }
-                    // The head block carries the inset now (prd §583) — see
-                    // the money receipt below for why it must not be doubled.
-                    .settleIn(delay: 0.06)
-                }
                 if let moneyReceipt {
                     // The subject face is a door (prd §369 amendment): the
                     // history this sheet already draws belongs to that address,
@@ -724,19 +700,6 @@ struct ThingSheetView: View {
                     }
                     .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                     .settleIn(delay: 0.04)
-                } else if vibenetEventFacts != nil {
-                    // A VIBENET EVENT IS ITS OWN HEAD (prd §495). The card
-                    // below opens with the event's own words at the display
-                    // tier, so drawing `thing.title` above it sets the same
-                    // sentence twice — once with the address and once without,
-                    // one line apart, which is §366's failure with the two
-                    // halves visible at the same time.
-                    //
-                    // The same stand-down the token chart and the note
-                    // anatomies above already make, and for the same reason:
-                    // an object that states its own subject does not want a
-                    // label over it.
-                    EmptyView()
                 } else if mailHead {
                     // The SENDER leads (prd §894): a mail is from someone, and
                     // the subject is its headline.
@@ -834,49 +797,6 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
-                }
-                // A vibenet key event's own anatomy (prd §467) — see
-                // `VibenetEventCard`. BELOW the title, never above it: the
-                // title is the event ("New passkey authorized for …9a0b") and
-                // this card is what follows FROM it — which account, how many
-                // keys it carries now, when this one dies. Composed in `body`
-                // rather than in a `.task` like the money receipt because
-                // every input is already in hand: the event's own stored
-                // fields plus the cached room, no store read and no await.
-                //
-                // `lead` IS the head now (prd §495, reversing this comment's
-                // own former reasoning): `summary` is the title minus the
-                // address, and since the generic title block stands down above
-                // it is drawn once here rather than twice. It beats anything
-                // this card could derive because the landing resolved the
-                // key's kind from a LIVE read at the time — see the card's own
-                // note on `lead`.
-                if let facts = vibenetEventFacts {
-                    VibenetEventCard(facts: facts,
-                                     lead: thing.summary,
-                                     happenedAt: thing.capturedAt,
-                                     // THE VIBENET ACCOUNT, not the wallet
-                                     // address card (2026-08-25, prd §476).
-                                     // `openAddressCard` opens `AddressCard`,
-                                     // which is the MAINNET address book's own
-                                     // detail — balances, connections, watch
-                                     // state — none of which describes a devnet
-                                     // keystore account, and none of which this
-                                     // bridge feeds. The account's real detail
-                                     // is `VibenetAccountSheet`, one door over.
-                                     onAccount: openVibenetAccount,
-                                     // The chain's own explorer, opened in
-                                     // the person's browser — a hand-off, not
-                                     // a read of ours, so no host of ours
-                                     // joins `NetworkReach`.
-                                     onTransaction: { hash in
-                                         if let url = URL(string: VibenetExplorer.tx(hash)) {
-                                             openURL(url)
-                                         }
-                                     })
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
-                        .settleIn(delay: 0.08)
                 }
                 // Events speak through WHEN below; and when the content is
                 // just the title again (a short note with no body beyond its
@@ -1356,7 +1276,6 @@ struct ThingSheetView: View {
                 priceENSRenewal(term: ensRenewTerm)
             }
             loadReceipt()
-            Task { await loadAltanaKey() }
         }
         // A Safe receipt can't be complete until its queue read answers — the
         // stamp ("Your turn" vs "Pending") and the signer sentence both come
@@ -1416,13 +1335,6 @@ struct ThingSheetView: View {
             switch target {
             case .person(let profile): SocialProfileCard(profile: profile)
             case .address(let entry):  AddressCard(entry: entry)
-            case .vibenet(let address):
-                // Composed from the cached room, the same synchronous door the
-                // feed head uses — `openVibenetAccount` has already proved the
-                // account is in it, so this cannot present an empty sheet.
-                if let room = VibenetRoomSource.card() {
-                    VibenetAccountSheet(address: address, room: room)
-                }
             case .remind(_, let text):
                 NoteRemindTray(note: thing, item: text)
             }
@@ -2566,7 +2478,7 @@ struct ThingSheetView: View {
         // It had stood down on seven separate conditions already — a social
         // reception's own sentence (§363), a purchase's (§364), a note's
         // (§366), an agent sheet's (§367), a Work receipt, an eyebrow that
-        // leads with the person (§451), a vibenet event's card (§467) — every
+        // leads with the person (§451), a devnet event's card (§467) — every
         // one of them a place where something else said it better, in words
         // rather than behind an 80pt label column. §634 then deleted four of
         // the phrases themselves. What was left failed the same test on the
@@ -2788,17 +2700,6 @@ struct ThingSheetView: View {
         }
     }
 
-    /// Compose the Altana credential head, then ask the chain whether the key
-    /// is still valid (prd §404).
-    ///
-    /// TWO steps on purpose. The snapshot gives the whole card instantly, so
-    /// the sheet never opens empty; the live check is the one thing the stored
-    /// row cannot know — a row records that a key EXISTED, and only a fresh
-    /// read says whether it still does (`WalletPrepare`'s ruling, §112). It
-    /// settles in after mount rather than blocking the sheet.
-    ///
-    /// No `Thing` crosses the suspension: the ref is copied out first, so the
-    /// await holds a `String` and nothing else (corollary 6).
     /// Prices an ENS renewal for one term (prd §540). Reads only — it quotes
     /// what a renewal would cost and prepares the transaction; nothing here
     /// signs or sends.
@@ -2820,19 +2721,6 @@ struct ThingSheetView: View {
             guard term == ensRenewTerm else { return }
             ensRenewQuote = quote
         }
-    }
-
-    private func loadAltanaKey() async {
-        guard thing.isLive, thing.source == AltanaKeystore.source,
-              let ref = thing.sourceRef,
-              var model = AltanaKeySheet.compose(ref: ref, readings: AltanaState.readings)
-        else { return }
-        altanaKey = model
-
-        let address = model.address, keyID = model.keyID
-        let state = await AltanaKeystore.liveState(address: address, keyID: keyID)
-        model.live = state
-        altanaKey = model
     }
 
     /// Compose the money receipt and its commentary, once per open (prd §369).
@@ -3009,15 +2897,15 @@ struct ThingSheetView: View {
     /// enclosure too and "Audio" would be a claim we never checked.
     ///
     /// Scoped by SOURCE, never by "there is an `externalLink`". That field has
-    /// several fillers now — a Reddit post's first outbound body link, a TikTok
-    /// row's video link, a Cal.com meeting URL, a Snapchat memory's download
-    /// link — and a Reddit row must never grow a listen verb. For these two
+    /// several fillers now — a TikTok row's video link, a Cal.com meeting URL,
+    /// a Snapchat memory's download link — and none of those may grow a listen
+    /// verb. For these two
     /// feed sources it has exactly ONE writer (`FeedFollowBridges` and
     /// `RSSIngest` both fill it only from `item.mediaURL`), which is what makes
     /// the field's meaning unambiguous here and nowhere else. RSS is in because
     /// a podcast followed through the generic feed door is the same episode
-    /// wearing a different seat; Reddit, YouTube and Substack ride the same
-    /// ingest and are out.
+    /// wearing a different seat; YouTube and Substack ride the same ingest and
+    /// are out.
     ///
     /// Three gates, each closing a way this could be a disc that does nothing
     /// or one that repeats the disc beside it:
@@ -3069,7 +2957,7 @@ struct ThingSheetView: View {
     ///
     /// Scoped by SOURCE and by kind, never by "there is an `externalLink`" —
     /// that field means something different in every room that fills it (a
-    /// Reddit body link, a podcast enclosure, a meeting URL), and the episode
+    /// video link, a podcast enclosure, a meeting URL), and the episode
     /// verb above documents why at length.
     ///
     /// "On X", not "Open": §302's Explorer ruling — the glyph already says it
@@ -3248,65 +3136,6 @@ struct ThingSheetView: View {
         }
     }
 
-    /// A vibenet key event's facts, or nil for everything else (prd §467).
-    ///
-    /// Cheap enough to sit on the body path: two string compares reject every
-    /// other row in the corpus before anything is read, and the room itself is
-    /// a cached value (`VibenetRoomSource.card()`), not a fetch.
-    ///
-    /// The account comes from `authorHandle`, which every landed vibenet event
-    /// stamps for exactly this reason — recovering it by parsing the address
-    /// back out of a localized title is the thing `MoneyReceiptSource`'s own
-    /// doc forbids, for the same reason here.
-    private var vibenetEventFacts: VibenetEventFacts? {
-        guard thing.kind == .event, thing.source == VibenetIdentity.source,
-              let account = thing.authorHandle, !account.isEmpty else { return nil }
-        let item = VibenetRoomSource.card()?.items.first {
-            $0.address.caseInsensitiveCompare(account) == .orderedSame
-        }
-        // A key event is the one that can carry permissions; a lock or an
-        // unlock is about the ACCOUNT, so it never claims a key it isn't
-        // about. `sourceRef`'s own segment is the authority — the title is
-        // localized and must never be parsed.
-        // WHICH OF THE FOUR, off the ref's own segment (prd §495). The
-        // segment is `VibenetEventKind.refSegment`'s constant and an
-        // authorization and a revocation SHARE it — "actor" — so the two are
-        // separated by the tag the landing stamps, never by reading the
-        // localized title. An unrecognised shape falls back to `authorized`,
-        // which is the only kind whose anatomy degrades to the generic
-        // ("A new key", no chips) rather than to a wrong claim about a lock.
-        let ref = thing.sourceRef ?? ""
-        let kind: VibenetEventFacts.Kind
-        if ref.hasPrefix("vibenet:locked") {
-            kind = .locked
-        } else if ref.hasPrefix("vibenet:unlocking") {
-            kind = .unlocking
-        } else if ref.hasPrefix("vibenet:in:") || ref.hasPrefix("vibenet:out:") {
-            // prd §888: these fell through to `.authorized` and read as a key.
-            kind = .moved
-        } else if ref.hasPrefix("vibenet:policy:") {
-            kind = .policy
-        } else if ref.hasPrefix("vibenet:created:") {
-            kind = .created
-        } else if thing.tags.contains("Revoked") {
-            kind = .revoked
-        } else {
-            kind = .authorized
-        }
-        return VibenetEventFacts.compose(
-            account: account,
-            accountName: VibenetWatch.shared.name(for: account)
-                ?? VibenetRoom.shortAddress(account),
-            actors: item?.actors ?? [],
-            dueAt: thing.dueAt,
-            kind: kind,
-            sourceRef: thing.sourceRef,
-            // The facts each kind reads were composed and never handed over.
-            transfers: item?.transfers ?? [],
-            policyRuns: item?.policyRuns ?? [],
-            origin: item?.origin)
-    }
-
     /// Opening the address behind the receipt's subject face (prd §369
     /// amendment) — what this app knows about it: the history you share, what
     /// it can move, and the name you gave it.
@@ -3317,45 +3146,6 @@ struct ThingSheetView: View {
     /// a face must not quietly file a stranger's address in your book. The card
     /// reads `book.entry(for:) ?? entry`, so it upgrades itself the moment the
     /// address really is named from inside it.
-    /// A vibenet event's account door (prd §476).
-    ///
-    /// Nil-safe by construction: `VibenetRoomSource.card()` is the cached
-    /// snapshot the feed head already draws from, so this costs no read — and
-    /// where the account is not in it (unwatched, or no read has landed on
-    /// this device yet) the sheet simply does not rise, rather than opening a
-    /// detail about an account nothing knows anything about.
-    ///
-    /// **A tap never does nothing (user: "my account in the thing sheet doesn't
-    /// open").** The snapshot can lag the watch list — a chain reset, a create
-    /// closed by a swipe — so a watched account missing from it is read once
-    /// and then opened. An account this phone does not watch opens on the
-    /// chain's explorer, the hand-off the Transaction row already makes.
-    private func openVibenetAccount(_ address: String) {
-        guard !address.isEmpty else { return }
-        if Self.vibenetSnapshotHolds(address) {
-            faceTarget = .vibenet(address)
-            return
-        }
-        Task { @MainActor in
-            if VibenetWatch.shared.addresses.contains(where: {
-                $0.caseInsensitiveCompare(address) == .orderedSame
-            }) {
-                _ = await VibenetRoomSource.compose()
-                if Self.vibenetSnapshotHolds(address) {
-                    faceTarget = .vibenet(address)
-                    return
-                }
-            }
-            if let url = URL(string: VibenetExplorer.address(address)) { openURL(url) }
-        }
-    }
-
-    private static func vibenetSnapshotHolds(_ address: String) -> Bool {
-        VibenetRoomSource.card()?.items.contains {
-            $0.address.caseInsensitiveCompare(address) == .orderedSame
-        } ?? false
-    }
-
     private func openAddressCard(_ address: String) {
         guard !address.isEmpty else { return }
         faceTarget = .address(

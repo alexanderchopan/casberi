@@ -112,36 +112,12 @@ enum HomeComposition {
             // Dodo's demo rows wrote them as literals a text audit can see.
             "Dispute", "Subscription",                    // Stripe, Polar, Dodo
             "Paper",                                      // Hugging Face
-            // Altana (prd §402) and the chain a wallet row sits on. Both are
-            // STATE by this set's own rule: a key type says what a key IS and
-            // a chain name says where a row happened, and neither says what
-            // anything is ABOUT. A chain in particular is the `Onchain` test
-            // run backwards — that one is in KNOWN_SUBJECT because it is a
-            // theme somebody keeps things about, while "BNB Smart Chain" is a
-            // venue stamped on every row that touched it.
-            "Root key", "Session key",                    // Altana keystore
-            // vibenet (prd §468). STATE by this set's own rule: it says what a
-            // key IS (EIP-8130 scope 0, unrestricted), never what anything is
-            // about. Deliberately not a facet either — nobody types "admin
-            // key" as a search, and its whole job is to route one row to the
-            // lock screen (`NotifySweep.classify`).
-            "Admin key",                                  // vibenet keystore
-            // The devnet faucet claim (prd §553b). STATE by this set's own
-            // rule: it says what the row IS — a top-up from the faucet —
-            // never what it is about. Its SIBLING is "Sent", stamped on the
-            // same rows by `HegotaSend`, which is ruled nowhere and is not
-            // flagged only because that one is written through a ternary and
-            // this audit reads source text; so this entry covers the pair in
-            // practice while the parser can see one of them (2026-09-01).
-            "Faucet",                                     // Hegotá, vibenet
             // Logos (prd §988). STATE, every one: what happened to a watched
-            // LEZ account, never what it is about. "Faucet" above already
-            // covers one; "Sent" is ruled here, which also covers `HegotaSend`'s.
+            // LEZ account, never what it is about.
             "Received", "Sent", "Initialized", "Created", "Minted", "Burned",
             "Private", "Program",
             // prd §989: a token row's kind, and your node's states.
             "Token", "Node", "Offline", "Synced", "Behind", "Voucher",
-            "BNB Smart Chain",                            // wallet chain label
             // Radicle (prd §400). All five are STATE, not subject: they say
             // what happened to a patch or an issue, never what it is about.
             // Deliberately not facets either — `Issue` above is already

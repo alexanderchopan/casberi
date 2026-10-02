@@ -231,18 +231,16 @@ if [[ "$back" -eq 0 ]]; then
   printf '  ✓ no quiet-hours hold anywhere (§870)\n'
 fi
 
-# ── the two devnets (prd §522) ──────────────────────────────────────────────
+# ── the devnet (prd §522, §728) ─────────────────────────────────────────────
 # The compiled half above proves the RULES. These guard the wiring it cannot
-# see — and the wiring is where both seats failed before this pass: Hegotá
-# lands no `Thing` at all (§500), so nothing it learned could ever reach a lock
-# screen, and no audit in this repo could have reported that as a gap.
+# see — and the wiring is where a devnet seat fails: the Frames devnet lands no
+# `Thing` at all, so nothing it learns could ever reach a lock screen through
+# the corpus, and no audit in this repo could report that as a gap.
 DEVNET="Casberi/Casberi/Model/DevnetNotify.swift"
-VIB="Casberi/Casberi/Model/VibenetBridge.swift"
-HEG="Casberi/Casberi/Model/HegotaBridge.swift"
 FRAMESB="Casberi/Casberi/Model/FramesBridge.swift"
-DRIVER="Casberi/Casberi/Model/VibenetUnlockActivityDriver.swift"
+CHAINW="Casberi/Casberi/Model/FramesChainWatch.swift"
 BG="Casberi/Casberi/Model/WalletBackgroundRefresh.swift"
-for f in "$DEVNET" "$VIB" "$HEG" "$FRAMESB" "$DRIVER" "$BG"; do
+for f in "$DEVNET" "$FRAMESB" "$CHAINW" "$BG"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -252,7 +250,7 @@ guard "the headline has ONE authority, forwarded from the sweep" \
 # A seat name that does not equal the source the bridge really stamps fails at
 # NEITHER end: the notification arrives with a blank right-hand slot and its tap
 # opens the All feed. Derived from the bridges rather than typed twice here.
-for pair in "vibenet:$VIB" "Hegotá:$HEG" "Frames:$FRAMESB"; do
+for pair in "Frames:$FRAMESB"; do
   label="${pair%%:*}"; file="${pair#*:}"
   src=$(grep -oE 'static let source = "[^"]+"' "$file" | head -1 | sed 's/.*"\(.*\)"/\1/')
   if [[ -n "$src" ]] && grep -qF "return \"$src\"" "$PLAN"; then
@@ -263,15 +261,11 @@ for pair in "vibenet:$VIB" "Hegotá:$HEG" "Frames:$FRAMESB"; do
   fi
 done
 
-# Both windows are restated in the Foundation-only file because it cannot see
-# the other two. Restated is fine; DIVERGED is a notification that outlives the
-# sentence it points at, or one the corpus sweep would have called stale.
-guard "the devnet news window is the corpus sweep's own 36 hours" \
-      'static let newsWindow: TimeInterval = 36 \* 3600' "$PLAN"
-guard "…and the corpus sweep still uses that number" \
-      'static let newsWindow: TimeInterval = 36 \* 3600' "$SWEEP"
+# The window is restated in the Foundation-only file because it cannot see the
+# room's. Restated is fine; DIVERGED is a notification that outlives the
+# sentence it points at.
 guard "a reset stays sayable exactly as long as the room keeps saying it" \
-      'static let sayItFor: TimeInterval = 7 \* 86_400' "$VIB"
+      'static let sayRelaunchFor: TimeInterval = 7 \* 86_400' "$CHAINW"
 guard "…and the notification uses that same week" \
       'static let resetWindow: TimeInterval = 7 \* 86_400' "$PLAN"
 
@@ -279,36 +273,12 @@ guard "…and the notification uses that same week" \
 # instead of arriving as a second buzz beside a dispute.
 guard "the devnet plans ride the corpus sweep's one submit" \
       'Notifications\.submit\(plans \+ devnet' "$BG"
-guard "the unlock book is pruned only after that submit" \
-      'DevnetNotify\.prune\(\)' "$BG"
 
-# §522's two halves of the sticky record: without the KEY the ledger cannot tell
-# one wipe from the next, and the room's own date alone would announce the same
-# reset on every pass forever.
-guard "a reset stores the key that makes it announceable once" \
-      'UserDefaults\.standard\.set\(key, forKey: resetKeyKey\)' "$VIB"
-guard "…and Hegotá stamps its relaunch once per genesis hash, not per sweep" \
-      'if UserDefaults\.standard\.string\(forKey: Self\.restartHashKey\) != hash' "$HEG"
-guard "accepting the relaunch forgets the observation with it" \
-      'removeObject\(forKey: Self\.restartHashKey\)' "$HEG"
-
-# §473's control, as the notification's consent record.
-guard "tracking is recorded only when an activity really started" \
-      'VibenetUnlockBook\.record\(address: address, name: name, unlocksAt: unlocksAt\)' "$DRIVER"
-# The forget must come BEFORE the `guard let activity`, or stopping a tracker
-# whose handle died with the process leaves the notification armed.
-forget_line=$(grep -nF 'VibenetUnlockBook.forget(address: address)' "$DRIVER" | head -1 | cut -d: -f1)
-guard_line=$(grep -nF 'guard let activity = live.removeValue' "$DRIVER" | head -1 | cut -d: -f1)
-if [[ -n "$forget_line" && -n "$guard_line" && "$forget_line" -lt "$guard_line" ]]; then
-  printf '  ✓ stopping forgets the consent even with no handle left to end\n'
-else
-  printf '  ✗ DRIFT: finish() returns before forgetting the unlock book (§522)\n'; fail=1
-fi
-# A ROOM READ is not the person's tap. `reconcile` calling `finish` with the
-# default would forget an entry whose delay had just ELAPSED — silently deleting
-# the one thing that pass was about to announce, on the pass where it mattered.
-guard "a room reconcile forgets a PENDING entry only, never a finished one" \
-      'finish\(address: address, withdrawingConsent: false\)' "$DRIVER"
+# §522's sticky record: without the KEY the ledger cannot tell one wipe from
+# the next, and the room's own date alone would announce the same reset on
+# every pass forever.
+guard "a relaunch stores the genesis hash that makes it announceable once" \
+      'UserDefaults\.standard\.set\(hash, forKey: Self\.relaunchHashKey\)' "$FRAMESB"
 
 # THE GATHERER HOLDS NO RULE. Every threshold lives in the compiled file; one
 # that drifted down here would be a rule no harness could ever reach — which is
@@ -509,11 +479,10 @@ ok(NotifyRules.deadlinePhrase(cal.date(byAdding: .day, value: 3, to: at(9))!,
 ok(NotifyRules.deadlinePhrase(cal.date(byAdding: .day, value: -1, to: at(9))!,
                               now: at(9), calendar: cal) == "overdue", "the past reads 'overdue'")
 
-// ── the two devnets (prd §522) ──────────────────────────────────────────────
-// Hegotá lands no `Thing` at all (§500) and vibenet's two chain-wide clocks
-// belong to no row, so `NotifySweep.classify` structurally cannot reach any of
-// this — and nothing in this repo can make a devnet reset, a timelock elapse or
-// a timelock elapse on demand. These fixtures are not the best proof the rules
+// ── the devnet (prd §522, §728) ─────────────────────────────────────────────
+// The Frames devnet lands no `Thing` at all, so `NotifySweep.classify`
+// structurally cannot reach any of this — and nothing in this repo can make a
+// devnet reset on demand. These fixtures are not the best proof the rules
 // hold; they are the only one.
 let dnow = at(12)
 
@@ -521,79 +490,52 @@ func reset(_ seat: NotifyDevnet.Seat, key: String = "id-1-2",
            observed: Date = at(11), watching: Int = 2) -> NotifyDevnet.Reset {
     NotifyDevnet.Reset(seat: seat, key: key, observedAt: observed, watching: watching)
 }
-ok(NotifyDevnet.plan(reset: reset(.vibenet), now: dnow) != nil,
+ok(NotifyDevnet.plan(reset: reset(.frames), now: dnow) != nil,
    "a reset observed an hour ago is news")
-ok(NotifyDevnet.plan(reset: reset(.vibenet, watching: 0), now: dnow) == nil,
+ok(NotifyDevnet.plan(reset: reset(.frames, watching: 0), now: dnow) == nil,
    "NOBODY WATCHING, NOTHING TO SAY — a reset is only news about someone who had something there")
-ok(NotifyDevnet.plan(reset: reset(.vibenet, observed: dnow.addingTimeInterval(60)), now: dnow) == nil,
+ok(NotifyDevnet.plan(reset: reset(.frames, observed: dnow.addingTimeInterval(60)), now: dnow) == nil,
    "an observation from the FUTURE never fires (a clock that moved under us)")
-ok(NotifyDevnet.plan(reset: reset(.vibenet, observed: dnow.addingTimeInterval(-8 * 86_400)), now: dnow) == nil,
+ok(NotifyDevnet.plan(reset: reset(.frames, observed: dnow.addingTimeInterval(-8 * 86_400)), now: dnow) == nil,
    "a reset older than the week the room keeps explaining it never fires")
-ok(NotifyDevnet.plan(reset: reset(.vibenet, observed: dnow.addingTimeInterval(-6 * 86_400)), now: dnow) != nil,
+ok(NotifyDevnet.plan(reset: reset(.frames, observed: dnow.addingTimeInterval(-6 * 86_400)), now: dnow) != nil,
    "…and one inside that week still does")
 // The id is the whole of "fires once, ever" — and of a SECOND wipe being news.
-let dr1 = NotifyDevnet.plan(reset: reset(.vibenet, key: "id-1-2", observed: at(9)), now: dnow)!
-let dr2 = NotifyDevnet.plan(reset: reset(.vibenet, key: "id-1-2", observed: at(11)), now: dnow)!
+let dr1 = NotifyDevnet.plan(reset: reset(.frames, key: "id-1-2", observed: at(9)), now: dnow)!
+let dr2 = NotifyDevnet.plan(reset: reset(.frames, key: "id-1-2", observed: at(11)), now: dnow)!
 ok(dr1.id == dr2.id, "the same reset keeps ONE id however often the sticky record is re-read")
-let dr3 = NotifyDevnet.plan(reset: reset(.vibenet, key: "id-2-3"), now: dnow)!
+let dr3 = NotifyDevnet.plan(reset: reset(.frames, key: "id-2-3"), now: dnow)!
 ok(dr3.id != dr1.id, "a SECOND reset is a different id, so it is new news")
-let drh = NotifyDevnet.plan(reset: reset(.hegota), now: dnow)!
-ok(drh.id != dr1.id, "the two seats never share an id")
-ok(dr1.source == "Base Vibenet" && drh.source == "Hegotá UTXO",
-   "each plan carries its own seat's source, so the right-hand slot gets its mark")
+ok(dr1.source == "Hegotá Frames",
+   "the plan carries its seat's source, so the right-hand slot gets its mark")
 ok(dr1.body.contains("addresses"),
-   "vibenet's body says the ADDRESS survives — §515a's easily-missed half")
+   "the body says the ADDRESSES survive — §515a's easily-missed half")
 ok(dr1.cls == .alarm && !dr1.isTimeSensitive,
    "a devnet reset is an alarm that never breaks a Focus")
 
-func unlock(tracked: Bool = true, opensAt: Date = at(11),
-            address: String = "0xAbCd") -> NotifyDevnet.Unlock {
-    NotifyDevnet.Unlock(address: address, name: "Treasury", unlocksAt: opensAt, tracked: tracked)
-}
-ok(NotifyDevnet.plan(unlock: unlock(), now: dnow) != nil, "a timelock that ended an hour ago is news")
-ok(NotifyDevnet.plan(unlock: unlock(tracked: false), now: dnow) == nil,
-   "§473: an account merely WATCHED never reaches a lock screen")
-ok(NotifyDevnet.plan(unlock: unlock(opensAt: at(13)), now: dnow) == nil,
-   "a delay still running is the Live Activity's job, not a notification's")
-ok(NotifyDevnet.plan(unlock: unlock(opensAt: dnow.addingTimeInterval(-40 * 3600)), now: dnow) == nil,
-   "a window that opened days ago is not news")
-let du1 = NotifyDevnet.plan(unlock: unlock(address: "0xAbCd"), now: dnow)!
-let du2 = NotifyDevnet.plan(unlock: unlock(address: "0xabcd"), now: dnow)!
-ok(du1.id == du2.id, "the id is case-folded — an RPC's casing is not a promise")
-ok(NotifyDevnet.plan(unlock: unlock(opensAt: at(11, 30)), now: dnow)!.id != du1.id,
-   "a SECOND unlock at a new instant is new news")
-ok(du1.body.contains("Treasury"), "the body names the account")
-
-// Each seat's door must PARSE. Both names carry a space and one an accent, so
-// an unencoded link is one `URL(string:)` hands back as nil — a tap that opens
+// Each seat's door must PARSE. The name carries a space and an accent, so an
+// unencoded link is one `URL(string:)` hands back as nil — a tap that opens
 // the app on whatever room it was already showing.
 for seat in NotifyDevnet.Seat.allCases {
     ok(URL(string: seat.link)?.pathComponents.last == seat.source,
        "\(seat) links to its own room, percent-encoded so URL() can parse it back")
 }
 
-// Composed together, in a stable order, and then batched like any other alarm.
-let dAll = NotifyDevnet.plans(resets: [reset(.vibenet)], unlocks: [unlock()], now: dnow)
-ok(dAll.count == 2, "both compose together")
-ok(dAll.map(\.kind) == [.chainReset, .unlockReady], "…in a stable order")
+// Composed, and then batched like any other alarm.
+let dAll = NotifyDevnet.plans(resets: [reset(.frames), reset(.frames, key: "id-2-3")], now: dnow)
+ok(dAll.count == 2, "two resets compose")
 let dCollapsed = NotifyRules.collapse(dAll)
 ok(dCollapsed.count == 1, "two devnet alarms collapse to one, like any other alarm")
-ok(dCollapsed[0].kind == .chainReset, "…and the reset is the one that survives")
+ok(dCollapsed[0].kind == .chainReset, "…and it is a reset")
 
-// ── where the three sit on the ladder, both boundaries each ─────────────────
+// ── where it sits on the ladder, both boundaries ────────────────────────────
 ok(NotifyKind.paymentsSilent.severity > NotifyKind.chainReset.severity,
    "a devnet reset never outranks revenue that stopped — no real money is involved")
 ok(NotifyKind.chainReset.severity > NotifyKind.poolCleared.severity,
    "…and it outranks good news you can act on whenever")
-ok(NotifyKind.poolCleared.severity > NotifyKind.unlockReady.severity,
-   "real money out of a pool outranks a devnet's timelock")
-ok(NotifyKind.unlockReady.severity > NotifyKind.priceRose.severity,
-   "…which still outranks a charge already taken")
-for k: NotifyKind in [.chainReset, .unlockReady] {
-    ok(k.cls == .alarm, "\(k) is an alarm")
-    ok(k.severity > 0, "\(k) has a real severity, not the default 0 that ties with arrivals")
-    ok(!k.isTimeSensitive, "\(k) never breaks a Focus — none of them states a clock still running")
-}
+ok(NotifyKind.chainReset.cls == .alarm, "a reset is an alarm")
+ok(NotifyKind.chainReset.severity > 0, "a reset has a real severity, not the default 0 that ties with arrivals")
+ok(!NotifyKind.chainReset.isTimeSensitive, "a reset never breaks a Focus — it states no clock still running")
 // The headline moved onto the kind (§522) and `NotifySweep.headline` forwards,
 // so EVERY kind must answer — not only the ones a switch happened to list.
 for k in NotifyKind.allCases { ok(!k.headline.isEmpty, "\(k) has a non-empty headline") }
@@ -999,7 +941,7 @@ mutate "a wallet incident claims the Focus-breaking level" \
        's/self == \.disputeOpened \|\| self == \.deadlineNear/self == .disputeOpened || self == .deadlineNear || self == .walletIncident/'
 
 
-# ── the two devnets (prd §522) ──────────────────────────────────────────────
+# ── the devnet (prd §522, §728) ─────────────────────────────────────────────
 # Every one of these renders as a perfectly ordinary notification — or as
 # silence, which is worse, because silence here is also the healthy answer.
 mutate "a devnet reset alarms someone who watches nothing on it" \
@@ -1008,14 +950,6 @@ mutate "a reset stays news forever, long after the room stops explaining it" \
        's/static let resetWindow: TimeInterval = 7 \* 86_400/static let resetWindow: TimeInterval = 3650 * 86_400/'
 mutate "the same reset is announced again on every sweep (the key leaves the id)" \
        's/:\\\(r\.key\)//'
-mutate "§473 breaks: an account merely WATCHED reaches the lock screen" \
-       's/guard u\.tracked else \{ return nil \}//'
-mutate "an unlock fires while its timelock is still running" \
-       's/guard since >= 0 else \{ return nil \}//'
-mutate "one unlock announces itself again after a re-lock (the instant leaves the id)" \
-       's/:\\\(stamp\)//'
-mutate "stale news fires — the devnet window widens past every sweep" \
-       's/static let newsWindow: TimeInterval = 36 \* 3600/static let newsWindow: TimeInterval = 3600 * 3600/'
 mutate "a devnet reset outranks a dispute" \
        's/case \.chainReset:       return 55/case .chainReset:       return 200/'
 mutate "the dateline draws even when delivery is on time (the lag floor is lost)" \

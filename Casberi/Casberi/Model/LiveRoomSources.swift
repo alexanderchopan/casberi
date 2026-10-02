@@ -5,8 +5,8 @@ import Foundation
 ///
 /// Every other bridge in this app is corpus-shaped: connecting it lands
 /// things, and its chip exists in `MainSurface.chipLabels` precisely because
-/// things with that source exist. The devnet rooms aren't — Hegotá, Frames and
-/// the privacy devnet land no `Thing` ever; their content is live chain state.
+/// things with that source exist. The devnet rooms aren't — Frames and Logos
+/// land no `Thing` ever; their content is live chain state.
 /// Modelled the corpus way, a connected seat with nothing landed had no chip
 /// and therefore no room. (The founding members were the prediction markets,
 /// Kalshi and Polymarket, whose whole book was public and live; both were
@@ -22,19 +22,13 @@ enum LiveRoomSources {
     /// Sources whose ROOM has live content, so the chip is earned by the
     /// connection rather than by landed things — and so the room must not draw
     /// the generic "nothing here yet" empty state.
-    /// `FramesIdentity.source` joins for Hegotá's exact reason and NOT the
-    /// venues' (prd §548): it lands no `Thing` ever, so without membership its
-    /// room draws the corpus-shaped empty state over live chain content — and
-    /// `FeedScreen`'s two arms both fall through, which is a BLACK SCREEN.
-    /// It is deliberately absent from `venues` below: that narrower set drew
-    /// `PredictionRoomBook`, and adding Hegotá to the wrong one is why a device
-    /// report read "when i click on hegota it is showing me prediction
-    /// markets".
-    /// `PrivacyDevnetIdentity.source` joins for exactly Hegotá's and Frames'
-    /// reason, and it is the same ruling rather than a third one: it lands no
-    /// `Thing` ever. **NOT in `venues` below**, which is the mistake that
-    /// produced "when i click on hegota it is showing me prediction markets" —
-    /// that narrower set drew `PredictionRoomBook`.
+    /// `FramesIdentity.source` is a member (prd §548): it lands no `Thing`
+    /// ever, so without membership its room draws the corpus-shaped empty
+    /// state over live chain content — and `FeedScreen`'s two arms both fall
+    /// through, which is a BLACK SCREEN. It is deliberately absent from
+    /// `venues` below: that narrower set drew `PredictionRoomBook`, and adding
+    /// a devnet to the wrong one is why a device report read "it is showing me
+    /// prediction markets".
     /// Kalshi and Polymarket were the founding members and left on 2026-09-06
     /// with their code (prd §638's third amendment). Their rows persist in a
     /// corpus that has them, but `Corpus.retiredSources` refuses those rows a
@@ -42,8 +36,7 @@ enum LiveRoomSources {
     /// Logos (prd §991) joins for the devnets' reason with one difference: it
     /// DOES land rows, but a watch or a node with nothing landed yet is still
     /// a room with a crown and tiles, never the corpus-shaped empty state.
-    static let all: Set<String> = [HegotaIdentity.source, FramesIdentity.source,
-                                   PrivacyDevnetIdentity.source, LogosRoom.source]
+    static let all: Set<String> = [FramesIdentity.source, LogosRoom.source]
 
     /// **A KEYED AGENT EARNS ITS CHIP BY HOLDING A KEY (prd §842).**
     ///
@@ -120,9 +113,9 @@ enum LiveRoomSources {
     /// seat that wants a chip and nothing else adds itself to `all`, sees this
     /// set empty, and is told exactly why by the text under it.
     ///
-    /// Split out of `all` on 2026-08-27, from a device report: adding Hegotá to
-    /// this file made its room draw the Kalshi/Polymarket browse book —
-    /// "when i click on hegota it is showing me prediction markets". The set had
+    /// Split out of `all` on 2026-08-27, from a device report: adding a devnet
+    /// to this file made its room draw the Kalshi/Polymarket browse book —
+    /// "it is showing me prediction markets". The set had
     /// quietly grown THREE jobs and nothing separated them, because for two
     /// years its only members were the two venues and every job was true of
     /// both at once:

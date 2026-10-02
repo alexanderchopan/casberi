@@ -21,7 +21,7 @@
 #     rows dated across years that the All list deliberately hides, so the walk
 #     leaves the list without saying so;
 #   • a kind-filtered room walking rows of every other kind;
-#   • a narrowed room (pinned, a wallet, a person, a vibenet account) drawing
+#   • a narrowed room (pinned, a wallet, a person) drawing
 #     doors at all, when its membership cannot be rebuilt from a source and a
 #     kind — an absent door is honest, a wrong one is not;
 #   • the scope left out of the route's `id`, so the same thing opened from two
@@ -91,7 +91,7 @@ grep -q 'detail.present(thing, walk: walk)' "$TMP/feed.nocomment" \
        echo "  exactly the device with room to draw them"; exit 1; }
 # The four narrowings the fetch cannot rebuild must all reach `narrowed`.
 for narrowing in 'Pinboard.isPinnedRoom(source)' 'selectedWallet != nil' \
-                 'chrome.personScope != nil' 'chrome.vibenetScope != nil'; do
+                 'chrome.personScope != nil'; do
   grep -qF -- "$narrowing" "$TMP/feed.nocomment" \
     || { echo "✗ rowWalk does not consider $narrowing — a room narrowed by it"; \
          echo "  would draw doors onto rows its own list is hiding"; exit 1; }

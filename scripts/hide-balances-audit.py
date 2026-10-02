@@ -47,11 +47,14 @@ RAW = [
 # and an inferred "is this a wallet screen" is a judgement that drifts.
 WALLET_VIEWS = (
     "WalletFeedTiles.swift", "WalletScreen.swift", "WalletWatchField.swift",
-    "WalletRosterSection.swift", "WalletHistoryScreen.swift",
+    "WalletHistoryScreen.swift",
     "WalletFlowBand.swift", "WalletLiquidityCard.swift", "WalletPerpsCard.swift",
     "WalletRiskStrip.swift", "WalletApprovalExposureCard.swift",
-    "AddressBookViews.swift", "AddressConnectionsCard.swift",
-    "GnosisPayRoomCard.swift", "RailgunRoomCard.swift", "PeerRoomCard.swift",
+    "AddressBookViews.swift",
+    # `GnosisPayRoomCard.swift` became `CardSpendRoomCard.swift` in prd §858;
+    # `WalletRosterSection.swift` (§511) and `AddressConnectionsCard.swift`
+    # are deleted, so their entries named nothing (2026-10-01).
+    "CardSpendRoomCard.swift", "RailgunRoomCard.swift", "PeerRoomCard.swift",
     "PrivacyPoolsRoomCard.swift", "SafeRoomCard.swift", "SafeQueueCard.swift",
     "TokenQuickSheet.swift", "EthValidatorScreen.swift", "WalletRow.swift",
     "ApprovalPrepareCard.swift",

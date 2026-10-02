@@ -447,7 +447,7 @@ enum BridgeRefresh {
                 _ = await PinterestIngest.refresh(context: context)
             }
         }
-        // The feed-follow bridges (Substack/Reddit/YouTube/Podcasts) — each
+        // The feed-follow bridges (Substack/YouTube/Podcasts) — each
         // polls only when it's watching something.
         for kind in FeedFollowKind.allCases where !kind.store.isEmpty {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
@@ -459,7 +459,7 @@ enum BridgeRefresh {
                 // doubling and retitle checks already ran inside the ingest
                 // itself (they need the per-item feed data, not just the
                 // landed corpus), so only the corpus-wide checks live here.
-                // Podcasts joined YouTube/Reddit here 2026-07-28 (a show off
+                // Podcasts joined YouTube here 2026-07-28 (a show off
                 // hiatus is the exact same shape).
                 // A Short and a twenty-minute review land as the same kind of
                 // row — the feed says nothing about which is which, so this
@@ -674,36 +674,6 @@ enum BridgeRefresh {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await TwitchIngest.refresh(context: context)
-            }
-        }
-        if VibenetWatch.shared.connected {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                // THE ROOM IS COMPOSED ON THE SWEEP (prd §507), which it never
-                // was: `VibenetRoomSource.compose()` had exactly ONE caller in
-                // the whole app — the address book screen's own load — so the
-                // feed's head, the crown, the sparkline and every reading on
-                // the card were as fresh as the last time somebody happened to
-                // open that screen. §468 gave the card a "when this was read"
-                // line precisely because the snapshot could be days old; this
-                // is the other half of that fix.
-                //
-                // The landing then reads the composed room instead of asking
-                // the chain again for the transfers, policy runs and creation
-                // it has just fetched.
-                let room = await VibenetRoomSource.compose()
-                _ = await VibenetEvents.land(context: context, room: room)
-            }
-        }
-        // Hegotá lands NO `Thing` — every reading is live state on the room,
-        // the `WalletDeFi` shape. A devnet test address has no news: no row a
-        // screenshot would reference, nothing to search for later, and a
-        // balance that is test ETH. So the sweep refreshes the room's state
-        // and inserts nothing into the corpus.
-        if HegotaWatch.shared.connected {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                await HegotaLiveState.shared.refresh()
             }
         }
         if HuggingFaceStore.shared.connected {

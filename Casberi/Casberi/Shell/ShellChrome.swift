@@ -360,9 +360,9 @@ final class ShellChrome {
         let source: String
         let slots: [DSAccountSlot]
         let scope: String?
-        /// The room's own pick — each room writes a different scope (Vibenet's
-        /// is not even chrome state), so the rail carries the room's handler
-        /// rather than the shell learning five key paths.
+        /// The room's own pick — each room writes a different scope, so the
+        /// rail carries the room's handler rather than the shell learning five
+        /// key paths.
         let onPick: (String?) -> Void
 
         static func == (a: AccountRail, b: AccountRail) -> Bool {
@@ -405,7 +405,7 @@ final class ShellChrome {
     ///
     /// It doubles as the switcher's own GATE: only the wallet room ever writes
     /// it and it is cleared on the way out, so the toggle cannot appear over a
-    /// Vibenet- or Social-scoped room by mistake — a rule that holds by
+    /// devnet- or Social-scoped room by mistake — a rule that holds by
     /// construction rather than by a source-name test in two files that could
     /// drift apart.
     var walletSections: [WalletSection] = []
@@ -415,79 +415,34 @@ final class ShellChrome {
     /// cleared with it.
     var walletSectionAttention: Set<WalletSection> = []
 
-    /// The vibenet room's scope, and the two lists behind its switcher (prd
-    /// §482, 2026-08-26) — `walletSection`'s trio one room over, deliberately
-    /// SEPARATE properties rather than a shared generic pair.
+    /// The Frames devnet room's scope, the lists behind its switcher, and which
+    /// account its rail has scoped to — `walletSection`'s trio one room over,
+    /// deliberately SEPARATE properties rather than a shared generic pair: the
+    /// rooms publish different enums and only one may draw at a time, and
+    /// whoever writes a list owns its clear-on-exit.
     ///
-    /// **Why not one `sections: [any DSSectionScope]`.** The two rooms publish
-    /// different enums and only one of them may draw at a time; separate
-    /// properties make "these can never both be non-empty" a thing the gates
-    /// enforce by construction, where a shared list would need a discriminator
-    /// and a cast at the mount point. It also keeps each room's clear-on-exit
-    /// honest: whoever writes it owns it.
-    ///
-    /// Same lifetime rules as Wallet's, for the same reasons: the scope
-    /// survives a room change within the category, `VibenetSection.resolve`
-    /// handles a remembered scope whose content has since gone, and neither
-    /// persists across launches — these are facets of one subject, and Holdings
-    /// is the front door (§482).
-    /// The Hegotá room's scope, the two lists behind its switcher, and which
-    /// account its rail has scoped to.
-    ///
-    /// **Shell-held, exactly as Wallet's and vibenet's are** — because the
-    /// figure, the rail and the switcher are three separate sections of the
-    /// room rather than children of one card, and three sections cannot share
-    /// a card's `@State`. Holding it in the card was what left this room's
-    /// rails carrying the card's padding instead of the room's.
-    var hegotaSection: HegotaSection?
-    var hegotaSections: [HegotaSection] = []
-    var hegotaScope: String?
-
-    /// The Frames devnet room's scope, held on the SHELL rather than the card
-    /// for `hegotaSection`'s reason one chain over: the figure, the rail and
-    /// the switcher are three sections of the room rather than children of one
-    /// card, and three sections cannot share a card's `@State`.
+    /// **Shell-held, exactly as Wallet's are** — because the figure, the rail
+    /// and the switcher are three sections of the room rather than children of
+    /// one card, and three sections cannot share a card's `@State`. Holding it
+    /// in a card is what left a devnet room's rails carrying the card's padding
+    /// instead of the room's.
     var framesSection: FramesSection?
     var framesSections: [FramesSection] = []
     var framesScope: String?
     /// The Logos room's scope, its published scopes and its account pick
-    /// (prd §991) — the devnets' three, one seat over.
+    /// (prd §991) — the devnet's three, one seat over.
     var logosSection: LogosSection?
     var logosSections: [LogosSection] = []
     var logosScope: String?
 
-    /// The Ethrex Privacy room's scope strip and face-rail pick (prd §593).
-    /// Held here rather than on the screen for §357's reason: the room is
-    /// rendered under an `.id(filter.source)`, so anything mounted on it dies
-    /// with every room change — and a control that outlives the interaction it
-    /// drives belongs on the shell.
-    var privacyDevnetSections: [PrivacyDevnetSection] = []
-    var privacyDevnetScope: String?
-    var privacyDevnetSection: PrivacyDevnetSection?
-
-    var vibenetSection: VibenetSection?
-
-    /// Which scopes the vibenet room currently HAS something for. The shell
-    /// cannot compute this — presence needs the composed `VibenetRoom` and the
-    /// landed event rows, neither reachable from here — so the room publishes
-    /// and the control consumes. Doubles as the switcher's GATE: only that room
-    /// writes it and it clears on the way out, so this and `walletSections`
-    /// cannot both be non-empty.
-    var vibenetSections: [VibenetSection] = []
-
-    /// Which of those wear a dot — `VibenetAttention`'s ranking, one layer
-    /// down (see `VibenetSection.attention`). Published beside
-    /// `vibenetSections` and cleared with it.
-    var vibenetSectionAttention: Set<VibenetSection> = []
-
-    /// The Privacy Pools room's scope (prd §486, 2026-08-26) — Wallet's and
-    /// Vibenet's third instance, and the smallest: ONE property rather than a
+    /// The Privacy Pools room's scope (prd §486, 2026-08-26) — Wallet's
+    /// instance at its smallest: ONE property rather than a
     /// trio, because that room's card draws its own strip and derives its own
     /// presence from the composed room. There is no shell-mounted control to
     /// feed, so a published list and attention set would be state nothing ever
     /// reads.
     ///
-    /// Same lifetime rules as the other two: not persisted across launches
+    /// Same lifetime rules as Wallet's: not persisted across launches
     /// (`activity` is the front door, and every room in this app opens on its
     /// feed), not cleared on a room change (the wallet category spans several
     /// rooms and a reading survives moving between them), and
@@ -644,7 +599,7 @@ final class ShellChrome {
     /// The GitHub room's scoped watch — a repo's or a person's watch REF, or
     /// nil for everything (2026-09-11).
     ///
-    /// Its own property for `vibenetScope`'s reason one room over: this is a
+    /// Its own property rather than reusing another room's: this is a
     /// different SET from `personScope`, and sharing one would mean a Farcaster
     /// handle silently scoping the GitHub room to somebody it has never heard
     /// of. Cleared on a source change, like the person scope and for the same
@@ -655,13 +610,6 @@ final class ShellChrome {
     /// every pin (prd §819). Its own property for `githubScope`'s reason, and
     /// cleared on a source change with it.
     var pinterestScope: String?
-
-    /// The vibenet room's scoped account, or nil for all of them
-    /// (2026-08-23) — its own property rather than reusing `walletScope`,
-    /// because these are two different address SETS and sharing one
-    /// would mean a wallet pick silently scoping the vibenet room to an
-    /// address it has never heard of.
-    var vibenetScope: String?
 
     /// Who has posted in the room you're looking at since you last opened it —
     /// the face rail's attention ring (prd §362).
@@ -939,11 +887,11 @@ final class ShellChrome {
     /// **A LIST CHANGED, AND THAT IS NOT A SHOWER (prd §655 amendment,
     /// 2026-09-08).** `refreshPulse` was doing two jobs: it deals the rain AND
     /// it is the term `FeedScreen`'s memoised room head recomputes on. Six
-    /// sites bumped it for the second reason only — vibenet's unwatch, its key
-    /// revoke, its two watch sheets and `onWatched`, plus Hegotá Privacy's
-    /// example watch — and each therefore dealt a shower nobody asked for. The
-    /// unwatch bumped TWICE (a local trim, then the chain read), so removing an
-    /// address rained twice, seconds apart: the exact stutter "one gesture, one
+    /// sites bumped it for the second reason only — a devnet room's unwatch,
+    /// key revoke, watch sheets and example watch — and each therefore dealt a
+    /// shower nobody asked for. The unwatch bumped TWICE (a local trim, then
+    /// the chain read), so removing an address rained twice, seconds apart: the
+    /// exact stutter "one gesture, one
     /// shower" (2026-07-28) was written against, arriving by a route that
     /// ruling did not cover, and celebrating a REMOVAL while it did.
     ///

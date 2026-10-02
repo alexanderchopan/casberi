@@ -107,11 +107,11 @@ PY
     echo "✗ ${label}: FeedArticleText.sources is gone — membership is the one"
     echo "  thing that keeps a scrape off a host nobody chose"; return 1
   fi
-  # The three abstentions. Each passes the fairness rule and abstains for its
-  # OWN stated reason (a watch page, strangers' comments, a player) — so each
-  # is a separate decision and a wholesale widening must not quietly take them.
+  # The two abstentions. Each passes the fairness rule and abstains for its
+  # OWN stated reason (a watch page, a player) — so each is a separate
+  # decision and a wholesale widening must not quietly take them.
   local seat
-  for seat in YouTube Reddit Podcasts; do
+  for seat in YouTube Podcasts; do
     if print -r -- "$line" | grep -q "\"$seat\""; then
       echo "✗ ${label}: $seat is back in FeedArticleText.sources — its page is"
       echo "  not an article, and the type doc says why in its own words"

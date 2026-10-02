@@ -6,8 +6,8 @@ import SwiftUI
 /// `WalletPermissions.namesShown` says of the two holders a rung names: *"The
 /// remainder is not hidden — the list below carries every holder."* That was
 /// true of token grants, which `WalletApprovalExposureCard` lists in full, and
-/// false of everything else: a Safe module, an EIP-7702 delegate and an Altana
-/// credential were COUNTED by the card and listed by nothing. Reported against
+/// false of everything else: a Safe module and an EIP-7702 delegate were
+/// COUNTED by the card and listed by nothing. Reported against
 /// a real wallet whose Permissions scope drew *"6 · Can act as your wallet"*
 /// over an empty page — six things with the most unbounded power in the scope,
 /// four of them unreachable in the app at all.
@@ -115,9 +115,6 @@ struct WalletActingPartiesRows: View {
             out.append(String(localized: "One of your accounts is a smart account whose installed modules can't be listed — this app can see that it is one, not what is in it."))
         } else if unreadable > 1 {
             out.append(String(localized: "\(unreadable) of your accounts are smart accounts whose installed modules can't be listed — this app can see that they are, not what is in them."))
-        }
-        if acting.contains(where: \.keystorePartial) {
-            out.append(String(localized: "One account holds more keys than a single pass reads, so this list is a floor."))
         }
         return out
     }

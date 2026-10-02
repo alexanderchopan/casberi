@@ -97,11 +97,6 @@ extension AddressBook.Entry {
         if let label = kind.label { parts.append(label) }
         else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
         if let provenance { parts.append(provenance) }
-        // Where it was MET, when the provenance clause hasn't already said so
-        // (a key filed from vibenet already carries "Vibenet key · …" as its
-        // provenance — saying "Vibenet" twice on one row is the same word
-        // read as a mistake rather than a fact).
-        if let badge = networkBadge, provenance?.contains(badge) != true { parts.append(badge) }
         guard parts.isEmpty else { return parts.joined(separator: " · ") }
         // Nothing else to say. An auto-named row's own NAME is this string, so
         // returning it prints one fact twice; a real name makes it the second
@@ -1463,7 +1458,6 @@ struct AddressCard: View {
         switch label {
         case "Bluesky", "Farcaster", "Nostr", "Twitch": return "at"
         case "Contacts": return "person.crop.circle"
-        case "Vibenet":  return "cube.transparent"
         default:         return "cube"
         }
     }
@@ -1731,12 +1725,6 @@ struct AddressCard: View {
         // seen on a device as "Uma / Bluesky / Bluesky · uma").
         if let provenance = current.provenance, (current.accounts ?? []).isEmpty {
             parts.append(provenance)
-        }
-        // Where it was met — the wallet book showing a vibenet-tagged row so
-        // one book of BOTH populations never leaves you guessing which chain
-        // an address belongs to (2026-08-27, the address-book unification).
-        if let badge = current.networkBadge, current.provenance?.contains(badge) != true {
-            parts.append(badge)
         }
         return parts.joined(separator: " · ")
     }

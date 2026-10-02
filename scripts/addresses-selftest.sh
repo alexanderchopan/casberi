@@ -303,7 +303,7 @@ let prov = ContactSuggest.fromProvenance([
     .init(address: B, name: "@uma.bsky.social", provenance: "Bluesky"),
     .init(address: "0x" + String(repeating: "c", count: 40), name: "Mom", provenance: "Contacts"),
     .init(address: "0x" + String(repeating: "d", count: 40), name: "@ghost", provenance: "Farcaster"),
-    .init(address: "0x" + String(repeating: "e", count: 40), name: "@jesse", provenance: "Vibenet key · main"),
+    .init(address: "0x" + String(repeating: "e", count: 40), name: "@jesse", provenance: "Safe signer · main"),
 ], seeds: [fcJ, bskyUma])
 check(prov.count == 2 && prov.allSatisfy { $0.tier == .suggested && $0.source == "book.provenance" },
       "a book entry saved from a social door is suggested to that handle: \(prov.map(\.pairKey))")

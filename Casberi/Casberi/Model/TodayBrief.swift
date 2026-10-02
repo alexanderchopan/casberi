@@ -3598,7 +3598,7 @@ enum TodayBrief {
     /// The categories whose things are never "your reading" — money (a price
     /// isn't prose), media (a song/stream/game/image isn't prose), and shopping
     /// (an order isn't prose). Everything else counts, so a pasted link, an RSS
-    /// article, a saved highlight, or a subreddit post all still read as
+    /// article, a saved highlight, or a feed post all still read as
     /// reading — including sources with no catalog offer at all.
     private static let nonReadingSources: Set<String> = Set(
         BridgeCatalog.offers

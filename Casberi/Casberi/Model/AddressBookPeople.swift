@@ -41,9 +41,8 @@ enum AddressBookPeople {
         }
     }
 
-    /// The label the card's address row wears: the network's own badge where
-    /// the entry carries one, else the plain word.
+    /// The label the card's address row wears.
     static func addressLabel(for entry: AddressBook.Entry) -> String {
-        entry.networkBadge ?? String(localized: "Address")
+        String(localized: "Address")
     }
 }
