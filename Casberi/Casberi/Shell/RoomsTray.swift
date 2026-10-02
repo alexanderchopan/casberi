@@ -7,10 +7,11 @@ import SwiftUI
 /// imessage in app tray … lets go back to glass and do it this way … today
 /// our tray covers the entire width of the app and it looks weird"). It is
 /// Messages' attachment menu: a rounded glass card above the face's corner,
-/// about two thirds of the screen wide, one row per place — a round icon
-/// and its name — scrolling when the list is longer than the card. The four
-/// You rows (Home, Notes, Addresses, Settings) lead, then the categories in
-/// the person's Dock order (§1050j). No grabber, no detents and no search
+/// about two thirds of the screen wide, scrolling when the list is longer
+/// than the card. Since §1061 a row is a name and a run of round icons:
+/// You's four doors (Home, Notes, Addresses, Settings) lead, then each
+/// category in the person's Dock order (§1050j) — its own disc, its three
+/// most-opened apps, "+N". No grabber, no detents and no search
 /// (§1015's field is deleted with the full-width sheet it led): a list this
 /// short is read, not searched. Glass on the floating layer is the design
 /// law's own place for it; §1014's solid black answered a dense wall of
@@ -30,14 +31,17 @@ struct RoomsTray: View {
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// A row's round icon — Messages' size for its menu.
-    static let icon: CGFloat = 40
+    /// A row's round icons: the category's own and its apps', one size.
+    static let icon: CGFloat = 30
+    static let iconGap: CGFloat = 6
+    /// How many apps a row shows before its "+N".
+    static let appsShown = 3
     static let rowHeight: CGFloat = 52
     /// The card's corner: Messages' menu, a continuous corner.
     static let radius: CGFloat = 32
     /// How much of the screen the card may take: two thirds across, capped,
     /// and three quarters down before it scrolls.
-    static let widthShare: CGFloat = 0.7
+    static let widthShare: CGFloat = 0.73
     static let maxWidth: CGFloat = 300
     static let heightShare: CGFloat = 0.72
     /// The stagger between one row's arrival and the next.
@@ -100,14 +104,9 @@ struct RoomsTray: View {
         let height = min(contentHeight, screen.height * Self.heightShare)
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(youDoors.enumerated()), id: \.offset) { index, door in
-                    self.door(door, index: index)
-                }
-                // The app's own places, then the categories: a breath
-                // between them, never a header (Messages' menu has none).
-                Color.clear.frame(height: DS.Space.s2)
+                youRow
                 ForEach(Array(categories.enumerated()), id: \.element) { index, category in
-                    categoryRow(category, index: index + youDoors.count)
+                    categoryRow(category, index: index + 1)
                 }
             }
             .padding(.vertical, DS.Space.s3)
@@ -259,76 +258,146 @@ struct RoomsTray: View {
         ]
     }
 
-    /// A category's row (prd §1058): its glyph in a round icon, its name.
-    /// It lands in the category's room. The standing room fills its glyph
-    /// (`glyph(for:lit:)`); a broken app inside wears the attention hue on
-    /// the glyph, and the label says it too.
+    /// A category's row (prd §1061, user: "what if the icon for the category
+    /// is the first icon where the apps are now … that way if you touch that
+    /// icon you go to the room"): its name, then a run of round icons — the
+    /// category's own glyph on a plain disc first, then the three apps you
+    /// open most, then "+N" for the rest, so nobody reads three apps as all
+    /// there is. The name, the category's disc and the "+N" land in the
+    /// category's room on All; an app lands in the room scoped to it. The
+    /// standing category fills its glyph; a broken app inside wears the
+    /// attention hue on the category's glyph, and the label says it too.
     private func categoryRow(_ category: String, index: Int) -> some View {
         let lit = standingCategory == category
         let needsYou = broken(category)
-        return Button {
-            pick(category)
-        } label: {
-            menuRow(icon: roundIcon(glyph(for: category, lit: lit),
-                                    ink: needsYou ? DS.attention : DS.textPrimary,
-                                    fill: lit ? DS.fillStrong : DS.surfaceRaised,
-                                    bounces: lit),
-                    word: category)
+        let apps = rowApps(in: category)
+        let shown = Array(apps.prefix(Self.appsShown))
+        let more = apps.count - shown.count
+        return HStack(spacing: DS.Space.s3) {
+            Button {
+                pickCategory(category)
+            } label: {
+                Text(category)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, minHeight: Self.rowHeight, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .accessibilityLabel(needsYou
+                ? Text("\(category), needs your attention")
+                : Text(category))
+            .accessibilityAddTraits(lit ? .isSelected : [])
+            HStack(spacing: Self.iconGap) {
+                Button {
+                    pickCategory(category)
+                } label: {
+                    roundIcon(glyph(for: category, lit: lit),
+                              ink: needsYou ? DS.attention : DS.textPrimary,
+                              fill: lit ? DS.fillStrong : DS.surfaceRaised,
+                              bounces: lit)
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text("All of \(category)"))
+                ForEach(shown, id: \.name) { app in
+                    Button {
+                        pick(app.source ?? app.name)
+                    } label: {
+                        BridgeIcon(name: app.mark, size: Self.icon, circular: true)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text(app.name))
+                }
+                if more > 0 {
+                    Button {
+                        pickCategory(category)
+                    } label: {
+                        Text(verbatim: "+\(more)")
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textSecondary)
+                            .frame(width: Self.icon, height: Self.icon)
+                            .background(Circle().fill(DS.surfaceRaised))
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text("\(more) more in \(category)"))
+                }
+            }
         }
-        .buttonStyle(RowPress())
-        .accessibilityLabel(needsYou
-            ? Text("\(category), needs your attention")
-            : Text(category))
-        .accessibilityAddTraits(lit ? .isSelected : [])
         .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
+    }
+
+    /// The apps a row shows: a merged room's connected apps, the ones you
+    /// open most first (`ChipMemory`, which counts every tray pick), the
+    /// room's own A–Z after that. A category that is not one room shows its
+    /// rooms; one whose only room is itself (Markets, Social) shows none.
+    private func rowApps(in category: String) -> [RoomAccounts.Seat] {
+        let seats: [RoomAccounts.Seat]
+        if let room = mergedRoom(in: category) {
+            let names = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
+            seats = RoomAccounts.connected(in: room, names: names)
+        } else {
+            seats = self.seats(in: category).filter { $0 != category }.map {
+                RoomAccounts.Seat(name: $0, source: $0, holder: nil, group: "",
+                                  mark: BridgeCatalog.seatName(forSource: $0))
+            }
+        }
+        let weights = ChipMemory.snapshot()
+        let ranked = seats.enumerated().sorted { a, b in
+            let wa = ChipMemory.weight(for: a.element.source ?? a.element.name,
+                                       counts: weights.counts, lastVisit: weights.lastVisit)
+            let wb = ChipMemory.weight(for: b.element.source ?? b.element.name,
+                                       counts: weights.counts, lastVisit: weights.lastVisit)
+            return wa != wb ? wa > wb : a.offset < b.offset
+        }
+        return ranked.map(\.element)
+    }
+
+    /// You: the app's own places on one row (prd §1061, user: "put home
+    /// notes and settings in a row together and have a 'You' category
+    /// again"). Its word, then a disc per door — Home, Notes, Addresses,
+    /// Settings — the glyphs in the brand pink (§976a), the standing door's
+    /// disc white behind the same glyph (§1053). You is no room, so the word
+    /// is a heading, not a door.
+    private var youRow: some View {
+        HStack(spacing: DS.Space.s3) {
+            Text("You")
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, minHeight: Self.rowHeight, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: Self.iconGap) {
+                ForEach(Array(youDoors.enumerated()), id: \.offset) { _, door in
+                    Button(action: door.act) {
+                        roundIcon(door.glyph, ink: DS.brand,
+                                  fill: door.lit ? Color.white : DS.surfaceRaised,
+                                  bounces: door.lit)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text(door.word))
+                    .accessibilityAddTraits(door.lit ? .isSelected : [])
+                }
+            }
+        }
+        .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
     }
 
     // MARK: - Pieces
 
-    /// A row: the round icon, then the word — Messages' menu row, every
-    /// row the same weight, no chevron.
-    private func menuRow<Icon: View>(icon: Icon, word: String) -> some View {
-        HStack(spacing: DS.Space.s4) {
-            icon
-            Text(word)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-        }
-        .frame(minHeight: Self.rowHeight)
-        .contentShape(Rectangle())
-    }
-
-    /// The round icon: a glyph on a charcoal disc, and the standing place's
+    /// The round icon: a glyph on a plain disc, and the standing place's
     /// disc a step lighter, its glyph filled.
     private func roundIcon(_ glyph: String, ink: Color, fill: Color, bounces: Bool) -> some View {
         Circle()
             .fill(fill)
             .overlay(
                 Image(systemName: glyph)
-                    .dsGlyph(.body, weight: .medium)
+                    .dsGlyph(.subhead, weight: .medium)
                     .foregroundStyle(ink)
                     .symbolEffect(.bounce.up, value: bounces ? bounceTick : 0)
             )
             .frame(width: Self.icon, height: Self.icon)
             .animation(DS.Motion.standard, value: fill)
-    }
-
-    /// A You row: the app's own places, their glyphs in the brand pink
-    /// (§976a); the standing one's disc turns white behind the same glyph
-    /// (§1053, user: "maybe white with pink").
-    private func door(_ door: Door, index: Int) -> some View {
-        Button(action: door.act) {
-            menuRow(icon: roundIcon(door.glyph, ink: DS.brand,
-                                    fill: door.lit ? Color.white : DS.surfaceRaised,
-                                    bounces: door.lit),
-                    word: door.word)
-        }
-        .buttonStyle(RowPress())
-        .accessibilityLabel(Text(door.word))
-        .accessibilityAddTraits(door.lit ? .isSelected : [])
-        .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
     }
 
     /// One mark's arrival in the cascade: fades and grows in, one step after
@@ -365,6 +434,19 @@ struct RoomsTray: View {
         DSHaptic.selection()
         close()
         route.present(door)
+    }
+
+    /// Land in a category's room on All: its name, its disc and its "+N"
+    /// say the whole category, so a pick an app made earlier is dropped.
+    private func pickCategory(_ category: String) {
+        if let room = mergedRoom(in: category) {
+            if room == CategoryFold.walletRoom {
+                chrome.walletScope = nil
+            } else {
+                chrome.mergedScope[room] = nil
+            }
+        }
+        pick(category)
     }
 
     private func close() {
