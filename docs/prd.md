@@ -416,6 +416,8 @@ marks chronological position within the pair.
 | §326 (Mail folds into Life) | Gmail and iCloud Mail were members of Life | amended by §1049 — Life splits; Mail joins Day with Calendar, Reminders, Todoist, Cal.com and Calendly |
 | §780c (NerdWallet on the Wallet shelf) | NerdWallet sat in the Wallet group, its tagline guarded as news | amended by §1049 — NerdWallet joins Reading's Articles; the One Wallet holds only what has a dollar figure |
 | §1048 (Splits unruled) | Splits, Stripe, Dodo Payments and NerdWallet were left out of the Wallet merge, unruled | amended by §1049 — Splits joins the One Wallet; the other three wait on Work and Reading |
+| §1048 (Markets, Hegotá Frames and Logos stay their own rooms) | three standalone rooms inside the Wallet category | amended by §1050 — every tray entry is a category: Markets is its own category, Frames and Logos fold into one Testnets category |
+| §1049 (the tray's rooms) | Markets, Frames and Logos drew as room rows under the Wallet category | amended by §1050 — Markets and Testnets are categories |
 
 ## §1 — Thesis
 
@@ -63280,3 +63282,18 @@ The confusion it answers: three ids from the Logos team, all reading 0, with not
 - Life's tiles and list shape: it holds pictures, journals, files and workouts, so it is the one room the test may not pass as drawn.
 
 Nothing is built in this entry; it is the ruling only.
+
+## §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (user: "i don't know we are goign to have categories and then have frames and logos?", "i'm confused tho how frames and logos would fall into wallets… real money is moving thtere we couldn't jsut have fake money there", "Testnets is better", then "ok. i agree", 2026-10-01; amends §1048 and §1049)
+
+**The ruling.** The tray holds the doors row and categories, nothing else, and every category is one room. §1048 left Markets, Hegotá Frames and Logos as standalone rooms inside the Wallet category, which is a page that is not a category.
+- **Testnets** is a category. Hegotá Frames and Logos fold into one Testnets room, and its account menu (`RoomAccounts`, §1048b) lists the two. A pick shows that network's own verbs (Frames' Create · Send · Top up, Logos' Explorer, §1039).
+- **Markets** is a category of its own, one room, unchanged inside.
+- The tray reads: the doors row, then Wallet, Markets, Testnets, Work, Day, Life, Agents, Media, Social, Reading. A category draws only while it holds a connected seat (§977).
+
+**Why not inside Wallet.** Wallet means real money. Even kept out of the total, a test account in Wallet's menu puts a Send of test money one pick from a Send of real money. Test money and real money never share a room (§83; App Review has already questioned a devnet send once).
+
+**Why not in Settings.** Testnets holds balances and acts. It is content, not configuration, and the tray already hides it from anyone who connected neither network (§977); §780b is the case against parking a door in the nearest screen.
+
+**Why Markets is not a door or a Wallet tile.** The doors row is exactly five (Home, Notes, Apps, Addresses, Settings) on the tray's five-column grid, and its doors are app-wide places, not one feed. A Wallet tile would be one app's rows (§1049's bundle rule), would change Wallet ("wallet is not changing leave it alone"), and a watchlist is not money you hold (§1048).
+
+**For the build.** Testnets needs a row in `CategoryFold.glyphs` and in `BridgeCatalog.categories` (`category-fold-selftest.sh` holds the two together), and Markets, Hegotá Frames and Logos leave the Wallet catalogue group. Under §1049's tray paragraph, Markets' and Testnets' blue headers open their rooms and their marks open each app's settings. The glyph is not ruled.
