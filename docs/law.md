@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1168 of 1225 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1169 of 1226 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1381,14 +1381,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1047 — The ask is deleted: the on-device model reads and no longer answers, and the composer keeps Find and the agents you c…
 - §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050)
 - §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats
-- §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a…
-- §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door…
-- §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b)
+- §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e)
+- §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (part superseded by §1050e)
+- §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b; part superseded by §1050e)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a)
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
 - §1050b — Photos moves from Life to Media
 - §1050c — Life is one list by day, with no tiles
 - §1050d — Reading's menu lists apps, and the music shelf's orders are dropped
+- §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it
 
 ## Dead rulings → what replaced them (generated)
 

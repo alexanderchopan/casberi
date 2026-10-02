@@ -422,6 +422,7 @@ marks chronological position within the pair.
 | §1049 (Photos in Life) | Photos was a member of Life | amended by §1050b — Photos is a member of Media, in its square grid |
 | §455 (a board that narrows the RSS room to one feed) | the RSS room narrowed to a single feed | amended by §1050d — Reading's menu lists apps only; per-feed narrowing goes with the RSS room |
 | §995 (the music rooms scope Activity · Albums · Artists · Songs) | the music rooms carried four ordering tiles | amended by §1050d — dropped; Media has no tiles |
+| §1048c / §1049 (a merged room's tray circles open its apps' settings) | the tray drew each merged room's apps as circles that opened their account pages | reversed by §1050e — the tray is doors and categories; an app's settings open from the sliders disc of its room, scoped to it |
 
 ## §1 — Thesis
 
@@ -63340,3 +63341,18 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 **Markets and Testnets are categories (§1050, §1050a).** Markets holds its one seat; Testnets holds Hegotá Frames and Logos and wears `flask`, `flask.fill` lit. Testnets is not merged yet: its two rooms stand inside it as today. A stored category order that predates them gains them at its end, as every new category has.
 
 **Not done in this step.** The heads of the folded rooms are unreachable but not yet deleted. Safe's (who it waits on by name, contested nonces, guard and module notes, the throttle notice), Privacy Pools' (needs proof, needs reclaim, the anonymity set) and Privy's and CardPointers' carry readings nothing else draws, so the next step shows each one in the box when its app is picked (the precedent §1049 set for Work's Stripe), and deletes the heads with nothing to keep (Peer, Railgun, the three card heads). Until then a build should not ship. A tap on a tray circle was not verified on the simulator (its taps do not land under load); the circle calls the same destination as the sliders disc.
+
+## §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it (user: "i now think that woudl be annoying to have a tray w/ the icons that are for settings since seettings are things folks won't use much, and i think the settings slider should just be in scoped rooms. what that means for the tray is it is just categories and the doors", then "yes record it an dtell them. the alternative is we put settings back with the apps catalogue", 2026-10-01; reverses §1049's and §1048c's tray circles; amends §1048b)
+
+**The defect in §1049's tray.** It made the tray, which a person opens constantly to move around, into an index of settings they open almost never. The tray is navigation only.
+
+**The ruling.**
+- **The tray** is the doors row (Home, Notes, Apps, Addresses, Settings) and one entry per category, glyph and word. A merged category draws no app marks.
+- **The sliders disc** stands beside a merged room's name only while the account menu has ONE app picked, and opens that app's account page (`RoomAccountDoor.destination`). On All there is no disc.
+- **Apps** stays the other way to an app's settings: a connected row lands in its room (§1040), already scoped to it, where the disc stands.
+- **The transition.** A category that has not merged keeps its marks, each landing in that app's own room, until it merges; the same `RoomAccounts.mergedRooms` switch §1048c built turns them off. Dropping every mark at once would leave the unmerged rooms reachable only by swipe.
+
+**The alternative, named and not taken.** Settings return to the Apps catalogue: a connected row opens its account page instead of its room, reversing §1040. Kept in reserve if the scoped disc proves too hidden.
+
+**Open.** With no marks, the tint no longer separates two kinds of tap in a merged category's entry. Whether the entry keeps `DS.tint` is not ruled.
+
