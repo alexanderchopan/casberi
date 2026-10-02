@@ -515,13 +515,14 @@ struct RoomsTray: View {
         RoundedRectangle(cornerRadius: DS.Radius.appIcon(tile), style: .continuous)
     }
 
-    /// A You door (prd §976a, reshaped by §1050l): the brand pink at a fifth
-    /// with the glyph in the pink, and the standing door FILLS — the pink
+    /// A You door (prd §976a, reshaped by §1050l): the categories' charcoal
+    /// (`surfaceRaised`) with the glyph in the brand pink — a pink wash read
+    /// as mud (§1050m), and the standing door FILLS — the pink
     /// tile, white glyph and the top sheen `BridgeIcon` gives a seat with no
     /// art. Selection is the fill, so the door needs no ring.
     private func doorTile(_ glyph: String, lit: Bool) -> some View {
         Self.tileShape
-            .fill(lit ? DS.brand : DS.brand.opacity(0.2))
+            .fill(lit ? DS.brand : DS.surfaceRaised)
             .overlay {
                 if lit {
                     Self.tileShape.fill(LinearGradient(colors: [.white.opacity(0.16), .clear],

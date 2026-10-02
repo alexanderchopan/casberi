@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1179 of 1237 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1180 of 1238 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1397,7 +1397,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050i — Settings as one door and one list, built
 - §1050j — The rooms tray is a list of rooms with no counts and no Recent, and every glass category bar follows Dock order (amended by §1050l)
 - §1050k — Testnets is one room, built: it shows one network at a time, and the account menu crosses to the other
-- §1050l — The rooms tray is a Home Screen: the You doors and the categories are one tile, four to a line, in two sections
+- §1050l — The rooms tray is a Home Screen: the You doors and the categories are one tile, four to a line, in two sections (amended by §1050m)
+- §1050m — The You doors are charcoal with a pink glyph, the categories' tile
 - §1051 — Deals, Shopify and Cursor leave the catalogue, and their stored rows, settings and key go with them
 - §1051a — L2BEAT and Walletbeat move to Reading; Bitrefill still folds into the One Wallet
 

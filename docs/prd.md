@@ -63470,3 +63470,7 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 **No app marks.** An unmerged category's app circles (§1050j kept them until each merge) leave the tray: a tile lands in the category, whose room scopes to each app. The search narrows the categories, keeping a tile when its name or an app inside matches (a search for Stripe keeps Work). With the marks went the pick flight (`RoomPickFlight`, `ShellChrome.roomPick`, `roomHeadFrame`, `MarkKey`, `TrayFrames`), per §723.
 
 **Checked.** `category-fold-selftest.sh`, `dock-selftest.sh`, `ds-template-audit.py`, `dead-closure-audit.py`, `footnote-audit.py`. On the simulator (`-openTray YES`, demo): the You row and four-up Categories draw as the canvas's A; the face covers the first tile of the last line at rest, as it covered the first mark before.
+
+## §1050m — The You doors are charcoal with a pink glyph, the categories' tile (user: "the home etc icons look stupid those colors. should be black and pink or charcoal and pink like the others … that background is just gross", 2026-10-02; amends §1050l's door, restores §976a's colours on §1050l's shape)
+
+An unlit You door is `surfaceRaised` charcoal, the categories' own tile, with its glyph in `DS.brand`; the standing door still fills pink with a white glyph. The pink wash at a fifth (§1050l) read as mud on the black tray. **Checked.** On the simulator (`-openTray YES`): Notes, Addresses and Settings stand on the categories' charcoal, Home fills pink.
