@@ -50,9 +50,11 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)
         #expect(RoomAccounts.host(ofSource: "L2BEAT")?.room == RoomAccounts.readingRoom)
         #expect(RoomAccounts.host(ofSource: "Walletbeat")?.room == RoomAccounts.readingRoom)
-        for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom, "Bluesky"] {
+        for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom] {
             #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
         }
+        // The networks folded into Social with §1068, so Bluesky has a host now.
+        #expect(RoomAccounts.host(ofSource: "Bluesky")?.room == RoomAccounts.socialRoom)
     }
 
     // MARK: - Reading (prd §1052)
