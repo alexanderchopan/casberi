@@ -105,7 +105,7 @@ KNOWN_EXEMPT = {
     # in for an NFT (prd §387), not a chart.
     #
     # It also already HAS its one entrance, one level up and shared, which is
-    # the DialFigure shape above: the tiles ride `WalletNFTShelfCard`, whose
+    # the DialFigure shape above: the tiles ride the NFT rows (`WalletNFTRows.swift`, prd §1048), whose
     # section carries `RowEntrance`. A per-tile entrance would be a second
     # clock on one card — the double-deal TileRain's "ONE gesture deals ONE
     # shower" lesson forbids, and it would animate eight tiles independently

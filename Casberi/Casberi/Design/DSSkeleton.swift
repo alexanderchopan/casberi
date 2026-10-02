@@ -30,8 +30,6 @@ enum DSSkeleton {
         case graph
         /// The composition strip and its legend.
         case strip
-        /// The NFT quad.
-        case quad
         /// Ranked bars against a threshold.
         case ranked
         /// Holders ranked by reach.
@@ -50,7 +48,6 @@ enum DSSkeleton {
             case ScopeTileGlyph.holdings:    self = .treemap
             case ScopeTileGlyph.accounts:    self = .graph
             case ScopeTileGlyph.positions:   self = .strip
-            case ScopeTileGlyph.nfts:        self = .quad
             case ScopeTileGlyph.permissions: self = .holders
             case ScopeTileGlyph.frames:      self = .steps
             default:                         self = .ranked
@@ -172,11 +169,6 @@ struct DSSkeletonFigure: View {
                 dot(6 + CGFloat(i) * 90, 156, 4, DSSkeleton.accent)
                 pill(16 + CGFloat(i) * 90, 152, 54)
             }
-        case .quad:
-            box(0, 0, 146, 128, radius: 12)
-            box(154, 0, 146, 128, radius: 12)
-            box(0, 136, 146, 128, radius: 12)
-            box(154, 136, 146, 128, radius: 12)
         case .ranked:
             for (i, w) in [210.0, 150, 260, 110].enumerated() {
                 let y = CGFloat(i) * 62

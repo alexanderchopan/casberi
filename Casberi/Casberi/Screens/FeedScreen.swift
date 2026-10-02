@@ -250,6 +250,20 @@ struct FeedScreen: View {
             // reason: there is no corpus-scale materialisation to defer.
             _things = Query(filter: #Predicate<Thing> { $0.pinnedAt != nil || $0.source == "You" },
                             sort: \Thing.capturedAt, order: .reverse)
+        } else if source == CategoryFold.walletRoom {
+            // **THE WALLET CARRIES THE CARDS (prd §1048).** Its Cards tile reads
+            // the card seats' spends (`WalletCards`), so the room's one query
+            // takes their rows beside its own: one fetch, live like every other
+            // row, never a second store a tile could disagree with. Bounded and
+            // light-columned as the source rooms below are, and `lightColumns`
+            // already names every field `WalletCards` reads. Home still lists
+            // only the Wallet's own moves until the separate rooms fold.
+            let members = WalletCards.roomSources(source)
+            var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { members.contains($0.source) },
+                                           sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            d.fetchLimit = min(Self.sourceRoomFetchLimit, rowBudget ?? .max)
+            if Self.sourceRoomLightColumns { d.propertiesToFetch = Self.lightColumns }
+            _things = Query(d)
         } else {
             // A SOURCE room, bounded and light-columned the same way (2026-08-14).
             //
@@ -1639,7 +1653,8 @@ struct FeedScreen: View {
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
                 descriptor.fetchLimit = Self.allRoomFetchLimit
                 guard let raw = try? modelContext.fetch(descriptor) else { return }
-                let scoped = raw.filter { $0.source == source }
+                let members = WalletCards.roomSources(source)
+                let scoped = raw.filter { members.contains($0.source) }
                 #if DEBUG
                 NSLog("[Casberi] roomNet| source=%@ query=empty plain=%d %@", source, scoped.count,
                       scoped.isEmpty ? "(empty in the store too)" : "RECOVERED: the live query dropped rows a plain fetch finds")
@@ -1661,12 +1676,20 @@ struct FeedScreen: View {
             // regression the bound was added to remove, arriving through the
             // safety net instead of through the list. It is also invisible:
             // the room renders correctly the whole time.
-            let probe = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
+            // The Wallet's query carries the card seats (prd §1048), so its
+            // probe counts the same sources, or every pass would read the card
+            // rows as rows the query invented and swap in a Wallet-only fetch.
+            // Every other room keeps the plain equality this net was built on.
+            let members = WalletCards.roomSources(source)
+            let predicate = members.count > 1
+                ? #Predicate<Thing> { members.contains($0.source) }
+                : #Predicate<Thing> { $0.source == source }
+            let probe = FetchDescriptor<Thing>(predicate: predicate)
             guard let rawCount = try? modelContext.fetchCount(probe),
                   min(rawCount, Self.sourceRoomFetchLimit) != things.count
             else { return }
             var fetch = FetchDescriptor<Thing>(
-                predicate: #Predicate<Thing> { $0.source == source },
+                predicate: predicate,
                 sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
             // Bounded for the same reason the comparison above is: this array
             // stands in for `things`, so it must reproduce what a healthy

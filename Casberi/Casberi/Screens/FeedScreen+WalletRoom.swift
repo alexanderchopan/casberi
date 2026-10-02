@@ -114,7 +114,8 @@ extension FeedScreen {
     /// halves. Splitting those is worth doing deliberately, not as a side
     /// effect of a layout pass.
     @ViewBuilder
-    func walletScopeVisualSection(_ section: WalletSection, upcoming: [Thing] = []) -> some View {
+    func walletScopeVisualSection(_ section: WalletSection, upcoming: [Thing] = [],
+                                  cards: WalletCards.Reading? = nil) -> some View {
         switch section {
         // Home's drawing is the sparkline, which the crown draws itself — so
         // this slot is already filled there rather than empty.
@@ -124,6 +125,11 @@ extension FeedScreen {
         case .comingUp where upcoming.isEmpty:
             WalletScopeEmptyFigure(section: .comingUp)
         case .comingUp:    walletComingUpFigure(upcoming)
+        // Cards is decided where its rows are in hand (`cards`), as Coming up is.
+        case .cards where cards == nil:
+            WalletScopeEmptyFigure(section: .cards)
+        case .cards:
+            if let cards { WalletCardsFigure(reading: cards).modifier(rowEntrance(2)) }
         // **THE EMPTY STATE IS IN THE SLOT (prd §611, §610's ruling carried
         // here).** The five standing scopes
         // had nothing at all, so a chip onto Positions on a wallet with no
@@ -141,7 +147,6 @@ extension FeedScreen {
         // the scope, the row keeps its place at the top of the list where a
         // door belongs.
         case .risk:        walletRiskSection
-        case .nfts:        walletNFTSection
         case .permissions: walletPermissionsSection
         }
     }
@@ -179,6 +184,7 @@ extension FeedScreen {
     func walletScopeChromeSection(_ active: WalletSection,
                                   visible: [Thing],
                                   upcoming: [Thing],
+                                  cards: WalletCards.Reading? = nil,
                                   streamTotal: Int) -> some View {
         Section {
             DSRoomScopeChrome(
@@ -219,7 +225,7 @@ extension FeedScreen {
                     // `reservesHeadline: false` (prd §495): Wallet's figures
                     // name themselves inside their own drawing.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        walletScopeVisualSection(scope, upcoming: upcoming)
+                        walletScopeVisualSection(scope, upcoming: upcoming, cards: cards)
                     }
                 }
             )
@@ -515,12 +521,11 @@ extension FeedScreen {
     func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
         switch section {
         // Coming up is decided where its rows are in hand (`upcoming`).
-        case .home, .follow, .comingUp: return false
+        case .home, .follow, .comingUp, .cards: return false
         case .holdings:    return blockStream.els.isEmpty
         case .positions:   return !(hasLendingCard
                                     || !walletLive.uniswap.isEmpty
                                     || !walletLive.hyperliquid.positions.isEmpty)
-        case .nfts:        return nftShelfEntry == nil
         case .risk:        return (walletRiskEntries ?? []).isEmpty
         case .permissions: return WalletPermissionsSource.holders(exposure: walletLive.exposure,
                                                                   acting: walletLive.acting).isEmpty
@@ -659,7 +664,7 @@ extension FeedScreen {
 
     /// The picked-NFT shelf's wallet, or nil when the shelf draws nothing.
     ///
-    /// Hoisted out of `walletNFTSection` (2026-08-20) so the "What you hold"
+    /// Hoisted out of the NFT drawing (2026-08-20; the drawing went with its tile, prd §1048) so the "What you hold"
     /// header can ask whether that block has a second card without restating
     /// the gate — two copies of this condition is how a header starts
     /// appearing over an absent shelf.
@@ -747,7 +752,7 @@ extension FeedScreen {
     }
 
     /// Does the "What you hold" block have anything in it — the treemap, the
-    /// NFT shelf, or both.
+    /// NFT list under it (prd §1048), or both.
     var walletHoldsSomething: Bool {
         !blockStream.els.isEmpty || nftShelfEntry != nil
     }
@@ -849,26 +854,6 @@ extension FeedScreen {
     /// and no collections to pick — which is most wallets, and is why this is
     /// the one wallet card that can be completely absent without meaning a
     /// read failed.
-    @ViewBuilder
-    var walletNFTSection: some View {
-        // The gate itself lives in `nftShelfEntry` (2026-08-20) — the "What
-        // you hold" header asks the same question, and one copy is what keeps
-        // the header and this card from ever disagreeing.
-        if let entry = nftShelfEntry {
-                            WalletNFTShelfCard(
-                    wallet: entry.address,
-                    label: entry.label.isEmpty ? entry.short : entry.label,
-                    onEdit: { feedSheet = .nftPicks(address: entry.address,
-                                                    label: entry.label.isEmpty ? entry.short : entry.label) })
-                    .modifier(rowEntrance(2))
-        }
-    }
-
-    /// Every leveraged position on one axis (2026-08-01, `WalletRiskStrip`),
-    /// directly ABOVE the lending card it summarises — the cards below state
-    /// each position in its own protocol's units, and this is the one view
-    /// that puts them in an order. Declines under two positions, where the
-    /// cards already say it better.
     @ViewBuilder
     var walletRiskSection: some View {
         if let entries = walletRiskEntries {

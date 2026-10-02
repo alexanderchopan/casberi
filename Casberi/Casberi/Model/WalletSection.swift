@@ -20,7 +20,8 @@ import Foundation
 /// what makes content loss structurally impossible rather than merely unlikely.
 ///
 /// The two splits, and why each is a split rather than a rename:
-///   • `nfts` leaves "What you hold" — the only scope whose content is pictures.
+///   • `nfts` left "What you hold" — the only scope whose content is pictures —
+///     and went back into Holdings when Cards took its tile (prd §1048).
 ///   • "What it's doing" becomes `positions` (money deployed) and `risk` (money
 ///     that could move against you). One word could not carry both honestly:
 ///     an approval you granted on purpose is not a hazard, and a health factor
@@ -68,7 +69,9 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// §1041, user: "its own tile"). Home is only what happened.
     case comingUp
     case positions
-    case nfts
+    /// Every card's spends (prd §1048): Gnosis Pay, MetaMask Card, ether.fi,
+    /// Apple Card and Privacy.com, through `WalletCards`.
+    case cards
     case risk
     case permissions
     /// The room's VERB (prd §1039): follow another address. Never a scope —
@@ -84,7 +87,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// it is stated where a reader looking for it will find it and where a
     /// self-test can assert it.
     static let order: [WalletSection] = [
-        .home, .holdings, .comingUp, .positions, .nfts, .risk, .permissions,
+        .home, .holdings, .comingUp, .positions, .cards, .risk, .permissions,
     ]
 
     /// The verbs, drawn after the scopes (`DSScopeTiles.alphabetical`) on
@@ -104,7 +107,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     var isConditional: Bool {
         switch self {
         case .home, .holdings, .follow: return false
-        case .comingUp, .positions, .nfts, .risk, .permissions: return true
+        case .comingUp, .positions, .cards, .risk, .permissions: return true
         }
     }
 
@@ -119,7 +122,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         // The app's own word for what's ahead (the feed's "Coming up" group).
         case .comingUp:    return String(localized: "Coming up")
         case .positions:   return String(localized: "Positions")
-        case .nfts:        return String(localized: "NFTs")
+        case .cards:       return String(localized: "Cards")
         case .risk:        return String(localized: "Risk")
         case .permissions: return String(localized: "Permissions")
         // "Follow", not "Follow address" (prd §1039): a tile carries one word.
@@ -137,7 +140,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:    return String(localized: "What your money is made of")
         case .comingUp:    return String(localized: "What's ahead, soonest first")
         case .positions:   return String(localized: "Money you've deployed")
-        case .nfts:        return String(localized: "Collectibles you hold")
+        case .cards:       return String(localized: "What your cards spent")
         case .risk:        return String(localized: "Positions that could move against you")
         case .permissions: return String(localized: "What you've granted reach to")
         case .follow:      return String(localized: "Follow an address, privately")
@@ -165,7 +168,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:    return String(localized: "Nothing held")
         case .comingUp:    return String(localized: "Nothing ahead")
         case .positions:   return String(localized: "Nothing deployed")
-        case .nfts:        return String(localized: "No collectibles")
+        case .cards:       return String(localized: "No card spends")
         case .risk:        return String(localized: "Nothing at risk")
         case .permissions: return String(localized: "No grants")
         // A verb has no empty state: it is never on screen as a page.
@@ -201,8 +204,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "Unlocks, expiries and grants with a date still to come.")
         case .positions:
             return String(localized: "Money lent, pooled, or held as a perp.")
-        case .nfts:
-            return String(localized: "Collections you hold, minus what the spam filter caught.")
+        case .cards:
+            return String(localized: "Purchases on a card you connected.")
         case .risk:
             return String(localized: "A position a price move could liquidate, and how close it stands.")
         case .permissions:

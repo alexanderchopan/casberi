@@ -53,8 +53,8 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .comingUp, .positions, .nfts, .risk, .permissions],
-      "order is home → holdings → comingUp → positions → nfts → risk → permissions")
+check(WalletSection.order == [.home, .holdings, .comingUp, .positions, .cards, .risk, .permissions],
+      "order is home → holdings → comingUp → positions → cards → risk → permissions")
 // **COMING UP IS ITS OWN SCOPE (prd §1041)** — Home is only what happened.
 check(WalletSection.comingUp.label == "Coming up", "the scope reads Coming up — the app's own word")
 check(WalletSection.comingUp.isConditional, "coming up can be empty, so it sits in the tail")
@@ -83,7 +83,7 @@ check(WalletSection.order.first == .home, "home leads")
 check(WalletSection.home.isAlwaysPresent, "home is always present")
 check(!WalletSection.home.isConditional, "home is not conditional")
 check(!WalletSection.holdings.isConditional, "holdings is not conditional")
-for s in [WalletSection.comingUp, .positions, .nfts, .risk, .permissions] {
+for s in [WalletSection.comingUp, .positions, .cards, .risk, .permissions] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
 
@@ -166,7 +166,7 @@ check(WalletSection.shows(present: [.home, .holdings]), "two scopes draw a strip
 check(WalletSection.home.label == "Home", "home reads Home")
 check(WalletSection.holdings.label == "Holdings", "holdings reads Holdings")
 check(WalletSection.positions.label == "Positions", "positions reads Positions")
-check(WalletSection.nfts.label == "NFTs", "nfts reads NFTs")
+check(WalletSection.cards.label == "Cards", "cards reads Cards")
 check(WalletSection.risk.label == "Risk", "risk reads Risk")
 check(WalletSection.permissions.label == "Permissions", "permissions reads Permissions")
 for s in WalletSection.allCases {
@@ -214,7 +214,7 @@ mutate() {
 }
 
 mutate "a conditional scope moved out of the tail (the strip reflows)" \
-  's/\.home, \.holdings, \.comingUp, \.positions, \.nfts, \.risk, \.permissions,/.home, .risk, .holdings, .comingUp, .positions, .nfts, .permissions,/'
+  's/\.home, \.holdings, \.comingUp, \.positions, \.cards, \.risk, \.permissions,/.home, .risk, .holdings, .comingUp, .positions, .cards, .permissions,/'
 mutate "home no longer leads" \
   's/\.home, \.holdings, \.comingUp/.holdings, .home, .comingUp/'
 mutate "resolve falls back to the first present scope instead of home" \
@@ -222,11 +222,11 @@ mutate "resolve falls back to the first present scope instead of home" \
 mutate "the verb resolved to as a page (prd §1039)" \
   's/guard let wanted, !wanted\.isVerb, present\.contains\(wanted\)/guard let wanted, wanted.isVerb || present.contains(wanted)/'
 mutate "the verb slips into the scopes' order (prd §1039)" \
-  's/\.nfts, \.risk, \.permissions,\n    \]/.nfts, .risk, .permissions, .follow,\n    ]/'
+  's/\.cards, \.risk, \.permissions,\n    \]/.cards, .risk, .permissions, .follow,\n    ]/'
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
 mutate "risk is marked unconditional, so the tail rule stops being enforced" \
-  's/case \.comingUp, \.positions, \.nfts, \.risk, \.permissions: return true/case .comingUp, .positions, .nfts, .permissions: return true\n        case .risk: return false/'
+  's/case \.comingUp, \.positions, \.cards, \.risk, \.permissions: return true/case .comingUp, .positions, .cards, .permissions: return true\n        case .risk: return false/'
 mutate "every scope gated again, so five chips vanish on the wallet that most needs them" \
   's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
@@ -453,8 +453,29 @@ guard FeedScreen.swift "walletComingUpSections(upcoming, nextEventID: nextEventI
   "Coming up no longer lists what's ahead (prd §1041)"
 deny FeedScreen.swift "ahead: upcoming" \
   "what's ahead is back on Home — Home is only what happened (prd §1041)"
-guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) }" \
-  "Home's stream no longer drops the rows Coming up holds — a deadline would read as a move (prd §1041)"
+guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) && \$0.source == source }" \
+  "Home's stream no longer drops the rows Coming up holds, or now lists card spends its history door cannot open (prd §1041, §1048)"
+
+# ── the Cards tile and NFTs under Holdings (prd §1048) ───────────────────────
+# The Wallet's query carries the card seats, and three places must agree on
+# which rows those are: the query, the row filter and the safety-net probe. If
+# the probe forgets them, every pass reads the card rows as rows the query
+# invented and swaps in a Wallet-only fetch, and the tile goes empty with
+# nothing failing (measured on the simulator, 2026-10-01).
+guard FeedScreen.swift "WalletCards.roomSources(source)" \
+  "the Wallet's query or its probe no longer reads WalletCards.roomSources — the Cards tile empties (prd §1048)"
+guard FeedScreen.swift "WalletCards.rides(room: source, source: thing.source)" \
+  "the room filter drops the card seats' rows — the Cards tile empties (prd §1048)"
+guard FeedScreen.swift "WalletCards.compose(things: visible)" \
+  "the Cards tile's figure lost its reading (prd §1048)"
+guard FeedScreen.swift "let spends = visible.live.filter(WalletCards.isSpend)" \
+  "the Cards tile's list no longer reads the card spends (prd §1048)"
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: NFTs left Holdings — their tile is gone, so their list must stand under the tokens (prd §1048)"
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r"case \.holdings:(.*?)case \.positions:", src, re.S)
+sys.exit(0 if m and "walletNFTListSection" in m.group(1) else 1)
+PY
 
 # The Foundation-only promise: this file must stay compilable without SwiftUI,
 # or the harness above cannot run at all.

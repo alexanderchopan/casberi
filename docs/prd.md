@@ -63193,3 +63193,20 @@ The confusion it answers: three ids from the Logos team, all reading 0, with not
 **Next, in order.** (2) The Cards tile, with NFTs moving into Holdings. (3) The account menu listing the merged seats. (4) The separate rooms are deleted, Safe's queue moves to Coming up; this waits on the FeedScreen split landing.
 
 **Open: where an app's settings live once its room is gone.** Today a room's sliders disc beside its name opens its account page (§1033). Three options are on the table, to be mocked side by side at step 3: the sliders disc follows the account menu's pick; the rooms tray becomes the list of each room's connected apps; or the tray goes and settings live elsewhere. The same question returns in every room the merge reaches (Work's GitHub, for one), which will be ruled room by room.
+
+## §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats (user: "yes continue", 2026-10-01; builds §1048's tile ruling)
+
+**The tiles** are Home · Cards · Coming up · Holdings · Permissions · Positions · Risk · Follow (A–Z after Home, the verb last, §995). Cards wears `creditcard.and.123`. The bare `creditcard` and `creditcard.fill` are reserved for the Wallet itself (`room-kind-tiles-selftest`), and a tile inside the Wallet wearing the Wallet's own mark would read as a second door to the room it is in.
+
+**Cards** is every card's spends: Gnosis Pay, MetaMask Card, ether.fi, Apple Card and Privacy.com (`WalletCards`).
+- What counts as a spend: the three onchain cards defer to `CardSpendSeat` (§868). Apple Wallet's room also holds bank moves, dues, price creep and silences, so only a `.transaction` tagged Card counts. A refund on any card is money back, not a spend.
+- The figure is `CardSpendRoom`'s arithmetic and words, unchanged (`WalletCardsFigure`): the headline over every card, then one line per card ranked by spend COUNT, never by amount, because the cards settle in different currencies and the app invents no rate between them. Measured on the demo: "$972.12 in USD, plus another currency", Apple Wallet 10 spends, then Gnosis Pay €123.20, MetaMask Card and ether.fi at 3 each.
+- The list is the spends under the day they fell on.
+
+**The Wallet's query carries the card seats' rows** (`WalletCards.roomSources`), so the tile is live like every other row and no second store can disagree with it. Three places must agree on which rows those are, and the first build missed one: the query, the row filter in `liveVisible` (`WalletCards.rides`) and the safety-net probe that swaps in a plain fetch when the query seems to have dropped rows. With the probe still counting Wallet rows only, every pass read the card rows as rows the query invented, swapped in a Wallet-only fetch, and the tile went empty with nothing failing. `wallet-section-selftest.sh` now guards all three.
+- **Home stays the Wallet's own moves until the rooms fold.** Its door to the full history opens a screen that reads only Wallet rows, and a count that included card spends would open a list without them (§837). Step 4 merges Home.
+- An Apple Card statement due date now reaches Coming up from the same query, which is §1048's ruling.
+
+**NFTs fold into Holdings.** The picked collections read as rows under the tokens, and "Choose collections" stays the door while none are picked. The NFT drawing that filled the box is deleted with its tile: `WalletNFTShelfCard`, `walletNFTSection`, `NFTGrid` and the skeleton's quad. A feature off the surface is deleted from the model (§723). The rows file is `Screens/WalletNFTRows.swift`, and `wallet-nft-selftest.sh` now guards that the rows stand under Holdings and that no NFTs scope returns.
+
+**Tests.** `CasberiTests/WalletCardsTests` (inserted rows, so a nil reading means "no spends" and not "no live rows"); `wallet-section-selftest.sh` gains five guards, two of them proven by breaking the code.

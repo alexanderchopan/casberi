@@ -16,7 +16,11 @@ enum ScopeTileGlyph {
     static let accounts    = "person.2"
     static let permissions = "key"
     static let positions   = "building.columns"
-    static let nfts        = "photo.on.rectangle.angled"
+    /// The Wallet's Cards tile (prd §1048). Not the bare `creditcard`: the
+    /// user reserved that, and `creditcard.fill`, for the Wallet itself
+    /// (`room-kind-tiles-selftest`), and a tile inside the Wallet wearing the
+    /// Wallet's own mark would read as a second door to the room it is in.
+    static let cards       = "creditcard.and.123"
     static let risk        = "shield"
     static let frames      = "square.stack.3d.down.right"
     /// Privy's Apps — "every app that made you a wallet" (user, 2026-09-19:
@@ -306,7 +310,7 @@ extension WalletSection: DSTileScope {
         case .holdings:    return ScopeTileGlyph.holdings
         case .comingUp:    return ScopeTileGlyph.comingUp
         case .positions:   return ScopeTileGlyph.positions
-        case .nfts:        return ScopeTileGlyph.nfts
+        case .cards:       return ScopeTileGlyph.cards
         case .risk:        return ScopeTileGlyph.risk
         case .permissions: return ScopeTileGlyph.permissions
         case .follow:      return ScopeTileGlyph.watch
