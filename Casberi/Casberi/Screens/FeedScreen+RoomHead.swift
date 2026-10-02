@@ -427,7 +427,7 @@ extension FeedScreen {
     /// dead.
     func resolveRoomAgent() {
         let candidates = DemoMode.isActive ? AgentProvider.allCases : AgentKey.configured
-        // THE AGENTS ROOM (prd §1053): the agent New talks to is the one the
+        // THE AGENTS ROOM (prd §1054): the agent New talks to is the one the
         // menu picked, and none with no pick — New then asks which.
         if source == RoomAccounts.agentsRoom {
             let picked = selectedSeat?.name

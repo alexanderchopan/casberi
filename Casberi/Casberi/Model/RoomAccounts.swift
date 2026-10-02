@@ -104,7 +104,7 @@ enum RoomAccounts {
     /// The Reading room (prd §1049, §1050d, §1051a, built §1052).
     static let readingRoom = "Reading"
 
-    /// The Agents room (prd §1049, built §1053).
+    /// The Agents room (prd §1049, built §1054).
     static let agentsRoom = "Agents"
 
     /// The merged room a category opens, nil while the category still opens

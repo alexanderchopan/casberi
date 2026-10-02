@@ -82,7 +82,7 @@ struct RoomAccountsTests {
         #expect(BridgeCatalog.category(forSource: RoomAccounts.readingRoom) == "Reading")
     }
 
-    // MARK: - Agents (prd §1053)
+    // MARK: - Agents (prd §1054)
 
     /// Every agent is a seat of Agents, keyed or imported, and each agent
     /// provider's name is one of them — so New's pick always has a seat.

@@ -676,7 +676,7 @@ struct FeedScreen: View {
     /// resolved in `onAppear` by `resolveRoomAgent`, never in a body.
     @State var roomAgent: AgentProvider?
     /// New was tapped in the Agents room with no agent picked and several
-    /// that can answer (prd §1053).
+    /// that can answer (prd §1054).
     @State var askingWhichAgent = false
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
@@ -1787,7 +1787,7 @@ struct FeedScreen: View {
         // the signal; `AgentKey.configured` is memoised on `TokenVault
         // .generation`, so re-asking is a dictionary hit.
         .onChange(of: bridges.bridges.count) { _, _ in resolveRoomAgent() }
-        // The Agents room's menu decides whom New talks to (prd §1053).
+        // The Agents room's menu decides whom New talks to (prd §1054).
         .onChange(of: chrome.mergedScope[source]) { _, _ in resolveRoomAgent() }
         .onDisappear { if visitFrozen { leave() } }
         .onChange(of: isActive) { _, now in
@@ -1925,7 +1925,7 @@ struct FeedScreen: View {
     @State var windowSteps = Self.initialWindowSteps
 }
 
-/// Which agent New talks to, when the Agents room has no pick (prd §1053).
+/// Which agent New talks to, when the Agents room has no pick (prd §1054).
 /// A modifier for `NoteDeleteDialog`'s reason: the chain is long.
 private struct WhichAgentDialog: ViewModifier {
     @Binding var open: Bool

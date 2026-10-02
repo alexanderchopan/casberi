@@ -755,7 +755,7 @@ extension FeedScreen {
                                    heroShown: Bool) -> some View {
         let chatting = chrome.agentScope == .chat && roomAgent != nil
         // The thread and the entry are the agent's own: its source, not the
-        // Agents room's (prd §1053).
+        // Agents room's (prd §1054).
         let agentSource = roomAgent?.agent ?? source
         let days = chronoDays(visible)
         let coverID = heroShown ? nil : ledeThingID(in: days)
@@ -809,7 +809,7 @@ extension FeedScreen {
                                               trailing: DSRoomChassis.inset))
             }
         }
-        // Under the tiles, as every merged room's menu is (prd §1053).
+        // Under the tiles, as every merged room's menu is (prd §1054).
         roomScopeSection
         if chatting, let roomAgent {
             // The composer row, BELOW the tiles — where the list would be.

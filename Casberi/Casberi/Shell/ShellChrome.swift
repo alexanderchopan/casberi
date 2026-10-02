@@ -590,7 +590,7 @@ final class ShellChrome {
     var roomNewConversation = 0
 
     /// When New was last tapped for each agent in the Agents room (prd
-    /// §1053): its thread shows only conversations begun since, so New opens
+    /// §1054): its thread shows only conversations begun since, so New opens
     /// on an empty thread, never on the last one.
     var agentNewAt: [String: Date] = [:]
 

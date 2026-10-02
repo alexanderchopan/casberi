@@ -165,7 +165,7 @@ src = "\n".join("" if l.strip().startswith("//") else l
 # The escape arm must not run without a matching entry arm. Anything that can
 # exclude a room from `emptyState` has to appear in the final `else if`, or
 # that room matches no arm at all.
-# `agentRoomShown` since §1053: one agent's room, or the Agents room while an
+# `agentRoomShown` since §1054: one agent's room, or the Agents room while an
 # agent there can answer.
 esc = "!roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown"
 body = "} else if roomHasContent || agentRoomShown"
@@ -253,7 +253,7 @@ print("  \u2713 an empty room still holds the lead slot")
 SLOTS
 # The §83 half: a New tile over a seat with no key cannot answer.
 # `agentRoomShown` is a keyed `roomAgent` or a keyed agent in the Agents room
-# (`answeringAgents`, §1053) — both read `AgentKey.configured`.
+# (`answeringAgents`, §1054) — both read `AgentKey.configured`.
 guard "the tiles stand only where a key is present" \
   'guard agentRoomShown else \{ return nil \}' "$FEED"
 guard "the agent is resolved outside the body (build 525)" \

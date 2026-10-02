@@ -140,7 +140,7 @@ struct AgentChatThread: View {
     private func reparse() {
         guard let thing = live.first, thing.isLive,
               thing.sourceRef != closed,
-              // Begun after New was tapped, in the Agents room (prd §1053).
+              // Begun after New was tapped, in the Agents room (prd §1054).
               thing.capturedAt >= (chrome.agentNewAt[source] ?? .distantPast),
               let body = thing.enrichedText,
               let assistant = AgentSheet.assistant(for: source)
