@@ -176,6 +176,11 @@ struct AgentChatEntry: View {
                 .lineLimit(1...6)
                 .textInputAutocapitalization(.sentences)
                 .onSubmit(send)
+                // Centred on the 44pt send target's line, inside the well's
+                // own edge (prd §1075): bottom-aligned with no padding, the
+                // placeholder sat on the well's lower-left corner.
+                .padding(.vertical, (DS.Hit.min - 25) / 2)
+                .padding(.leading, DS.Space.s4)
             Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")
                     // `.feature` (28), not a frozen `.system(size: 26)` — §762:
@@ -195,6 +200,7 @@ struct AgentChatEntry: View {
             .dsTapTarget()
             .accessibilityLabel(String(localized: "Send"))
         }
+        .padding(.trailing, DS.Space.s1)
         .dsWell()
         // A refused ask hands the question back rather than eating it.
         .onChange(of: chrome.roomAskFailed) { _, failed in
