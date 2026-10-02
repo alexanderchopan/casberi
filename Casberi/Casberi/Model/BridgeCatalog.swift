@@ -515,7 +515,9 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "Polar",       tagline: "Sales and subscribers",             group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 30)),
-        Offer(name: "Dodo Payments", tagline: "Every payment, the moment it lands", group: "Wallet",    connectable: true,
+        // WORK (prd §1049, built §1057): a merchant's sales, beside Stripe
+        // and Polar, never the One Wallet's money.
+        Offer(name: "Dodo Payments", tagline: "Every payment, the moment it lands", group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 30)),
         Offer(name: "YouTube",     tagline: "Follow any channel",                    group: "Watching",  connectable: true,
               needsSetup: true),

@@ -579,6 +579,10 @@ final class ShellChrome {
     /// on an empty thread, never on the last one.
     var agentNewAt: [String: Date] = [:]
 
+    /// The Work room's standing tile (prd §1057), All or Coming up; cleared
+    /// on every source change like `notesScope`.
+    var workScope: WorkScope = .all
+
     /// Start a new conversation with `agent`, from the Agents room's New.
     func beginConversation(with agent: String) {
         roomNewConversation += 1

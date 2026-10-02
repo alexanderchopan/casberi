@@ -681,6 +681,9 @@ struct FeedScreen: View {
     /// New was tapped in the Day room with more than one thing to make
     /// (prd §1056).
     @State var dayMakeOpen = false
+    /// Watch was tapped in the Work room with more than one seat that keeps
+    /// a watch (prd §1057).
+    @State var workWatchOpen = false
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State var openProject: ProjectRoute?
@@ -1911,6 +1914,7 @@ struct FeedScreen: View {
         }
         .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
         .modifier(DayMakeDialog(open: $dayMakeOpen, makes: dayMakes, onPick: makeInDay))
+        .modifier(WorkWatchDialog(open: $workWatchOpen, watches: workWatches, onPick: watchInWork))
         .modifier(WhichAgentDialog(open: $askingWhichAgent, agents: answeringAgents) { provider in
             pickAgent(provider)
             chrome.beginConversation(with: provider.agent)
@@ -1927,6 +1931,23 @@ struct FeedScreen: View {
     /// screen: it must not collapse when a thing lands, or scrolling back would
     /// undo itself every sync.
     @State var windowSteps = Self.initialWindowSteps
+}
+
+/// What Watch follows in the Work room (prd §1057).
+private struct WorkWatchDialog: ViewModifier {
+    @Binding var open: Bool
+    let watches: [WorkWatch]
+    let onPick: (WorkWatch) -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(String(localized: "Watch"), isPresented: $open,
+                                   titleVisibility: .hidden) {
+            ForEach(watches) { watch in
+                Button(watch.label) { onPick(watch) }
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        }
+    }
 }
 
 /// What New makes in the Day room (prd §1056).

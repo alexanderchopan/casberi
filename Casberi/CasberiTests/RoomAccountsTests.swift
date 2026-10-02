@@ -50,7 +50,7 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)
         #expect(RoomAccounts.host(ofSource: "L2BEAT")?.room == RoomAccounts.readingRoom)
         #expect(RoomAccounts.host(ofSource: "Walletbeat")?.room == RoomAccounts.readingRoom)
-        for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom, "Stripe"] {
+        for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom, "Bluesky"] {
             #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
         }
     }
@@ -130,6 +130,22 @@ struct RoomAccountsTests {
         #expect(CategoryOrder.defaultOrder.contains("Day"))
     }
 
+    // MARK: - Work (prd §1057)
+
+    /// Every builder seat stays, Dodo Payments moved in from the Wallet
+    /// shelf, and Watch offers only the seats that keep a watch.
+    @Test func workHoldsEveryBuilderSeat() {
+        let work = Set(RoomAccounts.seats(for: RoomAccounts.workRoom).map(\.name))
+        for app in ["GitHub", "GitLab", "Radicle", "Hugging Face", "Linear", "Jira", "Trello",
+                    "Notion", "Slack", "Sentry", "Vercel", "PagerDuty", "Cloudflare", "AWS",
+                    "npm", "PyPI", "App Store Connect", "PostHog", "Stripe", "Polar",
+                    "Dodo Payments"] {
+            #expect(work.contains(app), "\(app) is in Work")
+        }
+        #expect(Set(WorkWatch.allCases.map(\.rawValue)).isSubset(of: work))
+        #expect(RoomAccounts.host(ofSource: "Dodo Payments")?.room == RoomAccounts.workRoom)
+    }
+
     // MARK: - Testnets (prd §1050k)
 
     /// The two networks fold into Testnets, never into the Wallet: test money
@@ -147,7 +163,7 @@ struct RoomAccountsTests {
     @Test func testnetsIsItsCategory() {
         #expect(BridgeCatalog.category(forSource: RoomAccounts.testnetsRoom) == "Testnets")
         #expect(RoomAccounts.room(ofCategory: "Testnets") == RoomAccounts.testnetsRoom)
-        #expect(RoomAccounts.room(ofCategory: "Work") == nil)
+        #expect(RoomAccounts.room(ofCategory: "Social") == nil)
     }
 
     /// The room shows the picked network's screen, the first connected one

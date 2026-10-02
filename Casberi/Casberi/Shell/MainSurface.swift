@@ -2136,6 +2136,7 @@ struct MainSurface: View {
             chrome.notesFolder = nil
             // And the Reminders room (prd §993).
             chrome.remindersScope = .all
+            chrome.workScope = .all
             // And the mail rooms (prd §1019).
             chrome.mailScope = .all
             // And the Tokens room's packs.
@@ -3365,7 +3366,17 @@ private struct PagerCover: View {
                     // Bare, as the dock draws it — no rim, no disc (user:
                     // a white one "looks accidental", a black one too, and
                     // the word beneath already frames it).
-                    BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
+                    if RoomAccounts.mergedRooms.contains(landing) {
+                        // A merged room is its category (prd §1057): no
+                        // app's mark stands for it, so its glyph does, the
+                        // one the rooms tray draws.
+                        Image(systemName: CategoryFold.glyph(for: landing))
+                            .dsGlyph(.hero, weight: .medium)
+                            .foregroundStyle(ink)
+                            .frame(width: DS.Mark.hero, height: DS.Mark.hero)
+                    } else {
+                        BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
+                    }
                     Text(label)
                         .dsText(.heading24)
                         .foregroundStyle(ink)

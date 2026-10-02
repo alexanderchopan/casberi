@@ -622,6 +622,8 @@ extension FeedScreen {
                 bundledSections(visible, nextEventID: nextEventID,
                                 heroShown: heroShown)
                 corpusFloorSection(visible)
+            } else if source == RoomAccounts.workRoom {
+                workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.dayRoom {
                 dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if agentRoomShown {
@@ -1004,7 +1006,7 @@ extension FeedScreen {
     /// `FeedScreen` has a fixed `source` and takes one branch or the other
     /// consistently, and `filter.tag` — the one input that moves it between
     /// them — is part of the key.
-    private func chronoDays(_ roomThings: [Thing]) -> [(String, [Thing])] {
+    func chronoDays(_ roomThings: [Thing]) -> [(String, [Thing])] {
         let key = derivationKey(roomThings)
         if memo.key != key {
             memo.key = key

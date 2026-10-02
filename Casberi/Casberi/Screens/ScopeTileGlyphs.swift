@@ -135,6 +135,17 @@ enum ScopeTileGlyph {
 
 /// The mail rooms' tiles (prd §1019). New is the Notes room's plus: the same
 /// verb, so the same glyph.
+/// The Work room's tiles (prd §1057).
+extension WorkScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:      return ScopeTileGlyph.all
+        case .comingUp: return ScopeTileGlyph.comingUp
+        case .watch:    return ScopeTileGlyph.watch
+        }
+    }
+}
+
 /// The Day room's tiles (prd §1056).
 extension DayScope: DSTileScope {
     var glyph: String {

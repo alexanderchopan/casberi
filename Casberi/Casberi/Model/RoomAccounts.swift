@@ -67,6 +67,7 @@ enum RoomAccounts {
         case mediaRoom: return media
         case lifeRoom: return life
         case dayRoom: return day
+        case workRoom: return work
         default: return []
         }
     }
@@ -99,7 +100,7 @@ enum RoomAccounts {
     /// so the category's tray row and the room are one name (the Wallet's
     /// balance room always was).
     static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, readingRoom, agentsRoom, mediaRoom,
-                                          lifeRoom, dayRoom]
+                                          lifeRoom, dayRoom, workRoom]
 
     /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
     /// the room exists while Hegotá Frames or Logos is connected.
@@ -117,6 +118,9 @@ enum RoomAccounts {
     /// The Life and Day rooms (prd §1049, §1050c, built §1056).
     static let lifeRoom = "Life"
     static let dayRoom = "Day"
+
+    /// The Work room (prd §1049, built §1057).
+    static let workRoom = "Work"
 
     /// The merged room a category opens, nil while the category still opens
     /// its apps' own rooms.
@@ -191,6 +195,9 @@ enum RoomAccounts {
     /// Day's (prd §1049): Calendar, Reminders, Todoist, Cal.com, Calendly,
     /// Gmail and iCloud Mail.
     private static let day = catalogSeats(dayRoom)
+
+    /// Work's (prd §1049): every builder seat, Dodo Payments included.
+    private static let work = catalogSeats(workRoom)
 
     /// The testnets (prd §1050): test money, never in the Wallet's menu or
     /// total (§83).

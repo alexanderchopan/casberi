@@ -147,3 +147,89 @@ extension FeedScreen {
         groupedSections(liftingCover(groups, id: cover?.id), nextEventID: nextEventID)
     }
 }
+
+// MARK: - Work (prd §1049, built §1057)
+
+extension FeedScreen {
+    /// The deadlines ahead, soonest first: a dispute's reply-by, a cert or
+    /// token that expires, a ticket due, a build that lapses.
+    private func workDeadlines(_ visible: [Thing]) -> [Thing] {
+        let now = Date.now
+        return visible.filter { thing in
+            guard thing.isLive, let due = thing.dueAt else { return false }
+            return due >= now
+        }
+        .sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
+    }
+
+    /// What Watch can follow: the connected seats that keep a watch.
+    var workWatches: [WorkWatch] {
+        let seats = Set(RoomAccounts.connected(in: RoomAccounts.workRoom, names: connectedSeatNames)
+            .map(\.name))
+        return WorkWatch.allCases.filter { seats.contains($0.rawValue) }
+    }
+
+    /// GitHub's own tray (§1031); the others' watch lists live on their
+    /// account pages.
+    func watchInWork(_ watch: WorkWatch) {
+        if watch == .github {
+            feedSheet = .githubWatch
+        } else if let destination = BridgeRouter.destination(forOffer: watch.rawValue) {
+            route.openAccount(destination)
+        }
+    }
+
+    /// The Work room: the most urgent thing (the next deadline, else the
+    /// newest), All · Coming up · Watch, the menu, then the list.
+    @ViewBuilder
+    func workRoomSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
+        let deadlines = workDeadlines(visible)
+        let comingUp = chrome.workScope == .comingUp
+        let cover = heroShown ? nil : (deadlines.first ?? visible.first { $0.isLive })
+        if let cover {
+            Section { ledeListRow(cover, top: 0, bottom: DSRoomChassis.contentGap) }
+        } else {
+            Section {
+                emptyLeadRow(headline: DSProse.text("Nothing yet"),
+                             words: Text("What you build lands here"))
+            }
+        }
+        let watches = workWatches
+        Section {
+            DSScopeTiles(sections: WorkScope.allCases.filter { !$0.isVerb || !watches.isEmpty },
+                         active: chrome.workScope, attention: [], verbs: [.watch]) { picked in
+                if picked.isVerb {
+                    if watches.count == 1 { watchInWork(watches[0]) } else { workWatchOpen = true }
+                    return
+                }
+                withAnimation(DS.Motion.standard) { chrome.workScope = picked }
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: DSRoomChassis.leadGap,
+                                      trailing: DSRoomChassis.inset))
+        }
+        roomScopeSection
+        if comingUp {
+            let rest = deadlines.filter { $0.id != cover?.id }
+            if rest.isEmpty && cover == nil {
+                Section {
+                    DSSkeletonRows(label: Text("No deadlines ahead."))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            } else {
+                // Soonest first: the days in order, each due-ordered.
+                let cal = Self.groupingCalendar
+                let days = Dictionary(grouping: rest) { cal.startOfDay(for: $0.dueAt ?? .now) }
+                groupedSections(days.keys.sorted().map { (dayLabel($0), days[$0] ?? []) },
+                                nextEventID: nextEventID)
+            }
+        } else {
+            let days = chronoDays(visible)
+            groupedSections(liftingCover(days, id: cover?.id), nextEventID: nextEventID,
+                            boundary: boundaryThingID(in: days))
+        }
+    }
+}
