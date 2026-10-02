@@ -63438,3 +63438,13 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 **The routes.** `HomeRoute.Node.settings` becomes `.casberi`, reached only from the pinned row (`openCasberiSettings`, beside the list on a pane, pushed on a phone). `casberi://settings`, `-openSettings` and ⌘, present the one list (`.apps`, a name kept for the many doors that already present it). The tray's doors row is Home, Notes, Addresses, Settings; the Apps door is deleted, and "Apps" survives in no title.
 
 **Checked.** `dock-selftest.sh` asserts the list's doors, the Casberi page and the pinned row, and that no separate Settings screen returns. Measured on the simulator: `-openSettings` opens "Settings", Casberi first, then the apps A–Z with their status lines and chevrons.
+
+## §1050j — The rooms tray is a list of rooms with no counts and no Recent, and every glass category bar follows Dock order (user: "ok lets do A but no counts b/c there are always going to be things in each room adn so the counts are just noise", "and lets remove 'recents'", "the addresses should have the same tab bar", 2026-10-02; rules on `design/mockups/rooms-tray-after-merge.html`, supersedes §1013's Recent)
+
+**The tray.** Option A of the mockup: once every category is one room, the tray is the search field, the doors row (Home, Notes, Addresses, Settings), then one row per room — glyph, name, chevron, primary ink (§1050f). No row carries a count: every room always holds something, so a number says nothing. A merged room already draws no marks (§1050e); an unmerged one keeps its marks until its merge lands, so the tray turns into the plain list one category at a time.
+
+**Recent is deleted.** With ten rooms it mostly repeated them. `RecentRooms` and the tray's Recent line go, with the `MarkKey.recent` case and the header's `opens` flag that only Recent used. The Addresses screen's own "Recent" section is a list of people, not rooms, and stays.
+
+**One order.** The order the person sets in Settings › Dock order (`CategoryOrder.current`) orders the tray and every glass category bar: Settings, Markets, Addresses and What this app reaches all sort through `CategoryOrder.sorted`, where they sorted A to Z. A category the order has never heard of sorts last, then A to Z among its kind.
+
+**Checked.** `dock-selftest.sh`, `category-fold-selftest.sh` and `category-order-selftest.sh` pass. On the simulator: the tray draws no Recent line; Addresses' bar reads All · Wallet · Life · Social in Dock order, where A to Z read Life · Social · Wallet.
