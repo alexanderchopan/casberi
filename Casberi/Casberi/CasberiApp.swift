@@ -304,8 +304,8 @@ struct CasberiApp: App {
             }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
-                    // Settings, its own screen (prd §933).
-                    focusedScene?.route.present(.settings)
+                    // Settings, the one list (prd §1050g).
+                    focusedScene?.route.present(.apps)
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }

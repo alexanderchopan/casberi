@@ -872,8 +872,10 @@ struct RootShell: View {
             // Settings is its own screen again since prd §933 (a section of
             // Accounts from §796 to then), so the hook presents it outright;
             // `-openAddresses YES` is the same shape one word over.
+            // Settings is the one list since prd §1050g (Casberi pinned
+            // first, then every app).
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                sceneState.route.present(.settings)
+                sceneState.route.present(.apps)
             }
             if UserDefaults.standard.bool(forKey: "openAddresses") {
                 sceneState.route.present(.addresses)
@@ -2508,9 +2510,8 @@ struct RootShell: View {
         case "account", "apps":
             sceneState.route.present(.apps)
         case "settings":
-            // Settings, its own screen (prd §933; a section of Accounts from
-            // §796 until then).
-            sceneState.route.present(.settings)
+            // Settings, the one list (prd §1050g): Casberi first, then every app.
+            sceneState.route.present(.apps)
         // casberi://note — a new note (prd §982), the Quick Note's door by
         // link: the New tile's own raise, wherever the shell stands.
         case "note":

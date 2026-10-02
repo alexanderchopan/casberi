@@ -133,7 +133,9 @@ struct AppsScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.s6) {
                         // The screen's name, in the content (prd §767).
-                        DSScreenHead(title: Text("Apps"))
+                        // SETTINGS (prd §1050g, §1050h): Apps and Settings
+                        // are one door and one list.
+                        DSScreenHead(title: Text("Settings"))
                             .id(Self.topAnchor)
                         // The search field leads the page (user ruling,
                         // 2026-07-23: "make sure the search bar is at the
@@ -144,6 +146,7 @@ struct AppsScreen: View {
                         // Connect | Manage switcher is deleted, and the
                         // catalogue is the one list.
                         searchField
+                        if casberiShown { casberiRow }
                         sections(proxy)
                     }
                     .padding(.horizontal, DS.Space.s4)
@@ -270,7 +273,7 @@ struct AppsScreen: View {
         .dsSoftScrollEdges()
         // The name is in the content and the way back is the dock's seat, so
         // nothing stands at the top edge (prd §767).
-        .navigationTitle(Text("Apps"))
+        .navigationTitle(Text("Settings"))
         .toolbar(.hidden, for: .navigationBar)
         #if DEBUG
         .navigationDestination(item: $probe) { p in
@@ -576,6 +579,51 @@ struct AppsScreen: View {
     }
 
     // MARK: - Search field (prd §200 — leads the page, not a nav-bar pull-down)
+
+    /// **CASBERI, PINNED FIRST (prd §1050g).** Always on and never
+    /// disconnectable, so it is no catalogue entry: its row opens what
+    /// Settings held (theme, iCloud sync, the Data tray, What this app
+    /// reaches, Diagnostics). A search for "settings" — or for anything that
+    /// page holds — finds it.
+    private var casberiShown: Bool {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return true }
+        let words = ["Casberi", "Settings", "Theme", "iCloud", "Sync", "Data", "Diagnostics",
+                     String(localized: "Settings")]
+        return words.contains { $0.range(of: q, options: [.caseInsensitive, .anchored]) != nil }
+    }
+
+    private var casberiRow: some View {
+        Button {
+            DSHaptic.tap()
+            route.fromAccountsList { route.openCasberiSettings() }
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                Circle()
+                    .fill(DS.brand)
+                    .overlay(
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: DS.Mark.tile * 0.43, weight: .semibold))
+                            .foregroundStyle(Color.white))
+                    .frame(width: DS.Mark.tile, height: DS.Mark.tile)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: "Casberi")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                    Text("Theme, iCloud sync, your data")
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                DSPushRowTrail()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .padding(.vertical, DS.Space.s2)
+        .accessibilityLabel(Text("Casberi settings"))
+    }
 
     private var searchField: some View {
         // The slab rung, spelled as itself. It used to say
@@ -930,11 +978,16 @@ struct AppsScreen: View {
         }
         switch entry.tier {
         case 1:
-            // A seat that needs input goes to its setup page; a one-tap seat
-            // has no page to go to and fires the system ask where it stands.
-            return entry.offer.needsSetup
-                ? { route.openSetup(forOffer: entry.offer.name) }
-                : { attemptConnect(entry.offer) }
+            // **AN APP NOT CONNECTED OPENS ITS PAGE TOO (prd §1050h)**, the
+            // page its Connect stands on; a one-tap seat with no page still
+            // fires the system ask where it stands.
+            if entry.offer.needsSetup {
+                return { route.openSetup(forOffer: entry.offer.name) }
+            }
+            if let destination = BridgeRouter.destination(forOffer: entry.offer.name) {
+                return { DSHaptic.tap(); route.openAccount(destination) }
+            }
+            return { attemptConnect(entry.offer) }
         default:
             return nil   // Soon — the capsule already says it
         }

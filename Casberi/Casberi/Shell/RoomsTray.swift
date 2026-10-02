@@ -514,11 +514,10 @@ struct RoomsTray: View {
                  lit: home) { pick("All") },
             Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
                  lit: notes) { pick(Pinboard.room) },
-            // "Apps", the screen it opens (§1012, renamed §1033): a place,
-            // like its neighbours, never a verb.
-            Door(word: String(localized: "Apps"), glyph: "square.grid.2x2") { connect() },
             Door(word: String(localized: "Addresses"), glyph: "at") { screen(.addresses) },
-            Door(word: String(localized: "Settings"), glyph: "gearshape") { screen(.settings) },
+            // ONE DOOR FOR SETTINGS (prd §1050g): Apps and Settings became one
+            // list — Casberi's own settings pinned first, then every app.
+            Door(word: String(localized: "Settings"), glyph: "gearshape") { screen(.apps) },
         ]
     }
 
@@ -723,13 +722,6 @@ struct RoomsTray: View {
     }
 
     /// Open Accounts on Connect; its switcher holds Manage (§933, §958).
-    private func connect() {
-        DSHaptic.selection()
-        close()
-        route.openConnect = true
-        route.present(.apps)
-    }
-
     /// Open a screen of its own — Settings or Addresses (§933).
     private func screen(_ door: HomeRoute.Node) {
         DSHaptic.selection()

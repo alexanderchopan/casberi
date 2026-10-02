@@ -351,12 +351,19 @@ strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
 grep -q 'SettingsRows()' "$TMP/apps.nc" \
   && { echo "✗ the Accounts screen draws SettingsRows again — Settings is its own screen (prd §933)."; fail=1; }
 grep -rq 'openSettings = ' Casberi/Casberi --include='*.swift' \
-  && { echo "✗ HomeRoute.openSettings is back — the doors present .settings outright (prd §933)."; fail=1; }
-[ "$(grep -c 'route.present(.settings)' "$TMP/root.nc")" -ge 2 ] \
+  && { echo "✗ HomeRoute.openSettings is back — the doors present Settings outright (prd §933)."; fail=1; }
+# SETTINGS IS THE ONE LIST (prd §1050g, §1050h): the deep link and
+# -openSettings present it (`.apps`), Casberi's own page is the list's pinned
+# first row (`.casberi`), and no separate `settings` screen comes back.
+[ "$(grep -c 'route.present(.apps)' "$TMP/root.nc")" -ge 2 ] \
   || { echo "✗ RootShell's settings doors (the deep link, -openSettings) no longer present"; \
-       echo "  the Settings screen (prd §933)."; fail=1; }
-grep -qE '^[[:space:]]*case settings[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
-  || { echo "✗ HomeRoute.Node lost its settings case — Settings is a screen (prd §933)."; fail=1; }
+       echo "  the one Settings list (prd §1050g)."; fail=1; }
+grep -qE '^[[:space:]]*case casberi[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
+  || { echo "✗ HomeRoute.Node lost Casberi's own settings page (prd §1050g)."; fail=1; }
+! grep -qE '^[[:space:]]*case settings[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
+  || { echo "✗ a separate Settings screen is back — Settings is the one list (prd §1050g)."; fail=1; }
+grep -q 'casberiRow' "$TMP/apps.nc" \
+  || { echo "✗ Settings lost its pinned Casberi row (prd §1050g)."; fail=1; }
 grep -qE '^[[:space:]]*case addresses[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   || { echo "✗ HomeRoute.Node lost its addresses case — Addresses is a screen (prd §933)."; fail=1; }
 # THE CATALOGUE DOOR IS DELETED (prd §798, 2026-09-17, user: "you forgot to

@@ -13,7 +13,9 @@ struct SettingsScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                DSScreenHead(title: Text("Settings"))
+                // Casberi's own settings (prd §1050g): the pinned first row of
+                // Settings opens this page, so it is named for the app.
+                DSScreenHead(title: Text(verbatim: "Casberi"))
                 SettingsRows()
             }
             .padding(.horizontal, DS.Space.s4)
@@ -25,7 +27,7 @@ struct SettingsScreen: View {
         .dsSoftScrollEdges()
         // The name is in the content and the way back is the dock's seat, so
         // nothing stands at the top edge (prd §767).
-        .navigationTitle(Text("Settings"))
+        .navigationTitle(Text(verbatim: "Casberi"))
         .toolbar(.hidden, for: .navigationBar)
     }
 }

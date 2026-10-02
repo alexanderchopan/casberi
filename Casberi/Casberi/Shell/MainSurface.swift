@@ -839,7 +839,7 @@ struct MainSurface: View {
         switch node {
         case .apps:
             EmptyView()
-        case .settings:
+        case .casberi:
             SettingsScreen()
         case .addresses:
             AddressesScreen()

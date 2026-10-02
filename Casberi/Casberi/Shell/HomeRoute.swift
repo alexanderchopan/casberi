@@ -32,12 +32,15 @@ final class HomeRoute {
     /// already sitting in the route) is no longer needed — every append is a
     /// real array mutation SwiftUI has never seen before.
     enum Node: Hashable {
+        /// SETTINGS (prd §1050g, §1050h): one list — Casberi pinned first,
+        /// then every app in its category, connected or not. The case keeps
+        /// the name `apps` for the many doors that already present it.
         case apps
-        /// Settings, its own screen again (prd §933). §796 folded it into
-        /// Accounts so the face could toggle one screen; the rooms tray
-        /// (§930) is the menu now, with a door per place, and a switcher may
-        /// only switch views of one thing.
-        case settings
+        /// Casberi's own settings (theme, iCloud sync, the Data tray, What
+        /// this app reaches, Diagnostics), reached from the list's pinned row.
+        /// It was `settings`, its own screen and tray door (prd §933), until
+        /// §1050g made Settings the one list with this page at its top.
+        case casberi
         /// The Addresses directory, its own screen for the same reason (§933;
         /// it was Accounts' fourth section since §916's amendment).
         case addresses
@@ -126,6 +129,12 @@ final class HomeRoute {
     /// Open a shell door (Apps / Settings) so it lands there fresh —
     /// replacing whatever was on the stack, not stacking a second door on
     /// top of one already there.
+    /// Casberi's own settings, from the pinned row at the top of Settings
+    /// (prd §1050g) — beside the list on a pane, pushed on a phone.
+    @MainActor func openCasberiSettings() {
+        place(.casberi)
+    }
+
     @MainActor func present(_ door: Node) {
         path = [door]
     }
