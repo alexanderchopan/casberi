@@ -63624,3 +63624,17 @@ The demo connects seats it pours no rows for: Coinbase, Kraken, Binance and Gemi
 **Follow-up, not done.** The better demo pours rows for the exchanges, which are worth showing; until then they are left out rather than shown empty.
 
 **Checked.** The app builds. On the simulator with the demo: the Wallet menu drops the four exchanges and keeps Safe, Privy, Wise, Acorns, Apple Wallet, Gnosis Pay and MetaMask Card; the tray's Wallet row reads +13 where it read +17, Testnets keeps both networks; Coinbase picked by launch argument says "Nothing from Coinbase yet".
+
+## §1065 — Every app in the demo has something behind it, and an app picked in a merged room keeps its page (user: "we need all apps to have demo data", "do we need to go room by room?", "or can you sweep that and do it", 2026-10-02) — BUILT
+
+Amends §1064. Swept, not room by room: the demo's 92 connected seats against the sources it pours. Five had no rows. Hegotá Frames reads live and never lands any (§548). The other four are the exchanges, and an exchange lands no rows in the real app either — it reads balances only. So the defect was the page, not the demo.
+
+**A picked app keeps its page.** `keepsChromeWhenEmpty` now holds for an app picked from a merged room's menu (§959's reason: the generic state took the control that could pick another). Coinbase picked draws its $6K box, the tiles and the menu, where it drew "Nothing from Wallet yet" with no way back but Show everything. That was true for real users too.
+
+**The demo's filter counts money.** §1064's `seatShows` now also passes a seat with a holder in the total (an exchange), so the four exchanges are back in the Wallet's menu and the tray (+18).
+
+**The agents.** `agentChats()` pours a conversation for every keyed `AgentProvider`, but six of them (Venice, Bankr, OpenRouter, Grok, NEAR AI, Muse) had no seat, so the Agents room's menu never listed them. They are seats now ("Key on this phone"). Apple Intelligence is no provider, so it had neither; it gets a seat and one conversation. `demo-selftest.py` check E skips the six (`PROVIDER_ROW_SEAT`: no literal names them; check O proves the loop).
+
+**Not done.** ETH Validators is a catalogue seat the demo does not connect, because its fixture holds no validators. Coinbase's box shows its figure over an empty well; its holdings could fill it.
+
+**Checked.** The app builds; `demo-selftest.py` and its self-test. On the simulator after a re-pour: Coinbase's page, Agents +7 in the tray where it read +1, Apple Intelligence's chat in the Agents list.
