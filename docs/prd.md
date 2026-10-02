@@ -63580,3 +63580,17 @@ An unlit You door is `surfaceRaised` charcoal, the categories' own tile, with it
 **Known, not fixed.** The box is one fixed size (§760, §904), and Privacy Pools' full reading is taller: Respond on 0xBow and the deposits' line clip below the legend. Left for a ruling.
 
 **Checked.** The app builds. `wallet-rooms-selftest.sh` (the scope checks and their six mutations replaced by guards that the head draws both readings and no tiles), `github-rowtag-selftest.sh` (the rail checks and two mutations out), `category-fold-selftest.sh` (two rails, not four), `tile-glyph-audit.py`, every `*-audit.py`, `room-perf-`, `feed-reading-`, `social-room-`, `room-heads-`, `dock-`, `feed-walk-selftest.sh`. Not the full `verify.sh` (user: its Mac leg opens the Mac app on their screen; it runs at ship time). On a private simulator with the demo: Wallet with 0xBow picked draws one head, Shielded and Review in it, then the tiles and the menu; with Gnosis Pay picked, one spending head where there were two.
+
+## §1061 — The tray's rows are a name and a run of icons: the category's own disc first, its three most-opened apps, "+N"; You is one row of four doors (user: "what if the icon for the category is the first icon where the apps are now … that way if you touch that icon you go to the room", "put home notes and settings in a row together and have a 'You' category again", "do plain disc and build it", 2026-10-02) — BUILT
+
+Amends §1058's rows. §1058 drew each category as a round glyph and its name, which says nothing about what is inside — "I can imagine not knowing whether to go to day life or work" — and 1.0's wall of marks said everything but was a wall. After nine mocks (1.0, a narrow and a full-width list of apps, folders, most-used, search, open-in-place, You as a row; full width "cumbersome", search "frustrating", an extra tap to open a row rejected) the user's own answer: keep the narrow card, move the category's glyph INTO the run of app icons as its first disc.
+
+**A row.** The name on the left; then, at one 30pt size, the category's glyph on a plain disc, its three apps you open most (`ChipMemory`, which counts every tray pick, then the room's A–Z), and "+N" for the rest, so three apps never read as all there is. The name, the category's disc and "+N" land in the category's room on All (the pick an app made earlier is dropped); an app lands in the room scoped to it, through `sourceRequest` and `RoomAccounts.host(ofSource:)`, the hop every door takes. A category that is not one room shows its rooms; one whose only room is itself (Markets) shows its disc alone. The standing category's disc is a step lighter with its glyph filled; a broken app turns the category's glyph the attention hue and its label says so.
+
+**The disc stays plain.** A pink ring was mocked beside it and declined: the ring is your face's (the You row's, the button that opens the tray), and on ten categories it would stop meaning you.
+
+**You.** One row: the word, then Home, Notes, Addresses and Settings as discs, glyphs in the brand pink (§976a), the standing door's disc white (§1053). You is no room, so its word is a heading. Addresses stays a door until it moves into Settings, which was floated and not ruled.
+
+**The card** widens from 70% to 73% of the screen (cap 300pt) so "Testnets" fits beside five discs.
+
+**Checked.** The app builds; `category-fold-selftest.sh`, `dock-selftest.sh`, `ds-template-audit.py`. On the simulator with the demo: every row draws its disc, apps and count; Linear opens Work scoped to Linear.
