@@ -1422,7 +1422,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1070 — A post's cover never prints its link
 - §1071 — One 30pt icon for rows, the tray and the account list
 - §1072 — Respond on 0xBow stands under Privacy Pools' headline
-- §1072 — The app sweep
+- §1073 — The app sweep
 
 ## Dead rulings → what replaced them (generated)
 

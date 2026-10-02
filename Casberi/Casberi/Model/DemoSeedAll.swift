@@ -4940,7 +4940,7 @@ enum DemoSeedAll {
     /// address to find and shift the wallet curve it seeds below — a second
     /// copy of the literal is how that drifts silently.
     static let demoWallet = "0x1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
-    /// The Logos account the demo watches (prd §1072) — a real-shaped public
+    /// The Logos account the demo watches (prd §1073) — a real-shaped public
     /// id, the one `logos-selftest.sh` parses.
     static let demoLogosAccount = "CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r"
 
@@ -5174,7 +5174,7 @@ enum DemoSeedAll {
         // sweep would answer with an empty account and draw the seat as a
         // room with nothing in it.
         FramesLiveState.seedDemo()
-        // 5c' · Logos' watched account (prd §1072): the rows below name it
+        // 5c' · Logos' watched account (prd §1073): the rows below name it
         // (`CbgR…Sr2r`), and with no account watched the room's box said
         // "No account watched yet." over its own moves. A fixture balance,
         // never a read.

@@ -63714,7 +63714,7 @@ Amends §1017. Rows and the face button had been one 46pt size since §1017; the
 
 **Checked.** The app builds; `wallet-rooms-selftest.sh` gains an order guard (the door ahead of the readings, drawn once). On a private simulator with the demo, Wallet with 0xBow picked: the headline, Respond on 0xBow, then what is in the pools and the review split.
 
-## §1072 — The app sweep (user: "ok do it", 2026-10-02) — BUILT
+## §1073 — The app sweep (user: "ok do it", 2026-10-02; renumbered from §1072, taken by a peer) — BUILT
 
 Every app the demo connects, picked from its room's menu by launch hook (`-walletScope`, `-roomScope`): 96 views across nine categories. Most drew what they should. Fixed:
 
