@@ -88,9 +88,19 @@ struct PrivacyPoolsRoomCard: View {
     /// below are individually tappable, so the lead's own sentence carries its
     /// door and there is no face-wide gesture. A reading with nothing in it
     /// draws no block.
+    ///
+    /// **THE RESPOND DOOR STANDS UNDER THE HEADLINE (prd §1072, user: "1").**
+    /// It ended the Review reading, and the box is one fixed size (§760), so
+    /// with every reading drawn it clipped below the legend — the one thing
+    /// to tap on the day a deposit needs your proof. Under the sentence that
+    /// says so, nothing above it can push it out.
     var body: some View {
         DSRoomChassis.Head(lead: .sentence(PrivacyPoolsRoom.headline(room)), door: headDoor,
                            footnotes: [.quiet(PrivacyPoolsRoom.activityNote(room))]) {
+            // Only for the state that needs a person — a standing "Open 0xBow"
+            // link would be chrome on every other room state, where there is
+            // nothing to respond to.
+            if room.needsYou != nil { DSRoomChassis.Block { respondRow } }
             if shieldedHasContent { DSRoomChassis.Block { shieldedBody } }
             if reviewHasContent { DSRoomChassis.Block { reviewBody } }
         }
@@ -151,13 +161,6 @@ struct PrivacyPoolsRoomCard: View {
         }
         legend
             .padding(.top, DSRoomChassis.headBlockGap)
-        // Only for the state that needs a person — a standing "Open 0xBow"
-        // link would be chrome on every other room state, where there is
-        // nothing to respond to.
-        if room.needsYou != nil {
-            respondRow
-                .padding(.top, DSRoomChassis.headBlockGap)
-        }
     }
 
     // MARK: - The split

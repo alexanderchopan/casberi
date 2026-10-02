@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1200 of 1258 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1201 of 1259 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1409,7 +1409,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows…
 - §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu
 - §1059 — The folded rooms' own views are deleted: the kind tiles, Reminders' and Mail's tiles, the Calendar agenda, and every…
-- §1060 — The rest of the folded rooms' controls are deleted: GitHub's and Pinterest's scope rails and Privacy Pools' tiles, wh…
+- §1060 — The rest of the folded rooms' controls are deleted: GitHub's and Pinterest's scope rails and Privacy Pools' tiles, wh… (amended by §1072)
 - §1061 — The tray's rows are a name and a run of icons: the category's own disc first, its three most-opened apps, "+N"; You i…
 - §1062 — A swipe right on Home opens the tray (a user: on Home "there is nothing to swipe right onto", wishing it raised the t…
 - §1063 — The Wallet category wears the dollar sign
@@ -1421,6 +1421,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1069 — A Safe leads with its balance
 - §1070 — A post's cover never prints its link
 - §1071 — One 30pt icon for rows, the tray and the account list
+- §1072 — Respond on 0xBow stands under Privacy Pools' headline
 
 ## Dead rulings → what replaced them (generated)
 

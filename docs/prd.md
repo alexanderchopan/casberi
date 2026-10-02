@@ -63707,3 +63707,9 @@ Amends §1017. Rows and the face button had been one 46pt size since §1017; the
 - The face button keeps `DS.Face.seat` (46): it is the one navigation control, not a list icon. `shelf` (face rails, sheet heads) and `Mark.tile` (catalogue cells) keep it too; they are standalone, not rows.
 
 **Checked.** The app builds; `feed-seam-selftest.sh`, `dock-selftest.sh`, `design-ramp-audit.py`, `ds-template-audit.py`, `lead-body-audit.py`, `row-cost-audit.py`. Before and after on the simulator: Home, Wallet, Social and the tray.
+
+## §1072 — Respond on 0xBow stands under Privacy Pools' headline (user: "1", 2026-10-02; amends §1060)
+
+§1060 drew every Privacy Pools reading in the Wallet's box, and the box is one fixed size (§760, §904), so the respond door at the end of the Review reading clipped below the legend: the one thing to tap on the day a deposit needs your proof. It is the first block now, directly under the headline that says so, and still drawn only while a deposit needs you. The deposits' line (the footnote) and the legend's tail still give way to the box, which the legend counts ("N more").
+
+**Checked.** The app builds; `wallet-rooms-selftest.sh` gains an order guard (the door ahead of the readings, drawn once). On a private simulator with the demo, Wallet with 0xBow picked: the headline, Respond on 0xBow, then what is in the pools and the review split.

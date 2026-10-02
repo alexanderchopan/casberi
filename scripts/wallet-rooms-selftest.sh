@@ -234,6 +234,15 @@ grep -q 'if shieldedHasContent { DSRoomChassis.Block { shieldedBody } }' "$CARD_
   || { echo "✗ the head no longer draws the Shielded reading — what is in the pools is on no screen (§1060)"; exit 1; }
 grep -q 'if reviewHasContent { DSRoomChassis.Block { reviewBody } }' "$CARD_STRIPPED" \
   || { echo "✗ the head no longer draws the Review reading — where each deposit stands is on no screen (§1060)"; exit 1; }
+# THE RESPOND DOOR LEADS THE BLOCKS (prd §1072). The box is one fixed size, so
+# anything after the readings clips — and this is the one thing to tap on the
+# day a deposit needs your proof.
+_respond=$(grep -n 'if room.needsYou != nil { DSRoomChassis.Block { respondRow } }' "$CARD_STRIPPED" | cut -d: -f1)
+_shielded=$(grep -n 'if shieldedHasContent { DSRoomChassis.Block { shieldedBody } }' "$CARD_STRIPPED" | cut -d: -f1)
+[[ -n "$_respond" && -n "$_shielded" && "$_respond" -lt "$_shielded" ]] \
+  || { echo "✗ Respond on 0xBow no longer stands under the headline, ahead of the readings — the box clips it (§1072)"; exit 1; }
+[[ $(grep -c 'respondRow' "$CARD_STRIPPED") -eq 2 ]] \
+  || { echo "✗ the respond door is drawn in more than one place, or nowhere (§1072)"; exit 1; }
 # PRESENCE AND RENDERING ARE ONE QUESTION, spelled the same way in both files.
 # §483 shipped a Risk chip that opened an empty page because they were spelled
 # differently two files apart; these are the same two expressions.
