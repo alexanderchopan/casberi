@@ -423,6 +423,9 @@ marks chronological position within the pair.
 | §455 (a board that narrows the RSS room to one feed) | the RSS room narrowed to a single feed | amended by §1050d — Reading's menu lists apps only; per-feed narrowing goes with the RSS room |
 | §995 (the music rooms scope Activity · Albums · Artists · Songs) | the music rooms carried four ordering tiles | amended by §1050d — dropped; Media has no tiles |
 | §1048c / §1049 (a merged room's tray circles open its apps' settings) | the tray drew each merged room's apps as circles that opened their account pages | reversed by §1050e — the tray is doors and categories; an app's settings open from the sliders disc of its room, scoped to it |
+| §1040 (a connected row in Apps lands in its room) | the row's tap set the room and scoped it | reversed by §1050f — the row opens the app's account page; settings live in Apps |
+| §1033 / §1050e (the room's sliders disc) | a disc beside a room's name opened its account page (§1050e: only while one app is picked) | reversed by §1050f — no room draws the disc; Apps is the one door to an app's settings |
+| §1048c (a merged category's tray header in `DS.tint`) | the header was tinted to read as a door beside settings circles | amended by §1050f — primary ink; with no circles the tint separated nothing |
 
 ## §1 — Thesis
 
@@ -63355,4 +63358,15 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 **The alternative, named and not taken.** Settings return to the Apps catalogue: a connected row opens its account page instead of its room, reversing §1040. Kept in reserve if the scoped disc proves too hidden.
 
 **Open.** With no marks, the tint no longer separates two kinds of tap in a merged category's entry. Whether the entry keeps `DS.tint` is not ruled.
+
+## §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's entries are not tinted (user: "no they shouldn't be blue anumore", then of "the slider in the room or settings w/ the list of apps", "yes do it", 2026-10-01; reverses §1050e's disc and §1040; amends §1033, §1048c and §1050e)
+
+**Why Apps over the scoped disc.** The disc was conditional: it stood only after a pick in the account menu, so a person on All looking for Safe's settings saw nothing to press. Apps gives one clean split. The tray goes places; Apps manages what you connected (connect, disconnect, configure) on one screen, as iOS keeps an app's settings in one list. A room carries content only.
+
+**The ruling.**
+- **A connected row in Apps opens its account page** (reverses §1040, whose tap landed in the room). After the merges a room is reached by its category in the tray, not app by app, so the row has no room left to stand for.
+- **No room draws a sliders disc** (amends §1033, and replaces §1050e's scoped disc). This holds for unmerged rooms too, so there is one door to an app's settings, never two (§190).
+- **The tray's category entries wear the primary ink, not `DS.tint`** (amends §1048c). With no marks beside them the tint separated nothing.
+
+§1050e's tray stands: the doors row and the categories, and an unmerged category keeps its marks, each landing in that app's room, until it merges.
 

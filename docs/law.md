@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1169 of 1226 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1169 of 1227 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1364,14 +1364,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1030 — GitHub's next step after a connect is a tray, and watching stands in the room (amended by §1031)
 - §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is
 - §1032 — An account page's commit is a check INSIDE the well, where Paste is
-- §1033 — A room's account door stands beside its name, Accounts is Apps with no Manage, and a tray mark has no hold (amended by §1036, §1040, §1045)
+- §1033 — A room's account door stands beside its name, Accounts is Apps with no Manage, and a tray mark has no hold (amended by §1036, §1040, §1045; part superseded by §1050f)
 - §1034 — Logos: the field reads what people actually paste, and turns a public key into its account
 - §1035 — Logos: a reset is detected by its first block and said, and a network account says what it is
 - §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
 - §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048)
-- §1040 — A connected row in Apps that has a room is still a status, and tapping it lands in its room
 - §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re…
 - §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
 - §1043 — `enrichedText` is the sheet's body and never a row's line; provider-authored display copy stays on `summary` and `pos…
@@ -1382,20 +1381,21 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050)
 - §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats
 - §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e)
-- §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (part superseded by §1050e)
+- §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
 - §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b; part superseded by §1050e)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a)
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
 - §1050b — Photos moves from Life to Media
 - §1050c — Life is one list by day, with no tiles
 - §1050d — Reading's menu lists apps, and the music shelf's orders are dropped
-- §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it
+- §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it (part superseded by §1050f)
+- §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's…
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1040→§1050f
 
 ## Renumbered (generated)
 
