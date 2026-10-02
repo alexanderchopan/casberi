@@ -132,7 +132,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The Wallet's tiles are Home · Cards · Coming up · Holdings · Permissions · Positions · Risk · Follow. Cards is every card's spends (`WalletCards`), counted per currency and never summed; NFTs read as rows under Holdings, and their drawing is deleted (§1048a).
 - The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b). An app that had a room head draws it in the box when picked (Safe's queue and co-signers, Privacy Pools' errands, a card's spending), inside the box's own well (§1048d).
 - The rooms tray is the doors row and one entry per category (glyph and word, primary ink), which opens its room. A merged category draws no app marks; an unmerged one keeps its marks, each landing in that app's room, until it merges, keyed on `RoomAccounts.mergedRooms` (§1050e, §1050f, §1048c).
-- A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Coming up leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under "Now" (§1048c).
+- A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Coming up leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under "Now" (§1048c). Rocket Money's next charges (a future record date) and Peer's settling sales (due at the escrow's 6.5h deadline, removed when the outcome lands) are dated items there (§1048f).
 - Markets is its own category; Testnets (Hegotá Frames, Logos, `flask`) is its own, never inside Wallet (§1050, §1050a).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1174 of 1232 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1175 of 1233 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1383,6 +1383,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e)
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
 - §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room…
+- §1048f — One Wallet: Rocket Money's next charges and Peer's settling sales reach Coming up; Bitrefill folds in
 - §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a; part superseded by §1050e)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a)
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
