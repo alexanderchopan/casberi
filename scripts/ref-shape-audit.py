@@ -77,7 +77,14 @@ CONSUMER = re.compile(r'hasPrefix\(\s*"([^"\n]+)"\s*\)')
 # justification has been removed is exactly as dead as a consumer whose producer
 # has, and it fails here rather than sitting as a comment nobody re-reads. The
 # namespace is now governed by `source-alias-audit.py`'s checks H and I instead.
-KNOWN_UNPRODUCED = {}
+KNOWN_UNPRODUCED = {
+    # `BlueskyIngest.followFeed` reads what the PERSON pasted — a feed's
+    # at:// URI — not a stored ref, so nothing in the tree produces it by
+    # design. Until prd §1070 the demo's Bluesky posts stored raw at:// URIs
+    # as content, which this audit counted as a producer; real ingest stores
+    # the bsky.app permalink, and so does the demo now.
+    "at://": "a pasted Bluesky feed URI, the person's input, never a stored ref (prd §1070)",
+}
 
 
 def strip_comments(src):

@@ -886,7 +886,9 @@ struct FeedLedeCard: View {
     /// A line that is only an address — nothing a person would read.
     static func isBareLink(_ line: String) -> Bool {
         let t = line.trimmingCharacters(in: .whitespaces)
-        return !t.contains(" ") && (t.hasPrefix("http://") || t.hasPrefix("https://") || t.hasPrefix("at://"))
+        // By scheme, not by prefix: a web link or an AT Protocol URI.
+        guard !t.contains(" "), let scheme = URL(string: t)?.scheme?.lowercased() else { return false }
+        return ["http", "https", "at"].contains(scheme)
     }
 
     /// More than the largest spelling's six `body17` lines can draw.
