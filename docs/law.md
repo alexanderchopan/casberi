@@ -53,7 +53,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The tray's search narrows the grid in place. The search and the You row stay pinned above the scroll (§1015). A mark has no hold menu (§1033).
 - You doors, in this order: Home, Notes, Apps, Addresses, Settings (§1012, renamed by §1033). While the tray is up, the face shows the octopus (§1009).
 - A category shows in the tray only while it holds a connected seat (§977).
-- No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). A room's account door is a 46pt `slider.horizontal.3` disc beside the room's name, scrolling with the list (§1033).
+- No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). No room draws an account door; an app's settings open from its row in Apps (§1050f).
 - On a pushed screen the dock's seat is the back door. The system back button is hidden at the resolver, and the edge swipe goes through `DSSwipeBack` (§767). Content comes to rest clear of the seat via `.dsSeatClearance()` (§829).
 - The keyboard covers the dock and never lifts it (§865).
 - Settings and Addresses are pushed screens of their own (§933). Addresses is a directory, never a room, and the Contacts room is retired (§916 amendment).
@@ -104,7 +104,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - A key is connected in one place, the seat's own page. Settings holds no key (§871).
 
 ### 8. Catalogue (Apps)
-- Apps is the whole catalogue, with no Manage and no switcher. A connected row with a room is a status: no chevron, and its tap lands in its room (§1033, §1036, §1040). A connected seat with no room keeps its door (§1033, §1036).
+- Apps is the whole catalogue, with no Manage and no switcher. A connected row opens that app's account page: Apps is the one door to an app's settings (§1050f). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns, Rocket Money and NerdWallet are on the Wallet shelf (§780c).
 - Markets is one app: Tokens plus Stocktwits' watched stocks. Every catalogue category is a company pack: Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted (§1000).
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
@@ -131,7 +131,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The Wallet has no Accounts or Activity tile: the menu under the tiles picks the account, and Home's list is only what happened, one row per move in time, with no in/out blocks (§942, §1039). What's ahead is its own tile, Coming up, soonest first (§1041). The connections reading is deleted with its model (§1041).
 - The Wallet's tiles are Home · Cards · Coming up · Holdings · Permissions · Positions · Risk · Follow. Cards is every card's spends (`WalletCards`), counted per currency and never summed; NFTs read as rows under Holdings, and their drawing is deleted (§1048a).
 - The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b).
-- In the rooms tray a category's header (glyph and name, in blue) opens its room, and an app's circle opens that app's settings; blue is for the headers alone. Built: keyed on `RoomAccounts.mergedRooms`, so an unmerged category keeps today's tray (§1048c).
+- The rooms tray is the doors row and one entry per category (glyph and word, primary ink), which opens its room. A merged category draws no app marks; an unmerged one keeps its marks, each landing in that app's room, until it merges, keyed on `RoomAccounts.mergedRooms` (§1050e, §1050f, §1048c).
 - A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Coming up leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under "Now" (§1048c).
 - Markets is its own category; Testnets (Hegotá Frames, Logos, `flask`) is its own, never inside Wallet (§1050, §1050a).
 - NFTs show only full rows of art, then one row per picked collection (§943).
@@ -213,7 +213,7 @@ found outgrown with no phrase the generator can read goes into that table, not h
 
 ## Conflicts to resolve
 
-None open. The four recorded here on 2026-10-01 were ruled the same day: `enrichedText` is the sheet's body (§1043), the phone draws no capsule beside the face (§1044), "Start here" leads Apps while nothing is connected (§1045), §1006's items 4 and 7 are declined (§1046); and a connected row in Apps opens its room (§1040).
+None open. The four recorded here on 2026-10-01 were ruled the same day: `enrichedText` is the sheet's body (§1043), the phone draws no capsule beside the face (§1044), "Start here" leads Apps while nothing is connected (§1045), §1006's items 4 and 7 are declined (§1046); and a connected row in Apps opens its room (§1040, since reversed by §1050f).
 
 <!-- law-digest: everything below this line is generated by scripts/law-digest.py; do not edit by hand -->
 
