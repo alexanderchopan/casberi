@@ -63673,3 +63673,17 @@ Every category, every Wallet tile and a dozen app picks, captured on the demo th
 **Also seen.** A picked Safe's Home list draws the empty skeleton: its rows are signatures still ahead, which Home ("only what happened", §1039) leaves to Coming up.
 
 **Checked.** The app builds; `ds-template-audit.py`, `lead-body-audit.py`, `status-ink-audit.py`, `row-cost-audit.py`, `plate-audit.py`, `dead-closure-audit.py`, `design-ramp-audit.py`. Re-captured on the simulator: Coinbase Home and Risk, Wise, Apple Wallet, Stripe in Work, Markets.
+
+## §1068 — Social is one room (user: "yes we need to merge social", 2026-10-02) — BUILT
+
+Found by §1067's sweep: §1048–§1057 merged every category but Social, which still landed in its last venue (Telegram). Built on Media's pattern: `RoomAccounts.socialRoom` with the category's catalogue seats (X, Instagram, TikTok, Snapchat, Telegram, Farcaster, Bluesky, Nostr), so the tray's Social row, the swipe card and the Accounts pill (§1066) follow with nothing added. The room leads with its newest thing (`SocialRoom.leadsWithNewest`, now also true of the merged room, §821's rule), draws each network's rows in their own anatomy (§489's `rowKind`, by the row's source) and has no tiles: a social room has no verb (the read-only rulings). `RoomAccountsTests` now expects Social to open its room.
+
+**Not done.** Threads fold per network only inside a network's own room (`foldsThreads` reads the room's source), so the merged room shows a self-reply run unfolded; the person face row (§959) belonged to Farcaster, Bluesky and Nostr's own rooms and does not stand in the merged one.
+
+**Checked.** The app builds; `social-room-selftest.sh`, `category-fold-selftest.sh`, `source-alias-audit.py`. On the simulator with the demo: Social with Accounts, then X, Bluesky, Instagram and Telegram picked, and the tray.
+
+## §1069 — A Safe leads with its balance (user: "Safe should still show balance on home shouldn't it?", 2026-10-02) — BUILT
+
+A Safe picked in the Wallet led Home with its waiting signatures and listed an empty skeleton under the tiles. A Safe is an account: Home now leads with what it holds, and the signatures stand in Coming up, where they already were. Its money is what the detected Safe addresses hold (`SafeBridge.detectedAddresses`, `WalletPortfolio.scoped(toAddresses:)`), sliced in both places the Wallet slices for an app (`FeedScreen.slice(_:for:)`). The crown's order for any picked app is now money, then the app's head, then its newest thing (§1067), so a card seat (no money) keeps its spending head and an exchange its holdings.
+
+**Checked.** The app builds; `wallet-viz-selftest.sh`, `wallet-total-audit.py`. On the simulator with the demo: Safe picked reads $4.2K with its map, its Coming up lists the signatures; Gnosis Pay keeps its spending head.
