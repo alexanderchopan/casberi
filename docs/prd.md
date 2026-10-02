@@ -63737,3 +63737,18 @@ One thing opened per category and per kind (`-openThing`), 27 sheets: an event, 
 **Seen and left.** The demo's YouTube and RSS items carry no link, so their sheets offer no Open; real ones carry one (`empty-door-audit.py` holds the bridges to it). "Send to Reminders" on a note is the standing hand-off (`Verbs.swift`), not a write. A Linear issue's sheet says its state twice (the stamp and the line under the title).
 
 **Checked.** The app builds; `money-receipt-selftest.sh`. On the simulator: the Gnosis Pay spend's sheet reads "Spent with Gnosis Pay".
+
+## §1075 — The tile-action sweep (user: "yes do it", 2026-10-02) — BUILT
+
+Every verb tile, tapped on the simulator with the demo:
+
+- **Day → New** offers Event and Email (the makes a connected seat can hand off to); Event opens Apple's Calendar editor.
+- **Agents → New** with no pick asks "Start a conversation with" over the nine answering agents; picking Claude opens an empty thread with the Claude pill and its Ask field.
+- **Work → Watch** offers GitHub, npm, PyPI and Hugging Face; GitHub raises its watch tray (§1031).
+- **Wallet → Follow** pushes the Wallet's account page on its paste-an-address field.
+
+Fixed: **the agent thread's Ask field** sat bottom-aligned with no inner padding, its placeholder on the well's lower-left corner. The field now stands `s4` inside the well's edge and centred on the 44pt send target's line.
+
+**The Mac.** The Catalyst build compiles and `mac-parity-audit.py` passes; the Mac app was not launched (user: its leg opens the app on their screen).
+
+**Checked.** The app builds for iOS and Mac Catalyst. On the simulator: each verb above, and the Ask field after the fix.
