@@ -443,7 +443,7 @@ text, and it is the one place a model belongs here:
   `basenames` record filed as `.basename`, a 429 read as throttled, a 200 that is not an array
   read as "shape not readable" (§780b's honesty rule), never a value logged.
 - Existing audits that must stay green and will bite: `network-reach-audit.sh` (the new host),
-  `room-kind-tiles-selftest.sh` (four glyph constants), `feed-row-skeleton-audit.py` (the row draws
+  `tile-glyph-audit.py` (four glyph constants), `feed-row-skeleton-audit.py` (the row draws
   no age), `plate-audit.py`, `footnote-audit.py` (one sentence in the room, none), `day-divider-audit.py`
   (`dated: false`), `swiftdata-liveness-audit.py` (the With-you list is a `ForEach` over a derived
   `[Thing]` — hold IDs, refetch), `defaults-lock-audit.py`, `feed-walk-selftest.sh` (a people row

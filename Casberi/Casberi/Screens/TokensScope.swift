@@ -17,7 +17,7 @@ struct TokensScope: DSTileScope {
 
     var label: String { category ?? String(localized: "Watchlist") }
 
-    var glyph: String { category.map(CategoryFold.glyph(for:)) ?? "eye" }
+    var glyph: String { category.map(CategoryFold.glyph(for:)) ?? ScopeTileGlyph.watch }
 
     var summary: String {
         guard let category else { return String(localized: "The tokens you watch") }

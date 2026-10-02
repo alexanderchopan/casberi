@@ -521,11 +521,6 @@ struct FeedScreen: View {
     /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
     @State var showTranslate = false
     @State var translateText = ""
-    @State var staleExpanded = false
-    /// The Calendar room hides what's already happened (user, 2026-07-27) —
-    /// this is the disclosure that brings it back. Collapsed by default; see
-    /// `calendarSections`.
-    @State var pastEventsExpanded = false
     @State var blockStream = GenStream()
     @Bindable var wallet = WalletStore.shared
 
@@ -1049,10 +1044,9 @@ struct FeedScreen: View {
         // before `keepsChromeWhenEmpty` is ever consulted.
         // The Notes room is never replaced either (prd §969, §979): its New
         // tile is how an empty one stops being empty, and the generic state
-        // told a first-time writer to open the catalog instead. Nor is a
-        // connected Reminders room (prd §993).
+        // told a first-time writer to open the catalog instead.
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
-            && !Pinboard.isPinnedRoom(source) && !connectedHoldsLead {
+            && !Pinboard.isPinnedRoom(source) {
             Group { emptyState }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -1126,8 +1120,7 @@ struct FeedScreen: View {
         // just see a black screen"*. `LiveRoomSources`' own doc names this
         // exact shape — it is why Frames and Logos each have an arm above
         // rather than a flag.
-        } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
-                    || connectedHoldsLead {
+        } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source) {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
@@ -1186,19 +1179,12 @@ struct FeedScreen: View {
     /// its rows are always zero) — this is that reasoning applied to the rooms
     /// that land rows but can legitimately have none of them in view.
     private var keepsChromeWhenEmpty: Bool {
-        // A picked kind tile is this room's navigation too (prd §815):
-        // the tiles stay, and say "nothing here" under themselves.
-        roomKindPick != .all
-            // **AN AGENT ROOM'S TILES ARE HOW IT STOPS BEING EMPTY (prd §841).**
-            // Without this the generic state replaces the whole room the
-            // moment its last conversation is deleted, taking the Chat tile
-            // with it — so the one control that could start another is gone,
-            // and the room is the dead end §538 was written about. It is NOT
-            // covered by `roomKindPick` above: that returns `.all` for every
-            // room `RoomKindTiles.Room(source:)` does not know, which is every
-            // agent room by construction — the very condition that routes them
-            // to `agentRoomSections`.
-            || agentRoomShown
+        // **AN AGENT ROOM'S TILES ARE HOW IT STOPS BEING EMPTY (prd §841).**
+        // Without this the generic state replaces the whole room the
+        // moment its last conversation is deleted, taking the Chat tile
+        // with it — so the one control that could start another is gone,
+        // and the room is the dead end §538 was written about.
+        agentRoomShown
             // A person, repo or board picked from the control IN the room
             // (prd §959): the generic state would take that control with it,
             // and its one door leaves the room.
@@ -1207,12 +1193,6 @@ struct FeedScreen: View {
             // (prd §979, §980): an empty Pinned or Folders pick keeps them,
             // and Folders keeps its New folder row under them.
             || Pinboard.isPinnedRoom(source)
-            // The Reminders room's tiles, for the kind tile's reason, and its
-            // empty list, which is a state of the list (prd §993).
-            || (source == "Reminders" && chrome.remindersScope != .all)
-            // And the mail rooms' Attachments pick (prd §1019).
-            || (MailScope.rooms.contains(source) && chrome.mailScope != .all)
-            || connectedHoldsLead
     }
 
     /// The day sections of a room that has rows, plus its closing line.
@@ -1265,29 +1245,17 @@ struct FeedScreen: View {
                 // lives on Home too (same-day amendment) — in Feed it shows
                 // only in the Wallet chip's own shape, never leading All.
                 shapedSections(visible, nextEventID: nextID)
-                // No closing line in the Reminders shape: its state groups
-                // deliberately render a subset (Done shows same-day only), so
-                // a `visible`-count claim would disagree with the rows above.
-                // Wallet joined it (2026-07-20) for the same reason — it
-                // previews five and hands off to the history page, so
-                // "that's everything · 131 transactions" under five rows was
-                // a flat lie. Its own "See all transactions · 131" row is
-                // the honest close. Calendar joined them conditionally
-                // (2026-07-27): with past events collapsed the room shows
-                // a subset too, and its disclosure row ("Show 12 past
-                // events") is that subset's honest close — expanded, the
-                // room is whole again and the line comes back.
+                // No closing line in the Wallet (2026-07-20): it previews
+                // five and hands off to the history page, so "that's
+                // everything · 131 transactions" under five rows was a flat
+                // lie. Its own "See all transactions · 131" row is the honest
+                // close. (Reminders' state groups and Calendar's collapsed
+                // past opted out for the same reason, and left with their
+                // rooms, prd §1059.)
                 // "That's everything" is a CLAIM, so it waits until the
                 // room really is whole (prd §264). While a window is open
                 // the `olderRow` is what sits at the bottom instead.
-                // **A SCOPE WITH NO ROWS MUST NOT CLAIM TO BE CAUGHT UP
-                // (prd §482, §486).** "You're all caught up" under a Shielded
-                // card with no stream on screen is a claim about a list that is
-                // not on screen — the §83 fake status. Wallet sidesteps the
-                // same problem by opting out of the footer entirely.
-                if shape != .reminders && shape != .wallet
-                    && privacyPoolsShowsRows(visible)
-                    && !hidesPastEvents(visible) && !memo.windowHasMore {
+                if shape != .wallet && !memo.windowHasMore {
                     caughtUpFooter(visible)
                 }
     }

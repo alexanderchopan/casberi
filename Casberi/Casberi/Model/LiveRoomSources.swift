@@ -63,33 +63,14 @@ enum LiveRoomSources {
         AgentProvider.allCases.contains { $0.agent == source }
     }
 
-    /// **A CONNECTED SEAT WHOSE EMPTY ROOM IS A REAL STATE KEEPS ITS ROOM
-    /// (prd §998).** Calendar lands only what is ahead and prunes what passed,
-    /// and Reminders only what is open, so a quiet month or a finished list
-    /// holds zero rows — and the corpus walk gave the seat no room at all
-    /// while Manage said Connected (user: *"apple calendar isn't showing in my
-    /// app"*, then *"we want there always to be a room head and a room"*).
-    /// Both rooms already draw their lead over nothing (§993, §994); this is
-    /// the dock's half, so the room can be reached.
-    ///
-    /// The mail rooms join (prd §1019): an empty inbox is a real state of a
-    /// mailbox, and the room's New tile stands under the held lead whether or
-    /// not a mail has landed — the Reminders shape (§993).
-    ///
-    /// SEPARATE from `all` for the keyed agents' reason: these rooms land
-    /// rows, they just have none now. Read by the dock's connected-seat door
-    /// and by `FeedScreen.connectedHoldsLead`.
-    static let keepsEmptyRoom: Set<String> = ["Calendar", "Reminders", "Gmail", "iCloud Mail"]
-
     /// **EVERY CONNECTED SEAT HAS A ROOM, EMPTY OR NOT (prd §1036, §998
     /// widened).** The room is where an app's settings live (its door beside
     /// the name, §1033), and Apps draws a connected row as a status with no
     /// way in — so a seat that had landed nothing yet (Apple Health with no
     /// workout) was connected and unreachable. Its room stands empty instead,
-    /// wearing `quietState`, with the door.
-    ///
-    /// Not `keepsEmptyRoom`: those rooms ALSO hold their lead over nothing
-    /// (`FeedScreen.connectedHoldsLead`); this only gives the dock a room.
+    /// wearing `quietState`, with the door. Calendar, Reminders and the mail
+    /// seats came in by this door too (prd §998); since they folded into Day
+    /// (prd §1056) the empty seat gives Day its room.
     static func earnsEmptyRoom(_ seat: String) -> Bool {
         !landsNothing.contains(seat)
     }

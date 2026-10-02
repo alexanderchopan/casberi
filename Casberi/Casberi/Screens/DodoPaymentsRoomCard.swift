@@ -30,9 +30,6 @@ import SwiftUI
 /// section that owns the sheet does the lookup (corollary 5).
 struct DodoPaymentsRoomCard: View {
     let room: DodoPaymentsRoom
-    /// The room's kind tiles, riding the head's `scopes` slot (prd §911, the
-    /// Stripe pattern). Nil, or fewer than two kinds, draws the head alone.
-    var tiles: DSScopeTiles<RoomKindTile>? = nil
     /// Hands back the CURRENCY — a currency owns many payments, so the honest
     /// landing is its most recent one.
     var onOpenCurrency: (DodoPaymentsRoom.Currency) -> Void
@@ -59,8 +56,7 @@ struct DodoPaymentsRoomCard: View {
             notes: [.note(DodoPaymentsRoom.note(room, mask: mask))],
             footnotes: [.quiet(DodoPaymentsRoom.refundNote(room, mask: mask)),
                         .quiet(DodoPaymentsRoom.coverageNote(room)),
-                        .quiet(DodoPaymentsRoom.footnote(room))],
-            tiles: tiles) {
+                        .quiet(DodoPaymentsRoom.footnote(room))]) {
             if !room.retries.isEmpty {
                 DSRoomChassis.Block {
                     rail

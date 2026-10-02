@@ -502,8 +502,6 @@ extension FeedScreen {
                            || (roomTakesWalletScope && selectedWallet != nil)
                            || (SocialRoom.hasRoster(source) && chrome.personScope != nil)
                            || (source == "GitHub" && chrome.githubScope != nil)
-                           // A kind tile narrows the list too (prd §815).
-                           || roomKindPick != .all
                            || (source == "Pinterest" && chrome.pinterestScope != nil))
     }
 }

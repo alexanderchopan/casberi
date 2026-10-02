@@ -789,8 +789,16 @@ extension FeedScreen {
 
     /// One calendar for the per-thing day grouping — `Calendar.current` copies
     /// the user's calendar on every access, and `dayLabel` runs once per thing
-    /// inside `dayGroups`/`agendaSplit`, which the feed re-derives per paint.
+    /// inside `dayGroups`, which the feed re-derives per paint.
     static let groupingCalendar = Calendar.current
+
+    /// The next upcoming event — its ROW carries the emphasis (no hero).
+    /// Events only: in the All shape other kinds share the list, and only
+    /// an event's capture time means "starts at".
+    func nextEventID(_ visible: [Thing]) -> UUID? {
+        visible.filter { $0.isLive && $0.kind == .event && $0.capturedAt > .now }
+            .min { $0.capturedAt < $1.capturedAt }?.id
+    }
 
     func dayLabel(_ date: Date) -> String { Self.dayWord(date) }
 
@@ -800,8 +808,9 @@ extension FeedScreen {
     static func dayWord(_ date: Date) -> String {
         if Self.groupingCalendar.isDateInToday(date) { return String(localized: "Today") }
         if Self.groupingCalendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
-        // Only the agenda ever labels a day ahead (every other feed drops
-        // future-dated rows in `dayGroups`), and there "Tomorrow" is how the
+        // Only a list that reads forward (Day, Coming up) ever labels a day
+        // ahead (every other feed drops future-dated rows in `dayGroups`), and
+        // there "Tomorrow" is how the
         // next day is actually named — a dated weekday header for it read as
         // history sitting at the top of the list.
         if Self.groupingCalendar.isDateInTomorrow(date) { return String(localized: "Tomorrow") }

@@ -870,7 +870,7 @@ enum SocialScopeRail {
 /// Watching was the account page's alone (user: *"can we emulate the way
 /// wallet and devnets do their watching so it is only on the set up screen"*)
 /// until prd §1030 gave the room its own verb, now the Watch TILE last in the
-/// room's grid (§1031, `RoomKindTile.watch`) — as the Wallet's Follow address
+/// room's grid (§1031; Work's `WorkScope.watch` since §1057) — as the Wallet's Follow address
 /// left setup for the room (§954). The verb is a tile, so the rail stays a
 /// choice.
 enum GitHubScopeRail {

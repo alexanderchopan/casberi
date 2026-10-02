@@ -311,32 +311,31 @@ grep -q 'leaderboard' "$TMP/feed.nocomment" \
 # lede ("N songs today", "N saved this month") in the cover's slot.
 grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\b' "$TMP/feed.nocomment" \
   && { echo "✗ a count lede is back in a shaped room — the newest thing is its head (prd §732)"; exit 1; }
-# The reading list and the generic room path (social, RSS, notes, media…).
+# The generic room path (social, Reading, Media…); the reading list's own arm
+# left with its room (Bookmarks folded into Reading, prd §1059).
 # The PREFIX, not the closing paren: §959 gave the generic path a trailing
 # `scopeControl:` argument, and a guard pinned to `)` read that as the cover gone.
-[ "$(grep -c 'cover: heroShown ? nil : ledeThingID(in: days)' "$TMP/feed.nocomment")" -ge 2 ] \
+[ "$(grep -c 'cover: heroShown ? nil : ledeThingID(in: days)' "$TMP/feed.nocomment")" -ge 1 ] \
   || { echo "✗ a headless room no longer covers its newest thing (prd §732)"; exit 1; }
 # The music rooms' own cover check is deleted with `musicSections` (prd §1055):
 # Apple Music and Spotify fold into Media, whose plain path covers its newest.
 # Every picture-grid room leads with its newest thing, lifted out ABOVE the
-# grid (`newestLead`): X and Instagram since prd §821, Photos, Files, Snapchat
-# and Telegram since §832. No grid declines the cover any more.
+# grid (`newestLead`): X and Instagram since prd §821, Snapchat and Telegram
+# since §832 (Photos and Files folded into Media and Life, prd §1059). No grid
+# declines the cover any more.
 grep -qE 'cover: heroShown \|\| !(memoryTiles|tiles|photoTiles|imageTiles)\.isEmpty' "$FEED" \
   && { echo "✗ a picture grid declines the cover again (prd §832)"; exit 1; }
-[ "$(grep -c 'let (cover, uncovered) = newestLead(visible, heroShown: heroShown)' "$FEED")" -eq 6 ] \
+[ "$(grep -c 'let (cover, uncovered) = newestLead(visible, heroShown: heroShown)' "$FEED")" -eq 4 ] \
   || { echo "✗ a picture-grid room no longer leads with its newest thing above the grid (prd §821, §832)"; exit 1; }
 grep -q 'photoGridSection' "$FEED" \
   && { echo "✗ a room draws one grid of every picture it holds again — the tiles stand under the rows' day headers since prd §910"; exit 1; }
-# THE DAY'S PICTURES TILE UNDER ITS HEADER (prd §910). Six rooms pass their
+# THE DAY'S PICTURES TILE UNDER ITS HEADER (prd §910). Five rooms pass their
 # tile test to `groupedSections`, which hands it to every `daySection`; the
 # section splits its own rows and draws the tiles between its header and its
-# run. Photos tiles everything (a screenshot room holds only screenshots) in the
-# phone's own shape; the five mixed rooms tile what has pixels and nothing to
-# say, as squares.
-[ "$(grep -c 'isTile: ' "$FEED")" -ge 8 ] \
-  || { echo "✗ a picture room no longer tiles per day (prd §910) — expected six callers plus the two parameters"; exit 1; }
-grep -q 'isTile: { _ in true }, tileShape: .screenshot' "$FEED" \
-  || { echo "✗ the Photos room no longer tiles every screenshot in the phone's own shape (prd §910)"; exit 1; }
+# run. The four mixed rooms tile what has pixels and nothing to say, and Media
+# every picture (prd §1055), as squares.
+[ "$(grep -c 'isTile: ' "$FEED")" -ge 7 ] \
+  || { echo "✗ a picture room no longer tiles per day (prd §910) — expected five callers plus the two parameters"; exit 1; }
 grep -q 'if !tiles.isEmpty { tileRows(tiles, shape: tileShape) }' "$FEED" \
   || { echo "✗ the day section no longer draws its tiles under its header (prd §910)"; exit 1; }
 # One List row per three tiles, and the count is FIXED — the grid used to
@@ -346,11 +345,10 @@ grep -q 'let perRow = 3$' "$FEED" \
 grep -q 'perRow = items.count > 12' "$FEED" \
   && { echo "✗ the grid reflows on its count again (prd §910)"; exit 1; }
 # THE CELL: the room's shape, the caption under the picture, no pill.
-# The pin (a7a8bcef) made `.square` the one centred shape, so the anchor now
-# reads from that side; either spelling puts a screenshot's crop at the top.
-grep -q 'case screenshot$' "$ROWS" \
-  && grep -qE 'self == \.screenshot \? \.top : \.center|self == \.square \? \.center : \.top' "$ROWS" \
-  || { echo "✗ a screenshot tile is no longer cropped from its top (prd §910)"; exit 1; }
+# `.square` is the one centred shape; a pin is cropped from its top, where its
+# headline is.
+grep -qE 'self == \.square \? \.center : \.top' "$ROWS" \
+  || { echo "✗ a pin tile is no longer cropped from its top (prd §910)"; exit 1; }
 grep -q 'dayPill' "$ROWS" \
   && { echo "✗ the tile wears a day pill again — the day header says when (prd §910, §746)"; exit 1; }
 grep -q 'LinearGradient(colors: \[.clear, .black.opacity(0.65)\]' "$ROWS" \

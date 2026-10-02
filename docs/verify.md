@@ -1148,6 +1148,14 @@ The same-name-**different**-runtime case is not an error (the newest wins) but i
 
 **Deliberately not checked.** Safe{Wallet}'s behaviour on the relay, the gateway's message shapes, the Enclave itself — no harness here can make any of them; the device test in §913's grade is the evidence.
 
+## Tile-glyph audit (scripts/tile-glyph-audit.py, 2026-10-02) — prd §815 · §831 · §1059
+
+**What it catches.** A tile glyph carrying two meanings, or one meaning wearing two glyphs — the rule the user set on 2026-09-18 and §831 widened when Privy's Apps wore Frames' glyph for a month with every table check green. Six checks over `Screens/ScopeTileGlyphs.swift`, the dock's `CategoryFold.glyphs` and every `DSTileScope` conformance in the app: (A) no conformance spells a literal glyph — a constant or `CategoryFold.glyph(for:)` only (Markets' Watchlist spelled `"eye"` until this pass); (B) a case wears the constant of its own name, or the pair is in `ALIASES` with its reason (one left: the Wallet's Follow is Watch); (C) a stale alias fails; (D) one symbol, one meaning, across the table and the dock; (E) the reserved symbols keep their owner; (F) `ScopeTileGlyph.all` reads the dock, and every constant is worn by something outside its declaration — the model half of a deleted tile, CLAUDE.md's rule. `--self-test` plants nine mutations, one or more per check, over an in-memory tree, and fails a mutation whose anchor drifted.
+
+**Why it is an audit now.** These checks lived inside `room-kind-tiles-selftest.sh`, which was deleted with the kind tiles when every category became one room (§1059). They were never about the kind tiles.
+
+**Deliberately not checked.** Glyphs outside tiles (row kinds, seat marks, dial discs); whether a symbol exists in SF Symbols (the screen sweep sees a blank, this cannot); a glyph reached through a variable.
+
 ## Moved from CLAUDE.md verbatim (2026-09-27, the context budget)
 
 Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.

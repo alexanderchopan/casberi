@@ -155,10 +155,10 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// between sorts by the word the person reads, in their language.
     /// **SEVERAL VERBS READ A–Z AMONG THEMSELVES (prd §1039)** — Frames
     /// carries three (Create · Send · Top up), after every scope. A lead
-    /// is known by its GLYPH: `room-kind-tiles-selftest.sh` holds every tile
-    /// glyph to one meaning, so `ScopeTileGlyph.all` and `.home` can only be
-    /// All and Home. Not "whatever is first": Calendar lists Today first and
-    /// opens on Week, and neither is a lead. The wallet family sorted this
+    /// is known by its GLYPH: `tile-glyph-audit.py` holds every tile glyph
+    /// to one meaning, so `ScopeTileGlyph.all` and `.home` can only be All
+    /// and Home. Not "whatever is first": a room may list a scope first that
+    /// is not a lead. The wallet family sorted this
     /// way already (`DSRoomScopeChrome.ordered`, prd §950); here it is the
     /// template's, so no room can forget it. The strip is exempt: it is a
     /// directory's categories, which keep the dock's own order.

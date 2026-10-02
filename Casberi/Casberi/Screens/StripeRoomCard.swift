@@ -36,9 +36,6 @@ import SwiftUI
 /// which Polar and Dodo Payments draw too.
 struct StripeRoomCard: View {
     let room: StripeRoom
-    /// The room's kind tiles (prd §816), drawn in the head's `scopes` slot —
-    /// the Privy pattern. Nil, or fewer than two kinds, draws the head alone.
-    var tiles: DSScopeTiles<RoomKindTile>? = nil
     /// Hands back the ITEM, not a `Thing` — the card never holds one.
     var onOpen: (StripeRoom.Item) -> Void
 
@@ -51,8 +48,7 @@ struct StripeRoomCard: View {
             lead: .sentence(StripeRoom.headline(room)),
             notes: [.note(StripeRoom.note(room))],
             footnotes: [.quiet(StripeRoom.coverageNote(room)),
-                        .quiet(StripeRoom.staleNote(asOf: room.asOf))],
-            tiles: tiles) {
+                        .quiet(StripeRoom.staleNote(asOf: room.asOf))]) {
             // The axis is drawn only where it has something to place. A Stripe
             // account with no deadline is the ordinary case, and an empty axis
             // under a balance would be decoration claiming to be a reading.

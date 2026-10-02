@@ -38,9 +38,6 @@ struct SafeRoomCard: View {
     /// What the card opens when nothing is pending — see the type doc. Nil is
     /// a legitimate state and means the card simply doesn't open anything.
     var fallbackRef: String?
-    /// The room's kind tiles (prd §816), drawn in the head's `scopes` slot —
-    /// the Privy pattern. Nil, or fewer than two kinds, draws the head alone.
-    var tiles: DSScopeTiles<RoomKindTile>? = nil
     /// Hands back a `sourceRef` — the card never holds a `Thing`.
     var onOpen: (String) -> Void
 
@@ -79,8 +76,7 @@ struct SafeRoomCard: View {
                 // (prd §789). Plain register: nothing is wrong with the Safe.
                 .note(SafeRoom.readLimitNote(room), glyph: "clock"),
             ],
-            footnotes: [.quiet(SafeRoom.footnote(room, drawn: drawn.count))],
-            tiles: tiles) {
+            footnotes: [.quiet(SafeRoom.footnote(room, drawn: drawn.count))]) {
             if !drawn.isEmpty {
                 DSRoomChassis.Block {
                     VStack(alignment: .leading, spacing: DS.Space.s3) {

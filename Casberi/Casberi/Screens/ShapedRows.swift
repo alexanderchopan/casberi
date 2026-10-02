@@ -2016,12 +2016,9 @@ struct PhotoCell: View {
     /// The room's cell shape: the picture the room holds decides it, not the
     /// cell.
     enum Shape {
-        /// A phone screen — 3:4, cropped from the TOP. The app chrome and the
-        /// first line are what name a screenshot; the middle band is anyone's,
-        /// and the bottom is a keyboard or a tab bar.
-        case screenshot
-        /// A photograph — a square, centred. Files, Snapchat memories, and a
-        /// wordless picture post.
+        /// A photograph — a square, centred: Media's every picture (prd §1055),
+        /// Snapchat memories, and a wordless picture post. (A screenshot's own
+        /// 3:4 tile left with the Photos room, prd §1059.)
         case square
         /// A Pinterest pin — 2:3, the platform's own default, cropped from the
         /// TOP the way Pinterest's grid cuts a long pin: its headline is up
@@ -2030,7 +2027,6 @@ struct PhotoCell: View {
 
         var ratio: CGFloat {
             switch self {
-            case .screenshot: 3.0 / 4.0
             case .square: 1
             case .pin: 2.0 / 3.0
             }

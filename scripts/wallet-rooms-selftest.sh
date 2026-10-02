@@ -280,17 +280,8 @@ grep -q 'PrivacyPoolsRoom.activityNote(room)' "$CARD_STRIPPED" \
 if grep -q 'onTapGesture' "$CARD_STRIPPED"; then
   echo "✗ the Privacy Pools card has a whole-card tap again, over rows that are already buttons"; exit 1
 fi
-# THE ROWS ARE A SCOPE. Without the gate the stream draws under Shielded and
-# Review, and the room is one long scroll again with a control that changes
-# only its head.
-grep -q 'if privacyPoolsShowsRows(visible) {' "$FEED" \
-  || { echo "✗ the Privacy Pools room's rows are no longer gated on its Activity scope"; exit 1; }
-grep -q '&& privacyPoolsShowsRows(visible)' "$FEED" \
-  || { echo "✗ the caught-up footer no longer respects the scope — it would claim you are all caught up with no stream on screen (§83)"; exit 1; }
-# Railgun shares the `.ledger` row shape and has NO scopes, so the gate must
-# stay scoped by source or this room's control reaches into its neighbour's.
-grep -q 'guard source == PrivacyPoolsRoomSource.source,' "$FEED" \
-  || { echo "✗ the row gate is no longer scoped to the Privacy Pools source — it would silently blank the Railgun room"; exit 1; }
+# The room's rows gate (`privacyPoolsShowsRows`) left with the room: Privacy
+# Pools folded into the Wallet (prd §1048), whose list is its own (prd §1059).
 grep -q 'var privacyPoolsSection: PrivacyPoolsSection?' "Casberi/Casberi/Shell/ShellChrome.swift" \
   || { echo "✗ the shell no longer remembers which reading is on screen"; exit 1; }
 grep -q 'extension PrivacyPoolsSection: DSSectionScope {}' "Casberi/Casberi/Shell/MainSurface.swift" \

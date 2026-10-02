@@ -74,7 +74,11 @@ SHEET_HEADS = (
     "Casberi/Casberi/Screens/SheetPartyHead.swift",   # prd §892
 )
 BRAND_HEX = "FF2D87"
-MIN_OPT_OUTS = 9
+# Four since prd §1059: the folded rooms' named groups (Reminders' Doing and
+# Done, Mail's Waiting on you, CardPointers' deadlines, Walletbeat's wallets,
+# L2BEAT's chains) left with the room-level arms that drew them. What stands is
+# the filtered All and the Notes room's three.
+MIN_OPT_OUTS = 4
 
 
 def strip_comments(text: str) -> str:

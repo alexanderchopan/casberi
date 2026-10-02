@@ -30,15 +30,6 @@ extension FeedScreen {
             || (source == "Pinterest" && chrome.pinterestScope != nil)
     }
 
-    /// Whether `roomScopeSection` draws anything — the three rails' own gates.
-    var roomScopeDraws: Bool {
-        if mergedMenuDraws { return true }
-        guard roomScopeInRoom else { return false }
-        return GitHubScopeRail.shows(source: source, watched: GitHubWatchStore.shared.watches.count)
-            || PinterestScopeRail.shows(source: source, follows: PinterestStore.shared.follows.count)
-            || SocialScopeRail.shows(source: source, accounts: SocialRoomSource.accounts(for: source).count)
-    }
-
     /// The control, as its own List section. Draws nothing where the room
     /// has nothing to pick between, or off the phone.
     @ViewBuilder

@@ -10,9 +10,6 @@ import SwiftUI
 /// does the lookup against the live corpus (corollary 5).
 struct WalletbeatRoomCard: View {
 	let room: WalletbeatRoom
-	/// The room's kind tiles (prd §816), drawn in the head's `scopes` slot —
-	/// the Privy pattern. Nil, or fewer than two kinds, draws the head alone.
-	var tiles: DSScopeTiles<RoomKindTile>? = nil
 	var onOpen: (String) -> Void
 	var onBrowse: () -> Void
 
@@ -20,8 +17,7 @@ struct WalletbeatRoomCard: View {
 		DSRoomChassis.Head(
 			lead: .sentence(WalletbeatRoom.headline(room)),
 			notes: [.note(WalletbeatRoom.note(room))],
-			footnotes: [.quiet(WalletbeatRoom.coverageNote(room))],
-			tiles: tiles) {
+			footnotes: [.quiet(WalletbeatRoom.coverageNote(room))]) {
 			if !room.items.isEmpty {
 				DSRoomChassis.Block {
 					DSRoomChassis.Rows(items: room.items) { index, item in

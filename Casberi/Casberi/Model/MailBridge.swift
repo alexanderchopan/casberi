@@ -84,6 +84,13 @@ enum MailProvider: String, CaseIterable, Identifiable {
 
 enum MailIngest {
 
+    /// The label of a mail's attachment fact: the names of what came with it,
+    /// read on the sheet. Localized at write time like every fact label. The
+    /// mail rooms' Attachments tile read it back until the rooms folded into
+    /// Day (prd §1056, §1059); the fact stays, because the sheet and search
+    /// still read it.
+    static var attachedLabel: String { String(localized: "Attached") }
+
     @MainActor private static var running: Set<MailProvider> = []
 
     /// The IMAP failure behind the last nil `refresh` — the generic "couldn't
@@ -200,10 +207,8 @@ enum MailIngest {
             //
             // Never phrased as "no attachments" anywhere: an empty list also
             // means the body fetch failed, and those are different facts.
-            // The label is `MailScope.attachedLabel`: the room's Attachments
-            // tile reads it back (prd §1019), so write and read spell it once.
             if !m.attachments.isEmpty {
-                thing.facts = [ThingFact(MailScope.attachedLabel,
+                thing.facts = [ThingFact(Self.attachedLabel,
                                          m.attachments.joined(separator: ", "))].map(\.encoded)
                 thing.enrichedText = [thing.enrichedText, m.attachments.joined(separator: "\n")]
                     .compactMap { $0 }.joined(separator: "\n")

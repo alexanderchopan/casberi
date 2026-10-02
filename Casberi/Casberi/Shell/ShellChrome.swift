@@ -458,13 +458,6 @@ final class ShellChrome {
     /// has since gone.
     var privacyPoolsSection: PrivacyPoolsSection?
 
-    /// The kind tile picked in a kind-tile room (prd §815, §816).
-    /// Not persisted, and cleared on every source change: All is where each of
-    /// those rooms opens ("for all of them we need a button that is 'all'").
-    /// One property for every such room because only one is ever standing,
-    /// and `RoomKindTiles.resolve` handles a pick whose kind has gone.
-    var roomKind: RoomKindTile = .all
-
     /// Which half of an AGENT room is standing (prd §840) — the conversations
     /// you have had, or the one you are having.
     ///
@@ -487,15 +480,6 @@ final class ShellChrome {
     /// Folders tile tapped again is the way back to the list. A note made
     /// while a folder is open is filed in it.
     var notesFolder: String? = nil
-
-    /// Which of the Reminders room's tiles is standing (prd §993) — All,
-    /// Today or Scheduled; never New. Cleared on every source change.
-    var remindersScope: RemindersScope = .all
-
-    /// Which of the mail rooms' tiles is standing (prd §1019) — All or
-    /// Attachments; never New, which is a verb. One pick for Gmail and iCloud
-    /// Mail, cleared on every source change like `remindersScope`.
-    var mailScope: MailScope = .all
 
     /// Which of the Tokens room's tiles is standing — the Watchlist, or one
     /// catalogue category's company pack (`CompanyPacks`). Cleared on every

@@ -114,23 +114,9 @@ extension FeedScreen {
     /// `Corpus.surfaced`/pin-room handling the same way `feedThings` itself
     /// does) so the SAME filtering rules apply whether the source array
     /// came from the live `@Query` or from a raw fetch that bypassed it.
-    func liveVisible(rawOverride: [Thing]? = nil, kindPick: Bool = true) -> [Thing] {
+    func liveVisible(rawOverride: [Thing]? = nil) -> [Thing] {
         let base = rawOverride.map { Pinboard.isPinnedRoom(source) ? notesOrder($0) : Corpus.surfaced($0, room: source) }
             ?? feedThings
-        // The kind tile's census (prd §815), built only while a tile other
-        // than All is picked — one walk of the refs, because a Safe pending
-        // row's kind depends on whether its outcome has landed.
-        let pick = kindPick ? roomKindPick : .all
-        let census: RoomKindTiles.Census? = pick == .all ? nil
-            : RoomKindTiles.Room(source: source).map {
-                RoomKindTiles.Census(room: $0, refs: base.map(\.sourceRef))
-            }
-        // Read ONCE, here, not per row (prd §993): with no rows the per-row
-        // read never happens, the body observes nothing, and a tile picked
-        // over an empty list lit nothing and changed nothing.
-        let remindersPick = source == "Reminders" ? chrome.remindersScope : .all
-        // The mail rooms' pick (prd §1019), read once for the same reason.
-        let mailPick = MailScope.rooms.contains(source) ? chrome.mailScope : .all
         return base.filter { thing in
             // The pinned room's membership is decided entirely by the `@Query`
             // above (`pinnedAt != nil`), so there is no source to match against
@@ -151,18 +137,6 @@ extension FeedScreen {
                 && personScopeAllows(thing)
                 && githubScopeAllows(thing)
                 && notesScopeAllows(thing)
-                && remindersPick.allows(done: thing.mark == .done, dueAt: thing.dueAt)
-                // The Attachments tile reads the row's fact labels (prd §1019);
-                // under All the facts are never decoded.
-                && (mailPick == .all
-                    || mailPick.allows(factLabels: thing.facts.compactMap { ThingFact(encoded: $0)?.label }))
-                // The kind tile (prd §815), which COMBINES with the GitHub
-                // face rail above rather than replacing it.
-                && (census.map {
-                    RoomKindTiles.allows(pick, kind: $0.kind(ref: thing.sourceRef,
-                                                             url: thing.content,
-                                                             tags: thing.tags))
-                } ?? true)
                 && pinterestScopeAllows(thing)
                 // Privy's display choices (prd §803e): hidden apps, and empty
                 // apps nobody uses unless the person asked to see them.
@@ -330,32 +304,6 @@ extension FeedScreen {
         guard source == "GitHub", let scope = chrome.githubScope else { return true }
         return GitHubRowTag.matches(scope: scope, ref: thing.sourceRef,
                                     url: thing.content, authorHandle: thing.authorHandle)
-    }
-
-    /// **A CONNECTED REMINDERS ROOM WITH NOTHING IN IT HOLDS ITS LEAD (prd
-    /// §993).** Nothing open is a real state of a list — everything done — so
-    /// the room keeps its box and its tiles and says so, instead of being
-    /// replaced by the invitation written for a room that is not connected.
-    /// A seat that is paused or needs attention keeps `quietState`, whose
-    /// door is the fix: an empty box there would claim a list it cannot see.
-    ///
-    /// Calendar joins by the same rule (prd §998): a quiet month is a real
-    /// state of a calendar, and its month grid is the lead. The mail rooms
-    /// too (prd §1019): an empty inbox is a state of a mailbox, and their New
-    /// tile stands under the held lead.
-    var connectedHoldsLead: Bool {
-        guard LiveRoomSources.keepsEmptyRoom.contains(source) else { return false }
-        return bridges.bridges.first { $0.name == source }?.status == .connected
-    }
-
-    /// The kind tile in force in a kind-tile room (prd §815, §816),
-    /// resolved: a pick whose kind is no longer offered is All. Before the
-    /// room's first head computation there is no presence to resolve against,
-    /// and the pick stands as picked.
-    var roomKindPick: RoomKindTile {
-        guard chrome.roomKind != .all, RoomKindTiles.Room(source: source) != nil else { return .all }
-        guard let present = heads?.kindTiles else { return chrome.roomKind }
-        return RoomKindTiles.resolve(chrome.roomKind, present: present)
     }
 
     /// The Pinterest room's follow scope (prd §819): every pin carries the

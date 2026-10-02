@@ -195,10 +195,6 @@ struct RootShell: View {
                 if let s = WalletSection(rawValue: raw), !s.isVerb { chrome.walletSection = s }
                 if let s = FramesSection(rawValue: raw), !s.isVerb { chrome.framesSection = s }
                 if let s = LogosSection(rawValue: raw), !s.isVerb { chrome.logosSection = s }
-                // The Reminders room's date tiles too (prd §993).
-                if let s = RemindersScope(rawValue: raw), !s.isVerb { chrome.remindersScope = s }
-                // The mail rooms' Attachments too (prd §1019); New is a verb.
-                if let s = MailScope(rawValue: raw), !s.isVerb { chrome.mailScope = s }
                 // And a Tokens company pack, by its category name ("Work").
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
             }

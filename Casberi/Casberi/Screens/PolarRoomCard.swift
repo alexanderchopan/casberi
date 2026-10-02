@@ -14,9 +14,6 @@ import SwiftUI
 /// its `DeadlineRow` (prd §745).
 struct PolarRoomCard: View {
     let room: PolarRoom
-    /// The room's kind tiles, riding the head's `scopes` slot (prd §911, the
-    /// Stripe pattern). Nil, or fewer than two kinds, draws the head alone.
-    var tiles: DSScopeTiles<RoomKindTile>? = nil
     var onOpen: (PolarRoom.Item) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -31,8 +28,7 @@ struct PolarRoomCard: View {
             lead: .sentence(PolarRoom.headline(room)),
             notes: [.note(PolarRoom.note(room))],
             footnotes: [.quiet(PolarRoom.coverageNote(room)),
-                        .quiet(PolarRoom.staleNote(asOf: room.asOf))],
-            tiles: tiles) {
+                        .quiet(PolarRoom.staleNote(asOf: room.asOf))]) {
             if !room.items.isEmpty {
                 DSRoomChassis.Block {
                     rail

@@ -185,22 +185,6 @@ extension FeedScreen {
             insightSection { DistributionHero(dist: distribution) }
         }
         switch shape {
-        case .photos:
-            // THE NEWEST SCREENSHOT LEADS, above the grid (prd §832): X's and
-            // Instagram's rule (§821). The cover is lifted out first, so it
-            // draws once and the grid starts at the next one.
-            //
-            // EVERY DAY'S SCREENSHOTS TILE UNDER THAT DAY'S HEADER (prd §910).
-            // The room used to draw one block of every screenshot it held, with
-            // a black day pill on the first tile of each day — a third pill next
-            // to `Chip` and `DSStamp` (§746), on the one room whose days the
-            // seam could not feel (§866). The days are the rows' own now, and
-            // every screenshot in the room is a tile.
-            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
-            if let cover { Section { ledeListRow(cover) } }
-            let days = chronoGroups(uncovered)
-            groupedSections(days, nextEventID: nextEventID,
-                            isTile: { _ in true }, tileShape: .screenshot)
         case .snapchat:
             // The memories whose pictures actually came back tile; everything
             // else — saved chats, videos (never fetched, see `SnapchatImport`),
@@ -278,26 +262,6 @@ extension FeedScreen {
             let days = chronoGroups(uncovered)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
                             isTile: Self.isInstagramPhotoTile, tileShape: .square)
-        case .files:
-            // The Snapchat split for a connected folder (2026-08-02): images
-            // whose heal has landed a thumbnail tile, everything else — PDFs,
-            // text files, and images the throttled heal (40 thumbnails a pass)
-            // hasn't reached yet — reads as rows until it has pixels to show.
-            // Same honesty rule as above: a tile promises a picture.
-            //
-            // The newest FILE leads, whatever it is, above the grid (prd §832).
-            // A grid used to decline the cover, so a PDF saved a minute ago sat
-            // under every picture in the folder.
-            //
-            // ONE TIMELINE (prd §910): a day's pictures tile under its header
-            // and its other files row beneath them. Every picture in the folder
-            // used to draw first, then the PDFs by day, so this morning's
-            // confirmation sat under Monday's photographs.
-            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
-            if let cover { Section { ledeListRow(cover) } }
-            let days = chronoGroups(uncovered)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            isTile: Self.isFileImageTile, tileShape: .square)
         case .wallet:
             // The reads first, then the stream (2026-07-20, the surface split):
             // balance + warnings side by side, the holdings treemap, DeFi, and
@@ -505,88 +469,6 @@ extension FeedScreen {
                 walletActingSection
                 walletApprovalsSection
             }
-        case .ledger:
-            // THE ROWS ARE A SCOPE IN ONE OF THE TWO ROOMS THIS SHAPE SERVES
-            // (prd §486) — Privacy Pools' Activity. Railgun shares the row
-            // anatomy and has no scopes at all, and `privacyPoolsShowsRows`
-            // answers true for it by construction rather than by a second
-            // source test here.
-            //
-            // Days, and the memoized grouping every other source room uses:
-            // these are real events at real block times, so a chronological
-            // grouping is honest.
-            if privacyPoolsShowsRows(visible) {
-                let days = chronoDays(visible)
-                groupedSections(days, nextEventID: nextEventID,
-                                boundary: boundaryThingID(in: days))
-            }
-        case .calendar:
-            calendarSections(visible, nextEventID: nextEventID, heroShown: heroShown)
-        case .gmail:
-            // The newest mail is the cover, and what is waiting on you stands
-            // under it (prd §911): the waiting section is a list section, and a
-            // room that led with it — or with nothing — was the one Life room
-            // with no lead. The tiles stand between the cover and the waiting
-            // section (prd §1019), and with nothing under the pick the lead
-            // box is held over them, the Reminders shape (§993).
-            let days = chronoGroups(visible)
-            let mailCoverID = heroShown ? nil : ledeThingID(in: days)
-            let mailScope = chrome.mailScope
-            standaloneLead(cover: coverThing(mailCoverID, in: visible),
-                           tiles: heroShown ? nil : mailTiles,
-                           listEmpty: visible.isEmpty,
-                           emptyWords: Text(mailScope.summary),
-                           emptyHeadline: Text(mailScope.emptyHeadline))
-            if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
-            groupedSections(liftingCover(days, id: mailCoverID), nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: days))
-        case .reminders:
-            reminderSections(visible, nextEventID: nextEventID, heroShown: heroShown)
-        case .cardPointers:
-            // Deadlines, not days — see `cardPointersGroups`. No `boundary:`,
-            // because every offer carries the
-            // `capturedAt` of the sync that first saw it, so a new-since
-            // divider in this room marks nothing.
-            // Under two offers the head is nil, and the room leads with its
-            // soonest offer as the cover (prd §911) rather than with a row.
-            let buckets = cardPointersGroups(visible)
-            groupedSections(buckets, nextEventID: nextEventID, dated: false,
-                            cover: heroShown ? nil : ledeThingID(in: buckets))
-        case .walletbeat:
-            // Your watched wallets lead as standing report cards, then the news
-            // below in days. A rating is not an event and must not be filed under
-            // the day it happened to be read; an incident is, and is.
-            // With no head (nothing watched, no incident) the cover and the
-            // tiles stand alone (prd §911) — the tiles used to vanish with it.
-            let wbCover = coverThing(heroShown ? nil : ledeThingID(in: chronoGroups(visible)), in: visible)
-            standaloneLead(cover: wbCover, tiles: heroShown ? nil : kindTilesInHead,
-                           listEmpty: visible.isEmpty)
-            let (watches, rest) = Self.splitTiles(visible.live.filter { $0.id != wbCover?.id }) {
-                WalletbeatWatch.isWatchRef($0.sourceRef)
-            }
-            if !watches.isEmpty {
-                groupedSections([(String(localized: "Your wallets"), watches)],
-                                nextEventID: nextEventID, dated: false)
-            }
-            let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
-        case .l2beat:
-            // Your watched chains lead as standing assessments, then the timeline
-            // below in days. An assessment is not an event and must not be filed
-            // under the day it happened to be read; a milestone is, and is.
-            // Walletbeat's rule above, for the same reason (prd §911).
-            let l2Cover = coverThing(heroShown ? nil : ledeThingID(in: chronoGroups(visible)), in: visible)
-            standaloneLead(cover: l2Cover, tiles: heroShown ? nil : kindTilesInHead,
-                           listEmpty: visible.isEmpty)
-            let (watches, rest) = Self.splitTiles(visible.live.filter { $0.id != l2Cover?.id }) {
-                L2beatWatch.isChainRef($0.sourceRef)
-            }
-            if !watches.isEmpty {
-                groupedSections([(String(localized: "Your chains"), watches)],
-                                nextEventID: nextEventID, dated: false)
-            }
-            let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .tokens:
             // The Watchlist, or a catalogue category's company pack
             // (`CompanyPacks`), picked on the tiles.
@@ -597,14 +479,6 @@ extension FeedScreen {
             } else {
                 companyPackSections(chrome.tokensScope)
             }
-        case .bookmarks:
-            // A reading list is doors, not reads (2026-07-21). Its newest save
-            // is the room's cover (prd §732), replacing the pile-count lede.
-            // Rows below stay chronological (coarsened when saves are sparse,
-            // like any door source).
-            let days = chronoGroups(visible)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            cover: heroShown ? nil : ledeThingID(in: days))
         default:
             if Pinboard.isPinnedRoom(source) {
                 notesSections(visible, nextEventID: nextEventID)
@@ -628,8 +502,6 @@ extension FeedScreen {
                 dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if agentRoomShown {
                 agentRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
-            } else if RoomKindTiles.Room(source: source) != nil {
-                kindTileSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else {
                 // Threads fold BEFORE day-grouping (item 6, 2026-07-27): a
                 // person's own consecutive replies collapse into one card in
@@ -715,29 +587,10 @@ extension FeedScreen {
         return (cover, live.filter { (thing: Thing) -> Bool in thing.id != id })
     }
 
-    /// THE KIND-TILE ROOMS (prd §815, §816): the cover, the kind tiles
-    /// under it, then the days.
-    ///
-    /// The cover is LIFTED out of its day, because the tiles
-    /// must sit between it and the list — a cover drawn inside the first day
-    /// would put the tiles under a day header. `visible` is already narrowed by
-    /// the pick (`liveVisible`), so the cover is the newest coverable thing IN
-    /// the picked tile and follows it with no code of its own.
-    ///
-    /// The geometry is `DSRoomChassis.Head`'s with tiles, so the tiles land at
-    /// one height in this room, Privy and the wallet family: the well at the
-    /// top of the row, the tiles `contentGap` under it, the list `leadGap`
-    /// under the tiles, all at the rows' inset. The cover holds the full box
-    /// (every cover does, prd §904) so the tiles never move between picks.
-    /// With no coverable thing the tiles still draw, at the top.
-    ///
-    /// A room that DRAWS a head (prd §816: Safe, Stripe, PostHog) draws no
-    /// cover and no tiles here — the head carries the tiles in its `scopes`
-    /// slot, and this draws only the narrowed days under it.
     /// An agent's room (prd §840): the cover, the two tiles, then either the
     /// conversations you have had or the one you are having.
     ///
-    /// It follows `kindTileSections`' geometry exactly rather than inventing
+    /// It follows `DSRoomChassis.Head`'s geometry exactly rather than inventing
     /// its own — cover, `contentGap`, tiles, `leadGap`, content — because the
     /// tiles are one control in one place in every room that has them (§752,
     /// user: *"that is a template. we follow it in all rooms, so the buttons
@@ -748,10 +601,8 @@ extension FeedScreen {
     /// moved"*). §840's first build drew it on All only, reasoning that on
     /// Chat the room IS the conversation — which put the tiles at two
     /// different heights depending on which one was picked, the exact thing
-    /// §752's template rule exists to prevent, and which every kind-tile room
-    /// already gets right: `kindTileSections` draws its cover whatever tile is
-    /// standing. The cost is that a conversation's opening question reads
-    /// twice on Chat, as a title card and as the first turn. That is the
+    /// §752's template rule exists to prevent. The cost is that a
+    /// conversation's opening question reads twice on Chat, as a title card and as the first turn. That is the
     /// cheaper of the two, because one is a repetition and the other is
     /// furniture that walks.
     @ViewBuilder
@@ -842,48 +693,6 @@ extension FeedScreen {
         }
     }
 
-    @ViewBuilder
-    private func kindTileSections(_ visible: [Thing], nextEventID: UUID?,
-                                  heroShown: Bool) -> some View {
-        let days = chronoDays(visible)
-        // A drawn head carries the tiles in its own `scopes` slot (prd §816),
-        // so they stand here only when no head is drawn — Safe and Stripe with
-        // only a sentence, and every room that has no head at all.
-        let scopeTiles = heroShown ? nil : kindTilesInHead
-        let coverID = heroShown ? nil : ledeThingID(in: days)
-        let coverThing = coverThing(coverID, in: visible)
-        // THE LEAD SLOT is held wherever the tiles stand (§862) — see
-        // `standaloneLead`; this arm below it is what is left for a room whose
-        // head is drawn above and so has no tiles here to hold a lead for.
-        let leadHeld = coverThing != nil || (scopeTiles != nil && visible.isEmpty)
-        standaloneLead(cover: coverThing, tiles: scopeTiles, listEmpty: visible.isEmpty,
-                       menuFollows: roomScopeDraws)
-        // Under the tiles, as the Wallet's account menu is (prd §959).
-        roomScopeSection
-        if visible.isEmpty {
-            // A tile and a face together can hold nothing (the GitHub rail
-            // combines with the tile) — said under the tiles, which stay, the
-            // `keepsChromeWhenEmpty` reasoning (prd §538, §769). Where the
-            // tiles stand, the LEAD says it instead (§862) and this draws
-            // nothing: a room said the same nothing twice, once on each side
-            // of one control. This arm is what is left — a room whose head is
-            // drawn above, which has no tiles here to hold a lead for.
-            if !leadHeld {
-                Section {
-                    DSSkeletonRows(label: Text("Nothing here yet."))
-                        .padding(.vertical, DS.Space.s2)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                                  bottom: 0, trailing: DSRoomChassis.inset))
-                }
-            }
-        } else {
-            let rest = liftingCover(days, id: coverID)
-            groupedSections(rest, nextEventID: nextEventID, boundary: boundaryThingID(in: rest))
-        }
-    }
-
     /// The live thing behind a cover id, against this render's rows — liveness
     /// inside the filter, before any stored read (corollary 3).
     func coverThing(_ id: UUID?, in visible: [Thing]) -> Thing? {
@@ -905,9 +714,8 @@ extension FeedScreen {
 
     /// THE STANDALONE LEAD, WHERE NO HEAD IS DRAWN (prd §815, §862, §911): the
     /// cover when there is one, the room's own empty state when the tiles
-    /// stand over nothing, then the tiles. One drawing for the kind-tile
-    /// rooms, and Walletbeat's and L2BEAT's standing
-    /// reports — which used to lose their tiles with their head (§911).
+    /// stand over nothing, then the tiles. The Notes room's since the kind-tile
+    /// rooms folded into their categories (prd §1059).
     ///
     /// THE LEAD SLOT is held wherever the tiles stand (§862): without it the
     /// tiles sat at the top of the screen — §752's one outright ban — on any
@@ -916,16 +724,8 @@ extension FeedScreen {
     func standaloneLead<Scope: DSTileScope>(
         cover: Thing?, tiles: DSScopeTiles<Scope>?,
         listEmpty: Bool,
-        // The room's scope menu stands right under the tiles (§959), at the
-        // Wallet's `s2`.
-        menuFollows: Bool = false,
-        // What the held lead says over an empty list; the kind tile's summary
-        // unless the room has its own line (Notes, prd §969).
-        emptyWords: Text? = nil,
-        // What the held lead draws and says instead of the skeleton rows and
-        // "Nothing here yet." — the Reminders room's checklist (prd §993).
-        emptyFigure: DSSkeleton.Figure? = nil,
-        emptyHeadline: Text? = nil) -> some View {
+        // What the held lead says over an empty list (Notes, prd §969).
+        emptyWords: Text) -> some View {
         let leadHeld = cover != nil || (tiles != nil && listEmpty)
         if let cover {
             Section {
@@ -935,9 +735,8 @@ extension FeedScreen {
             }
         } else if tiles != nil, listEmpty {
             Section {
-                emptyLeadRow(headline: emptyHeadline ?? DSProse.text("Nothing here yet."),
-                             words: emptyWords ?? Text(roomKindPick.summary),
-                             figure: emptyFigure)
+                emptyLeadRow(headline: DSProse.text("Nothing here yet."),
+                             words: emptyWords)
             }
         }
         if let tiles {
@@ -947,7 +746,7 @@ extension FeedScreen {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: leadHeld ? 0 : DS.Space.s2,
                                               leading: DSRoomChassis.inset,
-                                              bottom: menuFollows ? DS.Space.s2 : DSRoomChassis.leadGap,
+                                              bottom: DSRoomChassis.leadGap,
                                               trailing: DSRoomChassis.inset))
             }
         }
@@ -1040,15 +839,15 @@ extension FeedScreen {
                 openBySourceRef(item.id, in: visible)
             }
         case .stripe(let room):
-            StripeRoomCard(room: room, tiles: kindTilesInHead) { item in
+            StripeRoomCard(room: room) { item in
                 openBySourceRef(item.id, in: visible)
             }
         case .polar(let room):
-            PolarRoomCard(room: room, tiles: kindTilesInHead) { item in
+            PolarRoomCard(room: room) { item in
                 openBySourceRef(item.id, in: visible)
             }
         case .dodoPayments(let room):
-            DodoPaymentsRoomCard(room: room, tiles: kindTilesInHead) { currency in
+            DodoPaymentsRoomCard(room: room) { currency in
                 // A currency owns many payments, so the honest landing
                 // is its most recent one — the Gnosis Pay rule, matched
                 // on the same `priceCurrency` field the room groups by.
@@ -1059,7 +858,7 @@ extension FeedScreen {
                 openBySourceRef(retry.id, in: visible)
             }
         case .posthog(let room):
-            PostHogRoomCard(room: room, tiles: kindTilesInHead) { event in
+            PostHogRoomCard(room: room) { event in
                 openBySourceRef(PostHogWatch.metricRef(event), in: visible)
             }
         case .cardPointers(let room):
@@ -1068,7 +867,7 @@ extension FeedScreen {
             // row a scroll below, and each of those is its own door.
             CardPointersRoomCard(room: room)
         case .walletbeat(let room):
-            WalletbeatRoomCard(room: room, tiles: kindTilesInHead) { ref in
+            WalletbeatRoomCard(room: room) { ref in
                 // The card names a real row's `sourceRef`, so this lands
                 // exactly — the card itself holds no `Thing` (corollary 5)
                 // and the lookup happens here, against the live corpus.
@@ -1083,7 +882,7 @@ extension FeedScreen {
                 route.path.append(.walletbeatDirectory)
             }
         case .l2beat(let room):
-            L2beatRoomCard(room: room, tiles: kindTilesInHead) { ref in
+            L2beatRoomCard(room: room) { ref in
                 openBySourceRef(ref, in: visible)
             } onBrowse: {
                 // Pushed, not raised (§219 — Connect raises, Open pushes), and
@@ -1183,8 +982,7 @@ extension FeedScreen {
             // pending and only a module warning stands — without it
             // that card announced a door and had none (2026-08-17).
             SafeRoomCard(room: room,
-                         fallbackRef: SafeRoomSource.fallbackRef(things: visible),
-                         tiles: kindTilesInHead) { ref in
+                         fallbackRef: SafeRoomSource.fallbackRef(things: visible)) { ref in
                 // Unlike its siblings, a Safe entry OWNS a single row
                 // — the tracking snapshot is keyed by the pending
                 // thing's own `sourceRef` — so this is a direct

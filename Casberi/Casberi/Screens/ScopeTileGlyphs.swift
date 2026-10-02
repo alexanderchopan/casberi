@@ -18,7 +18,7 @@ enum ScopeTileGlyph {
     static let positions   = "building.columns"
     /// The Wallet's Cards tile (prd §1048). Not the bare `creditcard`: the
     /// user reserved that, and `creditcard.fill`, for the Wallet itself
-    /// (`room-kind-tiles-selftest`), and a tile inside the Wallet wearing the
+    /// (`tile-glyph-audit.py`), and a tile inside the Wallet wearing the
     /// Wallet's own mark would read as a second door to the room it is in.
     static let cards       = "creditcard.and.123"
     static let risk        = "shield"
@@ -36,68 +36,13 @@ enum ScopeTileGlyph {
     static let apps        = "square.grid.3x2"
     static let shielded    = "lock.shield"
     static let review      = "checkmark.shield"
-    /// The kind tiles of the Safe, GitHub and Stripe rooms (prd §815). All is
-    /// the dock's own All glyph, read from its one table rather than retyped.
+    /// Every room's All (prd §815): the dock's own All glyph, read from its
+    /// one table rather than retyped.
     static var all: String { CategoryFold.glyph(for: "All") }
-    static let queue        = "signature"
-    static let pullRequests = "arrow.triangle.pull"
-    static let issues       = "smallcircle.filled.circle"
-    static let releases     = "tag"
-    /// GitHub's Watch verb (prd §1031) — the app's watch glyph wherever a
+    /// Work's Watch verb (prd §1031, §1057) — the app's watch glyph wherever a
     /// person follows something privately (Follow address, the address
     /// book's Watch, Markets' Watchlist).
     static let watch        = "eye"
-    static let payments     = "dollarsign.circle"
-    static let payouts      = "banknote"
-    static let disputes     = "exclamationmark.triangle"
-    /// App Store Connect's and Hugging Face's kind tiles (prd §816). Each a
-    /// meaning no tile or dock seat had yet, so each a symbol none wears.
-    static let versions     = "app.badge"
-    static let reviews      = "star.bubble"
-    static let builds       = "hammer"
-    static let models       = "cpu"
-    static let datasets     = "cylinder.split.1x2"
-    static let papers       = "doc.text"
-    /// PostHog's, L2BEAT's and Walletbeat's (prd §816). News and Revisions
-    /// are one meaning in both rating rooms, so one glyph each.
-    static let metrics      = "gauge.with.dots.needle.33percent"
-    static let annotations  = "text.bubble"
-    static let milestones   = "flag"
-    static let chains       = "point.3.connected.trianglepath.dotted"
-    static let wallets      = "wallet.bifold"
-    static let news         = "newspaper"
-    static let revisions    = "arrow.triangle.2.circlepath"
-    /// The agent rooms' live half (prd §840) — the tile that turns the room
-    /// from the conversations you have HAD into the one you are having.
-    ///
-    /// **The bubble family here differs by what sits INSIDE the bubble**, and
-    /// that is what makes this free rather than a fifth generic one: a star is
-    /// a review, a line of text an annotation, a character Duolingo, an
-    /// exclamation Sentry — so an ellipsis is "it is answering". The plain
-    /// bubbles were all spoken for: `bubble.left` is the chat KIND and the
-    /// ChatGPT/Claude/Gemini seats, `bubble.left.and.bubble.right` is the
-    /// Social category chip and Stocktwits (user, 2026-09-19).
-    ///
-    /// `square.and.pencil` — Apple's own compose — was proposed and REFUSED
-    /// by the user, though it was free as a tile glyph and its five other uses
-    /// all mean compose. Do not re-propose it.
-    static let chat         = "ellipsis.bubble"
-    /// The twelve rooms that grew tiles in prd §911, each a meaning no tile or
-    /// dock seat wore. A merge request and a patch ARE pull requests, so those
-    /// two cases wear `pullRequests` as declared aliases (the harness's
-    /// `ALIASES`), never a second glyph for one meaning. `cart` is Shopping's,
-    /// so a sale is a bag; `creditcard` is the wallet's, so a cost is a bar chart.
-    static let sales        = "bag"
-    static let subscriptions = "repeat"
-    static let errors       = "ladybug"
-    static let regressions  = "arrow.counterclockwise"
-    static let deploys      = "shippingbox"
-    static let failed       = "xmark.octagon"
-    static let alarms       = "bell"
-    static let costs        = "chart.bar"
-    static let incidents    = "light.beacon.max"
-    static let resolved     = "checkmark.circle"
-    static let deprecations = "archivebox"
     /// Logos' Node scope (prd §991) — the node you run.
     static let node         = "server.rack"
     /// Logos' Rewards scope (prd §1016) — what that node earns. The app's own
@@ -105,18 +50,13 @@ enum ScopeTileGlyph {
     static let rewards      = "coins.stack"
     /// The Notes room's tiles (prd §969). Pin is the dial's own pin glyph —
     /// the same meaning, so the same symbol; New is the bare plus, a verb in
-    /// the tile row and the one tile that never lights. (`square.and.pencil`
-    /// was refused for Chat above and is not re-proposed here either.)
+    /// the tile row and the one tile that never lights. (`square.and.pencil`,
+    /// Apple's compose, was refused by the user for an agent's Chat tile
+    /// (2026-09-19) and is not re-proposed here either.)
     /// Folders is the bare `folder`, back with folders behind it (prd §980).
     static let pinned       = "pin"
     static let folders      = "folder"
     static let new          = "plus"
-    /// The Reminders room's date scope (prd §993), Apple's own Today.
-    /// Not `calendar`: that is the event kind's glyph and the Calendar seat's.
-    static let today        = "sun.max"
-    /// The mail rooms' Attachments (prd §1019). The note sheet's attach tool
-    /// wears the same clip for the same meaning; no tile or dock seat does.
-    static let attachments  = "paperclip"
     /// The Frames room's three VERB tiles (prd §1039) — the glyphs their rows
     /// wore in the Actions block, so the act keeps its face as it becomes a
     /// tile. `create` is not `new`'s plus: a new account is not a new note.
@@ -133,8 +73,6 @@ enum ScopeTileGlyph {
     static let explorer     = "safari"
 }
 
-/// The mail rooms' tiles (prd §1019). New is the Notes room's plus: the same
-/// verb, so the same glyph.
 /// The Work room's tiles (prd §1057).
 extension WorkScope: DSTileScope {
     var glyph: String {
@@ -156,16 +94,6 @@ extension DayScope: DSTileScope {
     }
 }
 
-extension MailScope: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .all:         return ScopeTileGlyph.all
-        case .attachments: return ScopeTileGlyph.attachments
-        case .new:         return ScopeTileGlyph.new
-        }
-    }
-}
-
 /// The Notes room's tiles (prd §969). Conformed here for the reason every
 /// other scope enum is — `NotesScope` stays Foundation-only so a harness can
 /// compile it whole.
@@ -176,70 +104,6 @@ extension NotesScope: DSTileScope {
         case .pinned:  return ScopeTileGlyph.pinned
         case .folders: return ScopeTileGlyph.folders
         case .new:     return ScopeTileGlyph.new
-        }
-    }
-}
-
-/// The Reminders room's tiles (prd §993). New is the Notes room's plus: the
-/// same verb, so the same glyph.
-extension RemindersScope: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .all:       return ScopeTileGlyph.all
-        case .today:     return ScopeTileGlyph.today
-        case .new:       return ScopeTileGlyph.new
-        }
-    }
-}
-
-/// The rooms' kind tiles (prd §815, §816). Activity and Permissions are the
-/// wallet family's own glyphs, because they are the same meaning; every new
-/// kind wears a glyph no other tile or dock seat wears, and a meaning two rooms
-/// share (News, Revisions) is one case, so one glyph.
-extension RoomKindTile: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .all:          return ScopeTileGlyph.all
-        case .queue:        return ScopeTileGlyph.queue
-        case .activity:     return ScopeTileGlyph.activity
-        case .permissions:  return ScopeTileGlyph.permissions
-        case .pullRequests: return ScopeTileGlyph.pullRequests
-        case .issues:       return ScopeTileGlyph.issues
-        case .releases:     return ScopeTileGlyph.releases
-        case .watch:        return ScopeTileGlyph.watch
-        case .payments:     return ScopeTileGlyph.payments
-        case .payouts:      return ScopeTileGlyph.payouts
-        case .disputes:     return ScopeTileGlyph.disputes
-        case .versions:     return ScopeTileGlyph.versions
-        case .reviews:      return ScopeTileGlyph.reviews
-        case .builds:       return ScopeTileGlyph.builds
-        case .models:       return ScopeTileGlyph.models
-        case .datasets:     return ScopeTileGlyph.datasets
-        case .papers:       return ScopeTileGlyph.papers
-        case .metrics:      return ScopeTileGlyph.metrics
-        case .annotations:  return ScopeTileGlyph.annotations
-        case .milestones:   return ScopeTileGlyph.milestones
-        case .chains:       return ScopeTileGlyph.chains
-        case .wallets:      return ScopeTileGlyph.wallets
-        case .news:         return ScopeTileGlyph.news
-        case .revisions:    return ScopeTileGlyph.revisions
-        // Splits' accounts are the wallet family's Accounts by name, so they
-        // wear its glyph rather than a second one (prd §820).
-        case .accounts:     return ScopeTileGlyph.accounts
-        case .sales:         return ScopeTileGlyph.sales
-        case .subscriptions: return ScopeTileGlyph.subscriptions
-        // GitLab's and Radicle's words for a pull request (prd §911).
-        case .mergeRequests: return ScopeTileGlyph.pullRequests
-        case .patches:       return ScopeTileGlyph.pullRequests
-        case .errors:        return ScopeTileGlyph.errors
-        case .regressions:   return ScopeTileGlyph.regressions
-        case .deploys:       return ScopeTileGlyph.deploys
-        case .failed:        return ScopeTileGlyph.failed
-        case .alarms:        return ScopeTileGlyph.alarms
-        case .costs:         return ScopeTileGlyph.costs
-        case .incidents:     return ScopeTileGlyph.incidents
-        case .resolved:      return ScopeTileGlyph.resolved
-        case .deprecations:  return ScopeTileGlyph.deprecations
         }
     }
 }
@@ -280,7 +144,7 @@ extension PrivacyPoolsSection: DSTileScope {
 
 /// Follow wears Watch's eye (prd §1039): following an address privately IS
 /// watching it (`ScopeTileGlyph.watch` names Follow address among its uses),
-/// so one meaning, one glyph — a declared alias in `room-kind-tiles-selftest`.
+/// so one meaning, one glyph — a declared alias in `tile-glyph-audit.py`.
 extension WalletSection: DSTileScope {
     var glyph: String {
         switch self {

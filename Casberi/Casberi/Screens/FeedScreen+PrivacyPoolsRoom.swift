@@ -23,22 +23,4 @@ extension FeedScreen {
         // from `shieldedHasContent`/`reviewHasContent` itself.
         PrivacyPoolsSection.present()
     }
-
-    /// Whether the Privacy Pools room's rows draw — true for every other room
-    /// the `.ledger` shape serves, so the footer and the rows can never
-    /// disagree about whether there is a list to be at the bottom of.
-    ///
-    /// Railgun shares that shape and has no scopes, so it must never be gated
-    /// by one; the source test is what keeps this room's control from reaching
-    /// into its neighbour's room. Recomposing the room here is the same read
-    /// the head above already makes on this pass — `PrivacyPoolsRoomSource`
-    /// composes from `visible` and touches nothing else — and deriving it is
-    /// what keeps the gate and the strip from describing different rooms.
-    func privacyPoolsShowsRows(_ visible: [Thing]) -> Bool {
-        guard source == PrivacyPoolsRoomSource.source,
-              let room = PrivacyPoolsRoomSource.compose(things: visible) else { return true }
-        let scopes = privacyPoolsSections(room)
-        return !PrivacyPoolsSection.shows(present: scopes)
-            || PrivacyPoolsSection.resolve(chrome.privacyPoolsSection, present: scopes) == .activity
-    }
 }

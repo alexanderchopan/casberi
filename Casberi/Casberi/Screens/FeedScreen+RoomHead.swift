@@ -32,20 +32,11 @@ extension FeedScreen {
         /// A head that had only its sentence (prd §760). Held as the head rather
         /// than as the string so the balance mask is read when it is drawn.
         var quietHead: SourceHead? = nil
-        /// The kind tiles of a kind-tile room (prd §815, §816),
-        /// read over the whole room BEFORE the pick narrows it — a presence
-        /// read off the narrowed list would leave only the picked kind, and
-        /// the tiles would vanish the moment one was tapped. Empty draws none.
-        var kindTiles: [RoomKindTile] = []
         /// The picked app's own head, when the Wallet's menu picks an app that
         /// has one (prd §1048d): drawn in the Wallet's box in place of the
         /// balance, so Safe's co-signers or a card's spending stay one pick
         /// away after their rooms folded in.
         var seatHead: SourceHead? = nil
-        /// Which of those tiles carry the attention dot: Safe's Queue while a
-        /// transaction awaits your signature, Stripe's Disputes while one is
-        /// open.
-        var kindAttention: Set<RoomKindTile> = []
     }
 
     /// The last head computed for each room, kept ACROSS the mount.
@@ -299,9 +290,7 @@ extension FeedScreen {
             predicate: #Predicate<Thing> { $0.source == source },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         guard let raw = try? modelContext.fetch(d) else { return fallback }
-        // Never narrowed by a kind tile (prd §815): the tiles' presence and
-        // the lead's foot describe the whole room.
-        let full = liveVisible(rawOverride: raw, kindPick: false).live
+        let full = liveVisible(rawOverride: raw).live
         return full.count >= fallback.count ? full : fallback
     }
 
@@ -346,67 +335,11 @@ extension FeedScreen {
         if let seat = selectedSeat, let seatSource = seat.source {
             computed.seatHead = sourceHead(rows.filter { seat.owns($0.source) }, for: seatSource)
         }
-        if let kindRoom = RoomKindTiles.Room(source: source) {
-            let kinds = kindRoomReading(kindRoom, rows: rows)
-            computed.kindTiles = kinds.tiles
-            computed.kindAttention = kinds.attention
-            RoomKindTileMemory.remember(kinds.tiles, for: source)
-        }
         Self.headMemo[headIdentity] = computed
         heads = computed
         SwipeClock.mark("heads", detail: "rows=\(rows.count)")
     }
 
-    /// The tiles and their dots, over the whole room.
-    @MainActor
-    private func kindRoomReading(_ room: RoomKindTiles.Room, rows: [Thing])
-        -> (tiles: [RoomKindTile], attention: Set<RoomKindTile>) {
-        let census = RoomKindTiles.Census(room: room, refs: rows.map(\.sourceRef))
-        var kinds: Set<RoomKindTile> = []
-        var hasUnkinded = false
-        for thing in rows {
-            if let kind = census.kind(ref: thing.sourceRef, url: thing.content, tags: thing.tags) {
-                kinds.insert(kind)
-            } else {
-                hasUnkinded = true
-            }
-        }
-        let tiles = RoomKindTiles.present(room: room, kinds: kinds, hasUnkinded: hasUnkinded)
-        var attention: Set<RoomKindTile> = []
-        switch room {
-        case .safe:
-            // "Your turn", read off the same model the head draws, so the dot
-            // and the head's lede can never disagree. The module warning is
-            // the head's own alert line again (prd §816).
-            if let safe = SafeRoomSource.compose(things: rows), safe.awaitsYouCount > 0 {
-                attention.insert(.queue)
-            }
-        case .stripe:
-            let open = RoomKindTiles.openDisputes(rows.map { (url: Optional($0.content), tags: $0.tags, title: $0.title) })
-            if open > 0 { attention.insert(.disputes) }
-        case .splits:
-            // A proposal waiting on signatures is the one thing in this room
-            // somebody has to act on (prd §820).
-            if rows.contains(where: { $0.sourceRef?.hasPrefix(SplitsShape.txPrefix) == true
-                                      && $0.tags.contains(SplitsShape.waitingTag) }) {
-                attention.insert(.queue)
-            }
-        case .github, .appStoreConnect, .huggingFace, .posthog, .l2beat, .walletbeat,
-             .polar, .dodoPayments, .gitlab, .radicle, .sentry, .vercel, .pagerduty,
-             .npm, .pypi, .aws:
-            // No dot: a dot is a claim that something needs you, and none of
-            // these rooms has a definition of that yet (prd §911).
-            break
-        }
-        return (tiles, attention.intersection(tiles))
-    }
-
-    /// The kind tiles as one control (prd §815, §816), or nil when the room
-    /// offers none. Where the room draws a head, the head carries it in its
-    /// `scopes` slot — `DSRoomChassis.Head`'s own geometry, the Privy pattern;
-    /// where it draws none, `kindTileSections` stands it under the cover. One
-    /// construction for both, so a tile is the same control in either place.
-    ///
     /// The agent whose room this is, and whose key is present (prd §840).
     ///
     /// Held in `@State` and resolved in `onAppear`, never read in a body:
@@ -485,32 +418,6 @@ extension FeedScreen {
         }
     }
 
-    /// Before this visit's reading lands, the room draws the tiles it drew
-    /// last time (`RoomKindTileMemory`, prd §830) — never the attention dot,
-    /// which waits for the reading.
-    var kindTilesInHead: DSScopeTiles<RoomKindTile>? {
-        let room = RoomKindTiles.Room(source: source)
-        var tiles = heads?.kindTiles
-            ?? (room != nil ? RoomKindTileMemory.tiles(for: source) : nil)
-        // GitHub's Watch verb, last (prd §1031) — where a key can act on it.
-        if let room {
-            tiles = RoomKindTiles.withVerbs(tiles ?? [], room: room,
-                                            acting: room == .github && githubKeyed)
-        }
-        guard let tiles, !tiles.isEmpty else { return nil }
-        return DSScopeTiles(sections: tiles,
-                            active: roomKindPick,
-                            attention: heads?.kindAttention ?? [],
-                            verbs: Set(tiles.filter(\.isVerb))) { picked in
-            // A verb acts and never scopes; Watch is the only one (§1031).
-            if picked.isVerb {
-                feedSheet = .githubWatch
-                return
-            }
-            withAnimation(DS.Motion.standard) { chrome.roomKind = picked }
-        }
-    }
-
     /// Everything the room draws ABOVE its rows — the source chrome, the
     /// per-source heroes and heads, the ledes.
     ///
@@ -539,11 +446,7 @@ extension FeedScreen {
             // What survives is COMPOSE, and only because it is a different
             // verb: "New event" / "New task" leaves for another app, which
             // the catalogue is not a door to. See `sourceComposeRow`.
-            // Calendar's compose is its New TILE since prd §994 — the row
-            // stood above the lead, at the top of the screen (§752). The mail
-            // rooms' since prd §1019, for the same reason.
-            if let bridge = activeSourceBridge, source != "Reminders", bridge.name != "Calendar",
-               !MailScope.rooms.contains(bridge.name),
+            if let bridge = activeSourceBridge,
                let action = SourceActions.action(forSource: bridge.name),
                case .openURL = action.run {
                 sourceComposeRow(action)

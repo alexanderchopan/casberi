@@ -76,7 +76,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case permissions
     /// The room's VERB (prd §1039): follow another address. Never a scope —
     /// it is never in `order`, never resolved to, and never lights. It rides
-    /// this enum as Watch rides `RoomKindTile` (prd §1031), because a verb
+    /// this enum as Watch rides `WorkScope` (prd §1031, §1057), because a verb
     /// tile is drawn by the same grid as the scopes.
     case follow
 

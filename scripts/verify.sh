@@ -596,6 +596,20 @@ step "Lead-cycle audit"
 "$ROOT/scripts/lead-cycle-audit.py" || fail "a row lead turns to something other than its dock category's glyph, or does not turn back — see the output above"
 print -P "%F{green}✓ lead-cycle audit%f"
 
+# ONE GLYPH, ONE MEANING, FOR EVERY TILE (prd §815, §831, moved here by §1059).
+# A tile's glyph is its meaning, so a symbol two tiles share reads as one thing
+# and a meaning that changes symbol reads as two. Every `DSTileScope` spells no
+# literal, a case wears its own name's constant or a declared alias, the table
+# and the dock's categories share no symbol, the reserved ones keep their
+# owner, and no constant outlives the tile that wore it. Invisible to a build
+# and a screenshot sweep: the tile draws, in a real symbol. These rules lived in
+# the kind tiles' self-test, deleted with the rooms that wore them.
+step "Tile-glyph audit"
+"$ROOT/scripts/tile-glyph-audit.py" --self-test >/dev/null \
+  || fail "the tile-glyph audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/tile-glyph-audit.py" || fail "a tile glyph carries two meanings, or a meaning two glyphs — see the output above"
+print -P "%F{green}✓ tile-glyph audit%f"
+
 # A STATUS WORD TAKES THE INK, NEVER THE HUE (the HIG sweep, 2026-09-29).
 # `DS.attention`/`confirm`/`destructive` are 2.2:1 and 3.6:1 on the light page,
 # so 157 words were readable only under Increase Contrast; they moved to the
@@ -1640,11 +1654,6 @@ harness "Privy self-test" "Privy self-test" "scripts/privy-selftest.sh" "the Pri
 # read parses to nothing, address-poisoning dust landed as news, and a
 # proposal waiting on signatures drawn as done.
 harness "Splits self-test" "Splits self-test" "scripts/splits-selftest.sh" "the Splits self-test failed — run scripts/splits-selftest.sh"
-# The rooms' kind tiles (prd §815, §816) — a `wallet:safe` prefix that claims
-# the outcome rows, an executed transaction still listed in Queue, a build
-# prefix that claims the expiry warning, All beside one kind drawing the same
-# list twice, and one glyph wearing two meanings.
-harness "Room kind-tiles self-test" "room kind-tiles self-test" "scripts/room-kind-tiles-selftest.sh" "the room kind-tiles self-test failed — run scripts/room-kind-tiles-selftest.sh"
 # The web-session capture (prd §777) — an instrument that records a MONEY app's
 # own traffic, so what it may report is the whole check: a host outside the
 # named target is dropped rather than redacted, a URL keeps its path and loses
@@ -1713,15 +1722,6 @@ harness "Feed-fold self-test" "feed-fold self-test" "scripts/feed-fold-selftest.
 # that the slice bounds, that the opener appears only when rows were held back,
 # and that the room still draws THROUGH the window rather than around it.
 harness "Row-window self-test" "row-window self-test" "scripts/row-window-selftest.sh" "the row-window self-test failed — run scripts/row-window-selftest.sh"
-
-# The Calendar room's tiles and month grid (prd §994): the spans roll from
-# today, the grid holds all of Month, and the ingest fetches far enough for
-# Month to be true — a grid over a week of data would draw empty weeks.
-
-# The mail rooms' tiles (prd §1019): All · Attachments · New in Gmail and
-# iCloud Mail alike, the Attachments tile reading the fact the ingest writes
-# under one spelling, and the "New email" row gone from the top of the screen.
-harness "Mail-scope self-test" "mail-scope self-test" "scripts/mail-scope-selftest.sh" "the mail-scope self-test failed — run scripts/mail-scope-selftest.sh"
 
 # A refused Safe read is never an empty answer (prd §789). Safe's keyless quota
 # is one pool shared by every keyless caller, and when it ran dry every reader

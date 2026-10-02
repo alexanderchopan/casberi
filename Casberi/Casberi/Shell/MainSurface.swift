@@ -1459,8 +1459,7 @@ struct MainSurface: View {
         // waiting for the first conversation meant waiting for a door that
         // only exists inside the room you could not reach.
         for bridge in store.bridges where bridge.status == .connected
-            && (LiveRoomSources.has(bridge.name) || LiveRoomSources.keyedAgent(bridge.name)
-                || LiveRoomSources.keepsEmptyRoom.contains(bridge.name))
+            && (LiveRoomSources.has(bridge.name) || LiveRoomSources.keyedAgent(bridge.name))
             && Corpus.earnsRoom(bridge.name)
             && seen.insert(bridge.name).inserted {
             ordered.append(bridge.name)
@@ -2121,11 +2120,8 @@ struct MainSurface: View {
             // A GitHub watch belongs to the GitHub seat, same argument
             // (2026-09-11) — a repo ref carried into Linear matches no row.
             chrome.githubScope = nil
-            // A kind tile belongs to its room, and every room opens on All
-            // (prd §815).
-            chrome.roomKind = .all
-            // An agent's Chat tile belongs to that agent, for `roomKind`'s
-            // reason and one of its own (prd §841): carried across, swiping
+            // An agent's Chat tile belongs to that agent, and every room opens
+            // on All (prd §815, §841): carried across, swiping
             // from Bankr into Claude's room lands you in a keyboard, which is
             // not a room you opened to look something up in. §840 documented
             // this reset and never wrote it — the comment was here, the line
@@ -2134,11 +2130,7 @@ struct MainSurface: View {
             // The Notes room opens on All too (prd §969).
             chrome.notesScope = .all
             chrome.notesFolder = nil
-            // And the Reminders room (prd §993).
-            chrome.remindersScope = .all
             chrome.workScope = .all
-            // And the mail rooms (prd §1019).
-            chrome.mailScope = .all
             // And the Tokens room's packs.
             chrome.tokensScope = .watchlist
             chrome.pinterestScope = nil

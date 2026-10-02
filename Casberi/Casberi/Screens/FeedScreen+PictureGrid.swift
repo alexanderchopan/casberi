@@ -45,27 +45,6 @@ extension FeedScreen {
             && thing.previewImageData != nil
     }
 
-    /// A connected-folder file whose heal has landed pixels — the mixed
-    /// Files room's grid membership (2026-08-02), `isMemoryTile`'s shape with
-    /// one addition: the extension check makes the picture claim explicit
-    /// rather than inferring it from `previewImageData`, which is the heal's
-    /// implementation detail and not this test's contract. Guarded internally
-    /// for the same corollary-4 reason as above.
-    ///
-    /// `drawsAsPicture`, not `isImageRef`, since 2026-08-17 — a VIDEO's poster
-    /// frame is pixels and tiles here too. The comment above used to say only
-    /// images ever carry `previewImageData` under Files; that stopped being
-    /// true the day the poster heal landed, which is exactly why the claim was
-    /// written as an explicit test instead of a `previewImageData != nil`.
-    static func isFileImageTile(_ thing: Thing) -> Bool {
-        thing.isLive && thing.source == "Files" && thing.kind == .file
-            // `drawsAsPicture` BEFORE the pixels (PERF 2026-09-01) — a
-            // `sourceRef` extension test is a string compare; the term after it
-            // is a file read. See `isMemoryTile` above.
-            && FilesIngest.drawsAsPicture(thing.sourceRef)
-            && thing.previewImageData != nil
-    }
-
     /// A wordless picture in an Instagram export (2026-08-18, prd §389) — the
     /// mixed room's grid membership, `isXPhotoTile`'s shape one product over
     /// and for its exact reasons.
