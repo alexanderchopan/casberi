@@ -1416,15 +1416,6 @@ struct FeedScreen: View {
                 // title, so every tile tap slid the title off and the tiles up
                 // by its height; it returns here, so the tiles stand still.
                 .id(Self.roomTitleAnchor)
-                // Where the name stands, for the tray's pick flight to land
-                // (§932). Written from the leaf that draws it, never read here.
-                .background {
-                    GeometryReader { g in
-                        Color.clear
-                            .onAppear { chrome.roomHeadFrame = g.frame(in: .global) }
-                            .onChange(of: g.frame(in: .global)) { _, f in chrome.roomHeadFrame = f }
-                    }
-                }
                 // The demo's pill RESERVES its band above the title (prd
                 // §1005, closing §946's "found, not fixed"): the well absorbed
                 // it under §919, but §930 put the title first, so the pill sat

@@ -7,12 +7,10 @@ import SwiftUI
 /// before a tap for any room past the fourth (user: "then it's only one
 /// button that a person has to press in the nav, whereas now they have to
 /// sort of scroll and stuff"). This tray puts every room one tap from the
-/// face: a row per category, its name at the left and its connected sources
-/// beside it as bare brand circles, wrapping inside the column when a category
-/// is crowded — so the first line of every row is the same shape whether
-/// Wallet holds two accounts or fourteen. A `You` row leads with four doors:
-/// Home (the All room), Connect, Addresses and Settings. Manage is not a door
-/// (prd §958): Connect lands on the same screen, whose switcher reaches it.
+/// face, drawn as the Home Screen draws apps (prd §1050l): a `You` row of
+/// four doors — Home (the All room), Notes, Addresses and Settings — then a
+/// Categories section of the same tiles, four to a line, each landing in its
+/// category's room.
 ///
 /// **A layer of `RootShell`'s stack, never a sheet (§394).** A sheet presents
 /// in its own context and would cover the face; this sits UNDER the seat so
@@ -34,9 +32,9 @@ import SwiftUI
 /// SELECTED and nothing else (the HIG's own reading of the fill variant), so
 /// the standing category and Home fill and tint, and the rest stay outline.
 /// The panel grows out of the face's corner on the dock's own spring, the
-/// marks deal in left to right, the standing glyph bounces once, and a picked
-/// source FLIES to the room's head (`RoomPickFlight`, the capture flight
-/// reversed). A category with a broken seat wears the attention colour on its
+/// tiles deal in left to right and the standing glyph bounces once (the
+/// picked source's flight to the room's head went with the marks, §1050l).
+/// A category with a broken seat wears the attention colour on its
 /// glyph and says so; a system Close appears at the accessibility text sizes,
 /// where the face's ring is hard to read. Every name is a 44pt target.
 ///
@@ -45,14 +43,13 @@ import SwiftUI
 /// the same hop every other room-to-room door takes, so a category label
 /// resolves through `CategoryFold.landing` exactly as a chip tap did.
 ///
-/// **A mark has no hold (prd §1033).** §1015 gave it one verb, Manage
-/// account, and nobody finds a hold; the room's own door beside its name
-/// was that verb, and since §1050f an app's settings open from Apps, so a
-/// mark only lands you in a room.
+/// **A tile has no hold (prd §1033).** §1015 gave a mark one verb, Manage
+/// account, and nobody finds a hold; since §1050f an app's settings open
+/// from Apps, so a tile only lands you in a room.
 ///
 /// **Search and the pinned row (prd §1015).** A search field leads the tray
-/// as it leads Accounts; typing narrows the grid in place — hits stay under
-/// their headers, named — and nothing opens. The field and the You row are
+/// as it leads Accounts; typing narrows the categories in place — a tile
+/// stays when its name or an app inside matches — and nothing opens. The field and the You row are
 /// pinned above the scroll, so Home, Notes and Settings are one tap away
 /// however far the rooms scroll.
 struct RoomsTray: View {
@@ -63,23 +60,14 @@ struct RoomsTray: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    /// Every button in the tray is the FACE's size (prd §1013, user: "we
-    /// should just use that size or the size of the fab and the You tiles,
-    /// not something else in between", then "lets go with h with all the
-    /// buttons at 46"): the five You doors and every account mark.
-    static let mark: CGFloat = DS.Face.seat
-    /// Five columns across the tray (prd §1013: "5 and 5"), shared by the You
-    /// doors and every section's marks, so the tray is one grid top to bottom.
-    static let marksPerLine = 5
-    /// The first column's centre, from the tray's inset: the column the face
-    /// and every room's row icons centre on (`rowLeadCentre`, prd §1014,
-    /// user: "we need the axis to align here … so it is cohesive? yes the
-    /// face would cover one but so what?"). The fifth column mirrors it.
-    static let axis: CGFloat = DSRoomChassis.rowLeadCentre - DSRoomChassis.inset
-    /// A header glyph's slot, so every category's glyph centres on `axis`
-    /// whatever its own width.
-    static let glyphSlot: CGFloat = 24
-    /// The air under a line of marks, before the next line.
+    /// Every door in the tray is ONE tile, the Home Screen's (prd §1050l,
+    /// user: "ok lets do A"): a rounded square at the app-icon ratio, its
+    /// word under it — the You doors and every category alike.
+    static let tile: CGFloat = 62
+    /// Four to a line, the Home Screen's count, shared by the You doors and
+    /// the categories, so the two sections stand on one set of columns.
+    static let tilesPerLine = 4
+    /// The air under a line of tiles, before the next line.
     static let lineAir: CGFloat = DS.Space.s4 + DS.Space.s1
     /// The air above a section's header: more than `lineAir`, so the gap is
     /// what divides one category from the next — no line, no card (§782,
@@ -102,10 +90,6 @@ struct RoomsTray: View {
     @State private var grown = false
     @State private var dealt = false
     @State private var bounceTick = 0
-    /// Where every mark stands, in window space: the flight's start. Layout,
-    /// not state — a reference the body never observes, so a scroll's frame
-    /// writes re-render nothing.
-    @State private var frames = TrayFrames()
     /// The search (prd §1015): typing narrows the grid in place.
     @State private var query = ""
     @FocusState private var searchFocused: Bool
@@ -185,11 +169,9 @@ struct RoomsTray: View {
         let natural = contentHeight + headHeight + Self.grabberHeight
         let rest = min(natural, screen.height * Self.restShare)
         let full = min(natural, screen.height * Self.grownShare)
-        // A header's glyph centres on the axis its first mark stands on.
-        let headInset = Self.axis - Self.glyphSlot / 2
         let height = grown ? full : rest
         let searching = !trimmedQuery.isEmpty
-        let hits = searching ? searchHits : []
+        let shown = searching ? searchHits : categories
         return VStack(spacing: 0) {
             grabber
             // The pinned part (prd §1015): the search, then the You row —
@@ -211,25 +193,28 @@ struct RoomsTray: View {
                 }
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: Self.sectionGap) {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if searching {
-                        if hits.isEmpty {
+                        if shown.isEmpty {
                             DSFootnote(Text("No room matches \u{201C}\(trimmedQuery)\u{201D}"))
-                                .padding(.leading, headInset)
-                        }
-                        ForEach(Array(hits.enumerated()), id: \.element.category) { index, hit in
-                            categoryRow(hit.category, present: hit.seats, index: index,
-                                        headInset: headInset, named: true)
                         }
                     } else {
-                        ForEach(Array(categories.enumerated()), id: \.element) { index, category in
-                            categoryRow(category, present: trayMarks(in: category), index: index,
-                                        headInset: headInset, named: false)
+                        // The categories are their own section (§1050l): a
+                        // header, then the same tiles as the You row.
+                        Text("Categories")
+                            .dsText(.heading20)
+                            .foregroundStyle(DS.textPrimary)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    MarkGrid(columns: Self.tilesPerLine, edge: Self.tile / 2, lineAir: Self.lineAir) {
+                        ForEach(Array(shown.enumerated()), id: \.element) { index, category in
+                            categoryTile(category, index: index + doors().count)
+                                .transition(.scale(scale: 0.6).combined(with: .opacity))
                         }
                     }
                 }
-                // One grid across the tray between its insets (§1013): the
-                // You doors and every section's marks share five columns.
+                // One grid across the tray between its insets: the You doors
+                // and the categories share four columns.
                 .padding(.horizontal, DSRoomChassis.inset)
                 // Hits settle into place rather than snapping (§1015).
                 .animation(DS.Motion.standard, value: trimmedQuery)
@@ -363,10 +348,10 @@ struct RoomsTray: View {
     }
 
     /// Whether one of the category's seats needs you — the same test the
-    /// face's ring makes (`DoorAlarm`), read per row so the row can say which.
-    private func broken(_ present: [String]) -> Bool {
-        let seats = Set(present)
-        return bridges.bridges.contains { seats.contains($0.name) && $0.status == .attention }
+    /// face's ring makes (`DoorAlarm`), read per tile so the tile can say which.
+    private func broken(_ category: String) -> Bool {
+        let names = Set(seats(in: category) + appNames(in: category))
+        return bridges.bridges.contains { names.contains($0.name) && $0.status == .attention }
     }
 
     /// A category's seats, in the tray's order.
@@ -384,20 +369,16 @@ struct RoomsTray: View {
         seats(in: category).first { RoomAccounts.mergedRooms.contains($0) }
     }
 
-    /// A row's marks. An unmerged category's are its rooms, each landing in
-    /// its own. A merged category draws NONE (prd §1050e, user: "settings are
-    /// things folks won't use much"): its header opens the room, and an app's
-    /// settings stand beside the room's name once the account menu picks it.
-    private func trayMarks(in category: String) -> [String] {
-        mergedRoom(in: category) == nil ? seats(in: category) : []
-    }
-
-    /// The names a search may find a merged category by: its own, and every
-    /// app it folded in that is connected (a search for Gnosis finds Wallet).
-    private func mergedSearchNames(in category: String) -> [String] {
-        guard let room = mergedRoom(in: category) else { return [] }
+    /// The names of the apps a category holds: its seats, and for a merged
+    /// room every app it folded in that is connected. A search finds the
+    /// category by any of them (a search for Gnosis finds Wallet), and a
+    /// broken one marks its tile. The tray draws no app marks since §1050l:
+    /// a tile lands in its category, whose room scopes to each app.
+    private func appNames(in category: String) -> [String] {
+        let own = seats(in: category).map { BridgeCatalog.seatName(forSource: $0) }
+        guard let room = mergedRoom(in: category) else { return own }
         let names = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
-        return RoomAccounts.connected(in: room, names: names).map(\.name)
+        return own + RoomAccounts.connected(in: room, names: names).map(\.name)
     }
 
     // MARK: - Search (§1015)
@@ -416,27 +397,17 @@ struct RoomsTray: View {
         query.trimmingCharacters(in: .whitespaces)
     }
 
-    /// What the query leaves: a seat one of whose name's WORDS starts with
-    /// it ("st" finds Stripe and App Store, not Instagram), under its own
-    /// header, or a whole category whose name starts with it — Spotlight's
-    /// rule, accents and case aside.
-    private var searchHits: [(category: String, seats: [String])] {
+    /// What the query leaves: the categories whose name, or the name of an
+    /// app inside, has a WORD starting with it ("st" finds Stripe's category
+    /// and App Store's, not Instagram's) — Spotlight's rule, accents and case
+    /// aside.
+    private var searchHits: [String] {
         let q = trimmedQuery
         func starts(_ name: String) -> Bool {
             name.split(whereSeparator: { $0.isWhitespace || $0 == "." || $0 == "-" })
                 .contains { $0.range(of: q, options: [.caseInsensitive, .diacriticInsensitive, .anchored]) != nil }
         }
-        return categories.compactMap { category in
-            // A merged category has no marks to narrow (prd §1050e); it is a
-            // hit, header alone, when its name or a folded app's name matches.
-            if mergedRoom(in: category) != nil {
-                let hit = starts(category) || mergedSearchNames(in: category).contains(where: starts)
-                return hit ? (category: category, seats: []) : nil
-            }
-            let all = trayMarks(in: category)
-            let kept = starts(category) ? all : all.filter { starts(BridgeCatalog.seatName(forSource: $0)) }
-            return kept.isEmpty ? nil : (category: category, seats: kept)
-        }
+        return categories.filter { starts($0) || appNames(in: $0).contains(where: starts) }
     }
 
     /// You: five doors, drawn as APP TILES in the brand pink (prd §976,
@@ -470,7 +441,7 @@ struct RoomsTray: View {
     private var youRow: some View {
         let home = filter.source == "All" && route.path.isEmpty
         let notes = Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty
-        return MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
+        return MarkGrid(columns: Self.tilesPerLine, edge: Self.tile / 2, lineAir: Self.lineAir) {
             ForEach(Array(doors(home: home, notes: notes).enumerated()), id: \.offset) { index, door in
                 self.door(door, index: index)
             }
@@ -498,131 +469,72 @@ struct RoomsTray: View {
         ]
     }
 
-    /// A category: its header above, its marks under it on the tray's five
-    /// columns (prd §1013). The header opens the category's room. `present`
-    /// is the category's seats, or the ones a search left (§1015), named.
-    private func categoryRow(_ category: String, present: [String], index: Int,
-                             headInset: CGFloat, named: Bool) -> some View {
+    /// A category's tile (prd §1050l): the You doors' tile in the room
+    /// head's charcoal (`surfaceRaised`, §1014 — black on the black tray had
+    /// no edge), the category's glyph in the page's own ink (§1050f) and its
+    /// word under it. It lands in the category's room. The standing room
+    /// says so with its filled glyph (`glyph(for:lit:)`) and a primary word;
+    /// a broken app inside wears the attention hue on the glyph, and the
+    /// label says it too.
+    private func categoryTile(_ category: String, index: Int) -> some View {
         let lit = standingCategory == category
-        let needsYou = broken(present)
-        return VStack(alignment: .leading, spacing: 0) {
-            Button {
-                pick(category)
-            } label: {
-                header(glyph: glyph(for: category, lit: lit), word: category,
-                       lit: lit, broken: needsYou)
-            }
-            .buttonStyle(RowPress())
-            .padding(.leading, headInset)
-            .accessibilityLabel(needsYou
-                ? Text("\(category), needs your attention")
-                : Text(category))
-            .accessibilityAddTraits(lit ? .isSelected : [])
-            // A merged category has no marks (prd §1050e), and an empty grid
-            // would still hold its line's air under the header.
-            if !present.isEmpty {
-                MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
-                    ForEach(Array(present.enumerated()), id: \.element) { slot, venue in
-                        markButton(venue, key: .source(venue), named: named)
-                            .modifier(Dealt(on: dealt, index: index + slot, reduceMotion: reduceMotion))
-                            .transition(.scale(scale: 0.6).combined(with: .opacity))
-                    }
-                }
-            }
-        }
-        // A header with no marks under it would shrink to its own width and
-        // centre; the row keeps the column's leading edge.
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// One account's mark: tap lands in its room, and the mark flies to the
-    /// room's head (§932); no hold since §1033. A
-    /// search's hit carries its name (`named`): a hit is read, not scanned.
-    private func markButton(_ venue: String, key: MarkKey, named: Bool) -> some View {
-        Button {
-            pick(venue, flying: true, from: key)
+        let needsYou = broken(category)
+        return Button {
+            pick(category)
         } label: {
             VStack(spacing: DS.Space.s2) {
-                BridgeIcon(name: venue, size: Self.mark, circular: true)
-                    .overlay {
-                        if filter.source == venue {
-                            Circle()
-                                .strokeBorder(DS.tint, lineWidth: 1.5)
-                                .padding(-2)
-                        }
-                    }
-                if named {
-                    Text(BridgeCatalog.seatName(forSource: venue))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                        .frame(maxWidth: Self.mark + DS.Space.s6)
-                }
+                Self.tileShape
+                    .fill(DS.surfaceRaised)
+                    .overlay(
+                        Image(systemName: glyph(for: category, lit: lit))
+                            .font(.system(size: Self.tile * 0.43, weight: .semibold))
+                            .foregroundStyle(needsYou ? DS.attention : DS.textPrimary)
+                            .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
+                    )
+                    .frame(width: Self.tile, height: Self.tile)
+                Text(category)
+                    .dsText(.label12)
+                    .foregroundStyle(lit ? DS.textPrimary : DS.textSecondary)
+                    .lineLimit(1)
             }
+            .frame(minWidth: Self.tile)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
-        .dsTapTarget(Circle())
-        .accessibilityLabel(Text(BridgeCatalog.seatName(forSource: venue)))
-        .accessibilityAddTraits(filter.source == venue ? .isSelected : [])
-        // Where this mark stands, for the flight.
-        .markFrame(key, in: frames)
+        .accessibilityLabel(needsYou
+            ? Text("\(category), needs your attention")
+            : Text(category))
+        .accessibilityAddTraits(lit ? .isSelected : [])
+        .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
     }
 
     // MARK: - Pieces
 
-    /// A section's header (prd §1013): the category's glyph bare, the way
-    /// the dock draws it — no disc (user: "use plain not disc for the header
-    /// icons just like we have in our docks") — then the word and, for a
-    /// room, the chevron. It labels its marks, so it sits in the secondary
-    /// ink and steps back; a pill or a card here would be a third pill and a
-    /// plate (§746, §782). Tint says selected; the attention colour says a
-    /// seat inside needs you (the label says it too).
-    ///
-    /// **Primary ink, never the tint (prd §1050f, user: "no they shouldn't be
-    /// blue anymore").** A category entry is the room's door and its label at
-    /// once, so it reads in the page's own ink; the standing room says so with
-    /// its filled glyph (`glyph(for:lit:)`), and a broken seat with the
-    /// attention hue on the glyph.
-    private func header(glyph: String, word: String, lit: Bool, broken: Bool) -> some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: glyph)
-                .dsGlyph(.subhead, weight: .medium)
-                .frame(width: Self.glyphSlot)
-                .foregroundStyle(broken ? DS.attention : DS.textPrimary)
-                .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
-            Text(word)
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-            DSChevron()
-        }
-        .frame(minHeight: DS.Hit.min)
-        .contentShape(Rectangle())
+    /// Every tile's shape: the app-icon squircle (brief §8's 22.37%).
+    private static var tileShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: DS.Radius.appIcon(tile), style: .continuous)
     }
 
-    /// A You door (prd §976a): a circle in the room head's charcoal
-    /// (`surfaceRaised`, §1014 — black on the black tray had no edge) with
-    /// the glyph in the brand pink, and the standing door FILLS — the pink
-    /// tile, white glyph and
-    /// the top sheen `BridgeIcon` gives a seat with no art. Selection is the
-    /// fill, so the door needs no ring.
+    /// A You door (prd §976a, reshaped by §1050l): the brand pink at a fifth
+    /// with the glyph in the pink, and the standing door FILLS — the pink
+    /// tile, white glyph and the top sheen `BridgeIcon` gives a seat with no
+    /// art. Selection is the fill, so the door needs no ring.
     private func doorTile(_ glyph: String, lit: Bool) -> some View {
-        Circle()
-            .fill(lit ? DS.brand : DS.surfaceRaised)
+        Self.tileShape
+            .fill(lit ? DS.brand : DS.brand.opacity(0.2))
             .overlay {
                 if lit {
-                    Circle().fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
-                                                 startPoint: .top, endPoint: .center))
+                    Self.tileShape.fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
+                                                       startPoint: .top, endPoint: .center))
                 }
             }
             .overlay(
                 Image(systemName: glyph)
-                    .font(.system(size: Self.mark * 0.43, weight: .semibold))
+                    .font(.system(size: Self.tile * 0.43, weight: .semibold))
                     .foregroundStyle(lit ? Color.white : DS.brand)
                     .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
             )
-            .frame(width: Self.mark, height: Self.mark)
+            .frame(width: Self.tile, height: Self.tile)
             .animation(DS.Motion.standard, value: lit)
     }
 
@@ -635,7 +547,7 @@ struct RoomsTray: View {
                     .foregroundStyle(door.lit ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)
             }
-            .frame(minWidth: Self.mark)
+            .frame(minWidth: Self.tile)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
@@ -665,12 +577,8 @@ struct RoomsTray: View {
 
     /// Land in a room. A category label resolves through `CategoryFold.landing`
     /// inside `MainSurface`'s `sourceRequest` handler, the way a chip tap did.
-    /// A source mark also FLIES to the room's head as the tray drops (§932).
-    private func pick(_ target: String, flying: Bool = false, from key: MarkKey? = nil) {
+    private func pick(_ target: String) {
         DSHaptic.selection()
-        if flying, !reduceMotion, let key, let from = frames.map[key], from != .zero {
-            chrome.roomPick = ShellChrome.RoomPick(source: target, from: from)
-        }
         close()
         if !route.path.isEmpty { route.path = [] }
         chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
@@ -691,80 +599,12 @@ struct RoomsTray: View {
     }
 }
 
-/// A mark in the tray: a source by its seat, so the flight starts from the
-/// one touched. Recent and its line are deleted (prd §1050j).
-enum MarkKey: Hashable {
-    case source(String)
-}
-
-/// The tray's layout, in window space: where each mark stands, for the
-/// flight. A class held in `@State` and never observed, so writing a frame
-/// on every scroll step re-renders nothing — `ShellChrome.pagerFrame`'s
-/// rule, layout is not state.
-final class TrayFrames {
-    var map: [MarkKey: CGRect] = [:]
-}
-
-private extension View {
-    /// Record where a mark stands, and forget it when it goes.
-    func markFrame(_ target: MarkKey, in frames: TrayFrames) -> some View {
-        background {
-            GeometryReader { g in
-                Color.clear
-                    .onAppear { frames.map[target] = g.frame(in: .global) }
-                    .onChange(of: g.frame(in: .global)) { _, f in frames.map[target] = f }
-                    .onDisappear { frames.map[target] = nil }
-            }
-        }
-    }
-}
-
-/// A picked source's mark on its way to the room's head (§932) — the capture
-/// flight run the other way: a `BridgeIcon` leaves the tray where the finger
-/// was and lands where the room's name is about to say it. Hosted on
-/// `RootShell`'s stack beside `CaptureFlight`, above the tray, under nothing.
-/// Reduce Motion skips it whole.
-struct RoomPickFlight: View {
-    let pick: ShellChrome.RoomPick
-    let target: CGRect
-    var onDone: () -> Void
-    @State private var flown = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        GeometryReader { geo in
-            let origin = geo.frame(in: .global).origin
-            let start = CGPoint(x: pick.from.midX - origin.x, y: pick.from.midY - origin.y)
-            let end = target == .zero
-                ? start
-                : CGPoint(x: target.minX - origin.x + DS.Face.rowCircle / 2,
-                          y: target.midY - origin.y)
-            // Lifts at the tray mark's size and lands at the head's (§1008).
-            BridgeIcon(name: pick.source, size: RoomsTray.mark, circular: true)
-                .scaleEffect(flown ? 0.6 * DS.Face.rowCircle / RoomsTray.mark : 1)
-                .opacity(flown ? 0 : 1)
-                .position(flown ? end : start)
-                .onAppear {
-                    guard !reduceMotion else { onDone(); return }
-                    withAnimation(DS.Motion.standard) { flown = true }
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(Int(DS.Motion.duration * 1000) + 50))
-                        onDone()
-                    }
-                }
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-}
-
-/// The tray's marks, a fixed number to a line (prd §1013, §1014): the first
+/// The tray's tiles, a fixed number to a line (prd §1013, §1050l): the first
 /// column's centre stands `edge` in from the leading side and the last one's
 /// `edge` in from the trailing side, the rest spread evenly between — the You
-/// doors and every section share these columns, so the tray is one grid and
-/// its first column is the face's own axis. Each subview is placed by its
-/// centre; a line steps the tallest subview plus `lineAir`.
+/// doors and the categories share these columns, so the tray is one grid.
+/// Each subview is placed by its centre; a line steps the tallest subview
+/// plus `lineAir`.
 struct MarkGrid: Layout {
     let columns: Int
     let edge: CGFloat
