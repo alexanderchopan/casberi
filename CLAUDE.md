@@ -194,7 +194,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-openAddressCard <0x…>` — raise the address card for a book entry when the Wallet page appears (`Screens/WalletScreen.swift`; pair with `-openSetup "Wallet"` and `casberi://account`; NSLogs `openAddressCard:`).
 - `-openReach YES` `-seedReceipts YES` `-reachScope "<Category>"` — present What this app reaches (`HomeRoute.Node.reach`, the registry and the ledger on one screen since prd §967; its door is the Data tray's one row); `-seedReceipts` records five hosts through `NetworkLedger`, one undeclared, and `-reachScope` picks a dock category. `simctl spawn defaults write` does not reach the ledger reliably; seed through this hook → prd §967
 - `-openTray YES` — raise the rooms tray at mount, no tap (`Shell/RoomsTray.swift`; NSLogs `openTray:`), prd §1008.
-- `-trayQuery "<text>"` — with `-openTray YES`, type into the tray's search headlessly (NSLogs `trayQuery:`), prd §1015.
 - `-openSettings YES` — present the Settings screen (`route.present(.settings)` in RootShell's onAppear, prd §933; a section of Accounts from §796 until then). `-deeplink casberi://settings` works equally.
 - `-icloud.sync YES` — AppStorage override for the sync toggle copy.
 - `-onboarded YES` — AppStorage override that skips first-launch onboarding (fresh installs otherwise land on it, hiding the screen you deep-linked to).
