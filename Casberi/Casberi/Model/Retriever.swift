@@ -310,8 +310,8 @@ enum Retriever {
             // 80-char clamp, and the post's real words live only here — so the
             // searchable body of a Farcaster, Bluesky, Nostr, Slack or X row
             // was a URL, and anything said past the clamp could not be found.
-            // `summary` is display copy the source wrote (a Trello card back, a
-            // Cursor agent's account of its run, an x402 seller's line); the
+            // `summary` is display copy the source wrote (a Trello card back,
+            // an x402 seller's line); the
             // embedding index has read it since 2026-07-22 and the keyword
             // engine never did.
             //
@@ -862,21 +862,12 @@ enum Retriever {
             (["my reviews", "reviews", "review", "ratings", "rating"], "Review"),
             (["releases", "release", "versions", "version"], "Release"),
             (["builds", "build"], "Build"),
-            // The Cursor room's halves (2026-08-08, prd §340). "Failed" is the
-            // one people actually arrive with — a finished agent run you have
-            // not looked at is fine, a failed one is why you opened the app —
-            // and until now the outcome existed only inside a display title,
-            // so it could not be asked for at all.
-            //
-            // Three words rather than one bucket, because an expired run and a
-            // crashed one are different facts. "PR" last, and deliberately not
-            // given the phrase "pull request" alone: behind a named source it
-            // narrows honestly, and the gating rule keeps an ordinary sentence
-            // about a pull request from emptying a result elsewhere.
+            // The outcome facets (2026-08-08, prd §340), which Stripe, Polar
+            // and Dodo Payments also land. Three words rather than one bucket,
+            // because an expired payment and a failed one are different facts.
             (["failed runs", "failures", "failed", "broke", "errored"], "Failed"),
             (["expired runs", "expired"], "Expired"),
             (["cancelled runs", "cancelled", "canceled"], "Cancelled"),
-            (["pull requests", "pull request", "prs"], "PR"),
             // The Walletbeat room's halves (2026-08-20, prd §419). It holds three
             // genuinely different records — a wallet's standing review, a security
             // incident, and Walletbeat revising one of its own ratings — and until now

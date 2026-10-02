@@ -125,9 +125,7 @@ struct PurchaseStageView: View {
         if reading.amount != nil {
             priceBar.padding(.top, DS.Space.s3)
         }
-        if let badge = reading.state, reading.history == nil {
-            // A recorded move already says "price drop", louder and with the
-            // number — so the chip stands down rather than saying it twice.
+        if let badge = reading.state {
             badgeChip(badge).padding(.top, DS.Space.s3)
         }
         if let grade = reading.nutriScore {
@@ -139,31 +137,13 @@ struct PurchaseStageView: View {
         provenanceLine
     }
 
-    /// The price, and what it fell from.
-    ///
-    /// The old number and the percentage are drawn ONLY from a recorded move
-    /// (`PriceHistory`), never computed from the title's `" (was €90.00)"`
-    /// parenthetical that used to be the only trace of it — that string is
-    /// written in the language of the day the drop landed (§340).
+    /// The price. (What it fell from went with Shopify, the one seat that
+    /// recorded a move, prd §1049.)
     @ViewBuilder private var priceBar: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(verbatim: reading.amount ?? "")
-                .dsText(.stat24)
-                .monospacedDigit()
-                .foregroundStyle(DS.textPrimary)
-            if let move = reading.history {
-                Text(verbatim: PurchaseStage.money(move.was, move.currency))
-                    .dsText(.body17)
-                    .monospacedDigit()
-                    .strikethrough()
-                    .foregroundStyle(DS.textTertiary)
-                if let fraction = move.fraction {
-                    DSStamp(word: fraction.formatted(.percent.precision(.fractionLength(0))),
-                            weight: move.fell ? .good : .quiet)
-                        .monospacedDigit()
-                }
-            }
-        }
+        Text(verbatim: reading.amount ?? "")
+            .dsText(.stat24)
+            .monospacedDigit()
+            .foregroundStyle(DS.textPrimary)
     }
 
     // MARK: - Nutri-Score
@@ -216,7 +196,7 @@ struct PurchaseStageView: View {
     // MARK: - Shared parts
 
     /// Who they are, and what they are TO YOU. The role word is the whole
-    /// point: "Slickdeals" alone reads as a shop, and reading it as one is the
+    /// point: a brand alone reads as a shop, and reading it as one is the
     /// false sentence this pass started from.
     private func partyLine(_ party: PurchaseStage.Party) -> some View {
         HStack(spacing: DS.Space.s2) {

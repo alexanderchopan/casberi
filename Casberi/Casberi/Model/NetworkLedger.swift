@@ -28,7 +28,7 @@ import Foundation
 ///    screen.
 ///
 /// 3. **Some hosts can only be named by the caller.** A followed feed, a
-///    Shopify store, a self-hosted PostHog, a saved link's own site: those
+///    self-hosted PostHog, a saved link's own site: those
 ///    hosts come out of the person's own input, so no hand-written registry
 ///    could contain them and `NetworkReach.service(forHost:)` will never match
 ///    one. Those call sites pass their service name to `record(host:as:)`, and
@@ -59,8 +59,8 @@ final class NetworkLedger: @unchecked Sendable {
         var first: Date
         var last: Date
         /// Which service asked, when the CALLER knows and the registry
-        /// structurally cannot (2026-08-03). A feed you follow, a Shopify
-        /// store you named, your own self-hosted PostHog, a link you saved:
+        /// structurally cannot (2026-08-03). A feed you follow,
+        /// your own self-hosted PostHog, a link you saved:
         /// the host comes out of your own input, so no hand-written list
         /// could ever have contained it. Without this the receipts screen
         /// read every such host as "not on the list — that's a bug, please
@@ -203,8 +203,8 @@ extension NetworkLedger.Entry {
 
     /// Registry first, then the recorder's own attribution.
     ///
-    /// Some hosts can never be in the registry: a feed you follow, a Shopify
-    /// store you named, a link you saved, your own self-hosted PostHog. The
+    /// Some hosts can never be in the registry: a feed you follow, a link
+    /// you saved, your own self-hosted PostHog. The
     /// host comes out of YOUR input, so `service(forHost:)` misses it.
     ///
     /// A caller's name is honoured only when the registry really carries a

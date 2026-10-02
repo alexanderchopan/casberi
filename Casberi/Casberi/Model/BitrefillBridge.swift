@@ -248,7 +248,7 @@ enum BitrefillFetch {
     }
 
     /// "$50", "€25", "SEK 12.40" — the shared product formatter, so a
-    /// Bitrefill row reads a price exactly as a Shopify/Deals row does
+    /// Bitrefill row reads a price exactly as a Privacy row does
     /// (NumberFormatter on the ISO currency: whole amounts drop the cents,
     /// the symbol is never guessed). The value arrives as a number OR a
     /// string depending on endpoint; `PriceFormat.parse` reads both.

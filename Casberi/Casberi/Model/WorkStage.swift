@@ -22,7 +22,7 @@ import Foundation
 /// **THE CENTRAL RULE: the outcome is read from a STABLE signal, never from
 /// the title.** Every `leadClause` in this codebase is `String(localized:)`,
 /// so it is written in whatever language the device was in WHEN THE ROW
-/// LANDED. prd §340 already ruled on exactly this for Cursor: parse the title
+/// LANDED. prd §340 already ruled on exactly this: parse the title
 /// back and "change the language and every past failure silently reads as a
 /// success", which is the §83 fake status in the most expensive possible
 /// place. So `tone` and `statusWord` are derived from things that cannot
@@ -37,7 +37,7 @@ import Foundation
 ///
 /// Foundation-only by design (no SwiftUI, no SwiftData, no `Thing`), so
 /// `scripts/work-stage-selftest.sh` can compile it WHOLE and unmodified —
-/// the `ASCShape`/`StripeShape`/`CursorAgentStatus` precedent. That matters
+/// the `ASCShape`/`StripeShape` precedent. That matters
 /// more here than usual: a mis-derived receipt renders as a perfectly
 /// good-looking sheet, so a build, a screen sweep and every probe pass while
 /// the sheet quietly states the wrong outcome.
@@ -118,8 +118,7 @@ enum WorkStage {
         /// Foundation-only reason.
         var mark: String
         /// Whatever stored field carries the owning project. Today that is
-        /// `authorHandle`, which Cursor has meant "org/repo" on since it
-        /// shipped (§303).
+        /// `authorHandle`.
         var projectField: String?
         var hasPrice: Bool
 
@@ -167,15 +166,6 @@ enum WorkStage {
         case "Vercel":
             if tags.contains("Build failure") { return (word("Build failed"), .failed) }
             if tags.contains("Deploy")        { return (word("Deployed"), .landed) }
-            return nil
-
-        case "Cursor":
-            // The three facet tags §340 landed precisely so this read would
-            // not have to touch the title. A run with none of them finished.
-            if tags.contains("Failed")    { return (word("Failed"), .failed) }
-            if tags.contains("Expired")   { return (word("Expired"), .waiting) }
-            if tags.contains("Cancelled") { return (word("Cancelled"), .waiting) }
-            if tags.contains("Agent run") { return (word("Finished"), .landed) }
             return nil
 
         case "npm", "PyPI":
@@ -363,15 +353,14 @@ enum WorkStage {
 
     /// The owning project, from a stored field ONLY.
     ///
-    /// Cursor has stamped `authorHandle` with `org/repo` since it shipped
-    /// (§303 — "not a person"), and this pass stamps the same field on the
-    /// three other seats that know their project at ingest. Everything else
+    /// The three seats that know their project at ingest stamp it on
+    /// `authorHandle`. Everything else
     /// answers nil and draws no project row, which is the honest outcome: the
     /// value is sitting in the middle of a joined title, and slicing it out on
     /// a separator would put half an issue title in a row labelled "Project"
     /// whenever a title contained one.
     static func project(_ row: Row) -> String? {
-        guard ["Cursor", "Vercel", "Sentry", "PagerDuty"].contains(row.source),
+        guard ["Vercel", "Sentry", "PagerDuty"].contains(row.source),
               let p = row.projectField?.trimmingCharacters(in: .whitespaces),
               !p.isEmpty
         else { return nil }
@@ -399,11 +388,11 @@ enum WorkStage {
     /// back at you in a quieter font. A GitHub label, a Linear project or a
     /// Trello label is the person's own word and stays.
     static let shapeTags: Set<String> = [
-        "Deploy", "Build failure", "Agent run", "Failed", "Expired", "Cancelled",
+        "Deploy", "Build failure", "Failed", "Expired", "Cancelled",
         "Release", "Deprecated", "Issue", "Regression", "Incident", "Resolved",
         "Dispute", "Payout", "Dunning", "Churn", "Silence", "Runway",
         "Won", "Lost", "Recovered",
-        "Review", "Build", "Annotation", "Milestone", "Watchlist", "Paper", "PR",
+        "Review", "Build", "Annotation", "Milestone", "Watchlist", "Paper",
     ]
 
     /// The person's own labels: what's left after the shape marks and the
@@ -418,11 +407,6 @@ enum WorkStage {
     /// `VerbDerivation` already derived.
     static func destination(_ row: Row) -> String? {
         switch row.source {
-        case "Cursor":
-            // A Cursor row's link is `prUrl ?? url`, so the two land in
-            // different places and the word has to follow the link rather
-            // than the seat.
-            return row.tags.contains("PR") ? String(localized: "Pull request") : nil
         case "App Store Connect": return String(localized: "Connect")
         case "Vercel", "Sentry", "PagerDuty", "Linear", "Trello", "Jira",
              "GitLab", "Notion", "PostHog", "Stripe":

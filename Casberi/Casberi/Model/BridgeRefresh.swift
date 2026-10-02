@@ -701,23 +701,6 @@ enum BridgeRefresh {
                 _ = await LogosIngest.refresh(context: context)
             }
         }
-        // What became of the pull request a Cursor agent opened (2026-08-08,
-        // prd §340). Its own line rather than a rider on the Cursor bridge,
-        // because it spends the GITHUB token: it is gated on both seats being
-        // connected, and `reconcile` re-checks the token itself so a
-        // disconnect between the two reads can't fire a keyless request.
-        //
-        // Behind `dueForHeal` like Instagram's captions — a
-        // PR merges on human time, not on foreground time, so asking on every
-        // activation would spend a request per open PR to learn nothing.
-        if TokenVault.get(TokenBridge.cursor.tokenKey)?.isEmpty == false,
-           TokenVault.get(TokenBridge.github.tokenKey)?.isEmpty == false,
-           BridgeRefresh.dueForHeal("cursor.pullRequests") {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await CursorPullRequests.reconcile(context: context)
-            }
-        }
         // npm and PyPI are keyless watch lists, so — like Hugging Face
         // above — they need their own line here rather than
         // riding `TokenBridge.allCases`. One slot each: they are separate
@@ -873,18 +856,6 @@ enum BridgeRefresh {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await CardPointersIngest.refresh(context: context)
-            }
-        }
-        if ShopifyStore.shared.connected {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await ShopifyIngest.refresh(context: context)
-            }
-        }
-        if DealsStore.shared.connected {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await DealsIngest.refresh(context: context)
             }
         }
         // Every slot is now dispatched, so the pass's own dispatch window is

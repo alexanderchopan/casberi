@@ -273,8 +273,6 @@ enum BridgeGlyph {
         case "files":     return "icloud"
         case "dropbox":   return "folder"
         case "twitch":    return "tv"
-        case "shopify":   return "bag"
-        case "deals":     return "tag.fill"
         case "open food facts": return "barcode.viewfinder"
         case "bitrefill": return "gift"
         case "privacy":   return "creditcard"
@@ -344,7 +342,6 @@ enum BridgeGlyph {
         case "aws":          return "server.rack"
         case "posthog":      return "chart.bar.xaxis"
         case "cloudflare":   return "cloud.fill"
-        case "cursor":       return "cursorarrow"
         // A session transcript is a terminal recording, not a chat — the
         // "claude"/"chatgpt"/"gemini" bubble is the wrong claim here (those
         // are message-shaped imports; this one imports what a CLI wrote).

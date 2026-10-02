@@ -134,7 +134,7 @@ ALLOWANCE = {
 
 # Files other sessions are rewriting as of 2026-09-15; their copy comes under
 # this audit when that work lands. Named, not globbed, except the room heads.
-PENDING = {"ShapedRows.swift", "CursorRow.swift", "WalletbeatRow.swift",
+PENDING = {"ShapedRows.swift", "WalletbeatRow.swift",
            "L2beatRow.swift", "WalletRow.swift", "SourceChips.swift"}
 
 

@@ -6,7 +6,8 @@
 // like to someone seeing it for the first time, and a room drawing brand
 // glyphs where the real one draws photographs is not that.
 //
-// WHY THIS EXISTS. The demo's Shopify and Deals rows are `.product` things,
+// WHY THIS EXISTS. The demo's Shopify and Deals rows (deleted with their
+// seats, prd §1049) were `.product` things,
 // and `ThingContent`'s `.product` case leads with `previewImageURL` — the
 // image is "doing the work of not leaving the sheet blank" in that file's own
 // words. They were seeded with `art(i)`, which resolves to the four bundled
@@ -52,27 +53,11 @@ func rgb(_ hex: UInt32) -> NSColor {
 
 // Order is the seeding order — `DemoSeedAll.productArt(_:)` indexes into it.
 let products: [Still] = [
-    // Shopify — the four arrivals
-    .init(symbols: ["tshirt.fill", "tshirt"], top: rgb(0xEDE7DC), bottom: rgb(0xD8CFBE),
-          ink: rgb(0x4A4238), note: "Linen apron"),
-    .init(symbols: ["frying.pan.fill", "frying.pan", "circle.fill"], top: rgb(0xDFE4E7),
-          bottom: rgb(0xC5CCD1), ink: rgb(0x2F3437), note: "Cast iron pan"),
-    .init(symbols: ["cup.and.saucer.fill", "cup.and.saucer"], top: rgb(0xF1E5DE),
-          bottom: rgb(0xDCC9BF), ink: rgb(0x5A3F36), note: "Ceramic mug"),
-    .init(symbols: ["fork.knife", "square.grid.2x2.fill"], top: rgb(0xEFE6D4),
-          bottom: rgb(0xDACEB6), ink: rgb(0x574B33), note: "Oak chopping board"),
-    // Deals — the four offers
-    .init(symbols: ["bolt.fill"], top: rgb(0xDEEAE4), bottom: rgb(0xC4DAD0),
-          ink: rgb(0x24443A), note: "Power bank"),
-    .init(symbols: ["book.closed.fill", "book.fill"], top: rgb(0xEAE8E2),
-          bottom: rgb(0xD4D1C8), ink: rgb(0x3A3A38), note: "Kindle"),
-    .init(symbols: ["mug.fill", "cup.and.saucer.fill"], top: rgb(0xE6DBD3),
-          bottom: rgb(0xCEC0B4), ink: rgb(0x4A3A2E), note: "Coffee grinder"),
-    .init(symbols: ["airpodspro", "headphones"], top: rgb(0xE6E9EE),
-          bottom: rgb(0xCCD3DB), ink: rgb(0x303640), note: "AirPods Pro"),
-    // Bitrefill — the two orders (2026-09-23). They read `productArt(i + 3)`,
-    // so an Amazon gift card wore the Shopify mug and an Uber ride its
-    // chopping board: the same two stills twice, on the wrong things.
+    // Bitrefill — the two orders (2026-09-23). They once read the Shopify
+    // stills, so an Amazon gift card wore a mug and an Uber ride a chopping
+    // board: the same two stills twice, on the wrong things. Shopify's four
+    // arrivals and Deals' four offers left with their seats (prd §1049), so
+    // these two are 1 and 2.
     .init(symbols: ["giftcard.fill", "creditcard.fill"], top: rgb(0xF3E6D0),
           bottom: rgb(0xE0CBA6), ink: rgb(0x5C4520), note: "Amazon.com gift card"),
     .init(symbols: ["car.fill", "car"], top: rgb(0xDCE3EA), bottom: rgb(0xC0CAD5),

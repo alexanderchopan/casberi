@@ -16622,34 +16622,6 @@
         }
       }
     },
-    "%lld deals in" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld ofertas importadas"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld件のセールを取り込みました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "할인 %lld개 들어옴"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已导入 %lld 个优惠"
-          }
-        }
-      }
-    },
     "%lld deposits" : {
       "localizations" : {
         "es" : {
@@ -17010,34 +16982,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你自己的 %lld 份草稿"
-          }
-        }
-      }
-    },
-    "%lld drops in" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld lanzamientos nuevos"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld件の新着ドロップ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "신규 드롭 %lld개"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "新增 %lld 个发布"
           }
         }
       }
@@ -31983,34 +31927,6 @@
         }
       }
     },
-    "A Cursor agent run failed" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Falló la ejecución de un agente de Cursor"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor のエージェント実行が失敗しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor 에이전트 실행이 실패했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "一次 Cursor 代理运行失败"
-          }
-        }
-      }
-    },
     "A P-256 key born in the Secure Enclave. Its bytes never exist in the app, so there is nothing to export — the Safe takes it through a signer contract your other wallet deploys once." : {
       "localizations" : {
         "es" : {
@@ -37842,34 +37758,6 @@
         }
       }
     },
-    "Already following that store." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ya sigues esa tienda."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "そのストアはフォロー済みです。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해당 스토어를 이미 팔로우하고 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已经关注该商店。"
-          }
-        }
-      }
-    },
     "Already have it?" : {
       "localizations" : {
         "es" : {
@@ -42381,34 +42269,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "回到了 %@ 开始时的水平。"
-          }
-        }
-      }
-    },
-    "Background agent" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Agente en segundo plano"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "バックグラウンドエージェント"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "백그라운드 에이전트"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "后台代理"
           }
         }
       }
@@ -53339,34 +53199,6 @@
         }
       }
     },
-    "Couldn't reach the deal feeds — check your connection." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No se pudieron alcanzar los feeds de ofertas — revisa tu conexión."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "セールフィードに接続できませんでした — 接続を確認してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "딜 피드에 연결할 수 없습니다 — 연결 상태를 확인하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "无法连接到优惠信息流——请检查你的网络连接。"
-          }
-        }
-      }
-    },
     "Couldn't reach the mail server — check your connection." : {
       "localizations" : {
         "es" : {
@@ -53503,34 +53335,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法连接你的订阅源 — 检查你的网络连接。"
-          }
-        }
-      }
-    },
-    "Couldn't reach your stores — check the address, or the store isn't Shopify / blocks reads." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No se pudo conectar con tus tiendas — revisa la dirección, o la tienda no es Shopify / bloquea las lecturas."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ストアに接続できませんでした — アドレスを確認するか、そのストアがShopifyでないか読み取りをブロックしている可能性があります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "스토어에 연결할 수 없습니다 — 주소를 확인하거나, 해당 스토어가 Shopify가 아니거나 읽기를 차단하고 있을 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "无法连接到你的店铺——请检查地址，或该店铺并非 Shopify 店铺 / 屏蔽了读取请求。"
           }
         }
       }
@@ -55375,62 +55179,6 @@
         }
       }
     },
-    "Cursor answered — no finished cloud agents yet. Casberi reads the background agents you launch from Cursor's dashboard or editor, not the edits you make yourself, so run one and sync again." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor respondió — aún no hay agentes en la nube finalizados. Casberi lee los agentes en segundo plano que lanzas desde el panel o el editor de Cursor, no las ediciones que haces tú mismo, así que ejecuta uno y sincroniza de nuevo."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursorから応答がありました — まだ完了したクラウドエージェントはありません。CasberiはCursorのダッシュボードやエディタから起動したバックグラウンドエージェントを読み取ります。自分で行った編集は対象外なので、エージェントを1つ実行してから再度同期してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor가 응답했습니다 — 아직 완료된 클라우드 에이전트가 없습니다. Casberi는 Cursor의 대시보드나 에디터에서 실행한 백그라운드 에이전트를 읽어들이며, 직접 수행한 편집은 대상이 아닙니다. 하나를 실행한 뒤 다시 동기화하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor 已响应——目前还没有已完成的云端代理。Casberi 读取的是你从 Cursor 的仪表盘或编辑器启动的后台代理，而不是你自己做的编辑，请运行一个代理后再同步一次。"
-          }
-        }
-      }
-    },
-    "Cursor answered — no finished cloud agents yet. Only the background agents you launch are read, not the edits you make yourself, so run one and sync again." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor ha respondido: todavía no hay agentes en la nube terminados. Solo se leen los agentes en segundo plano que tú lanzas, no las ediciones que haces tú mismo, así que ejecuta uno y vuelve a sincronizar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor から応答がありました — 完了したクラウドエージェントはまだありません。読み取るのはあなたが起動したバックグラウンドエージェントだけで、自分で行った編集は含まれません。1 つ実行してから再同期してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor가 응답했습니다 — 아직 완료된 클라우드 에이전트가 없습니다. 직접 한 편집이 아니라 실행한 백그라운드 에이전트만 읽으므로, 하나 실행한 뒤 다시 동기화하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cursor 已响应 — 尚无已完成的云端代理。这里只读取你启动的后台代理，而非你自己所做的编辑，所以先运行一个再同步。"
-          }
-        }
-      }
-    },
     "Custom" : {
       "localizations" : {
         "es" : {
@@ -55791,62 +55539,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "按最近截止排序。"
-          }
-        }
-      }
-    },
-    "Deal" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Oferta"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "お得情報"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "특가"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "优惠"
-          }
-        }
-      }
-    },
-    "Deal page" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Página de la oferta"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "お得情報のページ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "특가 페이지"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "优惠页面"
           }
         }
       }
@@ -58743,34 +58435,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每个计数器发送时都不用等其他的"
-          }
-        }
-      }
-    },
-    "Each deal lands as a product." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cada oferta llega como un producto."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "各ディールは製品として届きます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "각 거래는 제품으로 도착합니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每笔交易都以产品的形式呈现。"
           }
         }
       }
@@ -63526,34 +63190,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正常"
-          }
-        }
-      }
-    },
-    "Finished" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Terminado"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "完了"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "완료됨"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已完成"
           }
         }
       }
@@ -86175,34 +85811,6 @@
         }
       }
     },
-    "Not checked" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Sin comprobar"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "未確認"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "확인되지 않음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "未检查"
-          }
-        }
-      }
-    },
     "Not connected" : {
       "localizations" : {
         "es" : {
@@ -91185,34 +90793,6 @@
         }
       }
     },
-    "On sale" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "En oferta"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "セール中"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "할인 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "特价中"
-          }
-        }
-      }
-    },
     "On the ordinary nonce" : {
       "localizations" : {
         "es" : {
@@ -93861,34 +93441,6 @@
         }
       }
     },
-    "Opened a pull request" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Abrió una pull request"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "プルリクエストを作成しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "풀 리퀘스트를 열었습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "创建了一个拉取请求"
-          }
-        }
-      }
-    },
     "Opening Acorns' sign-in…" : {
       "localizations" : {
         "es" : {
@@ -95289,34 +94841,6 @@
         }
       }
     },
-    "Outcome: %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Resultado: %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "結果: %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "결과: %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "结果：%@"
-          }
-        }
-      }
-    },
     "Outdoors" : {
       "localizations" : {
         "es" : {
@@ -96526,34 +96050,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "粘贴密钥"
-          }
-        }
-      }
-    },
-    "Paste a key and your finished cloud agents keep arriving. Cursor's key can't be scoped read-only, so this only ever lists them." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Pega una clave y tus agentes en la nube terminados seguirán llegando. La clave de Cursor no puede limitarse a solo lectura, así que aquí únicamente se listan."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "キーを貼り付けると、完了したクラウドエージェントが届き続けます。Cursor のキーは読み取り専用に制限できないため、ここでは一覧表示しか行いません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "키를 붙여넣으면 완료된 클라우드 에이전트가 계속 도착합니다. Cursor의 키는 읽기 전용으로 제한할 수 없으므로, 여기서는 목록만 불러옵니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "粘贴密钥后，你已完成的云端代理会持续到达。Cursor 的密钥无法限定为只读，因此这里只会列出它们。"
           }
         }
       }
@@ -100559,118 +100055,6 @@
         }
       }
     },
-    "Pull request closed without merging" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Pull request cerrada sin fusionar"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "プルリクエストがマージされずにクローズされました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "풀 리퀘스트가 병합되지 않고 닫혔습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "拉取请求未合并即被关闭"
-          }
-        }
-      }
-    },
-    "Pull request closed without merging on %@." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Pull request cerrada sin fusionar el %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@にプルリクエストがマージされずにクローズされました。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@에 풀 리퀘스트가 병합되지 않고 닫혔습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "拉取请求于 %@ 未合并即被关闭。"
-          }
-        }
-      }
-    },
-    "Pull request merged" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Pull request fusionada"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "プルリクエストがマージされました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "풀 리퀘스트가 병합되었습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "拉取请求已合并"
-          }
-        }
-      }
-    },
-    "Pull request merged on %@." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Pull request fusionada el %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@にプルリクエストがマージされました。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@에 풀 리퀘스트가 병합되었습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "拉取请求已于 %@ 合并。"
-          }
-        }
-      }
-    },
     "Pull requests" : {
       "localizations" : {
         "es" : {
@@ -103053,34 +102437,6 @@
         }
       }
     },
-    "Reading the deals…" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Leyendo las ofertas…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "セール情報を読み込んでいます…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "할인 정보 읽는 중…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在读取优惠…"
-          }
-        }
-      }
-    },
     "Reading the follow list…" : {
       "localizations" : {
         "es" : {
@@ -103357,34 +102713,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取种子…"
-          }
-        }
-      }
-    },
-    "Reading the store…" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Leyendo el almacén…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ストアを読み込み中…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "스토어 읽는 중…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在读取存储…"
           }
         }
       }
@@ -117244,34 +116572,6 @@
         }
       }
     },
-    "Somewhere else" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "En otro sitio"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "別の場所"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "다른 곳"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "其他地方"
-          }
-        }
-      }
-    },
     "Songs" : {
       "localizations" : {
         "es" : {
@@ -119609,62 +118909,6 @@
         }
       }
     },
-    "Store" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tienda"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ストア"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "스토어"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "商店"
-          }
-        }
-      }
-    },
-    "Store web address" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Dirección web de la tienda"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ストアのウェブアドレス"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "스토어 웹 주소"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "商店网址"
-          }
-        }
-      }
-    },
     "Stored before whole passages were kept — import My Clippings.txt again for the rest." : {
       "localizations" : {
         "es" : {
@@ -121569,34 +120813,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这不是条形码号 — 条形码至少有 8 位数字。"
-          }
-        }
-      }
-    },
-    "That isn't a store web address — paste one like allbirds.com." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Eso no es una dirección web de tienda — pega una como allbirds.com."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "それはストアのウェブアドレスではありません — allbirds.comのようなものを貼り付けてください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "스토어 웹 주소가 아닙니다 — allbirds.com과 같은 주소를 붙여넣으세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "这不是商店网址 — 请粘贴类似 allbirds.com 的地址。"
           }
         }
       }
@@ -124394,34 +123610,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你认识的人，可查找"
-          }
-        }
-      }
-    },
-    "The price is the feed's, and may be stale." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "El precio es el del feed y puede estar desactualizado."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "価格はフィードのもので、古い可能性があります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "가격은 피드의 값이며 오래된 값일 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "价格来自信息源，可能不是最新的。"
           }
         }
       }
@@ -129826,34 +129014,6 @@
         }
       }
     },
-    "Turn on a source and its newest deals — each already priced in the headline — land in your feed as products." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Activa una fuente y sus ofertas más recientes — cada una con el precio ya indicado en el titular — llegarán a tu feed como productos."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ソースをオンにすると、最新のセール情報（見出しにすでに価格が表示されています）が商品としてフィードに届きます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "소스를 켜면 최신 할인 정보(각각 헤드라인에 가격이 이미 표시됨)가 제품으로 피드에 도착합니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "开启某个来源后，其最新优惠（每条标题已标明价格）会作为商品出现在你的订阅流中。"
-          }
-        }
-      }
-    },
     "Turn on at least one, or choose Full control." : {
       "localizations" : {
         "es" : {
@@ -133678,40 +132838,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "警告：此转账为垃圾信息，并非你发送"
-          }
-        }
-      }
-    },
-    "Was %@, now %@." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Was %1$@, now %2$@."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Era %@, ahora %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "以前は %@、現在は %@。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "이전 %@, 현재 %@."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "原为 %@，现为 %@。"
           }
         }
       }
@@ -144115,34 +143241,6 @@
         }
       }
     },
-    "Your finished cloud agents. The key can't be scoped read-only, so this only ever lists them." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tus agentes en la nube ya terminados. La clave no puede limitarse a solo lectura, así que esto se limita a listarlos."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "完了したクラウドエージェント。鍵を読み取り専用に絞ることはできないため、これは一覧表示しか行いません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "완료된 클라우드 에이전트. 키를 읽기 전용으로 제한할 수 없으므로, 이것은 목록만 보여줍니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你已完成的云端智能体。该密钥无法限定为只读，因此这里只做列出。"
-          }
-        }
-      }
-    },
     "Your first thing" : {
       "localizations" : {
         "es" : {
@@ -146774,34 +145872,6 @@
         }
       }
     },
-    "a feed you follow" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "un feed que sigues"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "フォロー中のフィード"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "내가 팔로우하는 피드"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你关注的一个信息源"
-          }
-        }
-      }
-    },
     "a major release" : {
       "localizations" : {
         "es" : {
@@ -147106,34 +146176,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "节目"
-          }
-        }
-      }
-    },
-    "a store you follow" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "una tienda que sigues"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "フォロー中のストア"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "내가 팔로우하는 상점"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你关注的一家店铺"
           }
         }
       }
@@ -147930,34 +146972,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法命名的地址"
-          }
-        }
-      }
-    },
-    "an agent run failed" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "una ejecución del agente falló"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "エージェントの実行が失敗"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "에이전트 실행 실패"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "一次代理运行失败"
           }
         }
       }
@@ -150588,34 +149602,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "明天到期"
-          }
-        }
-      }
-    },
-    "failed run" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ejecución fallida"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "失敗した実行"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "실패한 실행"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "失败的运行"
           }
         }
       }
@@ -157007,34 +155993,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "涨价"
-          }
-        }
-      }
-    },
-    "products" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "productos"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "商品"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "제품"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "商品"
           }
         }
       }

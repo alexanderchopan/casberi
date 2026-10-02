@@ -256,12 +256,6 @@ KNOWN_DEMO_REF_OK = {
     # render — and demo teardown already removes these rows by their own
     # prefix, which is the path that actually runs.
     "Hugging Face": "the only gate is a prune on toggling papers off, not a render",
-    # `cursor:agent:` is read by one rule in `NotifySweep` (a failed agent is
-    # an alarm). The demo seeds a failed run, but it must never notify —
-    # `Notifications.submit` returns [] while demo mode is active, by ruling —
-    # so a reachable ref would buy a plan that is discarded. The rule itself
-    # is covered by `notify-selftest.sh`, which does not use the demo corpus.
-    "Cursor": "its only gate is a notify rule the demo must never fire",
     # Neither prefix has a consumer: `instagram:comment:` and `x:handle:` are
     # written by their importers and read by nothing that gates on the shape.
     # They enter `gate_prefixes` because they LOOK like gates, which is the

@@ -59,7 +59,7 @@ enum CompanyPacks {
     }
 
     /// Catalogue offer name → its maker. Offers with no maker worth pricing
-    /// (RSS, Bookmarks, Deals, the devnets, the app's own Wallet and Tokens
+    /// (RSS, Bookmarks, the devnets, the app's own Wallet and Tokens
     /// seats, a foundation like PyPI's) have no row and stand in no pack.
     /// Every ticker and id here was read live on 2026-09-29.
     static let makers: [String: (company: String, listing: Listing)] = {
@@ -142,7 +142,6 @@ enum CompanyPacks {
             "ChatGPT": own("OpenAI"),
             "Claude": anthropic,
             "Claude Code": anthropic,
-            "Cursor": own("Anysphere"),
             "Gemini": alphabet,
             "Grok": own("xAI"),
             "Muse": meta,
@@ -172,7 +171,6 @@ enum CompanyPacks {
             "Substack": own("Substack"),
             // Shopping
             "Bitrefill": own("Bitrefill"),
-            "Shopify": ("Shopify", .stock("SHOP")),
             // Notes
             "Apple Journal": apple,
             "Day One": own("Automattic"),

@@ -1764,17 +1764,6 @@ harness "Rocket Money read-only self-test" "rocket money self-test" "scripts/roc
 # passing as no change, a second change to a record deduping into the first.
 harness "Cloudflare pure-logic self-test" "cloudflare self-test" "scripts/cloudflare-selftest.sh" "the Cloudflare logic self-test failed — run scripts/cloudflare-selftest.sh"
 
-# Pure-logic self-test for the Cursor bridge (prd §303). Stronger reason than
-# the two above: those bridges COULD be measured by someone who mints a key,
-# while Cursor's own docs and forum contradict each other on whether an
-# individual on a personal plan can mint a Cloud Agents key at all — so
-# `-cursorProbe` may be unavailable to this project indefinitely and this is
-# the only proof the bridge will ever have. It also carries the CONDUCT guard:
-# a Cursor key has no scopes, so the catalog's "never starts one, follows one
-# up, stops one, or deletes one" is kept only by that file issuing GET alone.
-# That promise was prose in the source; here it is mechanical.
-harness "Cursor pure-logic self-test" "cursor self-test" "scripts/cursor-selftest.sh" "the Cursor logic self-test failed — run scripts/cursor-selftest.sh"
-
 # Bankr is the one keyed agent in this catalog with a wallet behind it, so a
 # wrong guard here is not a bad answer, it is money moving. It got a second
 # verb that could ACT on 2026-08-29 (prd §529) and lost it again on 2026-09-03

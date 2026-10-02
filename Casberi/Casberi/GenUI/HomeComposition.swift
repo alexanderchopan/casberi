@@ -73,11 +73,10 @@ enum HomeComposition {
     static let mechanicalTags: Set<String> = {
         Retriever.facetTags.union([
             // Bridge state and row-type labels, by the bridge that stamps them.
-            "Agent run", "Session",                       // Cursor, Claude Code
+            "Session",                                    // Claude Code
             "Annotation", "Milestone", "Silence",         // PostHog
             "Build", "Build failure", "Deploy",           // Vercel
             "Deadline", "Your turn",                      // reminders, Safe
-            "Deal",                                       // Deals
             "Delivered", "Module added",                  // Safe, 7579
             "Deprecated", "Issue",
             "Mining", "Rewards", "Ticket",                // Logos (prd §1016)

@@ -586,26 +586,6 @@ extension FeedScreen {
             }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
-        case .cursor:
-            // Repositories, not days — see `cursorRepos`. Keeps `boundary:`,
-            // unlike CardPointers: these rows carry the run's REAL start, so they span
-            // real time and the new-since divider means something.
-            //
-            // THE NEWEST RUN LEADS, above the repositories (prd §751). The head
-            // that ranked repositories is deleted, and a repository grouping
-            // cannot hold the cover itself: the newest run is often not in the
-            // first group, so a cover drawn under its own header would sit
-            // halfway down the room. It is lifted out of its repository instead.
-            // Its kind tiles stand under the cover (prd §911): a run that
-            // opened a pull request, or one that did not finish.
-            let cover = heroShown ? nil : ledeThingID(in: chronoGroups(visible))
-            let coverThing = coverThing(cover, in: visible)
-            standaloneLead(cover: coverThing, tiles: heroShown ? nil : kindTilesInHead,
-                           listEmpty: visible.isEmpty)
-            let repos = cursorRepos(coverThing == nil ? visible
-                                    : visible.filter({ (thing: Thing) -> Bool in thing.id != coverThing?.id }))
-            groupedSections(repos, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: repos), dated: false)
         case .tokens:
             // The Watchlist, or a catalogue category's company pack
             // (`CompanyPacks`), picked on the tiles.
@@ -739,7 +719,7 @@ extension FeedScreen {
     /// THE KIND-TILE ROOMS (prd §815, §816): the cover, the kind tiles
     /// under it, then the days.
     ///
-    /// The cover is LIFTED out of its day, the `.cursor` way, because the tiles
+    /// The cover is LIFTED out of its day, because the tiles
     /// must sit between it and the list — a cover drawn inside the first day
     /// would put the tiles under a day header. `visible` is already narrowed by
     /// the pick (`liveVisible`), so the cover is the newest coverable thing IN
@@ -922,7 +902,7 @@ extension FeedScreen {
     /// THE STANDALONE LEAD, WHERE NO HEAD IS DRAWN (prd §815, §862, §911): the
     /// cover when there is one, the room's own empty state when the tiles
     /// stand over nothing, then the tiles. One drawing for the kind-tile
-    /// rooms, Cursor's repositories, and Walletbeat's and L2BEAT's standing
+    /// rooms, and Walletbeat's and L2BEAT's standing
     /// reports — which used to lose their tiles with their head (§911).
     ///
     /// THE LEAD SLOT is held wherever the tiles stand (§862): without it the

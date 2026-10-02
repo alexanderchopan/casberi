@@ -42,7 +42,7 @@ enum MediaShape {
     }
 
     /// The medium a source speaks, or nil for a source whose art carries no
-    /// inherent shape (Shopify, RSS, Deals — their images are
+    /// inherent shape (RSS, Bitrefill — their images are
     /// whatever the publisher uploaded, so the square grid stays honest).
     static func art(for source: String) -> Art? {
         switch source {

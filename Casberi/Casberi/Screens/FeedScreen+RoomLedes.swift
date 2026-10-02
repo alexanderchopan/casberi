@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 // The smaller rooms' ledes and groupings: Markets, Bitrefill, the themes
-// lede, the feed-health note, CardPointers and Cursor, split out of
+// lede, the feed-health note and CardPointers, split out of
 // FeedScreen.swift (prd §718). Nothing here changed but the file it lives
 // in and, where another file reads a member, its access level.
 extension FeedScreen {
@@ -348,46 +348,5 @@ extension FeedScreen {
                         notActive.sorted { $0.title < $1.title }))
         }
         return out
-    }
-
-    /// The Cursor room grouped by REPOSITORY rather than by day (2026-08-08,
-    /// prd §340).
-    ///
-    /// A day is the wrong axis for agent runs. You launch several against one
-    /// repository in an afternoon and then nothing for a week, so day-grouping
-    /// produces one enormous "Today" and a scatter of singletons, and the
-    /// question a person actually arrives with — *what has been happening on
-    /// this project* — is the one the screen refuses to answer.
-    ///
-    /// Within a repository, FAILURES LEAD (then newest first). That inverts the
-    /// chronology deliberately and for the same reason the room head ranks them
-    /// first: a failed run is the one that still needs you, and burying it under
-    /// three successes because they happened later is the room hiding its own
-    /// news. Repositories themselves are ordered by run count, with the name as
-    /// a tiebreak so the ordering is TOTAL — a room that reshuffles between
-    /// opens over identical data reads as broken.
-    func cursorRepos(_ visible: [Thing]) -> [(String, [Thing])] {
-        var repos: [String: [Thing]] = [:]
-        // Live at the BOUNDARY, before any stored property is read (corollary
-        // 4) — `visible` may be a debounced snapshot.
-        for thing in visible.live {
-            // The repo is stored on `authorHandle` at landing. A row that
-            // predates that, or a run whose source carried no usable
-            // repository, gets a shelf rather than vanishing — the §307 rule
-            // that a row we can't file is never silently dropped.
-            let repo = thing.authorHandle?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let label = (repo?.isEmpty == false ? repo! : String(localized: "Somewhere else"))
-            repos[label, default: []].append(thing)
-        }
-        return repos
-            .map { label, rows in
-                (label, rows.sorted {
-                    let a = CursorAgentStatus.failed(tags: $0.tags)
-                    let b = CursorAgentStatus.failed(tags: $1.tags)
-                    if a != b { return a }
-                    return $0.capturedAt > $1.capturedAt
-                })
-            }
-            .sorted { ($0.1.count, $1.0) > ($1.1.count, $0.0) }
     }
 }

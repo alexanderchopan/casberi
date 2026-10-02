@@ -4,7 +4,7 @@ import Foundation
 /// watching (prd §368, 2026-08-12; user: "less like a database field, more
 /// like a receipt… start with shopping").
 ///
-/// **The problem this solves.** Five Shopping seats land eight row shapes and
+/// **The problem this solves.** The Shopping seats landed eight row shapes and
 /// not one had a sheet anatomy of its own — every one fell through to the
 /// generic path: a link-preview card and the label/value grid. The inventory
 /// found the same disease in three forms, all of them facts the record already
@@ -12,8 +12,9 @@ import Foundation
 ///
 /// - **Money lived in a sentence.** Privacy and Bitrefill join the amount into
 ///   `title` at ingest (`"Netflix.com · $12.99"`), where nothing can total it
-///   or re-format it. Shopify, Deals and Open Food Facts land a real
-///   `priceValue` — and no feed row in this app draws that field, so its only
+///   or re-format it. The product bridges (Shopify, Deals and Open Food
+///   Facts, all since deleted or retired) landed a real
+///   `priceValue` — and no feed row in this app drew that field, so its only
 ///   appearance anywhere was one unlabelled line in `ThingContent`'s
 ///   `.product` branch.
 /// - **The seller was stamped and never drawn.** All three product bridges
@@ -97,8 +98,8 @@ enum PurchaseStage {
     }
 
     /// Who is on the other side, and what they are to you. The role word is
-    /// the whole reason this is a pair: "Slickdeals" alone reads as a shop,
-    /// and it isn't one.
+    /// the whole reason this is a pair: a brand alone reads as a shop, and it
+    /// isn't one.
     struct Party: Equatable {
         var name: String
         var role: String
@@ -132,41 +133,23 @@ enum PurchaseStage {
         ///
         /// It shipped as always-present, and most of what it said the sheet was
         /// already saying an inch higher: `watchParty` renders the role
-        /// ("a store you follow", "a feed you follow", "brand") and Privacy's
+        /// ("brand") and Privacy's
         /// rung renders "Your Privacy card", so "Read from the store's own
         /// catalogue" and "Charged to your Privacy card" were the same fact
         /// twice. "You scanned this barcode" told someone what their own hand
         /// had just done. **A sentence survives only when it explains an
         /// ABSENCE the screen cannot** — no merchant on a Gnosis Pay row, no
-        /// code on a Bitrefill order, a price nobody rechecked — **or a
+        /// code on a Bitrefill order — **or a
         /// notice this app raised rather than the seat.** Everything else is
         /// nil, and the line simply doesn't draw.
         var provenance: String?
         /// The word under the dial's first disc — WHERE you land, never "Open"
         /// (§302's Explorer ruling, generalised).
         var destination: String?
-        /// The price this row used to carry, when the app recorded the move.
-        var history: PriceMove?
         /// The A–E grade Open Food Facts published, when there is one. On the
         /// reading rather than re-derived in the view, so the sheet cannot ask
         /// a different question than the one that composed this card.
         var nutriScore: String?
-    }
-
-    /// A recorded price change. Composed and parsed by `PriceHistory` below;
-    /// carried here so the view never touches storage.
-    struct PriceMove: Equatable {
-        var was: Double
-        var now: Double
-        var currency: String
-        var wasUntil: Date
-        var fell: Bool { now < was }
-        /// The move as a share of the old price, or nil when the old price was
-        /// zero — a percentage off nothing is a division, not a fact.
-        var fraction: Double? {
-            guard was > 0 else { return nil }
-            return (now - was) / was
-        }
     }
 
     // MARK: - Entry
@@ -183,9 +166,8 @@ enum PurchaseStage {
         var tags: [String]
         var priceValue: Double?
         var priceCurrency: String?
-        /// `Thing.authorHandle` — the SELLER on a watch row (Shopify's store,
-        /// Deals' publisher, Open Food Facts' brand). All three bridges have
-        /// stamped it since they shipped.
+        /// `Thing.authorHandle` — the SELLER on a watch row (Open Food Facts'
+        /// brand). The bridge stamped it since it shipped.
         var sellerField: String?
         /// `Thing.transferCounterparty` — WHO the money went to, on a receipt.
         /// Apple Wallet has written the normalized merchant here since §317,
@@ -193,16 +175,12 @@ enum PurchaseStage {
         /// than inventing a second home for one meaning.
         var merchantField: String?
         var capturedAt: Date
-        /// `Thing.enrichedText` — retrieval-only by the 2026-07-15 ruling, and
-        /// read here for exactly one thing: the machine line `PriceHistory`
-        /// writes. Never rendered from here.
-        var enrichedText: String?
 
         init(source: String, sourceRef: String? = nil, kind: String,
              title: String, tags: [String] = [],
              priceValue: Double? = nil, priceCurrency: String? = nil,
              sellerField: String? = nil, merchantField: String? = nil,
-             capturedAt: Date = .distantPast, enrichedText: String? = nil) {
+             capturedAt: Date = .distantPast) {
             self.source = source
             self.sourceRef = sourceRef
             self.kind = kind
@@ -213,7 +191,6 @@ enum PurchaseStage {
             self.sellerField = sellerField
             self.merchantField = merchantField
             self.capturedAt = capturedAt
-            self.enrichedText = enrichedText
         }
     }
 
@@ -260,8 +237,7 @@ enum PurchaseStage {
     static func archetype(_ row: Row) -> Archetype? {
         guard let ref = row.sourceRef else {
             // A product with no ref still reads as a product — the kind alone
-            // is enough for the watch half, because `.product` is landed by
-            // three bridges and nothing else in the app.
+            // is enough for the watch half.
             return row.kind == "product" ? .watch : nil
         }
         if alarmRefs.contains(where: ref.hasPrefix) { return .alarm }
@@ -300,7 +276,6 @@ enum PurchaseStage {
             rungs: receiptRungs(row),
             provenance: provenance(row),
             destination: destination(row),
-            history: nil,
             nutriScore: nil)
     }
 
@@ -376,31 +351,25 @@ enum PurchaseStage {
             rungs: watchRungs(row),
             provenance: provenance(row),
             destination: destination(row),
-            history: PriceHistory.parse(row.enrichedText),
             nutriScore: nutriScore(row))
     }
 
-    /// The row's own state, from its tags. `Price drop` outranks `Sale`: both
-    /// can be true at once and only one of them is news.
+    /// The row's own state, from its tags. (`Price drop`, `Sale` and `Deal`
+    /// were Shopify's and Deals' words, deleted with them, prd §1049.)
     static func watchState(_ row: Row) -> Badge? {
         let tags = Set(row.tags)
-        if tags.contains("Price drop") { return Badge(word: word("Price drop"), tone: .good) }
-        if tags.contains("Sale")       { return Badge(word: word("On sale"), tone: .good) }
-        if tags.contains("Deal")       { return Badge(word: word("Deal"), tone: .neutral) }
         if tags.contains("Food")       { return Badge(word: word("Scanned"), tone: .neutral) }
         return nil
     }
 
     /// The seller, and what they are TO YOU — the role word is why this is a
     /// pair rather than a name. Open Food Facts' handle is a brand nobody
-    /// follows; Deals' is a feed, not a shop, and reading it as one is the
-    /// false sentence this whole pass started from.
+    /// follows, and reading it as a shop is the false sentence this whole
+    /// pass started from.
     static func watchParty(_ row: Row) -> Party? {
         let name = (row.sellerField ?? "").trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return nil }
         let role = switch row.source {
-        case "Shopify":         word("a store you follow")
-        case "Deals":           word("a feed you follow")
         case "Open Food Facts": word("brand")
         default:                word("seller")
         }
@@ -416,14 +385,6 @@ enum PurchaseStage {
         }
         out.append(Rung(key: row.source == "Open Food Facts" ? word("Scanned") : word("Seen"),
                         value: stamp(row.capturedAt), dim: true))
-        // Said out loud, because a missing number and an unread one are
-        // different facts and the sheet used to show neither. Deals never
-        // parses a price — the claim is in the headline the publisher wrote,
-        // and repeating it as OUR number would be asserting something we
-        // didn't measure.
-        if row.priceValue == nil, row.source == "Deals" {
-            out.append(Rung(key: word("Price"), value: word("Not checked"), dim: true))
-        }
         return out
     }
 
@@ -474,7 +435,6 @@ enum PurchaseStage {
             rungs: [Rung(key: word("Noticed"), value: stamp(row.capturedAt), dim: true)],
             provenance: word("Noticed here, not sent by Bitrefill. Fires once per crossing, re-arms when you top up."),
             destination: word("Bitrefill"),
-            history: nil,
             nutriScore: nil)
     }
 
@@ -484,7 +444,7 @@ enum PurchaseStage {
     /// nil for most of them.
     ///
     /// Per seat because the truth is per seat: `from a store you follow` was
-    /// rendered over a deal (which comes from a feed publisher) and over a
+    /// rendered over a deal (which came from a feed publisher) and over a
     /// barcode scan (which comes from your own hand). But the fix for a wrong
     /// sentence is the right sentence OR NO SENTENCE, and for five of these
     /// seats it was no sentence — see `Reading.provenance`. What survives
@@ -495,10 +455,6 @@ enum PurchaseStage {
         // record — said once, here, or the sheet looks like it lost it.
         case "Bitrefill":
             return isRefill(row) ? nil : word("The code lives on Bitrefill's own page.")
-        // A deal's price was read when the feed published it and never
-        // rechecked — the one fact that changes what you'd do next.
-        case "Deals":
-            return word("The price is the feed's, and may be stale.")
         // §222: merchant names never reach the chain. A missing seller on a
         // card purchase reads as a failed lookup unless it is stated.
         case "Gnosis Pay":
@@ -513,8 +469,6 @@ enum PurchaseStage {
         switch row.source {
         case "Privacy":         return word("Privacy")
         case "Bitrefill":       return word("Bitrefill")
-        case "Shopify":         return word("Store")
-        case "Deals":           return word("Deal page")
         case "Open Food Facts": return word("Full entry")
         default:                return nil
         }
@@ -526,7 +480,7 @@ enum PurchaseStage {
     /// the strings `watchState`/`receiptState` read above, so a chip strip
     /// showing them would print the badge back at you in a quieter font.
     static let shapeTags: Set<String> = [
-        "Sale", "Price drop", "Deal", "Food", "Refund", "Pending", "Settled",
+        "Food", "Refund", "Pending", "Settled",
         "Delivered",
     ]
 
@@ -565,104 +519,5 @@ enum PurchaseStage {
     /// the day the row landed.
     private static func word(_ key: String.LocalizationValue) -> String {
         String(localized: key)
-    }
-}
-
-// MARK: - Price history
-
-/// The price a watched product used to carry, recorded so a drop can say what
-/// it dropped FROM (2026-08-12).
-///
-/// **Why it needs recording at all.** `ShopifyIngest` compares the new price
-/// against the old one, rewrites the title to `"Cast iron pan, 26cm (was
-/// €90.00)"`, and then overwrites `priceValue`. So the drop — the entire reason
-/// the row re-surfaced — survived only as a parenthetical inside an
-/// 80-character-clamped string, and reading it back out is exactly the §340 bug
-/// this file exists to avoid.
-///
-/// **Why `enrichedText` and not a new field.** A new `Thing` property is a
-/// CloudKit **Production** deploy before it can ship (an undeployed field never
-/// mirrors, silently, forever), and `enrichedText` already carries three
-/// documented exceptions to the retrieval-only rule. The cost is honest and
-/// stated: one machine line joins the retrieval index. The line is short and
-/// the human sentence beneath it is genuinely worth indexing — "was €90.00,
-/// now €72.00" is a thing somebody would search for.
-///
-/// **The format is versioned and locale-free, and only the machine line is ever
-/// parsed.** Values are plain `Double` descriptions and the date is epoch
-/// seconds, so nothing here depends on a decimal separator, a calendar or a
-/// language. The sentence below it is prose for the index and for a reader; no
-/// code reads it back.
-enum PriceHistory {
-
-    static let marker = "pricemove/1|"
-
-    /// `pricemove/1|EUR|90.0|1754265600|72.0` followed by the human sentence.
-    ///
-    /// The composed sentence is deliberately NOT the source of truth for
-    /// anything — if the marker line is missing or malformed, the sheet simply
-    /// shows no history, which is what a row landed before this existed does.
-    static func compose(was: Double, now: Double, currency: String,
-                        wasUntil: Date) -> String {
-        let head = "\(marker)\(currency)|\(was)|\(Int(wasUntil.timeIntervalSince1970))|\(now)"
-        let sentence = String(
-            localized: "Was \(PurchaseStage.money(was, currency)), now \(PurchaseStage.money(now, currency)).")
-        return head + "\n" + sentence
-    }
-
-    /// The move, or nil. Every failure mode returns nil rather than a partial
-    /// reading: a receipt that states half a price change is worse than one
-    /// that states none.
-    static func parse(_ text: String?) -> PurchaseStage.PriceMove? {
-        guard let line = text?.split(separator: "\n", omittingEmptySubsequences: false).first,
-              line.hasPrefix(marker) else { return nil }
-        let parts = line.dropFirst(marker.count).split(separator: "|",
-                                                       omittingEmptySubsequences: false)
-        guard parts.count == 4,
-              !parts[0].isEmpty,
-              let was = Double(parts[1]),
-              let seconds = TimeInterval(parts[2]),
-              let now = Double(parts[3]),
-              was > 0, now > 0
-        else { return nil }
-        return PurchaseStage.PriceMove(
-            was: was, now: now, currency: String(parts[0]),
-            wasUntil: Date(timeIntervalSince1970: seconds))
-    }
-
-    /// Whatever the row carried BEFORE this line was added, kept whole.
-    ///
-    /// A vault note, an article's reader text and a Privacy Pools cover all
-    /// live on `enrichedText`, and a product could legitimately gain one
-    /// tomorrow — so the writer preserves the existing body rather than
-    /// assuming the field is ours. Idempotent: re-recording a move replaces
-    /// the marker line and never stacks a second one.
-    static func rewrite(existing: String?, with head: String) -> String {
-        var lines = (existing ?? "").split(separator: "\n",
-                                           omittingEmptySubsequences: false)
-        // `compose` always writes exactly two lines — the marker and its
-        // sentence — so removing our previous record is "drop the marker and
-        // the one line under it", by POSITION. Matching the sentence by its
-        // own words would be a localized read, and it would leave a stale
-        // sentence in the retrieval index the day somebody changes language.
-        if let index = lines.firstIndex(where: { $0.hasPrefix(marker) }) {
-            let end = lines.index(index, offsetBy: 2, limitedBy: lines.endIndex)
-                ?? lines.endIndex
-            lines.removeSubrange(index..<end)
-        }
-        let body = lines.joined(separator: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return body.isEmpty ? head : head + "\n" + body
-    }
-
-    /// Drop the recorded move and keep whatever else the field held — what a
-    /// price RECOVERING calls. Nil rather than an empty string so a row that
-    /// carried nothing but a move goes back to carrying nothing: an empty
-    /// `enrichedText` is a value the retrieval index would still walk.
-    static func clear(_ existing: String?) -> String? {
-        guard let existing, existing.contains(marker) else { return existing }
-        let kept = rewrite(existing: existing, with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return kept.isEmpty ? nil : kept
     }
 }

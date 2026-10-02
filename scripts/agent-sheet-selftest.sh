@@ -118,8 +118,9 @@ FROMGONE
 # A grant draws no content: its link is the same dashboard URL on every row.
 guard "a grant shows no link preview" \
   'agentShape != \.grant' "$VIEW"
-# A row wears ONE anatomy. Cursor is in the Agents category and is drawn by the
-# Work receipt — asking this first would take that away from it.
+# A row wears ONE anatomy. An Agents-category row the Work receipt draws
+# (Cursor's runs did, until prd §1049) keeps that receipt — asking this first
+# would take it away.
 # `walletStage` was retired in the 2026-08-12 integration merge — §369's money
 # receipt generalized the three wallet title grammars into one anatomy, so the
 # gate is spelled `moneyReceipt` now. The RULE is unchanged and is what this
@@ -211,10 +212,10 @@ for block in catalog.split("Offer(")[1:]:
         offers.add(name.group(1))
 listed = set(re.findall(r'"([^"]+)"', re.search(
     r'static let chatSources: Set<String> = \[(.*?)\]', source, re.S).group(1)))
-# The seats that deliberately land nothing (keys, not sources) and the one
-# already covered by the Work receipt. Each is a conscious ruling, not a gap.
+# The seats that deliberately land nothing (keys, not sources). Each is a
+# conscious ruling, not a gap.
 # Apple Intelligence (prd §833) switches which model answers; it lands nothing.
-known = {"Venice", "OpenRouter", "Grok", "Bankr", "1Claw", "Cursor", "Apple Intelligence"}
+known = {"Venice", "OpenRouter", "Grok", "Bankr", "1Claw", "Apple Intelligence"}
 missing = offers - listed - known
 if missing:
     print("  \u2717 catalog Agent seats in neither chatSources nor the ruled-out set: "

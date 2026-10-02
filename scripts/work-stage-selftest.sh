@@ -11,7 +11,7 @@
 #
 # HOW. `Model/WorkStage.swift` is Foundation-only BY DESIGN (no SwiftUI, no
 # SwiftData, no `Thing`) precisely so this can compile it WHOLE and UNMODIFIED
-# — the `ASCShape`/`StripeShape`/`CursorAgentStatus` precedent. There are no
+# — the `ASCShape`/`StripeShape` precedent. There are no
 # stubs at all: what runs here is the shipped file, byte for byte.
 #
 # THE RULE IT PROTECTS (prd §340). Every `leadClause` in this codebase is
@@ -197,8 +197,8 @@ ok("labels.money.chrome.stripped",
                                "Silence", "Runway", "Link"]),
                     typeTags: ["Link"]).isEmpty)
 ok("labels.outcome.chrome.stripped",
-   WorkStage.labels(row("Cursor", title: "x",
-                        tags: ["Agent run", "Failed", "Expired", "Cancelled", "PR"]),
+   WorkStage.labels(row("Dodo Payments", title: "x",
+                        tags: ["Failed", "Expired", "Cancelled"]),
                     typeTags: []).isEmpty)
 ok("labels.shape.chrome.stripped",
    WorkStage.labels(row("App Store Connect", title: "x",
@@ -272,7 +272,7 @@ mutate "Stripe stops distinguishing won from lost" \
 
 # The project stops being field-only — the exact bug the design refuses.
 mutate "project accepts any source" \
-  's|guard \["Cursor", "Vercel", "Sentry", "PagerDuty"\].contains(row.source),|guard true \|\| ["x"].contains(row.source),|'
+  's|guard \["Vercel", "Sentry", "PagerDuty"\].contains(row.source),|guard true \|\| ["x"].contains(row.source),|'
 
 # ASC stops reading Apple's raw constant.
 mutate "ASC rejection reads as nothing" \

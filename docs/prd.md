@@ -63403,3 +63403,14 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 - §1048c's tray circles that opened settings, and §1048b's blue header, are superseded by §1050e and §1050f and are gone from the code.
 
 **Not built here.** §1050g and §1050h (Apps and Settings as one door and one list) are a build of their own.
+
+## §1051 — Deals, Shopify and Cursor leave the catalogue, and their stored rows, settings and key go with them (builds §1049's removals, 2026-10-01)
+
+**What goes**, on §1038's pattern: the three offers, their routes, refresh passes, setup screens and bridge files (`DealsBridge`, `ShopifyBridge`, `CursorBridge`, `CursorPullRequests`, `CursorRow`, `DealsScreen`, `ShopifyScreen`), their `NetworkReach` hosts, brand art and demo rows and stills, their probe hooks (`-shopifyStore`, `-dealsFeed`, `-cursorProbe`, `-cursorPRProbe`, `-cursorPRSync`), `cursor-selftest.sh`, the website's tiles, shelf cells, backgrounds and docs lines (cache-busters bumped; not deployed), and every model piece only they used (§723): Cursor's room shape and repository grouping, the `agentRunFailed` notification kind, and `PriceHistory`/`PriceMove` with the purchase sheet's price-history bar, since Shopify was the only seat that wrote a price move.
+
+**The rows.** The three names join `Corpus.retiredSources` and `SourceRename.droppedSources`; the launch sweep deletes their rows and seat records, the defaults under `deals.`, `shopify.` and `heal.due.cursor.`, and Cursor's token (`token.cursor` in `com.casberi.app.tokens`). Its run-once flag moves to `sourceRename.droppedSeats.local.v2`, so a device that already ran §1038's sweep runs it again for these three; re-running §1038's part is harmless.
+
+**What stays.** Bitrefill, alone in Shopping until §1049 moves it into the One Wallet. Historical mentions in comments and in `docs/hooks`, marked retired.
+
+**Checked.** iOS build and the Mac Catalyst compile pass, on main after §1048d. Every self-test that the change touched passes (category-fold, category-order, room-kind-tiles, purchase-stage, notify, work-stage, agent-sheet, legible-ink, dock), as do `catalog-sync.sh`, `network-reach-audit.sh`, `harness-exists-audit.py` and `source-alias-audit.py`. The full `verify.sh` was not run.
+

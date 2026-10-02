@@ -324,7 +324,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - Dropbox (2026-07-27, Model/DropboxBridge.swift, Screens/DropboxScreen.swift) — a first-class → docs/hooks/bridges.md
 - PostHog (2026-07-27, prd §223, Model/PostHogBridge.swift, Screens/PostHogScreen.swift) → docs/hooks/bridges.md · prd §223
 - `-for` — Stripe (2026-07-31, prd §250, Model/StripeBridge.swift, Screens/StripeScreen.swift) → docs/hooks/bridges.md · prd §250
-- Cursor (2026-08-04, prd §303, Model/CursorBridge.swift) — the cloud agents you launched, landing → docs/hooks/bridges.md · prd §303
 - **The GitHub room is ONE FEED: row types are tags (`Model/GitHubRowTag.swift`), watched repos and people scope it from a face rail (`github-rowtag-selftest.sh`)** → docs/hooks/bridges.md · prd §699
 - **A GitHub events row names its OBJECT, opens it and carries its words — a PR's title and body, a push's commit, a branch named — off the payload, no request (`GitHubEventShape`, `github-event-selftest.sh`); a notification reads its subject's body, capped at 10** → docs/hooks/bridges.md · prd §909 · §912
 - **A connect LANDS in its room (prd §1029): `AccountPage` routes when its seat registers on screen, armed on the seat, never on `state` alone (adopters load `connected` late); GitHub then raises its watch tray once (`ShellChrome.connectLanding`), and its room's tiles end in a Watch verb, as Reminders' end in New (`RoomKindTile.watch`, `GitHubWatchTray`, `GitHubWatchAdd`, prd §1030 · §1031)** → prd §1029 · §1030 · §1031

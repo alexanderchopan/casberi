@@ -385,10 +385,6 @@ enum BridgeCatalog {
         // conduct, not by the credential (unlike every other keyed bridge).
         Offer(name: "Privacy",     tagline: "Your card purchases, in reach",         group: "Wallet",  connectable: true,
               needsSetup: true, added: day(2026, 7, 22)),
-        Offer(name: "Shopify",     tagline: "Follow any store's new drops",          group: "Shopping",  connectable: true,
-              needsSetup: true),
-        Offer(name: "Deals",       tagline: "The best prices, as they drop",          group: "Shopping",  connectable: true,
-              needsSetup: true),
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               needsSetup: true),
         // "Nothing here trades" went false on 2026-08-29 (prd §529) and is
@@ -509,8 +505,6 @@ enum BridgeCatalog {
         Offer(name: "npm",         tagline: "Your dependencies, when they ship",    group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 4)),
         Offer(name: "PyPI",        tagline: "Your Python packages, on release",     group: "Work",      connectable: true,
-              needsSetup: true, added: day(2026, 8, 4)),
-        Offer(name: "Cursor",      tagline: "What your coding agents did",          group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 8, 4)),
         Offer(name: "App Store Connect", tagline: "How your app is doing",           group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 6)),
@@ -814,15 +808,16 @@ enum BridgeCatalog {
         ("Social",  "Bluesky",     ["Network"]),
         // Reading sits AHEAD of Shopping (user ruling 2026-08-06, "should
         // reading come before shopping?"). Two reasons, both about the band
-        // rather than the taste: Reading is 6 seats to Shopping's 5, and every
+        // rather than the taste: Reading is 6 seats to Shopping's 1, and every
         // one of them is a live connect that fills the feed with something to
         // READ (RSS, Substack, Readwise, Raindrop, Kindle, Bookmarks)
         // — the app's own core loop. Shopping is the narrowest band in the
-        // catalog: Privacy needs a paid plan, Bitrefill is crypto gift cards
-        // (Open Food Facts, a barcode scanner rather than a feed, was retired
-        // 2026-09-06 with the Markets seats, prd §638).
+        // catalog: Bitrefill is crypto gift cards (Open Food Facts, a barcode
+        // scanner rather than a feed, was retired 2026-09-06 with the Markets
+        // seats, prd §638; Shopify and Deals followed someone else's catalogue
+        // and were deleted 2026-10-01, prd §1049).
         ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Shopping", "Shopify",    ["Shopping"]),
+        ("Shopping", "Bitrefill",  ["Shopping"]),
         ("Notes",   "Obsidian",    ["Notes"]),
     ]
 
@@ -1076,7 +1071,7 @@ enum BridgeSetupMode {
     /// A handle, an address, a feed URL — public reads, no key.
     static let noAccountSeats: Set<String> = ["Wallet", "Markets", "YouTube",
         "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
-        "Telegram", "Shopify", "Deals", "Hugging Face", "Radicle",
+        "Telegram", "Hugging Face", "Radicle",
         "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames",
         "ETH Validators", "NerdWallet", "Logos",
         // No key and no account — Apple's model, turned on (prd §833).

@@ -239,8 +239,7 @@ struct BandRow: View {
         // are NOT here despite stamping the same field: name a THING that has
         // a proper name, never a class — and never a fact the row already
         // tells. Both of those build their title as "Track — Artist", so the
-        // artist here would print it twice; Cursor's repo already LEADS its
-        // title by §303; Steam's title is literally "Played <game>"; an
+        // artist here would print it twice; Steam's title is literally "Played <game>"; an
         // Instagram save's handle IS its title; and Twitch and Stocktwits both
         // lead with that person's own avatar, which is the icon's word twin
         // the RSS fork above exists to avoid. Kalshi is the class case: its
@@ -295,18 +294,18 @@ struct BandRow: View {
         // "… with <method> on Peer" template (`PeerBridge.title(for:story:)`
         // is the only place that string is built, so the parse is exact, not
         // a heuristic). No structured field carries the method separately.
-        // WHO IS SELLING IT (2026-08-12, prd §368) — the store, the deal
-        // publisher, the brand. All three bridges have stamped `authorHandle`
-        // since they shipped and this slot had no case for any of them, so the
-        // fact was in the store, in the index, in the demo seed, and on no
-        // screen: a Shopify row and a Deals row were indistinguishable from
-        // each other and from a bare link.
+        // WHO IS SELLING IT (2026-08-12, prd §368) — the brand. The bridge
+        // stamped `authorHandle` since it shipped and this slot had no case
+        // for it, so the fact was in the store, in the index, in the demo
+        // seed, and on no screen. (Shopify and Deals shared this case until
+        // they were deleted, prd §1049; Open Food Facts' kept rows still
+        // read it.)
         //
         // It is the same "the row cannot otherwise carry this" reasoning the
         // RSS case above states. Deliberately NOT extended to Privacy or
         // Bitrefill, whose merchant leads their own title — naming it here
         // would print it twice on one row.
-        case "Shopify", "Deals", "Open Food Facts":
+        case "Open Food Facts":
             let name = thing.authorHandle?.trimmingCharacters(in: .whitespaces) ?? ""
             return name.isEmpty ? nil : name
         case "Peer":

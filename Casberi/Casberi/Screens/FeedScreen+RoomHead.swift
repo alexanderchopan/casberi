@@ -393,7 +393,7 @@ extension FeedScreen {
             }
         case .github, .appStoreConnect, .huggingFace, .posthog, .l2beat, .walletbeat,
              .polar, .dodoPayments, .gitlab, .radicle, .sentry, .vercel, .pagerduty,
-             .npm, .pypi, .aws, .cursor, .appleHealth:
+             .npm, .pypi, .aws, .appleHealth:
             // No dot: a dot is a claim that something needs you, and none of
             // these rooms has a definition of that yet (prd §911).
             break

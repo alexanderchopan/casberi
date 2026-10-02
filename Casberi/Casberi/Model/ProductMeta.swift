@@ -1,7 +1,7 @@
 import Foundation
 
-/// Formats and parses product prices — one place, so Shopify, Deals, and the
-/// pasted-product parser all read and write a price the same way.
+/// Formats and parses product prices — one place, so Bitrefill, Privacy and
+/// the pasted-product parser all read and write a price the same way.
 enum PriceFormat {
     /// Formats an amount in its own currency. Whole amounts drop the cents
     /// ("$105", not "$105.00"); the ISO currency picks the symbol, so a GBP
@@ -20,7 +20,7 @@ enum PriceFormat {
     /// A price number out of a JSON number or a human/string price. Handles US
     /// and European grouping/decimal conventions ("1,299.00" and "1.299,00"
     /// both → 1299; "12,99" → 12.99); nil when there's no number to read. One
-    /// parser so Shopify's variant strings and a scraped page's price agree.
+    /// parser so a seat's price strings and a scraped page's price agree.
     static func parse(_ raw: Any?) -> Double? {
         if let d = raw as? Double { return d }
         if let i = raw as? Int { return Double(i) }

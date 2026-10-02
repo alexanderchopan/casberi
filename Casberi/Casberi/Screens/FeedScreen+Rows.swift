@@ -553,18 +553,6 @@ extension FeedScreen {
                             imageOnly: imageOnly,
                             wideArt: wideArt)
                 }
-            case .cursor:
-                // Our own note about the sync keeps its plain band, the way
-                // the X room treats its own — it is not a run.
-                if Corpus.isImportReceipt(thing) {
-                    BandRow(thing: thing,
-                            emphasized: thing.id == nextEventID,
-                            live: false,
-                            imageOnly: imageOnly,
-                            wideArt: wideArt)
-                } else {
-                    CursorRow(thing: thing)
-                }
             case .walletbeat:
                 // Three shapes in one room: a watched wallet is a standing report
                 // card, an incident and a revision are dated news, and our own note

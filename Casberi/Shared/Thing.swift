@@ -22,8 +22,8 @@ enum ThingKind: String, Codable, CaseIterable, Sendable {
     // swap, send, or receive is a discrete event, so it fits the feed; holdings
     // and portfolio value are synthesis, not things.
     case transaction
-    // Shopping (2026-07-14) — a product you follow or watch: a Shopify store's
-    // new drop, a barcode you scanned, a page you're watching for a price drop.
+    // Shopping (2026-07-14) — a product you follow or watch: a gift card you
+    // bought, a page you're watching for a price drop.
     // A discrete item with a price and a store, so it fits the feed like a link
     // does; its own kind gives shopping a bag glyph and a "Products" pile.
     case product
@@ -150,6 +150,10 @@ enum Corpus {
         // devnets' earlier names (§629, §685) are here for the same reason.
         "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
         "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
+        // Three more the same way (prd §1049): Deals and Shopify followed
+        // someone else's catalogue and nobody would use them; Cursor went
+        // with them.
+        "Deals", "Shopify", "Cursor",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now
@@ -1019,8 +1023,7 @@ final class Thing {
     /// The doc used to say "nil for every non-product thing", which stopped
     /// being true the day the card seats landed:
     ///   · a PRODUCT price is CURRENT and re-checkable — the anchor that lets a
-    ///     later pass say "dropped $40" (Shopify/Deals, the pasted-product
-    ///     parser);
+    ///     later pass say "dropped $40" (the pasted-product parser);
     ///   · a TRANSACTION amount is FINAL — what you were charged, and the only
     ///     tense `Corpus.cardSpendSources` may do arithmetic over;
     ///   · a SNAPSHOT is true only at `capturedAt` — a trending token's price

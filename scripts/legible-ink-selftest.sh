@@ -161,7 +161,7 @@ for (pname, phex) in [("Default dark", "#000000"), ("Default light", "#f2f2f7")]
 }
 
 // ===== 3. A NEAR-NEUTRAL MARK IS NEVER TINTED ==============================
-// X's black, ChatGPT's white, Cursor, Tokens: no honest hue, so no ink.
+// X's black, ChatGPT's white, Tokens: no honest hue, so no ink.
 for (name, s) in [("x/black", 0.0), ("chatgpt/white", 0.0), ("near-neutral", 0.14)] {
     for page in [hexLum("#000000"), hexLum("#f2f2f7")] {
         check(DS.solveInk(hue: 0.6, saturation: s, brightness: 0.5,

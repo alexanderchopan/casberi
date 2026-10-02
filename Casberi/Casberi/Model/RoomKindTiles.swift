@@ -4,7 +4,7 @@ import Foundation
 /// APP STORE CONNECT, HUGGING FACE, POSTHOG, L2BEAT AND WALLETBEAT (prd §820), AND OF
 /// SPLITS (prd §820), AND — SINCE prd §911 — OF EVERY ROOM WHOSE ROWS ALREADY
 /// CARRY A KIND: Polar, Dodo Payments, GitLab, Radicle, Sentry, Vercel,
-/// PagerDuty, npm, PyPI, AWS, Cursor and Apple Health.
+/// PagerDuty, npm, PyPI, AWS and Apple Health.
 ///
 /// **Where a room has a head, the tiles ride its `scopes:` slot** — the Privy
 /// pattern, `DSRoomChassis.Head`'s own geometry — and the head stays exactly as
@@ -58,8 +58,8 @@ enum RoomKindTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     case accounts
     // prd §911 — the rooms whose rows already carried a kind and drew no
     // tiles. A meaning two rooms share is one case (Sales and Disputes in
-    // Polar and Dodo Payments; Deploys in Vercel and AWS; Failed in Vercel
-    // and Cursor; Issues in GitLab and Radicle beside GitHub).
+    // Polar and Dodo Payments; Deploys in Vercel and AWS; Issues in GitLab
+    // and Radicle beside GitHub).
     case sales, subscriptions
     case mergeRequests, patches
     case errors, regressions
@@ -176,7 +176,7 @@ enum RoomKindTiles {
     enum Room: String, CaseIterable, Sendable {
         case safe, github, stripe, appStoreConnect, huggingFace, posthog, l2beat, walletbeat, splits
         // prd §911.
-        case polar, dodoPayments, gitlab, radicle, sentry, vercel, pagerduty, npm, pypi, aws, cursor, appleHealth
+        case polar, dodoPayments, gitlab, radicle, sentry, vercel, pagerduty, npm, pypi, aws, appleHealth
 
         init?(source: String) {
             switch source {
@@ -199,7 +199,6 @@ enum RoomKindTiles {
             case "npm":               self = .npm
             case "PyPI":              self = .pypi
             case "AWS":               self = .aws
-            case "Cursor":            self = .cursor
             case "Apple Health":      self = .appleHealth
             default:                  return nil
             }
@@ -226,7 +225,6 @@ enum RoomKindTiles {
             case .npm:             return "npm"
             case .pypi:            return "PyPI"
             case .aws:             return "AWS"
-            case .cursor:          return "Cursor"
             case .appleHealth:     return "Apple Health"
             }
         }
@@ -261,9 +259,6 @@ enum RoomKindTiles {
             case .pagerduty:       return [.all, .incidents, .resolved]
             case .npm, .pypi:      return [.all, .releases, .deprecations]
             case .aws:             return [.all, .alarms, .deploys, .costs]
-            // A run that opened a pull request, or one that did not finish;
-            // a plain finished run is All only.
-            case .cursor:          return [.all, .pullRequests, .failed]
             case .appleHealth:     return [.all, .workouts, .sleep, .mood]
             }
         }
@@ -322,7 +317,7 @@ enum RoomKindTiles {
     static let splitsTx          = "splits:tx:"
     /// prd §911 — the ref families the twelve new rooms land, spelled here
     /// for the harness. Where a bridge ALSO tags the row (Polar's and Dodo's
-    /// `tag`, Radicle's, Vercel's, Cursor's facets), the tag is read as well,
+    /// `tag`, Radicle's, Vercel's facets), the tag is read as well,
     /// because the demo's rows carry `demo:` refs and the real tags.
     static let polarOrder        = "polar:order:"
     static let polarSubscription = "polar:subscription:"
@@ -352,11 +347,6 @@ enum RoomKindTiles {
     static let awsAlarm          = "aws:alarm:"
     static let awsPipeline       = "aws:pipeline:"
     static let awsCost           = "aws:costanomaly:"
-    /// Cursor's outcome facets (`CursorAgentStatus.facetTags`) and its PR
-    /// tag, spelled here for the harness.
-    static let cursorRun         = "cursor:agent:"
-    static let cursorFailedTags: Set<String> = ["Failed", "Expired", "Cancelled"]
-    static let cursorPRTag       = "PR"
     static let healthWorkout     = "hkworkout:"
     static let healthSleep       = "hksleep:"
     static let healthMood        = "hkmood:"
@@ -508,12 +498,6 @@ enum RoomKindTiles {
                 if ref?.hasPrefix(RoomKindTiles.awsAlarm) == true || tags.contains("Alarm") { return .alarms }
                 if ref?.hasPrefix(RoomKindTiles.awsPipeline) == true || tags.contains("Deploy") { return .deploys }
                 if ref?.hasPrefix(RoomKindTiles.awsCost) == true || tags.contains("Cost") { return .costs }
-                return nil
-            case .cursor:
-                // Failed before PR: a run that opened a pull request and then
-                // expired is the one somebody has to go back to.
-                if tags.contains(where: { RoomKindTiles.cursorFailedTags.contains($0) }) { return .failed }
-                if tags.contains(RoomKindTiles.cursorPRTag) { return .pullRequests }
                 return nil
             case .appleHealth:
                 guard let ref else { return nil }

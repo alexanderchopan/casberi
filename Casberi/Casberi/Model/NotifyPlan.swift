@@ -54,12 +54,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// Only the ALARMING verdicts reach here — an approval is welcome news you
     /// will see the moment you open anything, and it already rains in-app.
     case appRejected
-    /// A Cursor cloud agent run finished with an ERROR (2026-08-09) — not
-    /// Expired/Cancelled, which are administrative outcomes rather than
-    /// something having gone wrong. Same wiring gap as `positionAtRisk`: the
-    /// row has landed with a "Failed" tag since the bridge shipped, and
-    /// nothing ever turned that into a notification.
-    case agentRunFailed
     /// A key/balance/quota crossed under its own "about to stop working"
     /// floor — OpenRouter credits, a Bitrefill balance, a Stripe payout
     /// runway, a GitHub API rate limit (2026-08-09). One kind for all four:
@@ -118,7 +112,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         switch self {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
-             .appRejected, .agentRunFailed, .runningLow, .safeSignatureNeeded,
+             .appRejected, .runningLow, .safeSignatureNeeded,
              .walletIncident, .chainReset:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest:
@@ -173,9 +167,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .chainReset:       return 55
         case .poolCleared:      return 50    // good news, act whenever
         case .priceRose:        return 40    // recurring money, already charged
-        // Something you asked to run did not finish — worth knowing, not
-        // urgent: nothing is moving or at risk, a rerun costs a tap.
-        case .agentRunFailed:   return 35
         // The lowest alarm on purpose — "do this soon" rather than "something
         // is wrong right now". Ranked under a price rise (money already
         // left, so at least that one is definite) but still a real severity,
@@ -247,7 +238,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // body, so a headline repeating it would say one word twice. This says
         // who decided, which the row doesn't.
         case .appRejected:      return String(localized: "App Review turned it down")
-        case .agentRunFailed:   return String(localized: "A Cursor agent run failed")
         case .runningLow:       return String(localized: "Running low")
         // Names WHAT happened, never which chain — the plan carries its
         // source, so the mark says which devnet, and the body names it in
@@ -279,7 +269,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .paymentsSilent:      return String(localized: "payments went quiet")
         case .priceRose:           return String(localized: "a price went up")
         case .appRejected:         return String(localized: "App Review said no")
-        case .agentRunFailed:      return String(localized: "an agent run failed")
         case .runningLow:          return String(localized: "running low")
         case .chainReset:          return String(localized: "devnet reset")
         case .moneyIn:             return String(localized: "money arrived")
@@ -327,7 +316,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .paymentsSilent:      (one, many) = (String(localized: "quiet account"), String(localized: "quiet accounts"))
         case .priceRose:           (one, many) = (String(localized: "price rise"), String(localized: "price rises"))
         case .appRejected:         (one, many) = (String(localized: "rejection"), String(localized: "rejections"))
-        case .agentRunFailed:      (one, many) = (String(localized: "failed run"), String(localized: "failed runs"))
         case .runningLow:          (one, many) = (String(localized: "running low"), String(localized: "running low"))
         case .chainReset:          (one, many) = (String(localized: "reset"), String(localized: "resets"))
         case .moneyIn:             (one, many) = (String(localized: "transfer in"), String(localized: "transfers in"))
@@ -1102,7 +1090,7 @@ enum NotifyDigest {
         "Apple Wallet", "Safe", "ether.fi",
         "GitHub", "GitLab", "Linear", "Notion", "Slack", "Trello", "Jira",
         "Sentry", "Vercel", "PagerDuty", "Cloudflare", "App Store Connect", "Stripe",
-        "Shopify", "YouTube", "Spotify", "Strava", "Garmin",
+        "YouTube", "Spotify", "Strava", "Garmin",
         "Todoist", "Pinterest", "Day One", "Duolingo",
         "Farcaster", "Telegram", "Bluesky", "Instagram", "Snapchat", "TikTok", "X",
         "Steam", "Dropbox", "Twitch", "Substack",

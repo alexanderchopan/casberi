@@ -45,7 +45,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case dodoPayments = "Dodo Payments"
     case trello   = "Trello"
     case cloudflare = "Cloudflare"
-    case cursor   = "Cursor"
     case sentry   = "Sentry"
     case vercel   = "Vercel"
     case pagerduty = "PagerDuty"
@@ -89,7 +88,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .dodoPayments: "dodopayments"
         case .trello:   "trello"
         case .cloudflare: "cloudflare"
-        case .cursor:   "cursor"
         case .sentry:   "sentry"
         case .vercel:   "vercel"
         case .pagerduty: "pagerduty"
@@ -126,9 +124,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:   URL(string: "https://app.privacy.com/account")
         // Wise's settings ROOT, not a per-tab path: the API-tokens page
         // sits behind "Integrations and tools" and its URL has moved at
-        // least once, so the step below names the tab (Cursor's and Dodo
-        // Payments' reasoning — a door that 404s is worse than one that
-        // needs a click).
+        // least once, so the step below names the tab (Dodo Payments'
+        // reasoning — a door that 404s is worse than one that needs a
+        // click).
         case .wise:      URL(string: "https://wise.com/settings/")
         // The API-keys page itself: the step below only has to name the scope.
         case .splits:    URL(string: "https://app.splits.org/settings/team/api-keys/")
@@ -139,7 +137,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // after a token exists. The token itself lives under a "Developers"
         // section on that page (named in the step below).
         case .polar:     URL(string: "https://polar.sh/to/dashboard/settings")
-        // The dashboard ROOT, Cursor's exact reasoning: no per-tab path is
+        // The dashboard ROOT, deliberately: no per-tab path is
         // confirmed (the docs describe "Developer → API Keys" in prose, never
         // a URL), and a door that 404s is worse than one that needs a tab
         // click — the step below names the tab to look for.
@@ -177,14 +175,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // read would need `page:read` added here, deliberately NOT included
         // while nothing reads it.
         case .cloudflare: URL(string: "https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22zone%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22ssl_and_certificates%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22dns%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%5D&accountId=%2A&zoneId=all&name=Casberi")
-        // The dashboard ROOT, not the API-keys tab, and that is deliberate
-        // imprecision: Cursor's current docs put the key at
-        // `cursor.com/dashboard/api` while an older revision of the same page
-        // says `/dashboard/integrations`, and this bridge has never been run
-        // against a live account (see `CursorFetch`). A door that 404s is worse
-        // than one that needs a tab click, so this opens the page that
-        // certainly exists and the first STEP names the tab to look for.
-        case .cursor:    URL(string: "https://cursor.com/dashboard")
         // The token page is per-organization and its URL carries the org slug,
         // which isn't known until after the token exists — so this is the
         // account-wide page, which is where Sentry's own docs send you and
@@ -229,7 +219,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
              .vercel, .sentry, .jira, .cloudflare:
             String(localized: "Get your token")
         case .calcom, .linear, .bitrefill, .privacy, .posthog,
-             .stripe, .polar, .trello, .cursor, .pagerduty, .appStoreConnect,
+             .stripe, .polar, .trello, .pagerduty, .appStoreConnect,
              .dodoPayments:
             String(localized: "Get your API key")
         case .wise:      String(localized: "Get your API token")
@@ -337,12 +327,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // step that was already on screen — and worse, it would name the WRONG
         // template, sending someone to widen a token the door just narrowed.
         case .cloudflare: []
-        // No scope to choose, and the steps deliberately don't pretend there
-        // is one: Cursor's keys carry no permissions at all (see
-        // `CursorFetch`). What that means is said once, in `NetworkReach`'s Cursor
-        // purpose — not repeated here as an instruction nobody can act on (§220).
-        case .cursor: [
-            "API Keys → create a Cloud Agents key"]
         // The three scopes are NOT named here — Sentry owns its own screen and
         // renders a `DSCheckList` under this step, so naming them twice is
         // §220's "a step that was already on screen twice" (the PostHog and
@@ -392,7 +376,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // account (see `NetworkReach`'s Jira purpose), so there is no box to tick the way
         // Cloudflare's or Sentry's steps name one.
         case .jira: []
-        // AWS has a real read-only IAM POLICY — unlike Cursor's or App Store
+        // AWS has a real read-only IAM POLICY — unlike App Store
         // Connect's key, which carry no such thing — so the step names it
         // rather than leaving the promise to conduct alone (see `NetworkReach`).
         case .aws: []
@@ -417,25 +401,21 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .stripe:   "rk_live_…"
         // No confirmed prefix from Polar's docs — Organization Access
         // Tokens are described in prose with no example string shown, so a
-        // guessed prefix would read as a validation rule (the Cursor/Vercel
+        // guessed prefix would read as a validation rule (the Vercel
         // reasoning: a placeholder showing the wrong prefix reads as a rule
         // and would have someone believing a perfectly good token is wrong).
         case .polar:    "Organization access token"
-        // No confirmed prefix from Dodo's docs (the Cursor/Vercel reasoning)
+        // No confirmed prefix from Dodo's docs (the Vercel reasoning)
         // — the closest fact found is "typically prefixed live_" for a live
         // key, which "typically" is too weak to assert as a validation cue.
         case .dodoPayments: "API key"
         case .trello:   "Token"
         case .cloudflare: "API token"
-        // No prefix shown. `crsr_` is documented for Cursor's ADMIN keys and
-        // it is unverified whether a Cloud Agents key wears it — a placeholder
-        // that shows the wrong prefix reads as a validation rule and would
-        // have someone believing a perfectly good key is the wrong one.
-        case .cursor:   "API key"
         case .sentry:   "sntryu_…"
         // No prefix. Vercel's tokens are an opaque random string with no
         // documented prefix at all, and inventing one would read as a
-        // validation rule (the Cursor reasoning).
+        // validation rule (a placeholder showing the wrong prefix would have
+        // someone believing a perfectly good token is wrong).
         case .vercel:   "Token"
         case .pagerduty: "API key"
         case .gitlab:   "glpat-…"
@@ -482,7 +462,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .dodoPayments: "API key"
         case .trello:   "token"
         case .cloudflare: "API token"
-        case .cursor:   "API key"
         case .sentry:   "auth token"
         case .vercel:   "token"
         case .pagerduty: "API key"
@@ -517,7 +496,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .dodoPayments: "updates"
         case .trello:   "cards"
         case .cloudflare: "alerts"
-        case .cursor:   "runs"
         case .sentry:   "issues"
         case .vercel:   "deploys"
         case .pagerduty: "incidents"
@@ -559,8 +537,8 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     // the read-only promise was written, guarded and kept current where no
     // person could read it. It has one home now, and that home is on screen:
     // `NetworkReach`'s purpose for the service, drawn in Settings (§702). The
-    // App Store Connect and Cursor conduct guards read it there — see
-    // `scripts/appstoreconnect-selftest.sh` and `scripts/cursor-selftest.sh`.
+    // App Store Connect conduct guard reads it there — see
+    // `scripts/appstoreconnect-selftest.sh`.
 
     /// What an EMPTY but SUCCESSFUL read means, for the bridges where empty is
     /// a state worth explaining rather than good news (2026-08-03, prd §291).
@@ -610,13 +588,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // forever without this sentence.
         case .cloudflare:
             String(localized: "Cloudflare answered — no certificate, domain or token is close to expiring.")
-        // Cursor earns one for the plainest reason of the three: most people
-        // who use Cursor have never launched a CLOUD agent — they use the
-        // editor, which this cannot see and does not claim to. So a perfectly
-        // good key legitimately reads empty forever, and without this sentence
-        // that is indistinguishable from a key Cursor refused.
-        case .cursor:
-            String(localized: "Cursor answered — no finished cloud agents yet. Only the background agents you launch are read, not the edits you make yourself, so run one and sync again.")
         // Cloudflare's case exactly: here empty is the GOOD outcome and the
         // common one, and it is precisely as silent as a refused key. Nothing
         // lands until something fires, so a quiet week reads as a broken
@@ -1184,19 +1155,7 @@ enum TokenIngest {
         case .trello:   await trello(token)
         case .cloudflare: await CloudflareFetch.things(token: token)
         case .gitlab:   await gitlab(token)
-        // Only runs that are OVER land, so — unlike Linear/Trello/Cloudflare
-        // above — there is no `reconcile…` call for this bridge at the top of
-        // `refresh`. A finished agent run is finished forever. See
-        // `CursorFetch`.
-        //
-        // Note what that does and does not cover (2026-08-08, prd §340): the
-        // RUN is final, and the PULL REQUEST it opened is not. That second
-        // half is reconciled by `CursorPullRequests`, which runs from the
-        // foreground sweep rather than here, because it spends the GitHub
-        // token rather than this bridge's own.
-        case .cursor:   await CursorFetch.things(token: token)
-        // A deployment that is OVER is over forever, so — like Cursor and
-        // unlike Linear/Trello/Cloudflare — there is no `reconcile…` call for
+        // A deployment that is OVER is over forever, so — unlike Linear/Trello/Cloudflare — there is no `reconcile…` call for
         // this bridge at the top of `refresh`. See `VercelFetch`.
         case .vercel:   await VercelFetch.things(token: token)
         // Unreachable — `refresh` routes these two to their own sweeps above.

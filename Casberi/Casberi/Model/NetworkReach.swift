@@ -472,10 +472,6 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "appstoreconnect"),
                  purpose: "Reads your apps' review status, your customer reviews and your builds, with a key you generate and a token this iPhone signs itself — nothing about the key ever leaves the Keychain. Never your sales, your proceeds, or your analytics. Apple has no read-only role, so nothing here submits, releases, removes an app from sale, replies, or uploads. appstoreconnect.apple.com is the page that generates the key and the page a row links to — opened in your browser, never called by the app.",
                  hosts: ["api.appstoreconnect.apple.com", "appstoreconnect.apple.com"]),
-        Endpoint(service: "Cursor",
-                 reach: .whenConnected(bridge: "cursor"),
-                 purpose: "Lists the cloud agents you've run — the name, the repository, whether each finished, and the pull request it opened. One request, and only ever a read: Cursor's key cannot be scoped read-only, so nothing here starts, stops, follows up, or deletes an agent. Your code is never sent anywhere; the agent already ran on Cursor's side. cursor.com is the page that mints the key — opened in your browser, never called by the app. For a run on a GitHub repository, the repository owner's public avatar is fetched from github.com so the row and its notification can wear it.",
-                 hosts: ["api.cursor.com", "cursor.com", "github.com"]),
         // AWS (2026-08-30) — the HOST varies by AWS SERVICE and by the region
         // you type, so no fixed list of literals could ever be complete
         // (§289's class: a host built at runtime). Declaring the parent
@@ -668,7 +664,7 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Calendly"),
                  purpose: "Reads your scheduled events with a token you provide.",
                  hosts: ["api.calendly.com"]),
-        // A fully dynamic host, the Shopify shape: the site is the person's
+        // A fully dynamic host: the site is the person's
         // OWN Jira Cloud domain (`<name>.atlassian.net`), built at runtime
         // from what they typed, so there is no literal tail this registry —
         // or `network-reach-audit.sh`'s scan — can name. `JiraAuth`'s calls
@@ -762,14 +758,6 @@ enum NetworkReach {
 
         // MARK: Shopping
 
-        Endpoint(service: "Shopify",
-                 reach: .whenConnected(bridge: "Shopify"),
-                 purpose: "Reads a store's public product catalog for new drops. Goes to the store's own site.",
-                 hosts: ["the store you follow"]),
-        Endpoint(service: "Deals",
-                 reach: .whenConnected(bridge: "Deals"),
-                 purpose: "Fetches the public deal feeds you follow.",
-                 hosts: ["www.dealnews.com", "the deal sites you follow"]),
         Endpoint(service: "Bitrefill",
                  reach: .whenConnected(bridge: "Bitrefill"),
                  purpose: "Reads your Bitrefill orders and balance with an API key you provide.",

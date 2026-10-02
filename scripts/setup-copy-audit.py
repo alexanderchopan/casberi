@@ -1173,7 +1173,7 @@ def self_test() -> bool:
     # invites — `name:` is the CATALOG name and `source:` is not, so passing
     # the one you already typed is the natural slip; and it renders perfectly,
     # so nothing but this can catch it.
-    stamped = {"Privacy Pools", "Peer", "Deals"}
+    stamped = {"Privacy Pools", "Peer", "Bitrefill"}
     dirty_room = ('AccountPage(name: "0xBow Privacy Pools", seatID: "pp",\n'
                   '            source: "0xBow Privacy Pools")')
     f = audit_room_doors("fixture.swift", dirty_room, stamped)

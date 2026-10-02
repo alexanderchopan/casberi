@@ -220,7 +220,7 @@ enum PrivacyFetch {
     }
 
     /// "$12.99" from integer cents, via the shared product formatter so a
-    /// Privacy row reads a price exactly as a Bitrefill/Shopify row does.
+    /// Privacy row reads a price exactly as a Bitrefill row does.
     /// Privacy cards are USD; a merchant's own currency is a separate field
     /// (`merchant_currency`) we don't quote here — the card amount is what you
     /// were charged. Returns nil for a zero amount rather than "$0.00".

@@ -299,7 +299,7 @@ enum PackageShape {
     /// the component after the shape, already lowercased at mint time. Read
     /// from the REF and not from a field, because the ingest stamps no author:
     /// a package is not a person, and `authorHandle` is where the seats with a
-    /// real publisher (RSS, Shopify, Hugging Face) put one. Matched WHOLE
+    /// real publisher (RSS, Hugging Face) put one. Matched WHOLE
     /// rather than by `contains`, or `react` would claim every `react-router`
     /// row; scoped to the registry, so `requests` on PyPI and `requests` on
     /// npm stay two packages (the two registries share a namespace shape, not

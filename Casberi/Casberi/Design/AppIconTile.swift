@@ -144,10 +144,6 @@ extension DS {
         // teal end reads as any mint brand and the periwinkle end as any purple.
         case "circle x402":         return Color.fixed("#60b0f0")
         case "trello":              return Color.fixed("#1169df")   // the mark's own gradient at its midpoint, icon-sampled from the bundled asset (#2381fd → #0054c2)
-        // Cursor's own brand page gives #000000, and the mark really is
-        // monochrome — the Grok/X case, not a logo-on-black lockup. washHue
-        // nils pure black, so the Cursor screens stay pure ink on purpose and
-        // this only stops the tile falling back to gray.
         // iOS system blue — NOT the App Store icon's blue, and the difference
         // is the point (user, 2026-08-06: "we can't use their icon"). This
         // seat carries no bundled mark at all, so the hue and the glyph
@@ -155,21 +151,20 @@ extension DS {
         // gradient would be imitating the mark by other means. The system
         // accent says "Apple platform" without standing in for a trademark.
         case "app store connect":   return Color.fixed("#0a84ff")
-        case "cursor":              return Color.fixed("#000000")
         // Sentry's documented purple. Their mark is the lantern in this
         // colour on white — the PostHog/Hugging Face shape (a logo-on-white
         // lockup where the brand is the mark), not the ChatGPT one where the
         // white field IS the identity.
         case "sentry":              return Color.fixed("#362d59")
         // Vercel is pure black by their own brand guidance, and the triangle
-        // really is monochrome — the Cursor/Grok/X case, not a lockup.
+        // really is monochrome — the Grok/X case, not a lockup.
         // washHue nils pure black, so the Vercel screens stay ink on purpose
         // and this only stops the tile falling back to gray.
         case "vercel":              return Color.fixed("#000000")
         case "pagerduty":           return Color.fixed("#04ac38")   // icon-sampled from the bundled mark's own field
         // Atlassian's documented Jira blue — no bundled mark yet, so the hue
         // and the glyph together are this seat's whole identity until one
-        // lands (the App Store Connect/Cursor case: a real color even without
+        // lands (the App Store Connect case: a real color even without
         // an asset, rather than falling to the gray default).
         case "jira":                return Color.fixed("#0052cc")
         // npm's documented red. PyPI's blue is deliberately DIFFERENT rather
@@ -185,7 +180,7 @@ extension DS {
         case "gitlab":              return Color.fixed("#fc6d26")
         // GitHub's mark is the Octocat on a near-BLACK field — measured
         // (2026-08-24): zero saturated pixels, dominant sample near-black —
-        // the Vercel/Grok/Cursor case exactly (a real ground colour, not a
+        // the Vercel/Grok case exactly (a real ground colour, not a
         // logo-on-white lockup). `washHue` nils this on purpose; `brandHue`
         // still wants the true field so a fallback-gray tile isn't invented
         // for an app that has a real one.
@@ -255,8 +250,6 @@ extension DS {
         case "podcasts":            return Color.fixed("#8a2be2")   // Apple Podcasts purple
         case "contacts":            return Color.fixed("#34c759")   // Contacts green
         case "kindle":              return Color.fixed("#f2a900")   // Amazon/Kindle amber
-        case "shopify":             return Color.fixed("#5e8e3e")   // Shopify's green
-        case "deals":               return Color.fixed("#e0245e")   // a sale-tag crimson
         case "open food facts":     return Color.fixed("#7cb342")   // a fresh grocery green
         case "stocktwits":          return Color.fixed("#008fff")   // their azure (icon-sampled)
         case "bitrefill":           return Color.fixed("#002b28")   // their dark teal (icon-sampled)

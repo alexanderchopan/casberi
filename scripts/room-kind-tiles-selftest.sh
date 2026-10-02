@@ -158,7 +158,7 @@ src = "\n".join("" if l.strip().startswith("//") else l
                  for l in open(sys.argv[1]).read().splitlines())
 fails = []
 # The kind-tile rooms' lead, tiles and empty state are one drawing since
-# prd §911 (`standaloneLead`, shared with Cursor, Walletbeat and L2BEAT).
+# prd §911 (`standaloneLead`, shared with Walletbeat and L2BEAT).
 for fn, tiles in (("func standaloneLead", "if let tiles {"),
                   ("private func agentRoomSections", "if let agentTiles {")):
     i = src.find(fn)
@@ -324,22 +324,17 @@ AWSB="Casberi/Casberi/Model/AWSBridge.swift"
 for r in 'static let source = "AWS"' 'sourceRef: "aws:alarm:' 'sourceRef: "aws:pipeline:\(id)"' 'sourceRef: "aws:costanomaly:\(day)"'; do
   grep -qF "$r" "$AWSB" || { echo "✗ AWS's shape moved: $r"; exit 1; }
 done
-CUR="Casberi/Casberi/Model/CursorBridge.swift"
-for r in 'source: "Cursor"' 'sourceRef: "cursor:agent:\(id)"' '"Failed"' '"Expired"' '"Cancelled"' 'tags.append("PR")'; do
-  grep -qF "$r" "$CUR" || { echo "✗ Cursor's shape moved: $r"; exit 1; }
-done
 HKI="Casberi/Casberi/Model/HealthIngest.swift"
 for r in 'source: "Apple Health"' '"hkworkout:\(record.activityID)"' 'let ref = "hksleep:\(night.dayKey)"' 'let ref = "hkmood:\(mood.uuid.uuidString)"'; do
   grep -qF "$r" "$HKI" || { echo "✗ Apple Health's shape moved: $r"; exit 1; }
 done
-# The Cursor room draws its tiles by hand inside its repository shape, and
-# Walletbeat's and L2BEAT's stand alone when their head is nil (prd §911).
+# Walletbeat's and L2BEAT's tiles stand alone when their head is nil (prd §911).
 # Generic over the tile scope since prd §969 (Notes' tiles ride it too).
 grep -qF 'func standaloneLead<Scope: DSTileScope>(' "$FEED" \
   && grep -qF 'cover: Thing?, tiles: DSScopeTiles<Scope>?,' "$FEED" \
   || { echo "✗ FeedScreen lost standaloneLead — the cover, empty lead and tiles in one drawing"; exit 1; }
 [[ $(grep -c 'standaloneLead(cover:' "$FEED") -ge 4 ]] \
-  || { echo "✗ fewer than four rooms draw the standalone lead (kind-tile rooms, Cursor, Walletbeat, L2BEAT)"; exit 1; }
+  || { echo "✗ fewer than four rooms draw the standalone lead (kind-tile rooms, Walletbeat, L2BEAT, Notes, Music, agenda)"; exit 1; }
 echo "room-kind-tiles-selftest: drift guards ✓"
 
 TMP="$(mktemp -d)"
@@ -364,11 +359,12 @@ check(RoomKindTiles.Room(source: "Safe") == .safe
       && RoomKindTiles.Room(source: "PostHog") == .posthog
       && RoomKindTiles.Room(source: "L2BEAT") == .l2beat
       && RoomKindTiles.Room(source: "Walletbeat") == .walletbeat, "the eight rooms resolve from their sources")
-// prd §911 — the twelve rooms whose rows already carried a kind.
+// prd §911 — the rooms whose rows already carried a kind (twelve; Cursor's
+// left with the seat, prd §1049).
 for (source, room) in [("Polar", RoomKindTiles.Room.polar), ("Dodo Payments", .dodoPayments),
                        ("GitLab", .gitlab), ("Radicle", .radicle), ("Sentry", .sentry),
                        ("Vercel", .vercel), ("PagerDuty", .pagerduty), ("npm", .npm),
-                       ("PyPI", .pypi), ("AWS", .aws), ("Cursor", .cursor),
+                       ("PyPI", .pypi), ("AWS", .aws),
                        ("Apple Health", .appleHealth)] {
     check(RoomKindTiles.Room(source: source) == room, "\(source) resolves to its room (§911)")
 }
@@ -590,11 +586,7 @@ check(awsc.kind(ref: "aws:alarm:prod:ALARM:1", url: nil, tags: ["Alarme"]) == .a
 check(awsc.kind(ref: "aws:pipeline:1", url: nil, tags: ["Deploy", "Failed"]) == .deploys, "AWS: a pipeline is Deploys")
 check(awsc.kind(ref: "aws:costanomaly:2026-09-24", url: nil, tags: ["Cost"]) == .costs, "AWS: a cost anomaly")
 check(awsc.kind(ref: "demo:aws:1", url: nil, tags: ["Alarm"]) == .alarms, "AWS: the demo's row sorts by its tag")
-let cur = RoomKindTiles.Census(room: .cursor, refs: [])
-check(cur.kind(ref: "cursor:agent:1", url: nil, tags: ["Agent run", "PR"]) == .pullRequests, "Cursor: a run with a PR")
-check(cur.kind(ref: "cursor:agent:2", url: nil, tags: ["Agent run", "Failed"]) == .failed, "Cursor: a failed run")
-check(cur.kind(ref: "cursor:agent:3", url: nil, tags: ["Agent run", "Expired", "PR"]) == .failed, "Cursor: Failed wins over PR")
-check(cur.kind(ref: "cursor:agent:4", url: nil, tags: ["Agent run"]) == nil, "Cursor: a finished run is All only")
+check(RoomKindTiles.Room(source: "Cursor") == nil, "Cursor grows no tiles — the seat is deleted (prd §1049)")
 let hk = RoomKindTiles.Census(room: .appleHealth, refs: [])
 check(hk.kind(ref: "hkworkout:1", url: nil, tags: []) == .workouts, "Health: a workout")
 check(hk.kind(ref: "hksleep:2026-09-24", url: nil, tags: []) == .sleep, "Health: a night")

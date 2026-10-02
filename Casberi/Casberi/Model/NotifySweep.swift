@@ -131,7 +131,7 @@ enum NotifySweep {
     /// at least four causes: nothing landed inside the news window, nothing
     /// classified, every candidate was dust, or the deadline scan found no row
     /// with a clock. Only one of those is a bug, and a bare zero cannot tell
-    /// them apart — the same reason `-cursorProbe` exists.
+    /// them apart.
     static func skipCensus(things: [Thing], now: Date = Date()) -> [String] {
         let live = things.filter(\.isLive)
         let fresh = live.filter { $0.capturedAt > now.addingTimeInterval(-newsWindow) }
@@ -261,13 +261,6 @@ enum NotifySweep {
         //   every row landed under either prefix IS the crossing.
         if ref.hasPrefix("wallet:defi:") || ref.hasPrefix("hyperliquid:risk:") {
             return .positionAtRisk
-        }
-        // — Cursor: a cloud agent run that ended in an ERROR, and only that —
-        //   Expired/Cancelled are administrative, not something gone wrong.
-        //   Tag-based rather than ref-based (`cursor:agent:<id>` alone can't
-        //   say which outcome), the Stripe/Apple-Wallet tag-check shape.
-        if ref.hasPrefix("cursor:agent:"), thing.tags.contains("Failed") {
-            return .agentRunFailed
         }
         // — Running low: a key/balance/quota crossed under its own floor
         //   (2026-08-09) — OpenRouter credits, a Bitrefill balance, a Stripe

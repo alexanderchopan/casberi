@@ -24,11 +24,6 @@ enum AgentSheetSource {
     /// rather than sources: they buy a better answer and never write a row, so
     /// there is no sheet of theirs to shape.
     ///
-    /// Cursor is absent on purpose and it is the interesting absence: its runs
-    /// are `.link` rows with facet tags, and `WorkStage` has drawn them as a
-    /// receipt since this morning. A row can only have one anatomy, and the
-    /// one it already has is right.
-    ///
     /// A literal set rather than a `BridgeCatalog` walk — this is read on every
     /// sheet open, and the catalog answer is a linear scan over sixty-odd
     /// offers. Guarded against the catalog by `agent-sheet-selftest.sh`, so an

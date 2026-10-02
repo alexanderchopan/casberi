@@ -54,7 +54,6 @@ FEED_ROWS = {
     "MusicRow": ROWS, "TokenRow": ROWS, "CompanyRow": ROWS, "BundleRow": ROWS, "StripRow": ROWS,
     "PostCard": ROWS, "SocialThreadCard": ROWS, "AppReviewRow": ROWS,
     "TakeawayCard": ROWS,
-    "CursorRow": "Casberi/Casberi/Screens/CursorRow.swift",
     "WalletbeatWalletRow": "Casberi/Casberi/Screens/WalletbeatRow.swift",
     "WalletbeatNewsRow": "Casberi/Casberi/Screens/WalletbeatRow.swift",
     "L2beatChainRow": "Casberi/Casberi/Screens/L2beatRow.swift",

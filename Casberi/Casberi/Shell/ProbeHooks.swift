@@ -1083,7 +1083,7 @@ enum ProbeHooks {
             NSLog("[Casberi] awsRegion: %@", AWSAuth.region)
         },
         // `-awsProbe YES` walks the AWS read phase by phase with the STORED
-        // key pair — the `-ascProbe`/`-cursorProbe` lesson: an empty AWS room
+        // key pair — the `-ascProbe` lesson: an empty AWS room
         // has several causes (no key pair, a refused key pair, an IAM policy
         // that can see some services and not others, a genuinely quiet
         // account, or shape drift in a doc-derived field map) and only the
@@ -1203,18 +1203,6 @@ enum ProbeHooks {
             for line in SafeRoomSource.probeLines(things: rows) {
                 NSLog("[Casberi] %@", line)
             }
-        },
-        // `-cursorProbe YES` walks the Cursor read phase by phase with the
-        // STORED key (connect first via `-tokenBridge "Cursor:<key>"`), and
-        // dumps one `cursorAgent|` line per run. Same lesson as the two above:
-        // an empty Cursor room has five causes — no key, a refused key, an
-        // account that has genuinely never launched a cloud agent, every agent
-        // still in flight, and shape drift — and only the last is a bug, while
-        // all five render as the same one sentence. It is also the only way to
-        // see a status value this build doesn't know, which lands nothing and
-        // says nothing. See `CursorFetch.diagnose`.
-        Hook(key: "cursorProbe") { _, _ in
-            Task { @MainActor in await CursorFetch.diagnose() }
         },
         // `-cardPointersProbe YES` — CardPointers phase by phase with the
         // STORED token (prd §420). Every read there needs CardPointers+, so
@@ -2843,29 +2831,6 @@ enum ProbeHooks {
                 for line in await ENSRenewPrepare.probe(name: value, context: context) {
                     NSLog("%@", line)
                 }
-            }
-        },
-        // `-shopifyStore <url[,url]>` follows one or more Shopify stores and
-        // syncs — headless bridge test. A blocked store logs FAILED honestly.
-        Hook(key: "shopifyStore") { spec, context in
-            for raw in spec.split(separator: ",") {
-                ShopifyStore.shared.add(String(raw).trimmingCharacters(in: .whitespaces))
-            }
-            Task { @MainActor in
-                let n = await ShopifyIngest.refresh(context: context)
-                NSLog("Shopify probe: %@ new products", n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-dealsFeed <sources|YES>` connects the Deals bridge (a comma list of
-        // source ids, or YES for the defaults) and syncs — headless test.
-        Hook(key: "dealsFeed") { spec, context in
-            let list = spec.split(separator: ",")
-                .compactMap { DealSource.from(String($0).trimmingCharacters(in: .whitespaces)) }
-            if list.isEmpty { DealsStore.shared.connectDefaults() }
-            else { for s in list { DealsStore.shared.add(s) } }
-            Task { @MainActor in
-                let n = await DealsIngest.refresh(context: context)
-                NSLog("Deals probe: %@ new deals", n.map(String.init) ?? "FAILED")
             }
         },
         // `-priceProbe <url>` parses a product page's price/identity and NSLogs
@@ -6477,28 +6442,6 @@ enum ProbeHooks {
             NSLog("viProbe: %d hit(s) for [%@]: %@", hits.count,
                   labels.joined(separator: ", "),
                   hits.isEmpty ? "—" : hits.map(\.title).joined(separator: " · "))
-        },
-        // `-cursorPRProbe YES` — what became of the pull requests your agents
-        // opened, WITHOUT changing anything (2026-08-08, prd §340).
-        //
-        // An unchanged room has five causes that look identical from the feed:
-        // no GitHub token, no Cursor row carrying a PR at all, every PR
-        // already resolved, every PR still genuinely open, or a url shape this
-        // build can't parse. Only the last is a bug, and it is the invisible
-        // one — the row just keeps saying a pull request was opened, forever.
-        // `parsed=NO` is what separates it in one launch.
-        Hook(key: "cursorPRProbe") { _, context in
-            Task { @MainActor in await CursorPullRequests.diagnose(context: context) }
-        },
-        // `-cursorPRSync YES` — actually run the loop-closer and report how
-        // many rows changed. A DIFFERENT word from the probe above, not a flag
-        // on it, for `-librarianProbe`'s reason: this one spends requests, so
-        // it must never be something a headless sweep runs by accident.
-        Hook(key: "cursorPRSync") { _, context in
-            Task { @MainActor in
-                let changed = await CursorPullRequests.reconcile(context: context)
-                NSLog("[Casberi] cursorPRSync: %d row(s) resolved", changed)
-            }
         },
         // `-framesProbe YES` — the Frames devnet's read, phase by phase, then
         // ONE LINE PER FRAME of the newest frame transaction (the

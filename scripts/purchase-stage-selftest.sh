@@ -4,10 +4,10 @@
 #
 # WHY THIS EXISTS. `PurchaseStage` decides what a shopping thing sheet SAYS: a
 # purchase or a thing you're watching, who you paid, whether the charge is
-# final, what the price fell from, and — the sentence the whole pass started
-# from — where the row came from. Every failure it can have renders as a
-# perfectly good-looking card: an authorization stated as settled, a deal
-# introduced as "a store you follow", a grade beside a food this app never
+# final, and — the sentence the whole pass started from — where the row came
+# from. Every failure it can have renders as a perfectly good-looking card: an
+# authorization stated as settled, a brand introduced as a shop, a grade
+# beside a food this app never
 # graded, a merchant that is really the first half of somebody's product name.
 # `xcodebuild` is happy with all of them, the screen sweep passes, and nothing
 # in the app can tell.
@@ -19,7 +19,7 @@
 #
 # THE RULE IT PROTECTS (prd §340, inherited from `WorkStage`). Every joined
 # title in this codebase is `String(localized:)`, so it records the merchant
-# and the old price in whatever language the device was in WHEN THE ROW LANDED.
+# in whatever language the device was in WHEN THE ROW LANDED.
 # So the archetype comes from the `sourceRef` prefix — a string this app WROTE
 # — and every word returned is produced fresh. Group 8 and mutation 5 are that
 # rule as a test.
@@ -27,7 +27,7 @@
 # NOTE the negative guards read a COMMENT-STRIPPED copy. The source DOCUMENTS
 # this rule by naming the very things it must not do ("never sliced out of the
 # title", "parsing it back"), so a guard grepping raw source fires on the prose
-# explaining it — the Obsidian/Cursor lesson, earned again here.
+# explaining it — the Obsidian lesson, earned again here.
 set -uo pipefail
 ROOT="${0:a:h:h}"
 SRC="$ROOT/Casberi/Casberi/Model/PurchaseStage.swift"
@@ -53,11 +53,11 @@ func at(_ daysAgo: Double) -> Date { Date(timeIntervalSince1970: 1_760_000_000 -
 func row(_ source: String, ref: String? = nil, kind: String = "transaction",
          title: String, tags: [String] = [], price: Double? = nil,
          currency: String? = nil, seller: String? = nil, merchant: String? = nil,
-         when: Date = at(1), enriched: String? = nil) -> PurchaseStage.Row {
+         when: Date = at(1)) -> PurchaseStage.Row {
     PurchaseStage.Row(source: source, sourceRef: ref, kind: kind, title: title,
                       tags: tags, priceValue: price, priceCurrency: currency,
                       sellerField: seller, merchantField: merchant,
-                      capturedAt: when, enrichedText: enriched)
+                      capturedAt: when)
 }
 
 // 1 ── The fork. A ref this app wrote decides it, never the price alone.
@@ -65,10 +65,13 @@ let privacy = row("Privacy", ref: "privacy:txn:abc", title: "Netflix.com · $12.
                   tags: ["Card", "Settled"], price: 12.99, currency: "USD",
                   merchant: "Netflix.com")
 eq("privacy.archetype", PurchaseStage.archetype(privacy)?.rawValue, "receipt")
-let shopify = row("Shopify", ref: "shopify:store.com:1", kind: "product",
+// A product is a watch by its KIND (Shopify and Deals, its two live
+// landers, were deleted in prd §1049; the archetype stays for the rows a
+// person captures and Open Food Facts' kept scans).
+let product = row("You", kind: "product",
                   title: "Cast iron pan, 26cm", price: 72, currency: "EUR",
                   seller: "Aesop")
-eq("shopify.archetype", PurchaseStage.archetype(shopify)?.rawValue, "watch")
+eq("product.archetype", PurchaseStage.archetype(product)?.rawValue, "watch")
 let low = row("Bitrefill", ref: "bitrefill:balance:low:1", kind: "reminder",
               title: "Your Bitrefill balance is running low — $4.20 left",
               price: 4.20, currency: "USD")
@@ -149,52 +152,40 @@ ok("receipt.needs.amount",
                              title: "Netflix.com", merchant: "Netflix.com")) == nil)
 
 // 8 ── THE PROVENANCE SENTENCE — the finding that started the pass. The old
-// spec row said "from a store you follow" over all three, and it is true of
-// exactly one of them.
-let deal = row("Deals", ref: "deals:x", kind: "product",
-               title: "Anker 737 power bank — 38% off", tags: ["Deal"],
-               seller: "Slickdeals")
+// spec row said "from a store you follow" over all three product seats, and
+// it was true of exactly one of them.
 let food = row("Open Food Facts", ref: "off:5060403320102", kind: "product",
                title: "Oat drink, barista", tags: ["Food", "Nutri-Score B"],
                seller: "Oatly")
 // The user ruling (2026-08-12) that made this optional: the sentence is nil
 // unless it names something the SCREEN CANNOT. `watchParty` already renders
-// the role a line above ("a store you follow" / "a feed you follow" /
-// "brand"), so a sentence repeating it was the same fact twice.
+// the role a line above ("brand"), so a sentence repeating it was the same
+// fact twice.
 let bitrefill = row("Bitrefill", ref: "bitrefill:order:9", title: "Amazon gift card — $50",
                     price: 50, currency: "USD")
 let refillRow = row("Bitrefill", ref: "bitrefill:invoice:9", title: "Added $50 to your balance",
                     price: 50, currency: "USD")
 let gnosis = row("Gnosis Pay", ref: "gnosispay:spend:7", title: "Card spend — €18.40",
                  price: 18.40, currency: "EUR")
-ok("shopify.prov.silent", PurchaseStage.provenance(shopify) == nil)
+ok("product.prov.silent", PurchaseStage.provenance(product) == nil)
 ok("food.prov.silent", PurchaseStage.provenance(food) == nil)
 ok("privacy.prov.silent", PurchaseStage.provenance(privacy) == nil)
-// The three that survive, each naming an absence the sheet has no field for.
-ok("deals.prov.stale", PurchaseStage.provenance(deal)?.contains("stale") == true)
+// The two that survive, each naming an absence the sheet has no field for.
 ok("bitrefill.prov.code", PurchaseStage.provenance(bitrefill)?.contains("code") == true)
 ok("gnosis.prov.merchant", PurchaseStage.provenance(gnosis)?.contains("merchant") == true)
 // A refill has no code to explain, so it says nothing.
 ok("refill.prov.silent", PurchaseStage.provenance(refillRow) == nil)
 // And the ROLE word, which is why the seller is a pair and not a name.
-eq("shopify.role", PurchaseStage.watchParty(shopify)?.role, "a store you follow")
-eq("deals.role", PurchaseStage.watchParty(deal)?.role, "a feed you follow")
 eq("food.role", PurchaseStage.watchParty(food)?.role, "brand")
+eq("product.role", PurchaseStage.watchParty(product)?.role, "seller")
 ok("no.seller.no.party", PurchaseStage.watchParty(
-    row("Shopify", ref: "shopify:s:1", kind: "product", title: "x")) == nil)
+    row("You", kind: "product", title: "x")) == nil)
 
-// 9 ── State words. A drop outranks a sale: both can be true and only one is
-// news.
-eq("drop.beats.sale",
-   PurchaseStage.watchState(row("Shopify", ref: "shopify:s:1", kind: "product",
-                                title: "x", tags: ["Sale", "Price drop"]))?.word,
-   "Price drop")
-eq("sale.alone", PurchaseStage.watchState(
-    row("Shopify", ref: "shopify:s:1", kind: "product", title: "x",
-        tags: ["Sale"]))?.word, "On sale")
-eq("drop.tone", PurchaseStage.watchState(
-    row("Shopify", ref: "shopify:s:1", kind: "product", title: "x",
-        tags: ["Price drop"]))?.tone.rawValue, "good")
+// 9 ── State words. A scan says so; Shopify's sale and drop words left with
+// the seat (prd §1049), so a stray tag says nothing.
+eq("food.state", PurchaseStage.watchState(food)?.word, "Scanned")
+ok("sale.silent", PurchaseStage.watchState(
+    row("You", kind: "product", title: "x", tags: ["Sale", "Price drop"])) == nil)
 
 // 10 ── Nutri-Score is READ, never computed, and only a real grade counts.
 eq("nutri.b", PurchaseStage.nutriScore(food), "B")
@@ -205,7 +196,7 @@ ok("nutri.rejects.word", PurchaseStage.nutriScore(
     row("Open Food Facts", ref: "off:1", kind: "product", title: "x",
         tags: ["Nutri-Score good"])) == nil)
 ok("nutri.scoped.to.seat", PurchaseStage.nutriScore(
-    row("Shopify", ref: "shopify:s:1", kind: "product", title: "x",
+    row("You", kind: "product", title: "x",
         tags: ["Nutri-Score A"])) == nil)
 
 // 11 ── The barcode, out of the ref it was already sitting in.
@@ -213,71 +204,23 @@ eq("barcode.spaced", PurchaseStage.barcode(food), "5060 4033 2010 2")
 ok("barcode.rejects.nondigits", PurchaseStage.barcode(
     row("Open Food Facts", ref: "off:abc", kind: "product", title: "x")) == nil)
 ok("barcode.scoped", PurchaseStage.barcode(
-    row("Shopify", ref: "off:123", kind: "product", title: "x")) == nil)
+    row("You", ref: "off:123", kind: "product", title: "x")) == nil)
 
-// 12 ── PRICE HISTORY. Round-trips, is locale-free, and every malformed shape
-// is nil rather than a partial reading.
-let move = PriceHistory.compose(was: 90, now: 72, currency: "EUR", wasUntil: at(7))
-let parsed = PriceHistory.parse(move)!
-ok("history.was", parsed.was == 90)
-ok("history.now", parsed.now == 72)
-eq("history.currency", parsed.currency, "EUR")
-ok("history.date", abs(parsed.wasUntil.timeIntervalSince(at(7))) < 1)
-ok("history.fell", parsed.fell)
-ok("history.fraction", abs((parsed.fraction ?? 0) - -0.2) < 0.0001)
-ok("history.rise.notfell", !PriceHistory.parse(
-    PriceHistory.compose(was: 50, now: 60, currency: "USD", wasUntil: at(2)))!.fell)
-ok("history.nil.on.nothing", PriceHistory.parse(nil) == nil)
-ok("history.nil.on.prose", PriceHistory.parse("Was €90.00, now €72.00.") == nil)
-ok("history.nil.on.short", PriceHistory.parse("pricemove/1|EUR|90.0|123") == nil)
-ok("history.nil.on.garbage", PriceHistory.parse("pricemove/1|EUR|x|123|72.0") == nil)
-ok("history.nil.on.zero", PriceHistory.parse("pricemove/1|EUR|0|123|72.0") == nil)
-// The marker must be the FIRST line, or a note that happens to quote it wins.
-ok("history.first.line.only",
-   PriceHistory.parse("some words\n" + move) == nil)
+// 12 ── The watch reading: the product is the hero, and nothing was done.
+let watched = PurchaseStage.reading(product)!
+eq("watch.face", watched.face.rawValue, "product")
+ok("watch.no.verb", watched.verb == nil)
 
-// 13 ── The writer preserves a body it doesn't own, and never stacks.
-let kept = PriceHistory.rewrite(existing: "a vault note's own words", with: "HEAD")
-ok("rewrite.keeps.body", kept.contains("a vault note's own words"))
-ok("rewrite.head.first", kept.hasPrefix("HEAD"))
-let twice = PriceHistory.rewrite(
-    existing: PriceHistory.rewrite(existing: "body", with: move), with: move)
-ok("rewrite.idempotent",
-   twice.components(separatedBy: PriceHistory.marker).count == 2)
-ok("rewrite.still.has.body", twice.contains("body"))
-ok("clear.drops.move", PriceHistory.clear(twice)?.contains(PriceHistory.marker) == false)
-ok("clear.keeps.body", PriceHistory.clear(twice)?.contains("body") == true)
-ok("clear.nil.when.empty", PriceHistory.clear(move) == nil)
-ok("clear.passes.through", PriceHistory.clear("just a note") == "just a note")
-
-// 14 ── The watch reading carries the move through.
-let dropped = PurchaseStage.reading(
-    row("Shopify", ref: "shopify:s:1", kind: "product", title: "Cast iron pan, 26cm",
-        tags: ["Price drop"], price: 72, currency: "EUR", seller: "Aesop",
-        enriched: move))!
-ok("watch.history.read", dropped.history?.was == 90)
-eq("watch.face", dropped.face.rawValue, "product")
-ok("watch.no.verb", dropped.verb == nil)
-
-// 15 ── Deals says its price is unread rather than leaving a gap that looks
-// like a missing number — and only Deals, because only Deals never parses one.
-ok("deals.says.unchecked",
-   PurchaseStage.reading(deal)!.rungs.contains { $0.value == "Not checked" })
-ok("shopify.no.unchecked.rung",
-   !PurchaseStage.reading(row("Shopify", ref: "shopify:s:2", kind: "product",
-                              title: "x", seller: "Aesop"))!
-       .rungs.contains { $0.value == "Not checked" })
-
-// 16 ── Shape tags are chrome; a person's own labels survive.
+// 13 ── Shape tags are chrome; a person's own labels survive.
 eq("labels.keep.own",
-   PurchaseStage.labels(row("Shopify", ref: "shopify:s:1", kind: "product", title: "x",
-                            tags: ["Sale", "Price drop", "Kitchen"]),
+   PurchaseStage.labels(row("You", kind: "product", title: "x",
+                            tags: ["Food", "Kitchen"]),
                         typeTags: ["Product"]).joined(separator: ","),
    "Kitchen")
 ok("labels.drop.nutri",
    PurchaseStage.labels(food, typeTags: ["Product"]).isEmpty)
 
-// 17 ── Seats with no shape here are untouched, which is what lets this land.
+// 14 ── Seats with no shape here are untouched, which is what lets this land.
 for source in ["Slack", "Notion", "Bluesky", "Photos", "GitHub", "Stripe"] {
     ok("silent.\(source)",
        PurchaseStage.reading(row(source, ref: "\(source):1", title: "x · y")) == nil)
@@ -346,11 +289,11 @@ mutate "an unmarked charge defaults to settled" \
 mutate "the merchant is sliced out of the title" \
   's|return merchant.isEmpty ? row.title.trimmingCharacters(in: .whitespaces) : merchant|return String(row.title.split(separator: "·").first ?? "")|'
 
-# The stale-price warning lost, so a deal's price reads as rechecked.
-# Range-scoped: an unscoped `case "Deals":` also matches `watchParty`'s switch,
-# where deleting it is a syntax error rather than the bug being modelled.
+# The missing-merchant sentence lost, so a Gnosis Pay spend with no merchant
+# reads as a failed lookup. Range-scoped to `provenance`, the one switch that
+# names the seat.
 mutate "provenance loses the seat that made it necessary" \
-  '/static func provenance/,/^    }$/ s|case "Deals":||'
+  '/static func provenance/,/^    }$/ s|case "Gnosis Pay":|case "Gnosis Pay (gone)":|'
 
 # The ruling reverted — a sentence on every seat again, restating the role line.
 mutate "provenance speaks where the screen already spoke" \
@@ -360,23 +303,10 @@ mutate "provenance speaks where the screen already spoke" \
 mutate "Nutri-Score accepts any letter" \
   's|if grade.count == 1, "ABCDE".contains(grade) { return grade }|if grade.count == 1 { return grade }|'
 
-# A sale reported as a drop, so a product that was never cheaper reads as news.
-mutate "sale outranks a real price drop" \
-  's|if tags.contains("Price drop") { return Badge(word: word("Price drop"), tone: .good) }||'
-
-# A half-read price move — the partial reading the parser refuses.
-mutate "price history accepts a malformed record" \
-  's|guard parts.count == 4,|guard parts.count >= 2,|'
-
-# The move stops having to be the FIRST line, so any note quoting the marker
-# becomes a price claim about the product.
-mutate "price history scans the whole body for its marker" \
-  's|.first,$|.first(where: { $0.hasPrefix(marker) }),|'
-
-# Re-recording stacks instead of replacing: a product that drops twice
-# accumulates contradictory records and the sheet reads the oldest.
-mutate "re-recording a move stops replacing the old one" \
-  's|lines.removeSubrange(index..<end)|_ = end|'
+# A scan that stops saying so, so a barcode you scanned reads as a product
+# that arrived on its own.
+mutate "a scanned product loses its state word" \
+  's|if tags.contains("Food")       { return Badge(word: word("Scanned"), tone: .neutral) }||'
 
 # A refill claims a merchant it never had.
 mutate "a refill reads as a purchase" \
@@ -421,13 +351,6 @@ for f in PrivacyBridge BitrefillBridge; do
     || { print -u2 "purchase-stage-selftest: drift — $f stopped healing landed rows"; exit 1; }
 done
 
-# Shopify must RECORD a drop rather than write it into the title, which is
-# where it lived and where nothing could read it honestly.
-grep -qE 'PriceHistory\.compose' "$ROOT/Casberi/Casberi/Model/ShopifyBridge.swift" \
-  || { print -u2 "purchase-stage-selftest: drift — Shopify stopped recording price moves"; exit 1; }
-grep -qE '\(was \\\(' "$ROOT/Casberi/Casberi/Model/ShopifyBridge.swift" \
-  && { print -u2 "purchase-stage-selftest: drift — Shopify is writing the old price back into the title"; exit 1; }
-
 # The sheet must actually draw it. A perfect `PurchaseStage` nothing renders is
 # the §311/§340 shape: the reading composes, and no screen shows it.
 grep -qE 'PurchaseStageView\(thing:' "$ROOT/Casberi/Casberi/Screens/ThingSheetView.swift" \
@@ -460,9 +383,10 @@ if back:
     sys.exit(1)
 FROMROW
 
-# The seller must reach the FEED row too. It was stamped by all three bridges
-# and drawn nowhere, which is half of what this pass was for.
-grep -qE '"Shopify", "Deals", "Open Food Facts"' "$ROOT/Casberi/Casberi/Screens/ShapedRows.swift" \
+# The seller must reach the FEED row too. It was stamped by every product
+# bridge and drawn nowhere, which is half of what this pass was for. Shopify
+# and Deals shared the case until prd §1049; Open Food Facts' kept rows hold it.
+grep -qE 'case "Open Food Facts":' "$ROOT/Casberi/Casberi/Screens/ShapedRows.swift" \
   || { print -u2 "purchase-stage-selftest: drift — the feed row stopped naming the seller"; exit 1; }
 
 # DEMO PARITY (the standing rule). A demo ref that doesn't match the real one
@@ -480,8 +404,6 @@ for ref in 'privacy:txn:' 'bitrefill:order:' 'bitrefill:invoice:'; do
   grep -qF "\"$ref" "$DEMO" \
     || { print -u2 "purchase-stage-selftest: drift — the demo stopped seeding a real $ref ref"; exit 1; }
 done
-grep -qE 'PriceHistory\.compose' "$DEMO" \
-  || { print -u2 "purchase-stage-selftest: drift — the demo stopped seeding a price drop"; exit 1; }
 # …and every one of those real-shaped refs must be in `refPrefixes`, or the row
 # OUTLIVES the demo — indistinguishable from a real synced purchase, on a corpus
 # the person never chose to keep. The exact trap `DemoSeedAll` documents for

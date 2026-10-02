@@ -7,7 +7,7 @@ import SwiftData
 enum IngestSupport {
 
     /// A Safari-shaped User-Agent, shared by the callers that reach store
-    /// pages behind a bot-WAF (Shopify catalogs, product-page price parsing) —
+    /// pages behind a bot-WAF (product-page price parsing, link titles) —
     /// a phone fetch that looks like the phone's own browser gets through more
     /// often. One copy so a version bump can't drift between callers.
     static let safariUserAgent =
@@ -370,8 +370,8 @@ enum IngestSupport {
     // MARK: - JSON over HTTP (200 with a JSON body, or nil)
 
     /// `service` names the caller for the receipts screen, and is needed
-    /// only where the HOST comes from the person's own input — a Shopify
-    /// store they named, their own self-hosted PostHog, the domain in a
+    /// only where the HOST comes from the person's own input — their own
+    /// self-hosted PostHog, the domain in a
     /// Nostr name. Every other caller leaves it nil and is matched against
     /// `NetworkReach` by host, which is the stronger check. See
     /// `NetworkLedger.Entry.service`.
@@ -700,7 +700,7 @@ final class ArtlessBackfill {
 ///
 /// Every removal verb in the app edited its own list and left the corpus
 /// alone, so an unwatched wallet's whole transaction history, an unfollowed
-/// channel's casts and a disabled deal source's deals all stayed forever,
+/// channel's casts all stayed forever,
 /// clearable only by Delete everything. This is the one place that removes
 /// them, so a new bridge's unfollow is a one-liner rather than a new chance
 /// to forget.

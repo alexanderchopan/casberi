@@ -29,7 +29,7 @@ extension FeedScreen {
 
     /// The shape a source takes when its chip is in force.
     enum Shape {
-        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, snapchat, files, instagram, tiktok, x, appStoreConnect, cursor, cardPointers, walletbeat, l2beat, telegram, plain
+        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, snapchat, files, instagram, tiktok, x, appStoreConnect, cardPointers, walletbeat, l2beat, telegram, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -121,7 +121,7 @@ extension FeedScreen {
             // (the trailing SYMBOL of `transferAmount`) and belongs in its own
             // pass rather than riding this one.
             //
-            // The LITERALS, like `case "Cursor"` and `case "Instagram"` below
+            // The LITERALS, like `case "Telegram"` and `case "Instagram"` below
             // — `demo-selftest.py`'s check F reads this switch to prove every
             // shape has a seeded source, and it resolves only three
             // indirections by name.
@@ -218,12 +218,6 @@ extension FeedScreen {
             // and a room of broadcast posts drawn as chat bubbles is the §313
             // failure wearing the other coat.
             case "Telegram":            self = .telegram
-            // Its own case rather than joining `.chat` (2026-08-08, prd §340).
-            // A Cursor row is a REPORT — an outcome, a repository and a
-            // paragraph the agent wrote about what it did — where a chat row
-            // is an excerpt of a conversation; and `.plain`, which this fell
-            // to before, drew the outcome and the report away entirely.
-            case "Cursor":              self = .cursor
             // CardPointers, 2026-08-26 (prd §487) — the x402 finding again,
             // six rooms later and with the same three symptoms. It had no case
             // here, so `.plain` drew a `BandRow` per offer: one glyph, the
@@ -236,7 +230,7 @@ extension FeedScreen {
             // offer). Its own case rather than `.reminders`, whose band is a
             // one-line fact — an offer is three.
             //
-            // The LITERAL, like `case "Cursor"` above it — `demo-selftest.py`'s
+            // The LITERAL, like `case "Telegram"` above it — `demo-selftest.py`'s
             // check F reads this switch to prove every shape has a seeded
             // source, and it resolves only three indirections by name.
             case "CardPointers":        self = .cardPointers

@@ -7,8 +7,8 @@ import SwiftData
 /// `NerdWalletBridge`). Turning it on lands new articles on every visit and app
 /// foreground. No account, no token, read-only public feed.
 ///
-/// The act slot is `DealsScreen`'s shape with one row instead of several —
-/// picking IS connecting here, so the switch is the act rather than a control
+/// The act slot is one row (the shape the deleted Deals screen had with
+/// several) — picking IS connecting here, so the switch is the act rather than a control
 /// underneath a Connect button that would do the same thing twice.
 struct NerdWalletScreen: View {
     @Environment(\.modelContext) private var modelContext
@@ -82,9 +82,8 @@ struct NerdWalletScreen: View {
         if following {
             NerdWalletBridge.stopFollowing()
             following = false
-            // The articles leave with the follow (prd §286), the way a removed
-            // Deals publisher's rows do — they landed because of this seat and
-            // nothing else stamps them.
+            // The articles leave with the follow (prd §286) — they landed
+            // because of this seat and nothing else stamps them.
             FollowPrune.remove(source: NerdWalletBridge.source, context: modelContext) { _ in true }
             store.remove("nerdwallet")
             lastResult = nil

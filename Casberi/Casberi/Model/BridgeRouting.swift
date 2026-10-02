@@ -61,8 +61,6 @@ enum BridgeRouter {
         /// `finishesOnConnect == true` and dismiss the raised sheet the
         /// moment the first watched address registered the seat.
         case frames
-        case shopify
-        case deals
         case icloudMail
         case gmail
         case rss
@@ -312,8 +310,6 @@ enum BridgeRouter {
             case .radicle:        "radicle"
             case .logos:          "logos"
             case .frames:         FramesIdentity.seatID
-            case .shopify:        "shopify"
-            case .deals:          "deals"
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
             case .rss:            "rss"
@@ -435,8 +431,6 @@ enum BridgeRouter {
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
         Row(offer: "Logos",      id: "logos",      destination: .logos),
         Row(offer: "Hegotá Frames", id: FramesIdentity.seatID, destination: .frames),
-        Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
-        Row(offer: "Deals",      id: "deals",      destination: .deals),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
@@ -625,8 +619,6 @@ struct BridgeDestinationView: View {
         case .radicle:        RadicleScreen()
         case .logos:          LogosScreen()
         case .frames:         FramesScreen()
-        case .shopify:        ShopifyScreen()
-        case .deals:          DealsScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()

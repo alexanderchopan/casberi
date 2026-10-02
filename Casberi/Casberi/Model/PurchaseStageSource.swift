@@ -25,8 +25,7 @@ enum PurchaseStageSource {
             priceCurrency: thing.priceCurrency,
             sellerField: thing.authorHandle,
             merchantField: thing.transferCounterparty,
-            capturedAt: thing.capturedAt,
-            enrichedText: thing.enrichedText)
+            capturedAt: thing.capturedAt)
     }
 
     static func reading(for thing: Thing) -> PurchaseStage.Reading? {

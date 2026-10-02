@@ -395,7 +395,7 @@ extension DSRoomChassis {
 
     /// THE RANKED ROW — a thing the room counts, what it holds, and a measure
     /// under both. Ten heads drew this byte-for-byte (X, Journal, Agent,
-    /// Cursor, Peer, Gnosis Pay, Dodo Payments, Railgun, Radicle, App Store
+    /// Cursor — since deleted — Peer, Gnosis Pay, Dodo Payments, Railgun, Radicle, App Store
     /// Connect), at two paddings and with a 44pt target in one of them.
     ///
     /// **It is a `DSFeedRow` (prd §763).** A head's rows sat in a different

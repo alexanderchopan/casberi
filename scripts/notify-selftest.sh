@@ -1040,7 +1040,7 @@ mutate "the card draws every row, however many" \
 # actually touches.
 #
 # Scoped ON PURPOSE to the branches this pass ADDED (positionAtRisk,
-# agentRunFailed, runningLow) — the pre-existing branches (ASC, wallet
+# runningLow; agentRunFailed went with the Cursor seat, prd §1049) — the pre-existing branches (ASC, wallet
 # approvals, Privacy Pools, Peer, social, Apple Wallet, money-in, Stripe) are
 # a real coverage gap too, but backfilling them is its own pass, not a side
 # effect of this one; the stubs for those four types exist ONLY so the file
@@ -1181,16 +1181,6 @@ func runFixtures() {
     ok(NotifySweep.classify(row(ref: "wallet:approval:ethereum:0xabc:1700000000"), now: now) != .positionAtRisk,
        "an approval ref is not mistaken for a risk crossing")
 
-    // ── agentRunFailed: Cursor, and ONLY the error outcome ────────────────────
-    ok(NotifySweep.classify(row(ref: "cursor:agent:abc123", source: "Cursor", tags: ["Agent run", "Failed"]), now: now)
-       == .agentRunFailed, "a Cursor run tagged Failed classifies as agentRunFailed")
-    ok(NotifySweep.classify(row(ref: "cursor:agent:abc123", source: "Cursor", tags: ["Agent run", "Expired"]), now: now)
-       == nil, "an Expired Cursor run does not alarm — administrative, not a failure")
-    ok(NotifySweep.classify(row(ref: "cursor:agent:abc123", source: "Cursor", tags: ["Agent run", "Cancelled"]), now: now)
-       == nil, "a Cancelled Cursor run does not alarm")
-    ok(NotifySweep.classify(row(ref: "cursor:agent:abc123", source: "Cursor", tags: ["Agent run", "PR"]), now: now)
-       == nil, "a successful Cursor run (no outcome tag) does not alarm")
-
     // ── runningLow: four bridges, one kind ─────────────────────────────────────
     ok(NotifySweep.classify(row(ref: "openrouter:credits:low:1700000000", source: "OpenRouter"), now: now)
        == .runningLow, "OpenRouter's low-credit crossing classifies as runningLow")
@@ -1265,7 +1255,7 @@ func runFixtures() {
        "a rating revision never alarms")
 
     // ── headline() never returns empty for a kind classify() can produce ──────
-    for k: NotifyKind in [.positionAtRisk, .agentRunFailed, .runningLow, .walletIncident] {
+    for k: NotifyKind in [.positionAtRisk, .runningLow, .walletIncident] {
         ok(!NotifySweep.headline(k).isEmpty, "\(k) has a non-empty headline")
     }
     // ── the picture ladder, rung 1 and the refined rung 2 (prd §714) ────────────

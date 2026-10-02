@@ -279,7 +279,7 @@ extension FeedScreen {
             /// rules as written, invisible to the lint that enforces them.
             case single(KeyedThing)
             /// `art`: up to three member preview-image URLs, newest first — the
-            /// bundle's own pictures (2026-07-21), so "Shopify · 100 products"
+            /// bundle's own pictures (2026-07-21), so "Photos · 100 photos"
             /// can show what actually arrived instead of one brand glyph.
             ///
             /// `lead` is the newest member's title, the line the row draws

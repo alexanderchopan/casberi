@@ -2781,7 +2781,7 @@ struct ThingSheetView: View {
     ///
     /// It is asked BEFORE `workReading` and that ordering is load-bearing —
     /// both types read `Thing.tags`, and a shape word one of them owns
-    /// ("Settled", "Deal") must not be read by the other's table. The whole
+    /// ("Settled", "Food") must not be read by the other's table. The whole
     /// derivation is `PurchaseStage`, Foundation-only so
     /// `scripts/purchase-stage-selftest.sh` can compile it as shipped.
     private var purchaseReading: PurchaseStage.Reading? {
@@ -2793,9 +2793,9 @@ struct ThingSheetView: View {
     ///
     /// Sibling to `moneyReceipt` and `workReading`, and gated behind BOTH for
     /// the same reason they are gated behind each other: a row wears one
-    /// anatomy. Cursor is the case that matters — its runs are in the Agents
-    /// category and are drawn by the Work receipt, which is right, and asking
-    /// this first would take that away from them.
+    /// anatomy. (Cursor was the case that mattered — its runs sat in the Agents
+    /// category and were drawn by the Work receipt — until the seat was
+    /// deleted, prd §1049.)
     private var agentShape: AgentSheet.Shape? {
         guard thing.isLive, moneyReceipt == nil, workReading == nil else { return nil }
         return AgentSheetSource.shape(for: thing)
