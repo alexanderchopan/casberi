@@ -384,6 +384,23 @@ struct NoteCaptureSheet: View {
                 focusWords()
             }
         }
+        #if DEBUG
+        // `-noteType "…"` — type the note character by character, then keep
+        // and close, for a screen recording of the whole capture (the
+        // composer's `-composerType`, on the sheet that keeps).
+        .task {
+            guard let text = UserDefaults.standard.string(forKey: "noteType") else { return }
+            try? await Task.sleep(for: .milliseconds(900))
+            for ch in text {
+                draft.append(ch)
+                try? await Task.sleep(for: .milliseconds(ch == " " ? 90 : 60))
+            }
+            try? await Task.sleep(for: .milliseconds(1100))
+            NSLog("[Casberi] noteType: kept %d characters", draft.count)
+            DSHaptic.tap()
+            keepAndClose()
+        }
+        #endif
         // A call or an alarm took the microphone (prd §972): capture stopped,
         // so keep what was recorded and close, rather than leave a clock
         // running over nothing.
@@ -926,6 +943,17 @@ struct NoteSheetHooks: ViewModifier {
             .onChange(of: newNote) { _, _ in
                 withAnimation(DS.Motion.standard) { noteOpen = true }
             }
+            #if DEBUG
+            // `-noteType "…"` raises the sheet after `-noteTypeDelay` seconds
+            // (default 2.5), so a recording opens on the room first.
+            .task {
+                guard UserDefaults.standard.string(forKey: "noteType") != nil else { return }
+                let set = UserDefaults.standard.double(forKey: "noteTypeDelay")
+                let delay = set > 0 ? set : 2.5
+                try? await Task.sleep(for: .seconds(delay))
+                withAnimation(DS.Motion.standard) { noteOpen = true }
+            }
+            #endif
             .onAppear {
                 if UserDefaults.standard.bool(forKey: "openNote") {
                     NSLog("[Casberi] openNote: raised")

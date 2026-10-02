@@ -94,7 +94,18 @@ enum ShareCard {
         // statement, the qualifier leads the words.
         let seam = TitleSeam.split(thing.title)
         let title = isPost ? "" : seam.name
-        let words = isPost ? body : [seam.line, body].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")
+        let words: String
+        if isPost {
+            words = body
+        } else if let rest = wordsAfterName(seam.name, clampedTitle: thing.title, content: body) {
+            // A title clamped off the thing's own words (a note, a pasted
+            // paragraph) is a prefix of them: the name is the statement and
+            // the rest of the words follow it once, never the clamp's line
+            // and then the whole text again.
+            words = rest
+        } else {
+            words = [seam.line, body].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")
+        }
         return Model(source: thing.source,
                      sourceName: BridgeCatalog.seatName(forSource: thing.source),
                      author: isPost ? handle : nil,
@@ -178,6 +189,21 @@ enum ShareCard {
         return order.compactMap { label in
             facts.first { $0.label == label }.map { ($0.value, label == "Pace / km" ? "/km" : label) }
         }
+    }
+
+    /// The words after the name, when the title is a clamp of `content`
+    /// (its text up to the ellipsis is where the content starts); nil
+    /// otherwise, so a title that says something the words don't keeps it.
+    static func wordsAfterName(_ name: String, clampedTitle: String, content: String) -> String? {
+        var stem = clampedTitle.trimmingCharacters(in: .whitespaces)
+        for tail in ["…", "..."] where stem.hasSuffix(tail) {
+            stem = String(stem.dropLast(tail.count)).trimmingCharacters(in: .whitespaces)
+        }
+        guard !stem.isEmpty, stem != clampedTitle || content.count > stem.count,
+              content.hasPrefix(stem), content.hasPrefix(name) else { return nil }
+        var rest = Substring(content.dropFirst(name.count))
+        rest = rest.drop { $0.isWhitespace || $0 == "—" || $0 == "–" || $0 == "-" || $0 == "·" }
+        return String(rest).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// The words under a title. `content` is the row's own words, except
