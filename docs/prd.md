@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §2 (Users: Bob first, Alice later) | the consumer on ChatGPT is the target; the agent power user is served later on the same build | superseded by §1037 — the builder comes first, the prosumer next, and everyone is becoming a builder; §3–§12 stand as the Bob/Alice record |
 | §344 (the four demo photos are by design) | `DemoSeedAll.art(_:)` cycling every image-seeding room through the same four bundled files is "by design, not a rendering defect" | superseded by §890 (user: "that is really bad") — every demo picture is its own drawn asset, keyed by subject, and no two rows may share one |
 | §857b (Monad is refused) | Monad's card spends are correct to read and refused on cost — 100-block log cap against 0.302s blocks is 2,860 requests a day per wallet — recorded in `unreadableChains` | superseded by §860 (the arithmetic stands and the conclusion does not: Alchemy's index answers a wallet's whole Monad history in one call, so Monad is a third `Chain`; `unreadableChains` is deleted) |
 | §384 / §386p (the chip peek) | a long press on a source chip floats the room's figure up without navigating — rail-only since 2026-09-05, so iPad and Mac | deleted by §836 (user: "i don't think we need that on ipad and mac") — the peek, `RoomFigure`, and every `AgentPanel.Figure` it alone produced (treemap, bars, rail, pulse, curve, wall, flow, runway, worth, river) with the ranking between them; the answer's dial and semantic map stand |
@@ -63020,3 +63021,33 @@ The confusion it answers: three ids from the Logos team, all reading 0, with not
 **Open:** whether tapping a status row should land in its room (recommended) or stay static (§1033's "go nowhere") — asked, not yet ruled.
 
 **Seen** on a fresh iPhone 17 Pro simulator (iOS 27, no demo): Apple Health connected through Apps' Allow with no data — its row "Synced just now" with no chevron; the tray's Life › Apple Health; the room's quiet state with the sliders disc. Not seen: an aliased or wallet-riding seat with no rows, the Mac.
+
+## §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next (user: "this doc should be the bob / alice spec in our prd", 2026-10-01; supersedes §2)
+
+**Why.** §2 built for Bob first (a consumer on ChatGPT) and served Alice (agents as labor) later. The product the user is building and pitching now is the other way round: the **builder** comes first, and the consumer arrives by becoming one. This entry is the spec that replaces §2's targeting. §3–§12 stay as the Bob/Alice record they were; `docs/prd-table.md` is that record's synthesis, not this one.
+
+**Users.**
+- **Builder (target first).** A power user who makes things with agents and developer tools. They work in GitHub, Cursor, Stripe, App Store Connect and PostHog, pay for API credits and a stack of subscriptions, and their agents write code, open PRs and run jobs.
+- **Prosumer (next).** Runs their life across consumer apps: mail, social, photos, notes, money and media subscriptions, with as many inboxes and bills as a builder.
+- **Everyone is becoming a builder.** Agents make building something a person can do without being a developer; a prosumer who asks an agent for an app, a site or a workflow has the builder's inboxes, tools and bills. Serving builders first serves the larger market as it arrives.
+
+**Thesis.** Agents write and spend. People still read and browse, because reading is how anyone stays aware of what their apps and agents did. Casberi is where that reading happens, and where acting starts. *Today, Casberi shows you. Tomorrow, it acts for you.* Reading is free, acting is Pro, spending is Premium.
+
+**The table.** Each row is one chain: the builder fact sets up the goal, how it works today is how they reach for it, the problem is why that fails, Casberi today fixes that failure, and tomorrow takes the same goal further. "Live" means shipped.
+
+| # | The builder | Goal | How it works today | Problem | Casberi today (Free) | Casberi tomorrow |
+|---|---|---|---|---|---|---|
+| 1 | **Inboxes.** Uses dozens of apps and accounts. | See what's happening in all of them. | Opens each app's inbox one at a time. | Nothing shows them together, so things get missed. | One inbox for 100+ apps, and a daily digest of what needs you. *Live* | **Pro:** the agent reads every inbox and surfaces what needs you. |
+| 2 | **Mobile.** Often away from the desk. | Keep up from their phone. | Checks agents and tools back at the desktop. | Agents only live on the desktop. | Claude Code and Cursor sessions, PRs and runs, on the phone. *Live* | **Pro:** run the agent from the phone. |
+| 3 | **Agents.** Runs agents that write code and open PRs. | Know what their agents did. | Reads each agent's output in the tool that made it. | Agents write; the builder still has to read it all. | Every agent's output in one place, to read and ask about. *Live* | **Pro:** the agent sums up what changed, with the source one tap away. |
+| 4 | **Access.** Has given apps and agents access to their accounts. | Know what has access, and trust it. | Grants access one app at a time. | No list shows what holds which key. | One list of every site, approval and who can act for you. Read-only, keys on your device. *Live* | **Pro:** every payment waits for your tap, read back in plain words first. **Premium:** inside a cap you set, agent tasks pay on single-use cards without asking; freeze any card anytime. |
+| 5 | **Costs.** Pays for API credits, Cursor, Vercel and more. | Get use out of every tool they pay for. | Each tool bills its own card. | Cost and use never meet, so unused tools keep billing. | Each subscription beside the app it pays for. *Live* | **Pro:** the agent flags tools you pay for and don't use. **Premium:** one standing card pays the tools you keep, and shows each bill first. |
+| 6 | **Spending.** Finds things to buy while browsing. | Spend on what they choose, and get something back. | Browses in one app, pays in another. | Agents spend; the builder still browses, then pays somewhere else. | A watchlist of the stocks and tokens behind your apps. *Live* | **Pro:** buy and swap right where you find it. **Premium:** the agent pays inside your cap; card rewards come back as stock or tokens of the apps you pay for. |
+
+**Agent guards, not blanket authority.** The agent never holds open-ended access, so even if it is wrong or tricked it can't pay on its own: outside a cap you set, nothing moves without your tap, and a single-use card limits any one task to its cap. Every act lands as a row you can read, freeze and dispute. This rests on structure (the tap and the cap), never on a promise that a model can't be prompt-injected.
+
+**Mechanics.** Buying goes through an exchange or a swap you sign. Cards come from an issuing partner: one standing card for subscriptions, single-use cards for agent tasks. Rewards come from the card program, funded by interchange like any card's rewards, and are paid out in the stock or token of the apps you pay for; apps pay nothing.
+
+**Tiers.** Free: every account and a read-only wallet. Pro ($20/mo): the agent, and a wallet that can buy, swap and send. Premium ($40/mo, placeholder): the cards, and your bills paid from them; Pro included. On top: a fee on every swap, interchange on every card payment.
+
+**How to apply.** A feature decision cites the row it serves. Rows 1–3 are Free-and-Pro time work and ship first; rows 4–6 are the money layer, and row 4's guards ship before anything in rows 5–6 can pay. Row 6's "Live" is the Markets watchlist (§1000).

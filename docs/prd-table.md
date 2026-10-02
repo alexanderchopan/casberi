@@ -1,5 +1,7 @@
 # PRD in one table
 
+> **Superseded for targeting by prd §1037** (2026-10-01): the user is now the builder, and §1037 holds the six-goal table this file's Bob/Alice rows preceded. This file stays as that record.
+
 A synthesis of docs/prd.md §3–§12. It does not replace the PRD — specs, rulings, and evidence stay there. Each row is one goal (or operate cost); each cell carries both rungs: **B** = Bob (app scale), **A** = Alice (machine-and-agent scale).
 
 | User goal | How it works today | Outcomes (evidence) | Problem | Solution |
