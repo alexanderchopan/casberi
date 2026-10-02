@@ -217,7 +217,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1166 of 1223 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1167 of 1224 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -732,7 +732,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §452 — The room heads stop introducing themselves
 - §453 — Nothing in the app shouts
 - §454 — The wallet room gets one card recipe
-- §455 — The reading rooms, past §312 — an article you can actually read, a board that narrows its own room, and a feed that s…
+- §455 — The reading rooms, past §312 — an article you can actually read, a board that narrows its own room, and a feed that s… (amended by §1050d)
 - §456 — Telegram returns, through the two doors §57 never weighed
 - §457 — The agent rooms get a head, Claude Code gets measured, and two registries that answered nil
 - §458 — WhatsApp is passed on, and the reasons are of two grades
@@ -1329,7 +1329,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016)
 - §993 — The Reminders room holds its lead when empty, and scopes like Apple's lists (amended by §997)
 - §994 — The Calendar room is a month grid over Today · Week · Month · New (amended by §999)
-- §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039)
+- §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039, §1050d)
 - §997 — The Reminders room drops Scheduled, and its tiles never rise
 - §998 — A connected Calendar or Reminders keeps its room with nothing in it (amended by §1036)
 - §999 — The Calendar room's tiles read in time, and its month title stands at the day dividers' size (part superseded by §1006)
@@ -1385,6 +1385,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
 - §1050b — Photos moves from Life to Media
 - §1050c — Life is one list by day, with no tiles
+- §1050d — Reading's menu lists apps, and the music shelf's orders are dropped
 
 ## Dead rulings → what replaced them (generated)
 

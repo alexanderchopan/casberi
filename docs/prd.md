@@ -420,6 +420,8 @@ marks chronological position within the pair.
 | §1049 (the tray's rooms) | Markets, Frames and Logos drew as room rows under the Wallet category | amended by §1050 — Markets and Testnets are categories |
 | §322 / §1049 (Life's glyph `calendar`) | Life wore `calendar` | amended by §1050a — Life wears `face.smiling`; Day keeps `calendar.day.timeline.left` |
 | §1049 (Photos in Life) | Photos was a member of Life | amended by §1050b — Photos is a member of Media, in its square grid |
+| §455 (a board that narrows the RSS room to one feed) | the RSS room narrowed to a single feed | amended by §1050d — Reading's menu lists apps only; per-feed narrowing goes with the RSS room |
+| §995 (the music rooms scope Activity · Albums · Artists · Songs) | the music rooms carried four ordering tiles | amended by §1050d — dropped; Media has no tiles |
 
 ## §1 — Thesis
 
@@ -63312,4 +63314,9 @@ Casberi's Photos lands mostly screenshots ("Screenshots, straight to your feed")
 ## §1050c — Life is one list by day, with no tiles (user: of "one list, newest first, grouped under day headers… no extra tiles, just the list", "yes", 2026-10-01; settles §1049's open Life question)
 
 Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava and Garmin, Duolingo) draws as the All feed draws: one list, newest first, under day headers, every row in §744's anatomy. It has no tiles but All. The account menu (§1048b) narrows it to one app. "On this day", the same date in earlier years, was offered as a tile and declined.
+
+## §1050d — Reading's menu lists apps, and the music shelf's orders are dropped (user: "yes drop them", 2026-10-01; settles §1049's two open proposals; amends §455 and §995)
+
+- **Reading's account menu lists apps only** (RSS, Substack, Readwise, Kindle, Bookmarks, Raindrop, NerdWallet), as every room's does, so one `RoomAccounts` shape serves them all. A menu of every feed would run to forty rows for a person who follows forty. §455's narrowing to one feed is lost with the RSS room; if it is missed, it returns as a filter inside RSS, never as menu rows for everyone.
+- **The music shelf's orders are dropped** (Activity · Albums · Artists · Songs, §995, `Model/MusicShelf.swift`). They were tiles, and Media has none. Showing them only when Apple Music or Spotify is picked was offered and declined: a room whose tiles change with the pick is more to learn for a small gain.
 
