@@ -1189,6 +1189,11 @@ struct FeedScreen: View {
             // (prd §959): the generic state would take that control with it,
             // and its one door leaves the room.
             || roomScopePicked
+            // An app picked from a merged room's menu, the same reason
+            // (prd §1065): an exchange lands no rows, only a balance, and the
+            // generic state took its balance, its tiles and the menu that
+            // could pick another account.
+            || (selectedSeat != nil && RoomAccounts.mergedRooms.contains(source))
             // The Notes room's tiles are its navigation and its one verb
             // (prd §979, §980): an empty Pinned or Folders pick keeps them,
             // and Folders keeps its New folder row under them.

@@ -933,8 +933,11 @@ final class ShellChrome {
     /// seat with no rows is left out (prd §1064, user: "in the demo i
     /// shouldn't be able to pick something and it go to empty").
     func seatShows(_ seat: RoomAccounts.Seat) -> Bool {
-        // A testnet draws its own screen from live reads, not stored rows.
-        guard DemoMode.isActive, !landedSources.isEmpty, !seat.ownScreen else { return true }
+        // A testnet draws its own screen from live reads, not stored rows;
+        // a seat with money in the total (an exchange) draws its balance,
+        // which is all it lands (prd §1065).
+        guard DemoMode.isActive, !landedSources.isEmpty, !seat.ownScreen, seat.holder == nil
+        else { return true }
         return landedSources.contains { seat.owns($0) }
     }
 

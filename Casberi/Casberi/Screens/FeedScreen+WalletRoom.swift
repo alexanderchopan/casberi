@@ -271,8 +271,7 @@ extension FeedScreen {
         // kind, after the addresses. The addresses take a section of their
         // own only once an app stands beside them; alone, the menu reads as
         // it always did.
-        // In the demo, only an app with rows (prd §1064): a picked app with
-        // none opens the empty page even when it holds money.
+        // In the demo, only an app with rows or money (prd §1064, §1065).
         let seats = RoomAccounts.connected(in: source, names: connectedSeatNames)
             .filter(chrome.seatShows)
         let addresses = watched.map { addr in
