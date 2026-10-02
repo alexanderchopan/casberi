@@ -428,6 +428,7 @@ marks chronological position within the pair.
 | §1048c (a merged category's tray header in `DS.tint`) | the header was tinted to read as a door beside settings circles | amended by §1050f — primary ink; with no circles the tint separated nothing |
 | §933 / §1033 (two doors: Apps for the catalogue, Settings for Casberi's own) | the tray carried an Apps door and a Settings door | amended by §1050g — one door, Settings: Casberi pinned first, then your apps, then the catalogue |
 | §1012 (the doors row: Home, Notes, Apps, Addresses, Settings) | five doors | amended by §1050g — four: Home, Notes, Addresses, Settings |
+| §1050g (Settings as your apps, then the catalogue) | two lists on the Settings screen | amended by §1050h — one list: Casberi first, then every app in its category, connected ones marked on |
 
 ## §1 — Thesis
 
@@ -63381,4 +63382,8 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 - **The screen, top to bottom:** Casberi, pinned first, always on, never disconnectable, opening what Settings held (§933: theme, iCloud sync, the Data tray, What this app reaches, Diagnostics); then each connected app, whose row opens its account page (§1050f); then the catalogue of apps to connect (§1033's Apps, with its search and "Start here", §1045).
 - **Search** on the screen finds Casberi's row for "settings" as well as its name.
 - `casberi://settings` and `-openSettings YES` open this screen. Copy says "Settings" for the door, and Apps survives only as the catalogue's section name.
+
+## §1050h — Settings is one list: Casberi first, then every app in its category, connected or not (user: "and connected and not connected are in one list not two?", then "yes one list", 2026-10-01; amends §1050g)
+
+§1050g drew the Settings screen as two lists, your apps and then the catalogue. It is one, as Apps has been since §1033: Casberi pinned first, then every app under its category, a connected one marked on. A connected row and an unconnected one now do the same thing, opening that app's one account page, which is both its connect and its settings (§639, §1050f), so a section split would say nothing a row's state does not. Search runs over the whole list; "Start here" still leads it while nothing is connected (§1045).
 

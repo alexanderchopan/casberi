@@ -104,7 +104,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - A key is connected in one place, the seat's own page. Settings holds no key (§871).
 
 ### 8. Catalogue (Apps)
-- Apps is the whole catalogue, with no Manage and no switcher. A connected row opens that app's account page (§1050f). Apps and Settings are one door, Settings: Casberi's own settings pinned first, then your apps, then the catalogue (§1050g). A connected seat with no room keeps its door (§1033, §1036).
+- Apps is the whole catalogue, with no Manage and no switcher. A connected row opens that app's account page (§1050f). Apps and Settings are one door, Settings: one list, Casberi's own settings pinned first, then every app in its category, connected ones marked on (§1050g, §1050h). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns, Rocket Money and NerdWallet are on the Wallet shelf (§780c).
 - Markets is one app: Tokens plus Stocktwits' watched stocks. Every catalogue category is a company pack: Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted (§1000).
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1170 of 1228 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1171 of 1229 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1390,7 +1390,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050d — Reading's menu lists apps, and the music shelf's orders are dropped
 - §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it (part superseded by §1050f)
 - §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's… (amended by §1050g)
-- §1050g — Apps and Settings become one door, Settings: Casberi's own settings first, then your apps, then the catalogue
+- §1050g — Apps and Settings become one door, Settings: Casberi's own settings first, then your apps, then the catalogue (amended by §1050h)
+- §1050h — Settings is one list: Casberi first, then every app in its category, connected or not
 
 ## Dead rulings → what replaced them (generated)
 
