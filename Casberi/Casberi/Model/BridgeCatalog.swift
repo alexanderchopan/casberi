@@ -147,7 +147,7 @@ enum BridgeCatalog {
         // Wallet group, and the only seat here that reads no money at all (prd §419):
         // every other one reads what your funds did, this reads what the SOFTWARE
         // holding them does. Walletbeat is an independent, MIT-licensed registry.
-        Offer(name: "Walletbeat", tagline: "How your wallet apps actually behave", group: "Wallet", connectable: true,
+        Offer(name: "Walletbeat", tagline: "How your wallet apps actually behave", group: "Reading", connectable: true,
               needsSetup: true, added: day(2026, 8, 20)),
         Offer(name: "ENS",         tagline: "Follow a name, know when it expires", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 8, 29)),
@@ -361,7 +361,7 @@ enum BridgeCatalog {
         // in order to compare things before committing; with that category
         // deleted, the chains your money sits on are a lens on money you hold.
         // Still no standalone chip: it is a venue in the Wallet folder.
-        Offer(name: "L2BEAT", tagline: "How safe the chains you use really are", group: "Wallet", connectable: true,
+        Offer(name: "L2BEAT", tagline: "How safe the chains you use really are", group: "Reading", connectable: true,
               needsSetup: true, added: day(2026, 8, 21)),
         // OPENSEA IS RETIRED (user ruling 2026-09-06, §638's second
         // amendment: "opensea should not have its own category or exist").

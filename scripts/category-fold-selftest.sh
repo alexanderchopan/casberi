@@ -1219,9 +1219,12 @@ if wallet_groups is None:
     sys.exit("✗ BridgeCatalog.categories has no Wallet category")
 if "NFTs" in wallet_groups:
     sys.exit('✗ Wallet spans the "NFTs" group again — it left with the OpenSea seat (prd §638, second amendment)')
-for name in ("Markets", "L2BEAT"):
-    if not re.search(r'name:\s*"%s".*?group:\s*"Wallet"' % name, src, re.S):
-        sys.exit(f'✗ "{name}" is no longer a Wallet-group offer (prd §638 moved it there)')
+# L2BEAT and Walletbeat read as Reading (prd §1051a): incidents, reviews and
+# ratings you read, not money you hold. Matched on ONE line each — the old
+# check spanned lines (`re.S`) and so could pass on the next offer's group.
+for name in ("L2BEAT", "Walletbeat"):
+    if not re.search(r'Offer\(name:\s*"%s",[^\n]*group:\s*"Reading"' % name, src):
+        sys.exit(f'✗ "{name}" is no longer a Reading-group offer (prd §1051a)')
 # The seven retired seats are RETIRED: named in `Corpus.retiredSources` and
 # offered nowhere. A name in both is a seat you can connect and never open —
 # the one state `earnsRoom` and the catalog must never disagree about.
