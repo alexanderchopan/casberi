@@ -63752,3 +63752,19 @@ Fixed: **the agent thread's Ask field** sat bottom-aligned with no inner padding
 **The Mac.** The Catalyst build compiles and `mac-parity-audit.py` passes; the Mac app was not launched (user: its leg opens the app on their screen).
 
 **Checked.** The app builds for iOS and Mac Catalyst. On the simulator: each verb above, and the Ask field after the fix.
+
+## §1076 — A Wallet transfer with no address and no token wears the way it moved (2026-10-02) — BUILT
+
+Seen in the store captures: "Received 500 USDC from sam.eth" led with a grey "?" — no counterparty address for an identicon, no parsed token for `AssetMark`, whose empty-name monogram is "?". Initials of the title were tried and read "R5". The row now wears a direction glyph on a faint disc (`arrow.down.left` received, `arrow.up.right` sent) through `WalletMarkView`. A folded app's token-less row keeps its app's mark (§1067).
+
+**Checked.** A clean build (the first incremental one crashed in `destroy for AssetMark`, the stale-build class CLAUDE.md names); on the simulator, the row draws the arrow.
+
+## §1077 — The 2.0 store listing, after the 4.1(a) rejection (user: "lets do 5 only", "i think the read we get rid of b/c we are for builders", "github", "yes", 2026-10-02) — APPLIED
+
+Apple rejected iOS 2.0 (build 720) under 4.1(a) Copycats and attached all sixteen of the listing's screenshots: every one but the catalogue stood in a pile of other companies' icons, and the catalogue was a grid of nothing but logos.
+
+**The pictures.** Five per device, plain black ground, a white headline with one pink phrase, one device showing a real screen, the demo pill hidden (`-hideDemoBanner`), the status bar at 9:41: Home ("Everything new, in one place" — the nomination's "daily brief" is Home, user), Work picked to GitHub ("Know what needs you"; the user chose it over the room's own Trello-led cover), Wallet ("All your money, one number"), Day ("What's next, soonest first"), Notes ("Your notes, and everything you keep"). Reading was cut (user: "we are for builders"). Social, Agents and Media were left out because their screens are the marks Apple named; the tray and catalogue for the same reason. The iPad set is the same five on the iPad's layout, each with its own thing open in the pane. Generators: `~/Documents/casberi-deck/cards/appstore2.py` and `appstore2_ipad.py`; output in `~/Downloads/App Store 2.0 iPhone|iPad`.
+
+**Applied.** `scripts/asc-screenshots.py` (new; dry run unless `--yes`) deleted the ten iPhone 6.5" and six iPad 12.9" screenshots on iOS 2.0 and uploaded the ten new ones; all ten read back `COMPLETE`. The description (`docs/store-copy.md`, 1,641 characters, was 2,854) names no third-party product and drops the deleted features (the testnets, a chart for every app, the ask); applied with `asc-copy.py` and read back.
+
+**Not yet.** A build with today's fixes (721) and the resubmission.
