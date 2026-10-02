@@ -63713,3 +63713,17 @@ Amends §1017. Rows and the face button had been one 46pt size since §1017; the
 §1060 drew every Privacy Pools reading in the Wallet's box, and the box is one fixed size (§760, §904), so the respond door at the end of the Review reading clipped below the legend: the one thing to tap on the day a deposit needs your proof. It is the first block now, directly under the headline that says so, and still drawn only while a deposit needs you. The deposits' line (the footnote) and the legend's tail still give way to the box, which the legend counts ("N more").
 
 **Checked.** The app builds; `wallet-rooms-selftest.sh` gains an order guard (the door ahead of the readings, drawn once). On a private simulator with the demo, Wallet with 0xBow picked: the headline, Respond on 0xBow, then what is in the pools and the review split.
+
+## §1072 — The app sweep (user: "ok do it", 2026-10-02) — BUILT
+
+Every app the demo connects, picked from its room's menu by launch hook (`-walletScope`, `-roomScope`): 96 views across nine categories. Most drew what they should. Fixed:
+
+- **The Wallet's newest-thing lead printed a link** under the title (Privacy, Bitrefill, ENS): §1067's `WalletSeatLatestLead` now drops a bare link, §1070's rule.
+- **Contacts was a pick that opened "Nothing here yet."** It lands no row by design (§916, `Corpus.chiplessSources`). `ShellChrome.seatShows` refuses a source that earns no room in every mode, so it leaves Life's menu and the tray (+7 → +6).
+- **Logos' box said "No account watched yet." over its own moves.** The demo poured rows naming `CbgR…Sr2r` but watched nothing. It now watches that account with a fixture balance (110), torn down with the demo.
+- **Apple Intelligence was in the demo and did nothing when picked.** §1065 gave it a seat and a chat, but `retireAppleIntelligenceIfUnavailable` removes the seat on every launch of a build without Apple's entitlement — the demo claimed a seat the binary takes away (§83). It leaves the demo again; the other six agents stay.
+- **Work's and Day's covers stood 10pt higher than every head** (Stripe, Polar, Dodo Payments, PostHog, Cloudflare), so the tiles moved between picks. Their covers take `ledeListRow`'s own insets, the ones every other room's cover and every head use; measured: box top 595 and tiles 1576 on GitHub, Stripe and Day alike.
+
+**Seen and left.** Peer's 13-second capture drew the whole Wallet's chart over blank rows; at 25 seconds it draws its own head and rows (a slow first read, not a defect). Its card names the lead rail in the sentence and bars only the rest, by design. A handful of apps have one row, so their list under the cover is empty (Cal.com, Calendly, Venice, Bankr): thin demo data, not a broken room.
+
+**Checked.** The app builds; `demo-selftest.py` and its self-test, `logos-selftest.sh`. Re-captured: GitHub, Stripe and Day measured, Logos, the tray.
