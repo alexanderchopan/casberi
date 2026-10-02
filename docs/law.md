@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1175 of 1233 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1176 of 1234 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1394,6 +1394,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's… (amended by §1050g)
 - §1050g — Apps and Settings become one door, Settings: Casberi's own settings first, then your apps, then the catalogue (amended by §1050h)
 - §1050h — Settings is one list: Casberi first, then every app in its category, connected or not
+- §1050i — Settings as one door and one list, built
 - §1051 — Deals, Shopify and Cursor leave the catalogue, and their stored rows, settings and key go with them
 - §1051a — L2BEAT and Walletbeat move to Reading; Bitrefill still folds into the One Wallet
 

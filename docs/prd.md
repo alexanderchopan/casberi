@@ -63430,3 +63430,11 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 **Bitrefill (§1051a, built).** It joins the Wallet's catalogue group and its `RoomAccounts` seats; its balance joins the total as a place (`cash:bitrefill`, read only while the seat is connected), which is where the room's lede had shown it. The room's own shape and lede are deleted. The Shopping category goes with its last seat: the catalogue entry, `cart`/`cart.fill`, and the default-order slot. A stored order that still names Shopping drops it, as `reconcile` drops any name it does not know.
 
 **L2BEAT and Walletbeat (§1051a)** are Reading's catalogue group now; they keep their rooms until Reading merges.
+
+## §1050i — Settings as one door and one list, built (user: "we can do apps and settings before moving to the other categories", 2026-10-02; builds §1050g and §1050h)
+
+**The list.** The Apps screen is Settings: titled Settings, the search field, then Casberi pinned first, then every app under its category, connected or not (Apps' existing single list, §1033, with "Start here" still leading while nothing is connected). The Casberi row (the brand pink disc with the gear, "Theme, iCloud sync, your data") opens what Settings held, a page now titled Casberi; a search for "settings", "casberi", "theme", "icloud", "sync", "data" or "diagnostics" finds it. A connected app opens its account page (§1050f); an app not connected opens its page too, the one its Connect stands on (§1050h), and a one-tap seat with no page still fires the system ask where it stands.
+
+**The routes.** `HomeRoute.Node.settings` becomes `.casberi`, reached only from the pinned row (`openCasberiSettings`, beside the list on a pane, pushed on a phone). `casberi://settings`, `-openSettings` and ⌘, present the one list (`.apps`, a name kept for the many doors that already present it). The tray's doors row is Home, Notes, Addresses, Settings; the Apps door is deleted, and "Apps" survives in no title.
+
+**Checked.** `dock-selftest.sh` asserts the list's doors, the Casberi page and the pinned row, and that no separate Settings screen returns. Measured on the simulator: `-openSettings` opens "Settings", Casberi first, then the apps A–Z with their status lines and chevrons.
