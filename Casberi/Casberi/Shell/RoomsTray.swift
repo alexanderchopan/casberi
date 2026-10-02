@@ -7,9 +7,9 @@ import SwiftUI
 /// before a tap for any room past the fourth (user: "then it's only one
 /// button that a person has to press in the nav, whereas now they have to
 /// sort of scroll and stuff"). This tray puts every room one tap from the
-/// face, drawn as the Home Screen draws apps (prd §1050l): a `You` row of
-/// four doors — Home (the All room), Notes, Addresses and Settings — then a
-/// Categories section of the same tiles, four to a line, each landing in its
+/// face, as ONE LIST (prd §1053, Settings' and Mail's shape): four You rows
+/// — Home (the All room), Notes, Addresses and Settings — each led by a
+/// tile, then a Categories section of plain rows, each landing in its
 /// category's room.
 ///
 /// **A layer of `RootShell`'s stack, never a sheet (§394).** A sheet presents
@@ -32,7 +32,7 @@ import SwiftUI
 /// SELECTED and nothing else (the HIG's own reading of the fill variant), so
 /// the standing category and Home fill and tint, and the rest stay outline.
 /// The panel grows out of the face's corner on the dock's own spring, the
-/// tiles deal in left to right and the standing glyph bounces once (the
+/// rows deal in top to bottom and the standing glyph bounces once (the
 /// picked source's flight to the room's head went with the marks, §1050l).
 /// A category with a broken seat wears the attention colour on its
 /// glyph and says so; a system Close appears at the accessibility text sizes,
@@ -60,16 +60,16 @@ struct RoomsTray: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    /// Every door in the tray is ONE tile, the Home Screen's (prd §1050l,
-    /// user: "ok lets do A"): a rounded square at the app-icon ratio, its
-    /// word under it — the You doors and every category alike.
-    static let tile: CGFloat = 62
-    /// Four to a line, the Home Screen's count, shared by the You doors and
-    /// the categories, so the two sections stand on one set of columns.
-    static let tilesPerLine = 4
-    /// The air under a line of tiles, before the next line.
-    static let lineAir: CGFloat = DS.Space.s4 + DS.Space.s1
-    /// The air above a section's header: more than `lineAir`, so the gap is
+    /// The tray is ONE LIST (prd §1053, user: "i worry with the grid we
+    /// look android", then "yes D"): the lead column every row's word starts
+    /// after — a You door's tile, or the slot a category's bare glyph
+    /// centres in.
+    static let lead: CGFloat = 34
+    /// A You row stands a little taller than a category's: they are the
+    /// app's own places, and the tile needs the air.
+    static let youRowHeight: CGFloat = 52
+    static let rowHeight: CGFloat = 48
+    /// The air above a section's header, so the gap is
     /// what divides one category from the next — no line, no card (§782,
     /// user: "you decide the optimal spacing").
     static let sectionGap: CGFloat = DS.Space.s6
@@ -174,17 +174,13 @@ struct RoomsTray: View {
         let shown = searching ? searchHits : categories
         return VStack(spacing: 0) {
             grabber
-            // The pinned part (prd §1015): the search, then the You row —
-            // Home, Notes and Settings stay one tap away however far the
-            // rooms scroll under them. The You row steps aside while a
-            // query is up, the way the App Library's row does.
-            VStack(alignment: .leading, spacing: Self.sectionGap) {
-                searchField
-                if !searching { youRow }
-            }
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, DS.Space.s2)
-            .padding(.bottom, Self.sectionGap)
+            // The pinned part (prd §1015): the search. The You rows scroll
+            // with the list since §1053 — four pinned rows would take half
+            // the tray at rest.
+            searchField
+                .padding(.horizontal, DSRoomChassis.inset)
+                .padding(.top, DS.Space.s2)
+                .padding(.bottom, DS.Space.s3)
             .background {
                 GeometryReader { g in
                     Color.clear
@@ -193,28 +189,30 @@ struct RoomsTray: View {
                 }
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: 0) {
                     if searching {
                         if shown.isEmpty {
                             DSFootnote(Text("No room matches \u{201C}\(trimmedQuery)\u{201D}"))
                         }
                     } else {
-                        // The categories are their own section (§1050l): a
-                        // header, then the same tiles as the You row.
+                        // The You rows, untitled: first place and the tile
+                        // say they are the app's own (§1053, Settings' first
+                        // block). They step aside while a query is up.
+                        ForEach(Array(youDoors.enumerated()), id: \.offset) { index, door in
+                            self.door(door, index: index)
+                        }
                         Text("Categories")
                             .dsText(.heading20)
                             .foregroundStyle(DS.textPrimary)
                             .accessibilityAddTraits(.isHeader)
+                            .padding(.top, Self.sectionGap)
+                            .padding(.bottom, DS.Space.s1)
                     }
-                    MarkGrid(columns: Self.tilesPerLine, edge: Self.tile / 2, lineAir: Self.lineAir) {
-                        ForEach(Array(shown.enumerated()), id: \.element) { index, category in
-                            categoryTile(category, index: index + doors().count)
-                                .transition(.scale(scale: 0.6).combined(with: .opacity))
-                        }
+                    ForEach(Array(shown.enumerated()), id: \.element) { index, category in
+                        categoryRow(category, index: index + youDoors.count)
+                            .transition(.opacity)
                     }
                 }
-                // One grid across the tray between its insets: the You doors
-                // and the categories share four columns.
                 .padding(.horizontal, DSRoomChassis.inset)
                 // Hits settle into place rather than snapping (§1015).
                 .animation(DS.Motion.standard, value: trimmedQuery)
@@ -437,15 +435,9 @@ struct RoomsTray: View {
     /// design this"). They are the app's own places, not accounts, so they
     /// stand apart from the categories, larger, each with its word under it
     /// — five destinations nobody should have to recognise by glyph alone.
-    /// The row spans the tray between its insets, one equal column a door.
-    private var youRow: some View {
-        let home = filter.source == "All" && route.path.isEmpty
-        let notes = Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty
-        return MarkGrid(columns: Self.tilesPerLine, edge: Self.tile / 2, lineAir: Self.lineAir) {
-            ForEach(Array(doors(home: home, notes: notes).enumerated()), id: \.offset) { index, door in
-                self.door(door, index: index)
-            }
-        }
+    private var youDoors: [Door] {
+        doors(home: filter.source == "All" && route.path.isEmpty,
+              notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty)
     }
 
     /// The You row's doors, in order.
@@ -469,38 +461,34 @@ struct RoomsTray: View {
         ]
     }
 
-    /// A category's tile (prd §1050l): the You doors' tile in the room
-    /// head's charcoal (`surfaceRaised`, §1014 — black on the black tray had
-    /// no edge), the category's glyph in the page's own ink (§1050f) and its
-    /// word under it. It lands in the category's room. The standing room
-    /// says so with its filled glyph (`glyph(for:lit:)`) and a primary word;
-    /// a broken app inside wears the attention hue on the glyph, and the
-    /// label says it too.
-    private func categoryTile(_ category: String, index: Int) -> some View {
+    /// A category's row (prd §1053): its glyph bare in the lead column, in
+    /// the page's own ink (§1050f), its word, the chevron. It lands in the
+    /// category's room. The standing room says so with its filled glyph
+    /// (`glyph(for:lit:)`); a broken app inside wears the attention hue on
+    /// the glyph, and the label says it too.
+    private func categoryRow(_ category: String, index: Int) -> some View {
         let lit = standingCategory == category
         let needsYou = broken(category)
         return Button {
             pick(category)
         } label: {
-            VStack(spacing: DS.Space.s2) {
-                Self.tileShape
-                    .fill(DS.surfaceRaised)
-                    .overlay(
-                        Image(systemName: glyph(for: category, lit: lit))
-                            .font(.system(size: Self.tile * 0.43, weight: .semibold))
-                            .foregroundStyle(needsYou ? DS.attention : DS.textPrimary)
-                            .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
-                    )
-                    .frame(width: Self.tile, height: Self.tile)
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: glyph(for: category, lit: lit))
+                    .dsGlyph(.body)
+                    .foregroundStyle(needsYou ? DS.attention : DS.textPrimary)
+                    .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
+                    .frame(width: Self.lead)
                 Text(category)
-                    .dsText(.label12)
-                    .foregroundStyle(lit ? DS.textPrimary : DS.textSecondary)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
+                Spacer(minLength: 0)
+                DSChevron()
             }
-            .frame(minWidth: Self.tile)
+            .frame(minHeight: Self.rowHeight)
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressSpring())
+        .buttonStyle(RowPress())
         .accessibilityLabel(needsYou
             ? Text("\(category), needs your attention")
             : Text(category))
@@ -510,48 +498,41 @@ struct RoomsTray: View {
 
     // MARK: - Pieces
 
-    /// Every tile's shape: the app-icon squircle (brief §8's 22.37%).
-    private static var tileShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: DS.Radius.appIcon(tile), style: .continuous)
-    }
-
-    /// A You door (prd §976a, reshaped by §1050l): the categories' charcoal
-    /// (`surfaceRaised`) with the glyph in the brand pink — a pink wash read
-    /// as mud (§1052), and the standing door FILLS — the pink
-    /// tile, white glyph and the top sheen `BridgeIcon` gives a seat with no
-    /// art. Selection is the fill, so the door needs no ring.
+    /// A You door's tile (prd §976a, §1050m, §1053): the app-icon squircle
+    /// in the categories' charcoal (`surfaceRaised`) with the glyph in the
+    /// brand pink, and the standing door turns WHITE behind the same pink
+    /// glyph (user: a pink fill "is a bit overkill … maybe white with pink").
+    /// Selection is the fill, so the door needs no ring.
     private func doorTile(_ glyph: String, lit: Bool) -> some View {
-        Self.tileShape
-            .fill(lit ? DS.brand : DS.surfaceRaised)
-            .overlay {
-                if lit {
-                    Self.tileShape.fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
-                                                       startPoint: .top, endPoint: .center))
-                }
-            }
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.appIcon(Self.lead), style: .continuous)
+        return shape
+            .fill(lit ? Color.white : DS.surfaceRaised)
             .overlay(
                 Image(systemName: glyph)
-                    .font(.system(size: Self.tile * 0.43, weight: .semibold))
-                    .foregroundStyle(lit ? Color.white : DS.brand)
+                    .font(.system(size: Self.lead * 0.5, weight: .semibold))
+                    .foregroundStyle(DS.brand)
                     .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
             )
-            .frame(width: Self.tile, height: Self.tile)
+            .frame(width: Self.lead, height: Self.lead)
             .animation(DS.Motion.standard, value: lit)
     }
 
+    /// A You row: the tile, then the word in the heavier rung — the two
+    /// marks that it is primary — and no chevron (§1053).
     private func door(_ door: Door, index: Int) -> some View {
         Button(action: door.act) {
-            VStack(spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s3) {
                 doorTile(door.glyph, lit: door.lit)
                 Text(door.word)
-                    .dsText(.label12)
-                    .foregroundStyle(door.lit ? DS.textPrimary : DS.textSecondary)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
+                Spacer(minLength: 0)
             }
-            .frame(minWidth: Self.tile)
+            .frame(minHeight: Self.youRowHeight)
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressSpring())
+        .buttonStyle(RowPress())
         .accessibilityLabel(Text(door.word))
         .accessibilityAddTraits(door.lit ? .isSelected : [])
         .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
@@ -597,36 +578,5 @@ struct RoomsTray: View {
     private func close() {
         drag = 0
         withAnimation(liftMotion) { chrome.roomsTray = false }
-    }
-}
-
-/// The tray's tiles, a fixed number to a line (prd §1013, §1050l): the first
-/// column's centre stands `edge` in from the leading side and the last one's
-/// `edge` in from the trailing side, the rest spread evenly between — the You
-/// doors and the categories share these columns, so the tray is one grid.
-/// Each subview is placed by its centre; a line steps the tallest subview
-/// plus `lineAir`.
-struct MarkGrid: Layout {
-    let columns: Int
-    let edge: CGFloat
-    let lineAir: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width ?? CGFloat(columns) * DS.Hit.min
-        guard !subviews.isEmpty else { return CGSize(width: width, height: 0) }
-        let target = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? DS.Hit.min
-        let lines = (subviews.count + columns - 1) / columns
-        return CGSize(width: width, height: CGFloat(lines) * target + CGFloat(lines - 1) * lineAir)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews,
-                       cache: inout ()) {
-        let pitch = (bounds.width - 2 * edge) / CGFloat(max(columns - 1, 1))
-        let target = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? DS.Hit.min
-        for (i, view) in subviews.enumerated() {
-            let x = bounds.minX + edge + CGFloat(i % columns) * pitch
-            let y = bounds.minY + target / 2 + CGFloat(i / columns) * (target + lineAir)
-            view.place(at: CGPoint(x: x, y: y), anchor: .center, proposal: .unspecified)
-        }
     }
 }
