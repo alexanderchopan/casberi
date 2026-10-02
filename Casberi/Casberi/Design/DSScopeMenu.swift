@@ -27,6 +27,7 @@ struct DSScopeMenu: View {
     /// drop. Off in the wallet family, whose `sub` is a tooltip.
     var subtitles: Bool = false
     let onPick: (String?) -> Void
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         Menu {
@@ -68,21 +69,56 @@ struct DSScopeMenu: View {
         return seen
     }
 
+    /// A row: its face (an address's identicon, an app's own mark) beside
+    /// its name, and the checkmark on the one showing (user: "this needs to
+    /// show the icons of the app"). A `Toggle` is what gives a menu row a
+    /// checkmark AND an image; a `Label` carries only one of the two. "All"
+    /// draws no face: it stands for every face below it.
     private func item(_ slot: DSAccountSlot) -> some View {
-        Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) {
-                onPick(slot.id.isEmpty ? nil : slot.id)
+        Toggle(isOn: Binding(
+            get: { slot.id == showing.id },
+            set: { _ in
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) {
+                    onPick(slot.id.isEmpty ? nil : slot.id)
+                }
             }
-        } label: {
-            if slot.id == showing.id {
-                Label(slot.name, systemImage: "checkmark")
+        )) {
+            if let image = slot.id.isEmpty ? nil : menuImage(slot.faces.first) {
+                Label { Text(slot.name) } icon: { image }
             } else {
                 Text(slot.name)
             }
             if subtitles, let sub = slot.sub {
                 Text(sub)
             }
+        }
+    }
+
+    /// A menu draws images, not views, so the face is rendered once to a
+    /// bitmap, round and in its own colours (`.alwaysOriginal`, or the menu
+    /// tints it). A face read from the network (an avatar) has no bitmap yet,
+    /// so it draws its source's mark instead.
+    @MainActor
+    private func menuImage(_ face: FaceScopeRail.Item.Face?) -> Image? {
+        guard let face else { return nil }
+        let renderer = ImageRenderer(content: MenuFace(face: face))
+        renderer.scale = displayScale
+        guard let image = renderer.uiImage else { return nil }
+        return Image(uiImage: image.withRenderingMode(.alwaysOriginal))
+    }
+}
+
+/// A face as a menu row draws it: round, at the badge tier, from what is on
+/// the device (`DSScopeMenu.menuImage`).
+private struct MenuFace: View {
+    let face: FaceScopeRail.Item.Face
+    var body: some View {
+        switch face {
+        case .wallet(let address):
+            WalletFace(address: address, size: DS.Face.badge, circular: true)
+        case .avatar(_, let source), .mark(_, let source):
+            BridgeIcon(name: source, size: DS.Face.badge, circular: true)
         }
     }
 }
