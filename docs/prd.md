@@ -63656,3 +63656,20 @@ Amends §1064. Swept, not room by room: the demo's 92 connected seats against th
 **Found, not fixed.** The Wallet's other tiles do not narrow to a picked app: with Kraken picked, Risk still draws Morpho and Aave. Left for the room sweep.
 
 **Checked.** The app builds; `ds-template-audit.py`, `splits-selftest.sh`. On the simulator with the demo: "Accounts" on All; "Coinbase" picked by launch argument; the list opens from the pill with the check at the right of Coinbase; Kraken picked from it closes the list and the pill reads Kraken (`accountsPill: picked seat:Kraken`).
+
+## §1067 — The room sweep (user: "sweep every room and make sure it works end to end eg is what it is supposed to be", 2026-10-02) — BUILT
+
+Every category, every Wallet tile and a dozen app picks, captured on the demo through launch hooks rather than taps (36 screens; `-roomScope "<room>|seat:<Name>"` is new, the merged rooms' `-walletScope`). Home, Wallet's seven tiles, Testnets, Work, Day, Life, Agents, Media, Reading and Notes drew what they should. Fixed:
+
+- **An app picked in the Wallet showed the whole Wallet's Risk, Positions and approvals.** `loadWalletLive` read every address under the app's name (Morpho and Aave under Coinbase). An app pick now clears those readings: they belong to addresses, and an app holds none. Coinbase's Risk says "Nothing at risk".
+- **An exchange's Home drew "$6K" over an empty box** while its Holdings drew "$6.1K" and a map. Home now draws the Holdings figure for an app with money and no head, so the two agree.
+- **An app with no money and no head drew the Wallet's empty balance line** ("No balance yet" over a chart and range chips; user: "when it showed Wise it showed crypto in the header card which is wrong"). It now leads with its newest thing (`WalletSeatLatestLead`), as every other room's app pick does.
+- **Wise's rows wore a grey "?"**: a transfer with no token symbol fell to `AssetMark`'s empty monogram. A folded app's token-less row wears its app's mark.
+- **Work and Day stacked an empty "Nothing yet" box under a picked app's head**, pushing the tiles off the screen (Stripe in Work). The empty box draws only when no head holds the slot.
+- **Markets' box was one line over air.** The Watchlist box now draws the day's biggest moves as bars (the same 24h changes the counts are made of; a change that rounds to zero has no sign or colour, §83).
+
+**Found, not fixed — Social is not one room.** The Social category still lands in its last venue (the sweep opened Telegram): §1048–§1057 merged Wallet, Testnets, Reading, Agents, Media, Life, Day and Work, and Social was never on the list. It needs a ruling and its own build, as each merge had.
+
+**Also seen.** A picked Safe's Home list draws the empty skeleton: its rows are signatures still ahead, which Home ("only what happened", §1039) leaves to Coming up.
+
+**Checked.** The app builds; `ds-template-audit.py`, `lead-body-audit.py`, `status-ink-audit.py`, `row-cost-audit.py`, `plate-audit.py`, `dead-closure-audit.py`, `design-ramp-audit.py`. Re-captured on the simulator: Coinbase Home and Risk, Wise, Apple Wallet, Stripe in Work, Markets.

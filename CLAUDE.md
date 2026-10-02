@@ -181,6 +181,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-chipStats "<source:n[,…]>"|clear` — seed the source strip's tap-learning counters (`Model/ChipMemory.swift`); every mount NSLogs `chipLabels:`.
 - `-openRoom "<seat name>"` — land in a source's room headlessly at mount (`RootShell.openRoomIfRequested`; NSLogs `openRoom:`). Pair with `-demoEnter YES` on a prior launch for a furnished room.
 - `-walletScope <address | seat:Name>` — pick an account in the Wallet's menu at launch, an app the Wallet folded in included (`RoomAccounts`, prd §1048b; NSLogs `walletScope:`)
+- `-roomScope "<room>|seat:<Name>"` — pick an app in a merged room's menu at launch (`chrome.mergedScope`; NSLogs `roomScope:`), the room sweep's door to every app pick, as `-walletScope` is the Wallet's (prd §1067)
 - `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (or a Markets company pack by its category name, `Work`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
 - **The folded rooms' own views are deleted (prd §1059): the kind tiles (`RoomKindTiles`), Reminders' and Mail's tiles, the Calendar agenda and every room-level arm only a folded app reached; `FeedScreen.Shape` and `rowShape` stay for the rows. A mail's `Attached` fact stays (`MailIngest.attachedLabel`): the sheet and search read it** → prd §1059
 - `-connectReminders YES` — the real Reminders connect, seat included (relaunch to see it; `simctl privacy … grant reminders` first, `-demo.corpusAllowed NO` on a fresh install or the dev seed pours four) → prd §993
