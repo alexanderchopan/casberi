@@ -77,56 +77,6 @@ enum TokensAsk {
         return "Over the last 24h: \(parts.joined(separator: ", "))."
     }
 
-    /// The watchlist's line for the away recap — each watched token's change
-    /// over the away window itself, computed from real candles at the range
-    /// that covers it (hourly for a day or a week, daily beyond). A window
-    /// past the 30-day candles says "over the last 30 days" instead — the
-    /// line never claims a window the data doesn't span. Coarse-fallback
-    /// tokens (no real candles anywhere) are left out rather than guessed.
-    @MainActor
-    static func awayLine(window: Range<Date>, context: ModelContext) async -> String? {
-        let routes = watched(context).compactMap { t -> (symbol: String, chain: String, address: String)? in
-            guard let route = TokenChart.route(from: t.content) else { return nil }
-            return (symbol(of: t.title), route.chain, route.address)
-        }
-        guard !routes.isEmpty else { return nil }
-
-        let gap = window.upperBound.timeIntervalSince(window.lowerBound)
-        let range: TokenRange = gap <= 86_400 ? .day
-            : (gap <= 7 * 86_400 ? .week : .month)
-        // Capped at 8 tokens — the recap wants the movers, not a census, and
-        // each token is up to 3 GETs; the line shows 4 anyway.
-        let charts = await IngestSupport.boundedGather(Array(routes.prefix(8)),
-                                                       maxConcurrent: 4) { r in
-            (r.symbol, await TokenChart.fetch(chain: r.chain, address: r.address,
-                                              range: range))
-        }
-        // A gap past the 30-day candles gets the candles' own window; either
-        // way the LABELED window is what every counted token must span.
-        let capped = gap > Double(TokenRange.month.ohlcv.limit) * TokenRange.month.step
-        let labeledWindow = min(gap, Double(TokenRange.month.ohlcv.limit) * TokenRange.month.step)
-        let back = Int((labeledWindow / range.step).rounded(.up))
-
-        var moves: [(symbol: String, change: Double)] = []
-        for (sym, chart) in charts {
-            guard let chart, !chart.coarse, chart.closes.count >= 2,
-                  let last = chart.closes.last else { continue }
-            // The candle nearest the window's start, clamped to the oldest —
-            // candles-as-hours is the app's standing chart assumption (the
-            // sheet's scrub makes the same one); a quiet pool returns SPARSE
-            // candles, so demanding a full count would silently drop real
-            // tokens from the line.
-            let first = chart.closes[max(0, chart.closes.count - 1 - back)]
-            guard first > 0 else { continue }
-            moves.append((sym, (last - first) / first))
-        }
-        guard !moves.isEmpty else { return nil }
-        moves.sort { abs($0.change) > abs($1.change) }
-        let parts = moves.prefix(4).map { "\($0.symbol) \(TokenChartStyle.changeText($0.change))" }
-        let windowWords = capped ? "over the last 30 days" : "while you were away"
-        return "Your watchlist \(windowWords): \(parts.joined(separator: ", "))."
-    }
-
     /// The bare ticker from "Name · $TICKER" (TokenWatch's title format) —
     /// the whole title when the format doesn't match. The one parser of the
     /// watch-title format (HomeComposition's pinned-tile chips read it too).

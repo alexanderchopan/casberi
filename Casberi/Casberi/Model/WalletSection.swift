@@ -37,9 +37,15 @@ import Foundation
 /// **`home` leads and is the default** for the reason this whole direction
 /// was chosen: every other room in this app opens on its feed, and making
 /// Wallet the exception again is what put its transactions three screens down
-/// in the first place. Named "Activity" rather than "Transactions" (long, and
-/// §8 asks for Bob's words) or "Recent" — which is wrong by construction, since
-/// the scope leads with forward-dated rows that are not recent.
+/// in the first place.
+///
+/// **HOME'S LIST IS THE ACTIVITY, AND THE ACTIVITY AND ACCOUNTS TILES ARE
+/// DELETED (prd §1039, 2026-10-01, user approving the merge mockup).** The
+/// room takes every other room's anatomy — box, tiles, the account menu, a
+/// list — so what moved (and what is ahead, under its own date) is Home's
+/// list, the account menu under the tiles picks the account, and the
+/// Overview rows and the Actions block are gone. Following an address is the
+/// LAST tile, `follow`, a verb that never lights (GitHub's Watch, prd §1031).
 ///
 /// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610).** Until
 /// 2026-09-05 `present(…)` dropped a scope the wallet had nothing for, so a
@@ -57,13 +63,19 @@ import Foundation
 /// resolves to the wrong one, or a strip whose order changes between opens.
 enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case home
-    case activity
     case holdings
-    case accounts
+    /// What's AHEAD — every row with a future `dueAt`, soonest first (prd
+    /// §1041, user: "its own tile"). Home is only what happened.
+    case comingUp
     case positions
     case nfts
     case risk
     case permissions
+    /// The room's VERB (prd §1039): follow another address. Never a scope —
+    /// it is never in `order`, never resolved to, and never lights. It rides
+    /// this enum as Watch rides `RoomKindTile` (prd §1031), because a verb
+    /// tile is drawn by the same grid as the scopes.
+    case follow
 
     var id: String { rawValue }
 
@@ -72,8 +84,15 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// it is stated where a reader looking for it will find it and where a
     /// self-test can assert it.
     static let order: [WalletSection] = [
-        .home, .activity, .holdings, .accounts, .positions, .nfts, .risk, .permissions,
+        .home, .holdings, .comingUp, .positions, .nfts, .risk, .permissions,
     ]
+
+    /// The verbs, drawn after the scopes (`DSScopeTiles.alphabetical`) on
+    /// every page — following is the room's act, not one account's (§774).
+    static let verbs: [WalletSection] = [.follow]
+
+    /// A verb acts instead of scoping, and never lights.
+    var isVerb: Bool { self == .follow }
 
     /// Which scopes can be EMPTY.
     ///
@@ -84,26 +103,27 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
-        case .accounts: return true
-        case .home, .activity, .holdings: return false
-        case .positions, .nfts, .risk, .permissions: return true
+        case .home, .holdings, .follow: return false
+        case .comingUp, .positions, .nfts, .risk, .permissions: return true
         }
     }
 
-    /// `activity` is the only scope that is always available — the room always
-    /// has a crown, and an empty stream is a real answer rather than an absence.
-    var isAlwaysPresent: Bool { self == .home || self == .activity }
+    /// `home` is the only scope that is always available — the room always
+    /// has a crown, and an empty list is a real answer rather than an absence.
+    var isAlwaysPresent: Bool { self == .home }
 
     var label: String {
         switch self {
         case .home:        return String(localized: "Home")
-        case .activity:    return String(localized: "Activity")
         case .holdings:    return String(localized: "Holdings")
+        // The app's own word for what's ahead (the feed's "Coming up" group).
+        case .comingUp:    return String(localized: "Coming up")
         case .positions:   return String(localized: "Positions")
         case .nfts:        return String(localized: "NFTs")
-        case .accounts:    return String(localized: "Accounts")
         case .risk:        return String(localized: "Risk")
         case .permissions: return String(localized: "Permissions")
+        // "Follow", not "Follow address" (prd §1039): a tile carries one word.
+        case .follow:      return String(localized: "Follow")
         }
     }
 
@@ -113,18 +133,14 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// it is ranked by the dollars somebody can take right now (§292).
     var summary: String {
         switch self {
-        case .home:        return String(localized: "The line, and the last few moves")
-        case .activity:    return String(localized: "What moved, and what's ahead")
+        case .home:        return String(localized: "The line, and what moved")
         case .holdings:    return String(localized: "What your money is made of")
+        case .comingUp:    return String(localized: "What's ahead, soonest first")
         case .positions:   return String(localized: "Money you've deployed")
         case .nfts:        return String(localized: "Collectibles you hold")
-        // **THE SCOPE §295 NEVER HAD (prd §689).** "N of your addresses are
-        // connected" lived at the foot of the Wallet manager and died with
-        // that screen; the reading kept running with nowhere to draw. This is
-        // where it goes, and the devnets took the same one.
-        case .accounts:    return String(localized: "The accounts you follow, and the ones tied to them")
         case .risk:        return String(localized: "Positions that could move against you")
         case .permissions: return String(localized: "What you've granted reach to")
+        case .follow:      return String(localized: "Follow an address, privately")
         }
     }
 
@@ -146,13 +162,14 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         // reserved 300pt box rendered as a card of black, and §757's collapse
         // rendered as a room that opens on `Actions` and never says why.
         case .home:        return String(localized: "No balance yet")
-        case .activity:    return String(localized: "Nothing yet")
         case .holdings:    return String(localized: "Nothing held")
+        case .comingUp:    return String(localized: "Nothing ahead")
         case .positions:   return String(localized: "Nothing deployed")
         case .nfts:        return String(localized: "No collectibles")
-        case .accounts:    return String(localized: "No accounts yet")
         case .risk:        return String(localized: "Nothing at risk")
         case .permissions: return String(localized: "No grants")
+        // A verb has no empty state: it is never on screen as a page.
+        case .follow:      return nil
         }
     }
 
@@ -178,34 +195,33 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             // those apart — so it says what was found, which is true either way
             // and is `holdings`' own phrasing one scope over.
             return String(localized: "What these accounts are worth, and the line it traces.")
-        case .activity:
-            return String(localized: "Transfers, approvals, and what's ahead.")
         case .holdings:
             return String(localized: "Tokens sized by worth. Dust below the floor is left out.")
+        case .comingUp:
+            return String(localized: "Unlocks, expiries and grants with a date still to come.")
         case .positions:
             return String(localized: "Money lent, pooled, or held as a perp.")
         case .nfts:
             return String(localized: "Collections you hold, minus what the spam filter caught.")
         case .risk:
             return String(localized: "A position a price move could liquidate, and how close it stands.")
-        case .accounts:
-            return String(localized: "Drawn from shared counterparties and direct payments.")
         case .permissions:
             return String(localized: "A token approval, a Safe module, a delegate.")
+        case .follow:
+            return nil
         }
     }
 
     /// Resolve the scope actually shown from the one the person last picked.
     ///
-    /// **Falls back to `.activity`, never to "the first present scope."** The
-    /// two differ only when `activity` is somehow absent, which cannot happen —
-    /// and that is the point: an unreachable branch that quietly picks
-    /// `holdings` is how a room starts opening somewhere nobody chose. A
-    /// remembered scope whose content has since gone (the last approval
-    /// revoked, the last position closed) resolves to the feed rather than to
-    /// an empty page claiming to be a section.
+    /// **Falls back to `.home`, never to "the first present scope."** An
+    /// unreachable branch that quietly picks `holdings` is how a room starts
+    /// opening somewhere nobody chose. A remembered scope whose content has
+    /// since gone — or one the room no longer has, like the deleted Activity
+    /// and Accounts (prd §1039) — resolves to Home rather than to an empty
+    /// page claiming to be a section. A verb is never a page.
     static func resolve(_ wanted: WalletSection?, present: [WalletSection]) -> WalletSection {
-        guard let wanted, present.contains(wanted) else { return .home }
+        guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }
         return wanted
     }
 

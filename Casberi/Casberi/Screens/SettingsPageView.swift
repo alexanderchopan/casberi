@@ -19,8 +19,6 @@ struct SettingsPageView: View {
                 AccountDetailSheet(detail: .data)
             case .notifications:
                 AccountDetailSheet(detail: .notifications)
-            case .mcp:
-                AccountDetailSheet(detail: .mcp)
             case .language:
                 LanguagePickerSheet()
             case .diagnostics:

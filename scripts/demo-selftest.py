@@ -114,8 +114,6 @@ DEMO_FILES = {
     "DemoMode": CASBERI / "Model/DemoMode.swift",
     "DemoSeedAll": CASBERI / "Model/DemoSeedAll.swift",
     "ChipMemory": CASBERI / "Model/ChipMemory.swift",
-    "BriefLedger": CASBERI / "Model/BriefLedger.swift",
-    "AskMemory": CASBERI / "Model/AskMemory.swift",
     "AppVisit": CASBERI / "Model/AppVisit.swift",
     # Read-only reference for checks D/E — never mutated by this file's own
     # fixtures, since the fixtures exist to break the DEMO side of the sync,
@@ -241,12 +239,6 @@ KNOWN_CATALOG_ALIAS = {
 DEMO_FACING_FUNCS = [
     ("ChipMemory", "static func seedDemo"),
     ("ChipMemory", "static func forgetDemo"),
-    ("BriefLedger", "static func seedDemo"),
-    ("BriefLedger", "static func shiftDemoWindows"),
-    ("BriefLedger", "static func demoCheckpoint"),
-    ("BriefLedger", "static func restoreDemoCheckpoint"),
-    ("AskMemory", "static func seedDemo"),
-    ("AskMemory", "static func forgetDemo"),
     ("AppVisit", "static func seedDemo"),
     ("AppVisit", "static func forgetDemo"),
     ("DemoMode", "static func begin"),

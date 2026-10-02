@@ -29,7 +29,6 @@ STABLE="Casberi/Casberi/Model/WalletStables.swift"
 EXPOSURE="Casberi/Casberi/Model/WalletApprovalExposure.swift"
 USEROPS="Casberi/Casberi/Model/WalletUserOps.swift"
 PARTIES="Casberi/Casberi/Model/WalletActingParties.swift"
-CONNECTIONS="Casberi/Casberi/Model/AddressConnections.swift"
 PORTFOLIO="Casberi/Casberi/Model/WalletPortfolio.swift"
 # FeedScreen is split across files (prd §718). Every check reads the room as ONE
 # text, so a guard can neither fail nor pass because its code moved next door.
@@ -38,7 +37,7 @@ FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 TILES="Casberi/Casberi/Screens/WalletFeedTiles.swift"
 INGEST="Casberi/Casberi/Model/WalletIngest.swift"
-for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$PORTFOLIO"; do
+for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$PORTFOLIO"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -987,208 +986,7 @@ eq(WalletUserOps.word(uoData(costWei: TENTH), at: 2), 1e16, "the cost word is re
 eq(WalletUserOps.word(uoData(costWei: TENTH), at: 9), 0, "a word past the end reads zero")
 eq(WalletUserOps.word(nil, at: 0), 0, "absent data reads zero")
 
-// ===========================================================================
-// AddressConnections — which of your addresses are connected (prd §295)
-// ===========================================================================
-// The failure mode is a WRONG COUNT under a confident headline, which renders
-// perfectly. Two of these cases are the ones that would ship a lie: an address
-// reaching ONE wallet counted as connected (which would print the book's own
-// length back at you), and a total that moves when the display cap moves.
-
-typealias Conn = AddressConnections
-
-// `spelling` is the UNFOLDED address the door opens with — defaulted to an
-// obviously-different form of the key so any test that reads it proves the
-// node carried the landed spelling rather than the folded one.
-func edge(_ address: String, _ wallet: String,
-          usd: Double? = nil, named: Bool = false,
-          name: String? = nil, spelling: String? = nil) -> Conn.Edge {
-    Conn.Edge(addressKey: address, address: spelling ?? address.uppercased(),
-              addressName: name ?? address,
-              named: named, walletKey: wallet, usd: usd)
-}
-func watched(_ keys: String...) -> [Conn.WatchedWallet] {
-    keys.map { Conn.WatchedWallet(key: $0, name: $0.uppercased()) }
-}
-
-// ── the decline, and the empty answer ─────────────────────────────────────
-// Two different states, deliberately not one: nil is "this card can never say
-// anything for you", empty is "it can, and the answer is none". Collapsing
-// them would either hide a real answer or show a card to someone watching one
-// wallet forever.
-check(Conn.map(edges: [edge("mom", "main")], watched: watched("main")) == nil,
-      "one watched wallet — no card at all, a connection cannot exist")
-check(Conn.minWallets == 2, "…and the bar for that is two")
-let none = Conn.map(edges: [edge("mom", "main"), edge("shop", "trading")],
-                    watched: watched("main", "trading"))
-check(none?.isEmpty == true, "everyone reaching exactly ONE wallet is not a connection")
-check(none?.connectedCount == 0, "…and the count says zero rather than two")
-check(none?.untouchedWalletNames == ["MAIN", "TRADING"],
-      "…with every wallet named as unreached")
-check(none?.columns.isEmpty == true, "…and no wallet column is drawn")
-
-// ── the connection itself ──────────────────────────────────────────────────
-let one = Conn.map(edges: [edge("mom", "main"), edge("mom", "trading"),
-                           edge("shop", "trading")],
-                   watched: watched("main", "trading"))
-check(one?.connectedCount == 1, "an address reaching TWO wallets is connected")
-check(one?.nodes.first?.id == "mom", "…and it is the one that reached both")
-check(one?.nodes.first?.count == 2, "the count is transactions, not wallets")
-check(one?.nodes.first?.walletKeys == ["main", "trading"], "…and it names both")
-check(one?.columns.map(\.id) == ["main", "trading"],
-      "both wallets get a column — `shop` is not connected but `trading` is still reached")
-check(one?.untouchedWalletNames.isEmpty == true, "nothing is unreached here")
-check(one?.isEmpty == false, "…so the map is not empty")
-
-// A self-transfer is not a relationship, and neither is a wallet we stopped
-// watching. Both would otherwise inflate the headline with something the
-// person cannot act on.
-check(Conn.map(edges: [edge("main", "main"), edge("main", "trading")],
-               watched: watched("main", "trading"))?.connectedCount == 0,
-      "a self-edge is dropped, so `main` reaches only one real wallet")
-check(Conn.map(edges: [edge("mom", "main"), edge("mom", "old")],
-               watched: watched("main", "trading"))?.connectedCount == 0,
-      "an edge to an unwatched wallet cannot make a connection")
-
-// ── order is first-appearance, never a ranking (the user ruling) ───────────
-let ordered = Conn.map(edges: [edge("first", "main"), edge("first", "trading"),
-                               edge("second", "main"), edge("second", "trading"),
-                               edge("second", "savings"), edge("second", "main")],
-                       watched: watched("main", "trading", "savings"))
-check(ordered?.nodes.map(\.id) == ["first", "second"],
-      "nodes are in the order you first dealt with them, NOT by transaction count")
-check(ordered?.nodes.last?.count == 4, "…even though the later one is busier")
-// Wallet order is YOUR watch order on every node, so two nodes' ribbons never
-// cross for no reason.
-check(Conn.map(edges: [edge("mom", "savings"), edge("mom", "main")],
-               watched: watched("main", "trading", "savings"))?
-        .nodes.first?.walletKeys == ["main", "savings"],
-      "a node's wallets read in watch order, not the order the transfers landed")
-
-// ── names ─────────────────────────────────────────────────────────────────
-let named = Conn.map(edges: [edge("mom", "main"),
-                             edge("mom", "trading", named: true, name: "Mom")],
-                     watched: watched("main", "trading"))
-check(named?.nodes.first?.named == true,
-      "a name found on ANY of an address's transfers names the node")
-check(named?.nodes.first?.name == "Mom", "…and the node wears it")
-check(named?.firstUnnamed == nil, "…so there is nothing left to name")
-let unnamed = Conn.map(edges: [edge("aaa", "main", named: true, name: "Aaa"),
-                               edge("aaa", "trading", named: true, name: "Aaa"),
-                               edge("bbb", "main"), edge("bbb", "trading"),
-                               edge("bbb", "savings")],
-                       watched: watched("main", "trading", "savings"))
-check(unnamed?.firstUnnamed?.id == "bbb",
-      "the button targets the first unnamed address, not the busiest")
-
-// ── money ─────────────────────────────────────────────────────────────────
-// An unpriced leg contributes NOTHING rather than zero: a $0 would understate
-// a wallet's total while looking like a measurement.
-let priced = Conn.map(edges: [edge("mom", "main", usd: 100),
-                              edge("mom", "trading", usd: nil),
-                              edge("mom", "main", usd: 50),
-                              edge("shop", "main", usd: 999)],
-                      watched: watched("main", "trading"))
-eq(priced?.columns.first?.usd, 150, "a wallet's total sums only its connected, priced legs")
-check(priced?.columns.last?.usd == nil,
-      "a wallet whose connected legs were never priced states nothing, not $0")
-check(priced?.columns.first?.id == "main", "…and `shop` never contributed, being unconnected")
-
-// ── the display cap does not change what a number means ───────────────────
-// Every connected address counts and contributes its money; only the drawn
-// rows are capped, and the gap is stated. A cap that silently shrank the total
-// would be the no-silent-caps rule broken by a layout decision.
-var many: [Conn.Edge] = []
-for i in 0..<(Conn.nodeLimit + 1) {
-    many.append(edge("a\(i)", "main", usd: 10))
-    many.append(edge("a\(i)", "trading", usd: 10))
-}
-let capped = Conn.map(edges: many, watched: watched("main", "trading"))
-check(capped?.connectedCount == Conn.nodeLimit + 1, "every connected address is counted")
-check(capped?.nodes.count == Conn.nodeLimit, "…only `nodeLimit` are drawn")
-check(capped?.hiddenCount == 1, "…and the gap is stated")
-eq(capped?.columns.first?.usd, Double(Conn.nodeLimit + 1) * 10,
-   "the total covers the undrawn ones too — a display cap is not an accounting rule")
-check(capped?.hiddenNames.count == capped?.hiddenCount,
-      "the named tail and the counted gap agree — they are spelled separately")
-check(capped?.hiddenNames == ["a\(Conn.nodeLimit)"],
-      "…and the tail is the NEWEST connection, which is what the cap always cuts")
-
-// THE ACTION MUST NOT VANISH BEHIND THE CAP. `firstUnnamed` used to scan the
-// drawn prefix alone, so a book whose drawn six were all named lost the card's
-// naming prompt entirely while an unnamed connection sat undrawn behind it —
-// invisible, since a card with no button looks exactly like a card with
-// nothing left to name. A display cap is not an action rule either.
-var capNamed: [Conn.Edge] = []
-for i in 0..<Conn.nodeLimit {
-    capNamed.append(edge("n\(i)", "main", named: true, name: "Named \(i)"))
-    capNamed.append(edge("n\(i)", "trading", named: true, name: "Named \(i)"))
-}
-capNamed.append(edge("stranger", "main"))
-capNamed.append(edge("stranger", "trading"))
-let behindCap = Conn.map(edges: capNamed, watched: watched("main", "trading"))
-check(behindCap?.nodes.count == Conn.nodeLimit, "every drawn node is named")
-check(behindCap?.nodes.allSatisfy(\.named) == true, "…all of them")
-check(behindCap?.firstUnnamed?.id == "stranger",
-      "…and the prompt still targets the unnamed one behind the cap")
-
-// ── the door carries the LANDED spelling, not the folded key ──────────────
-// The address card it opens prints the address in full, warns about
-// look-alikes against it and builds its explorer link from it, so a folded
-// hex would strip the EIP-55 checksum on the one screen whose job is telling
-// two similar addresses apart.
-let spelled = Conn.map(edges: [edge("0xabc", "main", spelling: "0xAbC"),
-                               edge("0xabc", "trading", spelling: "0xabc")],
-                       watched: watched("main", "trading"))
-check(spelled?.nodes.first?.id == "0xabc", "the KEY stays the folded identity")
-check(spelled?.nodes.first?.address == "0xAbC",
-      "…while the door gets the spelling as it landed")
-check(Conn.map(edges: [edge("0xabc", "main", spelling: "0xabc"),
-                       edge("0xabc", "trading", spelling: "0xAbC")],
-               watched: watched("main", "trading"))?.nodes.first?.address == "0xabc",
-      "the FIRST spelling wins — a door that changes address between two "
-        + "passes over identical data reads as broken")
-
-// ── the words ─────────────────────────────────────────────────────────────
-//
-// `headline` and `subhead` retired 2026-08-22 (prd §448, user ruling: "I want
-// it with the least amount of words ever there"). The card draws one row per
-// connected address, so a sentence counting them was the drawing read out
-// loud, and the subhead re-defined "connected" under a section header that
-// already carries the word. `connectedCount` survives and is asserted above —
-// it is what gates the card at all now, so its arithmetic matters more than
-// before, not less. The remaining notes are the facts the picture OMITS.
-check(Conn.hiddenNote(hidden: 0, names: []) == nil, "nothing hidden, nothing said")
-check(Conn.hiddenNote(hidden: 1, names: []) != nil
-        && Conn.hiddenNote(hidden: 4, names: []) != nil,
-      "…otherwise always said, even when nothing could be named")
-
-// ── the undrawn tail is NAMED, not just counted ───────────────────────────
-// `nodeLimit` cuts by first-appearance order, so everything behind the cap is
-// by construction a NEWER connection than everything drawn — a relationship
-// formed today can never enter the picture. "2 more aren't drawn" was its only
-// trace, which is a silent cap wearing a number.
-check(Conn.hiddenNote(hidden: 1, names: ["Shop"])?.contains("Shop") == true,
-      "one undrawn connection is NAMED")
-let twoHidden = Conn.hiddenNote(hidden: 2, names: ["Shop", "Mom"])
-check(twoHidden?.contains("Shop") == true && twoHidden?.contains("Mom") == true,
-      "…and so are two")
-check(twoHidden?.contains("2") == true,
-      "…with the count still leading, so the sentence states the whole truth")
-// The trim is where a caveat would otherwise become a paragraph. The COUNT
-// never trims — only the list does — so the note cannot understate the gap.
-let manyHidden = Conn.hiddenNote(hidden: 9,
-                                 names: ["A", "B", "C", "D", "E", "F", "G", "H", "I"])
-check(manyHidden?.contains("9") == true, "a long tail still states its real size")
-check(manyHidden?.contains("C") == true && manyHidden?.contains("D") == false,
-      "…names only `hiddenNameLimit` of them")
-check(manyHidden?.contains("6") == true, "…and counts the rest it did not name")
-check(Conn.hiddenNameLimit == 3, "…which is three")
-check(Conn.untouchedNote(["COLD"], connectedCount: 0) == nil,
-      "at zero connections the wallet list is the headline repeated, so it is silent")
-check(Conn.untouchedNote([], connectedCount: 2) == nil, "nothing unreached, nothing said")
-check(Conn.untouchedNote(["COLD"], connectedCount: 2)?.contains("COLD") == true,
-      "…and an unreached wallet is NAMED, never drawn as an empty node")
+// (AddressConnections' assertions are deleted with the model, prd §1041.)
 
 // ===========================================================================
 // WalletPortfolio — the holdings card's whole remaining vocabulary (prd §447)
@@ -1298,5 +1096,5 @@ SWIFT
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 3.5x faster).
 # Re-probe before trusting it again after adding mutations.
-swiftc -Onone -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$STUBS" "$PORTFOLIO" "$DRIVER"
+swiftc -Onone -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$STUBS" "$PORTFOLIO" "$DRIVER"
 "$TMP/selftest"

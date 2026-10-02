@@ -28,15 +28,14 @@ FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
-# The one template all five wallet-family rooms wear (prd §747), and the three
-# views it composes. Every guard below reads them comment-stripped, because
-# these files DOCUMENT the ruling by naming what they replaced.
+# The one template the wallet family wears (prd §747, the box · tiles · menu
+# of §1039), and the views it composes. Every guard below reads them
+# comment-stripped, because these files DOCUMENT the ruling by naming what
+# they replaced. (`DSScopeRows` and `RoomActivityChart` are deleted, prd §1039.)
 CHROMEVIEW="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
-SCOPEROWS="Casberi/Casberi/Design/DSScopeRows.swift"
 SCOPEHEAD="Casberi/Casberi/Design/DSScopeTiles.swift"
 EMPTYFIG="Casberi/Casberi/Screens/WalletScopeEmptyFigure.swift"
 CHASSIS="Casberi/Casberi/Design/DSRoomChassis.swift"
-ACTIVITY="Casberi/Casberi/Screens/RoomActivityChart.swift"
 CHIPS="Casberi/Casberi/Design/DSChip.swift"   # DSRangeChips lives beside Chip since prd §746
 
 work=$(mktemp -d)
@@ -54,10 +53,22 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .activity, .holdings, .accounts, .positions, .nfts, .risk, .permissions],
-      "order is home → activity → holdings → accounts → positions → nfts → risk → permissions")
-check(WalletSection.order.count == WalletSection.allCases.count,
-      "order lists every case — a new scope cannot be silently unlisted")
+check(WalletSection.order == [.home, .holdings, .comingUp, .positions, .nfts, .risk, .permissions],
+      "order is home → holdings → comingUp → positions → nfts → risk → permissions")
+// **COMING UP IS ITS OWN SCOPE (prd §1041)** — Home is only what happened.
+check(WalletSection.comingUp.label == "Coming up", "the scope reads Coming up — the app's own word")
+check(WalletSection.comingUp.isConditional, "coming up can be empty, so it sits in the tail")
+// **THE VERB IS A CASE, NEVER A SCOPE (prd §1039).** Follow is the last tile:
+// every case is a scope in `order` or a verb in `verbs`, never both.
+check(WalletSection.order.count + WalletSection.verbs.count == WalletSection.allCases.count
+      && Set(WalletSection.order).isDisjoint(with: WalletSection.verbs),
+      "order and verbs list every case once — a new scope cannot be silently unlisted")
+check(WalletSection.verbs == [.follow] && WalletSection.follow.isVerb
+      && !WalletSection.order.contains(where: \.isVerb),
+      "Follow is the one verb, and no scope is a verb")
+check(WalletSection.follow.label == "Follow", "the verb tile reads Follow (prd §1039)")
+check(!WalletSection.allCases.contains { $0.rawValue == "activity" || $0.rawValue == "accounts" },
+      "Activity and Accounts are gone — Home's list is the activity, the menu picks the account (prd §1039)")
 
 // THE STRUCTURAL RULE: every conditional scope sits at the END. A conditional
 // scope in the middle shifts every scope after it the day it appears.
@@ -68,13 +79,11 @@ check(lastUnconditional < firstConditional,
 check(WalletSection.order.last == .permissions, "permissions is last")
 check(WalletSection.order.first == .home, "home leads")
 
-// activity is the front door and is never conditional.
+// home is the front door and is never conditional.
 check(WalletSection.home.isAlwaysPresent, "home is always present")
-check(WalletSection.activity.isAlwaysPresent, "activity is always present")
 check(!WalletSection.home.isConditional, "home is not conditional")
-check(!WalletSection.activity.isConditional, "activity is not conditional")
 check(!WalletSection.holdings.isConditional, "holdings is not conditional")
-for s in [WalletSection.positions, .nfts, .risk, .permissions] {
+for s in [WalletSection.comingUp, .positions, .nfts, .risk, .permissions] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
 
@@ -83,13 +92,14 @@ for s in [WalletSection.positions, .nfts, .risk, .permissions] {
 // all seven chips, each with an empty state of its own.
 let all = WalletSection.present()
 check(all == WalletSection.order, "every scope is present, in order")
-check(all.count == WalletSection.allCases.count, "no scope is hidden from anybody")
+check(all.count == WalletSection.order.count, "no scope is hidden from anybody")
+check(!all.contains(.follow), "the verb is never published as a scope")
 
 // THE OBLIGATION THAT MAKES THAT HONEST. A chip that opens onto nothing is the
 // dead control §83 bans; the scopes that can be empty are allowed only because
 // each says what it would hold. A scope that can be empty and has no words is
 // the failure.
-for s in WalletSection.allCases {
+for s in WalletSection.order {
     check(!(s.emptyHeadline ?? "").isEmpty, "\(s.rawValue) names its own empty state")
     check(!(s.emptyBody ?? "").isEmpty, "\(s.rawValue) says what it would hold")
     check(s.emptyBody != s.summary, "\(s.rawValue)'s empty state is not its summary restated")
@@ -138,7 +148,9 @@ check(WalletSection.resolve(.risk, present: all) == .risk,
 check(WalletSection.resolve(.permissions, present: [.home, .holdings]) == .home,
       "a scope whose content has gone falls back to home")
 check(WalletSection.resolve(.holdings, present: [.holdings, .risk]) == .holdings,
-      "resolve honours a present scope even when activity is absent")
+      "resolve honours a present scope even when home is absent")
+check(WalletSection.resolve(.follow, present: WalletSection.order + WalletSection.verbs) == .home,
+      "a verb is never resolved to — Follow acts, it is not a page (prd §1039)")
 // The fixture that separates "falls back to activity" from "falls back to the
 // first present scope" — without it, both implementations pass every case above.
 check(WalletSection.resolve(.permissions, present: [.holdings, .home]) == .home,
@@ -147,19 +159,19 @@ check(WalletSection.resolve(.permissions, present: [.holdings, .home]) == .home,
 // shows(): one scope is a label, not a control (§83).
 check(!WalletSection.shows(present: [.home]), "one scope draws no strip")
 check(!WalletSection.shows(present: []), "no scopes draw no strip")
-check(WalletSection.shows(present: [.home, .activity]), "two scopes draw a strip")
+check(WalletSection.shows(present: [.home, .holdings]), "two scopes draw a strip")
 
 // The labels are the ruled short nouns. Spelled out because the ruling was
 // specifically that the four QUESTIONS are too long for a control.
 check(WalletSection.home.label == "Home", "home reads Home")
-check(WalletSection.activity.label == "Activity", "activity reads Activity")
 check(WalletSection.holdings.label == "Holdings", "holdings reads Holdings")
 check(WalletSection.positions.label == "Positions", "positions reads Positions")
 check(WalletSection.nfts.label == "NFTs", "nfts reads NFTs")
 check(WalletSection.risk.label == "Risk", "risk reads Risk")
 check(WalletSection.permissions.label == "Permissions", "permissions reads Permissions")
 for s in WalletSection.allCases {
-    check(!s.label.contains(" "), "\(s.rawValue)'s label is ONE word — the strip must not wrap")
+    // One line on a tile: one word, or two short ones ("Coming up", prd §1041).
+    check(s.label.split(separator: " ").count <= 2, "\(s.rawValue)'s label fits one tile line — the grid must not wrap")
     check(s.label.count <= 11, "\(s.rawValue)'s label is short enough for a chip")
     check(!s.summary.isEmpty, "\(s.rawValue) carries an accessibility summary")
     check(s.summary != s.label, "\(s.rawValue)'s summary says more than its label")
@@ -202,15 +214,19 @@ mutate() {
 }
 
 mutate "a conditional scope moved out of the tail (the strip reflows)" \
-  's/\.home, \.activity, \.holdings, \.accounts, \.positions, \.nfts, \.risk, \.permissions,/.home, .risk, .activity, .holdings, .accounts, .positions, .nfts, .permissions,/'
+  's/\.home, \.holdings, \.comingUp, \.positions, \.nfts, \.risk, \.permissions,/.home, .risk, .holdings, .comingUp, .positions, .nfts, .permissions,/'
 mutate "home no longer leads" \
-  's/\.home, \.activity, \.holdings/.holdings, .home, .activity/'
-mutate "resolve falls back to the first present scope instead of activity" \
-  's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
+  's/\.home, \.holdings, \.comingUp/.holdings, .home, .comingUp/'
+mutate "resolve falls back to the first present scope instead of home" \
+  's/guard let wanted, !wanted\.isVerb, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, !wanted.isVerb, present.contains(wanted) else { return present.first ?? .home }/'
+mutate "the verb resolved to as a page (prd §1039)" \
+  's/guard let wanted, !wanted\.isVerb, present\.contains\(wanted\)/guard let wanted, wanted.isVerb || present.contains(wanted)/'
+mutate "the verb slips into the scopes' order (prd §1039)" \
+  's/\.nfts, \.risk, \.permissions,\n    \]/.nfts, .risk, .permissions, .follow,\n    ]/'
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
 mutate "risk is marked unconditional, so the tail rule stops being enforced" \
-  's/case \.positions, \.nfts, \.risk, \.permissions: return true/case .positions, .nfts, .permissions: return true\n        case .risk: return false/'
+  's/case \.comingUp, \.positions, \.nfts, \.risk, \.permissions: return true/case .comingUp, .positions, .nfts, .permissions: return true\n        case .risk: return false/'
 mutate "every scope gated again, so five chips vanish on the wallet that most needs them" \
   's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
@@ -227,8 +243,8 @@ mutate "home's empty copy promises a load state it cannot know (§83)" \
 # these files DOCUMENT the rules by naming what they must not do, so a guard
 # grepping raw source scores prose as compliance (the Obsidian/Cursor lesson).
 strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
-for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$CHROMEVIEW" "$SCOPEROWS" "$SCOPEHEAD" \
-         "$SRC" "$CHASSIS" "$ACTIVITY" "$CHIPS" "$EMPTYFIG"; do
+for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$CHROMEVIEW" "$SCOPEHEAD" \
+         "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -258,11 +274,17 @@ deny MainSurface.swift "walletSectionSwitcher" \
 # `roomControls` (the `deny` directly above is its other half).
 guard FeedScreen.swift "DSRoomScopeChrome(" \
   "the scope control is not drawn in the room's content"
-# ...and the chrome really carries BOTH halves, rather than having become a deck
-# with the readings quietly dropped. Home draws them as rows, a pushed scope as
-# a header; without both this passes on a room that lost what it scopes by.
-guard DSRoomScopeChrome.swift "DSScopeRows(" \
-  "the chrome no longer draws the scope rows — Home's list IS the readings (§747)"
+# **THE OVERVIEW ROWS AND THE ACTIONS BLOCK ARE DELETED (prd §1039).** The
+# rows said the tiles a second time; the verbs are the last tiles now. Home
+# is box · tiles · menu · list, as in every room, and neither block returns.
+deny DSRoomScopeChrome.swift "DSScopeRows(" \
+  "the Overview rows are back — they repeat the tiles as rows (prd §1039)"
+deny DSRoomScopeChrome.swift 'String(localized: "Actions")' \
+  "the Actions block is back on Home — the verbs are the last tiles (prd §1039)"
+deny DSRoomScopeChrome.swift 'String(localized: "Overview")' \
+  "the Overview block is back on Home (prd §1039)"
+guard DSRoomScopeChrome.swift "verbs: Set(verbs)" \
+  "the chrome no longer hands the room's verbs to the grid as verb tiles (prd §1039)"
 # **THE HEADER BECAME TILES, UNDER THE FIGURE** (prd §752, user: "i don't want
 # the app to have controls at the top of the screen anywhere"). The chrome draws
 # the scopes as a grid, and nothing brings the strip back.
@@ -307,18 +329,12 @@ tiles_at=$(print -r -- "$chrome_bare" | grep -n "DSScopeTiles(" | head -1 | cut 
 [[ "$chrome_bare" == *"figure(active)"* && "$chrome_bare" == *"height: DSRoomChassis.visualSlot"* ]] \
   || fail "drift: the chrome no longer draws the section figure in the fixed lead box — the tiles move between pages (§765)"
 wallet_fn=$(sed -n '/func walletScopeChromeSection(/,/^    }$/p' "$work/FeedScreen.swift.bare")
-[[ "$wallet_fn" == *"figure: { scope in"* && "$wallet_fn" == *"walletScopeVisualSection(scope)"* ]] \
+[[ "$wallet_fn" == *"figure: { scope in"* && "$wallet_fn" == *"walletScopeVisualSection(scope"* ]] \
   || fail "drift: the wallet no longer hands its section figure to the chrome (§765)"
 for sibling in "FramesRoomFigure(head: head,"; do
   (( $(grep -c "$sibling" "$work/FeedScreen.swift.bare") == 2 )) \
     || fail "drift: a devnet figure is drawn outside the chrome again — its tiles move between pages (§765): $sibling"
 done
-# A ROOM WITH ONE READING DRAWS NO ROWS (\u00a783). The gate used to sit in the
-# room, beside the switcher it suppressed; under \u00a7744 the chrome must draw on
-# Home either way (it carries the crown and the acts), so the gate moved into
-# the rows themselves. Same rule, one place, all five rooms.
-guard DSScopeRows.swift "if !sections.isEmpty" \
-  "the rows are not gated — a room with one reading would draw an empty plate (\u00a783)"
 guard FeedScreen.swift "WalletSection.resolve(" \
   "the room reads chrome.walletSection raw instead of resolving it"
 
@@ -348,27 +364,16 @@ chrome_fn=$(sed -n '/func walletScopeChromeSection(/,/^    }$/p' "$work/FeedScre
 [[ "$chrome_fn" == *"DSRoomScopeChrome("* && "$chrome_fn" == *"crown: { slot in"* \
    && "$chrome_fn" == *"walletTilesSection(visible"* ]] \
   || fail "drift: the wallet no longer passes its crown into DSRoomScopeChrome"
-# **One surface, in reading order** (prd §750): the head, then Actions, then
-# Readings. Read in the chrome, where the order is the source order.
+# **Box, then tiles** (prd §1039, after §750's head · Actions · Readings).
+# Read in the chrome, where the order is the source order.
 CHROME="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
 # Since §765 the crown is drawn by `lead`, the one box both arms share, so the
 # head's place in the order is the `lead` call and `lead` must draw the crown.
 grep -q "if let showing { crown(showing) }" "$CHROME" \
   || fail "drift: the chrome's lead box no longer draws the crown on Home (§765)"
-head_at=$(grep -n "^            lead$" "$CHROME" | head -1 | cut -d: -f1 || true)
-acts_at=$(grep -n 'String(localized: "Actions")' "$CHROME" | head -1 | cut -d: -f1 || true)
-rows_at=$(grep -n "DSScopeRows(sections:" "$CHROME" | head -1 | cut -d: -f1 || true)
-[[ -n "$head_at" && -n "$acts_at" && -n "$rows_at" ]] \
-  || fail "drift: cannot locate the head, Actions or the Readings in DSRoomScopeChrome"
-(( head_at < acts_at && acts_at < rows_at )) \
-  || fail "drift: Home is out of order — the head, then Actions, then Readings (§750)"
-# ...and the section tiles sit between the head and Actions on Home too (§752b,
-# user: "i think they should always show"). The first match is Home's.
-tiles_at=$(grep -n "DSScopeTiles(sections:" "$CHROME" | head -1 | cut -d: -f1 || true)
-[[ -n "$tiles_at" ]] && (( head_at < tiles_at && tiles_at < acts_at )) \
-  || fail "drift: Home's section tiles are missing or out of order — the head, then the tiles, then Actions (§752b)"
-guard DSScopeRows.swift "section.glyph" \
-  "the Readings rows lost their glyph — they must lead with the tile's symbol (§752b)"
+# The wallet's verb is handed to the chrome, and the tap acts (prd §1039).
+[[ "$chrome_fn" == *"verbs: WalletSection.verbs"* && "$chrome_fn" == *"route.pushBridge(.wallet)"* ]] \
+  || fail "drift: the wallet's Follow tile is not handed to the chrome, or no longer opens the follow field (prd §1039)"
 
 # ── §757: the rows stand on nothing, and Home reserves no box ────────────────
 # **THE PLATES** (user, 2026-09-15: "they should not have cards"). Actions and
@@ -382,8 +387,6 @@ guard DSScopeRows.swift "section.glyph" \
 # here, we don't want cards that are like this"), so §758 took it off the head
 # template and off this crown: NOTHING on Home stands on a plate, and the guard
 # is a plain `deny` on both files.
-deny DSScopeRows.swift "dsWidgetSurface" \
-  "the readings are back on a plate — §749 took the card off every row in the app (§757)"
 deny DSRoomScopeChrome.swift "dsWidgetSurface" \
   "a block on the wallet family's Home is on a plate again — the head, the acts and the readings are all content on the page (§757/§758)"
 
@@ -444,10 +447,14 @@ guard FeedScreen.swift "chrome.walletSections = \[\]" \
   "the room no longer CLEARS its scopes — the toggle would draw over the next room"
 guard FeedScreen.swift "walletLive.warnings" \
   "the dot no longer rides warnings — presence-lighting is the §83 overclaim that retired 'Needs attention'"
-guard FeedScreen.swift "case .activity:" \
+guard FeedScreen.swift "case .holdings:" \
   "the wallet block no longer switches on the scope"
-guard FeedScreen.swift "Ahead" \
-  "the forward-dated rows lost their heading in Activity"
+guard FeedScreen.swift "walletComingUpSections(upcoming, nextEventID: nextEventID)" \
+  "Coming up no longer lists what's ahead (prd §1041)"
+deny FeedScreen.swift "ahead: upcoming" \
+  "what's ahead is back on Home — Home is only what happened (prd §1041)"
+guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) }" \
+  "Home's stream no longer drops the rows Coming up holds — a deadline would read as a move (prd §1041)"
 
 # The Foundation-only promise: this file must stay compilable without SwiftUI,
 # or the harness above cannot run at all.
@@ -475,11 +482,7 @@ guard DSRoomChassis.swift "crownChrome + (chips ? crownRangeChips : 0)" \
   "the chips left the crown's budget — every crown drawing a range track clips it again"
 guard FeedScreen.swift "DSRoomChassis.crownChart(chips: ranges.count > 1)" \
   "the wallet crown stopped paying for its range chips — the 7d/Watched track clips at the slot's edge"
-# Since prd §942 the activity chart pays by construction instead: the whole
-# drawing is framed to exactly the caller's box and the bars flex inside it, so
-# the window line under them can never be pushed through the slot's edge.
-guard RoomActivityChart.swift ".frame(height: box, alignment: .top)" \
-  "the activity chart is no longer framed to its box — its window line can clip at the slot's edge"
+# (The activity chart's own guard went with the chart, prd §1039.)
 # (The chart's `chartHeight(chips:)` budget, and the guard that its predicate
 # stayed the chips' own gate, went with prd §942: a flexing drawing reserves
 # nothing, so there is no second answer for the chips to disagree with.)

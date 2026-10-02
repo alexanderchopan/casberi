@@ -1,35 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Ask ${applicationName}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preguntar a ${applicationName}"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName} に聞く"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName}에게 물어보기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "问 ${applicationName}"
-          }
-        }
-      }
-    },
     "New note in ${applicationName}" : {
       "extractionState" : "extracted_with_value",
       "localizations" : {
@@ -109,35 +80,6 @@
         }
       }
     },
-    "Search ${applicationName}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buscar en ${applicationName}"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName} を検索"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName} 검색"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索 ${applicationName}"
-          }
-        }
-      }
-    },
     "Things with someone in ${applicationName}" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -163,35 +105,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "${applicationName} 中与某人相关的内容"
-          }
-        }
-      }
-    },
-    "What's my week in ${applicationName}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cómo va mi semana en ${applicationName}"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName} で今週はどうだった"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName}에서 이번 주는 어땠는지"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 ${applicationName} 里我这周怎么样"
           }
         }
       }

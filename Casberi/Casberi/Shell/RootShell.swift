@@ -39,23 +39,6 @@ struct RootShell: View {
         composerOpen || noteOpen || deepLinkThing != nil
             || deepLinkPerson != nil || safeAsk != nil || !onboarded
     }
-    /// Session-scoped only, never persisted — the bar's pulse (ruling 6)
-    /// stops once the agent has been raised AT ALL this launch. Distinct
-    /// from `KeptAskStore`'s own per-ask, persisted "seen" dot.
-    @State private var agentEverOpened = false
-    /// The hint capsule is on screen (prd §550) — the once-ever teach of the
-    /// gesture §390 hid. Just the visibility; the gate that decides whether it
-    /// may ever appear again is `agentEverRaised` below.
-    @State private var agentHint = false
-    /// Spent the first time the agent rises by ANY door (prd §550). Persisted,
-    /// for `sources.everOpened`'s stated reason one control over: a first-run
-    /// explanation re-explained on every cold launch is what turns a grace into
-    /// permanent furniture.
-    ///
-    /// It tracks the AGENT, never a connected app. Somebody can furnish the
-    /// whole catalog and still never find the hold, and a grace that expires on
-    /// an unrelated event is a label outliving its own explanation.
-    @AppStorage("agent.everRaised") private var agentEverRaised = false
     @State private var deepLinkThing: Thing?
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
@@ -207,9 +190,11 @@ struct RootShell: View {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(4))
                 NSLog("[Casberi] openSection: %@", raw)
-                if let s = WalletSection(rawValue: raw) { chrome.walletSection = s }
-                if let s = FramesSection(rawValue: raw) { chrome.framesSection = s }
-                if let s = LogosSection(rawValue: raw) { chrome.logosSection = s }
+                // A verb tile (Follow, Create, Send, Top up, Explorer) is
+                // never a page (prd §1039); `activity` and `accounts` are gone.
+                if let s = WalletSection(rawValue: raw), !s.isVerb { chrome.walletSection = s }
+                if let s = FramesSection(rawValue: raw), !s.isVerb { chrome.framesSection = s }
+                if let s = LogosSection(rawValue: raw), !s.isVerb { chrome.logosSection = s }
                 // The Reminders room's date tiles too (prd §993).
                 if let s = RemindersScope(rawValue: raw), !s.isVerb { chrome.remindersScope = s }
                 // The Calendar room's spans too (prd §994); New is a verb.
@@ -225,54 +210,6 @@ struct RootShell: View {
 
     var body: some View {
         shell
-    }
-
-    /// THE ONCE-A-DAY WHISPER IS GONE (prd §550). What survives here is the
-    /// iPad pane's day lead, which was always on a different clock — the
-    /// capsule was a once-a-day DELIVERY, the pane is a standing lead redrawn
-    /// every open — and the two only ever shared this one compose so they
-    /// could never disagree about what today was. With the capsule out of the
-    /// day business the pane is the only reader left, so this composes when,
-    /// and only when, the pane is there to read it.
-    ///
-    /// The day reading did not leave the phone with the capsule: the All
-    /// feed's own Today header has drawn `DayBrief.whisper` since §385.
-    @MainActor
-    private func refreshPaneBrief(things: [Thing]) {
-        guard onboarded, sceneState.detail.paneActive else { return }
-        // Composing is not free — `DayBrief.lead` walks the window several
-        // times and `walletMove` decodes every watched wallet's sample line —
-        // so it happens only when someone will actually read the result. On a
-        // phone that is nobody, which the guard above now says in one line
-        // instead of the two clocks it used to reconcile.
-        chrome.paneBrief = DayBrief.whisper(things: things)
-    }
-
-    /// **THE HINT IS RETIRED (prd §591, 2026-09-03) and this is its stub.**
-    ///
-    /// §550 shipped a one-time glass capsule above the agent bar reading
-    /// "Talk to your agents · Press and hold the button below." Its entire
-    /// content was the 0.45s hold, which §390 had made the only route to the
-    /// agent from this control and which had no visible affordance — a control
-    /// that has to be advertised is a control that was not found.
-    ///
-    /// §591 deleted the hold: the bar's tap opens a panel and the agent is a
-    /// labelled row inside it, so there is nothing left to teach. A hint whose
-    /// sentence names a gesture the app no longer has is worse than no hint —
-    /// it is the honesty rule's dead control, in the one place a first-time
-    /// reader is being told how the app works.
-    ///
-    /// Kept as a function that arms nothing rather than unwound, so
-    /// `-agentHintProbe` and the two activation call sites still resolve and
-    /// still report; the flag simply never becomes true.
-    @MainActor
-    private func refreshAgentHint() {
-        if agentHint { withAnimation(DS.Motion.standard) { agentHint = false } }
-        #if DEBUG
-        if UserDefaults.standard.bool(forKey: "agentHintProbe") {
-            NSLog("[Casberi] agentHint: retired (§591 — the hold it taught is gone)")
-        }
-        #endif
     }
 
     private var shell: some View {
@@ -301,18 +238,6 @@ struct RootShell: View {
         .onChange(of: composerOpen) { _, open in
             if open {
                 OnDeviceModel.resetConversation()
-                agentEverOpened = true
-                // The hint's job is done however the agent rose (prd §550) —
-                // this capsule's own tap, the hold it names, ⌘K, a quick
-                // action, a deep link. Spent here rather than at any one tap
-                // site so no door can be the one that forgets, which is the
-                // same reason `openSources` owns `sources.everOpened`.
-                //
-                // Retiring by being USED is the whole design: the rise is
-                // proof the explanation landed, so nothing has to guess when
-                // it has been read.
-                agentEverRaised = true
-                agentHint = false
                 // Whatever the walk had selected belongs to the feed you just
                 // left; coming back should not find a stale ring on a row.
                 chrome.walkSelected = nil
@@ -322,10 +247,6 @@ struct RootShell: View {
             // any more, so there is no stale word for a next rise to inherit.
         }
         #if targetEnvironment(macCatalyst)
-        // The local MCP listener (2026-08-06) — Mac only, and only if the
-        // person turned it on. `startIfEnabled` is a no-op otherwise, so the
-        // default build opens no port at all.
-        .task { MCPServer.shared.startIfEnabled() }
         // THE MAC'S OWN SWEEP CLOCK (prd §607). Everywhere else, alarms ride
         // two doors: `WalletBackgroundRefresh`'s `BGAppRefreshTask`, and the
         // activation pass. Neither reaches a Mac that is simply LEFT OPEN.
@@ -572,6 +493,9 @@ struct RootShell: View {
                 // The seats deleted 2026-10-01 (prd §1038): their rows, seat
                 // records, address-book tags, defaults and devnet keys.
                 SourceRename.sweepRetiredSeats(context: modelContext, store: bridges)
+                // What the ask left behind (2026-10-01): its defaults, the MCP
+                // pairing token, and any MCP save request still in the store.
+                SourceRename.sweepRetiredAsk(context: modelContext)
                 // Every voice note's length, and a few notes' words read back
                 // with their times (prd §987). Its own task: a read is seconds
                 // of on-device work, and nothing below waits on it.
@@ -799,10 +723,6 @@ struct RootShell: View {
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
                 }
             }
-            // Warm the model at launch (non-blocking) so the first Ask doesn't
-            // pay the one-time model load. Guarded so `-noPrewarm` can measure
-            // the cold path.
-            if !skipPrewarm { OnDeviceModel.prewarm() }
             #if DEBUG
             // The launch-arg connect-and-sync probes (-chatgptImport,
             // -tokenBridge, -fcName, -bskyHandle, -rssFeed) share one shape —
@@ -860,8 +780,6 @@ struct RootShell: View {
                           UserDefaults.standard.bool(forKey: "demo.mode.pourPending") ? "YES" : "NO",
                           count)
                     NSLog("[Casberi] demoProbe| seats=%d", bridges.bridges.count)
-                    NSLog("[Casberi] demoProbe| keptAsks=%@",
-                          KeptAskStore.shared.order.joined(separator: ", "))
                 }
             }
             #endif
@@ -1157,21 +1075,6 @@ struct RootShell: View {
                     }
                     let ms = Int(Date().timeIntervalSince(start) * 1000)
                     NSLog("[Casberi] answerProbe(\"%@\") %dms →\n%@", q, ms, doc.joined(separator: "\n"))
-                }
-            }
-            // Debug hook: `-homeInsightProbe YES` runs the on-device "Noticed"
-            // line over the current corpus (bypassing the cache), logging the
-            // candidates fed, the raw model text, and the post-guard result, so
-            // the line's voice/quality/decline-rate can be sampled headlessly.
-            if UserDefaults.standard.bool(forKey: "homeInsightProbe") {
-                let delay = UserDefaults.standard.double(forKey: "probeDelay")
-                Task { @MainActor in
-                    if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
-                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                    let surfaced = Corpus.surfaced(all)
-                        .sorted { $0.capturedAt > $1.capturedAt }
-                    let line = await HomeInsightStore.shared.debugProbe(from: surfaced)
-                    NSLog("[Casberi] homeInsightProbe result → %@", line ?? "NONE (declined)")
                 }
             }
             // Debug hooks for the BYO-key path: `-byokKey <key>` stores a key
@@ -1490,71 +1393,6 @@ struct RootShell: View {
                     }
                 }
             }
-            // Debug hook: `-keepAskProbe "<kind>:<title>"` keeps that kind
-            // headlessly (or `clear`); `KeptAskStore.seedFromLaunchArgs()` does
-            // the keep itself. Then run its composer over the real corpus and
-            // log the result, so the persistence + digest machinery verifies
-            // without tapping through the UI.
-            KeptAskStore.seedFromLaunchArgs()
-            if !KeptAskStore.shared.order.isEmpty {
-                Task { @MainActor in
-                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
-                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
-                    for kind in KeptAskStore.shared.order {
-                        let result = await KeptAskComposers.compose(kind, things: all, context: modelContext)
-                        NSLog("[Casberi] keepAskProbe compose(\"%@\") → delta=\"%@\" digest=\"%@\"\n%@",
-                              kind, result?.delta ?? "nil", result?.digest ?? "nil",
-                              result?.doc.joined(separator: "\n") ?? "(no composer for this kind)")
-                    }
-                }
-            }
-            // Debug hook: `-briefLedger "days=6;symbol=ETH;themes=…;sources=…"`
-            // (or `clear`) plants prior windows in the §214 ledger, so a
-            // streak, a continuity subline or an absence line verifies in ONE
-            // launch instead of a week of real opens. Declared before the
-            // probe below — hooks run in list order, and the probe must read a
-            // ledger that's already seeded.
-            BriefLedger.seedFromLaunchArgs()
-            // Debug hook: `-briefScope "<Scope>:<hoursAgo>[,…]"` (or `clear`)
-            // seeds a scoped brief's own "since I last checked" stamp, so a
-            // window that spans real days verifies in one launch instead of
-            // a real wait. WAS DECLARED (the function existed in
-            // `BriefScope.swift` since the feature shipped) but never called
-            // from anywhere — found live, 2026-08-08: seeding "Money:20" had
-            // no effect, and `BriefScope.since(category:)` was silently
-            // reading whatever a PRIOR launch's real `markViewed` call had
-            // left behind instead. Declared here, before every brief-composing
-            // probe below, for the same list-order reason `BriefLedger`'s
-            // sits here.
-            BriefScope.seedFromLaunchArgs()
-            // Debug hook: `-todayProbe YES` composes the Today brief (prd
-            // §166) over the real corpus and logs the whole doc — every module
-            // it chose and every observation that fired — so the composer
-            // verifies without a tap. Pair with `-awayGap <hours>` to widen
-            // the window a headless run measures.
-            //
-            // Composes with `presenting: false` ON PURPOSE: recording would
-            // make each probe run suppress the leads of the next one, so a
-            // rerun wouldn't reproduce. Use `-briefLedger` to stage memory.
-            if UserDefaults.standard.bool(forKey: "todayProbe") {
-                Task { @MainActor in
-                    let all = Corpus.surfaced((try? modelContext.fetch(FetchDescriptor<Thing>(
-                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? [])
-                    let landed = DayBrief.landed(all)
-                    let result = await KeptAskComposers.compose("today", things: all,
-                                                               context: modelContext)
-                    NSLog("[Casberi] todayProbe: landed=%d ledger=%d headline=\"%@\" digest=\"%@\"",
-                          landed.count, BriefLedger.snapshot().count,
-                          DayBrief.headline(things: all) ?? "(nil)",
-                          result?.digest ?? "nil")
-                    // One NSLog PER LINE — a joined multi-line message gets
-                    // truncated by the log reader mid-document, which hid an
-                    // unresolved ref for a whole debugging round (2026-07-22).
-                    for line in result?.doc ?? ["(no doc)"] {
-                        NSLog("[Casberi] todayDoc| %@", line)
-                    }
-                }
-            }
             // Debug hook: `-ellipsisProbe "<q1>|<q2>"` runs two asks in
             // sequence through the REAL answer path (§176) — q1 sets the
             // named-ask shape, then q2 (a bare "and bbc?") exercises the
@@ -1627,9 +1465,7 @@ struct RootShell: View {
             // `if composerOpen { … }`, so every raise builds a brand-new
             // `Composer` and every lower destroys it — which means the FIRST
             // open a launch makes is the only one `-openComposer` can show,
-            // and it is the atypical one. Everything the open reuses
-            // (`AgentOpenCache`) only pays off from the second onward, so
-            // without this the cache reads as doing nothing at all.
+            // and it is the atypical one.
             let cycles = UserDefaults.standard.integer(forKey: "composerCycles")
             if cycles > 0 {
                 Task { @MainActor in
@@ -1767,20 +1603,6 @@ struct RootShell: View {
                     }
                 }
             }
-            // Debug hook: `-mcpProbe "<query>"` exercises the MCP tool layer
-            // (PRD §34) against the real corpus — search + week synthesis run as
-            // reads, and a save is requested (which lands as an approval in Feed,
-            // never a silent write). Proves the tools before the transport exists.
-            if let q = UserDefaults.standard.string(forKey: "mcpProbe") {
-                let hits = MCPTools.searchThings(q, context: modelContext)
-                NSLog("[Casberi] mcpProbe search(\"%@\") → %d things:\n%@", q, hits.count,
-                      hits.map { "· \($0.title) [\($0.kind.typeTag) · \($0.source)]" }.joined(separator: "\n"))
-                NSLog("[Casberi] mcpProbe week_synthesis → %@", MCPTools.weekSynthesis(context: modelContext))
-                let approval = MCPTools.saveThing(text: "Ship the MCP spec review",
-                                                  from: "Claude", tags: ["Casberi"],
-                                                  context: modelContext)
-                NSLog("[Casberi] mcpProbe save_thing → approval pending in Feed: %@", approval.title)
-            }
             #endif
         }
         // A Spotlight result opens the thing itself, not the app's front door.
@@ -1912,13 +1734,6 @@ struct RootShell: View {
             for: UIApplication.willEnterForegroundNotification)) { _ in
             shellMounted = true
         }
-        // The quick action's WARM door (2026-08-14). `SceneDelegate` receives
-        // the long-press while this view is alive, so the brief opens on the
-        // press rather than waiting on an activation pass that may already
-        // have run — see `openBriefIfRequested`, which both doors share.
-        .onReceive(NotificationCenter.default.publisher(for: QuickAction.received)) { _ in
-            openBriefIfRequested()
-        }
     }
 
     /// Everything one foreground/activation runs — split from the scenePhase
@@ -1957,8 +1772,8 @@ struct RootShell: View {
         // every single foreground re-evaluates the whole shell body for
         // nothing. Same reasoning as `redactNow`'s removal above.
         if !hasBeenActive { hasBeenActive = true }
-        // Freeze the away window (librarian, prd §67 ⑥) — "while you
-        // were away" grounds on it; things landing from here on are
+        // Freeze the away window (prd §67 ⑥) — the All feed's "new since
+        // you were away" grounds on it; things landing from here on are
         // arriving while you're present.
         AppVisit.markOpened()
         // The digest's reading hour learns from when the app is opened.
@@ -1989,34 +1804,8 @@ struct RootShell: View {
             await DemoMode.pourIfNeeded(context: modelContext)
             await DemoMode.restampIfStale(context: modelContext)
         }
-        // Take back the questions an older demo pinned and never removed. Its
-        // own teardown iterates the CURRENT list, so a pin it stopped planting
-        // survives every exit — see `DemoMode.sweepRetiredKeptAsks`. Here
-        // rather than in `exit` because the person may never enter the demo
-        // again, and it costs a `UserDefaults` bool on every launch after the
-        // first.
-        DemoMode.sweepRetiredKeptAsks()
         // (The placeholder crossfade used to live here — it is hoisted to the
         // top of this function now, above the debounce guard.)
-        // Warm the model so the first Ask is fast — but OFF the launch
-        // window (PERF 2026-07-29, user: "first open is many seconds
-        // and in slow motion, then fine"). `WarmModel.prewarm()` does
-        // two synchronous @MainActor calls — `LanguageModelSession()`
-        // and `session.prewarm()`, which loads the on-device LLM — and
-        // running them the instant the scene activates blocked the main
-        // thread as the opening frames painted, so the feed hung and
-        // the chip strip wouldn't swipe until the model finished
-        // loading ("then fine"). Deferred well past the first
-        // interactive frame on cold launch; the only cost is an Ask
-        // fired in the opening couple of seconds paying the same
-        // one-time load itself, which prewarm merely front-runs.
-        if !skipPrewarm {
-            let coldLaunch = firstActivation
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(coldLaunch ? 2500 : 300))
-                OnDeviceModel.prewarm()
-            }
-        }
         // The heavier foreground work — polling every connected bridge
         // (`refreshAllConnected` includes a SYNCHRONOUS Photos fetch),
         // the embedding backfill, and the insight/kept-ask/whisper
@@ -2086,108 +1875,38 @@ struct RootShell: View {
                     await ThreadDigest.sweep(context: modelContext)
                     await ScreenshotNaming.sweep(context: modelContext)
                 }
-                // The "Noticed" line's real trigger (docs/agent-brief.md
-                // ruling 10). Also refreshes the kept-ask digest cache
-                // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
+                // The wallet widget's payloads (prd §382). This block also ran
+                // the Noticed line, the notice, the cluster names, the kept-ask
+                // digests and the Today brief until they went with the ask
+                // (2026-10-01); the widget publish is what is left of it.
                 Task { @MainActor in
                   // On the sweep clock (2026-08-06) because it is main-actor work
-                  // in the same window as the bridge sweep and costs about what a
-                  // bridge slot does — a 600-row materialization plus three
-                  // composes — so a report that showed only the sweep would send
-                  // whoever reads it to optimize the smaller half.
+                  // in the same window as the bridge sweep — a 600-row
+                  // materialization — so a report that showed only the sweep
+                  // would send whoever reads it to optimize the smaller half.
                   // Behind the first paint (2026-09-06): this fetch's transformable
                   // decoding was 61% of the main thread in the pre-paint window.
                   await FirstPaint.painted()
                   // A COLD LAUNCH WAITS A BEAT MORE (PERF 2026-09-08, prd §651).
-                  // Nothing below is drawn by the feed — the insight line feeds
-                  // the agent, the digests feed the kept-ask chips, the brief and
-                  // the widgets are read later — and the block sampled at 158 of
-                  // 1,083 main-thread samples across a launch (`insightFetch600`
-                  // hydrates 600 rows with their inline text, and the composers
-                  // read it), landing in the seconds a person starts scrolling in.
-                  // On a later foreground the corpus is warm and this runs as it
-                  // always did.
+                  // Nothing below is drawn by the feed, and the fetch hydrates
+                  // 600 rows in the seconds a person starts scrolling in. On a
+                  // later foreground the corpus is warm and this runs at once.
                   if firstActivation { try? await Task.sleep(for: .seconds(2.5)) }
-                  await SweepClock.measure("insight.recompute") {
-                    // Bounded (2026-07-24): insight/kept-ask/whisper read
-                    // only recent activity, so this needn't materialize the
-                    // whole corpus on the main actor at launch.
+                  await SweepClock.measure("widget.publish") {
                     var d = FetchDescriptor<Thing>(
                         sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
                     d.fetchLimit = 600
                     #if DEBUG
-                    let surfaced = LaunchPerf.time("insightFetch600") {
+                    let surfaced = LaunchPerf.time("widgetFetch600") {
                         Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
                     }
-                    LaunchPerf.time("HomeInsight.refresh") { HomeInsightStore.shared.refresh(from: surfaced) }
-                    // The deterministic notice (prd §384) — its own bounded
-                    // fetches, because a newest-600 window structurally cannot
-                    // hold a three-years-ago anniversary (the §382 widget
-                    // deadline-scan reasoning).
-                    LaunchPerf.time("AgentNoticed.refresh") { AgentNoticed.shared.refresh(context: modelContext) }
-                    // The librarian names the map's clusters (prd §386m) — off
-                    // the compose path by construction, which is the only reason
-                    // §386a's "the brief awaits no model" survives the feature.
-                    await ClusterNames.shared.refresh()
-                    // GITHUB'S CONTRIBUTION YEAR (2026-08-16, report: "did we
-                    // just get rid of 'your work' as a category or it's not
-                    // showing"). Not removed — starved. `TodayBrief.githubCalendar`
-                    // reads `GitHubGraphStore.year` and deliberately never
-                    // fetches, so the brief costs nothing for a room it merely
-                    // mentions; but the ONLY caller that did fetch was the GitHub
-                    // room's own `.task`. So Work could compose only for someone
-                    // who had opened that room within six hours, which for most
-                    // people is never, and the section silently never appeared.
-                    //
-                    // This is §320's class exactly ("two features existed and
-                    // NOTHING CALLED THEM") and §386m's, one section over — a
-                    // feature whose absence looks identical to its quiet success,
-                    // since a Work section that declines and one that was never
-                    // fed render as the same nothing.
-                    //
-                    // Safe here for the reason the composer's comment already
-                    // gives: `refreshIfStale` self-guards on a six-hour cache, an
-                    // in-flight flag, and a stored token, so a foreground with no
-                    // GitHub connected returns before it touches the network.
-                    await GitHubGraphStore.shared.refreshIfStale()
-                    await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
-                    // The widget's rung-1 content (its brief headline) is
-                    // published as a side effect of composing "today" — but
-                    // refreshDigests only composes it for someone who has
-                    // KEPT that ask. Most people never do, so the widget
-                    // silently sat on rung 2 (the newest thing) forever.
-                    // Compose it here too, unconditionally, so the widget
-                    // stops being stale for everyone else (2026-08-03).
-                    if !KeptAskStore.shared.order.contains("today") {
-                        _ = await TodayBrief.compose(things: surfaced, context: modelContext)
-                    }
-                    LaunchPerf.time("refreshPaneBrief") { refreshPaneBrief(things: surfaced) }
-                    refreshAgentHint()
                     LaunchPerf.time("widgetPublish") { WidgetPublish.publishAll(things: surfaced, context: modelContext) }
                     #else
                     let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
-                    HomeInsightStore.shared.refresh(from: surfaced)
-                    AgentNoticed.shared.refresh(context: modelContext)
-                    await ClusterNames.shared.refresh()
-                    await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
-                    if !KeptAskStore.shared.order.contains("today") {
-                        _ = await TodayBrief.compose(things: surfaced, context: modelContext)
-                    }
-                    // The pane brief's compose rides the same corpus walk this
-                    // Task already paid for — never its own fetch.
-                    refreshPaneBrief(things: surfaced)
-                    refreshAgentHint()
                     WidgetPublish.publishAll(things: surfaced, context: modelContext)
                     #endif
                   }
                 }
-                // The agent's chip counters, computed while nothing is waiting on
-                // them, so the first raise of a launch costs what every later one
-                // does (2026-08-12). Self-delaying and self-skipping — see
-                // `AgentOpenCache.warm`; it deliberately does NOT run inline here,
-                // since a ~761ms walk in the sweep is the launch stall this whole
-                // pass has been removing.
-                AgentOpenCache.shared.warm(context: modelContext)
         
             }
 }
@@ -2237,15 +1956,10 @@ struct RootShell: View {
             group?.removeObject(forKey: "note.request")
             chrome.newNote += 1
         }
-        // The "Daily Brief" quick action (icon long-press / Mac Dock menu)
-        // left a flag — this is the COLD-launch door for it, since a launch
-        // receives the action long before this view exists. The warm door is
-        // the `QuickAction.received` observer on the body.
-        openBriefIfRequested()
         // A notification was tapped (prd §306). The tap left the link rather
         // than opening it, because a notification can COLD-LAUNCH the app and
         // `onOpenURL` routing isn't guaranteed live at that instant — the same
-        // reason the quick action above uses a flag.
+        // reason the Control Center flags above are flags.
         if let link = Notifications.pendingLink() {
             route(link)
         }
@@ -2263,37 +1977,6 @@ struct RootShell: View {
             group?.removeObject(forKey: "capture.landed")
             nudgeAfterExternalCapture()
         }
-    }
-
-    /// Land the "Daily Brief" quick action, if one is waiting.
-    ///
-    /// Reached from BOTH activation doors on purpose, and the flag is what
-    /// makes that safe: whichever runs first clears it, so the other returns
-    /// having done nothing. A cold launch is drained by `handleActivation`
-    /// (nothing was listening when the action arrived); a warm one is drained
-    /// by the `QuickAction.received` observer, because `handleActivation` is
-    /// debounced to one pass per two seconds and may already have run — a
-    /// flag with no nudge could otherwise sit until some later foreground and
-    /// raise the brief on an activation the person meant for something else.
-    ///
-    /// The landing is the `casberi://brief` route's, verbatim (see `route`'s
-    /// `case "brief"`): one composer, one door onto the day.
-    @MainActor
-    private func openBriefIfRequested() {
-        let group = UserDefaults(suiteName: SharedStore.appGroup)
-        guard group?.bool(forKey: "brief.request") == true else { return }
-        group?.removeObject(forKey: "brief.request")
-        // DRAINED BUT NOT ACTED ON while the ask is deprecated (prd §697b):
-        // the flag is cleared first, so a request left in the app group by an
-        // older build (or by a shortcut somebody saved) cannot sit there and
-        // raise the ask on some later foreground the person meant for
-        // something else — §377's own failure, from the other side.
-        guard AskSurface.enabled else { return }
-        NSLog("[Casberi] briefRequest: raising the agent on the brief")
-        sceneState.filter.source = "All"
-        sceneState.filter.tag = "All"
-        chrome.askRequest = TodayBrief.title
-        composerOpen = true
     }
 
     /// The leaving half of the scenePhase observer. Unlike the ACTIVATION
@@ -2319,15 +2002,11 @@ struct RootShell: View {
             // the value line densifies between opens (no-op without a
             // watched wallet; the OS decides if it ever runs).
             WalletBackgroundRefresh.schedule()
-            // The widget's new-ring boundary: everything after this
-            // stamp is "new since you left" on the home screen too
-            // (delight 2026-07-13). Reload so the widget re-reads.
+            // The "new since last seen" boundary a row's time tints against
+            // (`ShapedRows.newSinceLastSeen`). Born as the hero widget's
+            // new-ring stamp (2026-07-13); the key keeps its name.
             UserDefaults(suiteName: SharedStore.appGroup)?
                 .set(Date.now.timeIntervalSince1970, forKey: "widget.lastSeen")
-            WidgetCenter.shared.reloadTimelines(ofKind: "casberi.hero")
-            // Give the model's memory back when we're not in use; the
-            // next foreground reloads it.
-            OnDeviceModel.teardown()
         }
     }
 
@@ -2828,40 +2507,10 @@ struct RootShell: View {
         case "note":
             chrome.newNote += 1
         // casberi://brief — the agent, raised onto the brief (2026-07-25).
-        // The hero widget carries the brief's own lede now, so its tap has to
-        // land on the sentence it was showing; landing on the feed instead
-        // would make the tile a headline with nothing behind it. The SAME
-        // `askRequest` door the whisper capsule, the agent bar and a typed
-        // "how's my day" all already funnel through — one composer, one route.
-        // Both ask links answer NOTHING while the ask is deprecated (prd
-        // §697b) — an `openURL` that opens a surface the app does not offer
-        // is the dead control §83 bans, reached by a link instead of a tap.
-        case "brief":
-            guard AskSurface.enabled else { return }
-            sceneState.filter.source = "All"
-            sceneState.filter.tag = "All"
-            chrome.askRequest = TodayBrief.title
-            composerOpen = true
-        // casberi://ask?q=<question> — any ask, by its own words (2026-08-14,
-        // prd §382). Minted by the kept-ask and "Needs you" widgets, whose taps
-        // must land on the answer they were showing rather than at the feed.
-        //
-        // It hands the QUESTION to the same `askRequest` door above, which is
-        // byte-for-byte what tapping the kept pill in the composer does
-        // (`draft = title; commit()`). So a widget can only ever open an answer
-        // the app itself would produce for the same words — there is no second
-        // dispatch to drift, and a kind this build doesn't recognise degrades to
-        // an ordinary free-text ask instead of a dead link.
-        case "ask":
-            guard AskSurface.enabled else { return }
-            guard let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                    .queryItems?.first(where: { $0.name == "q" })?.value,
-                  !q.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            else { return }
-            sceneState.filter.source = "All"
-            sceneState.filter.tag = "All"
-            chrome.askRequest = q
-            composerOpen = true
+        // `casberi://brief` and `casberi://ask?q=` are GONE with the ask
+        // (2026-10-01; dark since prd §697b). Nothing mints either any more,
+        // and an old link falls to `default` and opens nothing, as it did
+        // while they were gated.
         // casberi://person/<Source>/<handle> — the profile card for one person
         // on one network (2026-07-16). In the app it's reached by tapping a
         // face; this is the same card by name, so the screen sweep can reach it
@@ -3177,16 +2826,6 @@ struct RootShell: View {
         }
     }
 
-    /// DEBUG `-noPrewarm` skips warming the model, so the cold first-answer
-    /// latency can be measured against the warm path.
-    private var skipPrewarm: Bool {
-        #if DEBUG
-        return UserDefaults.standard.string(forKey: "noPrewarm") != nil
-        #else
-        return false
-        #endif
-    }
-
     /// The person's OWN tags — every tag minus the built-in kind tags (Link,
     /// Note, …, which every thing wears automatically) — with how many things
     /// carry each, biggest first, the name breaking ties.
@@ -3393,13 +3032,6 @@ struct RootShell: View {
             #endif
             rawPartial(doc)
         }
-        // How long the brief's own compose stands off after painting the
-        // cached document, so the rise animation gets the main actor
-        // (PERF 2026-08-18; see the `TodayBrief.matches` branch below).
-        // Roughly the bar→surface morph's own spring response — long enough to
-        // cover the frames that make the open feel smooth, short enough to
-        // disappear into the seconds the live reads take anyway.
-        let briefRiseHoldMS = 250
         // The named-ask ellipsis reads the PREVIOUS answer's shape, then this
         // call resets it — set back to non-nil only when a named ask answers
         // below (`answerNamedAsk`), so any other kind of answer turns the
@@ -3464,110 +3096,12 @@ struct RootShell: View {
                 return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
             }
         }
-        // "How's my day?" — the Today brief (prd §166), the screen the whisper
-        // capsule opens. Answers THROUGH the composer itself so the typed ask,
-        // the kept pill, and the whisper's tap can never drift (the §132
-        // principle). Before the wallet/watchlist branches: this ask spans
-        // them, and its own words ("today", "my day") never collide with
-        // theirs.
-        if TodayBrief.matches(query) {
-            lastAnswerHits = []
-            // THE LAST BRIEF, INSTANTLY (prd §386k). The rise lands on the
-            // brief now (§386d), so every bar tap pays `allThings()` — an
-            // unbounded main-actor hydration, the exact class the 08-13 ask
-            // fix removed from the kept chips — before one pixel of document
-            // paints. Painting this session's previous doc through the
-            // partial channel makes the rise feel instant; the fresh partial
-            // replaces it the moment the corpus half composes, and the
-            // quiet-set then says honestly what didn't change.
-            //
-            // ACROSS LAUNCHES since 2026-08-21 — see `lastPresentedDoc`, which
-            // now keeps the doc for the calendar day rather than the session.
-            // Session-only left the FIRST open of every launch with nothing to
-            // paint, which is the one open the jank was reported against: the
-            // most common tap was getting the worst case.
-            var paintedCached = false
-            if let cached = TodayBrief.lastPresentedDoc {
-                onPartialDoc(cached)
-                paintedCached = true
-                // …AND THE PAINT NEEDS A FRAME TO HAPPEN IN (PERF 2026-08-18).
-                //
-                // `onPartialDoc` publishes into `GenStream`; the pixels arrive
-                // on the next render pass. `allThings()` below is an unbounded
-                // main-actor hydration with no yield point inside it, and it
-                // sat in the SAME run-loop turn — so the cached doc could not
-                // paint before the fetch blocked, and §386k's "instantly" was
-                // instant only in the sense that the work started immediately.
-                // One yield is what turns a published document into a drawn
-                // one; the composer's own `.task(id: isOpen)` makes exactly
-                // this move for exactly this reason.
-                await Task.yield()
-                // Then hold the actor free while the rise animation runs. The
-                // morph is a spring, and it needs frames more than the fresh
-                // compose needs a 250ms head start — the document on screen is
-                // already a real brief, minutes old, and the live reads it is
-                // waiting on cost seconds. ONLY when something painted: an
-                // empty surface must never be made to wait.
-                try? await Task.sleep(for: .milliseconds(briefRiseHoldMS))
-            }
-            // THE CORPUS-ONLY DRAFT STANDS DOWN WHEN A CACHED DOC PAINTED
-            // (PERF 2026-08-18). `TodayBrief.compose` paints a second document
-            // before its live reads settle — composed with `skipLiveReads`, so
-            // it carries NO money hero, no movers, no cluster map. Over an
-            // empty surface that is a real gain. Over the cached doc it is a
-            // REGRESSION dressed as progress: the reader watches a complete
-            // brief lose three modules and then grow them back, and pays a
-            // full corpus compose plus a full document mount for the
-            // privilege. Nothing is withheld — the fresh document replaces it
-            // either way, bounded by `liveReadBudget`.
-            //
-            // `askPerf| firstPaint` is unaffected: the cached paint goes
-            // through this same wrapped channel, so the span still ends at the
-            // first pixel rather than at the first partial.
-            let partial: (([String]) -> Void)? = paintedCached ? nil : onPartialDoc
-            // `presenting: true` — this is the route every way of REACHING the
-            // brief funnels through (the typed ask, the whisper's tap, the
-            // kept pill), so it's the one place the §214 ledger should record
-            // what was shown.
-            if let result = await KeptAskComposers.compose("today", things: allThings(),
-                                                          context: modelContext,
-                                                          presenting: true,
-                                                          onPartial: partial) {
-                return result.doc
-            }
-        }
-        // The agent's own deterministic notice (prd §384) — the composer's
-        // "Noticed today" chip sends exactly this query. The line plus its EVIDENCE rows, so the
-        // claim is checked rather than believed; a day with no notice says so
-        // honestly instead of falling through to retrieval on the word
-        // "notice".
-        if AgentNoticed.matches(query) {
-            lastAnswerHits = []
-            guard let notice = AgentNoticed.shared.notice else {
-                return proseDoc(String(localized: "Nothing noticed today — a notice only lands for something real."))
-            }
-            let ids = Set(notice.ids)
-            let evidence = allThings().filter { ids.contains($0.id.uuidString) }
-            lastAnswerHits = evidence
-            var doc = ["root = Stack([\(evidence.isEmpty ? "ins" : "ins, res")])",
-                       "ins = Insight(\"\(genSafe(notice.line))\")"]
-            if !evidence.isEmpty {
-                doc += groundingLines(evidence, title: String(localized: "The evidence"))
-            }
-            return doc
-        }
         // A watchlist ask ("how's my watchlist") is answered from the same
         // 24h curves the feed pulse draws — computed, current, no model
         // (2026-07-14). Before StatusAsk on purpose: the words name the
         // watchlist, not the feeds.
         if TokensAsk.matches(query) {
             lastAnswerHits = []
-            // The last reading, while the candle fetches are out (PERF
-            // 2026-08-13) — this branch's whole latency is network, so without
-            // it the person watches a breathing berry to be told a number the
-            // app computed on the last foreground. Nil until a pass has
-            // computed one, so it can never invent a figure.
-            if let interim = lastKnownDoc("watchlist") { onPartialDoc(interim) }
             let moves = await TokensAsk.moves(context: modelContext)
             // The market half of this ask went with the Kalshi and Polymarket
             // seats (2026-09-06) — a watchlist is tokens again, as it was
@@ -3581,9 +3115,7 @@ struct RootShell: View {
                     ? "Nothing watched yet — add one from Apps."
                     : "Couldn't read your watchlist's prices right now — check your connection.")
             }
-            // TokenChip rows alongside the summary — `KeptAskComposers.watchlistDoc`
-            // so a typed ask and the kept "How's my watchlist?" chip can never
-            // disagree about what's shown.
+            // TokenChip rows alongside the summary — `KeptAskComposers.watchlistDoc`.
             return KeptAskComposers.watchlistDoc(line: TokensAsk.line(moves), moves: moves)
         }
         // A wallet ask ("how's my wallet") is answered from the live holdings
@@ -3592,13 +3124,10 @@ struct RootShell: View {
         // the feeds' pulse.
         if WalletAsk.matches(query) {
             lastAnswerHits = []
-            // The LOCAL half first (PERF 2026-08-13). The approvals and the
-            // activity below are rows the bridges already landed, so they can
-            // be on screen while the two live reads are still out; only the
-            // headline and the treemap actually wait on the network. Scoped to
-            // the two rooms `walletDoc` reads rather than the whole store.
+            // Scoped to the two rooms `walletDoc` reads rather than the whole
+            // store. Its interim (the last kept reading, painted while the
+            // live reads were out) went with the kept asks (2026-10-01).
             let corpus = keptCorpus(for: "wallet")
-            if let interim = lastKnownDoc("wallet", things: corpus) { onPartialDoc(interim) }
             guard let line = await WalletAsk.answer() else {
                 return proseDoc(String(localized: "Nothing in your wallet yet — watch an address from Apps → Wallet."))
             }
@@ -3758,39 +3287,20 @@ struct RootShell: View {
         // (2026-07-11).
         if let pulse = StatusAsk.pulse(query, things: allThings()) {
             lastAnswerHits = pulse.sample
-            // The away recap's watchlist line (2026-07-14): watched tokens'
-            // moves over the frozen away window, from real candles — the one
-            // fact of the absence the corpus' things can't carry themselves.
-            // Started here, awaited only when the doc is assembled, so the
-            // candle fetches ride under the model's own synthesis time.
-            let context = modelContext
-            let awayWindow = (pulse.windowWords == "while you were away") ? AppVisit.away : nil
-            let tokenLineTask: Task<String?, Never>? = awayWindow.map { away in
-                Task { await TokensAsk.awayLine(window: away, context: context) }
-            }
-            func tokenLine() async -> String? {
-                guard let tokenLineTask else { return nil }
-                return await tokenLineTask.value
-            }
-            // The wallet's own away line (2026-07-15) — the value's move over the
-            // window, read from local samples (no network), so it needs no task.
-            let walletLine = awayWindow.flatMap { WalletAsk.awayLine(window: $0) }
+            // The away recap's watchlist and wallet lines rode here until
+            // "while I was away" went with the ask (2026-10-01).
             guard !pulse.pool.isEmpty else {
-                return appendingInsight(await tokenLine(), walletLine, to: proseDoc(StatusAsk.line(pulse)))
+                return proseDoc(StatusAsk.line(pulse))
             }
             if let prose = await streamSynthesis(query,
                                                  over: candidates(pulse.sample,
                                                                   terms: Retriever.contentTerms(query)),
                                                  document: proseDoc,
                                                  onProseDoc: onProseDoc) {
-                // Prose, then its away/wallet addenda, then the receipts it
-                // was drawn from — the status synthesis success now shows its
-                // grounding too, like the counted `pulseDoc` fallback already
-                // does (§175).
-                let doc = appendingInsight(await tokenLine(), walletLine, to: proseDoc(prose))
-                return appendingGrounding(pulse.sample, title: "Drawn from", to: doc)
+                // Prose, then the receipts it was drawn from (§175).
+                return appendingGrounding(pulse.sample, title: "Drawn from", to: proseDoc(prose))
             }
-            return appendingInsight(await tokenLine(), walletLine, to: pulseDoc(pulse))
+            return pulseDoc(pulse)
         }
         // A follow-up ("which ones were from sam") searches the LAST
         // answer's grounding, not the whole corpus (2026-07-10).
@@ -3801,15 +3311,16 @@ struct RootShell: View {
         // bridge vocabulary gaps contributes almost nothing on a real corpus
         // (measured, `-rankSweep` — byte-identical across every floor), so a
         // paraphrase ("that beach place" for a "coastal property" note) comes
-        // back empty. When a FRESH ask lands thin and the on-device model is
-        // present, it rephrases the query into concrete terms and we UNION
+        // back empty. When a FRESH ask lands thin and Apple Intelligence is
+        // answering (prd §833 — the on-device model answers nothing since
+        // 2026-10-01), it rephrases the query into concrete terms and we UNION
         // anything new those reach — the SAME deterministic retriever, so every
         // hit is still a real ranked thing (honesty rail intact). Purely
         // additive: primary ranking is untouched, and it's a no-op when the ask
         // wasn't thin, the model declines, or there's no model (zero
         // regression). Skipped for a follow-up (its pool is deliberately the
         // last answer's things, and a widened search would lose that anchor).
-        if pool == nil, hits.count < 8, OnDeviceModel.isAvailable,
+        if pool == nil, hits.count < 8, AskModel.usesCloud,
            let phrases = await OnDeviceModel.expandQuery(query) {
             var seen = Set(hits.map(\.id))
             for phrase in phrases {
@@ -3825,7 +3336,11 @@ struct RootShell: View {
         // tag's tile — tap it to open the tag's view, the same push the Home
         // treemap makes (PRD §17: a topic opens its view, not a Feed filter).
         let tag = matchedTag(query, in: allThings())
-        guard OnDeviceModel.isAvailable, !hits.isEmpty else {
+        // THE MODEL ANSWERS ONLY WHEN APPLE INTELLIGENCE IS ON (2026-10-01).
+        // The on-device model stopped answering as an agent; without the seat
+        // a typed question gets the retrieved things themselves, as a device
+        // without Apple Intelligence always did.
+        guard AskModel.usesCloud, !hits.isEmpty else {
             return retrievalDoc(hits, tag: tag, in: allThings())
         }
         switch await resolvedMode(query) {
@@ -3957,13 +3472,7 @@ struct RootShell: View {
     ///   • A query that names NO entity — the common case, since this is one
     ///     of a dozen branches every ask walks — no longer materialises the
     ///     corpus to find that out. `namedAskTarget` resolves the prefix
-    ///     table, the brief scopes and the catalog categories without it.
-    ///   • A `.category` ask (the Money/Work/Life chips) is composed over a
-    ///     SCOPED fetch instead of the whole corpus. `TodayBrief.compose`
-    ///     immediately filters to exactly those sources anyway, so every row
-    ///     from every other app was fetched, hydrated and thrown away — on a
-    ///     bulk-import corpus that is most of the store, on the main actor,
-    ///     before the chip could paint anything.
+    ///     table without it.
     private func answerNamedAsk(_ query: String, things fetchAll: @autoclosure () -> [Thing],
                                 onProseDoc: @escaping ([String]) -> Void,
                                 onPartialDoc: @escaping ([String]) -> Void) async -> [String]? {
@@ -3976,29 +3485,17 @@ struct RootShell: View {
         }
         guard let (target, wantsSynthesis) = KeptAskComposers.namedAskTarget(query, things: all())
         else { return nil }
-        // The pool this target composes over. A category scopes its own fetch;
-        // everything else reads the corpus it was handed. MEMOIZED like
-        // `all()` above, and for a reason that only shows on one path: a
-        // `.category` ask that ASKS FOR SYNTHESIS ("summarize my Money") reads
-        // this once for the synthesis window, and if the model declines it
-        // falls through and reads it again for the deterministic recap — two
-        // scoped fetches of up to 20,000 hydrated rows for one question.
-        var cachedPool: [Thing]?
-        func composePool() -> [Thing] {
-            if let cachedPool { return cachedPool }
-            let pool: [Thing]
-            if case .category(let scope) = target { pool = categoryCorpus(scope) } else { pool = all() }
-            cachedPool = pool
-            return pool
-        }
+        // The pool this target composes over: the corpus it was handed. A
+        // `.category` target (the Money/Work/Life briefs) scoped its own fetch
+        // here until the briefs went with the ask (2026-10-01).
+        func composePool() -> [Thing] { all() }
         // Records the shape only when it ACTUALLY answers, so the next query's
         // ellipsis reflects what the person saw — a recognized-but-empty named
         // ask that falls through to another path shouldn't arm "and X?".
         func answered(_ doc: [String]) -> [String] { lastNamedAskSynth = wantsSynthesis; return doc }
-        if wantsSynthesis, OnDeviceModel.isAvailable {
-            // Scoped for a category (see `composePool`); `target.pool` then
-            // narrows it exactly as before — idempotent on an already-scoped
-            // array, so the synthesis window is unchanged.
+        // Synthesis is Apple Intelligence's (prd §833) — the on-device model
+        // answers nothing since 2026-10-01.
+        if wantsSynthesis, AskModel.usesCloud {
             let pool = target.pool(in: composePool())
             let now = Date.now
             var recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
@@ -4030,15 +3527,8 @@ struct RootShell: View {
             }
         }
         lastAnswerHits = []
-        // The brief paints its corpus half first (§288 amendment, 2026-08-12)
-        // — see `TodayBrief.compose`'s `onPartial`. Routed through the SAME
-        // `onProseDoc` channel a streaming synthesis uses, because the
-        // composer already repaints on each snapshot and `GenStream.paint`
-        // swaps a whole document; nothing new is needed on the display side.
         guard let doc = await KeptAskComposers.compose(target.keptKind, things: composePool(),
-                                                       context: modelContext,
-                                                       presenting: true,
-                                                       onPartial: onPartialDoc)?.doc
+                                                       context: modelContext)?.doc
         else { return nil }
         return answered(doc)
     }
@@ -4098,32 +3588,9 @@ struct RootShell: View {
         return rows
     }
 
-    /// Just the rows a BRIEF SCOPE covers (PERF 2026-08-11) — the fetch behind
-    /// the Money/Work/Life chips.
-    ///
-    /// `TodayBrief.compose(category:)` filters to exactly these sources on its
-    /// first Stage-1 line, so handing it the whole corpus meant materialising
-    /// every row of every unrelated app — fully hydrated, on the main actor —
-    /// only to drop them. On a corpus carrying a bulk import that is most of
-    /// the store.
-    ///
-    /// FAILS SAFE, deliberately, and this is why the scoping is worth doing at
-    /// all rather than being a risk: an `IN`-shaped predicate is a shape this
-    /// codebase has been bitten by before (a `$0.tags.contains(…)` predicate
-    /// over a transformable attribute compiles clean and traps at runtime —
-    /// see CLAUDE.md). A captured `Set<String>` tested against a plain `String`
-    /// column is a different, ordinary construct, but the fallback costs one
-    /// line: `try?` swallows a throw and an empty read is treated as no scope
-    /// at all, exactly as `scopedCorpus(for:)` already treats its own. So the
-    /// worst case here is the performance we had yesterday, never a wrong or
-    /// empty answer.
-    private func categoryCorpus(_ scope: String) -> [Thing] {
-        keptCorpus(for: "category:" + scope)
-    }
-
-    /// The rows one kept-ask KIND actually needs, fetched scoped (PERF
-    /// 2026-08-13). Generalises `categoryCorpus` above, which was the first
-    /// instance of exactly this and covered only the three brief scopes.
+    /// The rows one ask KIND actually needs, fetched scoped (PERF
+    /// 2026-08-13). Named for the kept asks it was written for; they went with
+    /// the ask (2026-10-01), and the typed asks still compose through it.
     ///
     /// Every kept-ask branch in `answerDocument` used to open with
     /// `allThings()` — `fullCorpus()`, an unbounded fully-hydrated fetch of the
@@ -4173,40 +3640,6 @@ struct RootShell: View {
         NSLog("[Casberi] keptCorpus| kind=%@ rows=%d", kind, rows.count)
         #endif
         return rows.isEmpty ? fullCorpus() : rows
-    }
-
-    /// What the app ALREADY KNOWS about a kept kind, as a document to paint
-    /// while that kind's own reads are still out (PERF 2026-08-13).
-    ///
-    /// `KeptAskStore.refreshDigests` composes every kept kind on each
-    /// foreground and keeps the one-line reading each composer returned
-    /// (`currentDeltas`). Tapping the chip then threw that away and recomposed
-    /// from scratch — including, for the wallet and the watchlist, live network
-    /// reads — so the person watched a breathing berry for the length of a
-    /// round trip to be told something the app had computed seconds earlier.
-    ///
-    /// This is NOT the placeholder doc the 2026-07-20 fix removed. That one
-    /// painted the word "Thinking…" inside the answer card's full chrome — an
-    /// empty-looking card standing in for content that did not exist. This
-    /// paints the last real reading, the same text the panel tile is showing,
-    /// and the breathing berry remains the whole loading state. §83 holds
-    /// because `currentDeltas` is deliberately never persisted: it is empty at
-    /// launch until a foreground pass fills it, so this can only ever show a
-    /// figure computed during THIS session, never a stale one restored from
-    /// disk. When there is no reading yet, there is no interim — the honest
-    /// answer to "what do we know" is nothing, and today's behaviour stands.
-    private func lastKnownDoc(_ kind: String, things: [Thing] = []) -> [String]? {
-        guard let reading = KeptAskStore.shared.currentDeltas[kind],
-              !reading.isEmpty else { return nil }
-        // The wallet's document is mostly LOCAL — the approvals and the
-        // activity are rows the bridges already landed, and only the headline
-        // and the treemap wait on the network. So its interim is the real
-        // document minus the parts still in flight, which is the same shape
-        // `KeptAskComposers.wallet` already paints when a live read fails.
-        if kind == "wallet" {
-            return KeptAskComposers.walletDoc(line: reading, groups: [], things: things)
-        }
-        return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(reading))\")"]
     }
 
     /// The entity named by a bare follow-up ("and bbc?", "what about calendar",
@@ -4534,6 +3967,9 @@ struct RootShell: View {
     private func streamSynthesis(_ query: String, over candidates: [OnDeviceModel.Candidate],
                                  document: @escaping (String) -> [String],
                                  onProseDoc: @escaping ([String]) -> Void) async -> String? {
+        // Apple Intelligence's alone (prd §833): the on-device model stopped
+        // answering as an agent on 2026-10-01.
+        guard AskModel.usesCloud else { return nil }
         guard let stream = OnDeviceModel.synthesisStream(query: query, candidates: candidates) else {
             return nil
         }
@@ -4551,28 +3987,6 @@ struct RootShell: View {
     private func proseDoc(_ text: String) -> [String] {
         ["root = Stack([ins])",
          "ins = Insight(\"\(genSafe(text))\")"]
-    }
-
-    /// Tacks computed lines under an answer doc as their own Insights — the
-    /// away recap's watchlist and wallet lines ride whatever the answer path
-    /// produced (prose, the counted pulse, or the honest empty). nil lines are
-    /// skipped; each real one gets its own uniquely-named ref so two can splice
-    /// without colliding.
-    private func appendingInsight(_ lines: String?..., to doc: [String]) -> [String] {
-        let real = lines.compactMap { $0 }
-        guard !real.isEmpty,
-              let i = doc.firstIndex(where: { $0.hasPrefix("root = Stack([") }),
-              doc[i].hasSuffix("])")
-        else { return doc }
-        var out = doc
-        let refs = real.indices.map { "extraIns\($0)" }
-        // Splice before the closing "])" — suffix surgery, so a root whose
-        // ref list ever nests its own brackets can't be corrupted mid-line.
-        out[i] = String(out[i].dropLast(2)) + ", " + refs.joined(separator: ", ") + "])"
-        for (j, line) in real.enumerated() {
-            out.append("\(refs[j]) = Insight(\"\(genSafe(line))\")")
-        }
-        return out
     }
 
     /// The grounding list as doc lines — `res = Widget(title, count, rows)`
@@ -4600,8 +4014,8 @@ struct RootShell: View {
     /// Appends a "Drawn from" receipt Widget to a finished answer doc — the
     /// things a SYNTHESIS was written from, shown under the prose so every
     /// model answer is verifiable at a glance and tappable into the Stack
-    /// (2026-07-22). Splices a `grd` ref into the root's list by the same
-    /// suffix surgery `appendingInsight` uses, and its rows carry a distinct
+    /// (2026-07-22). Splices a `grd` ref into the root's list by suffix
+    /// surgery before the closing "])", and its rows carry a distinct
     /// `g` prefix so they never collide with a doc's own `res`/`r0` rows.
     /// A doc with no root, or no things to show, is returned untouched — the
     /// prose stands alone rather than wearing an empty footer.

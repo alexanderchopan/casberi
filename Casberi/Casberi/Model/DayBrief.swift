@@ -3,10 +3,9 @@ import SwiftUI
 
 /// The day's shared reading (prd §165, extended §166) — the window the day's
 /// news is measured from, the one nameable thing that leads it, and the
-/// wallet's day move. Read by BOTH the whisper capsule's headline
-/// (`RootShell.refreshWhisper`) and the Today brief's modules
-/// (`TodayBrief`), so the line the capsule teases and the screen it opens can
-/// never disagree about what today was.
+/// wallet's day move. Read by the All feed's Today header (`FeedScreen`,
+/// since §385). It also fed the whisper capsule and the Today brief, until
+/// both went (§550; the brief with the ask, 2026-10-01).
 ///
 /// Deterministic by construction (docs/agent-brief.md ruling 1's spine
 /// guarantee — no model anywhere near the launch path): every fragment is a
@@ -31,10 +30,7 @@ enum DayBrief {
     /// Everything that landed since the boundary, preserving the caller's
     /// order (every caller fetches newest-first).
     ///
-    /// `since` overrides the boundary entirely (nil = the usual `windowStart`)
-    /// — the hook a category-scoped brief uses to reach back to its own
-    /// per-category "last checked" moment (`BriefScope.since(category:)`)
-    /// instead of the whole day's away-window/midnight boundary.
+    /// `since` overrides the boundary entirely (nil = the usual `windowStart`).
     static func landed(_ things: [Thing], now: Date = .now, since: Date? = nil) -> [Thing] {
         let start = since ?? windowStart(now: now)
         return things.filter { $0.capturedAt > start }
@@ -150,18 +146,6 @@ enum DayBrief {
         String(localized: "What's going on")
     }
 
-    /// The day's facts as one line — the kept `today` pill's digest. ONE
-    /// implementation with the capsule's own text (it reads the same
-    /// `Whisper`), so the pill's trailing signal and the capsule can't drift.
-    static func detail(things: [Thing], now: Date = .now) -> String? {
-        whisper(things: things, now: now)?.detail
-    }
-
-    /// The whole line, for logs and probes — the two parts as one string.
-    static func headline(things: [Thing], now: Date = .now) -> String? {
-        detail(things: things, now: now).map { "\(title(now: now)) · \($0)" }
-    }
-
     /// Roughly what fits the capsule's detail line at `subhead12` on the
     /// narrowest phone — a character budget, not a measurement, which is why
     /// the clamp leaves margin rather than filling to the pixel. Bigger than
@@ -239,8 +223,8 @@ enum DayBrief {
     }
 
     /// The wallet's day move and the sample it's measured FROM — the anchor
-    /// `TodayBrief` re-uses so its attribution ("ETH did the lifting") spans
-    /// exactly the window the percentage claims.
+    /// the Today brief re-used (until 2026-10-01) so its attribution ("ETH did
+    /// the lifting") spanned exactly the window the percentage claimed.
     struct WalletMove {
         let pct: Double
         let usd: Double

@@ -3,8 +3,11 @@
 # tapping an agent chip stop materialising the entire store twice.
 #
 #   Casberi/Casberi/Model/KeptAskComposers.swift  — CorpusNeed / corpusNeed(for:)
-#   Casberi/Casberi/Shell/RootShell.swift         — keptCorpus(for:) / lastKnownDoc
-#   Casberi/Casberi/Shell/Composer.swift          — the deferred settle bookkeeping
+#   Casberi/Casberi/Shell/RootShell.swift         — keptCorpus(for:)
+#
+# The settle bookkeeping this file also guarded (the Keep pill's and the
+# follow-up chip's corpus fetch, held below the paint) went with the kept asks
+# (2026-10-01), and its check and two mutations with it.
 #
 # WHY A HARNESS. The reported symptom was "it's pretty good when you first open
 # the agent but not so much when you click one of the chips", and the cause was
@@ -29,9 +32,7 @@
 #     CoreData (CLAUDE.md's own standing gotcha), so it is a crash, not a
 #     miscount;
 #   • `keptCorpus` losing its empty-read fallback, which is the one thing
-#     keeping a mis-scoped fetch to "slow" instead of "wrong";
-#   • the settle bookkeeping drifting back above the paint, which restores
-#     exactly half the original latency with nothing on screen to say so.
+#     keeping a mis-scoped fetch to "slow" instead of "wrong".
 #
 # None of these is visible to `xcodebuild`, to the screen sweep, or to the
 # nightly perf pass — that pass times launch, RSS and answer latency, and this
@@ -53,9 +54,7 @@ cd "$(dirname "$0")/.."
 
 COMPOSERS="Casberi/Casberi/Model/KeptAskComposers.swift"
 ROOTSHELL="Casberi/Casberi/Shell/RootShell.swift"
-COMPOSER="Casberi/Casberi/Shell/Composer.swift"
-
-for f in "$COMPOSERS" "$ROOTSHELL" "$COMPOSER"; do
+for f in "$COMPOSERS" "$ROOTSHELL"; do
   [[ -f "$f" ]] || { print "FAIL: missing source $f"; exit 1; }
 done
 
@@ -177,44 +176,12 @@ check_failsafe() {
     || fail "check 4: keptCorpus no longer swallows a fetch throw"
 }
 
-# CHECK 5 — the settle bookkeeping stays BELOW the paint, and re-guards.
-#
-# Two separate failures. Moving the fetch back above `answerStream` restores
-# half the original latency invisibly. Dropping the post-yield `gen` re-guard
-# is worse than a perf regression: the yield is a real suspension, so a newer
-# ask can begin inside it and would wear this question's Keep pill.
-check_settle_order() {
-  local dir="$1" c="$1/Composer.swift"
-  if ! python3 - "$c" <<'PY'
-import sys
-src = open(sys.argv[1], encoding="utf-8").read()
-fetch = src.find("let settledThings")
-if fetch < 0:
-    sys.exit("settledThings fetch not found")
-paint = src.find("else { answerStream.stream(finalDoc) }")
-if paint < 0:
-    sys.exit("the answer paint not found")
-if fetch < paint:
-    sys.exit("the settle's full-corpus fetch runs BEFORE the answer is painted")
-# The yield and the re-guard must both sit between the paint and the fetch.
-window = src[paint:fetch]
-if "await Task.yield()" not in window:
-    sys.exit("no yield between painting the answer and the settle fetch")
-if "guard gen == askGeneration else { return }" not in window:
-    sys.exit("the deferred settle work is not re-guarded on askGeneration")
-PY
-  then
-    fail "check 5: see above"
-  fi
-}
-
 run_all() {
   local dir="$1"
   check_none_kinds "$dir"
   check_constants "$dir"
   check_showtag "$dir"
   check_failsafe "$dir"
-  check_settle_order "$dir"
 }
 
 # ── Pass 1: the real tree ────────────────────────────────────────────
@@ -223,14 +190,13 @@ CLEAN="$WORK/clean"
 mkdir -p "$CLEAN"
 strip_comments "$COMPOSERS" "$CLEAN/KeptAskComposers.swift"
 strip_comments "$ROOTSHELL"  "$CLEAN/RootShell.swift"
-strip_comments "$COMPOSER"   "$CLEAN/Composer.swift"
 
 run_all "$CLEAN"
 if (( FAILURES > 0 )); then
   print "\n$FAILURES failure(s) against the real tree."
   exit 1
 fi
-print "  ✓ 5 checks pass against the tree"
+print "  ✓ 4 checks pass against the tree"
 
 # ── Pass 2: mutations — a check that cannot fail proves nothing ──────
 # Each mutation is a real defect this change could plausibly reintroduce.
@@ -265,8 +231,8 @@ PY
 print "\nmutations"
 # 1. A `.none` composer grows a corpus argument — reads nothing, forever.
 mutate "a .none kind handed things" KeptAskComposers.swift \
-  'if kind == "noticed" { return noticed() }' \
-  'if kind == "noticed" { return noticed(things) }' \
+  'if kind == "walletgas" { return await walletGas() }' \
+  'if kind == "walletgas" { return await walletGas(things) }' \
   check_none_kinds
 # 2. A `.none` entry left behind after its kind is renamed.
 mutate "a stale .none entry" KeptAskComposers.swift \
@@ -293,21 +259,9 @@ mutate "fail-safe removed" RootShell.swift \
   'return rows.isEmpty ? fullCorpus() : rows' \
   'return rows' \
   check_failsafe
-# 7. The settle fetch drifts back above the paint.
-mutate "settle fetch above the paint" Composer.swift \
-  '                await Task.yield()' \
-  '                let settledThingsEARLY = 0; _ = settledThingsEARLY; await Task.yield()' \
-  check_settle_order
-# 8. The post-yield re-guard dropped — a newer ask wears this one's Keep pill.
-mutate "settle re-guard dropped" Composer.swift \
-  'guard gen == askGeneration else { return }
-                let settledThings' \
-  'let settledThings' \
-  check_settle_order
-
 if (( MUT_FAILS > 0 )); then
   print "\n$MUT_FAILS mutation(s) not caught — the checks above do not prove what they claim."
   exit 1
 fi
 
-print "\nask-scope self-test: 5 checks, 8 mutations, all good"
+print "\nask-scope self-test: 4 checks, 6 mutations, all good"

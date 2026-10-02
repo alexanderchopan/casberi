@@ -26,32 +26,39 @@ import Foundation
 /// earned sits on Node.
 enum LogosSection: String, CaseIterable, Identifiable, Sendable {
     case home
-    case activity
-    case accounts
     case node
     case rewards
+    /// The room's one VERB (prd §1039): the explorer, for the page showing.
+    /// Never a scope — never in `order`, never resolved to, never lit.
+    case explorer
 
     var id: String { rawValue }
 
-    static let order: [LogosSection] = [.home, .activity, .accounts, .node, .rewards]
+    /// **HOME'S LIST IS THE ACTIVITY (prd §1039).** The Activity and Accounts
+    /// tiles are deleted, as in the Wallet and Frames: Home lists the chain's
+    /// moves and the account menu under the tiles picks the account.
+    static let order: [LogosSection] = [.home, .node, .rewards]
+
+    /// The verbs, drawn after the scopes (`DSScopeTiles.alphabetical`).
+    static let verbs: [LogosSection] = [.explorer]
+
+    var isVerb: Bool { self == .explorer }
 
     var label: String {
         switch self {
         case .home:     return String(localized: "Home")
-        case .activity: return String(localized: "Activity")
-        case .accounts: return String(localized: "Accounts")
         case .node:     return String(localized: "Node")
         case .rewards:  return String(localized: "Rewards")
+        case .explorer: return String(localized: "Explorer")
         }
     }
 
     var summary: String {
         switch self {
-        case .home:     return String(localized: "The balance, and the last few moves")
-        case .activity: return String(localized: "What moved, dated from its block")
-        case .accounts: return String(localized: "The accounts you watch")
+        case .home:     return String(localized: "The balance, and what moved, dated from its block")
         case .node:     return String(localized: "Your node's sync and peers")
         case .rewards:  return String(localized: "What your node earns: mining tickets and reward vouchers")
+        case .explorer: return String(localized: "Open the testnet's explorer")
         }
     }
 
@@ -61,25 +68,23 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
     var emptyHeadline: String? {
         switch self {
         case .home:     return nil
-        case .activity: return String(localized: "None yet")
-        case .accounts: return String(localized: "No accounts yet")
         case .node:     return String(localized: "No node")
         case .rewards:  return String(localized: "No node")
+        case .explorer: return nil
         }
     }
 
     var emptyBody: String? {
         switch self {
         case .home:     return nil
-        case .activity: return String(localized: "Covers what moved since you started watching.")
-        case .accounts: return String(localized: "Paste an LEZ account id on the Logos page.")
         case .node:     return String(localized: "Give the Logos page your node's address.")
         case .rewards:  return String(localized: "Mine with your own Logos node, added on the Logos page.")
+        case .explorer: return nil
         }
     }
 
     static func resolve(_ wanted: LogosSection?, present: [LogosSection]) -> LogosSection {
-        guard let wanted, present.contains(wanted) else { return .home }
+        guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }
         return wanted
     }
 }

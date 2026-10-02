@@ -75,11 +75,6 @@ KNOWN_UNSWEPT = {
         "failure, so a sweep shot would certify an error toast. The screen it "
         "lands on is the Safe account page, which `-openSetup \"Safe\"` reaches."
     ),
-    "brief": (
-        "the brief STREAMS for ~20-25s (CLAUDE.md: a screenshot taken early "
-        "shows skeleton rows and unloaded thumbnails). A 4s sweep shot would "
-        "photograph a loading state and certify it as the screen."
-    ),
     "person": (
         "needs a real social handle already in the corpus — the card is "
         "`casberi://person/<Source>/<handle>`, and a handle no bridge has "
@@ -89,15 +84,6 @@ KNOWN_UNSWEPT = {
         "needs a real thing: a UUID changes every install and "
         "`casberi://thing/latest` needs a seeded corpus the sweep does not "
         "build. `-openThing \"<title prefix>\"` is the sheet's headless door."
-    ),
-    "ask": (
-        "`brief`'s reason, twice over (prd §382, 2026-08-14). It opens the "
-        "composer onto a STREAMING answer, so a 4s sweep shot photographs a "
-        "skeleton and certifies it as the screen — and it needs a `?q=` that "
-        "actually retrieves, which the sweep's empty corpus cannot supply "
-        "(bare `casberi://ask` returns early by design). `-answerProbe` / "
-        "`-uiAnswerProbe` are its headless doors, and they read the document "
-        "rather than photograph it."
     ),
     "frames": (
         "`casberi://frames/sponsor?r=` carries a payment request SIGNED by "

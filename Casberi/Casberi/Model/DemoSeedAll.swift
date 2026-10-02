@@ -4152,12 +4152,8 @@ enum DemoSeedAll {
         out += cursor.enumerated().map { i, c in
             row(.link, c.0, source: "Cursor", ref: "demo:cursor:\(i)", days: c.1, hour: 22) { t in
                 t.summary = "Ran for 6 minutes. Opened a PR with the change and a test."
-                // `CursorRoomSource` groups on `authorHandle` (where
-                // `CursorFetch` stamps the real repo, §340), never the
-                // clamped title — without it `CursorRoom.compose` sees zero
-                // repos and the head is nil no matter how many rows landed.
-                // Found by the room-head coverage check's own first run
-                // (2026-08-10): all three seeded runs were missing it.
+                // The real repo rides `authorHandle`, where `CursorFetch`
+                // stamps it (§340), never the clamped title.
                 t.authorHandle = "you/quillmark"
                 // The tags `CursorBridge` stamps (prd §895) — without them no
                 // demo run ever read as finished or failed.
@@ -5194,17 +5190,15 @@ enum DemoSeedAll {
             announced: 5_000, seeded: true, fetchedAt: .now)
         PostHogState.replace(metrics)
 
-        // 2b · Apple Wallet — its room head gates on its own bespoke
-        // `connected` flag (a plain UserDefaults bool, distinct from the
-        // generic catalog "connected" status `seats` grants below), which
-        // nothing was ever setting. Found the same way as the PostHog gap.
+        // 2b · Apple Wallet — the seat keeps its own bespoke `connected` flag
+        // (a plain UserDefaults bool, distinct from the generic catalog
+        // "connected" status `seats` grants below).
         AppleWalletBridge.connected = true
 
-        // 2c · App Store Connect — its room head gates on `ASCAuth.configured`
-        // (a REAL `.p8` key in the Keychain), which a demo must never fake —
-        // so `ASCRoomSource.compose` widens for `DemoMode.isActive` instead,
-        // and this plants the standing it reads once that door is open.
-        // Matches the alert row above ("In review · Quillmark 1.4", build 285).
+        // 2c · App Store Connect — the standing its setup screen lists. A
+        // demo must never fake a REAL `.p8` key into the Keychain, so this
+        // plants the state directly. Matches the alert row above ("In review ·
+        // Quillmark 1.4", build 285).
         ASCState.apps = ["quillmark": "Quillmark"]
         ASCState.standing = [
             "quillmark": ASCStanding(
@@ -5242,24 +5236,10 @@ enum DemoSeedAll {
         UserDefaults.standard.set("Quillmark", forKey: "polar.orgName")
         UserDefaults.standard.set("quillmark", forKey: "polar.orgSlug")
 
-        // Radicle's open work (prd §401). The head reads bridge STATE, not
-        // rows, so seeding the three patch/issue rows above is not enough to
-        // make it compose — this is what it actually reads. Dates match the
-        // seeded rows, so the card and the room beneath it agree.
-        RadicleStore.shared.seedDemo(
-            rid: "rad:zDEMOheartwood0000000000001",
-            name: "heartwood",
-            open: [
-                RadicleWire.OpenItem(kind: .issue, id: "demo2",
-                                     title: "NO_COLOR disables all styling",
-                                     opened: at(41, 11), isDraft: false),
-                RadicleWire.OpenItem(kind: .patch, id: "demo1",
-                                     title: "Cache the inventory read",
-                                     opened: at(12, 11), isDraft: false),
-                RadicleWire.OpenItem(kind: .patch, id: "demo3",
-                                     title: "Try a smaller gossip window",
-                                     opened: at(4, 11), isDraft: true),
-            ])
+        // Radicle's watched repo, so the seat reads as connected over the
+        // patch and issue rows above.
+        RadicleStore.shared.seedDemo(rid: "rad:zDEMOheartwood0000000000001",
+                                     name: "heartwood")
 
         // 3 · A visit history, so the panel ranks on something.
         ChipMemory.seedDemo(demoVisits)

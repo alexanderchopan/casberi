@@ -557,22 +557,8 @@ if "chartWipe(reduceMotion:" not in body:
 sys.exit(0)
 PYENTRY
 done
-# **AND THE DRAWING THAT REPLACED `FramesMovementBars` (prd §687/§688).** The
-# signed value bars are deleted with the Activity scope they served, and what
-# draws there now is the shared `ActivityBars` — also a `Canvas`, also
-# invisible to `design-motion-audit`, so the ruling follows the drawing to the
-# file it moved to rather than lapsing with the name it was pinned on.
-python3 - "Casberi/Casberi/Screens/RoomActivityChart.swift" <<'PYSHARED' || exit 1
-import sys, io
-src = io.open(sys.argv[1], encoding="utf-8").read()
-i = src.find("struct ActivityBars: View")
-if i < 0:
-    print("\u2717 ActivityBars is gone \u2014 every Activity scope in the family draws it"); sys.exit(1)
-if "chartWipe(reduceMotion:" not in src[i:]:
-    print("\u2717 ActivityBars no longer arrives \u2014 a Canvas is invisible to design-motion-audit")
-    sys.exit(1)
-sys.exit(0)
-PYSHARED
+# (The shared `ActivityBars` and its arrival guard went with the Activity
+# scope it drew, prd §1039: Home lists the moves, and no room draws the chart.)
 # A NEW TRANSACTION IS A NEW DRAWING. A chart entrance is one-shot on appear,
 # which is right for opening a room and wrong for the moment this room exists
 # for — without the key, a send you just made lands by the chart redrawing
@@ -1196,15 +1182,34 @@ check("and carries no dollar sign",
 // ordinary room — a scope that never appears, a remembered scope resolving to
 // one nobody picked, or a strip drawn over a single chip.
 check("Home leads", FramesSection.order.first == .home)
-check("the order covers every case", Set(FramesSection.order) == Set(FramesSection.allCases))
-check("and lists each exactly once", FramesSection.order.count == FramesSection.allCases.count)
+// **THE VERBS ARE CASES, NEVER SCOPES (prd §1039).** Create, Send and Top up
+// are the last three tiles: every case is a scope in `order` or a verb in
+// `verbs`, never both, and no verb can be resolved to or published.
+check("the order and the verbs cover every case",
+      Set(FramesSection.order).union(FramesSection.verbs) == Set(FramesSection.allCases))
+check("and list each exactly once",
+      FramesSection.order.count + FramesSection.verbs.count == FramesSection.allCases.count
+        && Set(FramesSection.order).isDisjoint(with: FramesSection.verbs))
+check("the verbs are Create, Send and Top up",
+      FramesSection.verbs == [.create, .send, .topUp]
+        && FramesSection.verbs.allSatisfy(\.isVerb)
+        && !FramesSection.order.contains(where: \.isVerb))
+check("the verb tiles carry the ruled words",
+      FramesSection.create.label == "Create" && FramesSection.send.label == "Send"
+        && FramesSection.topUp.label == "Top up")
+check("a verb is never resolved to",
+      FramesSection.resolve(.send, present: FramesSection.order + FramesSection.verbs) == .home)
+// **ACTIVITY AND ACCOUNTS ARE DELETED (prd §1039)** — Home's list is the
+// moves and the account menu picks the account.
+check("Activity and Accounts are gone",
+      !FramesSection.allCases.contains { $0.rawValue == "activity" || $0.rawValue == "accounts" })
 // THE TAIL RULE, Wallet's: no UNCONDITIONAL scope may sit after a conditional
 // one, so the strip's stable head never reflows as an address gains content.
 let firstConditional = FramesSection.order.firstIndex { $0.isConditional } ?? FramesSection.order.count
 check("no unconditional scope sits after a conditional one",
       FramesSection.order.enumerated().allSatisfy { i, s in i < firstConditional || s.isConditional })
-check("home and activity are the constants",
-      FramesSection.order.filter { !$0.isConditional } == [.home, .activity])
+check("home is the one constant",
+      FramesSection.order.filter { !$0.isConditional } == [.home])
 // **HOLDINGS LEADS THE TAIL NOW, and `frames` still leads the frame scopes
 // (prd §688).** The older ruling was "frames leads the conditional tail,
 // because frame transactions are the reason this chain exists" — true, and
@@ -1215,11 +1220,6 @@ check("home and activity are the constants",
 // nothing about frames has moved relative to the scopes it outranks.
 check("holdings leads the conditional tail, as it does in every other room",
       FramesSection.order[firstConditional] == .holdings)
-// **ACCOUNTS SITS WHERE THE FAMILY PUTS IT (prd §689)** — straight after
-// Holdings, as Wallet has it.
-check("accounts follows holdings",
-      FramesSection.order.firstIndex(of: .accounts)!
-        == FramesSection.order.firstIndex(of: .holdings)! + 1)
 check("frames still leads the scopes it outranks",
       FramesSection.order.firstIndex(of: .frames)! < FramesSection.order.firstIndex(of: .permissions)!)
 // **SPONSORS BECAME PERMISSIONS (prd §692)** — one chip for one question in
@@ -1234,11 +1234,11 @@ check("`sponsors` is gone as a scope",
 // still reaches all four chips, each with an empty state of its own.
 let full = FramesSection.present()
 check("every scope is present, in order", full == FramesSection.order)
-check("no scope is hidden from anybody", full.count == FramesSection.allCases.count)
+check("no scope is hidden from anybody", full.count == FramesSection.order.count)
 // THE OBLIGATION THAT MAKES THAT HONEST. A chip onto nothing is the dead control
 // §83 bans; the two scopes that can be empty are allowed only because each says
 // what it would hold.
-for s in FramesSection.allCases where s != .home {
+for s in FramesSection.order where s != .home {
     check("\(s.rawValue) names its own empty state", !(s.emptyHeadline ?? "").isEmpty)
     check("\(s.rawValue) says what it would hold", !(s.emptyBody ?? "").isEmpty)
     check("\(s.rawValue)'s empty state is not its summary restated", s.emptyBody != s.summary)
@@ -1262,15 +1262,15 @@ for words in emptyBodies {
 check("an unremembered scope opens Home",
       FramesSection.resolve(nil, present: FramesSection.order) == .home)
 check("a remembered scope that is still present is kept",
-      FramesSection.resolve(.frames, present: [.home, .activity, .frames]) == .frames)
+      FramesSection.resolve(.frames, present: [.home, .holdings, .frames]) == .frames)
 check("a remembered scope whose content is gone falls back to Home",
-      FramesSection.resolve(.permissions, present: [.home, .activity]) == .home)
+      FramesSection.resolve(.permissions, present: [.home, .holdings]) == .home)
 check("the fallback is Home and not the first present scope",
-      FramesSection.resolve(.permissions, present: [.activity, .home]) == .home)
+      FramesSection.resolve(.permissions, present: [.holdings, .home]) == .home)
 
 // ONE SCOPE IS A LABEL, NOT A CONTROL.
 check("a strip over one scope is not drawn", !FramesSection.shows(present: [.home]))
-check("a strip over two is", FramesSection.shows(present: [.home, .activity]))
+check("a strip over two is", FramesSection.shows(present: [.home, .holdings]))
 // NO DOTS, EVER: nothing in this room is urgent — no deadline, no expiry, no
 // grant to revoke, and the asset is test ETH on a resettable chain.
 check("no chip ever wears a dot", FramesSection.attention().isEmpty)
@@ -2443,10 +2443,16 @@ mutate "the balance rounded to nearest" $F2 \
 mutate "the wei-per-ETH divisor losing a zero" $F2 \
   '"1000000000000000000"' '"100000000000000000"'
 mutate "a conditional scope ahead of an unconditional one" $F3 \
-  '[.home, .activity, .holdings, .accounts, .frames, .permissions]' '[.home, .holdings, .activity, .accounts, .frames, .permissions]'
+  '[.home, .holdings, .frames, .permissions]' '[.holdings, .home, .frames, .permissions]'
 mutate "the remembered scope falling back to the first present one" $F3 \
-  'guard let wanted, present.contains(wanted) else { return .home }' \
+  'guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }' \
   'guard let wanted, present.contains(wanted) else { return present.first ?? .home }'
+mutate "a verb tile resolved to as a page (prd §1039)" $F3 \
+  'guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }' \
+  'guard let wanted else { return .home }; if wanted.isVerb { return wanted }; guard present.contains(wanted) else { return .home }'
+mutate "a verb slipping into the scopes' order (prd §1039)" $F3 \
+  'static let order: [FramesSection] = [.home, .holdings, .frames, .permissions]' \
+  'static let order: [FramesSection] = [.home, .holdings, .frames, .permissions, .send]'
 mutate "a strip drawn over a single chip" $F3 'present.count > 1' 'present.count > 0'
 mutate "every scope gated again, so two chips vanish on the address that most needs them" $F3 \
   'static func present() -> [FramesSection] { order }' \
@@ -2454,7 +2460,7 @@ mutate "every scope gated again, so two chips vanish on the address that most ne
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" $F3 \
   'A plain transfer runs no steps.' ' '
 mutate "frames marked unconditional" $F3 \
-  'case .holdings, .accounts, .frames, .permissions: return true' 'case .holdings, .accounts, .frames, .permissions: return false'
+  'case .holdings, .frames, .permissions: return true' 'case .holdings, .frames, .permissions: return false'
 mutate "a chip growing a dot that can never honestly light" $F3 \
   'static func attention() -> Set<FramesSection> { [] }' \
   'static func attention() -> Set<FramesSection> { [.frames] }'

@@ -4,21 +4,12 @@ extension LogosSection: DSSectionScope {}
 
 /// The Logos room's figure — one slot per scope, the devnets' `DSRoomSlot`
 /// (prd §991). Home is the crown (`RoomHomeCrown`, the combined balance and
-/// its line), Accounts the faces (`RoomAccountsFaces`), Activity the chain's
-/// rhythm (`RoomActivityChart`), Node your node's state and Rewards what it
-/// earned (prd §1016). Every part is a family part; only Node's and Rewards'
-/// drawings are this room's own, because only this room has a node.
+/// its line), Node your node's state and Rewards what it earned (prd §1016).
+/// The Activity chart and the Accounts faces went with their tiles (prd
+/// §1039): Home lists the moves, and the account menu picks the account.
 struct LogosRoomFigure: View {
     let head: LogosRoom.Head
     let section: LogosSection
-    /// When each chain row landed, for Activity's chart; the rows themselves
-    /// are drawn under the tiles by `FeedScreen`.
-    var activityDates: [Date] = []
-    /// Every watched account, never the scoped list: Accounts is where the
-    /// scope is picked, so feeding it one face would leave no way back.
-    var roster: [String] = []
-    var scope: String? = nil
-    var onPickAccount: ((String?) -> Void)? = nil
 
     var body: some View {
         DSRoomSlot(headline: drawsEmptyState ? nil : slotHeadline,
@@ -39,9 +30,7 @@ struct LogosRoomFigure: View {
 
     private var drawsEmptyState: Bool {
         switch section {
-        case .home:     return false
-        case .activity: return activityDates.isEmpty
-        case .accounts: return roster.isEmpty
+        case .home, .explorer: return false
         case .node, .rewards: return !head.nodeWatched
         }
     }
@@ -49,10 +38,10 @@ struct LogosRoomFigure: View {
     @ViewBuilder private var reading: some View {
         switch section {
         case .home:     crown
-        case .activity: RoomActivityChart(dates: activityDates, box: DSRoomChassis.figureSlot)
-        case .accounts: accounts
         case .node:     node
         case .rewards:  rewards
+        // A verb is never a page — `resolve` never lands here.
+        case .explorer: EmptyView()
         }
     }
 
@@ -100,14 +89,6 @@ struct LogosRoomFigure: View {
         guard let reset = head.resetDay else { return who }
         let day = reset.formatted(.dateTime.month(.abbreviated).day())
         return String(localized: "\(who) · testnet reset \(day)")
-    }
-
-    // MARK: - Accounts
-
-    @ViewBuilder private var accounts: some View {
-        RoomAccountsFaces(faces: roster.map { .init(id: $0, name: LogosWire.short($0)) },
-                          selected: scope,
-                          onPick: { onPickAccount?($0) })
     }
 
     // MARK: - Node

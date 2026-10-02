@@ -83,8 +83,12 @@ grep -q 'store.advance(to: block.id)' "$BRIDGE" || { echo "✗ the walk no longe
 # (prd §1016): a Holdings or Permissions case would be a scope with nothing
 # this network can fill.
 ROOM="Casberi/Casberi/Model/LogosRoom.swift"
-grep -q 'static let order: \[LogosSection\] = \[.home, .activity, .accounts, .node, .rewards\]' "$ROOM" \
-  || { echo "✗ LogosSection's scopes moved — Home, Activity, Accounts, Node, Rewards (prd §991, §1016)"; guard_fail=1; }
+# Activity and Accounts went with the merge (prd §1039): Home lists the moves,
+# the account menu picks the account, and the explorer is the one verb tile.
+grep -q 'static let order: \[LogosSection\] = \[.home, .node, .rewards\]' "$ROOM" \
+  || { echo "✗ LogosSection's scopes moved — Home, Node, Rewards (prd §991, §1016, §1039)"; guard_fail=1; }
+grep -q 'static let verbs: \[LogosSection\] = \[.explorer\]' "$ROOM" \
+  || { echo "✗ Logos' Explorer verb tile moved (prd §1039)"; guard_fail=1; }
 # What the node EARNED is Rewards', never Node's (prd §1016): every kind that
 # lands an earning must be in rewardKinds, or it shows under Node.
 grep -q 'static let rewardKinds: Set<String> = \["vouchers", "tickets", "mining", "idle"\]' "$ROOM" \
@@ -97,7 +101,7 @@ grep -q '"coins.stack"' Casberi/Casberi/Design/DSSymbol.swift \
   || { echo "✗ DSSymbol.custom does not list coins.stack — the tile would draw nothing"; guard_fail=1; }
 grep -q 'Image(dsSymbol: name)' Casberi/Casberi/Design/CategoryGlyph.swift \
   || { echo "✗ CategoryGlyph no longer draws through Image(dsSymbol:)"; guard_fail=1; }
-if grep -qE '^\s*case (holdings|permissions|positions|nfts|risk)\b' "$ROOM"; then
+if grep -qE '^\s*case (holdings|permissions|positions|nfts|risk|activity|accounts)\b' "$ROOM"; then
   echo "✗ LogosSection grew a scope LEZ cannot fill (prd §991)"; guard_fail=1
 fi
 (( guard_fail == 0 )) || exit 1

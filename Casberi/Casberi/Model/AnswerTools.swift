@@ -250,7 +250,9 @@ private func lineFor(_ snap: AnswerTools.Snapshot) -> String {
 @available(iOS 26.0, *)
 enum AnswerToolsModel {
     static func answer(query: String, corpus: [AnswerTools.Snapshot]) async -> AnswerTools.Result? {
-        guard OnDeviceModel.isAvailable, !corpus.isEmpty else { return nil }
+        // Apple Intelligence's (prd §833); the on-device model stopped
+        // answering on 2026-10-01.
+        guard AskModel.usesCloud, !corpus.isEmpty else { return nil }
         let sink = ToolHitSink()
         let tools: [any Tool] = [
             SearchThingsTool(corpus: corpus, sink: sink),
@@ -273,8 +275,8 @@ enum AnswerToolsModel {
         // The same model the rest of the answer runs on (prd §833): the
         // agent's tools read the corpus on the phone either way — only the
         // question and what the tools return go to Private Cloud Compute.
-        // A cloud failure is NOT retried on the phone here: the caller already
-        // falls through to `compose`, which does its own fallback.
+        // A cloud failure is not retried on the phone: the caller falls
+        // through to `compose`, and then to the matches themselves.
         do {
             let (session, cloud) = AskModel.session(tools: tools, instructions: instructions)
             let response = try await session.respond(to: "Question: \"\(query)\"")

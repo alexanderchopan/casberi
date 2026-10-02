@@ -115,7 +115,7 @@ enum DemoCensus {
 
         // ── Agent: every ask kind the composer can be handed ──────────────
         // Pure composers over the corpus: an empty one is a real gap.
-        let pureKinds = ["today", "away", "wallet", "walletdefi", "walletuniswap", "walletgas",
+        let pureKinds = ["wallet", "walletdefi", "walletuniswap", "walletgas",
                          "walletsafe", "watchlist", "overdue", "upcoming", "throwback",
                          "moneyflow", "spend", "showtag:Release", "showtag:Alert"]
         for kind in pureKinds {
@@ -123,24 +123,6 @@ enum DemoCensus {
                 await askVerdict(kind, things: surfaced, context: context)
             })
         }
-        // `noticed` reads the home-insight store, which the on-device model
-        // fills — ranked, and skipped where there is no model to fill it.
-        out.append(Surface(name: "ask.noticed", gate: .ranked) {
-            guard OnDeviceModel.isAvailable else { return .skipped("no on-device model") }
-            return await askVerdict("noticed", things: surfaced, context: context)
-        })
-        // The category ask takes a BRIEF SCOPE (Money / Work / Life), not a
-        // catalog category — derived from the catalog through the same map the
-        // composer uses, so the set can never be a hand copy.
-        let scopes = Set(BridgeCatalog.categories.map { BriefScope.scope(forCatalogCategory: $0.name) })
-        for scope in scopes.sorted() {
-            out.append(Surface(name: "ask.category.\(scope)", gate: .required) {
-                let v = await askVerdict("category:\(scope)", things: surfaced, context: context)
-                if case .ok(let d) = v, d.contains("unconnected") { return .empty(d) }
-                return v
-            })
-        }
-
         // ── Search: the retriever over the demo's own words ───────────────
         for q in ["what did I save about work", "ETH", "release", "dispute", "screenshot"] {
             out.append(Surface(name: "search.\(q.replacingOccurrences(of: " ", with: "_"))",
@@ -201,33 +183,13 @@ enum DemoCensus {
         })
 
         // ── Widgets / notify ──────────────────────────────────────────────
-        // The widgets are COMPOSED here and never published: nothing the demo
-        // makes reaches a Home Screen (§217 doctrine, `WidgetPublish.publishAll`
-        // returns under the demo). What is judged is what each tile WOULD draw.
-        out.append(Surface(name: "widget.asks", gate: .required) {
-            let kinds = KeptAskStore.shared.order
-            return kinds.isEmpty ? .empty("no kept ask for the asks tile") : .ok(kinds.joined(separator: ","))
-        })
-        // Today's asks and people are windowed to the last week and the last
-        // day, so an aged pour empties them honestly — ranked, not required.
-        out.append(Surface(name: "widget.requests", gate: .ranked) {
-            let r = WidgetPublish.requests(things: surfaced) ?? []
-            return r.isEmpty ? .empty("no GitHub request inside the week") : .ok("\(r.count) requests")
-        })
-        out.append(Surface(name: "widget.people", gate: .ranked) {
-            WidgetPublish.people(things: surfaced).map {
-                .ok("\($0.replies.count) replies likes=\($0.likes == nil ? "no" : "yes")")
-            } ?? .empty("no reply or like inside the day")
-        })
+        // The wallet widget's flow is COMPOSED here and never published:
+        // nothing the demo makes reaches a Home Screen (§217 doctrine,
+        // `WidgetPublish.publishAll` returns under the demo). What is judged is
+        // what the tile WOULD draw. The Today and kept-ask tiles' rows went
+        // with the ask (2026-10-01).
         out.append(Surface(name: "widget.flow", gate: .required) {
             WidgetPublish.flow(things: surfaced) != nil ? .ok("composed") : .empty("no flow band")
-        })
-        out.append(Surface(name: "widget.deadlines", gate: .required) {
-            let d = WidgetPublish.deadlines(context: context) ?? []
-            return d.isEmpty ? .empty("no deadlines") : .ok("\(d.count) deadlines")
-        })
-        out.append(Surface(name: "widget.safeCall", gate: .required) {
-            WidgetPublish.safeCall(things: surfaced) != nil ? .ok("composed") : .empty("no Safe call")
         })
         out.append(Surface(name: "notify.plans", gate: .required) {
             let things = WalletBackgroundRefresh.sweepCorpus(context) ?? []
@@ -313,11 +275,6 @@ enum DemoCensus {
             let legs = first.split(separator: " ").first { $0.hasPrefix("legs=") }
                 .flatMap { Int($0.dropFirst(5)) } ?? 0
             return legs > 0 ? .ok(first) : .empty(first)
-        })
-        out.append(Surface(name: "wallet.connections", gate: .required) {
-            let lines = AddressConnections.probeLines(context: context)
-            return lines.contains { $0.hasPrefix("DECLINED") }
-                ? .empty(lines.joined(separator: " · ")) : .ok(lines.first ?? "composed")
         })
         out.append(Surface(name: "wallet.nftShelf", gate: .required) {
             guard let first = WalletStore.shared.addresses.first else { return .empty("no watched wallet") }

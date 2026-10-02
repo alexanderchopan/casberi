@@ -2,9 +2,12 @@ import AppIntents
 import SwiftData
 import SwiftUI
 
-/// App Intents — the capture and the synthesis, reachable from Shortcuts,
-/// Siri phrasing, and the Action Button without opening the app. The same
-/// two moves the app itself leads with: save a thing, hear the week.
+/// App Intents — capture, reachable from Shortcuts, Siri phrasing, and the
+/// Action Button without opening the app: save a thing, start a note, and the
+/// things you have with someone (`ThingsWithContactIntent`).
+///
+/// "Ask Casberi", "Search Casberi" and "What's my week" went with the ask
+/// (2026-10-01): the app no longer answers questions on the device.
 struct SaveThingIntent: AppIntent {
     static let title: LocalizedStringResource = "Save to Casberi"
     static let description = IntentDescription(
@@ -47,98 +50,9 @@ struct SaveThingIntent: AppIntent {
     }
 }
 
-/// The hero rule as a sentence — what Home leads with, spoken back.
-struct WeekSynthesisIntent: AppIntent {
-    static let title: LocalizedStringResource = "What's my week"
-    static let description = IntentDescription(
-        "One line about what your things are up to.")
-
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try SharedStore.extensionContainer()
-        let context = ModelContext(container)
-        let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
-        guard !things.isEmpty else {
-            return .result(dialog: "Nothing yet — save a thing and your week starts.")
-        }
-
-        let typeTags = Set(ThingKind.allCases.map(\.typeTag))
-        var buckets: [String: Int] = [:]
-        for thing in things {
-            for tag in thing.tags where !typeTags.contains(tag) {
-                buckets[tag, default: 0] += 1
-            }
-        }
-        let top = buckets.sorted {
-            $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
-        }.first
-
-        if let top, top.value >= 2 {
-            let sources = Set(things.filter { $0.tags.contains(top.key) }.map(\.source)).count
-            // TWO strings, not one with a number in it (prd §855). Siri SPEAKS
-            // this line, and the single string it used to be had no English
-            // localization at all — so English fell back to the key and said
-            // "7 things across 3 app." out loud. `things` is guaranteed plural
-            // by the guard above; only `sources` can be one, so one branch
-            // covers it, in every language, with no plural table to keep.
-            let line: LocalizedStringResource = sources == 1
-                ? "\(top.key) fills your week — \(top.value) things in one app."
-                : "\(top.key) fills your week — \(top.value) things across \(sources) apps."
-            return .result(dialog: IntentDialog(line))
-        }
-        return .result(dialog:
-            "Your things are landing — \(things.count) so far.")
-    }
-}
-
-/// Search from anywhere (prd §67 goal ④) — the corpus as a Shortcuts value,
-/// pipeable into the rest of an automation. Matching is the plain kind
-/// (words in the title, tags, or text, newest first) — Spotlight-grade on
-/// purpose; the composer's full scorer stays in-app.
-struct SearchCasberiIntent: AppIntent {
-    static let title: LocalizedStringResource = "Search Casberi"
-    static let description = IntentDescription(
-        "Finds things by words in their title, tags, or text — newest first.")
-
-    @Parameter(title: "Search for")
-    var query: String
-
-    static var parameterSummary: some ParameterSummary {
-        Summary("Search Casberi for \(\.$query)")
-    }
-
-    func perform() async throws -> some IntentResult & ReturnsValue<[ThingEntity]> & ProvidesDialog & ShowsSnippetView {
-        let hits = try IntentCorpus.match(query, limit: 5)
-        guard !hits.isEmpty else {
-            return .result(value: [], dialog: "Nothing in your things matches that.",
-                           view: IntentRowsSnippet(rows: []))
-        }
-        let entities = hits.map(ThingEntity.init)
-        // The credential tripwire (prd §277), at the boundary that matters:
-        // this dialog is SPOKEN by Siri and shown outside the app, exactly as
-        // the snippet rows below are. Both of `AskCasberiIntent`'s paths and
-        // `IntentRowsSnippet.Row.init` have always scrubbed here; this one
-        // line did not, so a search that matched a screenshot of a recovery
-        // phrase read it out loud. Found by `redaction-coverage-audit.py` on
-        // its first run (2026-08-19).
-        let lines = hits.map { "\(SecretScan.redacted($0.title)) — \($0.source)" }
-        let joined = lines.joined(separator: "\n")
-        // The rows are built here, off the live models, and handed to the
-        // snippet as plain values — a view that held `Thing`s would be reading
-        // SwiftData from the system's process on the system's schedule.
-        // Redaction applies for the same reason it does in the dialog (prd
-        // §277): a snippet is shown outside the app.
-        let rows = hits.map(IntentRowsSnippet.Row.init)
-        return .result(value: entities,
-                       dialog: IntentDialog(full: LocalizedStringResource("\(hits.count) thing:\n\(joined)"),
-                                            supporting: "From your things."),
-                       view: IntentRowsSnippet(rows: rows))
-    }
-}
-
-/// What Siri and Shortcuts SHOW for a search or an ask (prd §282,
-/// 2026-08-02) — the matched things as rows, instead of the titles glued into
-/// one spoken paragraph. The intents have grounded their answers in real
-/// things since they shipped; until now the person could only hear about them.
+/// What Siri and Shortcuts SHOW for the things you have with someone (prd
+/// §282, 2026-08-02; `ThingsWithContactIntent`, §1025) — the matched things
+/// as rows, instead of the titles glued into one spoken paragraph.
 ///
 /// Plain values, never `Thing`s: a snippet view is rendered by the system, in
 /// its own process and on its own schedule, and handing it live SwiftData
@@ -170,16 +84,10 @@ struct IntentRowsSnippet: View {
         }
     }
 
-    var answer: String? = nil
     let rows: [Row]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let answer, !answer.isEmpty {
-                Text(answer)
-                    .dsText(.body17)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
             ForEach(rows) { row in
                 HStack(spacing: 10) {
                     Image(systemName: row.symbol)
@@ -204,58 +112,10 @@ struct IntentRowsSnippet: View {
     }
 }
 
-/// Ask from anywhere — the same grounded on-device answer the composer
-/// gives, as a Shortcuts value. On devices without the model, the matched
-/// things answer plainly (zero regression, same as in-app).
-struct AskCasberiIntent: AppIntent {
-    static let title: LocalizedStringResource = "Ask Casberi"
-    static let description = IntentDescription(
-        "Answers a question from your things, on this device.")
-
-    @Parameter(title: "Question")
-    var question: String
-
-    static var parameterSummary: some ParameterSummary {
-        Summary("Ask Casberi \(\.$question)")
-    }
-
-    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog & ShowsSnippetView {
-        let hits = try IntentCorpus.match(question, limit: 10)
-        guard !hits.isEmpty else {
-            return .result(value: "", dialog: "Nothing in your things matches that.",
-                           view: IntentRowsSnippet(rows: []))
-        }
-        // The credential tripwire (prd §277): an intent result is spoken by
-        // Siri and pipeable anywhere by Shortcuts, so it leaves the app the
-        // same way a Spotlight donation does. Titles are the whole payload
-        // here, and a screenshot's title is OCR-derived.
-        let candidates = hits.map {
-            OnDeviceModel.Candidate(title: SecretScan.redacted($0.title),
-                                    kind: $0.kind.typeTag,
-                                    source: $0.source,
-                                    when: $0.capturedAt.formatted(.relative(presentation: .named)))
-        }
-        if let answer = await OnDeviceModel.compose(query: question, candidates: candidates) {
-            // The snippet shows the sentence AND the things it rests on — the
-            // same grounding the in-app answer paints beneath its prose, which
-            // a spoken-only result could never carry.
-            let cited = answer.picks.compactMap { hits.indices.contains($0) ? hits[$0] : nil }
-            let shown = (cited.isEmpty ? Array(hits.prefix(3)) : cited).prefix(4)
-            return .result(value: answer.insight,
-                           dialog: IntentDialog(stringLiteral: answer.insight),
-                           view: IntentRowsSnippet(answer: answer.insight,
-                                                   rows: shown.map(IntentRowsSnippet.Row.init)))
-        }
-        // No model (or it declined) — the matched things ARE the answer.
-        let line = "Found: " + hits.prefix(3)
-            .map { SecretScan.redacted($0.title) }.joined(separator: " · ")
-        return .result(value: line, dialog: IntentDialog(stringLiteral: line),
-                       view: IntentRowsSnippet(rows: hits.prefix(3).map(IntentRowsSnippet.Row.init)))
-    }
-}
-
-/// The intents' shared corpus access — one plain matcher so Search and Ask
-/// agree on what a query reaches.
+/// The plain corpus matcher for everything that reaches the corpus from
+/// OUTSIDE the app — the Shortcuts entity query (`ThingEntity`) and Visual
+/// Intelligence (`VisualIntelligenceSearch`) — so they agree on what a query
+/// reaches.
 enum IntentCorpus {
     static func match(_ query: String, limit: Int) throws -> [Thing] {
         try match(query, in: corpus(), limit: limit)
@@ -314,27 +174,6 @@ struct CasberiShortcuts: AppShortcutsProvider {
             shortTitle: "Save a thing",
             systemImageName: "plus"
         )
-        AppShortcut(
-            intent: WeekSynthesisIntent(),
-            phrases: [
-                "What's my week in \(.applicationName)",
-                // "Ask Casberi about my week" is gone with the ask (prd §717b):
-                // this intent counts your things and asks nothing, and Siri
-                // offering an "Ask" phrase sells the retired feature.
-                "My week in \(.applicationName)",
-            ],
-            shortTitle: "My week",
-            systemImageName: "sparkles"
-        )
-        AppShortcut(
-            intent: SearchCasberiIntent(),
-            phrases: [
-                "Search \(.applicationName)",
-                "Find in \(.applicationName)",
-            ],
-            shortTitle: "Search things",
-            systemImageName: "magnifyingglass"
-        )
         // Your things with someone in Addresses (prd §1025) — Siri asks
         // who when the phrase does not name them.
         AppShortcut(
@@ -357,18 +196,5 @@ struct CasberiShortcuts: AppShortcutsProvider {
             shortTitle: "New note",
             systemImageName: "square.and.pencil"
         )
-        // **"Ask Casberi" IS NOT ADVERTISED (prd §697b, 2026-09-11).** The
-        // ask is deprecated, and Siri and Spotlight offering a phrase for a
-        // feature the app no longer draws is the dead control §83 bans,
-        // wearing the system's voice instead of ours.
-        //
-        // DELETED rather than wrapped in `if AskSurface.enabled`, and the
-        // compiler is the reason: `AppShortcutsBuilder` has no `buildOptional`
-        // ("if statements in an AppShortcutsBuilder can only be used with
-        // #available clauses"), so this list cannot branch on anything but an
-        // OS version. Restoring the phrase means pasting the entry back.
-        //
-        // `AskCasberiIntent` itself stays compiled: it answers headlessly from
-        // the corpus and draws no surface.
     }
 }

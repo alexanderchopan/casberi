@@ -3803,25 +3803,18 @@ struct FeedScreen: View {
             }
     }
 
-    /// THE FRAMES ROOM'S CHROME, WITH NO BAR IN IT (prd §747, 2026-09-15).
-    ///
-    /// The wallet's own conversion one chain over, and the parts that differ
-    /// are facts about this seat rather than style:
+    /// THE FRAMES ROOM'S CHROME: the box, the tiles, the account menu (prd
+    /// §1039) — the Wallet's merge, one chain over.
     ///
     /// **The crown is this room's `.home` figure.** `FramesRoomFigure` already
-    /// switches on the scope and already draws the crown for `.home`
-    /// (`sponsorship`), so the card mounts that view pinned to `.home` rather
-    /// than growing a second crown. Off Home the same view draws where it
-    /// always did.
+    /// switches on the scope and draws the crown for `.home` (`sponsorship`),
+    /// so the chrome mounts that view pinned to `.home`. Off Home the same
+    /// view draws the scope's figure in the same box.
     ///
-    /// **The acts ride EVERY page (prd §774, superseding §747's "All card
-    /// only").** That ruling reasoned from one key per phone, so Send acted
-    /// for the same account whichever card showed. A phone can hold several
-    /// accounts now, and the user's rule is the mockup's: All acts for the
-    /// current account, each of your own accounts' pages acts for itself, and
-    /// anybody else's page keeps Create account only — a stranger's card never
-    /// offers to send from the stranger. (`FramesKey.holds` is a defaults
-    /// read; the Keychain is never asked from a body, the build-525 class.)
+    /// **The verbs are the last three tiles, per page (prd §774, §1039):**
+    /// `FramesActs.verbs(for:)` gives All and your own accounts Create · Send
+    /// · Top up and a stranger's page Create alone, and the tap runs exactly
+    /// what the Actions row ran.
     @ViewBuilder
     private func framesScopeChromeSection(_ active: FramesSection,
                                           head: FramesRoom.Head) -> some View {
@@ -3829,20 +3822,30 @@ struct FeedScreen: View {
         // the scope, so feeding it the narrowed set would leave one card on
         // screen and no way back.
         let roster = FramesRoomSource.accounts()
-        // ONE pass, read once per row.
-        let readings = framesScopeReadings(head: head)
+        let account = chrome.framesScope
         Section {
             DSRoomScopeChrome(
                 source: FramesIdentity.source,
                 sections: chrome.framesSections,
+                verbs: FramesActs.verbs(for: account),
                 active: active,
                 home: .home,
                 attention: FramesSection.attention(),
-                onPick: { chrome.framesSection = $0 },
+                onPick: { picked in
+                    switch picked {
+                    case .send:
+                        FramesActs.send(account: account) { feedSheet = .framesSend }
+                    case .topUp:
+                        FramesActs.topUp(account: account, chrome: chrome) { feedSheet = .web($0) }
+                    case .create:
+                        FramesActs.create(store: bridges, chrome: chrome)
+                    case .home, .holdings, .frames, .permissions:
+                        chrome.framesSection = picked
+                    }
+                },
                 accounts: framesAccountSlots(roster),
                 scope: chrome.framesScope,
                 onPickAccount: framesPickAccount,
-                reading: { readings[$0] },
                 crown: { slot in
                     // The room figure carries its own slot (prd §953); a second
                     // one inset the Home crown 12pt past every other crown.
@@ -3851,10 +3854,7 @@ struct FeedScreen: View {
                             FramesRoomFigure(head: head,
                                              accounts: framesAccounts,
                                              section: .home,
-                                             onOpenAccount: { feedSheet = .framesAccount($0) },
-                                             roster: roster,
-                                             scope: chrome.framesScope,
-                                             onPickAccount: framesPickAccount)
+                                             onOpenAccount: { feedSheet = .framesAccount($0) })
                         }
                     }
                 },
@@ -3862,24 +3862,7 @@ struct FeedScreen: View {
                     FramesRoomFigure(head: head,
                                      accounts: framesAccounts,
                                      section: scope,
-                                     onOpenAccount: { feedSheet = .framesAccount($0) },
-                                     roster: roster,
-                                     scope: chrome.framesScope,
-                                     onPickAccount: framesPickAccount)
-                },
-                acts: { slot in
-                    // **EVERY PAGE (prd §774).** All acts for this phone's
-                    // current account; one of your own accounts — a key here
-                    // or the passkey account — acts for itself; anybody else's
-                    // page keeps Create account only.
-                    let mine = slot.id.isEmpty || FramesKey.holds(slot.id)
-                        || FramesPasskey.accountAddress()
-                            .map { $0.caseInsensitiveCompare(slot.id) == .orderedSame } == true
-                    FramesSendCard(account: slot.id.isEmpty ? nil : slot.id,
-                                   stranger: !mine,
-                                   onSend: { feedSheet = .framesSend },
-                                   onOpenPage: { feedSheet = .web($0) })
-                        .id(slot.id)
+                                     onOpenAccount: { feedSheet = .framesAccount($0) })
                 }
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
@@ -3923,54 +3906,15 @@ struct FeedScreen: View {
         }, onPhone: { FramesConnections.onPhone($0, passkey: passkey) })
     }
 
-    /// What each Frames scope holds, before you open it (prd §747).
-    ///
-    /// Built once per pass rather than once per row: `FramesHoldings.tokens`
-    /// and `FramesConnections.map` both walk every account, and the emptiness
-    /// switch inside `FramesRoomFigure` calls them too. An empty scope answers
-    /// with the same `emptyHeadline` the slot would have drawn.
-    private func framesScopeReadings(head: FramesRoom.Head) -> [FramesSection: String] {
-        var out: [FramesSection: String] = [:]
-        for section in chrome.framesSections where section != .home {
-            switch section {
-            case .home:
-                break
-            case .activity:
-                out[section] = head.moveCount == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(head.moveCount) moves")
-            case .holdings:
-                let tokens = FramesHoldings.tokens(framesAccounts)
-                out[section] = tokens.isEmpty
-                    ? section.emptyHeadline
-                    : String(localized: "\(tokens.count) tokens")
-            case .accounts:
-                // The accounts you follow (prd §948) — the crown's own number.
-                let n = FramesRoomSource.accounts().count
-                out[section] = n == 0 ? section.emptyHeadline
-                    : (n == 1 ? String(localized: "1 account") : String(localized: "\(n) accounts"))
-            case .frames:
-                out[section] = head.frameCount == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(head.frameCount) steps")
-            case .permissions:
-                out[section] = head.sponsoredCount == 0
-                    ? section.emptyHeadline
-                    : String(localized: "\(head.sponsoredCount) paid by somebody else")
-            }
-        }
-        return out
-    }
-
     // MARK: - Logos (prd §991)
 
-    /// The Logos room's rows for one scope: Activity is the chain's (narrowed
-    /// to the picked account), Node is your node's health and Rewards what it
-    /// earned (prd §1016). Home and Accounts list none — their figure and the
-    /// Readings are the scope.
+    /// The Logos room's rows for one scope: Home's are the chain's moves
+    /// (narrowed to the picked account) — the deleted Activity tile's list
+    /// (prd §1039) — Node is your node's health and Rewards what it earned
+    /// (prd §1016).
     private func logosRows(_ rows: [Thing], section: LogosSection) -> [Thing] {
         switch section {
-        case .activity:
+        case .home:
             return rows.filter { thing in
                 guard let account = LogosRoom.account(ofRef: thing.sourceRef) else { return false }
                 return chrome.logosScope == nil || chrome.logosScope == account
@@ -3979,52 +3923,49 @@ struct FeedScreen: View {
             return rows.filter { LogosRoom.isNodeRef($0.sourceRef) }
         case .rewards:
             return rows.filter { LogosRoom.isRewardsRef($0.sourceRef) }
-        case .home, .accounts:
+        case .explorer:
             return []
         }
     }
 
     /// The devnets' chrome, Logos' parts (prd §991). Every account feeds the
-    /// deck, never the scoped list, for Frames' reason: this is the control
-    /// that SETS the scope. The one act is the explorer — the seat holds no
-    /// key, so it has nothing to send and nothing to sign.
+    /// menu, never the scoped list, for Frames' reason: this is the control
+    /// that SETS the scope. The one verb is the explorer, the last tile (prd
+    /// §1039) — the seat holds no key, so it has nothing to send and nothing
+    /// to sign. It opens the page the Actions row opened: the explorer's root
+    /// on All, the account's own page on an account's.
     @ViewBuilder
-    private func logosScopeChromeSection(_ active: LogosSection, rows: [Thing]) -> some View {
+    private func logosScopeChromeSection(_ active: LogosSection) -> some View {
         let head = LogosRoom.compose(scope: chrome.logosScope)
         let roster = LogosStore.shared.accounts
-        let chain = logosRows(rows, section: .activity)
-        let dates = chain.map(\.capturedAt)
         Section {
             DSRoomScopeChrome(
                 source: LogosRoom.source,
                 sections: chrome.logosSections,
+                verbs: LogosSection.verbs,
                 active: active,
                 home: .home,
-                onPick: { chrome.logosSection = $0 },
+                onPick: { picked in
+                    guard picked == .explorer else {
+                        chrome.logosSection = picked
+                        return
+                    }
+                    let page = chrome.logosScope.map { "\(LogosIngest.explorer)/account/\($0)" }
+                        ?? LogosIngest.explorer
+                    if let url = URL(string: page) { UIApplication.shared.open(url) }
+                },
                 accounts: logosAccountSlots(roster),
                 scope: chrome.logosScope,
                 onPickAccount: logosPickAccount,
-                reading: { logosReading($0, head: head, moves: chain.count, accounts: roster.count) },
                 crown: { slot in
                     Group {
                         if slot.isShowing(chrome.logosScope) {
-                            LogosRoomFigure(head: head, section: .home, activityDates: dates,
-                                            roster: roster, scope: chrome.logosScope,
-                                            onPickAccount: logosPickAccount)
+                            LogosRoomFigure(head: head, section: .home)
                         }
                     }
                 },
                 figure: { scope in
-                    LogosRoomFigure(head: head, section: scope, activityDates: dates,
-                                    roster: roster, scope: chrome.logosScope,
-                                    onPickAccount: logosPickAccount)
-                },
-                acts: { slot in
-                    DevnetExplorerRow(url: slot.id.isEmpty
-                                        ? LogosIngest.explorer
-                                        : "\(LogosIngest.explorer)/account/\(slot.id)",
-                                      plain: true)
-                        .id(slot.id)
+                    LogosRoomFigure(head: head, section: scope)
                 }
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
@@ -4048,36 +3989,6 @@ struct FeedScreen: View {
             DSAccountSlot(id: id, name: LogosWire.short(id),
                           sub: store.balance(for: id).map { String(localized: "\(LogosWire.amount($0)) test coins") },
                           faces: [.wallet(address: id)])
-        }
-    }
-
-    /// What each Logos scope holds, before you open it (prd §747).
-    private func logosReading(_ section: LogosSection, head: LogosRoom.Head,
-                              moves: Int, accounts: Int) -> String? {
-        switch section {
-        case .home:
-            return nil
-        case .activity:
-            return moves == 0 ? section.emptyHeadline
-                : (moves == 1 ? String(localized: "1 move") : String(localized: "\(moves) moves"))
-        case .accounts:
-            return accounts == 0 ? section.emptyHeadline
-                : (accounts == 1 ? String(localized: "1 account") : String(localized: "\(accounts) accounts"))
-        case .node:
-            // Short, so the reading never truncates; the figure carries the rest.
-            guard head.nodeWatched else { return section.emptyHeadline }
-            guard let snap = head.node else { return String(localized: "Not read yet") }
-            guard snap.reachable else { return String(localized: "Not answering") }
-            return snap.synced ? String(localized: "In sync") : String(localized: "Syncing")
-        case .rewards:
-            // Mining's state, then the tickets waiting when there are any.
-            guard head.nodeWatched else { return section.emptyHeadline }
-            guard let snap = head.node else { return String(localized: "Not read yet") }
-            guard snap.reachable else { return String(localized: "Not answering") }
-            guard let mining = snap.mining else { return String(localized: "Mining not reported") }
-            let state = mining ? String(localized: "Mining") : String(localized: "Not mining")
-            guard let t = snap.tickets, t > 0 else { return state }
-            return t == 1 ? String(localized: "\(state) · 1 ticket") : String(localized: "\(state) · \(t) tickets")
         }
     }
 
@@ -4631,13 +4542,12 @@ struct FeedScreen: View {
             // a body that writes its own observed state costs.
             let framesScope = FramesSection.resolve(chrome.framesSection,
                                                     present: chrome.framesSections)
-            // **ON HOME THE CHROME IS THE WHOLE ROOM; OFF HOME IT FOLLOWS THE
-            // FIGURE** (prd §750, §752). On Home the figure section is not
-            // emitted and the chrome draws the head (`FramesRoomFigure` on its
-            // `.home` arm), Actions and the Readings rows. Off Home the scope's
-            // figure draws first and the chrome under it is the section tiles.
-            // Off Home the figure leads and the tiles sit UNDER it (prd §752): nothing
-            // that scopes the room is drawn at the top of the screen.
+            // **BOX · TILES · MENU, THEN THE LIST (prd §1039).** The chrome
+            // draws the crown (`FramesRoomFigure` on its `.home` arm) or the
+            // scope's figure in one box, the tiles and the account menu under
+            // it — nothing that scopes the room at the top of the screen
+            // (§752) — and `FramesRoomList` draws the page's list: the moves
+            // on Home.
             framesScopeChromeSection(framesScope, head: head)
             Group {
                 FramesRoomList(head: head,
@@ -4668,15 +4578,14 @@ struct FeedScreen: View {
                                       bottom: DS.Space.s4, trailing: DS.Space.s4))
         } else if source == LogosRoom.source {
             // **THE LOGOS ROOM (prd §991)** — a devnet-family room that DOES land
-            // rows. The chrome draws the crown, the tiles, Actions and the
-            // Readings on Home; off Home the scope's figure leads and the tiles
-            // sit under it. Activity, Node and Rewards then list their own
-            // rows here, with no cover: the crown is the room's lead, not the
-            // newest row.
+            // rows. The chrome draws the box, the tiles and the account menu on
+            // every page (prd §1039). Home (the chain's moves), Node and
+            // Rewards then list their own rows here, with no cover: the crown
+            // is the room's lead, not the newest row.
             let logosSection = LogosSection.resolve(chrome.logosSection,
                                                     present: chrome.logosSections)
-            logosScopeChromeSection(logosSection, rows: rows)
-            if logosSection == .activity || logosSection == .node || logosSection == .rewards {
+            logosScopeChromeSection(logosSection)
+            if logosSection != .explorer {
                 let days = chronoGroups(logosRows(rows, section: logosSection))
                 groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
             }
@@ -6012,12 +5921,9 @@ struct FeedScreen: View {
             // "never say one thing twice"; in every other scope the room is
             // answering a different question entirely.
 
-            // **ON HOME THE CHROME IS THE WHOLE ROOM; OFF HOME IT FOLLOWS THE
-            // FIGURE** (prd §750, §752). The crown no longer stands in a
-            // section of its own: on Home it is the chrome's head, over Actions
-            // and the Readings rows. Off Home the figure section below draws
-            // first and `walletScopeChromeSection` follows it as the section
-            // tiles.
+            // **BOX · TILES · MENU, THEN THE LIST (prd §1039).** The crown is
+            // the chrome's box on Home, the scope's figure off it; the tiles
+            // and the account menu sit under it; the scope's list follows.
             // THE TOGGLE SITS BELOW THE SPARKLINE, IN THE CONTENT (user ruling,
             // 2026-08-26: *"we need to have those toggles be below the
             // sparkline"*, and *"we cannot have four rows of chips"*).
@@ -6068,7 +5974,8 @@ struct FeedScreen: View {
             // a Section of its own here any more: as a sibling it took its own
             // row insets and the List's section spacing, and the tiles landed
             // at a different height than on Home.
-            walletScopeChromeSection(section, visible: visible, streamTotal: all.count)
+            walletScopeChromeSection(section, visible: visible, upcoming: upcoming,
+                                     streamTotal: all.count)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you
             // hold", and "What it's doing" into Positions and Risk — so the
@@ -6083,55 +5990,36 @@ struct FeedScreen: View {
             // kinds of thing.
             switch section {
             case .home:
-                // **HOME HAS NO LIST OF ITS OWN (prd §747).** It held the flow
-                // band (§690), which was the right answer while the scopes
-                // were a 12pt chip strip: the room needed something below the
-                // bar and the band was the one reading only the Wallet has.
-                // The scopes are door rows now, drawn by the chrome above, and
-                // they ARE Home's list — so a band under them would be a
-                // second thing to read before the doors, which is the shape
-                // this direction exists to delete.
-                EmptyView()
-            case .activity:
-                // **WHAT ALREADY HAPPENED, AND ONLY THAT** (user ruling, prd
-                // §483: *"on activity below the toggle bar, this is
-                // transactions or whatever, so it should be things that already
-                // happened, not things in the future"*).
-                //
-                // The forward-dated rows led this scope for one build, on the
-                // reasoning that a timeline has two directions. True of a
-                // timeline and false of this one: the stream reads backwards
-                // from today and is grouped Today / Yesterday / earlier, so a
-                // block of things that have not happened sat above a list whose
-                // every heading is a past day.
-                //
-                // PARKED rather than rehomed — `walletUpcoming` still computes
-                // and its rows still leave the stream, so nothing is duplicated
-                // and nothing is lost; they simply draw nowhere until a scope
-                // earns them. Risk is the likely home (a deadline is a hazard
-                // with a clock) but that is a ruling, not a default.
-                // **THE MOVES IN TIME, AND NOTHING ABOVE THEM (prd §942,
-                // user: "i also don't think in vs out is good b/c you want to
-                // see them chronologically").** The in/out blocks and their
-                // net are deleted, model included (§723); the brief keeps its
-                // band. One row per move under the feed's day headers.
+                // **HOME'S LIST IS THE ACTIVITY, AND ONLY WHAT HAPPENED (prd
+                // §1039, §1041).** Home drew nothing under the chrome since
+                // §747 — its list was the Overview rows, the tiles said twice
+                // — and the moves lived one tile over, under Activity. The
+                // Activity tile is deleted and its list is Home's: the moves
+                // under the feed's day headers (§942), then the door to all of
+                // them. What is still AHEAD is Coming up's, not Home's.
                 walletStreamSections(walletStreamRows(all), nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
-                // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Each
-                // arm's test is the gate its own sections draw on, so the
-                // skeleton stands only where nothing else would.
+                // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** The
+                // Follow tile above is the remedy, one tap away (§1039).
                 if all.isEmpty {
                     walletSkeletonRowsSection
-                    walletFollowDoorSection
                 }
+            case .comingUp:
+                // **WHAT'S AHEAD, SOONEST FIRST (prd §1041).** The next
+                // World ID grant, an unlock, an expiry — every row with a
+                // future `dueAt`, under the day it falls due.
+                walletComingUpSections(upcoming, nextEventID: nextEventID)
+                if upcoming.isEmpty {
+                    walletSkeletonRowsSection
+                }
+            case .follow:
+                // A verb is never a page — `resolve` never lands here.
+                EmptyView()
             case .holdings:
                 if portfolio?.isEmpty ?? true {
                     walletSkeletonRowsSection
-                    walletFollowDoorSection
                 }
                 walletTokenListSection
-            case .accounts:
-                walletAccountsListSection
             case .positions:
                 if walletScopeIsEmpty(.positions) { walletSkeletonRowsSection }
                 walletDeFiSection
@@ -10690,25 +10578,17 @@ struct FeedScreen: View {
             // A note of yours, reopened in the note sheet (prd §981).
             chrome.editNote(thing.id)
         case .approve:
-            // An MCP client asked to save a thing (PRD §34) — the approval
-            // carries the payload; the tap is what commits it. Consent → write.
-            if thing.sourceRef == MCPTools.saveMarker,
-               let real = Capture.thing(from: thing.content, source: thing.source) {
-                modelContext.insert(real)
+            // The MCP door's save requests (PRD §34) went with the door
+            // (2026-10-01) and their rows with it (`SourceRename.sweepRetiredAsk`), so an
+            // approval here only records the answer.
+            withAnimation(DS.Motion.standard) {
                 thing.mark = .done
                 modelContext.saveHonestly()
-                SpotlightIndex.index([real])
-                chrome.flash("Saved", tone: .success)
-            } else {
-                withAnimation(DS.Motion.standard) {
-                    thing.mark = .done
-                    modelContext.saveHonestly()
-                }
-                // Honesty: the answer is recorded on the thing. Nothing is
-                // sent anywhere — no agent transport exists yet (2026-07-10;
-                // the old copy claimed a gateway was told).
-                chrome.flash("Approved", tone: .success)
             }
+            // Honesty: the answer is recorded on the thing. Nothing is
+            // sent anywhere — no agent transport exists yet (2026-07-10;
+            // the old copy claimed a gateway was told).
+            chrome.flash("Approved", tone: .success)
         case .deny:
             withAnimation(DS.Motion.standard) {
                 thing.mark = .done

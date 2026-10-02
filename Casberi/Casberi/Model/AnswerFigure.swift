@@ -123,7 +123,7 @@ enum AnswerFigure {
                         .sorted { ($0.dueAt ?? now) < ($1.dueAt ?? now) }
         if let axis = KeptAskComposers.runwayAxis(dated) { return axis }
         // 3 — who these are from.
-        if let roster = TodayBrief.faces(rows) { return roster }
+        if let roster = faces(rows) { return roster }
         // 4 — the WEEK'S RHYTHM, above where they came from (2026-08-16, user
         // ruling). It sat under the two WHERE rungs at first, which meant it
         // could only ever draw for a search whose matches all came from one
@@ -145,7 +145,7 @@ enum AnswerFigure {
         // sets too small to fill one. See the type comment: one question, two
         // scales, never two claims.
         if let board = KeptAskComposers.sourceMapLine(rows) { return board }
-        if let mix = TodayBrief.sourceMixLine(
+        if let mix = sourceMixLine(
             rows, eyebrow: String(localized: "Where these came from")) {
             return mix
         }
@@ -306,5 +306,126 @@ enum AnswerFigure {
         out[i] = rootPrefix + (inner.isEmpty ? ref : ref + ", " + inner) + "])"
         out.append(line)
         return out
+    }
+
+    // MARK: - Two figures born in the Today brief
+
+    /// `SourceMix(eyebrow, subline, ["Source N", …])` over the matched rows —
+    /// nil under 2 sources or 4 things (one cell is a title, and a two-thing
+    /// set reads as rows, not a map). Import receipts excluded, every
+    /// aggregate's rule. Cells are ranked biggest-first with the alphabetical
+    /// tie so two composes can't disagree.
+    ///
+    /// Written for the Today brief (`TodayBrief.sourceMixLine`) and revived
+    /// here for answers on 2026-08-15; it moved into this file when the brief
+    /// went with the ask (2026-10-01), its body unchanged.
+    static func sourceMixLine(_ landed: [Thing],
+                              eyebrow: String) -> String? {
+        var counts: [String: Int] = [:]
+        for t in landed where !Corpus.isImportReceipt(t) {
+            counts[t.source, default: 0] += 1
+        }
+        let total = counts.values.reduce(0, +)
+        guard counts.count >= 2, total >= 4 else { return nil }
+        let ranked = counts.sorted { a, b in
+            a.value == b.value ? a.key < b.key : a.value > b.value
+        }
+        let cells = ranked.prefix(3).map { "\(tileSafe($0.key)) \($0.value)" }
+        return "mix = SourceMix(\"\(genSafe(eyebrow))\", \"\", [\(cells.joined(separator: ", "))])"
+    }
+
+    /// Who turned up, ranked by how often (2026-08-10) — the people rung.
+    ///
+    /// Counts appearances across the matched rows and needs no picture, so it
+    /// answers "who is around" rather than "what did they just say". Coverage
+    /// of `authorAvatarURL` is uneven across bridges, which is why the view
+    /// falls back to a monogram instead of gating on a picture.
+    ///
+    /// YOU are excluded: every social bridge stamps your own handle on your own
+    /// posts, so an unfiltered count ranks you first in every corpus.
+    ///
+    /// Written for the Today brief (`TodayBrief.faces`) and moved here with
+    /// `sourceMixLine` (2026-10-01), its body unchanged.
+    @MainActor
+    static func faces(_ things: [Thing]) -> String? {
+        var counts: [String: Int] = [:]
+        var newest: [String: Thing] = [:]
+        var avatar: [String: String] = [:]
+        let mine = ownHandles()
+        for t in things {
+            // A PERSON, not a byline. `authorHandle` is written by RSS,
+            // Substack, Podcasts and YouTube too, where it holds a
+            // PUBLICATION — so an unscoped roster drew "The Verge", "Small
+            // Things" and a podcast as the people in someone's life (seen on
+            // the sim, 2026-08-10). `SocialThread.contextSources` is already the
+            // app's own answer to "does this source name a human": the
+            // thread-capable networks plus Slack and X, which name people and
+            // will never name a masthead. Instagram/TikTok/Snapchat handles
+            // are people too but live outside that set; they are left out
+            // rather than special-cased, because the set is maintained for
+            // this exact distinction and forking it here would give the app
+            // two answers to one question.
+            guard SocialThread.hasContext(t.source) else { continue }
+            guard let raw = t.authorHandle ?? t.postAuthor else { continue }
+            let handle = raw.trimmingCharacters(in: CharacterSet(charactersIn: "@ "))
+            guard !handle.isEmpty, !mine.contains(handle.lowercased()) else { continue }
+            let key = handle.lowercased()
+            counts[key, default: 0] += 1
+            if let prior = newest[key], prior.capturedAt >= t.capturedAt {} else { newest[key] = t }
+            // Keep the first avatar any of this person's rows carried — one
+            // bridge may serve a face while another names them bare.
+            if avatar[key] == nil, let a = t.authorAvatarURL, !a.isEmpty { avatar[key] = a }
+        }
+        // Count first, then newest — a total order, so the roster can't
+        // reshuffle between two opens over identical data.
+        let ranked = counts.sorted {
+            $0.value != $1.value
+                ? $0.value > $1.value
+                : (newest[$0.key]?.capturedAt ?? .distantPast) > (newest[$1.key]?.capturedAt ?? .distantPast)
+        }
+        guard ranked.count >= 3 else { return nil }
+        // FIVE, not six (2026-08-13). The roster's diameters are 64/56/50/44/40
+        // and the card is ~362pt wide inside its padding, so six faces overflow
+        // by a few points — which drew the last person sliced vertically down
+        // the middle with their name cut off, reading as a rendering fault
+        // rather than as "scroll for more" (seen on the sim). Five fit, and the
+        // tail is already counted honestly in the subline below, which is the
+        // §300 folded-tail rule this module was built on.
+        let shown = ranked.prefix(5).compactMap { (key, n) -> String? in
+            guard let t = newest[key] else { return nil }
+            let display = (t.authorHandle ?? t.postAuthor ?? key)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "@ "))
+            return [genSafe(display), genSafe(avatar[key] ?? ""), "\(n)", t.id.uuidString]
+                .joined(separator: "|")
+        }
+        guard shown.count >= 3 else { return nil }
+        let more = ranked.count - shown.count
+        let subline = more > 0 ? String(localized: "and \(more) more") : ""
+        return "faces = Faces(\"\(String(localized: "Who's around"))\", \"\(genSafe(subline))\", \"\(shown.joined(separator: ";"))\")"
+    }
+
+    /// The handles that are YOURS — every account the social stores have been
+    /// told you own, plus the literal "you" the demo stamps. Lowercased and
+    /// stripped of a leading @, matching `faces`' own key.
+    @MainActor
+    private static func ownHandles() -> Set<String> {
+        var out: Set<String> = ["you"]
+        for name in FarcasterStore.shared.accounts.filter(\.mine).map(\.username)
+            + BlueskyStore.shared.accounts.filter(\.mine).map(\.handle) {
+            out.insert(name.trimmingCharacters(in: CharacterSet(charactersIn: "@ ")).lowercased())
+        }
+        return out
+    }
+
+    private static func tileSafe(_ s: String) -> String {
+        genSafe(s).replacingOccurrences(of: "|", with: " ")
+            .replacingOccurrences(of: ",", with: " ")
+            .replacingOccurrences(of: ";", with: " ")
+    }
+
+    private static func genSafe(_ s: String) -> String {
+        s.replacingOccurrences(of: "\"", with: "")
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

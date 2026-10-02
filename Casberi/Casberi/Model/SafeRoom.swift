@@ -642,7 +642,8 @@ struct SafeRoom: Equatable {
     /// whole days — nil when nothing awaits you, or when none of the ones
     /// that do carried a submission date to measure from.
     ///
-    /// Read by the Today brief (`TodayBrief`) and nothing on this card. A
+    /// Read by the Today brief and the Today widget until both went with the
+    /// ask (2026-10-01); `-safeRoomProbe` logs it now, and nothing draws it. A
     /// your-turn signature notifies ONCE, at landing, and §306's 36-hour news
     /// window means it can never notify again — so a request that has sat for
     /// a week has no surface that re-raises it. The brief is the honest one:

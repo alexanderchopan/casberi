@@ -4,15 +4,14 @@ import Foundation
 ///
 /// Every registry figure in `FeedInsight` is pure over ONE room's things by
 /// contract, which is exactly why the All feed has never had a hero: a chart
-/// of everything at once, composed that way, is a chart of nothing. These three
-/// are composed the other way round — they take the WHOLE corpus and find the
-/// axis all rooms genuinely share (the theme river went in §836 — nothing had
-/// drawn it since the panel):
+/// of everything at once, composed that way, is a chart of nothing. What is
+/// left is composed the other way round — it takes the WHOLE corpus and finds
+/// the axis all rooms genuinely share (the theme river went in §836; the
+/// semantic map, `scatter`, went with the Today brief that drew it,
+/// 2026-10-01):
 ///
-///   • `dial`    — the clock. Every thing has an hour; nothing in the app has
-///                 ever asked which one.
-///   • `scatter` — meaning. §282's embeddings serve retrieval invisibly; this
-///                 is the one surface that draws them.
+///   • `dial` — the clock. Every thing has an hour; nothing in the app has
+///              ever asked which one.
 ///
 /// Foundation-only over flat inputs, like `AgentPanel` itself, so
 /// `scripts/agent-panel-selftest.sh` compiles them whole with no stubs.
@@ -20,18 +19,13 @@ enum AgentPanelFigures {
 
     // MARK: - Input
 
-    /// One thing, flattened to what these figures read.
-    /// `Sendable` so the semantic map's projection can run OFF the main actor
-    /// (PERF 2026-08-12): every field is a value type, and `scatter` is the
-    /// one figure here whose cost is real arithmetic rather than a walk — see
-    /// `Composer.crossSourceCards`.
+    /// One thing, flattened to what these figures read. `Sendable`: every
+    /// field is a value type.
     struct Entry: Equatable, Sendable {
         var source: String
         var at: Date
         /// The terms already stamped on the thing (`ocrTopics` + tags).
         var terms: [String] = []
-        /// The stored embedding, or nil. Only `scatter` reads it.
-        var vector: [Double]? = nil
     }
 
     // MARK: - 1 · The day dial
@@ -96,163 +90,5 @@ enum AgentPanelFigures {
     private static func clock(_ hour: Int) -> String {
         let h = hour % 12 == 0 ? 12 : hour % 12
         return "\(h)\(hour < 12 ? "a" : "p")"
-    }
-
-    /// Words that name a SHAPE or a KIND, never a subject.
-    ///
-    /// `Thing.tags` carries the importers' facet tags (Post / Reply / Liked /
-    /// Shorts / …) beside real topics, and `ocrTopics` carries the kind words
-    /// the rooms file things under. Drawn as river bands they read as themes,
-    /// and the first real run produced exactly that: "link", "shorts",
-    /// "screenshot" flowing as if they were what the person cared about.
-    /// §313's ruling in a new figure — a container is not a subject.
-    static let nonSubject: Set<String> = [
-        "post", "posts", "reply", "replies", "liked", "saved", "save",
-        "comment", "comments", "conversation", "memory", "thread", "threads",
-        "shorts", "video", "videos", "review", "reviews", "release", "build",
-        "gone", "link", "links", "note", "notes", "screenshot", "screenshots",
-        "photo", "photos", "image", "images", "event", "chat", "chats",
-        "mail", "voice", "product", "transaction", "reminder", "file", "files",
-        "message", "messages", "untitled", "document", "documents",
-    ]
-
-    // MARK: - 2 · The semantic map
-
-    /// The corpus projected into the unit square by embedding similarity.
-    ///
-    /// **A DETERMINISTIC projection, and that constraint picked the method.**
-    /// t-SNE and UMAP give prettier separation and are both randomised — they
-    /// would rearrange the map between two opens over identical data, which is
-    /// the exact failure a total ordering exists to prevent (§332),
-    /// and far more glaring here since the whole picture moves. So: PCA onto
-    /// its own first two components, computed by power iteration with a FIXED
-    /// seed vector and a fixed iteration count. Same corpus in, same picture
-    /// out, on every device.
-    ///
-    /// Cheap enough to run on open at this size (two components over a few
-    /// hundred capped vectors is a handful of passes), and the caller caches
-    /// the result beside the vectors anyway.
-    static func scatter(_ entries: [Entry], cap: Int = 300)
-        -> (dots: [AgentPanel.Dot], clusters: [AgentPanel.DotCluster]) {
-        let usable = entries.compactMap { e -> (Entry, [Double])? in
-            guard let v = e.vector, !v.isEmpty else { return nil }
-            return (e, v)
-        }
-        guard usable.count >= 12 else { return ([], []) }
-        // Newest first so a capped corpus maps what's current.
-        let sample = usable.sorted { $0.0.at > $1.0.at }.prefix(cap).map { $0 }
-        let dim = sample.map(\.1.count).min() ?? 0
-        guard dim >= 2 else { return ([], []) }
-        let vectors = sample.map { Array($0.1.prefix(dim)) }
-
-        // Centre.
-        var mean = Array(repeating: 0.0, count: dim)
-        for v in vectors { for i in 0..<dim { mean[i] += v[i] } }
-        for i in 0..<dim { mean[i] /= Double(vectors.count) }
-        let centred = vectors.map { v in (0..<dim).map { v[$0] - mean[$0] } }
-
-        let a1 = principalAxis(centred, dim: dim)
-        // Deflate, then take the second axis out of what's left.
-        let deflated = centred.map { v -> [Double] in
-            let p = dot(v, a1)
-            return (0..<dim).map { v[$0] - p * a1[$0] }
-        }
-        let a2 = principalAxis(deflated, dim: dim)
-
-        var xs = [Double](), ys = [Double]()
-        for v in centred { xs.append(dot(v, a1)); ys.append(dot(v, a2)) }
-        let nx = unit(xs), ny = unit(ys)
-
-        // Dots are built AFTER the clusters below, so an unclustered stray can
-        // be dropped: 300 dots in a tile is mush regardless of layout, and a
-        // stray belongs to no neighbourhood by definition — it is the noise
-        // that makes the real structure harder to see (§339).
-        var dots: [AgentPanel.Dot] = []
-
-        // Clusters are NAMED BY THE TERMS THAT ARE ACTUALLY THERE — a cell
-        // label in a treemap is a word from the data, and this is the same
-        // rule: the map asserts nothing about why things sit together, it just
-        // says which word the neighbourhood shares. A cluster with no shared
-        // term goes unlabelled rather than getting an invented one.
-        var byTerm: [String: [Int]] = [:]
-        for (i, entry) in sample.enumerated() {
-            for term in Set(entry.0.terms.map { $0.lowercased() })
-            where term.count >= 3 && !nonSubject.contains(term) {
-                byTerm[term, default: []].append(i)
-            }
-        }
-        var clusters: [AgentPanel.DotCluster] = []
-        for (term, idx) in byTerm {
-            guard idx.count >= 3 else { continue }
-            var sx = 0.0, sy = 0.0
-            for i in idx { sx += nx[i]; sy += ny[i] }
-            let cx = sx / Double(idx.count)
-            let cy = sy / Double(idx.count)
-            var spread = 0.0
-            for i in idx {
-                let dx = nx[i] - cx, dy = ny[i] - cy
-                spread = max(spread, (dx * dx + dy * dy).squareRoot())
-            }
-            clusters.append(AgentPanel.DotCluster(label: term, x: cx, y: cy, radius: spread))
-        }
-        // Tightest first — a tight cluster is a real neighbourhood, a wide one
-        // is a common word smeared across the map.
-        clusters.sort { a, b in
-            a.radius == b.radius ? a.label < b.label : a.radius < b.radius
-        }
-        let kept = Array(clusters.prefix(4))
-        var member = Set<Int>()
-        for cluster in kept {
-            for (term, idx) in byTerm where term == cluster.label { member.formUnion(idx) }
-        }
-        for i in member.sorted() {
-            dots.append(AgentPanel.Dot(x: nx[i], y: ny[i], source: sample[i].0.source))
-        }
-        return (dots, kept)
-    }
-
-    // MARK: - Shared arithmetic
-
-    /// Power iteration with a FIXED start — no randomness anywhere, so the
-    /// same corpus projects identically on every device and every open.
-    private static func principalAxis(_ rows: [[Double]], dim: Int,
-                                      iterations: Int = 24) -> [Double] {
-        // A fixed, non-degenerate seed. All-ones would be orthogonal to any
-        // axis whose components sum to zero — which mean-centred data can
-        // easily produce — so the seed alternates sign instead.
-        var axis = (0..<dim).map { $0 % 2 == 0 ? 1.0 : -1.0 }
-        axis = normalize(axis)
-        for _ in 0..<iterations {
-            var next = Array(repeating: 0.0, count: dim)
-            for row in rows {
-                let p = dot(row, axis)
-                for i in 0..<dim { next[i] += p * row[i] }
-            }
-            let n = normalize(next)
-            guard n.contains(where: { $0 != 0 }) else { break }
-            axis = n
-        }
-        return axis
-    }
-
-    private static func dot(_ a: [Double], _ b: [Double]) -> Double {
-        var out = 0.0
-        for i in 0..<min(a.count, b.count) { out += a[i] * b[i] }
-        return out
-    }
-
-    private static func normalize(_ v: [Double]) -> [Double] {
-        let mag = dot(v, v).squareRoot()
-        guard mag > 0 else { return v }
-        return v.map { $0 / mag }
-    }
-
-    /// Map a series into 0…1. A degenerate axis (every value identical)
-    /// returns 0.5 for all — the flat-curve rule: drawing it against the edge
-    /// would claim a spread that isn't there.
-    static func unit(_ values: [Double]) -> [Double] {
-        guard let lo = values.min(), let hi = values.max() else { return [] }
-        guard hi > lo else { return values.map { _ in 0.5 } }
-        return values.map { ($0 - lo) / (hi - lo) }
     }
 }

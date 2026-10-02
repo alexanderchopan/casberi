@@ -48,12 +48,11 @@ HANDLE="Casberi/Casberi/Screens/HandleSetupScreen.swift"
 DETAIL="Casberi/Casberi/Screens/BridgeDetailScreen.swift"
 DISCONNECT="Casberi/Casberi/Screens/BridgeDisconnectSection.swift"
 ROOT="Casberi/Casberi/Shell/RootShell.swift"
-MCP="Casberi/Casberi/Model/MCPTools.swift"
 TOKENS="Casberi/Casberi/Design/DesignTokens.swift"
 SETTINGS="Casberi/Casberi/Screens/AccountDetailSheet.swift"
 
 for f in "$SHAPE" "$READERS" "$NOTES" "$ENFORCE" "$PAGE" "$TOKEN" "$HANDLE" "$DETAIL" \
-         "$DISCONNECT" "$ROOT" "$MCP" "$TOKENS" "$SETTINGS"; do
+         "$DISCONNECT" "$ROOT" "$TOKENS" "$SETTINGS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -80,7 +79,6 @@ strip_comments "$HANDLE"     > "$TMP/handle-bare.swift"
 strip_comments "$DETAIL"     > "$TMP/detail-bare.swift"
 strip_comments "$DISCONNECT" > "$TMP/disconnect-bare.swift"
 strip_comments "$ROOT"       > "$TMP/root-bare.swift"
-strip_comments "$MCP"        > "$TMP/mcp-bare.swift"
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled files cannot prove about themselves.
@@ -193,9 +191,7 @@ grep -q 'reader: reader)' "$TMP/root-bare.swift" \
   || { echo "✗ the keyed synthesize no longer names its agent as the reader"; exit 1; }
 grep -q 'AccountReaders.ID.agent(\$0.rawValue)' "$TMP/root-bare.swift" \
   || { echo "✗ the keyed reader id is not derived from the provider"; exit 1; }
-mcp_reads=$(grep -c 'by: AccountReaders.ID.mcp' "$TMP/mcp-bare.swift" || true)
-[[ "$mcp_reads" -eq 2 ]] \
-  || { echo "✗ MCPTools filters by the mcp reader $mcp_reads times, expected 2 (search_things, week_synthesis)"; exit 1; }
+# The MCP door's own filter went with the door (2026-10-01).
 
 # 11. The disconnect is the SHARED one, worn plain — never a second dialog.
 grep -q 'BridgeDisconnectSection(bridgeID: seatID, name: source' "$TMP/page-bare.swift" \
@@ -393,17 +389,17 @@ check("allowed again", R.mayRead(claude.id, seat: "gh", defaults: suite)
       && R.deniedSources(for: claude.id, defaults: suite).isEmpty)
 R.setMayRead(device.id, true, seat: "gh", source: "GitHub", defaults: suite)
 check("an empty deny set leaves no entry behind", suite.data(forKey: R.key) == nil)
-R.setMayRead(R.ID.mcp, false, seat: "bsky", source: "Bluesky", defaults: suite)
-R.setMayRead(R.ID.mcp, false, seat: "fc", source: "Farcaster", defaults: suite)
-check("mcp shut out of two sources", R.deniedSources(for: R.ID.mcp, defaults: suite) == ["Bluesky", "Farcaster"])
-R.setMayRead(R.ID.mcp, false, seat: "fc", source: "Farcaster (renamed)", defaults: suite)
+R.setMayRead(R.ID.agent("venice"), false, seat: "bsky", source: "Bluesky", defaults: suite)
+R.setMayRead(R.ID.agent("venice"), false, seat: "fc", source: "Farcaster", defaults: suite)
+check("an agent shut out of two sources", R.deniedSources(for: R.ID.agent("venice"), defaults: suite) == ["Bluesky", "Farcaster"])
+R.setMayRead(R.ID.agent("venice"), false, seat: "fc", source: "Farcaster (renamed)", defaults: suite)
 check("a rename re-stamps the source on the next write",
-      R.deniedSources(for: R.ID.mcp, defaults: suite) == ["Bluesky", "Farcaster (renamed)"])
+      R.deniedSources(for: R.ID.agent("venice"), defaults: suite) == ["Bluesky", "Farcaster (renamed)"])
 check("denying twice does not double the entry", R.denied(seat: "fc", defaults: suite).count == 1)
 R.forget(seat: "bsky", defaults: suite)
-check("forget one seat", R.deniedSources(for: R.ID.mcp, defaults: suite) == ["Farcaster (renamed)"])
+check("forget one seat", R.deniedSources(for: R.ID.agent("venice"), defaults: suite) == ["Farcaster (renamed)"])
 R.forgetAll(defaults: suite)
-check("forgetAll", R.deniedSources(for: R.ID.mcp, defaults: suite).isEmpty)
+check("forgetAll", R.deniedSources(for: R.ID.agent("venice"), defaults: suite).isEmpty)
 
 suite.removePersistentDomain(forName: "group.com.casberi.selftest.accountpage")
 if failures > 0 { print("\(failures) failure(s)"); exit(1) }

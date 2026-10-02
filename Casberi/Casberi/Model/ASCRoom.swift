@@ -1,75 +1,25 @@
 import Foundation
 
-/// THE APP STORE CONNECT ROOM'S HEAD (2026-08-06, prd §324) — where every app
-/// stands right now.
+/// How App Store Connect's setup screen words an app's STANDING (2026-08-06,
+/// prd §324) — "In review · 2 days".
 ///
-/// §323 landed four kinds of event and led with a plain list of them, which is
-/// the §247 gap exactly: a room holding the facts a developer refreshes App
-/// Store Connect for, drawing none of them. The rows answer *what happened*.
-/// This answers the question people actually have, which is present tense:
-/// **where is my build, and how long has it been there?**
+/// This was the room head's model until the head left the screen (§749) and
+/// its ranking, headline and note were deleted with it (2026-10-01, the rule
+/// that a feature deleted from the surface is deleted from the model). What
+/// stays is what `AppStoreConnectScreen.stateLine` still draws.
 ///
-/// ## It spends nothing
+/// ## The duration is the thing most easily faked
 ///
-/// Every field is already on the device — `ASCState.standing`, written by the
-/// same pass that lands the rows, from the same responses. No request, no new
-/// `Thing` field, no CloudKit deploy (the `StripeRoom`/`CloudflareRunway`
-/// contract: a head that costs a call is a head that can fail, and a room's
-/// lede must not fail differently from the rows beneath it).
-///
-/// ## The duration is the whole card, and it is the thing most easily faked
-///
-/// "In review · 2 days" is what makes this worth drawing. Apple publishes NO
-/// timestamp for when a version entered its current state, so the only clock
-/// available is our own — and on first connect that clock reads zero for a
-/// version that has been in review since Tuesday. So a duration is shown ONLY
-/// for a transition this device actually watched (`ASCStanding.observed`), and
-/// the state stands alone until then. Showing "0 days" would be a confident
-/// wrong answer about the one number being watched, which is §83 in the place
-/// it costs most.
-///
-/// ## What it may NOT draw
-///
-/// No ratings curve, no download line, no "review usually takes N days"
-/// estimate. The first two are tallies this bridge deliberately never fetches
-/// (§216); the third would be an average computed from a sample of one
-/// developer's history, rendered as a prediction. Apple's own review times are
-/// not published per-app and this app has no business inventing them.
+/// Apple publishes NO timestamp for when a version entered its current state,
+/// so the only clock available is our own — and on first connect that clock
+/// reads zero for a version that has been in review since Tuesday. So a
+/// duration is shown ONLY for a transition this device actually watched
+/// (`ASCStanding.observed`, gated by the screen), and `waitLabel` refuses day
+/// zero. "0 days" would be a confident wrong answer (§83).
 ///
 /// Foundation-only by design so `scripts/appstoreconnect-selftest.sh` can
 /// compile it WHOLE and unmodified.
-struct ASCRoom: Equatable {
-
-    /// One app's standing, already reduced to what the card draws.
-    struct App: Identifiable, Equatable {
-        /// The App Store Connect app id — what the card hands back so the
-        /// section can open the right row without the card holding a `Thing`.
-        let id: String
-        let name: String
-        let version: String
-        /// Nil when Apple reported a state this build has never heard of. The
-        /// card still draws the app (its build runway is still true); it just
-        /// says nothing it can't stand behind.
-        let state: ASCVersionState?
-        /// Whole days in the current state, or nil when we didn't watch it
-        /// arrive there. See the type note.
-        let days: Int?
-        let build: String
-        /// Whole days until the newest build stops working for testers, or nil
-        /// when there is no build, no expiry, or it has already gone.
-        let expiresInDays: Int?
-    }
-
-    /// Ranked — see `rank`. The lead is `apps.first`.
-    let apps: [App]
-    /// When the bridge last read Apple. Nil means never on this device, which
-    /// is a different fact from "nothing has changed".
-    let asOf: Date?
-
-    var lead: App? { apps.first }
-    /// Nothing worth a card. A connected key with no apps is a real state and
-    /// gets no head — the connect screen already says so more usefully.
-    var isEmpty: Bool { apps.isEmpty }
+enum ASCRoom {
 
     // MARK: - Days
 
@@ -82,50 +32,9 @@ struct ASCRoom: Equatable {
         return calendar.dateComponents([.day], from: a, to: b).day ?? 0
     }
 
-    // MARK: - Ranking
-
-    /// Which app leads the card.
-    ///
-    /// Ordered by what a developer would want to see first if they could only
-    /// see one line, and deliberately NOT by name or by recency:
-    ///
-    ///   4 — something is WRONG and only you can fix it (rejected, blocked).
-    ///   3 — Apple is holding it: in review, or approved and waiting on you.
-    ///   2 — a build is about to stop working for your testers.
-    ///   1 — everything else that has a state at all.
-    ///   0 — no readable state.
-    ///
-    /// An expiring build outranks a live app but never outranks a rejection:
-    /// the rejection has no deadline and the expiry does, but the rejection is
-    /// the one that stops the release entirely.
-    static func rank(_ app: App, expirySoonDays: Int = 14) -> Int {
-        if let state = app.state {
-            if state.alarming { return 4 }
-            if state == .inReview || state == .pendingDeveloperRelease
-                || state == .pendingAppleRelease { return 3 }
-        }
-        if let expires = app.expiresInDays, expires <= expirySoonDays { return 2 }
-        return app.state == nil ? 0 : 1
-    }
-
-    /// Rank first, then soonest expiry, then name — so the order is total and
-    /// two runs over the same data can never disagree (a card that reshuffles
-    /// on every foreground reads as broken).
-    static func ordered(_ apps: [App], expirySoonDays: Int = 14) -> [App] {
-        apps.sorted { a, b in
-            let ra = rank(a, expirySoonDays: expirySoonDays)
-            let rb = rank(b, expirySoonDays: expirySoonDays)
-            if ra != rb { return ra > rb }
-            let ea = a.expiresInDays ?? Int.max
-            let eb = b.expiresInDays ?? Int.max
-            if ea != eb { return ea < eb }
-            return a.name < b.name
-        }
-    }
-
     // MARK: - Words
 
-    /// The state, in the words the card shows. Distinct from
+    /// The state, in the words the screen shows. Distinct from
     /// `ASCVersionState.verdict`, which is written for a FEED ROW announcing a
     /// change ("Approved — yours to release") and reads wrong as a standing
     /// ("Casberi · Approved — yours to release · 2 days"). Present tense here,
@@ -163,55 +72,5 @@ struct ASCRoom: Equatable {
     static func waitLabel(days: Int?) -> String? {
         guard let days, days > 0 else { return nil }
         return days == 1 ? String(localized: "1 day") : String(localized: "\(days) days")
-    }
-
-    /// The build line: what it is and how long it has left. Nil when there is
-    /// no build to talk about.
-    static func buildLabel(_ app: App) -> String? {
-        guard !app.build.isEmpty else { return nil }
-        let name = String(localized: "Build \(app.build)")
-        guard let days = app.expiresInDays else { return name }
-        if days <= 0 { return name + " · " + String(localized: "expires today") }
-        if days == 1 { return name + " · " + String(localized: "expires tomorrow") }
-        return name + " · " + String(localized: "\(days) days left")
-    }
-
-    /// The one line at the top of the card.
-    ///
-    /// It states the LEAD app rather than counting apps, because a count is the
-    /// thing the module doctrine forbids and because almost every account here
-    /// has one or two apps — "2 apps" would be a worse sentence than the one
-    /// fact worth reading.
-    static func headline(_ room: ASCRoom) -> String {
-        guard let lead = room.lead else { return String(localized: "Nothing to report") }
-        var line = "\(lead.name) · \(stateLabel(lead.state))"
-        if let wait = waitLabel(days: lead.days) { line += " · \(wait)" }
-        return line
-    }
-
-    /// The quiet line under the card: how many more apps aren't drawn, and how
-    /// old the reading is. Both, or either, or nothing.
-    ///
-    /// Staleness is stated past a day because this bridge reads on the
-    /// foreground sweep — a number from this morning is normal, a number from
-    /// last week means the key stopped working and nothing else on the card
-    /// would say so.
-    static func note(_ room: ASCRoom, drawn: Int, now: Date = .now) -> String? {
-        var parts: [String] = []
-        let hidden = room.apps.count - drawn
-        if hidden > 0 {
-            parts.append(hidden == 1 ? String(localized: "1 more app")
-                                     : String(localized: "\(hidden) more apps"))
-        }
-        if let stale = staleNote(asOf: room.asOf, now: now) { parts.append(stale) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    static func staleNote(asOf: Date?, now: Date = .now) -> String? {
-        guard let asOf else { return String(localized: "not read on this device yet") }
-        let days = days(from: asOf, to: now)
-        guard days >= 1 else { return nil }
-        return days == 1 ? String(localized: "read yesterday")
-                         : String(localized: "read \(days) days ago")
     }
 }

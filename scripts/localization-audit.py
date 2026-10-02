@@ -90,7 +90,6 @@ KNOWN_EXEMPT = {
     "MetaMaskCardBridge.swift",  # same accountSummary(), same -metamaskCardProbe line
     "RailgunBridge.swift",    # accountSummary() is the probe's status line
     "SafeBridge.swift",       # probe() is -safeProbe's NSLog output
-    "MCPTools.swift",         # MCP tool text is consumed by an LLM client, not the app UI
 }
 
 LOCALIZED_CALL_RE = re.compile(

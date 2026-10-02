@@ -79,14 +79,9 @@ struct SettingsRows: View {
             .sheet(isPresented: $diagnosticsOpen) {
                 presented(NavigationStack { DiagnosticsScreen() }.dsNavSheet())
             }
-            // `onDismiss` because two of this screen's facts are MIRRORED
-            // `@State` (`mcpOn`/`mcpRunning`, prd §628) and the tray that
-            // opens from their own row is what changes them — so without
-            // this the row said "Off" over a listener the person had just
-            // switched on (§83's fake status). The rows beside it are
-            // computed properties and were always live; these two cannot be,
-            // because reading them is a `UserDefaults` hit and a class
-            // SwiftUI does not observe.
+            // `onDismiss` re-reads the mirrored counts (prd §628): a tray
+            // that changed what a row states must not leave the row stale
+            // (§83's fake status).
             .sheet(item: $detail, onDismiss: { readCounts() }) {
                 presented(AccountDetailSheet(detail: $0))
             }
@@ -248,23 +243,8 @@ struct SettingsRows: View {
     /// it needs the count when the screen opens, and again when the app comes
     /// back to it.
     @State private var thingCount = 0
-    #if targetEnvironment(macCatalyst)
-    /// The MCP listener's two facts, mirrored at appearance for the same
-    /// reason every other non-observable fact on this screen is (prd §628):
-    /// `MCPServer.shared` is a plain `@MainActor` class SwiftUI does not
-    /// observe, and `isEnabled` is a `UserDefaults` read. The row states the
-    /// two apart because they differ — a listener switched on that failed to
-    /// bind is not off, and "Listening" over a dead socket is §83's fake
-    /// status.
-    @State private var mcpOn = false
-    @State private var mcpRunning = false
-    #endif
     private func readCounts() {
         thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
-        #if targetEnvironment(macCatalyst)
-        mcpOn = MCPServer.isEnabled
-        mcpRunning = MCPServer.shared.running
-        #endif
     }
 
     /// A corpus passing a round number is a real crossing, and this is the one
@@ -411,9 +391,8 @@ struct SettingsRows: View {
             //
             // The two things it alone held went with it rather than being
             // dropped: `AgentLibrarianRow` moved onto the ACTIVE key's own
-            // page, and the Mac's MCP listener is the row below — it was never
-            // a key, and sat in that sheet only because the sheet was the
-            // nearest thing about agents.
+            // page, and the Mac's MCP listener got a row of its own here —
+            // until the listener itself went with the ask (2026-10-01).
             // "What you can do" (2026-07-11 as "How it works") sat here until
             // 2026-09-10 — a sheet holding one sentence, reached from a row
             // saying "New here? Start here". Deleted with the sheet (user: "it's
@@ -436,29 +415,7 @@ struct SettingsRows: View {
                         }
                     }),
         ] + diagnosticsRows
-        #if targetEnvironment(macCatalyst)
-        // Mac only, because it is the only build that is a real desktop
-        // process sitting on the same machine as the agent that wants to read
-        // the corpus (`MCPServer`). Its own row since prd §871; App Review was
-        // pointed at this switch inside the key sheet, so it keeps a door.
-        //
-        // Appended rather than written into the literal with an `#if` inside
-        // it, so the iOS build resolves one array and not a conditional
-        // element — and `rows` stays a `let` on both platforms.
-        let macRow = RowSpec(title: "Agents on this Mac",
-                             // Three states, because a listener switched on
-                             // that failed to bind is not off, and "Listening"
-                             // over a dead socket is §83's fake status.
-                             value: mcpRunning
-                                 ? String(localized: "Listening")
-                                 : (mcpOn ? String(localized: "Not listening")
-                                          : String(localized: "Off")),
-                             badge: ("terminal", DS.textPrimary),
-                             action: { open(.mcp) { detail = .mcp } })
-        return (rows + [macRow]).sorted { $0.title < $1.title }
-        #else
         return rows.sorted { $0.title < $1.title }
-        #endif
     }
 
     /// Whether "See the demo" belongs on screen — the demo mode's re-entry

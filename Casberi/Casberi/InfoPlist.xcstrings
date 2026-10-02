@@ -390,41 +390,6 @@
         }
       }
     },
-    "NSLocationWhenInUseUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi reads your location once to show today's weather in Coming up — never in the background."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi lee tu ubicación una vez para mostrar el clima de hoy en Coming up — nunca en segundo plano."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi は位置情報を一度だけ読み込み、Coming up に今日の天気を表示します — バックグラウンドでは読み込みません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi는 위치를 한 번만 읽어 Coming up에 오늘의 날씨를 보여줘요 — 백그라운드에서는 절대 읽지 않아요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi 只会读取一次你的位置，用于在「即将到来」中显示今天的天气 — 绝不会在后台读取。"
-          }
-        }
-      }
-    },
     "NSMicrophoneUsageDescription": {
       "extractionState": "manual",
       "localizations": {

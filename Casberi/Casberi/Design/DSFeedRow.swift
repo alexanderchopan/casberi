@@ -13,13 +13,14 @@ import SwiftUI
 ///
 /// ANATOMY, top to bottom, and nothing else:
 ///
-///     lead      26pt (`DS.Mark.row`): a source mark, or a person's face
+///     lead      46pt (`DS.Mark.row`, prd §1017) centred in a 60pt head:
+///               a source mark, or a person's face
 ///     name      17pt primary, ONE line (prd §902) · trailing slot on its baseline
 ///     line      12pt secondary — who, where, the count, the excerpt
 ///     below     tiles at 44pt (`DS.Mark.tile`), a post's words and media,
 ///               a reading's bars — anything that is the row's CONTENT
 ///
-/// **The lead is always 26pt, so the text column has ONE left edge from the
+/// **The lead is always one size, so the text column has ONE left edge from the
 /// top of a room to the bottom.** The user caught the one exception in the
 /// mock before a line of this existed ("why doesn't the social post … have the
 /// same indentation as the rest. it should"). A face is drawn at
@@ -118,9 +119,8 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
 }
 
 /// THE LEAD FOR A ROW THAT COUNTS A KIND OF THING rather than showing one
-/// (prd §763): a glyph on a faint 26pt disc — the disc the Readings rows and
-/// `DevnetVerbRow` wear (§752b) — so a head's ranked rows and the wallet
-/// family's rows share the feed row's leading column.
+/// (prd §763): a glyph on a faint 26pt disc, so a head's ranked rows share
+/// the feed row's leading column.
 struct DSGlyphLead: View {
     let glyph: String
     /// Ink for a glyph that states a STATE (prd §767) — Settings' on-device

@@ -31,8 +31,8 @@
 # (§440): four device drawings proved a force-free graph layout answers a
 # different geometric question for every corpus shape, and the reading moved to
 # `AddressSpineCard` — itself deleted 2026-08-27 (prd §497, user ruling); the
-# arithmetic survives in `AddressConnections`, covered by
-# `wallet-viz-selftest.sh`, and a §497 negative below keeps the drawing from
+# arithmetic survived in `AddressConnections` until prd §1041 deleted it
+# with its last surface, and a §497 negative below keeps the drawing from
 # quietly returning.
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
@@ -75,15 +75,11 @@ PEOPLE="Casberi/Casberi/Model/AddressBookPeople.swift"
 # rulings that outlive it (the shared row, the move sheet) are still guarded
 # on $VIEWS below. Groups are DELETED (prd §691) and guarded nowhere.
 VIEWS="Casberi/Casberi/Screens/AddressBookViews.swift"
-FLIGHT="Casberi/Casberi/Screens/AddressFlight.swift"
 REVEAL="Casberi/Casberi/Screens/AddressReveal.swift"
-SOURCE="Casberi/Casberi/Model/AddressConnectionsSource.swift"
-# The connections MODEL — where §448 cut `headline`/`subhead` out.
-CONN="Casberi/Casberi/Model/AddressConnections.swift"
 # The shell — where the rail is built and the route node resolved (§461).
 SHELL_MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$VIEWS" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$VIEWS" "$SHELL_MAIN" "$ROUTE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -104,7 +100,6 @@ src = re.sub(r'//.*$', '', src, flags=re.M)
 sys.stdout.write(src)
 PY
 }
-strip_comments "$FLIGHT" > "$TMP/flight-bare.swift"
 strip_comments "$SCREEN" > "$TMP/screen-bare.swift"
 strip_comments "$FIELD"  > "$TMP/field-bare.swift"
 strip_comments "$UNWATCH" > "$TMP/unwatch-bare.swift"
@@ -138,15 +133,7 @@ grep -q 'static func summaries(in context: ModelContext)' "$ACTIVITY" \
 # pass; the fix is a single `let` threaded down. A section builder that goes
 # back to the store for its own copy silently restores the cost.
 
-# ONE CORPUS WALK, TWO READINGS (prd §441).
-grep -q 'static func map(things: \[Thing\]) -> Map?' "$SOURCE" \
-  || { echo "✗ AddressConnections can no longer be built from an already-fetched array"; exit 1; }
-# The re-sort inside `edges(from:)` is load-bearing: AddressActivity hands back
-# NEWEST first and node order is FIRST-DEALT (§295), so trusting the caller's
-# order silently reverses the spine — a card that renders perfectly and lists
-# the newest relationship as the oldest.
-grep -q 'things.sorted(by: { $0.capturedAt < $1.capturedAt })' "$SOURCE" \
-  || { echo "✗ edges(from:) trusts the caller's order — the spine would be reversed, and it would look completely normal"; exit 1; }
+# (§441's one-corpus-walk guards went with `AddressConnections`, prd §1041.)
 
 # ── §461: NOTHING ON A READING SURFACE CHANGES WHAT THE APP READS ───────────
 #
@@ -247,27 +234,12 @@ grep -q 'Button(action: onToggleWatch)' "$VIEWS" \
 # that safe.
 grep -q 'onToggleWatch' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" \
   && { echo "✗ a screen passes a watch toggle to its rows — §511 merged the lists and did NOT bring the star back (§461)"; exit 1; }
-# The flight's ends are RAMP tokens the caller passes, and since §448 they are
-# REQUIRED: the old defaults named the star flight's own anchors, and a default
-# pointing at an anchor nothing publishes draws nothing at all — silently,
-# which is the failure this file exists to avoid. The ruling behind them is
-# unchanged: the size may never be read off the anchor rects, which are layout
-# frames and stop matching the face the moment a mark gains a border.
-grep -q 'let size = fromSize + (toSize - fromSize) \* progress' "$FLIGHT" \
-  || { echo "✗ the flight no longer interpolates between two ramp sizes"; exit 1; }
-grep -q 'var fromSize: CGFloat = DS.Face.list' "$FLIGHT" \
-  || { echo "✗ the flight's start stopped being a ramp token — and this file is the only place face-ramp-audit can see that a travelling face's ends are tiers"; exit 1; }
-grep -q 'var toSize: CGFloat = DS.Face.shelf' "$FLIGHT" \
-  || { echo "✗ the flight's end stopped being a ramp token — see above"; exit 1; }
-# The KEYS, unlike the sizes, may carry no default (§448). The old ones named
-# the star flight's anchors, and this overlay's answer to a key nothing
-# publishes is to draw nothing at all — silently.
-grep -qE '(var|let) (from|to)Key: String *=' "$TMP/flight-bare.swift" \
-  && { echo "✗ the flight grew a default ANCHOR again — a key nothing publishes draws nothing, silently (§448)"; exit 1; }
-grep -qE 'let (from|to)Key: String$' "$FLIGHT" \
-  || { echo "✗ the flight's anchors stopped being required (§448)"; exit 1; }
-grep -qE '\b[ab]\.(width|height|size)\b' "$TMP/flight-bare.swift" \
-  && { echo "✗ the flight sizes itself off the anchor rects again — those are layout frames and stop matching the face the moment a mark gains a border"; exit 1; }
+# The flight overlay is DELETED (2026-10-01): nothing had mounted
+# `AddressFlightOverlay` since the book screen went (prd §690), so its anchors
+# published into a preference nobody read. A feature deleted from the surface
+# is deleted from the model (§723), and this keeps it deleted.
+[[ -f "Casberi/Casberi/Screens/AddressFlight.swift" ]] \
+  && { echo "✗ AddressFlight.swift is back; nothing mounts its overlay since §690"; exit 1; }
 
 # ── §448: ONE ROW ANATOMY, ONE FACE PER ADDRESS ─────────────────────────────
 #
@@ -334,10 +306,9 @@ grep -q 'SocialRoom.hasRoster(source)' "$TMP/people-bare.swift" \
 # reference returning here is the ruling being quietly reversed.
 [[ -f "Casberi/Casberi/Screens/AddressSpineCard.swift" ]] \
   && { echo "✗ AddressSpineCard.swift is back; §497 deleted it with its only call site"; exit 1; }
-grep -qE 'static func (headline|subhead)\(count:' "$CONN" \
-  && { echo "✗ AddressConnections.headline/subhead are back; §448 cut them"; exit 1; }
-grep -q 'defaults.set(true, forKey: seededKey)' "$SOURCE" \
-  || { echo "✗ the seen-set no longer seeds silently on first sight — a year of history would announce itself as today's news (the Hyperliquid 2026-07-30 bug)"; exit 1; }
+# The connections model itself is deleted (prd §1041), and stays deleted.
+[[ -f "Casberi/Casberi/Model/AddressConnections.swift" ]] \
+  && { echo "✗ AddressConnections.swift is back; prd §1041 deleted it with its last surface"; exit 1; }
 
 # ONE ROW ANATOMY. Two spellings of the book row is two books.
 grep -q 'struct AddressBookRow: View' "$VIEWS" \
@@ -475,11 +446,6 @@ grep -q 'source: "Wallet"' "$TMP/wallet-screen-bare.swift" \
 grep -q 'lands: false' "$TMP/wallet-screen-bare.swift" \
   && { echo "✗ the wallet page declares it lands nothing — that suppresses the Activity"; \
        echo "  row, i.e. the View feed door §460 required"; exit 1; }
-
-# §439's wallet-to-wallet reading lives in the MODEL alone now — its bracket
-# and sentence left with the spine (§497).
-grep -q 'walletLinks' "$SOURCE" \
-  || { echo "✗ AddressConnections lost the direct wallet-to-wallet links (§439) — the model half must survive the drawing"; exit 1; }
 
 # --- §502: the five delight moments ------------------------------------------
 # Each of these is motion or a fact that renders as NOTHING when its wiring is

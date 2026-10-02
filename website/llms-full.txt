@@ -23,7 +23,7 @@ Last updated: September 13, 2026
 ### Take action
 
 - Save in one gesture — Share from any app, take a screenshot, or tap Save a thing in Control Center.
-- See your day — Home Screen widgets carry today's line, what's due, and your wallet.
+- See your wallet — a Home Screen widget carries your balance and the week's money in and out.
 - Find anything — Spotlight and Shortcuts search your things by what they say.
 
 ### Make it yours
@@ -34,7 +34,7 @@ Last updated: September 13, 2026
 
 ### The short version
 
-Connect your apps and everything lands in one private feed on your phone — no account, ever. Each app opens as a room shaped like what's in it, and you act on things in the apps they came from. Widgets put your day on the Home Screen, and Spotlight finds any thing by what it says. And it's yours to shape: avatar, language, and where your data lives.
+Connect your apps and everything lands in one private feed on your phone — no account, ever. Each app opens as a room shaped like what's in it, and you act on things in the apps they came from. A widget puts your wallet on the Home Screen, and Spotlight finds any thing by what it says. And it's yours to shape: avatar, language, and where your data lives.
 
 ### The situation
 
@@ -149,9 +149,9 @@ Share from any app and it lands in your feed. Screenshots flow in on their own a
 
 Save a thing in Control Center opens the composer from anywhere — paste something to save it, or tap the mic and talk. Typing alone never saves.
 
-To find a thing again, search from Spotlight, or ask Shortcuts to Search Casberi.
+To find a thing again, search from Spotlight, or type a few words into the composer and tap Find.
 
-Widgets put your day on the Home Screen: today's line and what just landed, what's due, and your wallet. Tap one and Casberi opens where those things are.
+The Wallet widget puts your balance on the Home Screen. Tap it and Casberi opens your wallet.
 
 ### Make it yours
 

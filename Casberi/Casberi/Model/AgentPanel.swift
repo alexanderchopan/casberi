@@ -1,7 +1,7 @@
 import Foundation
 
 /// What is left of the agent's instrument panel (prd §334) — the value types
-/// the answer's dial and semantic map still draw from.
+/// the answer's dial still draws from.
 ///
 /// The panel itself went in §386p, and its last surface, the source chip's
 /// long-press peek on the iPad/Mac rail, went in §836 (user: "i don't think we
@@ -9,8 +9,8 @@ import Foundation
 /// previewed — treemap, bars, rail, pulse, curve, wall, flow, runway, worth —
 /// and the ranking that chose between them (§723: a figure deleted from the
 /// surface is deleted from the model). What stays has a live producer: the
-/// dial (`KeptAskComposers.dialLine` → `GenDial`) and the map's dots
-/// (`AgentPanelFigures.scatter` → `ScatterFigure`).
+/// dial (`KeptAskComposers.dialLine` → `GenDial`). The semantic map's dots
+/// went with the Today brief that drew them (2026-10-01).
 ///
 /// **Foundation-only by design**: it holds no `Thing` and no SwiftUI, so
 /// `scripts/agent-panel-selftest.sh` compiles it WHOLE with no stubs.
@@ -28,24 +28,6 @@ enum AgentPanel {
         var recency: Double
         /// The room, for hue.
         var source: String
-    }
-
-    /// One dot on the semantic map — a thing already projected into the unit
-    /// square. The PROJECTION happens upstream (`SemanticProjection`), never
-    /// here: this file stays arithmetic, and the projection has to be cached
-    /// anyway or the map would reshuffle between opens.
-    struct Dot: Equatable, Sendable {
-        var x: Double
-        var y: Double
-        var source: String
-    }
-
-    /// A named cluster on the semantic map — its centre and its own top term.
-    struct DotCluster: Equatable, Sendable {
-        var label: String
-        var x: Double
-        var y: Double
-        var radius: Double
     }
 
     /// What a figure draws.

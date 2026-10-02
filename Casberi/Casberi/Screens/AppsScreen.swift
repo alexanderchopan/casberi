@@ -11,7 +11,7 @@ import SwiftData
 ///
 /// LAYOUT LAW (the doc's): no fixed heights anywhere — every card, pill, and
 /// row sizes to its content plus token padding (minHeight only where a target
-/// needs it). Capsule verbs are honest: Connect / Pair / Fix / Open / Soon.
+/// needs it). Capsule verbs are honest: Connect / Fix / Open / Soon.
 struct AppsScreen: View {
     @Environment(ShellChrome.self) private var chrome
     // This window's stack (per-window since `SceneState`).
@@ -22,7 +22,6 @@ struct AppsScreen: View {
     /// beside the seat (`DSScopeDock`, prd §960) instead of standing under
     /// the search field.
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var pairing = false
     @State private var query = ""
     @FocusState private var searchFocused: Bool
     /// The connect payoff (delight): every Connect on this screen — story
@@ -273,7 +272,6 @@ struct AppsScreen: View {
         // nothing stands at the top edge (prd §767).
         .navigationTitle(Text("Apps"))
         .toolbar(.hidden, for: .navigationBar)
-        .sheet(isPresented: $pairing) { PairClientSheet() }
         #if DEBUG
         .navigationDestination(item: $probe) { p in
             switch p {
@@ -309,7 +307,6 @@ struct AppsScreen: View {
                 }
             }
             #if DEBUG
-            if UserDefaults.standard.bool(forKey: "openPair") { pairing = true }
             // `-openWallet YES` takes the TRACKED route (prd §442, found on a
             // device). It used to set `probe`, which is a
             // `navigationDestination(item:)` binding of this screen's own —
@@ -934,11 +931,13 @@ struct AppsScreen: View {
     /// always draws now, and its first act is Create account.
     private static let devnetRooms: Set<String> = [FramesIdentity.source]
 
-    /// A connected account with a room is a STATUS here (prd §1033, user:
-    /// "lets make it go nowhere. it's just a status"): the room's own door
-    /// beside its name manages it. One with no room — an agent key, an
-    /// exchange, Apple Intelligence — keeps its door, or nothing would reach
-    /// its page.
+    /// A connected account with a room is a STATUS here (prd §1033): no
+    /// chevron, and the room's own door beside its name manages it. **A TAP
+    /// LANDS IN ITS ROOM (prd §1040, user, 2026-10-01: "yes it should take you
+    /// to its room", answering §1036's open question; amends §1033's "go
+    /// nowhere")** — the devnet rows' landing (`statusRoom`). One with no room
+    /// — an agent key, an exchange, Apple Intelligence — keeps its chevron and
+    /// its page, or nothing would reach that page.
     ///
     /// Read off the SAME rule the dock gives a connected seat its room by
     /// (`LiveRoomSources.earnsEmptyRoom`, prd §1036), not off the tray's
@@ -950,8 +949,18 @@ struct AppsScreen: View {
         return Corpus.earnsRoom(BridgeRouter.roomSource(forID: bridge.id) ?? bridge.name)
     }
 
+    /// The room a status row lands in: the room its rows land in, else its own.
+    private func statusRoom(_ entry: Ranked) -> String? {
+        guard isStatusOnly(entry), let bridge = entry.bridge else { return nil }
+        return BridgeRouter.roomSource(forID: bridge.id) ?? bridge.name
+    }
+
     private func rowOpen(_ entry: Ranked) -> (() -> Void)? {
-        if isStatusOnly(entry) { return nil }
+        // A status row OPENS ITS ROOM (prd §1040) — the devnet rows' landing,
+        // the same pop and the same request — and stays a status: no chevron.
+        if let room = statusRoom(entry) {
+            return { DSHaptic.tap(); route.path = []; chrome.sourceRequest = room }
+        }
         if Self.devnetRooms.contains(entry.offer.name) {
             let room = entry.offer.name
             return { DSHaptic.tap(); route.path = []; chrome.sourceRequest = room }
@@ -1051,8 +1060,11 @@ struct AppsScreen: View {
             }
             // A tactile press-pop when you tap into an app (delight, 2026-07-12)
             // — the row springs slightly under the finger instead of a flat
-            // .plain tap. Keeps the plain look, adds the give.
-            .buttonStyle(PressSpring())
+            // .plain tap. Keeps the plain look, adds the give. A STATUS row
+            // takes the row's own press (`RowPress`, prd §965) instead: it
+            // lands in its room, and a status should not spring like a verb
+            // (prd §1040).
+            .modifier(AppRowPress(status: statusOnly))
             // (The long-press peek retired with the product page, prd §641 —
             // it painted a `StorePreview` doc only 74 of 97 offers had, and a
             // hand-authored preview of a generated surface reads as a ceiling
@@ -1069,6 +1081,19 @@ struct AppsScreen: View {
         // The just-connected row lifts as the list re-sorts it into its
         // connected seat — a promotion you can feel, not a silent re-order.
         .connectPromote(isTarget: entry.offer.name == justConnectedName, token: connectLiftToken)
+    }
+
+    /// The press a catalogue row wears: the spring for a door or a verb, the
+    /// row's own highlight for a status row that lands in its room.
+    private struct AppRowPress: ViewModifier {
+        let status: Bool
+        func body(content: Content) -> some View {
+            if status {
+                content.buttonStyle(RowPress())
+            } else {
+                content.buttonStyle(PressSpring())
+            }
+        }
     }
 
     /// The line under a row's name says its STATE in colour (prd §811, user:

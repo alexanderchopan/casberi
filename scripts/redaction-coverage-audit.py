@@ -93,7 +93,8 @@ EGRESS = {
     "ThingEntity.swift":
         "the App Intents display representation, rendered by the system",
     "CasberiIntents.swift":
-        "Shortcuts and Siri grounding",
+        "the Shortcuts/Siri snippet rows (`IntentRowsSnippet`) — the \"Ask "
+        "Casberi\" and \"Search Casberi\" intents went with the ask, 2026-10-01",
     "ContactEntity.swift":
         "the Addresses entity's subtitle (a contact's newest thing) and the "
         "\"Things with someone\" dialog, both rendered by Siri and Shortcuts "
@@ -104,13 +105,9 @@ EGRESS = {
     "AgentCorpusTools.swift":
         "tool results, which are corpus text fetched AFTER `synthesize`'s own "
         "gate and would otherwise sail past the tripwire entirely",
-    "AgentContext.swift":
-        "the markdown clipboard hand-off to any agent on the machine",
-    "MCPServer.swift":
-        "the loopback JSON-RPC listener — another program's context window",
-    "MCPTools.swift":
-        "the corpus reads behind the MCP tools",
 }
+# `AgentContext.swift`, `MCPServer.swift` and `MCPTools.swift` left this list
+# with the MCP door they served (2026-10-01).
 
 # A person's own free text, as stored on `Thing`. NOT `source`/`sourceRef`/
 # addresses — those are ours or the chain's, never something somebody typed.
@@ -170,10 +167,6 @@ REQUIRED = {
     "AgentAnswer.swift": [
         ("SecretScan.redacted(candidate.title)", "the candidate title sent to a paid provider"),
         ("SecretScan.redacted(candidate.note)", "the candidate excerpt sent to a paid provider"),
-    ],
-    "MCPServer.swift": [
-        ("SecretScan.redacted(thing.title)",
-         "the only scrub between the corpus and another program on the machine"),
     ],
 }
 

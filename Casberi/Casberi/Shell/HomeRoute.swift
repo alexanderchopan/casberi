@@ -260,5 +260,5 @@ final class HomeRoute {
 /// with a pane each is drawn there; without one, the row raises the sheet it
 /// always did, and this enum is never read.
 enum SettingsPage: String, Hashable {
-    case data, notifications, mcp, diagnostics, language, dockOrder
+    case data, notifications, diagnostics, language, dockOrder
 }

@@ -11,7 +11,7 @@ import Foundation
 /// `frames-devnet-0` faucet is proof-of-work plus hCaptcha — a person mines in
 /// a browser and solves the captcha — so there is nothing here to call, and
 /// the claim, its failure case and its classifier alias are deleted with the
-/// verb (§723). `FramesSendCard` opens `FramesNetwork.current.faucetPage`.
+/// verb (§723). `FramesActs.topUp` opens `FramesNetwork.current.faucetPage`.
 ///
 /// ## TWO DIVERGENCES FROM `HegotaSend`, BOTH MEASURED, BOTH SILENT IF WRONG
 ///

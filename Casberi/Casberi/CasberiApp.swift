@@ -31,28 +31,9 @@ enum LaunchClock {
     }
 }
 
-/// A Home Screen quick action (long-press the icon on iOS/iPadOS) IS a Mac
-/// Dock menu under Catalyst — Apple surfaces the same `UIApplicationShortcutItem`
-/// list both ways, so this one registration reaches both platforms (Mac
-/// polish, 2026-07-28).
-///
-/// "New Thing" retired 2026-08-03 (user: "we don't really have that as a
-/// feature anymore") — typed text in the composer never saves (things enter
-/// only via capture paths, per the design law), so a shortcut promising a
-/// blank "new thing" opened a composer with nothing it could actually do.
-/// "Daily Brief" replaces it: reuses `RootShell`'s existing `"brief.request"`
-/// foreground flag, the same shape as the widget's Control Center button's
-/// `compose.request` — a flag in the app group, read and cleared on next
-/// foreground, rather than opening the `casberi://brief` URL directly, since
-/// a quick action can COLD-launch the app and `onOpenURL`'s routing isn't
-/// guaranteed live yet at that instant.
-///
-/// **Registering an action lives here; HANDLING one does not** (2026-08-14,
-/// user: "long press on the app icon for daily brief takes me to the all
-/// source feed instead of showing me the daily brief"). This is a scene-based
-/// app — every SwiftUI `App` is — so UIKit delivers a quick action to the
-/// window scene delegate, never to `application(_:performActionFor:)`. See
-/// `QuickActions.swift`, which owns both doors.
+/// The app delegate. It registers NO Home Screen quick action: "New Thing"
+/// retired 2026-08-03, and "Daily Brief" went with the ask (prd §697b dark,
+/// 2026-09-11; deleted 2026-10-01).
 ///
 /// `UIResponder`, not `NSObject` (2026-07-31): `buildMenu(with:)` is declared
 /// on `UIResponder`, and the app delegate is the last link in the responder
@@ -71,52 +52,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // EVERY launch — and the shell it gated then never built on Mac, where
         // neither mount door posts for a launch. `BackgroundLaunch` asks the
         // SCENE instead, on first read, from `RootShell`.
-        // THE "DAILY BRIEF" QUICK ACTION IS GONE (prd §697b, 2026-09-11) —
-        // it opened the ask, which is deprecated. Registered behind the flag
-        // rather than deleted, because §377's whole lesson is that
-        // registering and HANDLING live in different delegates and drift
-        // apart silently; `QuickAction.receive` keeps its arm, so flipping
-        // `AskSurface.enabled` restores a working action rather than a
-        // listed one that does nothing.
-        application.shortcutItems = AskSurface.enabled ? [
-            UIApplicationShortcutItem(
-                type: QuickAction.dailyBrief,
-                localizedTitle: "Daily Brief",
-                localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "sparkles"))
-        ] : []
+        // NO QUICK ACTIONS (2026-10-01). Assigning the empty list clears a
+        // "Daily Brief" a build before 2026-09-11 registered: dynamic items
+        // persist on the device across launches until the app replaces them.
+        application.shortcutItems = []
         return true
-    }
-
-    /// Installs `SceneDelegate` — the object UIKit hands quick actions to, and
-    /// the whole fix for a "Daily Brief" that opened the app and did nothing
-    /// (see `QuickActions.swift` for why the app-delegate callback that used to
-    /// stand here could never fire).
-    ///
-    /// The `options.shortcutItem` read here IS the cold-launch half, not a
-    /// duplicate of one: `SceneDelegate` deliberately does not implement
-    /// `scene(_:willConnectTo:options:)`, because that method is where SwiftUI's
-    /// own scene setup lives (see `QuickActions.swift`). Both callbacks receive
-    /// the same `ConnectionOptions`, and this one is called by UIKit directly,
-    /// so reading it here takes nothing over.
-    func application(_ application: UIApplication,
-                     configurationForConnecting connectingSceneSession: UISceneSession,
-                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        QuickAction.receive(options.shortcutItem)
-        let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
-        config.delegateClass = SceneDelegate.self
-        return config
-    }
-
-    /// The pre-scene door. It does NOT fire in this app — UIKit routes to
-    /// `SceneDelegate.windowScene(_:performActionFor:)` instead — and is kept
-    /// only so a future scene-less configuration can't silently lose the
-    /// action the way the scene-based one silently lost it for eleven days.
-    func application(_ application: UIApplication,
-                     performActionFor shortcutItem: UIApplicationShortcutItem,
-                     completionHandler: @escaping (Bool) -> Void) {
-        QuickAction.receive(shortcutItem)
-        completionHandler(true)
     }
 }
 

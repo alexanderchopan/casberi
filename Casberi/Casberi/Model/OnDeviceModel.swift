@@ -1,13 +1,26 @@
 import Foundation
-import NaturalLanguage
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
 
-/// Apple's on-device language model (iOS 26 Foundation Models) — the free,
-/// private agent brain. Only Apple Intelligence devices have it; everywhere
-/// else the scoring engine keeps answering, so this is an upgrade, never a
-/// requirement.
+/// Apple's language models (iOS 26 Foundation Models), in two roles.
+///
+/// **The on-device model READS; it no longer answers (2026-10-01, user: "we
+/// no longer are using on device intelligence as an agent").** `isAvailable`
+/// still gates the librarian's reading aids elsewhere — screenshot naming,
+/// thread digests, screenshot facts, the Addresses verdict — and
+/// `expandQuery` widens a search. Its answering half went: the prewarm, the
+/// Today brief's day read, Home's "Noticed" line, the cluster names, and the
+/// composer's answer falling back to the phone.
+///
+/// **The composer's ANSWER is Apple Intelligence's, on Private Cloud Compute
+/// (prd §833).** `compose` and `synthesisStream` run only when that seat is on
+/// and can answer (`AskModel.usesCloud`); a cloud failure is the answer's
+/// failure, never a retry on the phone. Everywhere else the scoring engine
+/// answers, as it always did on a device without the model.
+///
+/// `Candidate`, `numberedCandidates` and the synthesis contract are also the
+/// keyed agents' evidence shape (`AgentAnswer`), which is why they live here.
 enum OnDeviceModel {
 
     /// One plain line for logs and (later) a Support row.
@@ -83,12 +96,12 @@ enum OnDeviceModel {
         let picks: [Int]
     }
 
-    /// Composes a grounded answer over the retrieved candidates on the person's
-    /// own silicon. The model may only choose among these things and summarize
-    /// them — it never invents one, so every row we then paint is a real thing
-    /// (the honesty rule holds). Returns nil when the model is unavailable or
-    /// errors; the caller then paints the scoring engine's doc — zero
-    /// regression on non-Apple-Intelligence devices.
+    /// Composes a grounded answer over the retrieved candidates on Apple
+    /// Intelligence (prd §833). The model may only choose among these things
+    /// and summarize them — it never invents one, so every row we then paint
+    /// is a real thing (the honesty rule holds). Returns nil when the seat
+    /// cannot answer or the call fails; the caller then paints the scoring
+    /// engine's doc.
     static func compose(query: String, candidates: [Candidate]) async -> GroundedAnswer? {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
@@ -103,11 +116,11 @@ enum OnDeviceModel {
     /// the cumulative text so far, so the caller can paint it growing. Grounded
     /// by the prompt: the model may only reference these things, never invent
     /// one (a softer rail than `compose`'s indices, which is why lookups stay
-    /// on `compose`). Returns nil when the model is unavailable or the set is
-    /// empty; the caller then falls back to the scoring doc — zero regression.
+    /// on `compose`). Returns nil when Apple Intelligence cannot answer or the
+    /// set is empty; the caller then falls back to the scoring doc.
     static func synthesisStream(query: String, candidates: [Candidate]) -> AsyncStream<String>? {
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *), isAvailable, !candidates.isEmpty {
+        if #available(iOS 26.0, *), AskModel.usesCloud, !candidates.isEmpty {
             return FoundationAnswer.synthesisStream(query: query, candidates: candidates)
         }
         #endif
@@ -138,28 +151,6 @@ enum OnDeviceModel {
         return nil
     }
 
-    // MARK: - The day's read (Today brief synthesis)
-
-    /// The agent's genuine READ of the day for the Today brief (2026-08-07) —
-    /// the synthesis the deterministic notes can't be. Grounded strictly on the
-    /// day's real facts (`evidence`, every line something a deterministic pass
-    /// already established), with the prior briefs' recurring topics as
-    /// CONTINUITY so a week reads as a thread rather than a fresh template each
-    /// morning. Returns nil off Apple-Intelligence devices (the notes card then
-    /// stands alone, exactly as before) and on an honestly thin day (the model
-    /// declines with NONE). The money total is deliberately NOT in the evidence,
-    /// so the read can't restate the hero's number — the honesty rail holds.
-    static func dayRead(evidence: String, continuity: String?,
-                        scope: String? = nil) async -> String? {
-        #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            return await FoundationAnswer.dayRead(evidence: evidence, continuity: continuity,
-                                                  scope: scope)
-        }
-        #endif
-        return nil
-    }
-
     // MARK: - Shared synthesis prompt
 
     /// The one serialization every model path shares: a numbered line per
@@ -177,8 +168,8 @@ enum OnDeviceModel {
     }
 
     /// The synthesis contract both models answer under. `length` is the one
-    /// sanctioned divergence: the small on-device model is held to "two or
-    /// three plain sentences"; the keyed model may run "a few". Everything
+    /// sanctioned divergence: Apple's model is held to "two or three plain
+    /// sentences"; the keyed model may run "a few". Everything
     /// else — grounding, voice, honesty — is one text, so a tuning fix can't
     /// reach one model and miss the other.
     static func synthesisInstructions(length: String) -> String {
@@ -211,107 +202,7 @@ enum OnDeviceModel {
         """
     }
 
-    // MARK: - Cluster names (prd §386j)
-
-    /// One or two words naming a semantic cluster, or nil.
-    ///
-    /// **The model NAMES, it never narrates** — the §282 librarian doctrine,
-    /// and the exact inverse of the `dayRead` paragraph §386a retired. The
-    /// input is a term the corpus already contains and the output replaces
-    /// that one word, so the worst case is a slightly different word rather
-    /// than a sentence nobody can check.
-    static func clusterName(term: String) async -> String? {
-        #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            return await FoundationAnswer.clusterName(term: term)
-        }
-        #endif
-        return nil
-    }
-
-    // MARK: - Home "Noticed" line
-
-    /// One observational sentence for Home's "Noticed" line — a genuine
-    /// cross-thing connection among recent things, or nil when there's none
-    /// worth stating. Unlike `compose`/`synthesisStream`, this answers no
-    /// question: it's an unprompted observation, and it is ALLOWED to decline
-    /// (prd §36c — the old deterministic version was removed precisely because
-    /// it manufactured connections; the model saying nothing is the fix). Runs
-    /// on a throwaway session so it never touches the composer's conversation.
-    /// Returns nil where the model is unavailable — Home then shows no line,
-    /// exactly as before this existed.
-    static func homeInsight(candidates: [Candidate]) async -> (line: String, picks: [Int])? {
-        #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            return await FoundationAnswer.homeInsight(candidates: candidates)
-        }
-        #endif
-        return nil
-    }
-
-    /// The Home-insight contract: notice ONE real thread across MORE THAN ONE
-    /// thing, in one plain sentence, or write the single word NONE. The NONE
-    /// escape and the "never invent" rail are what keep §36c from recurring.
-    static var homeInsightInstructions: String {
-        """
-        You help someone notice a connection across the things they have \
-        saved. Speak TO them as "you" — never write in the first person, and \
-        never narrate other people by name or as "he"/"she" doing something \
-        ("Alex went…", "Sam attended…"); if a thing doesn't plainly state who \
-        did what, do not guess. Find ONE genuine thread across MORE THAN ONE \
-        of the things: a shared TOPIC, PROJECT, PLACE, or PERSON the things \
-        are actually about — a subject that shows up across different apps, or \
-        several saves clearly about the same thing. Two items merely being the \
-        same KIND (both transactions, both events) or from the same APP is NOT \
-        a connection worth noting — that is trivial; skip it. State the thread \
-        in ONE short plain sentence, grounded only in these things — no \
-        metaphors, no marketing, no preamble, no lists. Do NOT copy or restate \
-        a single item. Write ONLY the observation itself — never echo the \
-        list's formatting, and never include an app name, a kind label, or a \
-        timestamp (no "— Transaction, from Wallet, 12h", no "from the Wallet \
-        app"). If there is no real thread worth noting — if the things are \
-        unrelated, or the only thing in common is trivial — reply with exactly \
-        the single word NONE. A truthful NONE is better than a forced or \
-        obvious connection.
-        """ + LanguageStore.shared.llmLanguageDirective
-    }
-
-    /// The Home-insight user prompt, over the same numbered evidence shape
-    /// every model path shares.
-    static func homeInsightPrompt(candidates: [Candidate]) -> String {
-        """
-        Their recent things, numbered (an indented quote under a thing is its \
-        own text — everything you may use):
-        \(numberedCandidates(candidates))
-
-        Reply with one plain sentence naming a real connection across two or \
-        more of these things — plus the numbers of the things it runs \
-        across — or the single word NONE.
-        """
-    }
-
     // MARK: - Lifecycle
-
-    /// Warms the model so the first Ask doesn't pay the one-time load. Safe to
-    /// call repeatedly (idempotent) and non-blocking — a no-op when the model
-    /// isn't available. Call at launch and on foreground.
-    static func prewarm() {
-        #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            Task { @MainActor in WarmModel.prewarm() }
-        }
-        #endif
-    }
-
-    /// Releases the warm session so the model's memory can be reclaimed (call
-    /// on background); the next `prewarm()` reloads it.
-    static func teardown() {
-        #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            Task { @MainActor in WarmModel.teardown() }
-        }
-        #endif
-    }
 
     /// Starts a fresh answer CONVERSATION (2026-07-15) — drops the persistent
     /// session so the next Ask begins with no transcript. Called when the
@@ -329,33 +220,13 @@ enum OnDeviceModel {
 #if canImport(FoundationModels)
 import FoundationModels
 
-/// Holds a prewarmed session to keep the model resident. We prewarm the *model*
-/// rather than reuse one session's transcript across Asks: each Ask is
-/// independent, so a shared transcript would leak one answer into the next and
-/// eventually overflow the context window. Fresh per-query sessions stay
-/// correct; the resident model is what makes them fast. MainActor-isolated so
-/// the single warm session is never touched from two threads.
-@available(iOS 26.0, *)
-@MainActor
-enum WarmModel {
-    private static var session: LanguageModelSession?
-
-    static func prewarm() {
-        guard OnDeviceModel.isAvailable else { return }
-        if session == nil { session = LanguageModelSession() }
-        session?.prewarm()
-    }
-
-    static func teardown() { session = nil }
-}
-
 /// The persistent per-conversation session (2026-07-15) — what turns the
 /// composer from a series of independent one-shots into a real conversation, so
 /// a follow-up ("which of those were from Sam?") is carried by the transcript,
 /// not a pronoun heuristic. Reset when the composer opens, so one conversation
 /// never bleeds into the next; a shape change (lookup ↔ synthesis) also starts
 /// fresh, since their instructions differ. MainActor-isolated so the single
-/// session is never touched from two threads (the same rule `WarmModel` keeps).
+/// session is never touched from two threads.
 ///
 /// Bounded on purpose — a transcript can only grow within ONE conversation, and
 /// any turn that overflows the context window (or otherwise errors) drops the
@@ -368,21 +239,22 @@ enum ConversationModel {
     /// The instructions the live session was built with — a turn whose
     /// instructions differ (the other answer shape) starts a fresh session.
     private static var key: String?
-    /// Whether the live session runs on Private Cloud Compute (prd §833). Part
-    /// of the key: turning the seat on or off mid-conversation starts fresh,
-    /// so one transcript never spans both models.
+    /// Whether the live session runs on Private Cloud Compute (prd §833). The
+    /// callers are gated on `AskModel.usesCloud`, so this is true for every
+    /// session they get; it stays in the key so a seat switched off and on
+    /// mid-conversation starts fresh.
     private static var cloud = false
 
     /// The session for a turn under `instructions`, whether it was REUSED
     /// (a continuing conversation), and whether it runs in the cloud — the
     /// caller retries fresh on a reused session's failure, but not on a
-    /// brand-new one's (nothing to blame on history there), and retries on the
-    /// phone after a cloud one's (`forceDevice`).
-    static func acquire(instructions: String, forceDevice: Bool = false)
+    /// brand-new one's (nothing to blame on history there). A cloud failure
+    /// is never retried on the phone (2026-10-01).
+    static func acquire(instructions: String)
         -> (session: LanguageModelSession, reused: Bool, cloud: Bool) {
-        let wantsCloud = !forceDevice && AskModel.usesCloud
+        let wantsCloud = AskModel.usesCloud
         if let s = session, key == instructions, cloud == wantsCloud { return (s, true, cloud) }
-        let made = AskModel.session(instructions: instructions, forceDevice: forceDevice)
+        let made = AskModel.session(instructions: instructions)
         session = made.session; key = instructions; cloud = made.cloud
         return (made.session, false, made.cloud)
     }
@@ -405,18 +277,6 @@ struct GroundedAnswerLayout {
     var picks: [Int]
 }
 
-/// The Home "Noticed" line's schema — one field. File-scope (not nested), the
-/// same rule `GroundedAnswerLayout` follows, so the @Generable macro's keypaths
-/// resolve cleanly (nesting one corrupts the heap; CLAUDE.md).
-@available(iOS 26.0, *)
-@Generable
-struct HomeNoticeLayout {
-    @Guide(description: "One plain sentence naming a real connection across two or more of the listed things, grounded only in them. If there is no real connection worth noting, the single word NONE.")
-    var line: String
-    @Guide(description: "The numbers of the listed things the connection runs across — two or more, from the numbered list. Empty when the line is NONE.")
-    var picks: [Int]
-}
-
 /// The iOS-26 half — isolated so the plain `OnDeviceModel` API above carries no
 /// `@available` and the composer can call it without an availability dance.
 @available(iOS 26.0, *)
@@ -424,7 +284,7 @@ enum FoundationAnswer {
 
     @MainActor
     static func compose(query: String, candidates: [OnDeviceModel.Candidate]) async -> OnDeviceModel.GroundedAnswer? {
-        guard OnDeviceModel.isAvailable, !candidates.isEmpty else { return nil }
+        guard AskModel.usesCloud, !candidates.isEmpty else { return nil }
 
         let numbered = OnDeviceModel.numberedCandidates(candidates)
 
@@ -463,130 +323,22 @@ enum FoundationAnswer {
         // transcript, most likely) drops it and retries once fresh — so a long
         // conversation degrades to a stateless answer, never a broken one.
         //
-        // A CLOUD failure (prd §833) — no network, the quota, the service —
-        // answers on the phone instead, fresh, and the turn is marked as the
-        // phone's so the badge names what actually wrote it.
+        // A CLOUD failure (prd §833) — no network, the quota, the service — is
+        // the answer's failure: it used to answer on the phone instead, and the
+        // phone no longer answers (2026-10-01). The caller paints the matches.
         let (session, reused, cloud) = ConversationModel.acquire(instructions: instructions)
         do {
             let answer = try await run(session)
             AskModel.markAnswered(cloud: cloud)
             return answer
         } catch {
-            guard reused || cloud else { return nil }
+            guard reused else { return nil }
             ConversationModel.reset()
-            let (fresh, _, freshCloud) = ConversationModel.acquire(instructions: instructions,
-                                                                   forceDevice: cloud)
+            let (fresh, _, freshCloud) = ConversationModel.acquire(instructions: instructions)
             guard let answer = try? await run(fresh) else { return nil }
             AskModel.markAnswered(cloud: freshCloud)
             return answer
         }
-    }
-
-    /// The Home "Noticed" line — a fresh, throwaway session (NOT the shared
-    /// `ConversationModel`: Home is not the composer's conversation, and the
-    /// two must never bleed into each other). The model writes into a one-field
-    /// `@Generable` layout (the same `respond(to:generating:)` path `compose`
-    /// uses), declining by putting the single word NONE in the field, which we
-    /// map to nil so the caller shows no line.
-    ///
-    /// NOT `@MainActor` (reversed 2026-08-09, the `dayRead` finding — see its
-    /// comment for the measurement) — it was pinned on the same unmeasured
-    /// "await respond yields the main actor" assumption, which video-verified
-    /// on `dayRead` turned out false: the calling thread froze solid for the
-    /// whole inference. This throwaway session touches no shared MainActor
-    /// state either, so it runs off the main actor too.
-    static func homeInsight(candidates: [OnDeviceModel.Candidate]) async -> (line: String, picks: [Int])? {
-        guard OnDeviceModel.isAvailable, candidates.count >= 3 else { return nil }
-        let session = LanguageModelSession(instructions: OnDeviceModel.homeInsightInstructions)
-        do {
-            let response = try await session.respond(
-                to: OnDeviceModel.homeInsightPrompt(candidates: candidates),
-                generating: HomeNoticeLayout.self)
-            let text = response.content.line.trimmingCharacters(in: .whitespacesAndNewlines)
-            #if DEBUG
-            NSLog("[Casberi] homeInsight raw → %@ picks=%@", text,
-                  response.content.picks.map(String.init).joined(separator: ","))
-            #endif
-            // The model declined (NONE), or wrote too little to be a real
-            // observation — either way, no line.
-            let stripped = text.trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' "))
-            if stripped.isEmpty || stripped.uppercased() == "NONE" || text.count < 12 {
-                return nil
-            }
-            // Echo guard (honesty rail): the small model sometimes copies one
-            // candidate line back verbatim — scaffolding and all ("Sent … —
-            // Transaction, from Wallet, 12h") — instead of connecting several
-            // things. That's a single-item restatement, never the cross-thing
-            // observation this line promises, so treat it as a decline.
-            if echoesACandidate(text, candidates) { return nil }
-            // Third-person guard (voice rail, 2026-07-17): the residual bad
-            // output narrates a person by name — "Sam attended a dinner…" —
-            // usually FABRICATING the action (measured: the model invented
-            // attendance the things never stated). The contract speaks TO the
-            // person about their things; a sentence whose subject is somebody's
-            // name breaks the voice even when true, so it declines.
-            if startsWithPersonName(text) { return nil }
-            // The model's own indices, 1-based in the prompt → 0-based into
-            // `candidates`, out-of-range dropped. An empty set is fine — the
-            // line stands, it just isn't a door.
-            let picks = response.content.picks
-                .filter { (1...candidates.count).contains($0) }
-                .map { $0 - 1 }
-            return (text, picks)
-        } catch {
-            return nil
-        }
-    }
-
-    /// True when the sentence's first word is a person's name (NLTagger's
-    /// `.personalName`) — the shape of the third-person narration the voice
-    /// rail bans. First word only: a name deeper in the sentence ("Dinner with
-    /// Sam and the Lisbon flight…") is the model correctly citing a thing.
-    private static func startsWithPersonName(_ text: String) -> Bool {
-        let tagger = NLTagger(tagSchemes: [.nameType])
-        tagger.string = text
-        var isPerson = false
-        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word,
-                             scheme: .nameType,
-                             options: [.omitWhitespace, .omitPunctuation, .joinNames]) { tag, _ in
-            isPerson = (tag == .personalName)
-            return false   // first word decides
-        }
-        return isPerson
-    }
-
-    /// True when `text` is (or contains) a verbatim echo of one candidate — its
-    /// title alone, its whole serialized line, or the "— <kind>, from <source>,"
-    /// metadata fragment that only ever appears in the list's formatting. A real
-    /// observation contains none of those, so this only ever fires on a copy.
-    private static func echoesACandidate(_ text: String, _ candidates: [OnDeviceModel.Candidate]) -> Bool {
-        func norm(_ s: String) -> String {
-            s.lowercased()
-                .replacingOccurrences(of: "\n", with: " ")
-                .replacingOccurrences(of: "  ", with: " ")
-                .trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' "))
-        }
-        let out = norm(text)
-        guard !out.isEmpty else { return true }
-        var titleHits = 0
-        for c in candidates {
-            let title = norm(c.title)
-            let source = norm(c.source)
-            if title == out { return true }
-            if norm("\(c.title) — \(c.kind), from \(c.source), \(c.when)") == out { return true }
-            // Serialization / app-name leaks — pure list formatting, never a
-            // synthesized sentence: ", from ChatGPT," (the numbered line's
-            // metadata) or "the Wallet app" (an app name the line must not
-            // carry). The prompt bans naming apps, so echoing one is a decline.
-            if out.contains(", from \(source)") { return true }
-            if out.contains("\(source) app") { return true }
-            // Count verbatim titles present — three or more means the model
-            // pasted a list of things rather than connecting them (two titles
-            // can be a legitimate connective sentence, "your X and your Y", so
-            // the threshold sits above that to avoid rejecting real prose).
-            if !title.isEmpty, out.contains(title) { titleHits += 1 }
-        }
-        return titleHits >= 3
     }
 
     /// Expands a query into up to three concrete alternative phrasings — the
@@ -596,9 +348,10 @@ enum FoundationAnswer {
     /// dropped, `NONE` mapped to nothing. Fails to nil throughout, so the caller
     /// searches the literal words alone on any decline.
     ///
-    /// NOT `@MainActor` (reversed 2026-08-09, the `dayRead` finding) — same
-    /// throwaway-session shape, same corrected reasoning: nothing shared to
-    /// protect, and pinning it to the main actor is what froze the UI.
+    /// NOT `@MainActor` (reversed 2026-08-09): measured on device, a pinned
+    /// `session.respond(to:)` froze the calling thread for the whole
+    /// inference rather than suspending, and this throwaway session touches no
+    /// shared main-actor state.
     static func expandQuery(_ query: String) async -> [String]? {
         guard OnDeviceModel.isAvailable else { return nil }
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -638,143 +391,18 @@ enum FoundationAnswer {
         }
     }
 
-    /// The Today brief's read of the day — the iOS-26 half of
-    /// `OnDeviceModel.dayRead`. One throwaway session, one grounded paragraph,
-    /// the same NONE-declines-honestly rail `homeInsight` keeps. Never streams:
-    /// the brief anchors to its own top and is composed once (§288), so a
-    /// growing paragraph would fight that anchor.
-    ///
-    /// NOT `@MainActor` (reversed 2026-08-09) — it was, on the documented
-    /// assumption that "the `await respond` yields the main actor for the
-    /// whole inference, so this never blocks the UI." That assumption was
-    /// never measured and is wrong: captured on-device (video, 50ms frames),
-    /// the composer's skeleton pulse — which needs nothing but the main run
-    /// loop to keep committing CATransactions — went completely static
-    /// (pixel-identical across 550ms, several full animation cycles) for the
-    /// ~2.1s `dayRead` was in flight, matching the user's own report exactly
-    /// ("a black screen loads and hangs, then the stuff paints"). Whatever
-    /// `session.respond(to:)` does under the hood here does not hand the
-    /// calling thread back to the run loop the way plain Swift concurrency
-    /// suspension should. `dayRead` opens its OWN throwaway
-    /// `LanguageModelSession` (never `WarmModel`/`ConversationModel`, the
-    /// shared MainActor state those two guard), so nothing here needs
-    /// exclusive main-thread access — running it off the main actor lets the
-    /// caller's `await` suspend for real, freeing the main thread so the
-    /// skeleton can actually animate while this runs.
-    /// See `OnDeviceModel.clusterName` for the doctrine. Guarded on LENGTH
-    /// and on inventing: a reply over two words is a description rather than
-    /// a name, and one sharing no prefix with the term it was given has
-    /// wandered off the input — both fall back to the term, which is always a
-    /// true label because the things really do carry it.
-    static func clusterName(term: String) async -> String? {
-        guard OnDeviceModel.isAvailable else { return nil }
-        let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 3 else { return nil }
-        let instructions = """
-        You turn one keyword into a short, natural LABEL for a group of \
-        someone's saved things — at most two words, title case, no punctuation, \
-        no explanation. Keep the keyword's own meaning; never invent a topic it \
-        doesn't name. If the keyword is already a good label, reply with it \
-        unchanged. Reply with the label and nothing else.
-        """ + LanguageStore.shared.llmLanguageDirective
-        let session = LanguageModelSession(instructions: instructions)
-        do {
-            let response = try await session.respond(to: "Keyword: \(trimmed)")
-            let text = response.content
-                .trimmingCharacters(in: CharacterSet(charactersIn: " .\"'\n"))
-            guard !text.isEmpty, text.split(separator: " ").count <= 2,
-                  text.count <= 24 else { return nil }
-            let stem = trimmed.lowercased().prefix(4)
-            guard text.lowercased().contains(stem)
-                    || trimmed.lowercased().contains(text.lowercased().prefix(4))
-            else { return nil }
-            return text
-        } catch {
-            return nil
-        }
-    }
-
-    static func dayRead(evidence: String, continuity: String?,
-                        scope: String? = nil) async -> String? {
-        guard OnDeviceModel.isAvailable else { return nil }
-        let trimmed = evidence.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 20 else { return nil }
-        // A SCOPED brief asks a narrower question, and the paragraph has to
-        // answer that one (2026-08-13). Unscoped it reads the day; under
-        // "What's going on with Money?" it was still writing about the day in
-        // general — seen on the sim, where the Money paragraph came back "You
-        // worked on your watchlist, and this was the first time this week that
-        // you looked at the card and Casberi": true, grounded, and about app
-        // usage rather than about money, on the one screen that had asked.
-        let subject = scope.map { String(localized: "\($0.lowercased()) things") }
-            ?? String(localized: "day")
-        let instructions = """
-        You write ONE short paragraph — two sentences at most — saying what \
-        someone's \(subject) amounted to, from the facts you are given. Speak \
-        TO them as "you"; never write in the first person. Find the THREAD \
-        across the facts — a subject, place, person, or project running through \
-        more than one of them — and say what it amounted to, not a list. Do NOT \
-        restate a money total or any figure; another card already shows those. \
-        Ground every word in the facts; never invent a thing, a number, a \
-        person, or a connection that isn't there. Plain words only — no \
-        metaphors, no marketing, no preamble, no bullet points. If the facts \
-        don't add up to anything worth saying, reply with the single word NONE \
-        — a truthful NONE beats a forced observation.
-        """ + LanguageStore.shared.llmLanguageDirective
-        var prompt = scope.map { "Today's \($0) facts:\n\(trimmed)" }
-            ?? "Today's facts:\n\(trimmed)"
-        if let scope {
-            prompt += "\n\nStay on \(scope). If the facts are not really about "
-                + "\(scope), reply NONE rather than writing about something else."
-        }
-        if let continuity, !continuity.isEmpty {
-            prompt += "\n\nEarlier this week your brief kept returning to: \(continuity). "
-                + "Note a continuation ONLY if today's facts genuinely continue it."
-        }
-        let session = LanguageModelSession(instructions: instructions)
-        do {
-            let response = try await session.respond(to: prompt)
-            let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            #if DEBUG
-            NSLog("[Casberi] todayRead → %@", text.isEmpty ? "(nothing)" : text)
-            #endif
-            let stripped = text.trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' "))
-            if stripped.isEmpty || stripped.uppercased() == "NONE" || text.count < 20 { return nil }
-            // The ECHO tripwire (2026-08-14, prd §386). Seen live on the Money
-            // brief: the model returned its own prompt — "Today's Money
-            // facts: … Stay on Money. If the facts are not really about
-            // Money, reply NONE…" — followed by arithmetic the instructions
-            // forbid ("therefore you now have 11.80 ZORA"), and the guards
-            // above let it through because an echo is neither empty nor
-            // short. A reply carrying any fragment of the prompt's own
-            // scaffolding is the question handed back, not an answer; and a
-            // compliant reply — two sentences at most, by instruction — never
-            // needs 400 characters, so the ceiling backs the tripwire for
-            // echoes that paraphrase instead of quoting.
-            let scaffolding = ["reply NONE", "Stay on ", "kept returning to",
-                               " facts:", "facts are not really",
-                               "Note a continuation"]
-            if scaffolding.contains(where: { text.contains($0) }) || text.count > 400 {
-                return nil
-            }
-            return text
-        } catch {
-            return nil
-        }
-    }
-
     /// Streams a grounded plain-text synthesis. Bridges the model's response
     /// stream to a plain `AsyncStream<String>` (cumulative snapshots) so the
     /// caller needs no iOS-26 types and can consume it on the main actor.
     static func synthesisStream(query: String, candidates: [OnDeviceModel.Candidate]) -> AsyncStream<String> {
-        // The shared contract (prd §67) — one instructions/prompt pair for the
-        // on-device model and the BYO-key path, differing only in length.
+        // The shared contract (prd §67) — one instructions/prompt pair for
+        // Apple Intelligence and the BYO-key path, differing only in length.
         let instructions = OnDeviceModel.synthesisInstructions(length: "two or three plain sentences")
         let prompt = OnDeviceModel.synthesisPrompt(query: query, candidates: candidates)
 
         return AsyncStream { continuation in
             // MainActor so the persistent conversation session is touched from
-            // one thread only (the `WarmModel`/`ConversationModel` rule).
+            // one thread only (the `ConversationModel` rule).
             let task = Task { @MainActor in
                 let (session, reused, cloud) = ConversationModel.acquire(instructions: instructions)
                 var yielded = false
@@ -787,15 +415,14 @@ enum FoundationAnswer {
                 } catch {
                     // A failure on a REUSED session before anything streamed is
                     // most likely an overflowed transcript — drop it and stream
-                    // once fresh, so a long conversation still answers. A CLOUD
-                    // session that failed before a word arrived streams again on
-                    // the phone (prd §833). A refusal or a mid-stream error just
-                    // ends the stream; the caller falls back to the scoring doc
-                    // if nothing arrived.
-                    if (reused || cloud) && !yielded {
+                    // once fresh, so a long conversation still answers. A cloud
+                    // failure is never retried on the phone (2026-10-01). A
+                    // refusal or a mid-stream error just ends the stream; the
+                    // caller falls back to the scoring doc if nothing arrived.
+                    if reused && !yielded {
                         ConversationModel.reset()
                         let (fresh, _, freshCloud) = ConversationModel.acquire(
-                            instructions: instructions, forceDevice: cloud)
+                            instructions: instructions)
                         do {
                             var first = true
                             for try await partial in fresh.streamResponse(to: prompt) {

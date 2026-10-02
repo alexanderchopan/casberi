@@ -110,7 +110,7 @@ guard "the pass is held open across the dispatch window" \
 # half) and on the clock, since it costs about what a bridge slot does.
 guard "foreground work is deferred on a return too" \
   "Casberi/Casberi/Shell/RootShell.swift" 'firstActivation \? 800 : [0-9]+'
-for label in insight.recompute verbs.detect; do
+for label in widget.publish verbs.detect; do
   guard "slot instrumented: $label" \
     "Casberi/Casberi/Shell/RootShell.swift" "SweepClock\\.measure\\(\"$label\"\\)"
 done

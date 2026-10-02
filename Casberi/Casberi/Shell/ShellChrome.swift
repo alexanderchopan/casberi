@@ -735,21 +735,6 @@ final class ShellChrome {
     /// the Find door is that nothing runs until the person says what they want.
     var focusDraftOnOpen = false
 
-    /// The day, for the detail pane's RESTING state (2026-07-31), and since
-    /// prd §550 the only reader of `DayBrief` on this path — the capsule above
-    /// the bar stopped carrying the day. Published UNGATED.
-    ///
-    /// The capsule is once-a-day by ruling (§165: it's a delivery, and a
-    /// delivery that repeats is noise). The pane is not a delivery — it is up
-    /// to 560pt of the widest column in the app, standing empty for the whole
-    /// session behind one placeholder sentence, and §249 already ruled that
-    /// the agent's room leads with the day. So the pane at rest leads with it
-    /// too, every open, and simply says nothing on a day with nothing to say
-    /// (`DayBrief.whisper` composes nil — the honesty law: no manufactured
-    /// news). `RootShell.refreshWhisper` writes it from the corpus walk it
-    /// already pays for; the once-a-day stamp still gates the capsule alone.
-    var paneBrief: DayBrief.Whisper?
-
     /// The FAB lives on MainSurface's root now (it belongs to Home/Feed, not
     /// to pushed rooms or forms) — bumping this asks RootShell, which still
     /// owns the sheet, to open the composer.

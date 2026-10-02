@@ -159,8 +159,7 @@ enum AppleWalletBridge {
     }
 
     /// Payment due dates keyed by account name — read from FinanceKit's own
-    /// `nextPaymentDueDate`, never inferred. `AppleWalletRoomSource` turns
-    /// these into the clock rail.
+    /// `nextPaymentDueDate`, never inferred. `landDueRows` lands them as rows.
     static var dues: [String: Double] {
         get { UserDefaults.standard.dictionary(forKey: dueKey) as? [String: Double] ?? [:] }
         set { UserDefaults.standard.set(newValue, forKey: dueKey) }

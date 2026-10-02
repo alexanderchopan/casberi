@@ -10,14 +10,6 @@ import CloudKit
 /// pricing that doesn't exist yet.
 enum AccountDetail: String, Identifiable {
     case data
-    /// The Mac's local MCP listener (prd §871). It used to ride inside the
-    /// "Your key" sheet, on the reasoning that it was the same subject seen
-    /// from the other side — your key lets Casberi ask somebody else's agent,
-    /// this lets an agent on this Mac ask Casberi. With that sheet gone (every
-    /// key is connected on its own account page now) the listener is what it
-    /// always was on its own terms: a switch about this Mac, not about a key.
-    /// Mac-only, and `AccountScreen` draws no row for it anywhere else.
-    case mcp
     case notifications
     var id: String { rawValue }
 }
@@ -85,8 +77,6 @@ struct AccountDetailSheet: View {
             case .data:
                 dataCard
                 controls
-            case .mcp:
-                mcpCard
             case .notifications:
                 notifyCard
             }
@@ -158,7 +148,6 @@ struct AccountDetailSheet: View {
         // `AccountScreen`'s row title by hand: the row is what you tap and
         // this is the sheet it opens, so the two must never disagree.
         case .data: "Data"
-        case .mcp: "Agents on this Mac"
         case .notifications: "Notifications"
         }
     }
@@ -285,10 +274,6 @@ struct AccountDetailSheet: View {
         // text line vs three 44pt slabs), and the ADP nudge lost its 50pt
         // badge indent so it wraps one line fewer.
         case .data: privacyHeight
-        // The toggle, its two-line detail, the endpoint row, the copy verb
-        // and its one footnote — `MCPServerRow` whole, with nothing else in
-        // the tray (prd §871).
-        case .mcp: 380
         case .notifications: notifyHeight
         }
     }
@@ -402,9 +387,7 @@ struct AccountDetailSheet: View {
                 // capsule. prd §718: "answers" named the deprecated ask. The
                 // app's own claim without it is the one NetworkReach makes
                 // checkable.
-                DSStamp(word: AskSurface.enabled
-                            ? String(localized: "Private — answers run on \(DS.device)")
-                            : String(localized: "Private — nothing routes through us"),
+                DSStamp(word: String(localized: "Private — nothing routes through us"),
                         weight: .good, glyph: "sparkles")
                 // Only with a key configured — an unkeyed install reads
                 // exactly as it did before. The sentence names the AGENT (who
@@ -413,17 +396,11 @@ struct AccountDetailSheet: View {
                 // fork is not a nicety: with it on, the key is spent on the
                 // app's OWN schedule, so "when you tap" would be false in the
                 // one place a person checks whether that is true.
-                if let keyedAgent, !AskSurface.enabled {
-                    // With the ask off the key's ONLY departure from the
-                    // baseline is the librarian; without it there is none to
-                    // state (prd §718).
-                    if librarianOn {
-                        DSFootnote("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
-                    }
-                } else if let keyedAgent {
-                    DSFootnote(prose: librarianOn
-                         ? String(localized: "Your \(keyedAgent.agent) key answers when you tap, and the librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
-                         : String(localized: "Your \(keyedAgent.agent) key answers when you tap — that question and its matched things go to \(keyedAgent.company), per answer."))
+                // With the ask gone (2026-10-01; dark since §697b) the key's
+                // only departure from the baseline that this page can state is
+                // the librarian; without it there is none to state (prd §718).
+                if let keyedAgent, librarianOn {
+                    DSFootnote("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
                 }
             }
             // iCloud sync. The container binds at launch, so a fresh flip says
@@ -575,26 +552,6 @@ struct AccountDetailSheet: View {
                       action: @escaping () -> Void) -> some View {
         DSPushRow(title: Text(title), subtitle: Text(DSProse.unorphaned(subtitle)),
                   subtitleTone: subtitleTone, action: action)
-    }
-
-    /// The Mac's local MCP listener (prd §871, `MCPServer`) — the whole tray.
-    ///
-    /// `MCPServerRow` carries its own state, its own honesty copy and its own
-    /// `dsListRow`, so this is the row and nothing else. It was the last
-    /// thing standing in the "Your key" sheet that had no account page to go
-    /// to: it is not a key, it is a switch about this machine.
-    ///
-    /// Mac-only in the same `#if` the row is, so the iOS build has no case to
-    /// resolve — `AccountScreen` draws no row that reaches it there either,
-    /// and the enum case being unreachable on iOS is the same shape the
-    /// `#if targetEnvironment(macCatalyst)` around `MCPServerRow` already had
-    /// inside the key card.
-    @ViewBuilder private var mcpCard: some View {
-        #if targetEnvironment(macCatalyst)
-        MCPServerRow()
-        #else
-        EmptyView()
-        #endif
     }
 
     /// The colored squircle badge — the Apps-page glyph in a solid tone
@@ -937,14 +894,12 @@ struct AccountDetailSheet: View {
 
     /// The other wipe (user ruling 2026-07-13): every credential Casberi
     /// holds, gone in one move — the vault (bridge tokens, the Steam key,
-    /// Twitch tokens, mail passwords, the Anthropic key) and the MCP pairing
-    /// token (paired clients lose their way in). The bridges those
+    /// Twitch tokens, mail passwords, the Anthropic key). The bridges those
     /// credentials powered unregister so nothing claims a connection it no
     /// longer has. Things stay untouched.
     private func deleteAccess() {
         TokenVault.deleteAll()
         TokenBridge.allCases.forEach { $0.onRemove() }   // drop any cached non-thing state too
-        MCPPairing.reset()
         let credentialBacked = Set(
             TokenBridge.allCases.map(\.bridgeID)
             + ["steam", "twitch", "gmail", "icloudmail"]

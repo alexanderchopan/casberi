@@ -735,15 +735,9 @@ ok "activation door (refreshAllConnected span present)"
 probe find 'findDoc\|.*Row\(' 30 \
   -seedThing "Bluesky:0" -openComposer YES -findProbe "Ring"
 
-# Today brief: the whisper's landing screen, fully deterministic composition.
-probe today 'todayProbe: landed=' 40 -todayProbe YES -probeDelay 4
-
-# The Shortcuts/Siri grounding matcher — pure, local, and the one path a UI
-# sweep can never reach. This asserts the matcher RUNS, not that it hits:
-# `ProbeHooks` dispatches in list order and `intentProbe` sits above
-# `seedThing` in that table, so the corpus is still empty when it fires and
-# a hit count is not ours to demand from the script side.
-probe intent 'Intent probe: [0-9]+ hits' 25 -intentProbe "Ring"
+# The Today brief and the Shortcuts "Search/Ask Casberi" matcher had probes
+# here (`-todayProbe`, `-intentProbe`) until both went with the ask
+# (2026-10-01).
 
 # ── 5. Live integrations (network — WARN-ONLY, never gates) ───────────────
 # Same contract as scripts/live-integrations.sh: a third-party hiccup must

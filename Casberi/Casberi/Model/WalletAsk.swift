@@ -68,26 +68,4 @@ enum WalletAsk {
         }
         return "\(head)."
     }
-
-    /// The wallet's line for the away recap — the value's move over the away
-    /// window, from the samples bracketing it (the last point at/before the
-    /// window's start vs the latest). Synchronous: it reads the local value
-    /// samples, no network. nil when nothing spans the window (no samples, one
-    /// point, or a flat/zero start) — the line never claims a move it can't show.
-    @MainActor
-    static func awayLine(window: Range<Date>) -> String? {
-        let store = WalletStore.shared
-        guard !store.addresses.isEmpty else { return nil }
-        let multi = store.addresses.count > 1
-        let samples = multi
-            ? store.combinedValueSamples()
-            : store.valueSamples(forAddress: store.addresses[0].address)
-        guard samples.count >= 2,
-              let start = samples.last(where: { $0.at <= window.lowerBound }) ?? samples.first,
-              let last = samples.last, last.at > start.at, start.usd > 0
-        else { return nil }
-        let change = (last.usd - start.usd) / start.usd
-        let noun = multi ? String(localized: "Your wallets") : String(localized: "Your wallet")
-        return String(localized: "\(noun) \(TokenChartStyle.changeText(change)) while you were away.")
-    }
 }

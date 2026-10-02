@@ -51,130 +51,6 @@ enum DemoMode {
     /// of a room the person has just walked out of.
     static var hasSeen: Bool { ScratchDefaults.standard.bool(forKey: seenKey) }
 
-    /// The standing questions a furnished install would plausibly have kept.
-    ///
-    /// Four now (2026-08-07, was two) — each checked against the actual seed
-    /// rather than reasoned about, because a kept ask whose composer comes
-    /// back empty renders as a chip that answers nothing, worse than not
-    /// offering it:
-    ///   • `today` composes over whatever the corpus holds.
-    ///   • `wallet` has the seeded address and its balance curve behind it.
-    ///   • `showtag:Release` — `Corpus.tags.contains("Release")` matches 7
-    ///     seeded rows (the Vercel deploys + npm/PyPI releases in
-    ///     `DemoSeedAll.infra`), which is also the exact count the Themes
-    ///     treemap draws ("Release · 7 things") — the same fact, two places.
-    ///   • `context:Linear` — two Linear issues land inside 3 days
-    ///     (`DemoSeedAll.work`'s `issues` at days 1 and 2), so the composer's
-    ///     3-day window (not its 7-day fallback) is what actually answers.
-    /// Widen further only against a real run, never by reasoning about what
-    /// the seed probably contains — re-verify both counts if `infra`/`work`
-    /// changes.
-    /// ONE (prd §577b, user: "these prepopulated answers SHOULD NOT BE THERE
-    /// … all of that is crap that will return garbage answers anyways. the
-    /// only thing useful is 'how's my wallet'").
-    ///
-    /// It was four, and the other three are the §543 class the demo was still
-    /// paying: a kept pill is supposed to mean "you pinned this", and seeding
-    /// four of them puts standing questions on a new person's agent that they
-    /// never asked for and cannot have wanted. Worse, they answer BADLY —
-    /// "Show Release" and "What's new in Linear?" recite a tag and a source
-    /// over a corpus somebody has had for ninety seconds, which is the
-    /// demo's own furniture read back to it.
-    ///
-    /// The wallet ask survives because it is the one that answers with
-    /// something the person cannot get by looking: a figure, a delta and what
-    /// moved it. Keeping exactly one also demonstrates the FEATURE — that a
-    /// question can be pinned — without pretending anybody pinned four.
-    ///
-    /// `teardown` iterates this same list, so removing an entry here removes
-    /// its seed and its cleanup together; a pill seeded by an older build
-    /// simply stays kept, which is correct — it is the person's now.
-    private static let keptAsks: [(kind: String, title: String)] = [
-        ("wallet", String(localized: "How's my wallet?")),
-    ]
-
-    /// Asks this demo USED to pin, and the titles it pinned them under.
-    ///
-    /// `exit` iterates the CURRENT list, so an ask the demo planted and later
-    /// stopped planting can never be taken back by it: it stays pinned for
-    /// good on every device that ran that build. Three of them shipped —
-    /// found 2026-09-02 on a simulator carrying "How's my day?", "Show
-    /// Release" and "What's new in Linear?" long after the list had been cut
-    /// to one — and a pinned question nobody chose is exactly wrong in the one
-    /// place the product promises the person's OWN standing questions.
-    ///
-    /// The title must match too, and that is the whole safety argument. A
-    /// person is free to keep "How's my day?" themselves, and by KIND alone
-    /// this would delete it — so the seeded title is the strongest evidence
-    /// available that the pin is ours rather than theirs. It is
-    /// `String(localized:)` on both sides, so a device that ran the demo in
-    /// Spanish matches its own Spanish title; anything else simply does not
-    /// match and the pill stays, which is the right way to be wrong.
-    private static let retiredKeptAsks: [(kind: String, title: String)] = [
-        ("today", String(localized: "How's my day?")),
-        ("showtag:Release", String(localized: "Show Release")),
-        ("context:Linear", String(localized: "What's new in Linear?")),
-    ]
-
-    private static let retiredAsksSweptKey = "demo.mode.retiredAsksSwept.v1"
-
-    /// Take back the pins the demo left behind, ONCE.
-    ///
-    /// Once, because a person who re-keeps one of these on purpose afterwards
-    /// must keep it — a sweep that ran every launch would delete their choice
-    /// every launch, which is a far worse bug than the one it fixes.
-    ///
-    /// Gated on `hasSeen` because only a device that ran the demo can be
-    /// holding one, so an install that never did is never touched at all.
-    @MainActor
-    static func sweepRetiredKeptAsks() {
-        guard !ScratchDefaults.standard.bool(forKey: retiredAsksSweptKey) else { return }
-        ScratchDefaults.standard.set(true, forKey: retiredAsksSweptKey)
-        guard hasSeen else { return }
-        for ask in retiredKeptAsks
-        where KeptAskStore.shared.titles[ask.kind] == ask.title {
-            KeptAskStore.shared.remove(ask.kind)
-        }
-    }
-
-    /// The prior-window brief history, the tap-learning counters, and the
-    /// away window — the agent's MEMORY, as distinct from its corpus. A
-    /// furnished feed with none of this composes a Today brief with no
-    /// streak lede, offers composer tiles in a flat unlearned order, and can
-    /// never answer "while I was away" on a fresh install — three flagship
-    /// surfaces reading as day-one over data staged to look lived-in.
-    ///
-    /// `symbol`/`themes` are read off the SAME facts the live corpus will
-    /// independently produce, not invented: "ETH" because the seeded wallet
-    /// curve is 62% ETH (`DemoSeedAll.seedBridgeState`'s `holdings` split),
-    /// "Release"/"Alert" because those are real `Thing.tags` values on rows
-    /// the Themes treemap already counts — so `BriefLedger.symbolStreak`/
-    /// `themeStreak`, which compare a seeded PAST entry against what the LIVE
-    /// compose produces, actually match rather than silently miss.
-    private static let ledgerSymbol = "ETH"
-    private static let ledgerThemes = ["Release", "Alert"]
-    private static let ledgerSources = ["X", "Photos", "Obsidian", "Linear"]
-    private static let ledgerDays = 6
-
-    /// A stale tile (offered past `AskMemory.neglectThreshold` with no tap)
-    /// so the composer's live demotion is visible on the first open — the
-    /// exact proof CLAUDE.md documents for the real feature ("seed pulse:12,
-    /// watch pulse move last"). `week` is a real composer kind (`Shell/
-    /// Composer.swift`'s `AskOption(kind: "week", …)`), always offered, so
-    /// there's always something for it to demote BEHIND.
-    private static let neglectedAsk = "week"
-    /// A kind that is NOT in `keptAsks` above, primed past
-    /// `AskMemory.mintThreshold` so its "you ask this a lot — keep it?"
-    /// upgrade is already showing rather than requiring three live taps in
-    /// the middle of a demo. `overdue`'s composer (`KeptAskComposers
-    /// .overdue`) reads ONLY `Reminders`/`Todoist` rows with a past `dueAt`
-    /// — `DemoSeedAll.schedule`'s Todoist task "Book the dentist" is dated
-    /// one day overdue, the single row that qualifies. (The composer never
-    /// returns nil — an empty overdue list still composes "Nothing
-    /// overdue." — so this is checked for a REAL non-empty answer, not
-    /// merely a non-crashing one.)
-    private static let primedMintAsk = "overdue"
-
     /// The rooms somebody actually OPENED while the demo was furnished —
     /// read by the onboarding fork to decide which card to lead with
     /// (prd §422; the fork it ordered was deleted 2026-08-31).
@@ -191,8 +67,8 @@ enum DemoMode {
     /// Cleared by `begin` and NOT by `exit`, deliberately: a second demo run
     /// starts a fresh record, and the record has to outlive the demo by one
     /// screen or it answers nothing. It is counts against source names in
-    /// local defaults — the same shape and the same reach as `ChipMemory`
-    /// and `AskMemory`, with no edit surface and nothing that leaves.
+    /// local defaults — the same shape and the same reach as `ChipMemory`,
+    /// with no edit surface and nothing that leaves.
     private static let roomVisitsKey = "demo.mode.roomVisits"
 
     static var roomVisits: [String: Int] {
@@ -254,18 +130,11 @@ enum DemoMode {
         // persists on write, so this survives relaunch with no init path of
         // its own.
         store.bridges = BridgeApp.demo
-        for ask in keptAsks { KeptAskStore.shared.keep(ask.kind, title: ask.title) }
 
-        // The agent's MEMORY, not just its corpus (2026-08-07) — see the
-        // property docs above for what's seeded and why each composes
-        // non-empty. The checkpoint runs BEFORE the ledger seed so it
-        // captures the true pre-demo state (empty, on every real first
-        // entry) rather than the state this call is about to create.
-        BriefLedger.demoCheckpoint()
-        BriefLedger.seedDemo(days: ledgerDays, symbol: ledgerSymbol,
-                             themes: ledgerThemes, sources: ledgerSources)
-        AskMemory.seedDemo(neglect: [neglectedAsk: AskMemory.neglectThreshold + 2],
-                           made: [primedMintAsk: AskMemory.mintThreshold])
+        // The away window, so the All feed's "new since you were away"
+        // marks something on the first demo open. The demo also seeded a kept
+        // ask, the brief's ledger and the composer's tap counters until they
+        // went with the ask (2026-10-01).
         AppVisit.seedDemo()
         // The Tokens room's sparkline/price/percent (2026-08-11) — see
         // `TokenPulse.seedDemo`'s own doc for why this can't just be
@@ -348,13 +217,12 @@ enum DemoMode {
         ScratchDefaults.standard.set(false, forKey: pendingKey)
         // A fresh pour IS the current table (prd §1005).
         ScratchDefaults.standard.set(DemoSeedAll.version, forKey: tableKey)
-        // "While I was away?" answers over what landed after the last close.
+        // The feed's away window marks what landed after the last close.
         // `AppVisit.seedDemo` stamps that close three hours back, and the
         // seed's rows sit at fixed hours of fixed days — so at most times of
-        // day nothing at all fell inside the window and the ask said
-        // "Nothing new" over a corpus that had just poured (census
-        // 2026-09-05). Close the window just before the dozen newest rows
-        // instead, so the answer is the same at any hour.
+        // day nothing at all fell inside the window (census 2026-09-05).
+        // Close the window just before the dozen newest rows instead, so the
+        // mark is the same at any hour.
         let newest = rows.map(\.capturedAt).sorted(by: >)
         if newest.count >= 12 {
             AppVisit.markClosed(now: newest[11].addingTimeInterval(-1))
@@ -384,12 +252,8 @@ enum DemoMode {
     /// weekday drifts. A demo whose interesting feature is a shape, not a
     /// specific Tuesday, should keep the shape.
     ///
-    /// Scoped to what THIS file owns: `DemoSeedAll.refPrefixes` for Things,
-    /// the demo wallet's balance curve, and the ledger entries `seedDemo`
-    /// planted (`BriefLedger.shiftDemoWindows`) — never a real wallet or a
-    /// real ledger entry recorded during the live session, which is why the
-    /// ledger half tracks its OWN seeded set rather than shifting everything
-    /// with a `windowStart` in the past.
+    /// Scoped to what THIS file owns: `DemoSeedAll.refPrefixes` for Things and
+    /// the demo wallet's balance curve — never a real wallet.
     /// The `pouring` reasoning applies here too, one function over: this
     /// `async` function suspends (the chunked write loop's own yield), so a
     /// second concurrent call would read the "newest row" date from BEFORE
@@ -501,8 +365,6 @@ enum DemoMode {
             }
         }
 
-        BriefLedger.shiftDemoWindows(byDays: shiftDays)
-
         NSLog("[Casberi] demoMode: re-stamped %d rows forward %d day(s)", rows.count, shiftDays)
     }
 
@@ -517,21 +379,13 @@ enum DemoMode {
     static func exit(context: ModelContext, store: BridgeStore) {
         let rows = DemoSeedAll.teardown(context)
         store.bridges = []
-        for ask in keptAsks { KeptAskStore.shared.remove(ask.kind) }
         ScratchDefaults.standard.set(false, forKey: activeKey)
         // A pour interrupted by Exit must not resume on the next launch —
         // otherwise the rows the person just removed pour straight back in,
         // and the app looks like it refused to let go.
         ScratchDefaults.standard.set(false, forKey: pendingKey)
 
-        // The mirror of `begin`'s memory seed. `restoreDemoCheckpoint`
-        // removes both the fake prior windows AND any real window recorded
-        // DURING the live session (a Today-brief compose over the demo
-        // corpus is real, but its facts describe a corpus that no longer
-        // exists after this line) — see its own doc for why a blanket wipe
-        // isn't used instead.
-        BriefLedger.restoreDemoCheckpoint()
-        AskMemory.forgetDemo(neglect: [neglectedAsk], made: [primedMintAsk])
+        // The mirror of `begin`'s away-window seed.
         AppVisit.forgetDemo()
         TwitchIngest.forgetDemo()
         TokenPulse.shared.teardownDemo(DemoSeedAll.tokenSeeds.indices.map { "demo:token:\($0)" })

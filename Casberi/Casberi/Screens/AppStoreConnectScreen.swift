@@ -302,8 +302,7 @@ struct AppStoreConnectScreen: View {
     }
 
     /// "In review · 2 days", or the state alone when this device never watched
-    /// it arrive — `ASCRoom`'s own wording and its own honest-duration rule, so
-    /// this screen and the room head can never phrase the same fact differently.
+    /// it arrive — `ASCRoom`'s wording and its honest-duration rule (§83).
     private func stateLine(_ standing: ASCStanding) -> String {
         let state = ASCVersionState(rawValue: standing.state)
         var line = ASCRoom.stateLabel(state)

@@ -123,9 +123,6 @@ struct Composer: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var scheme
 
-    /// Flips true just after the bubble opens so the ask chips stagger in
-    /// rather than snapping (delight, 2026-07-12).
-    @State private var chipsAppeared = false
     /// The date NSDataDetector found in the draft (nil when none) — feeds the
     /// Send-to band's receipt line and Calendar's calshow timestamp.
     @State private var detectedDate: Date?
@@ -376,27 +373,6 @@ struct Composer: View {
     /// `commit()` computes `stayKeyed`, so it can never leak into the NEXT
     /// question typed after this one settles.
     @State private var forceKeyedThisAsk = false
-    /// The kept-ask KIND the current question would mint, computed once per
-    /// settled answer (same reason `keyAvailable` is settle-cached, not a
-    /// per-render computed property: a corpus fetch per render would be
-    /// wasteful during a streaming reveal). nil when the question doesn't
-    /// match a keepable shape, or it's already kept.
-    @State private var keepableAskKind: String?
-    /// The one related follow-up an answer offers (2026-07-22, §177) — a
-    /// wallet answer → "What about gas?", a source recap → "Synthesize it
-    /// instead" — teaching the next step at the moment it's most wanted. A
-    /// small deterministic map (`nextAsk(for:in:)`), never a model; nil when
-    /// the answer has no natural follow-up. Set at settle, cleared on the
-    /// next send.
-    private struct NextAsk { let label: String; let query: String }
-    @State private var nextAsk: NextAsk?
-    /// One-shot: the Keep chip morphs to a checkmark for a beat before it
-    /// retires (delight, 2026-07-21) — the mint earns a felt moment instead
-    /// of just vanishing the instant it's tapped.
-    @State private var keepJustLanded = false
-    /// The first-ever kept ask earns its own line, sibling to "Your first
-    /// thing" (RootShell) — persisted so it fires exactly once per install.
-    @AppStorage("composer.firstKeptAsk.done") private var firstKeptAskDone = false
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
     /// keeping: a lookup answer IS the things, which already live in the feed;
@@ -414,137 +390,6 @@ struct Composer: View {
     /// a real find earns the tick, a miss earns nothing.
     private func docHasFallback(_ lines: [String]) -> Bool {
         lines.contains { $0.contains("Insight(\"Nothing ") }
-    }
-
-    /// The kept-ask KIND the question would mint, or nil (docs/agent-brief.md
-    /// ruling 1). A PURE pattern-match against the same recognizers
-    /// `RootShell.answerDocument` checks before any model call — by
-    /// construction this can never reach the model, which is the "no LLM in
-    /// the kept-ask path" guarantee made structural rather than conventional.
-    /// Scoped to exactly the kinds `KeptAskComposers` implements — offering a
-    /// kind with no real composer would be a dead control once kept (honesty
-    /// rule).
-    private func recognizeKeptAskKind(_ question: String, in things: [Thing]) -> String? {
-        guard !question.isEmpty else { return nil }
-        let q = question.lowercased()
-        var kind: String?
-        if TodayBrief.matches(question), !things.isEmpty {
-            // Gated on a non-empty corpus for the same reason every other
-            // recognizer is gated on its own answer existing — keeping a
-            // "How's my day?" that can only ever say "nothing landed" would
-            // be a dead pill.
-            kind = "today"
-        } else if TokensAsk.matches(question) {
-            kind = "watchlist"
-        } else if WalletAsk.matches(question) {
-            kind = "wallet"
-        } else if WalletDeFiAsk.matches(question) {
-            kind = "walletdefi"
-        } else if UniswapAsk.matches(question) {
-            kind = "walletuniswap"
-        } else if WalletGasAsk.matches(question) {
-            kind = "walletgas"
-        } else if SafeAsk.matches(question) {
-            kind = "walletsafe"
-        } else if KeptAskComposers.matchesSpend(question),
-                  KeptAskComposers.hasSpendToReport(things) {
-            // Gated on the composer's OWN conditions, not a weaker proxy —
-            // a first cut asked only whether a card row existed, so someone
-            // whose card rows were all pending, or all older than the window,
-            // could mint a pill that composed nothing every time it was
-            // tapped: the dead control this gate exists to prevent.
-            kind = "spend"
-        } else if q.contains("away"), let pulse = StatusAsk.pulse(question, things: things),
-                  !pulse.pool.isEmpty {
-            kind = "away"
-        } else if q.hasPrefix("show "),
-                  let tag = tagPool.first(where: { q == "show \($0.lowercased())" }) {
-            kind = "showtag:\(tag)"
-        } else if q.contains("overdue"),
-                  things.contains(where: { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
-                                            && ($0.dueAt ?? .distantFuture) < .now }) {
-            kind = "overdue"
-        } else if KeptAskComposers.matchesUpcoming(q),
-                  things.contains(where: { $0.mark != .done && ($0.dueAt ?? .distantPast) >= .now }) {
-            // Gated on a real future deadline existing, the same way every other
-            // recognizer is gated on its own answer being non-empty — typing it
-            // with nothing ahead falls through to the normal answer path rather
-            // than minting a keepable ask that would only ever say "nothing".
-            kind = "upcoming"
-        } else if let (target, _) = KeptAskComposers.namedAskTarget(question, things: things),
-                  target.hasRealThings(in: things) {
-            // A named source/publisher/category ask (2026-07-22: "synthesize
-            // my Verge feed", "what happened in BBC" — widened from the
-            // original "what's new in Calendar"/"how's my GitHub" shape,
-            // which only ever recognized a whole BRIDGE, never a publisher
-            // within one). The verb ("synthesize" vs "what's new") only
-            // matters to the LIVE answer path (`RootShell.answerDocument`,
-            // same recognizer) — a kept pill always re-runs the deterministic
-            // recap regardless of which verb minted it, so the `_` here is
-            // correct: keeping never cares whether this was a synthesis ask.
-            kind = target.keptKind
-        } else if TagsAsk.parse(question) == nil, AppsAsk.parse(question) == nil,
-                  AggregateAsk.parse(question, sources: Array(Set(things.map(\.source)))) == nil,
-                  StatusAsk.pulse(question, things: things) == nil,
-                  !Retriever.rank(question, in: things, isPoolRefinement: false).isEmpty {
-            // Kept SEARCHES (docs/agent-brief.md ruling 13, 2026-07-20) — any
-            // free-text ask that actually retrieved something becomes
-            // keepable. The exclusions above matter: `answerDocument` checks
-            // TagsAsk/AppsAsk/AggregateAsk/StatusAsk BEFORE the general
-            // retriever, so a question one of those would have answered
-            // must never mint a `search:` kind — its kept re-run (retrieval
-            // rows) would silently disagree with what the live answer
-            // actually showed (an arithmetic line, a status pulse, …).
-            kind = "search:\(q.trimmingCharacters(in: CharacterSet(charactersIn: "? ")))"
-        }
-        guard let kind, !KeptAskStore.shared.isKept(kind) else { return nil }
-        // A SCOPE ask is never keepable (2026-08-10, user: "why would it show
-        // on how's my work stuff if that is already a default chip"). Money /
-        // Work / Life have a permanent, always-visible chip row of their own
-        // (`categoryChipsRow`), so keeping one mints a pin that duplicates a
-        // control already on screen — and, since a pinned ask sorts above the
-        // chips, pushes the real chip down under a copy of itself. This was
-        // right before the scoped briefs shipped, when `category:Work` was the
-        // only door to that room; the chips replaced that door and nothing
-        // told this recognizer. Other `category:` kinds are untouched — a
-        // catalog category with no chip (there are none today, but the
-        // mapping is data) is still a legitimate thing to pin.
-        if let scope = kind.hasPrefix("category:")
-            ? String(kind.dropFirst("category:".count)) : nil,
-           BriefScope.scopes.contains(scope) {
-            return nil
-        }
-        return kind
-    }
-
-    /// The one related follow-up to offer after an answer (§177) — a small
-    /// deterministic map from the answer's own shape to the next natural ask,
-    /// the same job the composer's context-aware lead chip does at open,
-    /// extended to the moment just after an answer. nil when there's no clean
-    /// pairing. Never the model; each pairing is a fixed, always-answerable
-    /// next step (the paired ask honestly handles its own empty case).
-    private func nextAsk(for question: String, in things: [Thing]) -> NextAsk? {
-        // Wallet ⇄ its sibling reads.
-        if WalletGasAsk.matches(question) {
-            return NextAsk(label: "How's my wallet?", query: "how's my wallet")
-        }
-        if WalletAsk.matches(question) {
-            return NextAsk(label: "What about gas?", query: "what have I spent on gas")
-        }
-        if TokensAsk.matches(question), !WalletStore.shared.addresses.isEmpty {
-            return NextAsk(label: "How's my wallet?", query: "how's my wallet")
-        }
-        // The day brief → the overnight catch-up (its natural neighbor).
-        if TodayBrief.matches(question) {
-            return NextAsk(label: "While I was away?", query: "while I was away")
-        }
-        // A source/publisher RECAP → offer the synthesis of the same thing
-        // (the verb it didn't use). Skipped when it already synthesized.
-        if let (target, synth) = KeptAskComposers.namedAskTarget(question, things: things),
-           !synth, OnDeviceModel.isAvailable {
-            return NextAsk(label: "Synthesize it instead", query: "synthesize \(target.name)")
-        }
-        return nil
     }
 
     @State private var proseStreaming = false
@@ -594,9 +439,6 @@ struct Composer: View {
     /// Debounce for the live read. 400ms of quiet, because the read is not
     /// cheap — see `liveReadCeiling`.
     @State private var liveReadTask: Task<Void, Never>?
-    /// The last query a find actually ran, so refining one search doesn't count
-    /// as asking it several times — see `runFind`.
-    @State private var lastFoundQuery: String?
 
     /// The corpus size past which the draft's live read is SKIPPED — the chip
     /// shows its plain "Find" and no scope chips appear until a find has run.
@@ -621,171 +463,6 @@ struct Composer: View {
     /// keystrokes.
     private static let liveReadCeiling = 1_200
 
-    /// Empty-field ask suggestions — derived from the live corpus on open
-    /// (re-ruling 2026-07-08: the dead GENERIC chips stay dead; these are
-    /// asks the corpus can actually answer right now). `kind` is the ask's
-    /// stable identity, `glyph` is assigned where the ask is created (no
-    /// parallel switch to forget), and `memoryKey` keys the decay counters
-    /// (see AskMemory) — kind:qualifier where one kind wears many faces,
-    /// so "Show recipes" neglect never pre-demotes "Show travel".
-    /// The DOOR a chip opens — used only to keep the four slots from filling
-    /// with four flavors of the same thing (2026-07-22): the diversity pass
-    /// prefers spanning shapes over stacking one. Derived from `kind`, never
-    /// stored, so no call site has to name it.
-    private enum AskShape { case recency, money, tasks, entity, insight }
-
-    private struct AskOption {
-        let kind: String
-        let title: String
-        let glyph: String
-        let memoryKey: String
-        /// A cheap, SYNCHRONOUS digest ("· 3") computed at open (2026-07-22)
-        /// — parity with the kept pills, which have carried a digest since
-        /// §132. nil where no honest cheap count exists (wallet/watchlist read
-        /// live prices/holdings async; §83 forbids a stale number wearing a
-        /// fresh face, so they simply show none rather than a lie).
-        var signal: String?
-
-        /// An event-driven chip (2026-07-22) — a busy publisher, a real
-        /// moment. It LEADS, is exempt from neglect decay (it's timely, not
-        /// evergreen, like "away"), and wears a tint dot so "happening now"
-        /// reads as happening. Derived from `kind`, not stored — one source of
-        /// truth, so a new timely kind is a one-line switch, never a
-        /// remembered constructor flag.
-        var timely: Bool { kind == "handle" }
-
-        /// What the tap actually SENDS — the display `title` for every chip
-        /// except the timely publisher one, which shows a SHORTENED name but
-        /// must send the CANONICAL full handle (from `memoryKey`) so the
-        /// answer path resolves the exact publisher the chip named, not a
-        /// fuzzy near-match by total volume (§174's `bestHandle` ranks by
-        /// history; `busyPublisher` ranks by recency — they can disagree).
-        /// Mirrors the away chip's own label/query split.
-        var query: String {
-            guard kind == "handle" else { return title }
-            return "What happened in \(memoryKey.dropFirst("handle:".count))?"
-        }
-
-        var shape: AskShape {
-            switch kind {
-            case "wallet", "watchlist":        return .money
-            case "overdue", "upcoming":        return .tasks
-            case "away", "pulse", "today", "week": return .recency
-            case "noticed", "observation":     return .insight
-            default:                           return .entity  // context/category/showtag/handle
-            }
-        }
-
-        init(kind: String, title: String, glyph: String, memoryKey: String? = nil,
-             signal: String? = nil) {
-            self.kind = kind
-            self.title = title
-            self.glyph = glyph
-            self.memoryKey = memoryKey ?? kind
-            self.signal = signal
-        }
-    }
-    /// A scoped "What's going on" chip (scoped-brief-spec.md) — one per BRIEF
-    /// SCOPE (`BriefScope.scopes`: Money, Work, Life) the corpus holds a
-    /// connected app in. No "Everything" chip (user, 2026-08-08) — that
-    /// brief is already the default you get by asking nothing in particular,
-    /// reachable via the whisper capsule or the kept "today" pill. Deliberately
-    /// a SEPARATE small type from `AskOption` rather than another `kind` on
-    /// it: `AskOption.query` special-cases "handle" to send a canonical
-    /// string different from its display title, and folding a second special
-    /// case in there for "send the recognized phrase, show the bare scope
-    /// name" risked disturbing the existing away/handle/today display-vs-send
-    /// split this file already leans on elsewhere. `query` here is a phrase
-    /// `KeptAskComposers.namedAskTarget` already recognizes, so firing it
-    /// runs the exact same pipeline a typed ask would.
-    private struct CategoryChip: Identifiable {
-        let id: String
-        let title: String
-        let query: String
-    }
-    @State private var categoryChips: [CategoryChip] = []
-    @State private var suggestions: [AskOption] = []
-    /// The away window's real count — the librarian chip rolls up to it
-    /// (delight 2026-07-13); set beside the gate that shows the chip.
-    @State private var awayLanded = 0
-    /// The tag list, snapshotted once per open — derived from the same corpus
-    /// walk `computeSuggestions()` already pays for, so typing never pays a
-    /// fetch per character (review 2026-07-08; the separate `tagCandidates()`
-    /// closure that used to do its OWN full-corpus fetch here retired
-    /// 2026-08-11, see `corpusScan`).
-    /// The corpus-wide chip counters, kept across opens (PERF 2026-08-12) —
-    /// see `computeSuggestions()`'s fetch for why. Nil means "never computed
-    /// on this launch", which is the one open that pays the full walk;
-    /// `composeBoard` refreshes it behind the board on every open after.
-    private var cachedChipFacts: AgentChipFacts? {
-        get { AgentOpenCache.shared.facts }
-        nonmutating set { AgentOpenCache.shared.facts = newValue }
-    }
-    @State private var tagPool: [String] = []
-    /// The brief document's own scroll proxy, published so the DOCKED nav
-    /// (`briefNav`, mounted above the input bar) can scroll it — see that
-    /// property's note for why a second `ScrollViewReader` down there would
-    /// silently scroll nothing.
-    /// The docked nav's travelling blob — its own namespace, never the
-    /// bar-morph's `glassNamespace`: two matched pairs sharing a namespace
-    /// with different ids is fine, but keeping them apart means neither can
-    /// ever accidentally pair with the other's id.
-    @Namespace private var briefNavNS
-
-    /// The agent's room as composed for this open (prd §332, 2026-08-07) —
-    /// the noticing, the kept asks wearing their answers, the threaded window,
-    /// the fold. Built once per open on the SAME corpus walk
-    /// `computeSuggestions()` already pays for, so the whole board costs one
-    /// extra pass over an array that is already in memory.
-    ///
-    /// Empty is a real state, not a failure: a new install has nothing to
-    /// synthesize, and the greeting-and-chips rest screen this replaced is
-    /// still exactly right there. `AgentOpen.Composition.isEmpty` is the gate.
-    /// The feed's own filter — the panel's tap target. Injected by `RootShell`
-    /// alongside the route and the detail selection, so this is the same object
-    /// the source chips and `NavigateIntent.source` already drive.
-    @Environment(FeedFilter.self) private var filter
-
-    /// Which brief section the reader is currently IN (prd §386j) — the
-    /// heading nearest the top of the viewport without having scrolled past
-    /// it. Updated from the headings' own reported offsets; empty before the
-    /// first frame, so the nav simply shows no active chip rather than
-    /// guessing at one.
-
-    /// The one predicate for "the composer is idle and showing its rest-screen
-    /// chrome" — open, nothing typed, nothing recording, no answer in flight.
-    /// The ask chips, the kept pills, and the placeholder cycle all read it, so
-    /// they can't drift (they each hand-rolled this conjunction before §181).
-    /// `keepBrief` folds in the brief LANDING (prd §181) — the one answer state
-    /// that KEEPS its chips — for the two that dock beside the brief; the
-    /// placeholder cycle passes `false`, deliberately, because the landing's
-    /// field already reads a static "Ask about this…" rather than cycling.
-    /// **FOCUSING THE FIELD IS THE SECOND DOOR** (2026-08-15, user: "tapping
-    /// the berry should bring up the brief… typing in the search bar should
-    /// bring up the chat cashapp style interface").
-    ///
-    /// This is what makes the ask surface reachable AT ALL. §386d made a bare
-    /// berry tap seed `TodayBrief.title`, which sets `answering` for the life
-    /// of the open — and `answering` is only cleared by `close()`. So
-    /// `restChrome(keepBrief: false)` could never return true on a normal
-    /// open, and the greeting, the day card and the chip beneath it were dead
-    /// code on every device: §386e predicted exactly this and parked it as a
-    /// ruling nobody had been asked for. Two sessions then spent a night
-    /// polishing a screen no tap could produce, which is how it was finally
-    /// noticed ("it's as if we never changed it" — correct, and not the
-    /// commits' fault).
-    ///
-    /// The ruling resolves it WITHOUT a second control, which matters because
-    /// §386o deleted the magnifier hours earlier on the reasoning that two
-    /// buttons opening one screen is a choice made before you know what either
-    /// does. The field was always the other door; it just never behaved like
-    /// one. Tap the berry to READ the day, touch the field to ASK — and the
-    /// gesture that says "I am about to type" is exactly the one that should
-    /// clear the document out of the way.
-    ///
-    /// `!hasDraft` still guards it, so the moment a character lands the rest
-    /// chrome yields to the typed-draft bands (Find / Ask / Send to) — this
-    /// state is the empty-handed invitation, never a layer over real typing.
     /// A question was in hand BEFORE the surface existed, so this open owes an
     /// answer and nothing else (2026-08-16, reported: "when i click on the fab,
     /// it momentarily opens a composer screen then jankily goes to the daily
@@ -875,54 +552,15 @@ struct Composer: View {
     /// The rest surface is now what it says it is — what this screen shows when
     /// it is at REST, with nothing answered and nothing answering. Tapping the
     /// field over an answer raises the keyboard and does nothing else.
-    private func restChrome(keepBrief: Bool) -> Bool {
+    private var atRest: Bool {
         // The `!onTint` term is GONE (prd §577c). It made seven bands mount
         // and unmount from the field's own focus, and the field lives inside
-        // them — see `askPanel` for the watchdog hang that caused.
-        isOpen && !hasDraft && !isRecording && !handingOff
-            && (!answering || (keepBrief && briefLanding))
+        // them — see `askPanel` for the watchdog hang that caused. The brief
+        // LANDING (§181) also counted as rest, until the brief went with the
+        // ask (2026-10-01).
+        isOpen && !hasDraft && !isRecording && !handingOff && !answering
     }
 
-    /// The ask surface is standing IN PLACE of a document — the focus door
-    /// above, seen from the document's side. Separate from `restChrome` so the
-    /// two can't disagree about when the brief yields: this is the one
-    /// condition where an answer exists and is deliberately not drawn.
-    ///
-    /// `!inFlight` (2026-08-30) — `commit()` blurs the field before an
-    /// answer starts (see its own comment), and nothing re-focuses it
-    /// automatically once one settles any more, so in the ordinary case
-    /// `fieldFocused` is already false while `inFlight` is true and this
-    /// term does no work. It still matters for the case that isn't ordinary:
-    /// someone can tap the empty field themselves WHILE an answer is still
-    /// running (mid-Bankr-wait, say), and without `!inFlight` that genuine
-    /// tap would hide the streaming content it's sitting on top of. The ask
-    /// surface may only replace a document once nothing is actually
-    /// running — the genuinely idle case this was written for.
-    /// ALWAYS FALSE since 2026-08-31 — the door is closed, see `restChrome`.
-    /// An answer that exists is always drawn.
-    ///
-    /// Kept as a named constant rather than deleted at its seven call sites:
-    /// each one carries the reasoning for a real bug it was closing (the day
-    /// card that became a dead control, the rising frame mirroring the turn's
-    /// own gate, the settle-time refocus that hid a just-landed answer), and
-    /// those comments are the only written record of why. Deleting the term
-    /// deletes the record. It costs nothing at runtime.
-    private var askSurfaceShowing: Bool { false }
-
-    /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
-    private struct ChipEntrance: ViewModifier {
-        let index: Int
-        let shown: Bool
-        let reduceMotion: Bool
-        func body(content: Content) -> some View {
-            content
-                .opacity(shown || reduceMotion ? 1 : 0)
-                .offset(y: shown || reduceMotion ? 0 : 8)
-                .animation(reduceMotion ? nil
-                           : DS.Motion.standard.delay(Double(min(index, 8)) * 0.05),
-                           value: shown)
-        }
-    }
     /// One-shot guard: a programmatic fill inserts more than 8 characters
     /// at once, which the draft onChange would read as a paste — and paste
     /// CAPTURES on send. fillDraft() sets it; onChange consumes it.
@@ -939,629 +577,6 @@ struct Composer: View {
 
     private var isRecording: Bool { voice.phase == .recording }
     private var hasDraft: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    /// The Today brief shown as the composer's LANDING — auto-seeded on open
-    /// (RootShell's agent-bar tap) or tapped from the whisper, settled, and not
-    /// yet followed up (prd §181, user: "make daily brief be the default when a
-    /// user opens the agent"). This is the one answer state that still shows
-    /// the docked ask chips and keeps the keyboard down: opening the agent
-    /// should read as "here's your day, ask anything" — the brief as a screen
-    /// to take in, with every ask still one glance away. The moment a follow-up
-    /// is asked (turns grows) or a keyed retry runs, it's an ordinary
-    /// conversation and the docked chips retire, exactly as before.
-    private var briefLanding: Bool {
-        answering && !inFlight && answerStream.completed && turns.isEmpty
-            && TodayBrief.matchesAny(currentQuestion)
-    }
-
-    /// The brief as the turn being answered RIGHT NOW — true from the moment it
-    /// commits, through the whole assembly and paint, until a follow-up makes it
-    /// an ordinary conversation. Distinct from `briefLanding`, which is the
-    /// SETTLED state (it waits on `answerStream.completed`) and so can't speak
-    /// for the window where the document is still painting — which is exactly
-    /// the window the scroll behaviour below has to get right.
-    /// Any brief — the whole day OR one scope (2026-08-10). It was
-    /// `matches`, which only ever recognised the UNSCOPED question, so every
-    /// Money/Work/Life brief took the `.bottom` scroll anchor and opened at
-    /// its own footer after the document painted.
-    private var briefInView: Bool {
-        turns.isEmpty && TodayBrief.matchesAny(currentQuestion)
-    }
-
-    /// An answer that is a DOCUMENT rather than a reply — opened and kept at
-    /// its own top (prd §543, extending §288's brief rule to the wallet).
-    ///
-    /// The wallet answer is `walletDoc`: a crown value, a sparkline under it,
-    /// a stat row, a holdings treemap. §288 top-anchored the brief because "a
-    /// document read from its own footer is the same mistake on a phone as on
-    /// a Mac", and every word of that applies here — a crown you have to
-    /// scroll UP to see is a crown that isn't one, which is what "wallet
-    /// doesn't open up at the top" reported.
-    ///
-    /// Gated on `turns.isEmpty` like `briefInView`, and for its reason: a
-    /// follow-up makes this an ordinary conversation, and the thumb rule
-    /// takes over again from there.
-    private var documentInView: Bool {
-        briefInView || (turns.isEmpty && WalletAsk.matches(currentQuestion))
-    }
-
-    /// The ask kinds the Today brief ALREADY answers on screen — its money hero
-    /// is "how's my wallet", its movers tile is "how's my watchlist", its next
-    /// tile is "what's overdue", and the whole screen is "what landed today".
-    private static let briefAnswers: Set<String> = ["wallet", "watchlist", "overdue", "today"]
-
-
-    /// Tag completions for the word being typed — your real tags, prefix-
-    /// matched on the draft's last token (2+ chars).
-    private var tagMatches: [String] {
-        guard hasDraft, !answering else { return [] }
-        guard let last = draft.split(separator: " ").last.map(String.init),
-              last.count >= 2 else { return [] }
-        let lower = last.lowercased()
-        return tagPool
-            .filter { $0.lowercased().hasPrefix(lower) && $0.lowercased() != lower }
-            .prefix(3).map { $0 }
-    }
-
-    private func completeTag(_ tag: String) {
-        DSHaptic.selection()
-        var words = draft.split(separator: " ").map(String.init)
-        if words.isEmpty { words = [tag] } else { words[words.count - 1] = tag }
-        fillDraft(words.joined(separator: " ") + " ")
-    }
-
-    /// Builds the ask chips from what the corpus can answer TODAY. Empty
-    /// corpus → no chips (the field is the invitation).
-    /// Returns the corpus it fetched, so the kept-ask digest refresh below can
-    /// reuse it instead of fetching the whole store a second time on the same
-    /// open (PERF 2026-08-11). Safe to hand on by the contract
-    /// `KeptAskComposers.compose` already states in its own header: it filters
-    /// `.live` at that one door, on every call, precisely because
-    /// `refreshDigests` holds one array across a suspension per kind.
-    private func computeSuggestions() async -> [Thing] {
-        #if DEBUG
-        // `-askStats "<key>:<n>[,…]|clear"` — seed the decay counters
-        // headlessly (see AskMemory; self-guarded to once per launch), so
-        // demotion verifies in one launch.
-        AskMemory.seedFromLaunchArgs()
-        // `-asksMade "<key>:<n>[,…]|clear"` — seed the proactive-minting
-        // counter the same way, so the "keep it?" upgrade verifies in one
-        // launch too.
-        AskMemory.seedMadeFromLaunchArgs()
-        let composerT0 = Date.now
-        #endif
-        var out: [AskOption] = []
-        // One plain fetch, filtered in memory — a #Predicate can't compare
-        // the Codable ThingKind enum (it throws at runtime, and try? made
-        // the miss silent), and one over the transformable `tags` array traps.
-        //
-        // THE FULL WALK IS THE OPEN'S WHOLE COST, so it runs at most once per
-        // launch (PERF 2026-08-12). Measured on a 13,412-row corpus: ~761ms
-        // median, against ~90ms for everything else this function does. It is
-        // a single `modelContext.fetch` — one uninterruptible call on the main
-        // actor, with no yield point inside it — so it does not merely delay
-        // the chips, it freezes the agent's rise animation while it runs.
-        // That stutter is what "the agent is laggy opening" actually is.
-        //
-        // What still needs it: the tag vocabulary and per-tag counts behind
-        // the two "Show <tag>" chips. `tags` is a transformable array, so it
-        // can be neither predicated (it traps, see CLAUDE.md) nor counted in
-        // SQL — every other counter here could be a `fetchCount` or a
-        // date-predicated read. Two chips were costing the entire open.
-        //
-        // So the facts are CACHED and refreshed behind the board, which does
-        // its own full fetch off the critical path anyway (`composeBoard`).
-        // The freshness cost is one open: a chip count can be one arrival
-        // stale before the refresh lands — the same trade the debounced feed
-        // and the retained board already make, and a count that is briefly one
-        // behind is a different thing from a count that is wrong.
-        //
-        // NOT projected, and that too is measured rather than assumed:
-        // `propertiesToFetch` is what fixed the feed's and MainSurface's
-        // per-body re-fetches, so narrowing this to the ten columns the chips
-        // read was the obvious move. A/B'd on the same corpus it was
-        // consistently SLOWER — ~1009ms against ~761ms — and it pushed the
-        // board's fetch up with it. The heavy blobs are already
-        // `.externalStorage` and were never in the row; what is left is inline
-        // text SQLite reads either way, and the partial-fault bookkeeping
-        // costs more than it saves. Don't re-add it without re-running that.
-        // Only the recent window the day-lede and the away pulse read — both
-        // are windowed by construction, so this is small at any corpus size.
-        // The counters come from the cache, or from the PAGED walk below.
-        //
-        // Unconditional since 2026-08-18. This used to fork: a cold cache took
-        // an unbounded `fetch(FetchDescriptor<Thing>())` and every later open
-        // took this window — so the first open of a launch materialised the
-        // whole store TWICE (once here, once inside the walk) and did it as one
-        // uninterruptible main-actor call in the middle of the rise. The fork
-        // bought nothing: the two readers below (`DayBrief.whisper`, the away
-        // pulse) are both windowed, which is why every open after the first has
-        // always been allowed to hand them exactly this array. The first open
-        // is simply consistent with them now.
-        let floor = min(AppVisit.away?.lowerBound ?? .distantFuture,
-                        Date.now.addingTimeInterval(-7 * 86_400))
-        var recent = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.capturedAt >= floor },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        recent.fetchLimit = 2000
-        let all = (try? modelContext.fetch(recent)) ?? []
-        #if DEBUG
-        NSLog("[Casberi] composerPerfDEBUG| afterFetch=%dms count=%d",
-              Int(Date.now.timeIntervalSince(composerT0) * 1000), all.count)
-        #endif
-        // ONE walk of the corpus for every counter the chips need (PERF
-        // 2026-08-11). Each counter below used to be its own
-        // `all.filter { … }.count` / `all.contains { … }` / `all.first { … }`
-        // — TEN separate traversals of the whole corpus, on the main actor,
-        // per composer open — plus an ELEVENTH inside `tagCandidates()`,
-        // which was `RootShell.projectTags`: its own unbounded, fully
-        // hydrated `fetch(FetchDescriptor<Thing>())` of the very rows this
-        // line had already fetched. So a composer open materialised the whole
-        // corpus twice and then walked it eleven times.
-        //
-        // Why that costs more than it looks: a `Thing` property read is not a
-        // struct field read. It goes through CoreData's
-        // `_PF_Handler_Public_GetProperty`, which is exactly the frame the
-        // 6,000-row main-thread profile found underneath `things.getter` at
-        // 26.6% (`scripts/output/profile-ios-cold-6k.txt`). The cost is per
-        // (row × property read), so folding eleven walks into one divides
-        // that traffic by eleven. Same numbers, same order, one walk.
-        //
-        // `now` is snapshotted rather than re-read per filter — the old form
-        // called `.now` inside each closure, so the "today", "this week",
-        // "overdue" and "upcoming" windows were each measured from a slightly
-        // different instant. One clock for one open.
-        let standingIn = contextSource()
-        // The cache, or the one full walk that seeds it. `contextSourceRecent`
-        // is the one counter that depends on WHERE you opened the agent from,
-        // so it is recomputed per open off the recent rows rather than cached.
-        var scan: AgentChipFacts
-        if let cached = cachedChipFacts {
-            scan = cached
-            scan.contextSourceRecent = all.reduce(into: 0) { n, t in
-                if let standingIn, t.source == standingIn,
-                   t.capturedAt >= Date.now.addingTimeInterval(-3 * 86_400) { n += 1 }
-            }
-        } else {
-            // The one open that pays the full walk — PAGED, so it yields
-            // between pages instead of holding the main actor for the whole
-            // of it (PERF 2026-08-18, see `AgentChipFacts.scanPaged`). Same
-            // counters, same total cost; the rise animation can draw during it.
-            scan = await AgentChipFacts.scanPaged(context: modelContext,
-                                                  contextSource: standingIn, now: .now)
-        }
-        cachedChipFacts = scan
-        tagPool = scan.tagPool
-        // NOTHING about the corpus itself goes under the greeting (user
-        // ruling 2026-07-31: "casberi is about insight and management, over
-        // tons of stuff, seeing numbers is just annoyance"). Three lines died
-        // here in one day, and they died for one reason, not three: the stat
-        // line ("2,481 things, across 14 apps."), the milestone ("1,000
-        // things banked.") and the anniversary ("3 years since your first
-        // thing.") were all FACTS ABOUT THE PILE — a scoreboard for having
-        // saved things, on the surface whose job is to tell you what the pile
-        // MEANS. The day's own sentence below is the room's lead now.
-        // The day, in the agent's own room (2026-07-31). Prefers the brief's
-        // ranked lede — risk, then money, then a person, then a deadline —
-        // which `TodayBrief.compose` republishes to the app group on every
-        // foreground for the widget; anyone who hasn't kept the `today` ask
-        // never publishes one, so the whisper's own line (synchronous, off
-        // the fetch just paid for) stands in. Empty = nothing to say today,
-        // and the card doesn't draw.
-        // The WHISPER itself is kept, not just its flattened line (2026-08-15).
-        // `detail` pre-joins the lead and the wallet move into one string, and
-        // a view handed that has no way to find the figure inside it — which
-        // is the exact reason `Whisper.walletPct` travels separately in the
-        // first place (see its own note). `detailText(scheme:)` paints the
-        // move in its direction's accent and returns nil-colored prose when
-        // the wallet can't speak or the move is FLAT, so §83's "a change that
-        // rounds to zero has no direction" is kept by the model, not re-derived
-        // here. Never parsed back out of the sentence — the MoneyReceipt rule.
-        // `dayLede`/`dayWhisper` went with `dayCard` (prd §543), and the
-        // whisper capsule itself went with prd §550 — the slot above the bar
-        // teaches the agent's gesture now. The day reading is still on the
-        // feed: the All room's own Today header has drawn `DayBrief.whisper`
-        // since §385.
-        // One busy-publisher scan per open, feeding the timely chip below.
-        // Counted in the single walk above rather than in a pass of its own.
-        let busy = scan.busyPublisher
-        // Context-aware lead (2026-07-12): if you opened the composer while
-        // looking at one source's feed, its recap leads the chips — the
-        // composer meets you where you are. Only when that source actually has
-        // things to synthesize (honesty rule: a chip must answer).
-        if let src = standingIn, scan.sourcesSeen.contains(src) {
-            // A source with its own signature ask leads with THAT ask, not the
-            // generic recap (user ruling 2026-07-21, prd §149: one ask per
-            // subject — standing on the Wallet feed, "What's new in Wallet?"
-            // recaps the feed already behind the sheet while "How's my
-            // wallet?" reads what the feed can't, and the grid can't afford
-            // both). The signature chips' own appends below skip themselves
-            // once one has led here.
-            if src == "Wallet", !WalletStore.shared.addresses.isEmpty {
-                out.append(AskOption(kind: "wallet", title: "How's my wallet?",
-                                     glyph: "wallet.bifold"))
-            } else if src == TokenWatch.source {
-                out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
-                                     glyph: "chart.line.uptrend.xyaxis"))
-            } else {
-                out.append(AskOption(kind: "context", title: "What's new in \(src)?",
-                                     glyph: "app.badge", memoryKey: "context:\(src)",
-                                     signal: sig(scan.contextSourceRecent)))
-            }
-            // A category sibling (2026-07-20) — only when it's a meaningfully
-            // BROADER ask than the single-source lead above (more than one
-            // source in the category), else it would just repeat the same
-            // question in different words.
-            if let offer = BridgeCatalog.offers.first(where: { $0.name == src }) {
-                let cat = BridgeCatalog.category(of: offer)
-                let sourcesInCat = Set(BridgeCatalog.offers
-                    .filter { BridgeCatalog.category(of: $0) == cat }.map(\.name))
-                if sourcesInCat.count > 1, !sourcesInCat.isDisjoint(with: scan.sourcesSeen) {
-                    out.append(AskOption(kind: "category", title: "How's my \(cat) stuff?",
-                                         glyph: "square.grid.2x2", memoryKey: "category:\(cat)"))
-                }
-            }
-        }
-        // A TIMELY chip (2026-07-22): a publisher unusually busy in the recent
-        // window — a feed that dropped a burst of stories, an account that
-        // went off. Event-driven, so it LEADS and is neglect-exempt; it also
-        // does double duty as the teaching chip for the widened per-publisher
-        // vocabulary (§174), naming a REAL entity that answers ("What happened
-        // in The Verge?"). Honest by construction: it fires only when one
-        // handle genuinely dominates a recent burst, and ages out on its own
-        // as that burst recedes past the window. Skipped once kept, like any
-        // chip (the `handle:` kind matches the kept store).
-        if let busy, !KeptAskStore.shared.isKept("handle:\(busy.handle)") {
-            // Display the SHORT name ("DealNews", not "DealNews - DealNews:
-            // Best Daily Deals…") — a feed pads its title, and the raw one
-            // overflows the chip. The tap still resolves: `namedAskTarget`
-            // fuzzy-matches "dealnews" back to the full handle (§174), and the
-            // memoryKey keeps the full handle so keep/dedup stay exact.
-            out.append(AskOption(kind: "handle",
-                                 title: "What happened in \(shortPublisher(busy.handle))?",
-                                 glyph: "newspaper", memoryKey: "handle:\(busy.handle)",
-                                 signal: sig(busy.count)))
-        }
-        // The feeds' pulse (2026-07-11): "What's going on?" synthesizes the
-        // recent window across every source. Gated on the SAME computation
-        // that will answer it — the chip can't drift from the ask it
-        // teaches — and it needs two things to say anything. When it shows,
-        // "What landed today?" sits out (near-duplicate recency asks would
-        // crowd out the chips that teach counting and pinning).
-        // The librarian's chip (prd §67 ⑥) — LEADS, and only when a real away
-        // gap holds enough to say something. Gated on the same computation
-        // that answers it, like every chip.
-        let awayPulse = StatusAsk.pulse("while i was away", things: all)
-        let awayCount = awayPulse?.pool.count ?? 0
-        awayLanded = awayCount
-        if awayCount >= 3 {
-            // The away chip's signal names WHAT landed, not just how many
-            // (2026-07-22) — a mention count is the fact worth teasing (the
-            // module doctrine, §166, at chip scale). Mentions computed off
-            // the same pool that answers, so it can't drift.
-            let mentions = awayPulse?.pool.filter { $0.socialContext == "mention" }.count ?? 0
-            // Names WHAT landed, not a bare count — the away chip's signal is
-            // richer than `sig()`'s "· N" (it earns "· N new, M mentions").
-            let awaySignal = mentions > 0 ? "· \(awayCount) new, \(mentions) mentions"
-                                          : "· \(awayCount) new"
-            out.insert(AskOption(kind: "away", title: "While I was away?",
-                                 glyph: "sparkles", signal: awaySignal), at: 0)
-        }
-        let todayCount = scan.todayCount
-        // The "What's going on?" chip RETIRED with §193: that phrase is now the
-        // name of the screen the agent opens onto, and a chip offering to fetch
-        // the screen you are already looking at is a dead control wearing a
-        // pill. `TodayBrief.matches` routes the typed phrase to that screen, so
-        // nothing is lost — the ask just stopped being worth a chip.
-        //
-        // The away chip still suppresses its near-duplicate: two catch-up chips
-        // would crowd out the ones that teach counting and showing.
-        if awayCount < 3, todayCount > 0 {
-            out.append(AskOption(kind: "today", title: "What landed today?",
-                                 glyph: "tray.and.arrow.down", signal: sig(todayCount)))
-        }
-        // The watchlist chip (2026-07-14): watched tokens are the corpus' one
-        // LIVE number — teach that the composer reads them. Gated on the same
-        // things TokensAsk answers from, so the chip always answers.
-        if scan.sourcesSeen.contains(TokenWatch.source),
-           !out.contains(where: { $0.kind == "watchlist" }) {
-            out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
-                                 glyph: "chart.line.uptrend.xyaxis"))
-        }
-        // The wallet chip (2026-07-15): gated on a watched address existing, so
-        // WalletAsk always has holdings to answer with — the chip can't drift
-        // from the ask it triggers.
-        if !WalletStore.shared.addresses.isEmpty,
-           !out.contains(where: { $0.kind == "wallet" }) {
-            out.append(AskOption(kind: "wallet", title: "How's my wallet?",
-                                 glyph: "wallet.bifold"))
-        }
-        // Only asks the corpus can honestly answer right now. (Pinning left
-        // the composer 2026-07-12: it's per-APP now, placed from the app's own
-        // screen, not a phrase. "How many links this week?" died 2026-07-16 —
-        // ruling: nobody cares; counting stays a typed power, never a tile.)
-        // Top TWO tags now (was one, 2026-07-20) — a chip vocabulary as wide
-        // as the corpus means more than one tag gets a one-tap path to kept.
-        for tag in tagPool.prefix(2) {
-            // Case-insensitively, exactly as the old per-tag `filter` did —
-            // `scan.tagCounts` is keyed by the lowercased tag and counts each
-            // thing once per distinct tag, so "Recipes" and "recipes" on one
-            // thing still count as one.
-            let n = scan.tagCounts[tag.lowercased()] ?? 0
-            out.append(AskOption(kind: "showtag", title: "Show \(tag)",
-                                 glyph: "tag", memoryKey: "showtag:\(tag)",
-                                 signal: sig(n)))
-        }
-        // The overdue chip (2026-07-20) — mirrors KeptAskComposers.overdue's
-        // own filter (light duplication, same precedent as elsewhere in this
-        // function) so the tile can't offer what its composer would call
-        // empty.
-        let overdueCount = scan.overdueCount
-        if overdueCount > 0 {
-            out.append(AskOption(kind: "overdue", title: "What's overdue?",
-                                 glyph: "exclamationmark.circle", signal: sig(overdueCount)))
-        }
-        // …and its forward half (2026-07-21). Same duplication precedent, same
-        // week horizon `KeptAskComposers.upcoming` uses, so the tile and its
-        // composer can never disagree about whether there's anything to say.
-        if scan.upcomingCount > 0 {
-            out.append(AskOption(kind: "upcoming", title: "What's coming up?",
-                                 glyph: "clock.badge", signal: sig(scan.upcomingCount)))
-        }
-        // The Noticed chip (2026-07-20) — the board's old "Noticed" card had
-        // no home after the board retired (prd §131); this is its one way
-        // back in. Tile-only: there's no natural typed trigger for a
-        // spontaneous connection, so it's never in `recognizeKeptAskKind`.
-        if let noticed = HomeInsightStore.shared.line, !noticed.isEmpty {
-            out.append(AskOption(kind: "noticed", title: "Noticed",
-                                 glyph: "sparkle"))
-        }
-        // The agent's deterministic notice (prd §384, `AgentNoticed`) — the
-        // ONLY surface it has since the bar's glint was removed (2026-09-05).
-        // LEADS while today's observation stands, because it
-        // is the one chip that exists only on a day something real happened.
-        // Its query routes to `RootShell.answerDocument`'s `AgentNoticed`
-        // branch: the line plus its evidence rows, checkable, no model.
-        if AgentNoticed.shared.notice != nil {
-            out.insert(AskOption(kind: "observation", title: "Noticed today",
-                                 glyph: "sparkles"), at: 0)
-        }
-        if !scan.sourcesSeen.isEmpty {
-            out.append(AskOption(kind: "week", title: "What's this week?",
-                                 glyph: "calendar", signal: sig(scan.weekCount)))
-        }
-        // Already-kept asks lead as their own pills now (docs/agent-brief.md
-        // ruling 4/5, `keptAskPills`) — offering one here too would show the
-        // same question twice, once as a curated pill and once as a
-        // suggestion (user ruling 2026-07-19: both coexist, but never for
-        // the SAME ask).
-        out.removeAll { KeptAskStore.shared.isKept($0.memoryKey) }
-        // Tap-learning decay (ruling 2026-07-16, prd 95): an ask offered ten
-        // opens without a tap steps behind the next qualifier — demoted by
-        // a stable partition, never filtered, so a short grid still fills
-        // with it. A tap resets its counter; exemptions (a timely chip is
-        // timely, not evergreen) live in AskMemory.
-        let ranked = out.filter { !AskMemory.neglected($0.memoryKey) }
-                   + out.filter { AskMemory.neglected($0.memoryKey) }
-        // 7, not 4, since the row became a horizontal SCROLL (§187): width no
-        // longer costs height, and the brief landing filters several of these
-        // back out (`dockedSuggestions` drops what the brief already answers),
-        // so a 4-slot set could dock as a single lonely chip.
-        // THE GENERIC ASK CHIPS RETIRED (user ruling 2026-08-14, prd §386b:
-        // "the chips we have need to go too … beyond that we just had chips
-        // to have them"). The whole suggestion machine above still runs — it
-        // feeds the decay counters and the recognizers — but the only chip
-        // that RENDERS is the observation one, because it is the opposite of
-        // a chip-for-chips'-sake: it exists only on a day something real
-        // happened. Everything evergreen
-        // ("What's this week?", the recaps, the wallet ask) is a typed ask
-        // away, and the kept pills remain the person's own standing set.
-        suggestions = selectSuggestions(from: ranked, slots: 7)
-            .filter { $0.kind == "observation" }
-        // What this open actually OFFERED, for the decay counters (§175). A
-        // handed-off ask (a status chip's question) fills the field and HIDES
-        // the chip row — the tiles never had a chance to be tapped, so that
-        // open must not count against them.
-        //
-        // The brief landing is the one exception (§187): it hands off an ask
-        // AND docks the chips in view, so those chips genuinely were offered.
-        // Without this branch the decay would have quietly stopped running
-        // altogether the moment the agent started opening onto the brief —
-        // every open now hands off, so `askRequest == nil` would never again
-        // be true on the main path and no chip could ever decay. Counted
-        // MINUS the kinds the brief answers, since `dockedSuggestions` drops
-        // those and they never appear.
-        if let handedOff = chrome.askRequest {
-            if TodayBrief.matches(handedOff) {
-                AskMemory.shown(suggestions
-                    .filter { !Self.briefAnswers.contains($0.kind) }
-                    .map(\.memoryKey))
-            }
-        } else {
-            AskMemory.shown(suggestions.map(\.memoryKey))
-        }
-        // Category chips (scoped-brief-spec.md) — one per BRIEF SCOPE the
-        // corpus holds at least one connected thing in. ALWAYS offered rather
-        // than ranked/decayed/capped like `suggestions` above: the spec
-        // frames these as a fixed row of scope pickers under the input, not
-        // a suggestion competing for a slot.
-        categoryChips = Self.computeCategoryChips(sourcesSeen: scan.sourcesSeen)
-        #if DEBUG
-        NSLog("[Casberi] composerPerfDEBUG| beforeBuildPanel=%dms",
-              Int(Date.now.timeIntervalSince(composerT0) * 1000))
-        #endif
-        // The board does NOT get built here (PERF 2026-08-12). It used to be
-        // the last thing this function did, which meant the ask chips — ~90ms
-        // of work, and the whole reason the agent has anything to show at
-        // once — waited on it, because `chipsAppeared` only flips after this
-        // function returns. Measured on a 12,000-row corpus: chips ready at
-        // 721ms, board at 2,270ms, and the person looked at nothing for the
-        // whole 2.3s. The caller reveals the chips and THEN composes the board
-        // (see the `.task(id: isOpen)` below).
-        #if DEBUG
-        NSLog("[Casberi] composerPerfDEBUG| chipsReady=%dms",
-              Int(Date.now.timeIntervalSince(composerT0) * 1000))
-        NSLog("[Casberi] askTiles: %@",
-              suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
-                  .joined(separator: ","))
-        #endif
-        return all
-    }
-
-    /// The board, composed after the chips are already on screen — see
-    /// `computeSuggestions()`'s tail for why the two are no longer one call.
-    ///
-    /// Takes its OWN, unprojected fetch and returns it. The chips read a
-    /// narrow projection now, and the panel's room figures plus every kept-ask
-    /// composer read far more widely than that — handing either of them the
-    /// chip projection would fault a column at a time, per row, which is
-    /// slower than the full fetch it was meant to save. Paying a full fetch
-    /// HERE is free in the way it wasn't before: nothing is waiting on it.
-    @discardableResult
-
-    /// Every BRIEF SCOPE with at least one thing in the corpus, as chips —
-    /// three (`BriefScope.scopes`: Money, Work, Life), deliberately fewer
-    /// than the app catalog's own ten categories (user, 2026-08-08: "how many
-    /// categories do we... want to offer to search across, lets limit
-    /// those"). "Connected" needs no separate check for the same reason
-    /// `computeSuggestions`' own category-sibling chip doesn't (line ~700
-    /// above): a source with no connected bridge can never have landed a
-    /// `Thing`. A scope with nothing connected simply has no chip (spec's
-    /// edge case — "don't render its chip").
-    ///
-    /// NO "Everything" chip (user, 2026-08-08: "do we need an everything
-    /// chip? i mean everything is the default") — the unscoped brief is
-    /// already reachable two other ways (the whisper capsule, the kept
-    /// "today" pill), and a fourth door to it crowded a row whose whole
-    /// point is three tight, purposeful choices. `TodayBrief.title` and
-    /// `.matches` are UNCHANGED — typing "what's going on" or tapping either
-    /// of those still works exactly as before; only the dedicated CHIP for
-    /// it is gone.
-    ///
-    /// `query` sends a phrase already wired to resolve to this exact scope —
-    /// "How's my <scope> stuff?", the same phrase `namedAskTarget`'s "how's
-    /// my " prefix already resolves to `.category(scope)`
-    /// (`KeptAskComposers.swift`) — so a tap runs through the identical
-    /// pipeline a typed ask would, never a shortcut that could answer
-    /// differently.
-    ///
-    /// Takes the source set `corpusScan` already built rather than the corpus
-    /// (PERF 2026-08-12): `Set(all.map(\.source))` was a full-corpus walk plus
-    /// a 12,000-element intermediate, and it is the same set the single scan
-    /// above already has. The scope→sources join is `categorySources`, the one
-    /// definition four readers now share.
-    private static func computeCategoryChips(sourcesSeen present: Set<String>) -> [CategoryChip] {
-        guard !present.isEmpty else { return [] }
-        // ONE overview, not three scoped screens (user, 2026-08-14, prd §386:
-        // "we need one composer screen for money work life day overview, not
-        // three separate ones… we have good stuff in each but each is not all
-        // good"). The unscoped Today brief already carries each scope's good
-        // half — the money hero and movers, the deadlines runway, the alerts,
-        // Life's contact sheet, the themes map — so three doors that each
-        // opened a narrower, weaker version of it were three chances to land
-        // on the junk half (the scoped facts paragraph, which is also where
-        // the prompt-echo leak lived). The scoped composes themselves survive
-        // for a TYPED "how's my money stuff" — capability kept, doors
-        // consolidated. `TodayBrief.title` is the canonical question, the
-        // same string the whisper and the kept pill send, so this chip runs
-        // exactly the pipeline those do.
-        return [CategoryChip(id: "day", title: TodayBrief.title,
-                             query: TodayBrief.title)]
-    }
-
-    // MARK: - Kept-ask digests
-
-    /// The corpus the kept-ask digests refresh over (prd §386p).
-    ///
-    /// `composeBoard` used to do this fetch as a side effect of building the
-    /// panel, and the digests rode along. With the panel deleted the fetch
-    /// stays and the ~40 room compositions do not — the same rows, none of
-    /// the work that was only ever for a screen nobody could reach.
-    private func fullCorpusForDigests() -> [Thing] {
-        var fd = FetchDescriptor<Thing>(
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        fd.fetchLimit = 600
-        return ((try? modelContext.fetch(fd)) ?? []).live
-    }
-
-    /// Fills the grid so the slots span DOORS, not four flavors of one
-    /// (2026-07-22). Timely chips lead (they earned their slot by a real
-    /// moment); a daypart nudge floats the moment's natural ask up; then the
-    /// rest fill by ROUND-ROBIN across shapes, so a pool heavy in one kind
-    /// (three tag chips, say) doesn't crowd out the money/time/task doors.
-    /// A shape only doubles up once every other shape is exhausted — the grid
-    /// still fills to `slots` when the pool is thin, never leaving a hole.
-    private func selectSuggestions(from ranked: [AskOption], slots: Int) -> [AskOption] {
-        var leads = ranked.filter { $0.timely || $0.kind == "away" }
-        var rest = ranked.filter { !($0.timely || $0.kind == "away") }
-        // Daypart nudge (2026-07-22): the moment's natural ask floats to the
-        // front of `rest` (never past a timely lead) so the top slot tends to
-        // match the hour — "What landed today?" in the evening, the week recap
-        // on Friday. A stable move, not a reshuffle: everything else keeps its
-        // rank. The morning belongs to "How's my day?", which the whisper
-        // already owns on the shell — so the chips defer there rather than
-        // competing, and only the evening/Friday nudges live here.
-        if let preferred = daypartPreferredKind(),
-           let i = rest.firstIndex(where: { $0.kind == preferred }) {
-            rest.insert(rest.remove(at: i), at: 0)
-        }
-        // Round-robin across shapes as one STABLE SORT: tag each option with
-        // how many of its own shape preceded it (its "round"), then sort by
-        // round. Swift's sort is stable, so within a round the original rank
-        // order holds — which is the whole point. Round 0 is one-of-each-shape
-        // in rank order, round 1 the second-of-each, and so on, so a pool
-        // heavy in one shape only doubles up after every other shape has had
-        // a turn.
-        var seen: [AskShape: Int] = [:]
-        let diversified = rest
-            .map { opt -> (round: Int, opt: AskOption) in
-                defer { seen[opt.shape, default: 0] += 1 }
-                return (seen[opt.shape, default: 0], opt)
-            }
-            .sorted { $0.round < $1.round }
-            .map(\.opt)
-        // Timely leads first, then the diversified rest; the whole list is
-        // capped to the grid. `leads` is already rank-ordered by `ranked`.
-        leads.append(contentsOf: diversified)
-        return Array(leads.prefix(slots))
-    }
-
-    /// The kind whose ask best matches the current hour, or nil. Deliberately
-    /// tiny: evening leans to "what landed today", Friday to the week recap.
-    /// Morning is intentionally absent — the whisper capsule owns the day
-    /// brief there, so a competing chip would just say the same thing twice.
-    private func daypartPreferredKind() -> String? {
-        let cal = Calendar.current
-        let hour = cal.component(.hour, from: .now)
-        // 18:00 = "evening", the same boundary `timeGreeting` already uses.
-        // weekday 6 = Friday, a Sun–Thu/Fri work-week assumption baked in as
-        // a bare literal — fine for a low-stakes ranking nudge; revisit if it
-        // ever needs locale sensitivity (`Calendar.firstWeekday`).
-        let weekday = cal.component(.weekday, from: .now)
-        if weekday == 6 { return "week" }
-        if hour >= 18 { return "today" }
-        return nil
-    }
-
-
-    /// A chip's trailing count signal ("· 3"), or nil for zero — the one
-    /// place the "· " glyph format lives, so the separator changes in one
-    /// spot, not eight.
-    private func sig(_ n: Int) -> String? { n > 0 ? "· \(n)" : nil }
-
-    /// A publisher's name trimmed to something that reads in a one-line
-    /// invitation — "Ars Technica - All content" → "Ars Technica". Cuts at
-    /// the first separator publishers pad their feed titles with.
-    private func shortPublisher(_ handle: String) -> String {
-        for sep in [" - ", " – ", " — ", " | ", ": "] {
-            if let r = handle.range(of: sep) { return String(handle[..<r.lowerBound]) }
-        }
-        return handle
-    }
-
-
-
-
 
     // MARK: - The ask panel's readings (prd §577, restructured §577c)
     //
@@ -1614,36 +629,6 @@ struct Composer: View {
         }
         .transition(.opacity)
         .accessibilityLabel("Working")
-    }
-
-    /// A follow-up asked from INSIDE an answer (the Today brief's residue
-    /// line). Sends through the same `commit()` every other ask uses, so it
-    /// pushes a fresh answer onto the agent's Stack (ruling 8) instead of
-    /// ejecting anywhere — `fillDraft`, not a raw `draft` write, so the paste
-    /// heuristic can't read the programmatic set as a capture.
-    private func askFromAnswer(_ query: String) {
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        DSHaptic.selection()
-        fillDraft(query)
-        commit()
-    }
-
-    /// "since 9:40 pm" — the eyebrow. Names the WINDOW the screen measured,
-    /// which is the one thing a reader can't infer from the modules themselves
-    /// (an overnight window and a since-midnight one produce the same-looking
-    /// screen from very different spans).
-    ///
-    /// The weekday and date used to lead this line, back when the screen was
-    /// "Your Wednesday brief" and a dated edition is what it was. With the
-    /// rename (§193) the date became the wrong lede twice over: it re-asserted
-    /// the daily framing the title just dropped, and it was the least useful
-    /// half of the line — a person knows what day it is; what they can't know
-    /// is how far back "going on" reaches. So the span stands alone, and a
-    /// window that IS just the calendar day says so plainly rather than
-    /// printing a start time that only restates midnight.
-    private func briefWindowLine() -> String {
-        guard let away = AppVisit.away else { return String(localized: "today so far") }
-        return String(localized: "since \(away.lowerBound.formatted(.dateTime.hour().minute()))")
     }
 
     // The bubble's asymmetric corners: 24 / 24 / 10 / 24 (TL/TR/BR/BL).
@@ -1719,21 +704,6 @@ struct Composer: View {
         // fixed height, which is the whole point — the answer can take all of
         // it, which is what the tiles could not allow.
         VStack(alignment: .leading, spacing: 0) {
-            if !tagMatches.isEmpty {
-                HStack(spacing: DS.Space.s2) {
-                    ForEach(tagMatches, id: \.self) { tag in
-                        Button { completeTag(tag) } label: {
-                            // A CHOICE among completions (prd §746).
-                            Chip(text: tag, glyph: "tag")
-                        }
-                        .buttonStyle(PressSpring())
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s2)
-            }
-
             // THE WAY BACK (2026-09-03, reported in capitals: "THERE IS NO WAY
             // TO GO BACK TO THE APP"). §581 deleted the ✕ and the chevron as
             // duplicated exits and replaced them with a swipe — which was
@@ -1946,89 +916,6 @@ struct Composer: View {
                 // written — it releases the hold for a request that arrives
                 // during this prep — and double-consumption is safe.
                 await consumeAskRequest()
-                // `computeSuggestions()` IS NOT CALLED ANY MORE (PERF, prd
-                // §577b, 2026-09-02, user: "we want it to be super fast when
-                // it opens too").
-                //
-                // It cost a measured ~700ms of main-actor time on a
-                // 12,000-row corpus, with no yield of its own, on EVERY open —
-                // and §543 deleted every chip it fed. Its own comment recorded
-                // the machinery as "deliberately not torn", which was a
-                // decision about the CODE and read, at this call site, as a
-                // decision to keep paying for it: `suggestions` is consumed by
-                // `dockedSuggestions` alone, and nothing has read that since
-                // the chip row went. So the rise spent most of a second
-                // ranking, decaying and capping a list with nowhere to appear.
-                //
-                // The two things it did that were NOT the list are kept: the
-                // DEBUG launch-arg seeds, moved up here so `-askStats` and
-                // `-asksMade` still land, and the kept-ask decay bump below,
-                // which was always its own call.
-                #if DEBUG
-                AskMemory.seedFromLaunchArgs()
-                AskMemory.seedMadeFromLaunchArgs()
-                #endif
-                // Kept asks share AskMemory's own decay counters with the
-                // suggestion tiles (ruling 5: "ignored asks decay dim") —
-                // bumped once per open here, exactly how computeSuggestions()
-                // bumps the tiles it actually shows. Never double-counted:
-                // a kept kind is always excluded from `suggestions` (see
-                // computeSuggestions()'s `KeptAskStore.shared.isKept` filter),
-                // so a given key's counter only ever moves from one side.
-                if !KeptAskStore.shared.order.isEmpty {
-                    AskMemory.shown(KeptAskStore.shared.order)
-                }
-                // Kept asks' signal dots refresh on open too (not just on
-                // foreground, docs/agent-brief.md Step 5) — the same
-                // granularity AskMemory's own decay counters already use
-                // (recomputed per open, never per keystroke). Fired
-                // DETACHED, not awaited inline — a network-backed kept ask
-                // (wallet/watchlist) can take several real seconds, and that
-                // must never delay the chip-reveal animation below. Cheap,
-                // synchronous kinds (away/showtag) update near-instantly
-                // anyway; `KeptAskStore` is @Observable, so `keptAskPills`
-                // simply re-renders whenever `currentDigests` lands, exactly
-                // `HomeInsightStore`'s own "kick async, repaint on arrival"
-                // shape.
-                //
-                // Reuses the corpus `computeSuggestions()` just fetched rather
-                // than fetching the whole store again (PERF 2026-08-11) — this
-                // was the THIRD full-corpus materialisation of a single
-                // composer open. `.live` at the hand-off, since this array was
-                // read before `buildPanel`'s awaits and a foreground heal can
-                // delete in that window (corollary 6); `compose` re-filters at
-                // its own door for the per-kind suspensions after that.
-                // Reset then reveal so the ask chips stagger in on each open.
-                // BEFORE the board, since 2026-08-12 — the chips are ready in
-                // a fraction of the board's time and used to sit behind it.
-                chipsAppeared = false
-                // ONE FRAME, NOT 90ms (PERF, prd §577b). The sleep existed so
-                // the false → true flip landed in a later transaction and the
-                // entrance actually animated; a yield does that and costs a
-                // frame instead of six. It was also sized for a row of seven
-                // suggestion chips that no longer exists — the kept pills are
-                // usually one or two.
-                await Task.yield()
-                chipsAppeared = true
-                // …and the board fills in behind them. `panelLoading` stays
-                // true across this, so a FIRST open still shows the bento
-                // The corpus the kept-ask digests are refreshed over. It was
-                // the panel's own fetch until §386p deleted the panel; the
-                // digests still want it, so it is fetched here directly and
-                // nothing composes ~40 room figures to get it.
-                let corpus = fullCorpusForDigests()
-                // The kept pills' signal dots, off the board's own fetch —
-                // this used to be a THIRD full-corpus read, and before that it
-                // sat on the chip path where its per-kind composers (wallet
-                // and watchlist are network-backed) delayed the reveal.
-                // `.live` at the hand-off: the array was read before
-                // `buildPanel`'s awaits and a foreground heal can delete in
-                // that window (corollary 6); `compose` re-filters at its own
-                // door for the per-kind suspensions after that.
-                Task { @MainActor [corpus] in
-                    await KeptAskStore.shared.refreshDigests(things: corpus.live,
-                                                             context: modelContext)
-                }
                 // Raised by the bar's magnifier (2026-07-30): the field takes
                 // focus and nothing else happens — no brief, no ask. Cleared
                 // on read so an ordinary later open doesn't inherit it.
@@ -2169,12 +1056,6 @@ struct Composer: View {
                     // scrolling content and was never a gap; this is the gap.
                     .padding(.bottom, DS.Space.s8)
                 }
-                .refreshable {
-                    guard briefLanding else { return }
-                    await WalletIngest.invalidateHoldingsCache()
-                    draft = TodayBrief.title
-                    commit()
-                }
                 // THE PAPER ANCHORS TO ITS TOP, ALWAYS (2026-09-03, reported:
                 // "the response is clipped and off screen").
                 //
@@ -2212,10 +1093,6 @@ struct Composer: View {
                 // second answer you look at opens part-way down.
                 .onChange(of: browsing) { _, _ in
                     withAnimation(DS.Motion.standard) { proxy.scrollTo("top", anchor: .top) }
-                }
-                .onChange(of: answerStream.completed) { _, done in
-                    guard done, TodayBrief.matches(currentQuestion) else { return }
-                    DSHaptic.selection()
                 }
                 .onChange(of: inFlight) { was, now in
                     guard was, !now, pendingKeyedFollowUp else { return }
@@ -2352,13 +1229,6 @@ struct Composer: View {
                     .environment(\.genProseStreaming, live ? proseStreaming : false)
                     .environment(\.genCitationGlint, live)
                     .environment(\.genAgentAnswerContext, true)
-                    .environment(\.genAskRequest, askFromAnswer)
-                    .environment(\.genRoomOpen) { source in
-                        ChipMemory.visited(source)
-                        filter.source = source
-                        filter.tag = "All"
-                        close()
-                    }
             }
             if !failed, !(live && inFlight) {
                 provenanceBadge(keyed: keyed, agent: agent, searchedWeb: searchedWeb,
@@ -2370,51 +1240,19 @@ struct Composer: View {
             if live, !proseStreaming, !inFlight { keepVerbs }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        // A FRONT PAGE GETS THE WIDE CAP, everything else the reading cap.
-        // One call site now instead of two (prd §581): every turn — settled or
-        // live — is rendered by this one function, so the two can no longer
-        // disagree, which was the whole thing the paired guard was watching
-        // for. A doc with the wide cap and no columns is one file of modules
-        // stretched across a phone; columns under the reading cap are crushed.
-        .dsAdaptiveContentWidth(GenFrontPage.qualifies(els) ? .wide : .reading)
+        // The reading cap. A front page (the Today brief on a wide window)
+        // took the wide one, until the brief went with the ask (2026-10-01).
+        .dsAdaptiveContentWidth(.reading)
         .padding(.bottom, DS.Space.s4)
     }
 
-    /// Keep this ask / Save as a note — the two things you can do with an
-    /// answer, under the answer they belong to rather than in the chrome.
+    /// Save as a note — what you can do with an answer, under the answer it
+    /// belongs to rather than in the chrome. "Keep this ask" went with the
+    /// kept asks (2026-10-01).
     @ViewBuilder
     private var keepVerbs: some View {
         // VERBS, so rows (prd §746) — they were a flow of chips.
         VStack(alignment: .leading, spacing: 0) {
-            if let kind = keepableAskKind {
-                let askedOften = AskMemory.askedOften(kind)
-                Button {
-                    DSHaptic.success()
-                    KeptAskStore.shared.keep(kind, title: currentQuestion)
-                    chrome.flash(firstKeptAskDone ? String(localized: "It'll stay fresh.")
-                                                  : String(localized: "I'll keep it fresh."),
-                                 tone: .success)
-                    firstKeptAskDone = true
-                    withAnimation(.spring(response: 0.22, dampingFraction: 0.6)) {
-                        keepJustLanded = true
-                    }
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(420))
-                        keepableAskKind = nil
-                        keepJustLanded = false
-                    }
-                } label: {
-                    DSDoorRowLabel(icon: keepJustLanded ? "checkmark"
-                                        : (askedOften ? "sparkles" : "pin.fill"),
-                                   title: Text(keepJustLanded ? String(localized: "Kept")
-                                        : (askedOften ? String(localized: "Asked often — keep it?")
-                                           : (kind == "today" ? String(localized: "Keep this view")
-                                              : String(localized: "Keep")))))
-                }
-                .buttonStyle(RowPress())
-                .dsHover()
-                .disabled(keepJustLanded)
-            }
             if !keptCurrent, currentStreamed, let text = keepableText(answerStream.els) {
                 DSDoorRow(icon: "tray.and.arrow.down", label: "Save as a note") {
                     DSHaptic.tap()
@@ -2797,7 +1635,7 @@ struct Composer: View {
             try? await Task.sleep(for: .milliseconds(500))
             runFind()
             try? await Task.sleep(for: .milliseconds(300))
-            NSLog("[Casberi] findProbe: query=%@ keepable=%@", q, keepableAskKind ?? "(none)")
+            NSLog("[Casberi] findProbe: query=%@", q)
             // One NSLog PER LINE — a joined multi-line message gets truncated
             // mid-document by the log reader (the lesson `-todayProbe` paid
             // for on 2026-07-22).
@@ -2848,7 +1686,6 @@ struct Composer: View {
         pendingHandoff = false
         risingFramePainted = false
         riseT0 = nil
-        chipsAppeared = false
         turns = []
         currentQuestion = ""
         keptCurrent = false
@@ -2882,7 +1719,6 @@ struct Composer: View {
         askSettling = false
         askWaitSeconds = nil
         inFlight = false
-        keepJustLanded = false
         askGeneration += 1   // any in-flight answer Task retires silently
         path = NavigationPath()
         onLowerAgent()
@@ -3013,7 +1849,6 @@ struct Composer: View {
         // Retires any answer Task still streaming — its doc must not paint
         // over the matches that just landed.
         askGeneration += 1
-        nextAsk = nil
         // THE DRAFT SURVIVES A FIND, unlike a committed ask (2026-08-13).
         // An ask BECOMES the question, so clearing the field is right there.
         // A search is refined, not asked once: keeping the words means the
@@ -3031,18 +1866,6 @@ struct Composer: View {
             liveReadTask?.cancel()
             liveScopes = report.scopes
             liveCount = report.total
-        }
-        // Keepable as a standing search — the kind `KeptAskComposers` already
-        // serves, so the Keep pill's whole path exists.
-        keepableAskKind = "search:\(query)"
-        // COUNTED ONCE PER QUERY, not once per tap. `AskMemory.asked` feeds the
-        // mint threshold behind "You ask this a lot — keep it?", and now that
-        // the draft survives a find, refining one search is several taps of the
-        // same words — which would trip that prompt after a single session and
-        // make an offer the person never earned (§95's counter, prd §83's rule).
-        if query != lastFoundQuery {
-            lastFoundQuery = query
-            AskMemory.asked("search:\(query)")
         }
         DSHaptic.success()
     }
@@ -3506,20 +2329,6 @@ struct Composer: View {
         }
     }
 
-    // MARK: - The day (the room's lead)
-
-    /// The kept kinds as actually docked.
-    ///
-    /// The `today` suppression died with `dayCard` (prd §543): it existed
-    /// because the card and that pill opened the identical screen, and with
-    /// the card deleted the pill is simply the only door again.
-    private var keptKinds: [String] {
-        KeptAskStore.shared.order
-    }
-
-    // MARK: - Kept-ask pills (docs/agent-brief.md ruling 4/5 — B1)
-
-
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
 
 
@@ -3546,7 +2355,7 @@ struct Composer: View {
     /// that fired a question you had to spend a tap to learn the value of.
     /// This runs nothing and fetches nothing; it opens a catalog.
     @ViewBuilder private var agentsLink: some View {
-        if let onOpenAgents, restChrome(keepBrief: false), configuredAgents.isEmpty {
+        if let onOpenAgents, atRest, configuredAgents.isEmpty {
             HStack(spacing: 0) {
                 DSMoreLink(title: Text("Set up an agent"), action: onOpenAgents)
                     .accessibilityLabel("Set up an agent")
@@ -3861,7 +2670,7 @@ struct Composer: View {
         // rule — agents stand down while recording), and "go to Wallet" is a
         // navigation, not a question anybody meant to pay for.
         if !isRecording, !forceAsk, chosenAgent != nil, hasDraft, keyAvailable,
-           NavigateCommand.parse(draft, tags: tagPool, sources: knownSources()) == nil {
+           NavigateCommand.parse(draft, tags: [], sources: knownSources()) == nil {
             // `askDirectly()`, never `askWithKey()` — see `sendPill`. This
             // branch returns BEFORE the `currentQuestion = draft` below it, so
             // routing straight to the retry verb asked the empty string on the
@@ -3896,7 +2705,7 @@ struct Composer: View {
             // misheard word becomes an instruction to an agent with a wallet.
             endDictation()
             return
-        } else if !forceAsk, let intent = NavigateCommand.parse(draft, tags: tagPool,
+        } else if !forceAsk, let intent = NavigateCommand.parse(draft, tags: [],
                                                      sources: knownSources()) {
             // A place, named — go there. Reads only (a navigation), so no
             // proposal needed; the composer closes and the shell moves.
@@ -3909,29 +2718,7 @@ struct Composer: View {
             // first settles the current LIVE answer into the thread so the Q&A
             // stacks (2026-07-12); the last answer stays live until the next
             // ask or close, so its typewriter reveal never gets cut.
-            //
-            // EXCEPT brief → brief (2026-08-13, user: "if i click what's going
-            // on in money, once i land, i should still be able to click what's
-            // going on in life or work, and presumably back to the day.
-            // basically all the chips should still be there"). Moving between
-            // scopes is changing which brief you are LOOKING AT, not asking a
-            // follow-up about the one you just read — and the difference is not
-            // cosmetic, because `turns` is what ends the landing: the moment it
-            // grows, `briefLanding` is false forever, every docked chip retires
-            // (§181's own rule) and the scope row that put you here disappears
-            // with them. So the agent opened onto the day, one tap on "Money"
-            // took you to Money, and there was no second tap available — no
-            // Work, no Life, no way back to the day, with nothing on screen
-            // saying why. Replacing the landing keeps `turns` empty, so the
-            // chips stay exactly as they were and the row stays live.
-            //
-            // Deliberately NOT `briefLanding` as the test: that waits on
-            // `answerStream.completed`, so a second scope tapped while the
-            // first is still painting would still stack a half-drawn brief into
-            // the thread. `briefInView` is the same question without the settle
-            // requirement, which is what this needs.
-            let movingBetweenBriefs = briefInView && TodayBrief.matchesAny(draft)
-            if answering, !movingBetweenBriefs {
+            if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
@@ -3978,8 +2765,6 @@ struct Composer: View {
                 foundCurrent = false       // this is an ANSWER, not a find
                 inFlight = true
             }
-            keepableAskKind = nil   // recomputed at settle, for THIS question
-            nextAsk = nil           // same — the prior answer's follow-up is stale
             askGeneration += 1
             let gen = askGeneration
             let q = draft
@@ -4144,29 +2929,6 @@ struct Composer: View {
                 if !docHasFallback(finalDoc) {
                     DSHaptic.success()
                 }
-                // The first brief ever, marked (delight, 2026-07-22) — the
-                // SAME persisted-flag idiom `MainSurface`'s `bloom.seen.
-                // <source>` uses for a source's first-ever landing, so it can
-                // only ever fire once, ever, ON THIS DEVICE (a fresh install
-                // sees it again, which is correct — it's a new relationship
-                // with the brief, not a global server-side fact).
-                // The persisted KEY keeps its old name on purpose — renaming it
-                // would re-fire this once-ever delight for everyone who already
-                // saw it. The COPY is what changed (§193): it promised "every
-                // morning" back when this was a daily brief, and it now lands
-                // on every open.
-                //
-                // The berry SHOWER it used to deal is gone (2026-07-31): those
-                // are the logo's own berries raining over the brief, and the
-                // ruling is that the mark belongs to the bar and the whisper,
-                // not to this screen. The toast still marks the moment — it
-                // says the thing worth saying, which the rain never did.
-                if TodayBrief.matches(q), !docHasFallback(finalDoc),
-                   !UserDefaults.standard.bool(forKey: "today.firstBriefShown") {
-                    UserDefaults.standard.set(true, forKey: "today.firstBriefShown")
-                    chrome.flash(String(localized: "Ready every time you open."),
-                                tone: .success)
-                }
                 // A cheap deterministic ONE-LINER lands instantly (2026-07-22)
                 // — a chip whose whole answer is a single Insight ("Nothing
                 // overdue.", a status count) has nothing to assemble, so the
@@ -4206,44 +2968,6 @@ struct Composer: View {
                 // automatically is retired rather than patched a third time
                 // — a follow-up now costs one tap on the field, same as it
                 // already did for every tapped ask.
-                // Everything past here is the VERB ROW's bookkeeping, and it
-                // runs after the answer is on screen (PERF 2026-08-13).
-                //
-                // It opens with an unbounded, fully-hydrated fetch of the whole
-                // store on the main actor, and it used to sit ABOVE the paint —
-                // so on a corpus carrying a bulk import the answer was finished
-                // and simply not yet drawn while this ran. That is the second
-                // half of a chip tap's felt latency; the first half was
-                // `answerDocument`'s own `fullCorpus()`, now scoped per kind
-                // (`RootShell.keptCorpus`). Neither was visible to the nightly
-                // perf pass, which times launch, RSS and answer LATENCY — and
-                // this work lands after the answer is computed, so it never
-                // showed up in that number.
-                //
-                // What it feeds is the Keep pill and the follow-up chip BELOW
-                // the answer, neither of which is what the tap was for. They
-                // arrive a beat later; both were cleared at commit, so the gap
-                // shows nothing rather than something stale.
-                await Task.yield()
-                // Re-guarded, and this is load-bearing rather than caution: the
-                // yield is a real suspension, so a newer ask can begin inside
-                // it — and without this, that newer answer would wear THIS
-                // question's Keep pill and follow-up chip.
-                guard gen == askGeneration else { return }
-                let settledThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                keepableAskKind = recognizeKeptAskKind(q, in: settledThings)
-                // The one related follow-up this answer offers (§177) — nil
-                // for an answer with no natural next step. Skipped on the
-                // honest "nothing matches" fallback: a dead-end answer has no
-                // follow-up worth teaching.
-                nextAsk = docHasFallback(finalDoc) ? nil : nextAsk(for: q, in: settledThings)
-                // Proactive minting (2026-07-20): count each keepable ask
-                // actually made, so a question asked often can upgrade its
-                // quiet Keep pill to a "you ask this a lot" prompt. Counted
-                // ONLY for keepable kinds — the counter's key space IS the
-                // kind space, so an unkeepable ask has nothing to count
-                // toward.
-                if let kind = keepableAskKind { AskMemory.asked(kind) }
             }
         }
     }

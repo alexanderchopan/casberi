@@ -8,7 +8,8 @@ import Foundation
 /// the time: `WalletStore.addresses` is equally the person's own data and did
 /// NOT mirror, so a second device received a wallet's NAME but not its WATCH —
 /// you'd see "Mom" on your iPad and no wallet behind it. The same gap stands
-/// for `TokenWatchOrder.manual`, `KeptAskStore.order` and `AddressNudge.declined`.
+/// for `TokenWatchOrder.manual` and `AddressNudge.declined` (and stood for the
+/// kept asks' order, until they went with the ask on 2026-10-01).
 ///
 /// **Why key-value store and not SwiftData**, unchanged from the original: these
 /// are tens of rows read SYNCHRONOUSLY from hot paths (`AddressBook.name(for:)`

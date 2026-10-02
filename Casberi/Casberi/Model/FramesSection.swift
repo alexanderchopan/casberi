@@ -72,17 +72,28 @@ import Foundation
 /// nothing in it says what it would hold (`emptyHeadline`/`emptyBody`). That
 /// obligation is what keeps this on the right side of §83.
 ///
+/// **HOME'S LIST IS THE ACTIVITY; ACTIVITY, ACCOUNTS AND THE ACTIONS BLOCK
+/// ARE DELETED (prd §1039, 2026-10-01).** The Wallet's merge, one chain over:
+/// Home lists the moves, the account menu under the tiles picks the account,
+/// and Send, Top up and Create account are the LAST three tiles — `send`,
+/// `topUp` and `create`, verbs that never light (GitHub's Watch, prd §1031;
+/// the user approved three verb tiles in this one room). A stranger's page
+/// keeps Create alone (§774), which the room decides per page.
+///
 /// Foundation-only by design: `scripts/frames-tx-selftest.sh` compiles it
 /// WHOLE and unmodified. Every failure it catches renders as a perfectly
 /// ordinary room — a scope that never appears, a remembered scope resolving to
 /// one nobody picked, or a strip drawn over a single chip.
 enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     case home
-    case activity
     case holdings
-    case accounts
     case frames
     case permissions
+    /// The room's VERBS (prd §1039) — never scopes: never in `order`, never
+    /// resolved to, never lit.
+    case create
+    case send
+    case topUp
 
     var id: String { rawValue }
 
@@ -96,10 +107,16 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     ///
     /// **`frames` leads the conditional tail** for Hegotá's reason, one step
     /// stronger: frame transactions are not merely this room's rarest reading,
-    /// they are the entire reason the chain and this seat exist. It also reads
-    /// directly off `activity`, which precedes it — the list says what moved,
-    /// this says what the transactions DID — so the two sit adjacent.
-    static let order: [FramesSection] = [.home, .activity, .holdings, .accounts, .frames, .permissions]
+    /// they are the entire reason the chain and this seat exist.
+    static let order: [FramesSection] = [.home, .holdings, .frames, .permissions]
+
+    /// The verbs, drawn after the scopes, A–Z among themselves
+    /// (`DSScopeTiles.alphabetical`). Which of them a page offers is the
+    /// room's call (§774): a stranger's page keeps `create` alone.
+    static let verbs: [FramesSection] = [.create, .send, .topUp]
+
+    /// A verb acts instead of scoping, and never lights.
+    var isVerb: Bool { Self.verbs.contains(self) }
 
     /// Which scopes can be EMPTY.
     ///
@@ -110,22 +127,20 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// it is what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
-        case .home, .activity: return false
-        case .holdings, .accounts, .frames, .permissions: return true
+        case .home, .create, .send, .topUp: return false
+        case .holdings, .frames, .permissions: return true
         }
     }
 
-    /// The room's constants. A watched address always has a balance reading
+    /// The room's constant. A watched address always has a balance reading
     /// (even "couldn't be read", which is itself the answer), and an empty
-    /// stream is a real answer rather than an absence.
-    var isAlwaysPresent: Bool { self == .home || self == .activity }
+    /// list is a real answer rather than an absence.
+    var isAlwaysPresent: Bool { self == .home }
 
     var label: String {
         switch self {
         case .home:     return String(localized: "Home")
-        case .activity: return String(localized: "Activity")
         case .holdings: return String(localized: "Holdings")
-        case .accounts: return String(localized: "Accounts")
         // **"Frames", the literal term** — Hegotá's Nonces ruling, applied
         // again. EIP-8141 calls them frames, the RPC field is `frames`, the
         // chain is NAMED for them, and the seat is called Hegotá Frames.
@@ -136,6 +151,10 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         // "Sponsors" — the room's only kind of permission wearing its own
         // name, which left five rooms asking one question under nine chips.
         case .permissions: return String(localized: "Permissions")
+        // One word a tile (prd §1039): "Create", not "Create account".
+        case .create: return String(localized: "Create")
+        case .send:   return String(localized: "Send")
+        case .topUp:  return String(localized: "Top up")
         }
     }
 
@@ -143,12 +162,13 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// short nouns are learnable but not self-explaining.
     var summary: String {
         switch self {
-        case .home:     return String(localized: "The balance, and the last few moves")
-        case .activity: return String(localized: "What moved, and whether it worked")
+        case .home:     return String(localized: "The balance, and what moved and whether it worked")
         case .holdings: return String(localized: "The tokens this address holds")
-        case .accounts: return String(localized: "The accounts you follow, and the ones tied to them")
         case .frames:      return String(localized: "The steps each transaction ran")
         case .permissions: return String(localized: "What's allowed to act on your accounts, and what already has")
+        case .create: return String(localized: "Make another account on this phone")
+        case .send:   return String(localized: "Send test ETH from this account")
+        case .topUp:  return String(localized: "Open the faucet for test ETH")
         }
     }
 
@@ -163,11 +183,10 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     var emptyHeadline: String? {
         switch self {
         case .home:     return nil
-        case .activity: return String(localized: "None yet")
         case .holdings: return String(localized: "Test ETH only")
-        case .accounts: return String(localized: "No accounts yet")
         case .frames:      return String(localized: "No steps")
         case .permissions: return String(localized: "No permissions")
+        case .create, .send, .topUp: return nil
         }
     }
 
@@ -188,16 +207,14 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:
             return nil
-        case .activity:
-            return String(localized: "Covers the stretch of chain this read reached.")
         case .holdings:
             return String(localized: "Tokens besides the chain's own coin — Home's balance is the whole of it.")
-        case .accounts:
-            return String(localized: "Drawn from counterparties two accounts share.")
         case .frames:
             return String(localized: "A plain transfer runs no steps.")
         case .permissions:
             return String(localized: "Here that means gas somebody else paid.")
+        case .create, .send, .topUp:
+            return nil
         }
     }
 
@@ -237,7 +254,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// whose content has since gone resolves to the crown rather than to an
     /// empty page claiming to be a section.
     static func resolve(_ wanted: FramesSection?, present: [FramesSection]) -> FramesSection {
-        guard let wanted, present.contains(wanted) else { return .home }
+        guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }
         return wanted
     }
 

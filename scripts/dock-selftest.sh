@@ -424,48 +424,45 @@ grep -q 'openFolder == .doors' "$TMP/main.nc" \
 grep -q 'openFolder == .doors' "$TMP/chips.nc" \
   && { echo "✗ SourceChips draws the doors folder again."; fail=1; }
 
-# --- 7. the ask is deprecated, and it is deprecated EVERYWHERE ---------------
-# prd §697b. Each line below is a door a person meets BY ACCIDENT if it is left
-# on — a Home Screen tile, a Siri phrase, a Control Center button, an icon
-# long-press. §377's lesson is that a feature reachable by five doors is a
-# feature turned off at four of them, so these are checked one by one.
-for gone in AgentBar DoorsStrip SourcesTray SourcesOverlay DoorsPanel; do
+# --- 7. the ask is DELETED, and deleted EVERYWHERE ---------------------------
+# prd §697b turned the ask off behind one flag; the 2026-10-01 ruling deleted it
+# (user: "re the ask side, we don't need it"). Each line below is a door a
+# person would meet BY ACCIDENT if it came back — a Home Screen tile, a Siri
+# phrase, a Control Center button, an icon long-press, a link. §377's lesson is
+# that a feature reachable by five doors is a feature turned off at four of
+# them, so these are checked one by one.
+for gone in AgentBar DoorsStrip SourcesTray SourcesOverlay DoorsPanel QuickActions; do
   [ -f "Casberi/Casberi/Shell/$gone.swift" ] \
-    && { echo "✗ $gone is back — the bar and its folder were deleted with the ask."; fail=1; }
+    && { echo "✗ $gone is back — it was deleted with the ask."; fail=1; }
 done
-grep -q 'static let enabled = false' "Casberi/Shared/AskSurface.swift" \
-  || { echo "✗ AskSurface.enabled is not false — the ask is deprecated (2026-09-11)."; fail=1; }
-grep -q 'AskSurface.enabled ? \[' "Casberi/Casberi/CasberiApp.swift" \
-  || { echo "✗ the Daily Brief quick action is registered unconditionally again."; fail=1; }
-grep -q 'AskCasberiIntent()' "Casberi/Casberi/Model/CasberiIntents.swift" \
-  && { echo "✗ the \"Ask Casberi\" Shortcuts phrase is advertised again — Siri would offer"; \
-       echo "  a feature the app no longer draws."; fail=1; }
-grep -q 'KeptAskWidget()' "Casberi/CasberiWidgets/CasberiWidgets.swift" \
-  && { echo "✗ the kept-ask widget is back in the bundle — every tile on it opens an ask."; fail=1; }
-grep -q 'BriefControl()' "Casberi/CasberiWidgets/CasberiWidgets.swift" \
-  && { echo "✗ the brief's Control Center button is back."; fail=1; }
-grep -q 'WidgetAskLink.url' "Casberi/CasberiWidgets/TodayWidget.swift" \
-  && { echo "✗ the Today widget taps through to an ask again — it reads corpus fields,"; \
-       echo "  so it opens the FEED and the things themselves (prd §877)."; fail=1; }
-grep -q 'guard AskSurface.enabled else { return }' "$TMP/root.nc" \
-  || { echo "✗ RootShell no longer gates the ask's deep links (casberi://ask, ://brief)"; \
-       echo "  and the quick action's landing."; fail=1; }
-# ...and because those two routes are gated, NO widget may mint them. The hero
-# tile's `widgetURL` was `casberi://brief` for two days after §697b, so every
-# tap on the one widget still in the bundle opened nothing — the gate above
-# and the link below are two files in two targets that cannot see each other.
-# Swept per file over a COMMENT-STRIPPED copy (the files explain the rule by
-# naming the link). `KeptAskWidget.swift` is exempt from the `WidgetAskLink`
-# half only: it is out of the bundle and returns with the flag, whole.
-# `DOCK_WIDGETS_DIR` exists so the check can be proven on a scratch copy.
+for gone in Casberi/Shared/AskSurface.swift Casberi/CasberiWidgets/TodayWidget.swift \
+            Casberi/CasberiWidgets/KeptAskWidget.swift Casberi/Casberi/Model/TodayBrief.swift \
+            Casberi/Casberi/Model/KeptAskStore.swift Casberi/Casberi/Model/MCPServer.swift; do
+  [ -f "$gone" ] && { echo "✗ ${gone:t} is back — it was deleted with the ask (2026-10-01)."; fail=1; }
+done
+grep -q 'application.shortcutItems = \[\]' "Casberi/Casberi/CasberiApp.swift" \
+  || { echo "✗ the app no longer clears its Home Screen quick actions — a Daily Brief an"; \
+       echo "  older build registered would stay on the icon, opening nothing."; fail=1; }
+grep -q 'UIApplicationShortcutItem(' "Casberi/Casberi/CasberiApp.swift" \
+  && { echo "✗ a Home Screen quick action is registered again — the Daily Brief went with the ask."; fail=1; }
+grep -qE 'AskCasberiIntent|SearchCasberiIntent|WeekSynthesisIntent' "Casberi/Casberi/Model/CasberiIntents.swift" \
+  && { echo "✗ an ask-side Shortcuts intent is back — Siri would offer a feature the app no"; \
+       echo "  longer has."; fail=1; }
+for w in TodayWidget KeptAskWidget BriefControl; do
+  grep -q "${w}()" "Casberi/CasberiWidgets/CasberiWidgets.swift" \
+    && { echo "✗ $w is back in the widget bundle — it went with the ask."; fail=1; }
+done
+grep -qE 'case "(ask|brief)":' "$TMP/root.nc" \
+  && { echo "✗ RootShell routes casberi://ask or casberi://brief again — both went with the ask."; fail=1; }
+# ...and NO widget may mint those links: a tap would open nothing. Swept per
+# file over a COMMENT-STRIPPED copy (the files explain the rule by naming the
+# link). `DOCK_WIDGETS_DIR` exists so the check can be proven on a scratch copy.
 WIDGETS_DIR="${DOCK_WIDGETS_DIR:-Casberi/CasberiWidgets}"
 for wf in "$WIDGETS_DIR"/*.swift; do
   strip_comments "$wf" > "$TMP/widget.nc"
   grep -qE 'casberi://(brief|ask)' "$TMP/widget.nc" \
     && { echo "✗ ${wf:t} mints a casberi://brief or casberi://ask link — both routes are"; \
-         echo "  gated off with the ask (prd §697b), so the tap would open nothing."; fail=1; }
-  [ "${wf:t}" != "KeptAskWidget.swift" ] && grep -q 'WidgetAskLink' "$TMP/widget.nc" \
-    && { echo "✗ ${wf:t} builds an ask link (WidgetAskLink) — the ask is deprecated (prd §697b)."; fail=1; }
+         echo "  gone with the ask, so the tap would open nothing."; fail=1; }
 done
 
 # --- 7. a folder tap LANDS and opens; the standing chip only toggles ---------
@@ -753,7 +750,7 @@ grep -q 'route.fromAccountsList(open)' "$TMP/apps.nc" \
        echo "  pages behind each other (prd §876)."; fail=1; }
 # Every SettingsPage case is opened by a row, or it is a page nothing reaches.
 strip_comments "Casberi/Casberi/Screens/AccountScreen.swift" > "$TMP/settings.nc"
-for page in data notifications mcp diagnostics language dockOrder; do
+for page in data notifications diagnostics language dockOrder; do
   grep -q "open(.$page)" "$TMP/settings.nc" \
     || { echo "✗ no Settings row opens .$page through open(_:sheet:) — on the Mac it"; \
          echo "  would still raise a sheet over the pane (prd §876)."; fail=1; }

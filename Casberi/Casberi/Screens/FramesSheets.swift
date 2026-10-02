@@ -1335,7 +1335,7 @@ struct FramesAccountSheet: View {
                       value: Text(verbatim: String(account.moves.count)),
                       tint: opens ? DS.tint : DS.textPrimary,
                       glyph: opens ? "chevron.right" : nil,
-                      action: opens ? { onScope?(.activity) } : nil)
+                      action: opens ? { onScope?(.home) } : nil)
             if frames > 0 {
                 DSSpecRow(label: Text("Frame transactions"),
                           value: Text(verbatim: String(frames)),

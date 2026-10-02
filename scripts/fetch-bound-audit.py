@@ -110,7 +110,7 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
     ("Shell/RootShell.swift", "fullCorpus"):
         "THE unscoped read of the answer path, and the one this audit exists "
         "around rather than against. Every scoping this app has (`keptCorpus`, "
-        "`categoryCorpus`, `scopedCorpus`) falls back to it by design, so a "
+        "`scopedCorpus`) falls back to it by design, so a "
         "fetchLimit here would silently narrow every ask that failed to scope. "
         "Check 3 holds its instrumentation instead, which is the honest trade: "
         "measured, not hidden.",
@@ -120,10 +120,6 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "The FAILURE path of a `BGAppRefreshTask` sweep — reached only when the "
         "two bounded reads above it both threw, and a background sweep that "
         "returns nothing has nothing to notify about. No view is mounted.",
-    ("Model/CasberiIntents.swift", "perform"):
-        "An App Intent in its own process over `SharedStore.extensionContainer()`, "
-        "answering `WeekSynthesisIntent` from the whole corpus because that is "
-        "what 'my week' means. No view, no main actor of ours.",
     ("Model/CasberiIntents.swift", "corpus"):
         "`IntentCorpus.corpus()` — the shared one-fetch-many-queries door for "
         "Visual Intelligence, which matches a frame's labels several at a time. "
@@ -218,16 +214,6 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "demo's are deleted.",
 
     # --- Composed once, for a corpus already known to be small ---------------
-    ("Model/CatalogTaste.swift", "reasons"):
-        "Counts kinds across the corpus to pick the catalog's reasons — a "
-        "distribution is not a distribution over a slice. Reached from the "
-        "catalog's appear, once, and it declines below a five-row floor.",
-    ("Model/AgentOpenCache.swift", "scanPaged"):
-        "PAGING THE FETCH IS REFUSED, DELIBERATELY: `capturedAt` carries no "
-        "index, so nine paged fetches are nine full sorts of the same table and "
-        "cost more than the one they replace. The WALK is what is chunked — "
-        "1,500 rows then a yield — so the main actor is released repeatedly "
-        "even though the read is whole.",
     ("Model/WalletFlowSource.swift", "probeLines"):
         "`-walletFlowProbe`'s own reporting line. A probe that bounded its read "
         "would report on a slice while naming the corpus.",
@@ -243,12 +229,6 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "'Matched on this iPhone' — a retrieval over a truncated corpus would "
         "make that sentence false, silently, on the one surface whose promise "
         "is that nothing was left out. Fires on a tap, never during a body.",
-    ("Shell/Composer.swift", "commit"):
-        "The settle block, and it is deliberately AFTER the answer is painted "
-        "and after a `Task.yield()` — what it feeds is the Keep pill and the "
-        "follow-up chip, which arrive a beat later by design. Kept unbounded "
-        "because `recognizeKeptAskKind` decides whether a question is standing, "
-        "which a recent slice cannot answer.",
     ("Shell/RootShell.swift", "shell"):
         "Migration v1's one-time voice-audio move (2026-07-07), in the launch "
         "migration block: it runs once per install, ever, and must reach every "

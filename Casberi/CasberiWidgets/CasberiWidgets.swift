@@ -11,30 +11,18 @@ import ActivityKit
 /// computes anything, none reaches the network, and none can (see
 /// `WidgetPayload`).
 ///
-/// Two widgets since prd §877 (2026-09-22). Today is one list — what needs
-/// you, who replied, what landed — where "Your day" and "Needs you" were two
-/// tiles, one showing a single line and the other usually empty. The wallet
-/// draws the line the balance card draws. Plus one Control Center button
-/// (capture) and the Live Activities below.
+/// One widget since the ask retired (2026-10-01): the wallet, drawing the line the
+/// balance card draws. The Today widget (§877) went with the ask. Plus two
+/// Control Center buttons (capture and a Quick Note) and the Live Activities
+/// below.
 @main
 struct CasberiWidgets: WidgetBundle {
     var body: some Widget {
-        TodayWidget()
-        // `KeptAskWidget` is GONE from the bundle (prd §697b, 2026-09-11):
-        // every tile on it opened an ask, so with the ask deprecated the
-        // whole widget is a wall of doors onto nothing. A placed one goes to
-        // the system's "unable to load" placeholder, which is the cost the
-        // user took knowingly ("get rid of it. i doubt any user is using
-        // it"). The file stays in the target and stays compiling, so the
-        // widget returns with the flag.
         WalletWidget()
         ComposeControl()
         // A QUICK NOTE from anywhere (prd §982): Control Center, the Lock
         // Screen and the Action button, onto the note sheet.
         NoteControl()
-        // `BriefControl` — the Control Center button onto the daily brief —
-        // is GONE with the ask (prd §697b). `ComposeControl` stays: it opens
-        // the CAPTURE surface, which outlives the ask.
         #if !targetEnvironment(macCatalyst)
         VoiceRecordingActivity()
         ImportActivity()
@@ -161,38 +149,5 @@ struct NoteControl: ControlWidget {
         }
         .displayName("Casberi note")
         .description("Writes a new note from anywhere.")
-    }
-}
-
-/// The READING half of the same pair (2026-08-14). Capture had a button
-/// anywhere on the device and the brief — the app's one composed answer to
-/// "what's going on" — could only be reached by opening the app and tapping.
-///
-/// It reuses `"brief.request"`, the flag the Home Screen quick action already
-/// writes and `RootShell.openBriefIfRequested` already reads (§377). One door,
-/// so a second entrance can't drift into a second behaviour — and notably that
-/// door is the one whose delivery half was broken for eleven days, which is
-/// another reason not to invent a third.
-struct OpenBriefIntent: AppIntent {
-    static let title: LocalizedStringResource = "What's going on"
-    static let description = IntentDescription("Opens Casberi's daily brief.")
-    static let openAppWhenRun = true
-
-    func perform() async throws -> some IntentResult {
-        UserDefaults(suiteName: SharedStore.appGroup)?
-            .set(true, forKey: "brief.request")
-        return .result()
-    }
-}
-
-struct BriefControl: ControlWidget {
-    var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "casberi.brief") {
-            ControlWidgetButton(action: OpenBriefIntent()) {
-                Label("What's going on", systemImage: "sparkles")
-            }
-        }
-        .displayName("Casberi brief")
-        .description("Opens your day.")
     }
 }

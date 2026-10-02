@@ -74,9 +74,7 @@ struct AgentModelRow: View {
                             AgentModelFacts.forget(provider, task: task)
                             tick += 1
                         } label: {
-                            Text(task == .librarian && AskSurface.enabled
-                                 ? String(localized: "Same as questions")
-                                 : String(localized: "Default (\(provider.defaultModel))"))
+                            Text(String(localized: "Default (\(provider.defaultModel))"))
                         }
                         ForEach(models) { model in
                             Button {
@@ -181,10 +179,8 @@ struct AgentSpendRow: View {
                     Image(systemName: "chart.bar.doc.horizontal")
                         .foregroundStyle(DS.textSecondary)
                         .accessibilityHidden(true)
-                    Text(AskSurface.enabled ? requestLine(entry)
-                         // With the ask off every request is the librarian's,
-                         // so none of them is "an ask" (prd §718).
-                         : entry.requests == 1 ? String(localized: "1 request")
+                    // Counted as requests, never "asks" (prd §718).
+                    Text(entry.requests == 1 ? String(localized: "1 request")
                          : String(localized: "\(entry.requests) requests"))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                 }
@@ -232,21 +228,9 @@ struct AgentSpendRow: View {
             .dsListRow()
         }
     }
-
-    /// "12 asks" when nothing went looking, "12 asks · 19 calls" when the tool
-    /// loop spent extra rounds — the two numbers differ only when it did, so
-    /// the second appears only then.
-    private func requestLine(_ entry: AgentSpend.Entry) -> String {
-        let asks = entry.requests - entry.toolRounds
-        if entry.toolRounds == 0 {
-            return asks == 1 ? String(localized: "1 ask")
-                             : String(localized: "\(asks) asks")
-        }
-        return String(localized: "\(asks) asks · \(entry.requests) calls, \(entry.toolRounds) of them searching your things")
-    }
 }
 
-/// The two things only a ROUTER can be asked for (2026-08-23, prd §459) —
+/// What only a ROUTER can be asked for (2026-08-23, prd §459) —
 /// drawn for OpenRouter and nowhere else, because nowhere else is there a
 /// choice of who serves a request.
 ///
@@ -264,7 +248,6 @@ struct AgentSpendRow: View {
 struct OpenRouterRoutingRow: View {
     let provider: AgentProvider
     @State private var privateRouting = AgentOpenRouter.privateRouting
-    @State private var webSearch = AgentOpenRouter.webSearch
 
     var body: some View {
         if provider == .openrouter, AgentKey.isConfigured(.openrouter) {
@@ -272,19 +255,10 @@ struct OpenRouterRoutingRow: View {
                 // The cost is stated on the control that causes it, not in
                 // fine print elsewhere — this is the one setting here that
                 // can make a question fail to answer.
-                DSToggleRow(title: AskSurface.enabled
-                                ? Text("Only providers that don't keep your question")
-                                : Text("Only providers that don't keep what you send"),
+                DSToggleRow(title: Text("Only providers that don't keep what you send"),
                             detail: DSProse.text("Some models won't be served that way — you'll be told which."),
                             isOn: $privateRouting)
                 .onChange(of: privateRouting) { _, on in AgentOpenRouter.privateRouting = on }
-                // Web search only ever runs inside an ask (prd §718).
-                if AskSurface.enabled {
-                    DSToggleRow(title: Text("Let it search the web"),
-                                detail: DSProse.text("Only when your own things fall short. Charged per result."),
-                                isOn: $webSearch)
-                    .onChange(of: webSearch) { _, on in AgentOpenRouter.webSearch = on }
-                }
             }
             .dsListRow()
         }
@@ -326,9 +300,7 @@ struct AgentLibrarianRow: View {
     var body: some View {
         if AgentKey.active == provider, provider != .bankr, !AgentLibrarian.deviceCanDoIt {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSToggleRow(title: AskSurface.enabled
-                                ? Text("Let your key organize too")
-                                : Text("Let your key organize"),
+                DSToggleRow(title: Text("Let your key organize"),
                             detail: DSProse.text("Names screenshots and reads long chats so they can be found. No free on-device model here."),
                             isOn: $enabled)
                 .onChange(of: enabled) { _, on in
@@ -443,12 +415,6 @@ struct AgentBudgetControl: View {
                         .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                // Said out loud because it is the one thing somebody would
-                // otherwise assume wrongly, in the expensive direction: a cap
-                // stops the app spending on its own, and never stops YOU.
-                if AskSurface.enabled {
-                    DSFootnote("Your own questions are never blocked.")
-                }
                 // Only where it is true. A ceiling governs spend, and a free
                 // model spends nothing — so it keeps working past the cap, and
                 // saying so is what stops that reading as the cap being broken.
@@ -461,74 +427,3 @@ struct AgentBudgetControl: View {
         }
     }
 }
-
-#if targetEnvironment(macCatalyst)
-/// The local MCP listener's switch (2026-08-06, `MCPServer`) — Mac only,
-/// because it is the only build that is a real desktop process sitting on the
-/// same machine as the agent that wants to read the corpus.
-///
-/// It states its own unproven status rather than implying a working feature.
-/// `MCPPairing.transportReady` is still false and no pairing UI has appeared;
-/// this is the honest interim — a switch that says what it does, what it
-/// can't promise, and exactly what to paste into a client.
-struct MCPServerRow: View {
-    @State private var enabled = MCPServer.isEnabled
-    @State private var running = MCPServer.shared.running
-    @State private var error: String?
-    @State private var copied = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSToggleRow(title: Text("Let agents on this Mac read your things"),
-                        detail: DSProse.text("127.0.0.1 only, never the network. Anything it offers to save waits for your approval."),
-                        isOn: $enabled)
-            .onChange(of: enabled) { _, on in
-                MCPServer.isEnabled = on
-                if on { MCPServer.shared.start() } else { MCPServer.shared.stop() }
-                running = MCPServer.shared.running
-                error = MCPServer.shared.lastError
-            }
-            if enabled {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: running ? "checkmark.circle.fill" : "circle.dotted")
-                        .dsSymbolSwap(running)
-                        .foregroundStyle(running ? DS.confirm : DS.textTertiary)
-                        .accessibilityHidden(true)
-                    Text(running ? MCPServer.endpoint : String(localized: "Not listening"))
-                        .dsText(.body17).monospaced()
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1).truncationMode(.middle)
-                }
-                if let error {
-                    Text(error)
-                        .dsText(.subhead12).foregroundStyle(DS.attentionInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if running {
-                    // A verb, so a row (prd §746).
-                    DSDoorRow(icon: copied ? "checkmark" : "key.fill",
-                              label: copied ? "Key copied" : "Copy the key") {
-                        DSHaptic.tap()
-                        // Sensitive: this IS the credential. Short clipboard
-                        // life, local only — `DSPasteboard`'s own split.
-                        DSPasteboard.copySensitive(MCPPairing.token())
-                        copied = true
-                    }
-                    // ONE sentence for the row (prd §748), where there were
-                    // two. Measured 2026-08-08 (prd §340): the standard MCP
-                    // inspector connects over HTTP and both lists and calls
-                    // the tools — the sentence names what was checked rather
-                    // than implying every client. Drawn only while listening:
-                    // the claim is about a server that is running.
-                    DSFootnote("Paste it as `Authorization: Bearer …` — checked with the standard MCP tools.")
-                }
-            }
-        }
-        .dsListRow()
-        .onAppear {
-            running = MCPServer.shared.running
-            error = MCPServer.shared.lastError
-        }
-    }
-}
-#endif

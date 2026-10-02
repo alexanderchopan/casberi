@@ -28,11 +28,6 @@ struct FramesRoomFigure: View {
     /// second account row to the list below, which would be one fact drawn
     /// twice six points apart.
     var onOpenAccount: ((FramesAccount) -> Void)? = nil
-    /// Every account you follow, never the scoped list, and the pick — the
-    /// Accounts crown's faces (prd §948). Empty draws the scoped accounts.
-    var roster: [FramesAccount] = []
-    var scope: String? = nil
-    var onPickAccount: ((String?) -> Void)? = nil
 
     private var moves: [FramesMove] {
         accounts.filter(\.reached).flatMap(\.moves).sorted { $0.blockNumber > $1.blockNumber }
@@ -52,10 +47,9 @@ struct FramesRoomFigure: View {
             // time (prd §683, and the "2.2960 ETH" over "2.2960 ETH" the
             // Privacy conversion showed).
             return nil
-        case .accounts:
-            // **THE CROWN OWNS THE COUNT (prd §689)** — it says how many
-            // addresses connect, which is the reading.
-            return isEmpty(.accounts) ? section.emptyHeadline : nil
+        // A verb is never a page — `resolve` never lands here.
+        case .create, .send, .topUp:
+            return nil
         case .holdings:
             // **NO TOTAL (prd §680, user: "it isn't supposed to say the
             // balance, we say that on home").** The cells carry the names and
@@ -71,12 +65,6 @@ struct FramesRoomFigure: View {
             // in all five rooms.
             // The figure owns its reading since prd §924; only the empty word stays.
             return RoomPermissions.headline(kinds) == nil ? section.emptyHeadline : nil
-        case .activity:
-            // **THE CHART OWNS THE COUNT (prd §686)**, exactly as the crown
-            // owns the balance on Home — this line and the chart's own number
-            // drew "6 transactions" one above the other, which is §683's
-            // "2.2960 ETH over 2.2960 ETH" in a second scope.
-            return head.moveCount > 0 ? nil : section.emptyHeadline
         // **STEPS, not transactions** — Hegotá's ruling, and the same reason:
         // the transaction count is the Activity scope's headline one chip
         // away, so repeating it makes two scopes look like one reading twice.
@@ -153,16 +141,12 @@ struct FramesRoomFigure: View {
     /// Frames list uses, so the slot and the rows beneath it cannot disagree.
     private func isEmpty(_ section: FramesSection) -> Bool {
         switch section {
-        case .home:     return false
-        case .activity: return head.moveCount == 0
+        case .home, .create, .send, .topUp: return false
         // **A ONE-CELL TREEMAP IS THE 100% BAR §610 REMOVED.** An address
         // holding only test ETH has nothing to split, so Holdings is EMPTY
         // here rather than drawing the balance a second time — the crown on
         // Home already states it.
         case .holdings: return FramesHoldings.tokens(accounts).isEmpty
-        // **EMPTY IS "NOTHING CONNECTS THEM" (prd §689)**, not "nothing is
-        // watched" — the rows list what you watch either way.
-        case .accounts: return (roster.isEmpty ? accounts : roster).isEmpty
         case .frames:   return frameRuns.isEmpty
         case .permissions: return !moves.contains(where: \.sponsored)
         }
@@ -202,10 +186,9 @@ struct FramesRoomFigure: View {
             switch section {
             case .home:     sponsorship
             case .permissions: permissions
-            case .activity:        activityChart
             case .holdings:        holdingsFigure
-            case .accounts:        accountsFigure
             case .frames:          frames
+            case .create, .send, .topUp: EmptyView()
             }
         }
     }
@@ -236,16 +219,6 @@ struct FramesRoomFigure: View {
     /// at all, it is a caveat about how much of the room was READ, and no
     /// other scope can carry it because it applies to all of them.
     /// The crown's caption: the scoped address, or how many you follow.
-    /// **THE SHARED ACTIVITY CHART (prd §686).** Replaces `activity`, whose
-    /// signed value bars answered "how much moved" — a question the Home crown
-    /// above already owns, and which left "how much has been going on" unasked
-    /// in the one scope named for it. Those value bars are deleted with it —
-    /// see the note above `newestHash` for why nothing else wanted them.
-    @ViewBuilder private var activityChart: some View {
-        RoomActivityChart(dates: moves.compactMap(\.timestamp),
-                          box: DSRoomChassis.figureSlot)
-    }
-
     private var crownCaption: String {
         if accounts.count == 1, let one = accounts.first {
             return FramesWatch.shared.name(for: one.address)
@@ -373,21 +346,6 @@ struct FramesRoomFigure: View {
     /// comparable and the map does not pretend they are. What it shows is
     /// WHICH assets and HOW MUCH of each — the same bargain `FramesMoney`
     /// takes for the coin.
-    /// **YOUR ACCOUNTS, FACE BY FACE (prd §948, the Wallet's §941).** The
-    /// crown is the count of the accounts you follow over one face each; a
-    /// face is the account picker too, through the same function the menu
-    /// under the tiles calls, so the two cannot disagree. How the accounts
-    /// relate is the list's `with` lines (§940), not a drawing.
-    @ViewBuilder private var accountsFigure: some View {
-        RoomAccountsFaces(
-            faces: (roster.isEmpty ? accounts : roster).map {
-                .init(id: $0.address,
-                      name: FramesWatch.shared.name(for: $0.address) ?? WalletStore.shortAddress($0.address))
-            },
-            selected: scope,
-            onPick: { onPickAccount?($0) })
-    }
-
     @ViewBuilder private var holdingsFigure: some View {
         RoomHoldingsFigure(cells: FramesHoldings.cells(head: head, accounts: accounts))
     }
@@ -588,11 +546,6 @@ struct FramesRoomList: View {
     /// mark, the name, the amount on the right. The same anatomy the vibenet
     /// room's Holdings list has used since it shipped, which is what makes two
     /// rooms' Holdings read as one screen rather than two.
-    @ViewBuilder private var accountsRows: some View {
-        RoomAccountsRows(rows: FramesConnections.rows(accounts, onOpen: onOpenAccount),
-                         splitsByPhone: true)
-    }
-
     @ViewBuilder private var holdingsRows: some View {
         RoomHoldingsRows(cells: FramesHoldings.cells(head: head, accounts: accounts))
     }
@@ -600,21 +553,20 @@ struct FramesRoomList: View {
     @ViewBuilder private var scoped: some View {
         switch section {
         case .home:
-            // **HOME HAS NO LIST (prd §747).** §553's "Home holds the tiles,
-            // not a form" still stands — the tiles simply moved onto the
-            // account card, where they sit beside the crown, and Home's list
-            // is the scope door rows the chrome draws above this view.
-            EmptyView()
-        case .activity:
+            // **HOME'S LIST IS THE ACTIVITY (prd §1039).** Home drew no list
+            // since §747 — the Overview rows above stood in for one — and the
+            // moves lived one tile over. The Activity tile is deleted; its
+            // rows, pending sends first, are Home's.
             rows(pairs)
+        case .create, .send, .topUp:
+            // A verb is never a page — `resolve` never lands here.
+            EmptyView()
         case .holdings:
             if FramesHoldings.cells(head: head, accounts: accounts).isEmpty {
                 DSSkeletonRows()
             } else {
                 holdingsRows
             }
-        case .accounts:
-            accountsRows
         case .frames:
             // **EVERY transaction that ran a step (prd §698)** — a plain
             // transfer parses to NO frames (measured), so admitting the
@@ -727,7 +679,7 @@ struct FramesRoomList: View {
         // by properties nothing can know yet — how many frames RAN, and who
         // PAID — so a pending row there would be filed under a claim that has
         // not been made.
-        let inFlight = section == .activity ? FramesLiveState.shared.pending : []
+        let inFlight = section == .home ? FramesLiveState.shared.pending : []
         if !inFlight.isEmpty {
             VStack(spacing: DS.Space.s2) {
                 ForEach(inFlight) { pendingRow($0) }
@@ -1333,60 +1285,15 @@ enum FramesHoldings {
 }
 
 
-/// **WHO THE ADDRESSES YOU WATCH HAVE BOTH DEALT WITH (prd §689).**
-///
-/// A `FramesMove` carries no counterparty of its own: this chain's transfers
-/// ride the FRAMES, each with its own target, which is the same fact one layer
-/// down. A plain transfer — the faucet pays out as one — has no frames and so
-/// contributes no edge, which is honest rather than a gap: the payer is on the
-/// receipt, not in the move's own rows.
+/// Whose an account is, on this phone (prd §964) — the account menu's
+/// On this phone / Watching split. The connections map and rows that lived
+/// here went with the Accounts tile (prd §1039).
 @MainActor
 enum FramesConnections {
-    static func map(_ accounts: [FramesAccount]) -> AddressConnections.Map? {
-        let moves = accounts.flatMap { account in
-            account.moves.flatMap { move in
-                move.rows.compactMap { row -> RoomConnectionsEdges.Move? in
-                    guard let target = row.frame.target, !target.isEmpty else { return nil }
-                    return RoomConnectionsEdges.Move(owner: account.address,
-                                                     counterparty: target,
-                                                     order: move.blockNumber)
-                }
-            }
-        }
-        return AddressConnections.map(
-            edges: RoomConnectionsEdges.edges(moves) { address in
-                FramesWatch.shared.name(for: address) ?? WalletStore.shortAddress(address)
-            },
-            watched: accounts.map {
-                AddressConnections.WatchedWallet(
-                    key: $0.address.lowercased(),
-                    name: FramesWatch.shared.name(for: $0.address)
-                        ?? WalletStore.shortAddress($0.address))
-            })
-    }
-
     /// This phone holds the account's key: one of `FramesKey`'s, or the
     /// passkey's account (prd §964).
     static func onPhone(_ address: String, passkey: String?) -> Bool {
         FramesKey.holds(address)
             || passkey.map { $0.caseInsensitiveCompare(address) == .orderedSame } == true
-    }
-
-    static func rows(_ accounts: [FramesAccount],
-                     onOpen: ((FramesAccount) -> Void)?) -> [RoomAccountsRows.Row] {
-        let drawn = map(accounts)
-        let passkey = FramesPasskey.accountAddress()
-        let followed = accounts.map { account -> RoomAccountsRows.Row in
-            return RoomAccountsRows.Row(
-                key: account.address.lowercased(),
-                address: account.address,
-                name: FramesWatch.shared.name(for: account.address)
-                    ?? WalletStore.shortAddress(account.address),
-                kind: nil,
-                onPhone: FramesConnections.onPhone(account.address, passkey: passkey),
-                unreached: !account.reached,
-                onOpen: onOpen.map { open in { open(account) } })
-        }
-        return RoomAccountsRows.list(followed, map: drawn)
     }
 }

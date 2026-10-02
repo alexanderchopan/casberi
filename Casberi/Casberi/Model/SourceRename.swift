@@ -329,4 +329,65 @@ enum SourceRename {
         _ = context.saveHonestly()
         return dropped.count
     }
+
+    // MARK: - The ask, retired (2026-10-01)
+
+    /// What the ask kept on this device, and what nothing reads any more: the
+    /// kept asks and their digests, the Today brief's last document, its
+    /// ledger and its scope stamps, the day's notice, Home's model-written
+    /// line, the cluster names, the composer's tap counters, the agent hint's
+    /// spent flag, the Mac's MCP switch — every key one of them wrote.
+    static let retiredAskDefaultsPrefixes = [
+        "keptAsks.", "brief.", "agent.noticed.", "home.insight.", "mcp.server.",
+    ]
+    static let retiredAskDefaultsKeys = [
+        "cluster.names", "cluster.named.asked",
+        "composer.askShownCounts", "composer.asksMadeCounts", "composer.firstKeptAsk.done",
+        "agent.everRaised", "demo.mode.retiredAsksSwept.v1", "today.firstBriefShown",
+    ]
+    /// The MCP door's pairing token (prd §34), in the data-protection
+    /// Keychain. A credential for a listener that no longer exists.
+    static let retiredAskKeychainService = "com.casberi.mcp.pairing"
+    /// The `sourceRef` an MCP client's save request carried (`MCPTools`,
+    /// prd §34): an approval row whose Approve committed the thing it held.
+    static let retiredMCPSaveMarker = "mcp.save"
+
+    private static let retiredAskLocalKey = "sourceRename.retiredAsk.local.v1"
+
+    /// Drops what the ask left behind, in `sweepRetiredSeats`' shape: the
+    /// MCP door's save requests at EVERY launch, because the store mirrors to
+    /// CloudKit and another device on an older build can still land one; the
+    /// device-local half — defaults and the pairing token, which nothing syncs
+    /// and nothing will write again — once.
+    ///
+    /// No `Thing` the person kept is touched. A kept ask, a brief, a notice
+    /// and a cluster name were never rows; an answer saved as a note is the
+    /// person's note and stays. A sweep, never a migration (§647), and no
+    /// schema field goes (CloudKit is additive only).
+    @MainActor
+    @discardableResult
+    static func sweepRetiredAsk(context: ModelContext) -> Int {
+        if !UserDefaults.standard.bool(forKey: retiredAskLocalKey) {
+            for key in UserDefaults.standard.dictionaryRepresentation().keys
+            where retiredAskDefaultsPrefixes.contains(where: { key.hasPrefix($0) })
+                || retiredAskDefaultsKeys.contains(key) {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: retiredAskKeychainService,
+            ]
+            SecItemDelete(query as CFDictionary)
+            UserDefaults.standard.set(true, forKey: retiredAskLocalKey)
+        }
+        let marker = retiredMCPSaveMarker
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == marker })
+        guard let count = try? context.fetchCount(descriptor), count > 0 else { return 0 }
+        let dropped = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+        guard !dropped.isEmpty else { return 0 }
+        SpotlightIndex.remove(ids: dropped.map(\.id))
+        for thing in dropped { context.delete(thing) }
+        _ = context.saveHonestly()
+        return dropped.count
+    }
 }

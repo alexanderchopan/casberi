@@ -126,6 +126,20 @@ enum ScopeTileGlyph {
     /// The mail rooms' Attachments (prd §1019). The note sheet's attach tool
     /// wears the same clip for the same meaning; no tile or dock seat does.
     static let attachments  = "paperclip"
+    /// The Frames room's three VERB tiles (prd §1039) — the glyphs their rows
+    /// wore in the Actions block, so the act keeps its face as it becomes a
+    /// tile. `create` is not `new`'s plus: a new account is not a new note.
+    static let send         = "arrow.up.right"
+    static let topUp        = "drop"
+    static let create       = "plus.rectangle.on.rectangle"
+    /// The Wallet's Coming up (prd §1041): a calendar with a clock — what
+    /// is still ahead. NOT the bare `calendar`, which is the dock's Life glyph
+    /// and the event kind's: one glyph carries one meaning (prd §999).
+    static let comingUp     = "calendar.badge.clock"
+    /// Logos' Explorer verb tile (prd §1039): it opens the testnet's explorer
+    /// in the browser, and Safari's compass is the app's "opens a page" mark
+    /// (the reading sheet's Open in Safari).
+    static let explorer     = "safari"
 }
 
 /// The mail rooms' tiles (prd §1019). New is the Notes room's plus: the same
@@ -282,31 +296,33 @@ extension PrivacyPoolsSection: DSTileScope {
     }
 }
 
+/// Follow wears Watch's eye (prd §1039): following an address privately IS
+/// watching it (`ScopeTileGlyph.watch` names Follow address among its uses),
+/// so one meaning, one glyph — a declared alias in `room-kind-tiles-selftest`.
 extension WalletSection: DSTileScope {
     var glyph: String {
         switch self {
         case .home:        return ScopeTileGlyph.home
-        case .activity:    return ScopeTileGlyph.activity
         case .holdings:    return ScopeTileGlyph.holdings
-        case .accounts:    return ScopeTileGlyph.accounts
+        case .comingUp:    return ScopeTileGlyph.comingUp
         case .positions:   return ScopeTileGlyph.positions
         case .nfts:        return ScopeTileGlyph.nfts
         case .risk:        return ScopeTileGlyph.risk
         case .permissions: return ScopeTileGlyph.permissions
+        case .follow:      return ScopeTileGlyph.watch
         }
     }
 }
 
-/// Logos' scopes (prd §991): the family's Home, Activity and Accounts glyphs,
-/// a rack for the node you run, and a coin stack for what it earns (§1016).
+/// Logos' scopes (prd §991): the family's Home glyph, a rack for the node you
+/// run, a coin stack for what it earns (§1016), and the explorer verb.
 extension LogosSection: DSTileScope {
     var glyph: String {
         switch self {
         case .home:     return ScopeTileGlyph.home
-        case .activity: return ScopeTileGlyph.activity
-        case .accounts: return ScopeTileGlyph.accounts
         case .node:     return ScopeTileGlyph.node
         case .rewards:  return ScopeTileGlyph.rewards
+        case .explorer: return ScopeTileGlyph.explorer
         }
     }
 }
@@ -315,11 +331,12 @@ extension FramesSection: DSTileScope {
     var glyph: String {
         switch self {
         case .home:        return ScopeTileGlyph.home
-        case .activity:    return ScopeTileGlyph.activity
         case .holdings:    return ScopeTileGlyph.holdings
-        case .accounts:    return ScopeTileGlyph.accounts
         case .frames:      return ScopeTileGlyph.frames
         case .permissions: return ScopeTileGlyph.permissions
+        case .create:      return ScopeTileGlyph.create
+        case .send:        return ScopeTileGlyph.send
+        case .topUp:       return ScopeTileGlyph.topUp
         }
     }
 }

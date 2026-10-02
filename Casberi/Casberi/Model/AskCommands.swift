@@ -337,8 +337,7 @@ enum StatusAsk {
 
     private static let cues = ["going on", "happening", "what's new", "whats new",
                                "anything new", "catch me up", "did i miss",
-                               "what's up", "whats up", "fill me in", "the latest",
-                               "while i was away", "since i was away", "since i left"]
+                               "what's up", "whats up", "fill me in", "the latest"]
 
     /// The words a status ask may be made of — anything else is CONTENT, and
     /// content means the scored retriever should run instead ("what's going
@@ -373,20 +372,9 @@ enum StatusAsk {
         guard words.isEmpty else { return nil }
         let things = things()
 
-        // The librarian's window (prd §67 ⑥): an away-shaped ask grounds on
-        // the FROZEN gap between last background and this foreground — not a
-        // calendar window — so the answer is exactly what arrived while you
-        // were gone. Never really away (gap under an hour, or a first visit):
-        // the honest empty pulse; the counted line words it plainly.
-        if q.contains("away") || q.contains("i left") {
-            guard let away = AppVisit.away else {
-                return Pulse(windowWords: "while you were away", pool: [], sample: [])
-            }
-            let pool = things.filter { away.contains($0.capturedAt) }
-            return Pulse(windowWords: "while you were away", pool: pool,
-                         sample: sample(of: pool))
-        }
-
+        // "While I was away" (the librarian's window, prd §67 ⑥) went with
+        // the ask (2026-10-01); the All feed still marks what landed while
+        // you were gone (`AppVisit`).
         if let date {
             // rangePhrase covers every DateQuery phrase today; "recently" is
             // the readable fallback if the two lists ever drift.

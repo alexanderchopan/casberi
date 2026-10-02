@@ -399,10 +399,8 @@ enum ProbeHooks {
         //
         // **On the simulator this reports empty, always, and that is the
         // correct answer** — MetricKit delivers on real hardware only. So a
-        // pass here is NOT evidence the feature works, exactly as
-        // `-quickActionProbe`'s own comment says of the quick action: it can
-        // only show that the read path runs and that the subscriber is
-        // registered. The reading of a real payload is proven by
+        // pass here is NOT evidence the feature works: it can only show that
+        // the read path runs and that the subscriber is registered. The reading of a real payload is proven by
         // `scripts/metrics-selftest.sh`, which compiles `AppMetricsDigest`
         // verbatim against hand-built fixtures; the DELIVERY half is a device
         // check, run by opening Diagnostics on a phone.
@@ -1048,25 +1046,6 @@ enum ProbeHooks {
         Hook(key: "ascProbe") { _, _ in
             Task { @MainActor in await ASCIngest.diagnose() }
         },
-        // `-ascRoomProbe YES` — what the App Store Connect room LEADS with
-        // (2026-08-06, prd §324): every stored standing, then the card's own
-        // headline and ranked rows. One NSLog per line (the `-todayProbe`
-        // truncation lesson). Spends NOTHING — it composes the card off stored
-        // standings exactly as the room does, so it works against whatever the
-        // last real sync left behind and needs no key.
-        //
-        // An empty head has four causes that render as one nothing: not
-        // connected, no pass has run on this device (a fresh install syncs rows
-        // but not UserDefaults, so the feed is full and the standings empty),
-        // the key sees no apps, or the standings failed to decode. Only the
-        // last is a bug. The `ascStanding|` lines are the raw reading BEFORE
-        // ranking, so a card that led with the wrong app can be told from one
-        // whose data was already wrong.
-        Hook(key: "ascRoomProbe") { _, _ in
-            for line in ASCRoomSource.probeLines() {
-                NSLog("[Casberi] ascRoom| %@", line)
-            }
-        },
         // AWS takes THREE credentials, App Store Connect's shape — declared
         // BEFORE `-awsProbe` since hooks run in list order and a signed
         // request needs all three.
@@ -1120,22 +1099,6 @@ enum ProbeHooks {
         Hook(key: "awsRoomProbe") { _, _ in
             for line in AWSRoomSource.probeLines() {
                 NSLog("[Casberi] awsRoom| %@", line)
-            }
-        },
-        // `-cursorRoomProbe YES` — the Cursor room head's reading, one line at
-        // a time (2026-08-08, prd §340). An empty head has five causes that
-        // render as one nothing, and only the last two are bugs: not
-        // connected, fewer than two placed runs (the healthy new-connection
-        // case), everything still in flight, a run whose repository could not
-        // be named, or the outcome falling back to title-parsing on rows that
-        // should carry the tag. `CursorRoomSource.probeLines` names which.
-        Hook(key: "cursorRoomProbe") { _, context in
-            var descriptor = FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == "Cursor" })
-            descriptor.fetchLimit = 200
-            let rows = (try? context.fetch(descriptor)) ?? []
-            for line in CursorRoomSource.probeLines(things: rows) {
-                NSLog("[Casberi] %@", line)
             }
         },
         // The three WALLET-RIDING room heads (2026-08-10, prd §349). Each rides
@@ -3679,27 +3642,8 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-connectionsProbe YES` — the address book's connections card
-        // (2026-08-03, prd §295), phase by phase: how many wallets are
-        // watched, how many transfers survived each exclusion, the headline,
-        // then one `connRow|` line per connected address and one
-        // `connWallet|` per wallet it reaches.
-        //
-        // One NSLog per line (the `-todayProbe` truncation lesson). It exists
-        // because an empty card has FOUR causes that render as the same
-        // silence — fewer than two wallets watched, no landed transfers, every
-        // address reaching exactly one wallet (the honest common case), or an
-        // exclusion eating them — and only the last is a bug. The
-        // `excludedFlagged`/`excludedMachinery` tallies are what separate them
-        // in one launch. Pair with `-walletAddress` (twice, on two launches —
-        // the hook fires once per run).
-        Hook(key: "connectionsProbe") { _, context in
-            Task { @MainActor in
-                for line in AddressConnections.probeLines(context: context) {
-                    NSLog("connections| %@", line)
-                }
-            }
-        },
+        // (`-connectionsProbe` is deleted with `AddressConnections`, prd §1041:
+        // the connections reading lost its last surface with the Accounts tile.)
         // `-userOpProbe YES` — who actually paid (2026-08-03, prd §293). Walks
         // the wallet's recent outgoing transactions, re-reads each receipt and
         // NSLogs one `userOp|` line per transaction naming the attribution the
@@ -4076,46 +4020,6 @@ enum ProbeHooks {
                 NSLog("SOL name probe: %@ -> %@", spec, address ?? "UNRESOLVED")
             }
         },
-        // `-corpusDupeProbe YES` reports any sourceRef the corpus holds TWICE.
-        // `Thing.sourceRef` carries no unique constraint, so every bridge's
-        // dedupe rests entirely on its own `existing.contains(ref)` check — and
-        // re-landing is the wallet path's historical bug class (the swap-legs
-        // fix of 2026-07-13 exists for exactly this). A standing probe turns
-        // "did it re-land?" from an argument into a number.
-        // `-scopeMaterialProbe YES` — what each brief scope actually HAS to
-        // draw with (2026-08-10). Written before building the four new scope
-        // visualizations rather than after, because every one of them rests on
-        // a field being populated often enough to make a shape, and "does the
-        // corpus carry this" is exactly the question that gets assumed and
-        // turns out false (§313's treemap counting t.co, §307's topicSource
-        // returning nil for X). One line per scope: how many things, how many
-        // carry a picture, a face, a deadline, a release-shaped event.
-        //
-        // Counts only — never a title, a handle or a URL. This walks somebody's
-        // whole corpus, and a probe that prints what is in it is a probe nobody
-        // can safely run in a sweep (`-secretScanProbe`'s own rule).
-        Hook(key: "scopeMaterialProbe") { _, context in
-            let all = ((try? context.fetch(FetchDescriptor<Thing>())) ?? []).live
-            let now = Date.now
-            for scope in BriefScope.scopes {
-                let sources = Set(BridgeCatalog.offers
-                    .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == scope }
-                    .map(\.name))
-                let mine = all.filter { sources.contains($0.source) }
-                // A PICTURE is any of the three the app can actually draw —
-                // stored bytes, a preview URL, or a post's own image list.
-                let pics = mine.filter {
-                    $0.previewImageData != nil || !($0.previewImageURL ?? "").isEmpty
-                        || !$0.imageURLs.isEmpty
-                }
-                let faces = mine.filter { !($0.authorAvatarURL ?? "").isEmpty }
-                let named = Set(mine.compactMap { $0.authorHandle ?? $0.postAuthor })
-                let due = mine.filter { $0.mark != .done && $0.dueAt != nil }
-                let ahead = due.filter { ($0.dueAt ?? .distantPast) >= now }
-                NSLog("scopeMaterial| %@ things=%d pics=%d faces=%d people=%d due=%d ahead=%d",
-                      scope, mine.count, pics.count, faces.count, named.count, due.count, ahead.count)
-            }
-        },
         // `-sheetShapeProbe YES` — CAN THE DEMO REACH EVERY SHEET ANATOMY?
         //
         // Five anatomies decide what a thing sheet IS, each by a DATA test
@@ -4259,22 +4163,12 @@ enum ProbeHooks {
                 NSLog("[Casberi] sheetShape| %@ = %d", key, n)
             }
         },
-        // `-agentNoticeProbe YES` — today's deterministic notice (prd §384),
-        // or the honest reasons there isn't one. Clears the day stamp first so
-        // a probe run always re-observes; the once-ever ledger is NOT cleared
-        // (that's the behaviour under test — a notice re-firing daily is the
-        // bug this exists to catch). Logs the line, the kind key and the
-        // evidence count; never a full title beyond what the line itself says.
-        Hook(key: "agentNoticeProbe") { _, context in
-            UserDefaults.standard.removeObject(forKey: "agent.noticed.day")
-            AgentNoticed.shared.refresh(context: context)
-            if let n = AgentNoticed.shared.notice {
-                NSLog("[Casberi] agentNotice| line=%@", n.line)
-                NSLog("[Casberi] agentNotice| key=%@ evidence=%d", n.key, n.ids.count)
-            } else {
-                NSLog("[Casberi] agentNotice| none (no anniversary, no cross-source tag today, no record day — or all already shown once)")
-            }
-        },
+        // `-corpusDupeProbe YES` reports any sourceRef the corpus holds TWICE.
+        // `Thing.sourceRef` carries no unique constraint, so every bridge's
+        // dedupe rests entirely on its own `existing.contains(ref)` check — and
+        // re-landing is the wallet path's historical bug class (the swap-legs
+        // fix of 2026-07-13 exists for exactly this). A standing probe turns
+        // "did it re-land?" from an argument into a number.
         Hook(key: "corpusDupeProbe") { _, context in
             let refs = ((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
                 .compactMap(\.sourceRef)
@@ -5667,26 +5561,15 @@ enum ProbeHooks {
                       code?.userCode ?? "nil (start failed)", code?.interval ?? 0)
             }
         },
-        // `-wipeAccessProbe YES` runs the Delete-access internals (vault-wide
-        // credential wipe + MCP pairing reset) and logs before/after state —
+        // `-wipeAccessProbe YES` runs the Delete-access internals (the
+        // vault-wide credential wipe) and logs before/after state —
         // the tray's confirm is the same code with consent in front.
         Hook(key: "wipeAccessProbe") { _, _ in
             let sampled = [TokenBridge.todoist.tokenKey, AgentProvider.anthropic.vaultKey]
             let before = sampled.filter { TokenVault.get($0) != nil }.count
             TokenVault.deleteAll()
-            MCPPairing.reset()
             let after = sampled.filter { TokenVault.get($0) != nil }.count
             NSLog("Wipe access probe: sampled credentials %d before → %d after", before, after)
-        },
-        // `-intentProbe "<query>"` runs the Shortcuts intents' shared corpus
-        // matcher (IntentCorpus.match — Search/Ask ground on it) and logs the
-        // hits, so the intent path verifies without driving the Shortcuts app.
-        Hook(key: "intentProbe") { query, _ in
-            Task { @MainActor in
-                let hits = (try? IntentCorpus.match(query, limit: 5)) ?? []
-                NSLog("Intent probe: %d hits — %@", hits.count,
-                      hits.map { "\($0.title) (\($0.source))" }.joined(separator: " · "))
-            }
         },
         // `-seedThing "Source:delay"` lands a link thing for that source
         // after the delay — flips the chip's "new" ring mid-visit exactly
@@ -6617,76 +6500,6 @@ enum ProbeHooks {
                 NSLog("[Casberi] cursorPRSync: %d row(s) resolved", changed)
             }
         },
-        // `-mcpServe YES` — turn the loopback MCP listener on and hand a test
-        // client what it needs to reach it (2026-08-08, prd §340).
-        //
-        // This exists because `MCPServer` could not be measured at all. It
-        // compiles out everywhere but Catalyst, so no simulator can exercise
-        // it; its switch lives in a Mac settings row, so no headless run can
-        // reach it; and its pairing token is written to the DATA-PROTECTION
-        // keychain, which `security(1)` cannot read — three separate walls
-        // between a listener that says it is unproven and anything that could
-        // prove it.
-        //
-        // **The token is written to a FILE, never logged.** It is the
-        // credential — `MCPServerRow` copies it with `DSPasteboard.
-        // copySensitive` for that reason — so this follows `-macSnapshot`'s
-        // rule that the log line names the PATH and the value stays out of it.
-        // Under DEBUG only, so it cannot ship; and the path is inside the
-        // app's own container, which nothing else can read.
-        Hook(key: "mcpServe") { _, _ in
-            #if targetEnvironment(macCatalyst)
-            MCPServer.isEnabled = true
-            MCPServer.shared.start()
-            // The listener reaches `.ready` on its own queue, so a census
-            // taken synchronously here reports "not running" on a listener
-            // that is seconds from being fine — the reason this waits before
-            // it reports rather than reporting twice.
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(2))
-                let server = MCPServer.shared
-                NSLog("[Casberi] mcpServe| endpoint=%@ running=%@ error=%@",
-                      MCPServer.endpoint,
-                      server.running ? "YES" : "no",
-                      server.lastError ?? "—")
-                let path = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("mcp-pairing-token").path
-                do {
-                    try MCPPairing.token().write(toFile: path, atomically: true,
-                                                 encoding: .utf8)
-                    NSLog("[Casberi] mcpServe| tokenFile=%@", path)
-                } catch {
-                    NSLog("[Casberi] mcpServe| tokenFile FAILED: %@",
-                          error.localizedDescription)
-                }
-            }
-            #else
-            NSLog("[Casberi] mcpServe| Catalyst only — there is no listener on this platform")
-            #endif
-        },
-        // `-quickActionProbe YES` — the "Daily Brief" quick action's LANDING,
-        // without a long press (2026-08-14). Fires `QuickAction.receive` after
-        // the launch activation has already drained everything, so the only
-        // door left is the warm one: the `QuickAction.received` observer on
-        // `RootShell`'s body. A pass logs `quickAction:` then `briefRequest:`
-        // and the agent rises on the brief.
-        //
-        // **A green probe is NOT evidence the quick action works.** It
-        // exercises the half that lives in this process; the half it cannot
-        // reach is UIKit's delivery into `SceneDelegate`, and that delivery is
-        // exactly where this feature was broken from the day it shipped
-        // (2026-08-03) until 2026-08-14 — an app-delegate callback a
-        // scene-based app never calls. No simulator gesture can long-press a
-        // Home Screen icon, so that half is verifiable on a device and nowhere
-        // else. The probe's value is that it makes the OTHER half provable, so
-        // a future report can be narrowed to one side in a single launch.
-        Hook(key: "quickActionProbe") { _, _ in
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(3))
-                QuickAction.receive(UIApplicationShortcutItem(
-                    type: QuickAction.dailyBrief, localizedTitle: "Daily Brief"))
-            }
-        },
         // `-framesProbe YES` — the Frames devnet's read, phase by phase, then
         // ONE LINE PER FRAME of the newest frame transaction (the
         // `-todayProbe` truncation lesson: a joined multi-line NSLog gets cut
@@ -7057,27 +6870,6 @@ enum ProbeHooks {
              ? CardPointersRoomSource.compose(things: things).map {
                 "\($0.headline) · \($0.deadlines.count) deadlines"
              } : nil)
-        // Unlike the three above this one DOES read `things` (the
-        // runs ARE the subject — see `CursorRoomSource`'s own note),
-        // so the gate here is belt-and-braces rather than the whole
-        // correctness: `compose` already filters to `source ==
-        // CursorRoomSource.source` internally, and would return nil
-        // for any other room's `things` on its own. Gated anyway, so
-        // this line reads the same way as its three neighbours.
-        note("cursorHead", source == CursorRoomSource.source
-             ? CursorRoomSource.compose(things: things).map {
-                "\(CursorRoom.headline($0)) · \($0.repos.count) repos"
-             } : nil)
-        // The remaining CODE head. `githubHead` went with the §401 card
-        // (user ruling, 2026-09-11 — the GitHub room draws no head at
-        // all now); `radicleHead` reads NO rows and is the only line in
-        // this block that doesn't: its subject is bridge state, since no
-        // landed row can say a patch is still unresolved (`ASCRoomSource`'s
-        // situation, and the `appStoreConnect` line's).
-        note("radicleHead", source == RadicleRoomSource.source
-             ? RadicleRoomSource.compose(things: things).map {
-                "\($0.items.count) open · \($0.repos) repos · \($0.drafts) drafts"
-             } : nil)
         // The three wallet-riding heads (2026-08-10, prd §349). Like
         // `cursorHead` these read `things` — the fills, the deposits
         // and the spends ARE the subject — so each `compose` would
@@ -7124,21 +6916,9 @@ enum ProbeHooks {
                 + " · \($0.awaitsYouCount) awaiting you · \($0.readyCount) ready"
                 + " · \($0.contestedCount) contested"
              } : nil)
-        // Three more per-source heads that shipped without a line
-        // here — exactly the drift this probe's own header warns
-        // against, and exactly how it was found (2026-08-10): a
-        // `-roomInsightProbe` sweep across every `SourceHead` case
-        // reported "leads with NOTHING" for all three, which read as
-        // three demo gaps until this probe's own card list turned
-        // out to be the thing that had drifted, not the demo.
-        note("appleWallet", source == AppleWalletBridge.sourceName
-             ? AppleWalletRoomSource.compose(things: things).map {
-                "\($0.headline) · \($0.merchants.count) merchants"
-             } : nil)
-        note("appStoreConnect", source == ASCShape.source
-             ? ASCRoomSource.compose(things: things).map {
-                "\(ASCRoom.headline($0)) · \($0.apps.count) apps"
-             } : nil)
+        // `cursorHead`, `radicleHead`, `appleWallet` and `appStoreConnect` are
+        // deleted with their models (2026-10-01): no view had drawn them since
+        // §749/§751, and those rooms lead with their newest thing.
         // `instagramHead` is deleted with its model (prd §821): the Instagram
         // room leads with its newest thing and never had a drawn head since §751.
         // The journal and agent heads (§398, §457) are DELETED (prd §832):

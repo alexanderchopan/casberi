@@ -27,70 +27,6 @@ extension FeedScreen {
     /// that the board has always been a partial answer with nothing saying so.
     /// The list is where the rest live, which is the other reason it belongs
     /// here rather than behind a door.
-    /// **§295'S OWN READING, IN THE SCOPE IT NEVER HAD (prd §689).**
-    ///
-    /// `AddressConnections.map(context:)` is the adapter that has been
-    /// running all along — it builds the edges while the models are live and
-    /// hands back a value, which is what keeps this immune to the liveness
-    /// crash class rather than merely guarded against it (CLAUDE.md
-    /// corollaries 1–6).
-    @ViewBuilder var walletActivitySection: some View {
-        Section {
-            RoomActivityChart(dates: visible.map(\.capturedAt),
-                              box: DSRoomChassis.visualSlot)
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.contentGap,
-                                          trailing: DSRoomChassis.inset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        }
-    }
-
-    @ViewBuilder var walletConnectionsSection: some View {
-        Section {
-            // Your accounts, face by face; a face is the account picker too,
-            // writing the same scope the menu under the tiles does (prd §941).
-            RoomAccountsFaces(
-                faces: WalletStore.shared.addresses.map {
-                    .init(id: $0.address, name: $0.label.isEmpty ? $0.short : $0.label)
-                },
-                selected: chrome.walletScope,
-                onPick: { picked in
-                    withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
-                })
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.contentGap,
-                                          trailing: DSRoomChassis.inset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        }
-    }
-
-    /// The wallets you watch — what each IS and how it relates, never what it
-    /// holds: Holdings owns that, one chip away (prd §689).
-    @ViewBuilder var walletAccountsListSection: some View {
-        let map = AddressConnections.map(context: modelContext)
-        // `WalletStore.shared.addresses` is the same watched set the map is
-        // built from — one source, so a row can never name a wallet the spine
-        // has never heard of.
-        let rows = WalletStore.shared.addresses.map { wallet in
-            RoomAccountsRows.Row(
-                key: AddressBook.key(for: wallet.address),
-                address: wallet.address,
-                name: wallet.label.isEmpty ? wallet.short : wallet.label,
-                kind: nil,
-                unreached: false)
-        }
-        if !rows.isEmpty {
-            Section {
-                RoomAccountsRows(rows: RoomAccountsRows.list(rows, map: map,
-                                                              scope: selectedWallet.map(AddressBook.key(for:))))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
-
     @ViewBuilder
     var walletTokenListSection: some View {
         if let portfolio, !portfolio.isEmpty {
@@ -178,27 +114,25 @@ extension FeedScreen {
     /// halves. Splitting those is worth doing deliberately, not as a side
     /// effect of a layout pass.
     @ViewBuilder
-    func walletScopeVisualSection(_ section: WalletSection) -> some View {
+    func walletScopeVisualSection(_ section: WalletSection, upcoming: [Thing] = []) -> some View {
         switch section {
         // Home's drawing is the sparkline, which the crown draws itself — so
         // this slot is already filled there rather than empty.
         case .home:        EmptyView()
+        // Coming up's emptiness is the room's upcoming rows, which only the
+        // caller holds (one `walletUpcoming` pass, prd §1041).
+        case .comingUp where upcoming.isEmpty:
+            WalletScopeEmptyFigure(section: .comingUp)
+        case .comingUp:    walletComingUpFigure(upcoming)
         // **THE EMPTY STATE IS IN THE SLOT (prd §611, §610's ruling carried
         // here).** The five standing scopes
         // had nothing at all, so a chip onto Positions on a wallet with no
         // positions opened 258 blank points.
         case _ where walletScopeIsEmpty(section):
             WalletScopeEmptyFigure(section: section)
-        // **THE FAMILY'S ACTIVITY CHART (prd §690, user: "Home Activity chart
-        // could be same chart the devnets have").** §483 kept the band here so
-        // Activity carried no second value figure; the band moves to Home and
-        // that substance holds — this slot draws WHEN, like the other four.
-        case .activity:    walletActivitySection
+        // A verb is never a page (prd §1039): `resolve` never lands here.
+        case .follow:      EmptyView()
         case .holdings:    holdingsBlockSection
-        // **§295 RESTORED (prd §689).** "N of your addresses are connected"
-        // drew at the foot of the Wallet manager until that screen went; the
-        // model never stopped running. This is its slot.
-        case .accounts:    walletConnectionsSection
         case .positions:   walletCompositionSection
         // **THE RANKED BARS LEAD, NOT "Worth a look"** (prd §483, 2026-08-26).
         // The warnings row is a ROW — one line with a chevron — so in a 210pt
@@ -227,72 +161,49 @@ extension FeedScreen {
     /// slower.
     static var walletVisualSlot: CGFloat { DSRoomChassis.visualSlot }
 
-    /// THE ROOM'S CHROME, AND THERE IS NO BAR IN IT (prd §747, 2026-09-15).
-    ///
-    /// Was `walletScopeRailSection` — the fused rail slab (§547), one deck of
-    /// faces over one deck of chips. Two complaints killed it and both were
-    /// measurable rather than matters of taste: a watched wallet's name cut at
-    /// ten characters (`accountle…` beside `alexanderc…`, on a roster whose
-    /// names differ only past the cut), and a scope was a 12pt word with no
-    /// rest fill under it, which is a caption's size and a caption's weight
-    /// for what the user rightly called *"a category of the wallet"*.
+    /// THE ROOM'S CHROME: the box, the tiles, the account menu (prd §1039).
     ///
     /// `DSRoomScopeChrome` carries the whole ruling; what lives here is the
-    /// wallet's own three answers to it.
+    /// wallet's own answers to it — its accounts, its crown, its figures, and
+    /// its one verb.
     ///
-    /// **The accounts.** Whole names, never shortened by this caller — the
-    /// card exists to have room for one. "All" leads, as the rail's own All
-    /// slot did, and says what it is made of rather than repeating the word.
+    /// **The accounts.** Whole names, never shortened by this caller. "All"
+    /// leads and says what it is made of rather than repeating the word.
     ///
-    /// **The crown rides the card.** `walletTilesSection` is the room's
-    /// identity and it reads the CURRENT pick, so it draws on the card that
-    /// is showing and the neighbours reserve its box. KNOWN, and named rather
-    /// than hidden: a card mid-drag shows its head over an empty crown box
-    /// until the page settles, because the crown's inputs (`portfolio`,
-    /// `walletLive`, `selectedWallet`) are room state and not parameters. The
-    /// fix is to thread a scope through `walletTilesSection` and its four
-    /// sources, which is a change to the READING layer and does not belong in
-    /// the pass that moves the chrome.
-    ///
-    /// **The act.** Watching a wallet had no door in the room at all — the
-    /// only one is `WalletWatchField` on the account page, five taps away
-    /// behind the room gear (user, 2026-09-15: *"the wallets follow button is
-    /// missing and that's a fail"*). This is a DOOR to that field and not a
-    /// second field, so §466's "one way to watch a wallet" is intact: the row
-    /// pushes `WalletScreen`, exactly as the four bridge setup screens' own
-    /// slabs do.
-    ///
-    /// **It says "Follow address", which is the user's word and not the app's
-    /// existing one** (2026-09-15, ruling on the first cut: *"as for watch a
-    /// wallet i would say follow address"*). The four setup screens still say
-    /// `Watch a wallet` for this same destination — a drift worth closing, and
-    /// a wider change than this pass.
-    ///
-    /// It rides the ALL card only, like every act in this family: following is
-    /// something the ROOM does, not something one account does.
+    /// **The verb is the LAST tile, "Follow" (prd §1039; the row said "Follow
+    /// address", the user's word from 2026-09-15, and a tile carries one).**
+    /// It does what the Actions row did: push `WalletScreen`, whose watch field
+    /// is §466's one way to watch a wallet. Every page offers it, the All page
+    /// and each account's (prd §774): following is the room's act.
     @ViewBuilder
     func walletScopeChromeSection(_ active: WalletSection,
                                   visible: [Thing],
+                                  upcoming: [Thing],
                                   streamTotal: Int) -> some View {
-        // ONE pass, read eight times — see `walletScopeReadings`.
-        let readings = walletScopeReadings(streamTotal: streamTotal)
         Section {
             DSRoomScopeChrome(
                 source: "Wallet",
                 sections: chrome.walletSections,
+                verbs: WalletSection.verbs,
                 active: active,
                 home: .home,
                 attention: chrome.walletSectionAttention,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
-                // everything below and settles it back.
-                onPick: { picked in chrome.walletSection = picked },
+                // everything below and settles it back. A verb acts and never
+                // scopes (GitHub's Watch, prd §1031).
+                onPick: { picked in
+                    if picked == .follow {
+                        route.pushBridge(.wallet)
+                        return
+                    }
+                    chrome.walletSection = picked
+                },
                 accounts: walletAccountSlots,
                 scope: chrome.walletScope,
                 onPickAccount: { picked in
                     withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
                 },
-                reading: { readings[$0] },
                 crown: { slot in
                     // **THE BOX IS BACK ON HOME (prd §760, reversing §757's
                     // drop).** Every room's lead is held to this height now, and
@@ -308,34 +219,8 @@ extension FeedScreen {
                     // `reservesHeadline: false` (prd §495): Wallet's figures
                     // name themselves inside their own drawing.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        walletScopeVisualSection(scope)
+                        walletScopeVisualSection(scope, upcoming: upcoming)
                     }
-                },
-                acts: { slot in
-                    // A ROW, not a slab (prd §750): the verb in the room's
-                    // tint, its glyph at the row's 26pt lead, the same insets
-                    // as the readings under it. The sentence that sat under
-                    // it ("Paste an address, or connect a wallet app") is
-                    // what the setup screen's field says — §748's cut.
-                    // Every page, the All page and each account's (prd §774):
-                    // following another address is the room's act, and the
-                    // Actions block is drawn on whichever page is showing.
-                    DSPushRow(title: Text("Follow address"),
-                              tint: DS.tint,
-                              action: { route.pushBridge(.wallet) }) {
-                        // The same 26pt disc as the devnet verbs and the
-                        // Readings rows under it (§752b), so all three share
-                        // one leading column and one look.
-                        ZStack {
-                            Circle().fill(DS.fillFaint)
-                                .frame(width: DS.Face.row, height: DS.Face.row)
-                            Image(systemName: "eye")
-                                .accessibilityHidden(true)
-                                .dsGlyph(.caption, weight: .semibold)
-                                .foregroundStyle(DS.tint)
-                        }
-                    }
-                    .dsScopeRow()
                 }
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
@@ -372,62 +257,6 @@ extension FeedScreen {
                 sub: addr.label.isEmpty ? nil : WalletStore.shortAddress(addr.address),
                 faces: [.wallet(address: addr.address)])
         }
-    }
-
-    /// WHAT EACH SCOPE HOLDS, BEFORE YOU OPEN IT (prd §747).
-    ///
-    /// The row's right-hand fact. §611 put every scope on every wallet on the
-    /// rule that a chip onto a sentence teaching the scope beats a chip onto
-    /// nothing — but a chip could only keep that promise AFTER the tap. A row
-    /// keeps it before, and an empty scope answers with the same
-    /// `emptyHeadline` its slot would have drawn, so the two never disagree.
-    ///
-    /// **Built ONCE per body pass, as a map.** The obvious shape — a
-    /// `(WalletSection) -> String?` the rows call — runs eight times a render,
-    /// and three of these answers are a fetch (`AddressConnections.map`, the
-    /// permissions holders, the risk scale). That is the cost class
-    /// `row-cost-audit.py` exists to catch, so the work happens here and the
-    /// rows read a dictionary.
-    ///
-    /// Absent, never empty-string, where the room genuinely cannot say it
-    /// cheaply: a row with no fact still opens, and a fact that guesses is
-    /// worse than none (§83).
-    func walletScopeReadings(streamTotal: Int) -> [WalletSection: String] {
-        var out: [WalletSection: String] = [:]
-        for section in chrome.walletSections where section != .home {
-            if walletScopeIsEmpty(section) {
-                out[section] = section.emptyHeadline
-                continue
-            }
-            switch section {
-            case .home:
-                break
-            case .activity:
-                out[section] = String(localized: "\(streamTotal) moves")
-            case .holdings:
-                out[section] = String(localized: "\(blockStream.els.count) tokens")
-            case .accounts:
-                // The accounts you follow (prd §948) — the crown's own number.
-                let n = WalletStore.shared.addresses.count
-                out[section] = n == 1 ? String(localized: "1 account") : String(localized: "\(n) accounts")
-            case .positions, .nfts:
-                // Both are counted by the figure they open onto and by nothing
-                // cheap here: the positions card is assembled from four live
-                // reads and the NFT shelf from a per-address fetch. A row with
-                // no fact is honest; a row with a stale one is not.
-                break
-            case .risk:
-                let count = (walletRiskEntries ?? []).count
-                if count > 0 { out[section] = String(localized: "\(count) to watch") }
-            case .permissions:
-                let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
-                                                              acting: walletLive.acting)
-                if !holders.isEmpty {
-                    out[section] = String(localized: "\(holders.count) live approvals")
-                }
-            }
-        }
-        return out
     }
 
     /// The composition strip, lifted OUT of the crown card and into the
@@ -685,12 +514,9 @@ extension FeedScreen {
     /// acting on it, so it reads the section's own holders.
     func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
         switch section {
-        case .home:        return false
-        case .activity:    return false
+        // Coming up is decided where its rows are in hand (`upcoming`).
+        case .home, .follow, .comingUp: return false
         case .holdings:    return blockStream.els.isEmpty
-        // **EMPTY IS "NO ACCOUNTS" (prd §948)** — the crown is your accounts
-        // face by face, so it has something to draw whenever you follow one.
-        case .accounts:    return WalletStore.shared.addresses.isEmpty
         case .positions:   return !(hasLendingCard
                                     || !walletLive.uniswap.isEmpty
                                     || !walletLive.hyperliquid.positions.isEmpty)
@@ -714,18 +540,12 @@ extension FeedScreen {
         }
     }
 
-    /// **THE DOOR AN EMPTY LIST CARRIES, where it is the remedy (prd §771).**
-    /// Holdings and Activity fill by following an address; the same row
-    /// Home's Actions draw, so it is one verb in one look.
-    var walletFollowDoorSection: some View {
-        Section {
-            DSPushRow(title: Text("Follow address"), tint: DS.tint,
-                      action: { route.pushBridge(.wallet) }) {
-                walletDoorLead("eye")
-            }
-            .modifier(WalletDoorRow())
-        }
-    }
+    // **THE FOLLOW DOOR UNDER AN EMPTY LIST IS DELETED (prd §1039).** §771
+    // put "Follow address" under an empty Activity or Holdings list, where it
+    // was the remedy and the only door in reach. Follow is a tile on every page
+    // now, directly above the list, and a second control for one consequence
+    // two inches below it is §190's "two doors, one place". NFTs keep theirs:
+    // Choose collections is no tile.
 
     /// NFTs fill by choosing collections for the wallet in scope.
     @ViewBuilder
@@ -1221,10 +1041,6 @@ extension FeedScreen {
         }
     }
 
-    /// How many deadlines the room shows at once. Small on purpose: this is
-    /// the head of a history feed, not an agenda.
-    static let walletUpcomingRows = 3
-
     /// What's still ahead in this room — the in-scope things carrying a future
     /// `dueAt`, soonest first (2026-07-31).
     ///
@@ -1243,69 +1059,47 @@ extension FeedScreen {
     /// Which is the whole problem: a weekly vote deadline and a lock expiry
     /// are the two rows in this room where being late is the only failure
     /// mode, and they were the two least likely to be seen.
+    ///
+    /// **THEY ARE THE "COMING UP" SCOPE NOW, AND HOME IS ONLY WHAT HAPPENED
+    /// (prd §1041, user: "its own tile").** Every one, uncapped — the
+    /// three-row cap was for the head of a history feed, and this is a scope
+    /// of its own — soonest first, which is the point of the scope. They
+    /// leave Home's stream whole, so a deadline is never read as a move.
     func walletUpcoming(_ visible: [Thing]) -> [Thing] {
         let now = Date.now
-        return Array(visible.live
+        return visible.live
             .filter { ($0.dueAt ?? .distantPast) > now }
             .sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
-            .prefix(Self.walletUpcomingRows))
     }
 
-    /// "Coming up" — the room's deadlines, in its own card and its own row
-    /// shape. Renders nothing when nothing is due, like every other section
-    /// here (the honesty floor: no empty parcel holding a slot).
-    ///
-    /// A card rather than bare rows on the page, even though these ARE landed
-    /// things and the room's other cards are live state. What decides it is
-    /// what the reader is being asked to do: everything below is history to
-    /// scroll, and this is a standing fact to act on — the same register as
-    /// the cards above, and putting it on the page would make it read as the
-    /// top of the stream, which is exactly the misreading that buried these
-    /// rows in the first place.
+    /// **COMING UP'S BOX (prd §1041): the next one, and the spread.** No new
+    /// figure: the next item's title over its countdown (`dueLine`, the
+    /// cover's own formatting), over `WalletRunwayRail` — the drawing the
+    /// CardPointers head already uses for deadlines, whether they are bunched
+    /// or spread (§417). Nothing due draws the scope's empty state instead
+    /// (§769, `walletScopeVisualSection`).
     @ViewBuilder
-    func walletComingUpSection(_ upcoming: [Thing]) -> some View {
-        if !upcoming.isEmpty {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    // No label of its own since 2026-08-20: the group header
-                    // directly above says "Coming up", and this card is the
-                    // only thing under it (§208 — never say one thing twice).
-                    // Every other card here keeps its label, because every
-                    // other card has siblings to be told apart from.
-                    //
-                    // The rail says what the rows can't: whether these are
-                    // bunched or spread (prd §417). Dates are read here, while
-                    // the models are known live, and handed on as plain values
-                    // — `WalletRunwayRail` never holds a `Thing` (the build-188
-                    // leaf rule).
-                    WalletRunwayRail(dates: upcoming.compactMap { $0.isLive ? $0.dueAt : nil })
-                        .padding(.bottom, 2)
-                    // `keyed` for identity + `live` inside the closure before
-                    // any stored read (corollaries 1 and 3): this is a derived
-                    // array, and a heal's delete can land in the same graph
-                    // update that re-evaluates this closure.
-                    ForEach(upcoming.keyed) { row in
-                        if let thing = row.live {
-                            Button {
-                                DSHaptic.selection()
-                                feedSheet = .thing(thing, walk: .none)
-                            } label: {
-                                WalletRow(mark: .kind(thing.kind),
-                                          title: thing.title,
-                                          subtitle: Self.dueLine(thing))
-                            }
-                            .buttonStyle(RowPress())
-                        }
-                    }
+    func walletComingUpFigure(_ upcoming: [Thing]) -> some View {
+        if let next = upcoming.first(where: \.isLive) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(next.title)
+                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                if let due = Self.dueLine(next) {
+                    Text(due)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                 }
-                .padding(WalletCardStyle.pad)
-                .modifier(rowEntrance(5))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(WalletCardStyle.rowInsets)
+                Spacer(minLength: 0)
+                WalletRunwayRail(dates: upcoming.compactMap { $0.isLive ? $0.dueAt : nil })
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .accessibilityElement(children: .combine)
         }
     }
+
+    // `walletComingUpSection` — the deadlines' own card, drawn nowhere since
+    // §483 parked it — is deleted: Coming up is a scope now (prd §1041),
+    // its rows under the feed's day headers and its figure in the box.
 
     /// "Closes Thursday" / "In 3 weeks" — when the deadline lands, in the
     /// grain that's actually useful at that distance. Guarded internally
@@ -1431,7 +1225,22 @@ extension FeedScreen {
         // The same boundary the rest of the feed draws, over `FeedRow`'s own
         // stored dates — dropping it here would have quietly cost this room
         // its "new since" divider.
-        let boundary = boundaryID(in: groups)
+        walletDaySections(groups, boundary: boundaryID(in: groups), nextEventID: nextEventID)
+    }
+
+    /// **COMING UP'S LIST (prd §1041): soonest first, each row under the day
+    /// it falls due** — the one list in the room that reads forward, because
+    /// that is the scope's whole point. No "new since" divider: a due row's
+    /// `capturedAt` is when it was read, not news.
+    @ViewBuilder
+    func walletComingUpSections(_ upcoming: [Thing], nextEventID: UUID?) -> some View {
+        walletDaySections(walletComingUpDays(upcoming), boundary: nil, nextEventID: nextEventID)
+    }
+
+    /// The day sections both lists draw — the stream's and Coming up's.
+    @ViewBuilder
+    func walletDaySections(_ groups: [(String, [FeedRow])], boundary: String?,
+                           nextEventID: UUID?) -> some View {
         ForEach(Array(groups.enumerated()), id: \.element.0) { groupIndex, group in
             let (label, dayRows) = group
             // Rows in a day share ONE card silhouette (2026-07-21); a single
@@ -1563,6 +1372,19 @@ extension FeedScreen {
                                   bottom: DS.Space.s2, trailing: DS.Space.s4))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
+    }
+
+    /// The due rows grouped under the day each falls due, soonest first.
+    func walletComingUpDays(_ upcoming: [Thing]) -> [(String, [FeedRow])] {
+        var order: [String] = []
+        var groups: [String: [FeedRow]] = [:]
+        for thing in upcoming.live {
+            guard let due = thing.dueAt else { continue }
+            let label = dayLabel(due)
+            if groups[label] == nil { order.append(label) }
+            groups[label, default: []].append(.single(thing))
+        }
+        return order.map { ($0, groups[$0] ?? []) }
     }
 
     /// Day groups over the stream's rows, newest first — `dayGroups`' rule

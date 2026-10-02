@@ -1809,9 +1809,7 @@ struct ThingSheetView: View {
         case .chain:
             // The risk card itself, not a link to a website.
             if let chainID = L2beatWatch.chainID(from: thing) {
-                L2beatRiskCard(chainID: chainID,
-                               showsHeader: false,
-                               onDismissForAsk: { dismiss() })
+                L2beatRiskCard(chainID: chainID, showsHeader: false)
             }
         case .milestone:
             L2beatMilestoneHead(thing: thing)
@@ -1832,9 +1830,7 @@ struct ThingSheetView: View {
             // rows opened a generic sheet while the feature's primary surface was
             // reachable only from the setup screen and the directory.
             if let walletID = WalletbeatWatch.walletID(from: thing) {
-                WalletbeatReportCard(walletID: walletID,
-                                     showsHeader: false,
-                                     onDismissForAsk: { dismiss() })
+                WalletbeatReportCard(walletID: walletID, showsHeader: false)
             }
         case .incident:
             WalletbeatIncidentHead(thing: thing)

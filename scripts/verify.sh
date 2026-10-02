@@ -1569,15 +1569,6 @@ harness "Chat-import self-test" "chat-import self-test" "scripts/chatimport-self
 # it).
 harness "Claude Code import self-test" "claude code self-test" "scripts/claudecode-selftest.sh" "the Claude Code import self-test failed — run scripts/claudecode-selftest.sh"
 
-# The Cursor feed-room head (prd §340), compiled WHOLE and unmodified. Its
-# room is the one whose rows are grouped by a field the bridge stamps
-# elsewhere, so a nil head and a correct empty room look identical.
-harness "Cursor-room self-test" "cursor-room self-test" "scripts/cursor-room-selftest.sh" "the Cursor-room self-test failed — run scripts/cursor-room-selftest.sh"
-
-# The brief's two-column front page (prd §274) — the chapter parse, the ref
-# segments cut at each opener, and what spans full width. A mis-cut segment
-# lays out cleanly and silently drops or duplicates a chapter's refs.
-harness "Front-page self-test" "front-page self-test" "scripts/frontpage-selftest.sh" "the front-page self-test failed — run scripts/frontpage-selftest.sh"
 
 # Pure-logic self-test for the X work (prd §280). Static, no build, no
 # network: the archive importer was authored against no real X archive, and
@@ -3366,15 +3357,11 @@ else
     polarHead         "Polar"
     dodoHead          "Dodo Payments"
     posthogHead       "PostHog"
-    appleWallet       "Apple Wallet"
-    appStoreConnect   "App Store Connect"
-    cursorHead        "Cursor"
     peerHead          "Peer"
     privacyPoolsHead  "Privacy Pools"
     gnosisPayHead     "Gnosis Pay"
     railgunHead       "Railgun"
     safeHead          "Safe"
-    radicleHead       "Radicle"
     cardPointersHead  "CardPointers"
     walletbeatHead    "Walletbeat"
 

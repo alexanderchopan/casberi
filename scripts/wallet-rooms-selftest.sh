@@ -649,28 +649,9 @@ grep -q 'showsCount && !sizeCategory.isAccessibilityCategory' "$TMP/safequeue.sw
 grep -q 'sizeCategory.isAccessibilityCategory, entry.required > 0' "$TMP/safecard.swift" \
   || { echo "✗ the Safe card no longer carries the fraction when the ring stops drawing it — the count would be lost at an accessibility size"; exit 1; }
 
-# The widget half. A your-turn signature has NO due date, so it can never be a
-# WidgetDeadline without inventing one — and an invented date would sort among
-# real deadlines and draw itself late.
-grep -q 'static func safeCall(things:' "Casberi/Casberi/Model/WidgetPublish.swift" \
-  || { echo "✗ the Needs-you tile no longer receives the Safe signature call"; exit 1; }
-grep -q 'enum WidgetSafe {' "Casberi/Shared/WidgetPayload.swift" \
-  || { echo "✗ the WidgetSafe payload is gone"; exit 1; }
-# It is a READING, so it takes the short window. Sharing the deadlines' 36
-# hours would leave a count on the Home Screen a day and a half after it
-# stopped being true.
-grep -q 'static let freshness: TimeInterval = 6 \* 3600' "Casberi/Shared/WidgetPayload.swift" \
-  || { echo "✗ the Safe call no longer carries the READING freshness window — a stale count would sit on the Home Screen for 36 hours"; exit 1; }
-# "Nothing due" while a signature waits is the bug this payload exists to fix.
-# Since prd §877 the Today plan draws the signature as a needs-you row of its
-# own, so a tile with a waiting signature is never empty.
-grep -q 'kind: .signature(count: signing.awaitsYou)' "Casberi/Shared/WidgetPayload.swift" \
-  || { echo "✗ the Today tile no longer draws a waiting signature — it could say nothing while one waits on you"; exit 1; }
-
-# The brief's rung — the ONLY surface that can re-raise a your-turn signature,
-# since §306's news window forbids a second notification forever after.
-grep -q 'safeStuckLine(now: now)' "Casberi/Casberi/Model/TodayBrief.swift" \
-  || { echo "✗ the Today brief no longer carries the stuck-signature rung — a request nobody answered would have no surface at all after its landing day"; exit 1; }
+# The widget half (the Today tile's Safe call) and the brief's stuck-signature
+# rung went with the ask (2026-10-01). `SafeRoom.stuckLine` stays, read by
+# `-safeRoomProbe`; its logic is still pinned below.
 
 # The demo has to be able to SHOW all three states, or they ship unseen — the
 # standing demo-parity rule, and what verify.sh's room-head check reads.
@@ -1830,7 +1811,7 @@ check("a nonce the wire never carried names no position rather than inventing on
       SafeRoom.positionLabel(safeEntry("a", nonce: nil)) == nil)
 
 print("")
-print("Safe — the stuck-signature line the brief and the widget read")
+print("Safe — the stuck-signature line (the brief and the widget read it until 2026-10-01)")
 // A your-turn signature notifies ONCE at landing and §306's 36-hour news
 // window forbids a second buzz forever after, so this is the only surface that
 // can ever re-raise a request nobody answered.

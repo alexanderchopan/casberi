@@ -152,7 +152,9 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// Week is alphabetical and reads as nothing.
     /// All and the wallet family's Home stay first (user: leads stay), a
     /// verb (New) stays last because it is not a list, and everything
-    /// between sorts by the word the person reads, in their language. A lead
+    /// between sorts by the word the person reads, in their language.
+    /// **SEVERAL VERBS READ A–Z AMONG THEMSELVES (prd §1039)** — Frames
+    /// carries three (Create · Send · Top up), after every scope. A lead
     /// is known by its GLYPH: `room-kind-tiles-selftest.sh` holds every tile
     /// glyph to one meaning, so `ScopeTileGlyph.all` and `.home` can only be
     /// All and Home. Not "whatever is first": Calendar lists Today first and
@@ -168,8 +170,10 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         let tail = sections.filter { !isLead($0) && verbs.contains($0) }
         let middle = sections.filter { !isLead($0) && !verbs.contains($0) }
         guard !Scope.readsInTime else { return leads + middle + tail }
-        return leads + middle.sorted { $0.label.localizedStandardCompare($1.label) == .orderedAscending }
-            + tail
+        let byWord: (Scope, Scope) -> Bool = {
+            $0.label.localizedStandardCompare($1.label) == .orderedAscending
+        }
+        return leads + middle.sorted(by: byWord) + tail.sorted(by: byWord)
     }
 
     @ViewBuilder

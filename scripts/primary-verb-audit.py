@@ -19,8 +19,8 @@ need to not hand roll things."*
 ONE CHECK, static, no build:
 
     A Button whose label paints a FULL-WIDTH solid fill and holds a verb must
-    be drawn by a component — `DSSlabButton`, `DSActVerb`, `DevnetSendPanel`
-    or `DevnetCreatePanel`.
+    be drawn by a component — `DSSlabButton` or `DSActVerb`. (The devnet
+    panels left with the Actions block, prd §1039.)
 
 "Full-width" is the whole of what keeps this from crying wolf, and it was
 MEASURED rather than guessed. Dropping it takes the finding count on a clean
@@ -55,7 +55,7 @@ WHAT THIS DELIBERATELY DOES NOT CHECK, so it stays honest about its reach:
     tree, because an import page legitimately carries a download door AND a
     commit. §190's sentence is about weight, not arithmetic.
   · A fill built at runtime from a venue's own hue (`tint` as a passed-in
-    property). Those exist — `DevnetSendPanel` takes one — and they are
+    property). Those exist — `DSActVerb` takes one — and they are
     components already; a hand-rolled one would be missed. Stated rather than
     papered over.
 
@@ -74,7 +74,7 @@ SOURCES = [
     os.path.join(ROOT, "Casberi", "Casberi", "Design"),
 ]
 
-COMPONENTS = ("DSSlabButton", "DSActVerb", "DevnetSendPanel", "DevnetCreatePanel")
+COMPONENTS = ("DSSlabButton", "DSActVerb")
 
 EXEMPT_FILES = {
     # The components themselves: they ARE the hand-rolled fill, once, on

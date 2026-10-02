@@ -89,11 +89,11 @@ ALLOWANCE = {
     # holds the librarian disclosure (two exclusive branches, (c)), the ADP
     # line (a) and the redaction line (c); notifications its no-push ceiling (a).
     # The key card's provider disclosure left with the card (prd §871).
-    "AccountDetailSheet.swift": (5, "two settings cards; (a)(b)(c)"),
+    "AccountDetailSheet.swift": (4, "two settings cards; (a)(b)(c)"),
     # The usage card's two honesty lines (a), the librarian's never-shown line
     # (a), the budget control's three conditional lines (a)(b), and the Mac
     # MCP row's one sentence — four separate components in one file.
-    "AgentKeyDetail.swift": (7, "four components; (a)(b)"),
+    "AgentKeyDetail.swift": (5, "four components; (a)(b)"),
     # The rename field's destructive consequence, the empty card, and the name
     # nudge's consequence are three different surfaces of the address book.
     "AddressBookViews.swift": (3, "three surfaces; consequence of an edit (b)"),

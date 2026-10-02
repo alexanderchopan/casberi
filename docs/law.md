@@ -66,7 +66,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The lead has no count foot, and day headers show no counts (§914).
 - Every room opens on a lead, with no exception for a shape. A room's tiles never depend on its head (`standaloneLead`) (§911).
 - Kind tiles show when a pick would change the list (§822). Tiles keep their glyphs (§938).
-- Tiles read A–Z, with All/Home first and a verb (New, Watch) last (§995). Spans of time keep their given order (`readsInTime`) (§999).
+- Tiles read A–Z, with All/Home first and the verbs (New, Watch, Follow, Create · Send · Top up, Explorer) last, A–Z among themselves (§995, §1039). The Wallet's are Home · Coming up · Holdings · NFTs · Permissions · Positions · Risk · Follow (§1041). Spans of time keep their given order (`readsInTime`) (§999).
 - Tiles never rise: when nothing is open, the lead holds its empty well over the tiles (§979, §997).
 - Every empty state draws a skeleton of what would fill it (`.room`/`.list`). A door appears only where it is the remedy (§771).
 - Every connected seat keeps a room, empty or not. The exceptions are `LiveRoomSources.landsNothing`: Apple Intelligence, ETH Validators and the four exchanges (§1036).
@@ -104,7 +104,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - A key is connected in one place, the seat's own page. Settings holds no key (§871).
 
 ### 8. Catalogue (Apps)
-- Apps is the whole catalogue, with no Manage and no switcher. A connected row with a room is a status: no chevron, no tap. A connected seat with no room keeps its door (§1033, §1036).
+- Apps is the whole catalogue, with no Manage and no switcher. A connected row with a room is a status: no chevron, and its tap lands in its room (§1033, §1036, §1040). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns, Rocket Money and NerdWallet are on the Wallet shelf (§780c).
 - Markets is one app: Tokens plus Stocktwits' watched stocks. Every catalogue category is a company pack: Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted (§1000).
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
@@ -127,10 +127,10 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Tempo is on, read through Zerion only, with no native balance (§810). Arc rides Alchemy and Zerion (§808a). World Chain is on by default (§788).
 - A transfer with no timestamp is read off its block, and dropped if the block can't be read, never dated now (§790).
 - Holdings is a true-area treemap: the total alone, grey tiles showing mark and share, the tail as Other, blue when pressed (§939). A tile's mark is 0.3 of its shorter side, 16–56pt (§957).
-- Accounts crown: your accounts face by face. A face picks the account, the same scope as the menu (§941). Every room's Accounts is one shape, "Yours" (§954).
-- Activity is one row per move in time, with no in/out blocks (§942). NFTs show only full rows of art, then one row per picked collection (§943).
+- The Wallet has no Accounts or Activity tile: the menu under the tiles picks the account, and Home's list is only what happened, one row per move in time, with no in/out blocks (§942, §1039). What's ahead is its own tile, Coming up, soonest first (§1041). The connections reading is deleted with its model (§1041).
+- NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
-- Wallet-family Homes stand on the Wallet's lines (§953). Acts ride every page (§774). The wallet crowns draw a line, not a wash, and "Readings" is "Overview" (§1005).
+- Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows: the verbs are the last tiles, on every page, per §774's rule (§1039). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 
@@ -141,10 +141,10 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Safe reads go keyless through the Client Gateway (§789b).
 
 ### 12. Devnets (Frames, Logos)
-- Devnet rooms use the Wallet's shapes. Accounts: faces (§948). Holdings: a treemap over test money, a count and never a dollar total (§949). Activity: under the day, no ages (§950). Permissions: the Wallet's crown (§951). Frames: one column per transaction (§952).
-- Accounts split into On this phone, Watching, then Tied to yours (§964). Every devnet Home offers Create account (§774). No suggested addresses (§990).
+- Devnet rooms use the Wallet's shapes, and Home lists the moves (§1039; the Accounts and Activity tiles are gone). Holdings: a treemap over test money, a count and never a dollar total (§949). Moves: under the day, no ages (§950). Permissions: the Wallet's crown (§951). Frames: one column per transaction (§952).
+- Accounts split into On this phone, Watching, then Tied to yours (§964). Every devnet page offers Create, a tile (§774, §1039); Frames' own pages add Send and Top up. No suggested addresses (§990).
 - Frames runs on ethpandaops' frames-devnet-0. `FramesNetwork.current` is the one value that names the chain (§962).
-- Logos: watch a public LEZ account, keyless, forward from the watch. Never in the wallet total (§988). Your own node is read at the address you give, through GETs only (§989). The room is Home · Accounts · Activity · Node · Rewards (§991, §1016). Tickets are a count, and the phone never mines (§1016). A pasted public key resolves to its account (§1034). A reset is detected by block 1's hash and stated once (§1035).
+- Logos: watch a public LEZ account, keyless, forward from the watch. Never in the wallet total (§988). Your own node is read at the address you give, through GETs only (§989). The room is Home · Node · Rewards, then Explorer, a verb tile (§991, §1016, §1039). Tickets are a count, and the phone never mines (§1016). A pasted public key resolves to its account (§1034). A reset is detected by block 1's hash and stated once (§1035).
 
 ### 13. Notes and voice
 - Notes is a room in You, reached through one always-drawn door. Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
@@ -160,7 +160,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Casberi is not a notification app. Everything arrives in one digest per category, with one switch per category. Only a dispute, a deadline, a position near liquidation or a Safe signature stands alone (§770).
 - The digest goes out once each evening, half an hour before your usual first evening open, held inside 17:00–21:00 (18:00 with little history) (§809). There are no quiet hours; iOS Focus does that job (§870).
 - A digest is the place and one line: a count, a money figure, or the one thing that needs you (§883).
-- There are two widgets, Today (one list: needs you, replies, landed) and Wallet (§877).
+- The widgets are Wallet and the Quick Note control; the Today widget is deleted with the ask (§1047, §982).
 
 ### 15. Demo
 - A fresh install pours the furnished demo at once, under a cover with no controls. Any tap or drag lifts it (§620). The demo is marked once: a floating blue pill on every screen, All included (§946, §919).
@@ -169,11 +169,11 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Every surface the app can draw over a populated corpus also draws over the demo (§617).
 
 ### 16. Agents and the composer
-- The ask is dark behind one flag, `AskSurface.enabled = false`. The composer stays as the capture surface. Typed text never saves (§697b).
+- The ask is deleted (§1047): the on-device model reads (OCR, embeddings, Visual Intelligence) and never answers; no Today brief, kept asks, Ask/Search Shortcuts or Today widget. The composer keeps Find and the agents you chose. Typed text never saves.
 - Keyed agents (Bankr, Venice…) and Apple Intelligence are seats. Turning on Apple Intelligence ends in the composer (§833).
 - A conversation is a thing in its agent's room (§839). The room's tiles are All · Chat (§840).
 - Evidence handed to an agent must belong to the question asked (§843).
-- Outside agents get two doors: App Intents (a structured Find) and the app's own MCP tools for a paired client. Both pass `AccountReaders` (§855, §34, §639).
+- Outside agents get one door: App Intents' structured Find (§1025), through `AccountReaders` (§855). The MCP door is deleted with the ask (§1047).
 
 ### 17. Privacy and network reach
 - No server, no analytics. Every host the app reaches is declared in `NetworkReach`, and `network-reach-audit.sh` checks it (§205).
@@ -199,36 +199,21 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 
 ## Quietly outgrown (found while writing this digest)
 
-A later ruling replaced each of these without a phrase the generator can read, so the
-generated index below still lists them as live. They belong in prd.md's "Known stale,
-by hand" table.
-
-- §917's Wallet half (holdings as a circle pack) → §939 (true-area treemap). The pack stands for source maps.
-- §922 (devnet holdings as a pack "at mainnet prices") → §949 (treemap, count never a dollar total).
-- §766's foot ("N things since <month>") → §914 (deleted).
-- §744's 26pt lead and §902's 52pt head → §1017 (46pt lead, 60pt head).
-- §905/§905a's large tier at `heading40` → §1006 (`heading28`). §999's month title at `heading24` → §1006 (`heading20`).
-- §969/§980's Notes tile order (All · Pinned · Folders · New) → §995 (A–Z, "GitHub and Notes reordered").
-- §969's `Pinboard.room = "Notes"` → §975 ("Your notes").
-- §896's "+N more" on a fold → §902 (count deleted).
-- §803g (Privy counts in the Wallet total) → §826 (Privy is out).
-- §818 (a Contacts room) → §916 amendment (retired; Addresses is a directory).
-- §770's two digest slots (09:00 and 18:00) → §809 (one evening slot, learned).
-- §750/§953's "Readings" → §1005 ("Overview").
-- §798 (the face is the one door to Accounts) → §930 and §1033 (the face opens the tray; Apps is a tray door).
+None open. The thirteen found while writing this digest were checked against the
+later ruling and the code on 2026-10-01 and recorded in prd.md's "Known stale, by
+hand" table, so the generated index below now reads them: §922 and §818 as dead,
+the other eleven as part superseded by the ruling that replaced the clause. A ruling
+found outgrown with no phrase the generator can read goes into that table, not here.
 
 ## Conflicts to resolve
 
-- **`enrichedText` on screen.** §645 (2026-09-08) made the sheet draw the words the app holds, so `enrichedText` stopped being retrieval-only, with the model-written exception. §912 (2026-09-24) restates "`enrichedText` stays retrieval-only" as part of its row rule. Both are live and say opposite things.
-- **What the capsule beside the face holds on the phone.** §935 seats the folder capsule (the standing venue, then the room's faces) beside the face, and §956 fixes a social room's capsule as its own seat, then All, then the faces. A few hours later §959 moves the phone's "whose" control into the room and says the capsule of faces "belonged to nothing". No ruling says what, if anything, the phone's capsule still draws.
-- **"Start here" after Manage was deleted.** §863 put three "Start here" rows (Calendar, Photos, Wallet) at the head of Connect's list for a first run. §1033 deleted the Connect | Manage split. Whether the block now leads Apps is unstated.
-- **Open, asked and not ruled** (not conflicts, recorded so nobody assumes an answer): whether tapping a status row in Apps lands in its room (§1036 open, against §1033's "go nowhere"). §1006's items 4 (pink as the only accent) and 7 (fitted wallet chart, total in full) wait for the user.
+None open. The four recorded here on 2026-10-01 were ruled the same day: `enrichedText` is the sheet's body (§1043), the phone draws no capsule beside the face (§1044), "Start here" leads Apps while nothing is connected (§1045), §1006's items 4 and 7 are declined (§1046); and a connected row in Apps opens its room (§1040).
 
 <!-- law-digest: everything below this line is generated by scripts/law-digest.py; do not edit by hand -->
 
 ## Live rulings, every one (generated)
 
-1175 of 1206 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1158 of 1215 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -260,7 +245,6 @@ by hand" table.
 - §31 — Hero rule
 - §32 — Design principles
 - §33 — Open items
-- §34 — MCP — Casberi is the server
 - §35 — Feed volume rulings
 - §36 — Bridge selection ruling: live data only (amended by §420, §669)
 - §36aa — The composer invites the first bulk tag
@@ -268,7 +252,7 @@ by hand" table.
 - §36ac — Nav doors: bigger, a sharper breakage signal, and no false tab
 - §36ad — Type: SF Rounded on the display tier only
 - §36b — Home order: Pinned leads the map
-- §36c — Home: the "Noticed" insight line is gone
+- §36c — Home: the "Noticed" insight line is gone (amended by §1047)
 - §36d — Home recomposes when a banner or the wallet pin changes
 - §36e — Wallet: the pin-to-Home toggle leads the holdings
 - §36f — Home: the default cover is black, not a color
@@ -348,7 +332,7 @@ by hand" table.
 - §64 — Kalshi titles get a third line; Share joins the Feed swipe
 - §65 — Alchemy's Prices API becomes a second chart tier
 - §66 — Dexscreener the bridge becomes "Tokens"
-- §67 — The power-user ring stays server-free
+- §67 — The power-user ring stays server-free (amended by §1047)
 - §68 — Delete things / Delete access — two wipes, two verbs
 - §69 — The key is an agent key — four providers, one contract
 - §70 — Venice connects as a key seat; Strava rides Apple Health;
@@ -412,8 +396,6 @@ by hand" table.
 - §128 — The Wallet FEED scopes to one wallet — a switcher
 - §129 — Full ink — the source feeds and thing sheets drop the brand-hue wash
 - §130 — Home rows: one image, inline sparklines — no full-width bands
-- §132 — Kept-ask decay-dim finished; wallet/watchlist answers gain their real visualization (docs/agent-brief.md rulings 5/13…
-- §133 — The chip vocabulary widens — parameterized kinds, kept searches, proactive minting (docs/agent-brief.md ruling 14, 20…
 - §134 — Onboarding teaches three steps, not four
 - §135 — The Wallet split — manage is the connection, the feed is the wallet
 - §136 — Glass needs something to refract
@@ -444,32 +426,27 @@ by hand" table.
 - §161 — Settings speaks the feed's row grammar
 - §163 — Read-only exchange seats — the balance that isn't onchain
 - §164 — The feed-head doctrine — one boxed aggregate; rows own recency (part superseded by §832)
-- §165 — The whisper carries the day brief (part superseded by §550)
+- §165 — The whisper carries the day brief (part superseded by §550, §1047)
 - §166 — The Today brief — the mosaic, with the agent's own read on top [+1 sub-entries]
 - §167 — The brief's design pass — six corrections (amended by §550)
 - §168 — The brief paints like generative UI — the stream paces by document size
 - §169 — The address book — naming is free, watching is the upgrade (amended by §498)
 - §170 — Watching is capped at five
 - §171 — Delight, part two — the moments the wallet work left silent
-- §172 — The brief's surprise & delight pass, and a design polish sweep
 - §173 — Lists are air; parcels are for the reads
 - §174 — Named asks widen to publishers, and finally reach the live path
-- §175 — The suggestion chips get timely, legible, and diverse
 - §176 — The agent answers smarter — receipts, more entities, follow-ups, comparatives
 - §178 — Tags become invisible infrastructure — the filing surface retires
 - §179 — A watched wallet always shows its hero — last-known when the read fails, sparkline from recorded history
-- §180 — Two more brief visualizations — what landed by source, and the watchlist drawn
 - §182 — The wallet manager stops looking like a settings page (part superseded by §448)
 - §183 — A tap-coordinate lesson, recorded so it isn't relearned
 - §185 — The asset roster — every manager is one shelf of circles
 - §186 — The two-state setup screen — connect is a form, connected is a manager
-- §187 — Three fixes to the brief landing — one scrolling chip row, no chips the brief already answers, and a `.link` is not a…
 - §188 — Connect a wallet app — a real button, and not claiming `wc:` stops meaning "no wallet"
 - §189 — The Wallet manager below the shelf — one shape, one font, four slabs
 - §190 — The slab, generalized — one shape per control, one signature shape per page type (amended by §613; part superseded by §640)
 - §191 — The product pages, checked against the slab pass — one real bug found, no shape problem
 - §192 — The three-beat summary rule, and where it actually applies
-- §193 — The brief is renamed "What's going on" — and absorbs the ask that had that name
 - §194 — The "What landed" map drew outside its own card
 - §195 — Module order is RANK, not arrival — "What landed" moves up behind the wallet
 - §196 — Worth a look splits by TYPE, approvals get a live-checked seat, and the trigger line earns its card back
@@ -488,9 +465,7 @@ by hand" table.
 - §210 — Peer moves from Markets to the Wallet catalog group
 - §211 — Catalog & manage-sheet prose breaks into short paragraphs
 - §212 — The wallet room's Cash App pass — six surfaces become two, and one row shape
-- §213 — The day brief's Cash App pass — volume stops being news, and the money takes the crown
-- §214 — The brief gets a memory — continuity, cross-source joins, and a lede that isn't wallet-only
-- §215 — Find gets a door, the widget stops counting, and the dead-Thing rule stops being remembered
+- §215 — Find gets a door, the widget stops counting, and the dead-Thing rule stops being remembered (amended by §1047)
 - §216 — The holdings read gets a freshness window — and the news does not
 - §217 — Onboarding forks — "Try it", then three verbs instead of forty apps (amended by §424, §527)
 - §218 — The All feed says what things are
@@ -503,7 +478,6 @@ by hand" table.
 - §223 — PostHog: a count is not a thing
 - §223a — The calendar room reads one direction
 - §224 — Bookmarks — one importer for Safari and Chrome, Reading List folded in
-- §225 — Two dead controls in the brief — a watchlist row, and a themes cell that ejected nowhere
 - §226 — Bitcoin — a third address family, read keyless
 - §227 — Bitcoin's surprise and delight — the facts only Bitcoin can state
 - §227b — Support returns: privacy@casberi.app is now a real channel
@@ -515,7 +489,6 @@ by hand" table.
 - §230a — The Apple Notes tile that could never fill
 - §231 — Deleting a screenshot from Photos removes it from Casberi
 - §231a — Notes group gains surprise & delight
-- §232 — The flow band comes to the brief — where the money moved, not just what it's worth
 - §232a — Slack, two things the first pass got wrong
 - §233 — Prediction markets get a browse room; venues become a wallet-style switcher, not a third chip
 - §234 — Connect is connect; the book lives in the room (part superseded by §638)
@@ -535,8 +508,6 @@ by hand" table.
 - §245 — Instagram connects by import, and the offer says which half is real (amended by §726)
 - §246 — Snapchat: the only door Snap leaves open is your own export
 - §247 — Instagram and Snapchat get rooms with a face (part superseded by §821, §832)
-- §248 — The brief's reading note stops making a claim it can't keep
-- §249 — The agent's room leads with the day; no logo inside it, no tally on it
 - §250 — Stripe: the five things that happen to money (amended by §537)
 - §251 — The agent bar rests compact, and holding it opens every source
 - §252 — The connect screens: failures that looked like successes, and a promise wearing the timestamp tier
@@ -560,7 +531,6 @@ by hand" table.
 - §271 — One transaction, one row: the labelled seat beats the bare transfer
 - §272 — The wordiness sweep: the unmeasured bridges wrote walls
 - §273 — The Mac wears the rail: the source chips go vertical
-- §274 — The brief becomes a front page, and the rail drops its pour behind a pushed room
 - §275 — The verb that opened nothing: a screenshot's picture becomes reachable
 - §276 — Web search and Tor: both assessed, both declined in their general form
 - §277 — Five privacy passes: the credential tripwire, device-only keys, network receipts, clipboard etiquette, and what sync…
@@ -574,7 +544,6 @@ by hand" table.
 - §285 — One evicted iCloud file could switch the Files bridge off for good
 - §286 — Unfollowing takes its posts with it [+2 sub-entries]
 - §287 — The empty room blamed the network, and the screenshot disproved it
-- §288 — The brief is a document, so it opens at the top and it composes on what arrived
 - §289 — The receipts screen accused itself, and it was half right
 - §290 — Hugging Face joins the catalog, and DeepSeek doesn't
 - §291 — Trello joins the catalog, and Casberi mints the read-only token itself [+1 sub-entries]
@@ -582,7 +551,7 @@ by hand" table.
 - §293 — Account abstraction: who actually paid, and what else can act as you
 - §294 — Your own smart wallet was filed as "Contract"
 - §294a — Virtuals: the agents' wallets are empty, so there is nothing to follow
-- §295 — The address book reads itself: N of your addresses are connected (amended by §448, §497) [+1 sub-entries]
+- §295 — The address book reads itself: N of your addresses are connected (amended by §448, §497; part superseded by §1041) [+1 sub-entries]
 - §296 — Cloudflare: the dates behind a site you run [+1 sub-entries]
 - §297 — Every visualization draws itself, and the crown stops pouring where it says nothing
 - §298 — The rooms that hold numbers and drew nothing [+2 sub-entries]
@@ -591,7 +560,6 @@ by hand" table.
 - §301 — Treemaps and the brief stay blue
 - §302 — The transfer stage is a ledger, not a tableau
 - §303 — Cursor is a bridge: the agent runs you launched, once they're over
-- §304 — The brief's 3-second stall was one read, paid twice
 - §305 — The Kalshi room's error was true of the app, not of Kalshi
 - §306 — Notifications: three classes, and the right-hand slot is the only one we own (amended by §383, §522, §644, §713, §714, §770; part superseded by §870) [+1 sub-entries]
 - §307 — An imported room you can't search is a folder
@@ -666,17 +634,15 @@ by hand" table.
 - §375 — The archive reads like an archive (amended by §396; part superseded by §821)
 - §376 — Connecting a wallet becomes a choice, not a silent bulk-add
 - §377 — A folded run is drawn as its members, not as a sentence about them (part superseded by §719)
-- §377a — A quick action is registered by the app delegate and DELIVERED to the scene delegate
 - §378 — The All feed gains one hierarchy, and it is provenance (amended by §773)
 - §379 — The tail says what it was about, and the fold rules become provable
 - §380 — Every room that knows who, shows who
 - §381 — What a thing carries besides its name
-- §382 — The Home Screen gets the rest of the app [+1 sub-entries]
+- §382 — The Home Screen gets the rest of the app (amended by §1047) [+1 sub-entries]
 - §383 — Four surfaces where the work was already done and the wiring wasn't [+1 sub-entries]
-- §384 — The composer draws, the corpus resurfaces, and everything on screen answers the finger (amended by §609; part superseded by §836)
+- §384 — The composer draws, the corpus resurfaces, and everything on screen answers the finger (amended by §609, §1047; part superseded by §836)
 - §385 — The All feed's head answers "since I last looked", and the map moves above the fold [+1 sub-entries]
-- §386 — One overview, not three scoped screens; the pulse earns its tile; the model may not hand the question back
-- §386a — The overview keeps the figures, the pictures and the people; the text blocks die; the themes map has ONE home
+- §386a — The overview keeps the figures, the pictures and the people; the text blocks die; the themes map has ONE home (part superseded by §1047)
 - §386b — Needs-you fills out, the day gets its source mix, the generic ask chips die, and no anniversaries
 - §386c — Your posts join the overview; the kept pills leave the rest surface; the typed band keeps its three verbs (part superseded by §543)
 - §386d — The rise lands on the overview, the day is composed by the clock, and what hasn't changed steps back
@@ -689,7 +655,7 @@ by hand" table.
 - §386k — The map costs nothing, and the dock is gone for good
 - §386l — The headers stop whispering
 - §386m — The librarian was never called, and Work gets its deadlines
-- §386n — The chips lead somewhere, the chip IS the colour, and Find shows a search
+- §386n — The chips lead somewhere, the chip IS the colour, and Find shows a search (amended by §1047)
 - §386o — One button, not two
 - §386p — The agent panel is deleted (part superseded by §836)
 - §387 — The NFT shelf comes back as a picker, and it costs less than the one that was cut (amended by §483)
@@ -752,7 +718,7 @@ by hand" table.
 - §442 — What the first device drawing of §440 found — five things a build cannot see
 - §443 — The address sheet, ranked — one subject, one number, one verb (part superseded by §461)
 - §444 — Six moves on the address book's sheets — the comparison made, the name edited where it stands, the filing given a flight (part superseded by §691)
-- §445 — The rise stops re-laying out the brief on every frame, and the document dissolves into the chrome instead of being cu…
+- §445 — The rise stops re-laying out the brief on every frame, and the document dissolves into the chrome instead of being cu… (amended by §1047)
 - §446 — The address card becomes one dated spine (amended by §461)
 - §447 — Seven text objects over one drawing — the holdings block's redundancy cut
 - §448 — One face per address — the watched shelf folds into the book, and the connected card stops narrating its own drawing (amended by §497; part superseded by §461)
@@ -858,7 +824,7 @@ by hand" table.
 - §546 — The Permissions slot stops repeating its own list — counts, big, no names (part superseded by §692, §944)
 - §548 — A seat for the chain that is only frames — the envelope Hegotá's could not sign (amended by §688, §698) [+12 sub-entries]
 - §549 — the demo's address book never leaves the device
-- §550 — The capsule above the bar stops being a daily headline and teaches the gesture, and the empty chat says where agents…
+- §550 — The capsule above the bar stops being a daily headline and teaches the gesture, and the empty chat says where agents… (amended by §1047)
 - §551 — One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the…
 - §552 — The send console fits the screen — and its height becomes a written-down sum
 - §552a — The keypad is the system's — the space has to come from below the slot, and 176pt of it was a keypad that was always…
@@ -1016,10 +982,7 @@ by hand" table.
 - §687 — Activity lists transactions, and the "when" follows the list's density (part superseded by §950)
 - §688 — Holdings, and the tokens nobody had asked the chain for
 - §688b — Holdings on the other two rooms, and the chips nobody budgeted for
-- §689 — Accounts is the connections between them, and §295 was still running with nowhere to draw
-- §689b — Accounts everywhere, and the Wallet finally gets §295 back
-- §689c — Accounts are what you follow and what is tied to them; a tied address is not always an account
-- §690 — The book folds into the Wallet's page; follow lives in the directory; Home is the band, Activity is the chart (amended by §692, §747)
+- §690 — The book folds into the Wallet's page; follow lives in the directory; Home is the band, Activity is the chart (amended by §692, §747; part superseded by §1039)
 - §691 — Groups are deleted
 - §692 — Permissions is one scope in five rooms, and Wallet's Home draws its flow as rows (amended by §695; part superseded by §942)
 - §693 — A share link left on the automatic button style takes its whole row
@@ -1027,7 +990,6 @@ by hand" table.
 - §695 — The net goes back on Wallet Home's flow (part superseded by §942)
 - §696 — The UTXO map says which half it draws, a spent piece says what became of it, and the room stops saying "coin" (part superseded by §1038)
 - §697 — The dock's leading seat is your face and the catalogue; the octopus is deleted
-- §697b — The ask is deprecated behind one flag, and every door it had is dark
 - §698 — The Frames scope is one reading in three rooms
 - §699 — The GitHub room is ONE FEED: the head card is deleted, the type becomes a tag under the timestamp, and the faces you… (part superseded by §815)
 - §700 — Only the avatar is fixed: the catalogue is the strip's LAST item (part superseded by §793, §798)
@@ -1050,8 +1012,8 @@ by hand" table.
 - §716 — The stock segmented pickers wear the app's own scope control, and the last two invented hues become tokens
 - §716b — L2BEAT's layer picker follows, once §715 landed
 - §717 — Every failed read you can retry has a control, every control is 44pt to hit, the ask's last doors close, and GenUI lo…
-- §717b — Three of §717's owed items close: the Siri phrase, the Vibenet unlock link, and the website's stale app text
-- §718 — The first screen stops promising the ask, a key says what it does now, the thing sheet asks each shape question once,…
+- §717b — Three of §717's owed items close: the Siri phrase, the Vibenet unlock link, and the website's stale app text (amended by §1047)
+- §718 — The first screen stops promising the ask, a key says what it does now, the thing sheet asks each shape question once,… (amended by §1047)
 - §719 — Every bundle row leads with its mark; a strip's tiles move under the name
 - §720 — The crown's line pays for its own range chips, in one expression every crown reads
 - §721 — A defaults write inside a lock is a deadlock with every view body: build 570 froze on every page and the watchdog too… [+1 sub-entries]
@@ -1081,14 +1043,14 @@ by hand" table.
 - §741 — An X notice carries X's time, and a landed aggregate is rewritten when it grows
 - §742 — The day divider's pink is one notch softer than the mark's
 - §743 — Every feed row stands on a plate, at the darkest step the app has
-- §744 — Every feed row is one anatomy: a 26pt lead, the name and the time, one line, and whatever is its content below
+- §744 — Every feed row is one anatomy: a 26pt lead, the name and the time, one line, and whatever is its content below (part superseded by §1017)
 - §745 — Every source room's head composes `DSRoomChassis`; the twenty-two hand-drawn heads are one template, and what they dr… (amended by §760; part superseded by §758)
 - §746 — A pill is a choice or a fact, and every verb is a row
-- §747 — The wallet family's bar is deleted: the account is a card you page, the readings are door rows (part superseded by §774)
+- §747 — The wallet family's bar is deleted: the account is a card you page, the readings are door rows (amended by §1039; part superseded by §774)
 - §748 — An explaining sentence has one view and one screen gets one of them: `DSFootnote`, counted by `footnote-audit.py`
-- §749 — Rows are bare again, and every room without a visualization leads with its newest thing, unbacked
-- §750 — The wallet family's Home is one surface: a head, Actions, Readings, and the accounts as the floating face rail above…
-- §751 — Every chart head draws at one height and caps at one row count, and three more text heads take the cover (amended by §760)
+- §749 — Rows are bare again, and every room without a visualization leads with its newest thing, unbacked (amended by §1042)
+- §750 — The wallet family's Home is one surface: a head, Actions, Readings, and the accounts as the floating face rail above… (amended by §1039; part superseded by §1005)
+- §751 — Every chart head draws at one height and caps at one row count, and three more text heads take the cover (amended by §760, §1042)
 - §752 — Inside a wallet-family room's section, the sections are tiles UNDER the figure, and nothing that scopes the room sits… (amended by §937)
 - §752b — The section tiles are on every page, flat, and the Readings rows lead with the same glyphs
 - §753 — The room's faces ride the dock folder's capsule, after the venues, and they draw no words
@@ -1104,15 +1066,15 @@ by hand" table.
 - §763 — The room's lead stands in the rows' column, ends at one gap, draws its rows as feed rows, and every room has one
 - §764 — One row anatomy in every room: regular titles, a 12pt line, 24pt sections (part superseded by §796)
 - §765 — The section tiles land at one height on every page, because the chrome draws the figure
-- §766 — Every room's lead is one well: a statement, a body, and a foot pinned to the bottom (amended by §905)
+- §766 — Every room's lead is one well: a statement, a body, and a foot pinned to the bottom (amended by §905; part superseded by §914)
 - §767 — The shell around the rows speaks the rooms' grammar: the dock's seat is the way back, a pushed screen names itself in…
 - §768 — The load screen says hello
 - §769 — An empty scope draws its own figure as a skeleton, its short state centred on it, and its list as skeleton rows (amended by §771)
-- §770 — Notifications are one digest, twice a day at most, with one switch per category (part superseded by §870)
+- §770 — Notifications are one digest, twice a day at most, with one switch per category (part superseded by §809, §870)
 - §771 — Every empty state in the app draws its skeleton, and an empty wallet list carries its remedy
 - §772 — A lead's body is a ladder, and the box gives way when the ladder runs out (amended by §775, §815, §905; part superseded by §904)
 - §773 — Nothing from today is dimmed
-- §774 — Every devnet Home offers Create account, and a phone can hold more than one account on Frames, Hegotá and the Privacy…
+- §774 — Every devnet Home offers Create account, and a phone can hold more than one account on Frames, Hegotá and the Privacy… (amended by §1039)
 - §776 — Duolingo, on the same door as Spotify, Instagram, TikTok and X
 - §777 — Measure the web app before writing the seat
 - §778 — Wise, and the two doors that stay shut: Plaid, Stripe Financial Connections, and a cookie sign-in for banks
@@ -1142,7 +1104,7 @@ by hand" table.
 - §795 — World App money, completed: usernames and faces, the WLD Vault in the total, Morpho on World Chain, and the next gran…
 - §796 — The face opens Accounts, and Settings is its third section: Manage | Connect | Settings (amended by §933, §1033; part superseded by §798)
 - §797 — World Chain approvals are read, a World App account says so on its card, and "human priority" is not drawn because no…
-- §798 — The dock's catalogue tile is deleted: one face, one door to Accounts
+- §798 — The dock's catalogue tile is deleted: one face, one door to Accounts (part superseded by §930, §1033)
 - §799 — The wordiness sweep: an empty scope's words are one clause, and the seats' capability paragraphs are deleted
 - §800 — Connect Bankr signs you in and makes the key; nobody pastes one
 - §801 — AgentKit is not built: World App answers our own bridge request and refuses it for want of an Orb, and a verified-hum…
@@ -1156,7 +1118,7 @@ by hand" table.
 - §803d — Privy Home authenticates by COOKIE, measured on a real sign-in
 - §803e — The Privy room draws the mockup: app logos, last used, balances, an app page, and the display choices
 - §803f — Privy activity: what moved in your app wallets, the Home/Apps/Activity tiles, and the app page's own history
-- §803g — Privy money counts in the Wallet total, and the room's tiles are Apps | Activity
+- §803g — Privy money counts in the Wallet total, and the room's tiles are Apps | Activity (part superseded by §826)
 - §803h — The Privy seat is MEASURED against the person's own account
 - §803i — A tile shows what its word says: Apps holds app rows only
 - §803j — The Privy room counts only the wallets an APP made, and reads them to the cent
@@ -1176,7 +1138,6 @@ by hand" table.
 - §815 — Safe, GitHub and Stripe get section tiles on the one template: All first, the cover above them, the list below (part superseded by §816)
 - §816 — Kind tiles in five more rooms, and a head keeps its place: the tiles ride its scopes slot (amended by §817; part superseded by §821)
 - §817 — The X room leads with its newest notification, never a year grid
-- §818 — Contacts get a room of their own, and stay out of All
 - §819 — Pinterest follows boards and people, and its room scopes by follow on a face rail
 - §820 — Splits: a team's accounts over a Read-scoped API key, All · Accounts · Queue · Activity, contacts into the address book
 - §821 — Instagram, X and TikTok lead with their newest thing, and the Instagram head model is deleted
@@ -1193,7 +1154,7 @@ by hand" table.
 - §830 — A room's kind tiles draw from the first frame, from what it drew last
 - §831 — Privy's Apps tile wore Frames' glyph, and the guard could not see it
 - §832 — Photos, Files and RSS lead with their newest thing
-- §833 — Apple Intelligence is a seat: Apple's model on Private Cloud Compute answers the composer, turned on in one tap
+- §833 — Apple Intelligence is a seat: Apple's model on Private Cloud Compute answers the composer, turned on in one tap (amended by §1047)
 - §834 — The Safe sign block reads a call it cannot name in its protocol's own words: ERC-7730, from the Ethereum Foundation's…
 - §835 — A seat that lands nothing says On or Off, and offers no Pause
 - §836 — The chip peek is deleted, and every figure only it drew goes with it
@@ -1215,7 +1176,7 @@ by hand" table.
 - §852 — The rest of the §847 leftovers: six bridges, and every one was a window rather than a name
 - §853 — Dodo's dispute amount stays a major-unit decimal, and the naive "fix" would break it
 - §854 — Muse: Meta's model, on the branch that was already there
-- §855 — What an outside agent can reach: a structured Find, and three sentences Siri was saying wrong
+- §855 — What an outside agent can reach: a structured Find, and three sentences Siri was saying wrong (amended by §1047)
 - §856 — Muse's key check was wrong within the hour, and §854 said exactly where to look
 - §857 — MetaMask Card: the third card that settles onchain, and the file that named its addresses
 - §857b — MetaMask Card reads Base too, and Monad is measured, buildable and refused (part superseded by §860)
@@ -1225,7 +1186,7 @@ by hand" table.
 - §861 — An empty agent room still holds the lead slot
 - §862 — §861 fixed the agent room; the same defect was in nine others, and the box was 30pt too tall
 - §862b — Two fixtures that tested the MACHINE, not the code
-- §863 — The demo's Exit lands on Accounts, Connect leads the switcher, and a first run is shown three rows
+- §863 — The demo's Exit lands on Accounts, Connect leads the switcher, and a first run is shown three rows (amended by §1045)
 - §864 — The demo says so where people read: the cover's word falls, the All feed leads with it (amended by §1028; part superseded by §946)
 - §865 — The keyboard covers the dock; it never lifts it
 - §865a — The §865 fix did nothing, and the measurement says which half a modifier can carry
@@ -1241,7 +1202,6 @@ by hand" table.
 - §874 — The Mac honours the app's Theme, and every tray has a way out
 - §875 — Where the rail stands, the dock's seat is only the way back
 - §876 — Accounts and Settings open in the pane
-- §877 — "Your day" and "Needs you" become one widget, Today
 - §878 — The phone's perf readout, read: launch is solved, and three of its instruments were lying
 - §879 — Things get their faces, and "Since you left" tells the truth about itself
 - §880 — "Since you left" wears the primary ink; the days inside it keep the pink
@@ -1260,7 +1220,7 @@ by hand" table.
 - §893 — A note's sheet leads with where it is from, the words under the dial
 - §894 — Chats and mail lead with who they are from, the dial under the head
 - §895 — Work items and purchases take the shared head
-- §896 — A fold says its newest thing, and counts the rest on the line's tail
+- §896 — A fold says its newest thing, and counts the rest on the line's tail (part superseded by §902)
 - §897 — Media leads with its art, a chart with its asset
 - §898 — The swipe is dealt on the brand ground
 - §898a — The brand ground steps down to B 42
@@ -1273,28 +1233,27 @@ by hand" table.
 - §901 — A row lead turns to its dock category's glyph and back, once
 - §901a — The turn is an ease, not a spring: two frames read as a flicker
 - §901b — The landing is the thing's ARRIVAL, never its date: the cycle was live and almost never fired
-- §902 — The All feed's Apple pass: one row head, one-line titles, no ages, no counts, no source in the line, the day alone (amended by §1017)
+- §902 — The All feed's Apple pass: one row head, one-line titles, no ages, no counts, no source in the line, the day alone (part superseded by §1017)
 - §903 — A fold's lead is the bare mark: the stacked plate is deleted
 - §904 — Every cover holds the box: one lead height in every room and the All feed
-- §905 — The ladder grows: a thin cover fills the box with larger words, a larger lede and a second row of faces (amended by §905a)
-- §905a — Three tiers, not two: the shelf grows even when the words cannot
+- §905 — The ladder grows: a thin cover fills the box with larger words, a larger lede and a second row of faces (amended by §905a; part superseded by §1006)
+- §905a — Three tiers, not two: the shelf grows even when the words cannot (part superseded by §1006)
 - §906 — One box, one position: every room's lead is the wallet's box at the wallet's height (amended by §938)
 - §907 — The face pass, batch one: Media A, Social C, Reading A
 - §908 — The face pass, batch two: Photos A, Life B, Work B, Notes B
 - §909 — A GitHub events row names its object, opens it, and carries its words
 - §910 — The grid stands under the day, in the room's own shape, with its caption under the picture
 - §911 — Every room opens on a lead, and every room whose rows carry a kind gets its tiles
-- §912 — Every landed row names its object, opens it, and carries its words: §909 applied to every bridge
+- §912 — Every landed row names its object, opens it, and carries its words: §909 applied to every bridge (amended by §1043)
 - §913 — More signer capabilities without a wallet that holds funds: a paired Safe app, a Secure Enclave owner, Safe statement…
 - §914 — The lead's count foot is deleted; the cast cover's sentence takes the fit's rung; the eyebrow never repeats the cast'…
 - §915 — The Apple polish pass: say every fact once, one scale of hierarchy, one title seam, words under art, the list just en…
 - §916 — Addresses: the unified contacts list comes back as a room that learns, and web3.bio is the resolver behind ENS (amended by §933, §1025) [+1 sub-entries]
-- §917 — A mark packs, a word tiles: the wallet's holdings and the source mix are circle packs
+- §917 — A mark packs, a word tiles: the wallet's holdings and the source mix are circle packs (part superseded by §939)
 - §918 — Addresses gets smarter: the row's line is the corpus's own word, Recent is alive, search resolves what you paste, eve…
 - §919 — The demo's mark is a blue pill that floats, and nothing on the page moves for it (amended by §1005)
 - §920 — The Home crown's Apple pass: the plot runs under the gear, the change is a signed short figure and its window, the ra…
 - §921 — Activity's Apple pass: the count at the crown's rung, a line that never goes missing, the span said in words under th…
-- §922 — A devnet's Holdings is the Wallet's circle pack, valued AT MAINNET PRICES and saying so
 - §923 — Accounts is the spine with faces: the crown's reading, faces at the nodes, ribbons weighted by what moved and coloure…
 - §924 — Permissions draws the permissions: the reach as the crown's reading, one key per permission under its class, amber wh…
 - §925 — Frames draws the shape of the transactions: steps flow by position, a node per mode sized by count, ribbons by how ma…
@@ -1307,7 +1266,7 @@ by hand" table.
 - §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (part superseded by §1014)
 - §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage
 - §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused…
-- §935 — The room's faces and venues sit BESIDE the face, not under it
+- §935 — The room's faces and venues sit BESIDE the face, not under it (amended by §1044)
 - §936 — The wallet family's tiles speak one grammar: one number over one caption, bars for "how many of each", one accent and… (part superseded by §944, §952)
 - §937 — The room's corner door is deleted: the tray's Manage is the one door to a room's account page (amended by §1033; part superseded by §958)
 - §938 — A day whose only row is the cover draws no header
@@ -1320,15 +1279,15 @@ by hand" table.
 - §945 — The Wallet's Positions: the total at work over one bar per protocol, and Lending, Liquidity and Perps as rows of one…
 - §946 — The demo is marked ONCE: the blue pill stands in All too, and the All feed's `DemoLead` is deleted
 - §947 — The Wallet's Risk is Leveraged then Worth a look, and Safe signatures lead Permissions; the face shrinks about its ce…
-- §948 — The devnets' Accounts are your accounts face by face, like the Wallet's, and a devnet crown sits on the Wallet's line
+- §948 — The devnets' Accounts are your accounts face by face, like the Wallet's, and a devnet crown sits on the Wallet's line (amended by §1039)
 - §949 — The devnets' Holdings are the Wallet's treemap over test money: the count, never a dollar total, and a pressed tile r…
 - §950 — The devnets' Activity lists read like the Wallet's: moves under the day, no ages, no strips, one plain figure, on the…
 - §951 — The devnets' Permissions wear the Wallet's crown, and a row's line stays only if it differs from row to row
 - §952 — The devnets' own screens read the Wallet's way: Frames draws a column per transaction, UTXOs names each coin's origin…
-- §953 — Every wallet-family Home stands on the Wallet's lines: headers on the tiles' edge, one crown position, no unscoped ca…
+- §953 — Every wallet-family Home stands on the Wallet's lines: headers on the tiles' edge, one crown position, no unscoped ca… (part superseded by §1005)
 - §954 — Accounts is one shape in every room: "Yours", one row per account in the rows' column, a line only where it tells row…
 - §955 — The rooms tray's categories stand one pitch apart: no air between sections, and a category grows a line only when its… (amended by §1010)
-- §956 — A social room's capsule carries its own seat alone, never its siblings; another network is a swipe or the tray
+- §956 — A social room's capsule carries its own seat alone, never its siblings; another network is a swipe or the tray (amended by §1044)
 - §957 — A holdings tile's mark is proportional to the tile, and capped
 - §958 — The rooms tray's You row has no Manage door; Connect opens Accounts and its switcher holds Manage (amended by §1012, §1033)
 - §959 — On the phone, a room's "whose" control stands in the room: GitHub and Pinterest pick from the Wallet's menu, the soci…
@@ -1340,7 +1299,7 @@ by hand" table.
 - §966 — Becoming the pick is a crossfade, in the template
 - §967 — What this app reaches and what it reached are ONE pushed screen, filtered by the dock's categories
 - §968 — Robinhood is read on Alchemy beside Zerion, and a DEX-only token is priced off a pool deep enough to sell into
-- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (part superseded by §972, §981)
+- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (part superseded by §972, §975, §981, §995)
 - §970 — A note can be spoken: the sheet's wide key carries the one verb, and holding New lands speaking (part superseded by §971)
 - §971 — Dictation is Apple's, and the note sheet's mic KEEPS A VOICE NOTE (amended by §972, §987)
 - §972 — "Voice" is retired as a source and a room, and the voice note is kept whole (part superseded by §980)
@@ -1352,7 +1311,7 @@ by hand" table.
 - §977 — A category is a tray row only while it holds a connected seat
 - §978 — A note of yours can be deleted from its long press, and it wears the note, not the person (amended by §985)
 - §979 — The Notes room covers whatever it holds, so its tiles never rise
-- §980 — Notes gets folders, and the Folders tile comes back with them
+- §980 — Notes gets folders, and the Folders tile comes back with them (part superseded by §995)
 - §981 — A note of yours edits, and its sheet drops "That day"
 - §982 — The note takes Apple Notes' five missing pieces: a checklist you tick, a scan, a link to anything you keep, a Quick N… (part superseded by §1023)
 - §983 — Notes, toward Apple: the room previews, the long press holds five, a note of yours is a page with three keys, and wri… (amended by §985)
@@ -1366,15 +1325,15 @@ by hand" table.
 - §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016)
 - §993 — The Reminders room holds its lead when empty, and scopes like Apple's lists (amended by §997)
 - §994 — The Calendar room is a month grid over Today · Week · Month · New (amended by §999)
-- §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999)
+- §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039)
 - §997 — The Reminders room drops Scheduled, and its tiles never rise
 - §998 — A connected Calendar or Reminders keeps its room with nothing in it (amended by §1036)
-- §999 — The Calendar room's tiles read in time, and its month title stands at the day dividers' size
+- §999 — The Calendar room's tiles read in time, and its month title stands at the day dividers' size (part superseded by §1006)
 - §1000 — Markets: Tokens and Stocktwits are one app, and every catalogue category is a company pack
 - §1003 — The redundancy and wordiness sweep, the whole app
 - §1004 — A status word takes the INK, never the hue
-- §1005 — The vibecoded audit, first pass: the demo, the wallet crown, Settings
-- §1006 — The polish pass: the screen's name leads, the day steps down, a deadline is a bar
+- §1005 — The vibecoded audit, first pass: the demo, the wallet crown, Settings (amended by §1039)
+- §1006 — The polish pass: the screen's name leads, the day steps down, a deadline is a bar (amended by §1046)
 - §1007 — Logos: the testnet moved to LEZ v0.3, and the seat reads it
 - §1009 — While the tray is up the face is the octopus, photo or not
 - §1010 — The tray's sections put the name above the marks, five to a line from the name's edge (amended by §1011)
@@ -1399,18 +1358,27 @@ by hand" table.
 - §1030 — GitHub's next step after a connect is a tray, and watching stands in the room (amended by §1031)
 - §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is
 - §1032 — An account page's commit is a check INSIDE the well, where Paste is
-- §1033 — A room's account door stands beside its name, Accounts is Apps with no Manage, and a tray mark has no hold (amended by §1036)
+- §1033 — A room's account door stands beside its name, Accounts is Apps with no Manage, and a tray mark has no hold (amended by §1036, §1040, §1045)
 - §1034 — Logos: the field reads what people actually paste, and turns a public key into its account
 - §1035 — Logos: a reset is detected by its first block and said, and a network account says what it is
-- §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca…
+- §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
+- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041)
+- §1040 — A connected row in Apps that has a room is still a status, and tapping it lands in its room
+- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re…
+- §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
+- §1043 — `enrichedText` is the sheet's body and never a row's line; provider-authored display copy stays on `summary` and `pos…
+- §1044 — On the phone, a room draws no capsule beside the face: its venues are the tray and a swipe, and its "whose" control s…
+- §1045 — "Start here" leads Apps while nothing is connected
+- §1046 — §1006's items 4 and 7 are declined
+- §1047 — The ask is deleted: the on-device model reads and no longer answers, and the composer keeps Find and the agents you c…
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §78→§114 · §113→§207 · §124a→§387 · §131→§228a · §160→§212 · §162→§207 · §181→§336 · §184→§185 · §201→§518 · §266→§691 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §775→§904 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017
 
 ## Renumbered (generated)
 

@@ -1,61 +1,44 @@
 import SwiftUI
 
-/// THE WALLET FAMILY'S HOME — one surface, in reading order (prd §750,
-/// 2026-09-15, user: "look these all look like different apps each component.
-/// they don't blend together in any way, and now we have the accounts faces
-/// at the top it's totally confusing").
+/// THE WALLET FAMILY'S CHROME — the box, the tiles, the account menu, in that
+/// order on every page (prd §1039, 2026-10-01, user approving the merge
+/// mockup; it amends §750's "head, Actions, Readings").
 ///
-/// §747 put the account at the TOP as a card you page, with the crown and the
-/// verbs inside it, and the readings as door rows under it. Shipped in 589 it
-/// read as four apps: a deck card, verb slabs at `price40`, a grouped list,
-/// the dock — four radii, four type scales, three insets — and the two grey
-/// faces over the figure looked like a contacts header where every other room
-/// puts its head.
+/// **Every other room's anatomy: box · tiles · "whose" menu · list.** §750
+/// gave Wallet, Frames and Logos a Home of their own — the head, then an
+/// Actions block of verb rows, then an Overview of `DSScopeRows` that said the
+/// tiles a second time as rows, and NO list. The merge deletes both blocks:
 ///
-/// This is the same facts on the app's own grammar, top to bottom:
+///   1. **the box** — the room's crown on Home (the figure, the chart, its
+///      range chips), the section's figure everywhere else, one fixed box
+///      (prd §765, §936);
+///   2. **the tiles** — the scopes, Home first then A–Z, and the room's VERBS
+///      last, A–Z among themselves (`DSScopeTiles.alphabetical`): Follow in
+///      the Wallet, Create · Send · Top up in Frames, Explorer in Logos. A
+///      verb tile acts and never lights — GitHub's Watch (prd §1031);
+///   3. **the account menu** (`DSScopeMenu`, prd §936) — the pick the deleted
+///      Accounts tiles duplicated;
+///   4. **the list** — the room's own, drawn by the room under this chrome:
+///      on Home, what moved (the deleted Activity tile's list).
 ///
-///   1. **the head** — the room's crown for the account in scope (the figure,
-///      the chart, its range chips), on the head surface every other room got
-///      in §745;
-///   2. **the account rail** — NOT drawn here. The room publishes its accounts
-///      to `ShellChrome.accountRail` and the shell draws them as a
-///      `FaceScopeRail` above the dock, where the Farcaster and Bluesky rails
-///      already sit (user, same day: "like on farcaster and bluesky"), so a
-///      pick survives a scroll and the head keeps one job;
-///   3. **Actions** — the room's verbs as rows under one label, the way §746
-///      made every verb a row;
-///   4. **Readings** — `DSScopeRows` under its own label (user: "it can't all
-///      be actions"). Not "Test": the devnets are test networks, but the
-///      Wallet room holds real money and the label is shared.
+/// **The verbs are per PAGE (prd §774).** The room hands in the verbs for the
+/// account showing; Frames keeps Create alone on a stranger's page.
 ///
-/// **NOTHING ON HOME STANDS ON A PLATE (prd §757, then §758).** Actions and
-/// Readings drew on `dsWidgetSurface`, the elevated card — the one thing §749
-/// took off every row in the app and §708 off every account page — and §757
-/// took it off both, keeping the head's on the grounds that a head card is what
-/// every room draws. A day later the user said the same thing about a room head
-/// ("again here, we don't want cards that are like this"), so the head's plate
-/// went too, here and in `dsRoomHeadBlock` for every other room. Home is three
-/// blocks of content on the page, separated by air.
+/// **NOTHING STANDS ON A PLATE (prd §757, §758).** The box is the head
+/// template's well; the tiles are the grid's own flat fills.
 ///
-/// The rail truncates a long name at its 66pt slot, which was §747's first
-/// complaint. The head names the picked account in FULL beside the figure
-/// (§450's caption, drawn by each room's crown), so the rail's word is a
-/// label and the head is the name — the §495 pairing, not a second truncation.
-///
-/// Every room in the family (Wallet, Frames, Logos) passes the same arguments
-/// it passed §747's chrome; only this file decides where they are drawn.
-///
-/// **The section TILES are on every page** (prd §752, §752b, user: "i don't
-/// want the app to have controls at the top of the screen anywhere", then "i
-/// think they should always show"). On Home they sit under the head, above
-/// Actions and the Readings rows; in a section each room mounts this chrome
-/// UNDER the section's figure and it draws the tiles alone. Home is a tile.
-struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: View>: View {
+/// The account rail is NOT drawn here: the room publishes its accounts to
+/// `ShellChrome.accountRail`, and the shell draws them where the iPad and Mac
+/// rail stands (§750, §936).
+struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     @Environment(ShellChrome.self) private var chrome
 
     /// The room this chrome stands in — the key the published rail carries.
     let source: String
     let sections: [Scope]
+    /// The room's verbs for the page showing, drawn as the LAST tiles (prd
+    /// §1039). The room's `onPick` receives them and acts; none ever lights.
+    var verbs: [Scope] = []
     let active: Scope
     let home: Scope
     var attention: Set<Scope> = []
@@ -65,24 +48,10 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
     let scope: String?
     let onPickAccount: (String?) -> Void
 
-    let reading: (Scope) -> String?
     @ViewBuilder let crown: (DSAccountSlot) -> Crown
     /// The section's own drawing, off Home. Drawn HERE, in the box the crown
     /// takes on Home, never as a sibling `Section` above the chrome (prd §765).
     @ViewBuilder let figure: (Scope) -> Figure
-    @ViewBuilder let acts: (DSAccountSlot) -> Acts
-
-    /// **HOME FIRST, THEN THE ALPHABET (user, 2026-09-26: "home would be
-    /// first and others alphabetized, is that easier for a user especially
-    /// w/ 8 buttons").** The room's own order was by felt importance, which
-    /// nobody could predict; eight tiles are not a sequence anyone reads in
-    /// order, so a guessable order wins. The tiles and the Readings rows
-    /// share it.
-    private var ordered: [Scope] {
-        [home] + sections.filter { $0 != home }
-            .sorted { $0.label.localizedStandardCompare($1.label) == .orderedAscending }
-    }
-    private var rest: [Scope] { Array(ordered.dropFirst()) }
 
     /// The slot the crown draws: the one in scope, else the "All" slot, else
     /// the only one.
@@ -91,16 +60,6 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
             ?? accounts.first { $0.id.isEmpty }
             ?? accounts.first
     }
-
-    /// The slot the ACTIONS are for: **the page you are on (prd §774, user:
-    /// "they may do it from home but may also from the account, but make it
-    /// consistent").** Until §774 every room drew its verbs for the "All" slot
-    /// whichever account was in scope, on the reasoning that the device held
-    /// one key — false once a phone can hold several. The room's `acts`
-    /// closure decides what a slot gets, and every room in the family gives
-    /// EVERY page its room-level verb (Create account, Follow address), so the
-    /// label is never drawn over nothing.
-    private var actsSlot: DSAccountSlot? { showing }
 
     var body: some View {
         content
@@ -134,45 +93,16 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View, Acts: Vi
     private var content: some View {
         VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
             lead
-            if active == home {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    DSScopeTiles(sections: ordered, active: active,
-                                 attention: attention, onPick: onPick)
-                    accountLine
-                }
-                .padding(.horizontal, DSRoomChassis.inset)
-                if let actsSlot {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        // On the tiles' edge, like every section's group
-                        // header (prd §953) — the block's own inset is the
-                        // only one; a second put it 16pt inside.
-                        WalletSectionLabel(title: String(localized: "Actions"))
-                        // NO PLATE (prd §757) — see `DSScopeRows`. The acts and
-                        // the readings are one grammar, so they lose the card
-                        // together or the two blocks read as different kinds of
-                        // thing, which is §750's own complaint.
-                        VStack(spacing: 0) {
-                            acts(actsSlot)
-                        }
-                    }
-                    .padding(.horizontal, DSRoomChassis.inset)
-                }
-                if !rest.isEmpty {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        WalletSectionLabel(title: String(localized: "Overview"))
-                        DSScopeRows(sections: rest, attention: attention,
-                                    reading: reading, onPick: onPick)
-                    }
-                    .padding(.horizontal, DSRoomChassis.inset)
-                }
-            } else {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    DSScopeTiles(sections: ordered, active: active,
-                                 attention: attention, onPick: onPick)
-                    accountLine
-                }
-                .padding(.horizontal, DSRoomChassis.inset)
+            // **THE TILES, THEN THE MENU, ON EVERY PAGE (prd §1039).** Home
+            // drew Actions and the Overview rows under these until the merge;
+            // the room's own list follows the chrome now, as in every room.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSScopeTiles(sections: sections + verbs, active: active,
+                             attention: attention, verbs: Set(verbs),
+                             onPick: onPick)
+                accountLine
             }
+            .padding(.horizontal, DSRoomChassis.inset)
         }
     }
 

@@ -24,7 +24,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CONSOLE = ROOT / "Casberi/Casberi/Screens/DevnetSendConsole.swift"
-CARD = ROOT / "Casberi/Casberi/Screens/FramesSendCard.swift"
+# The Frames verbs' dispatcher (prd §1039): Send, Top up and Create are the
+# room's last tiles, and this file is what each tile runs. It was
+# `FramesSendCard.swift`, the Actions block's panel, until the merge.
+CARD = ROOT / "Casberi/Casberi/Screens/FramesActs.swift"
 FEED = ROOT / "Casberi/Casberi/Screens/FeedScreen.swift"
 # The wallet room's half of FeedScreen (prd §718): read as one text with FEED.
 FEED_WALLET = ROOT / "Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
@@ -120,26 +123,19 @@ def checks(console: str, card: str, feed: str):
     c_bare = strip_comments(console)
     k_bare = strip_comments(card)
 
-    # 1. **HOME'S VERBS ARE ROWS (prd §750, 2026-09-15).** The tiles are gone:
-    #    on the user's screenshot they were the loudest thing in the room and a
-    #    fourth kind of container ("these all look like different apps each
-    #    component"), so every verb is a `DevnetVerbRow` on the readings'
-    #    insets. What this asserts is that shape — and that neither the tile
-    #    rung nor the tile's surface comes back, since a panel that quietly
-    #    regrows a tile would render perfectly.
-    if "struct DevnetVerbRow" not in c_bare:
-        out.append("the devnet verb row is gone — Home's verbs have no shared row to draw through")
-    panel = re.search(r"struct DevnetSendPanel: View \{.*?\n\}\n", c_bare, re.S)
-    if not panel or "DevnetVerbRow(" not in panel.group(0):
-        out.append("DevnetSendPanel no longer draws its verbs as rows — a verb is a tile again (§750)")
-    # Scoped to the two verb panels: the send SHEET draws its amount at the
-    # crown rung on purpose, and that is a figure, not a verb.
-    for name in ("DevnetSendPanel", "DevnetCreatePanel"):
-        body = re.search(r"struct %s: View \{.*?\n\}\n" % name, c_bare, re.S)
-        if body and (".price40" in body.group(0) or ".stat24" in body.group(0)
-                     or "DevnetTileSurface" in c_bare):
-            out.append("%s draws a verb on the tile rung or the tile surface again — "
-                       "Home is four containers again (§750)" % name)
+    # 1. **HOME'S VERBS ARE THE GRID'S LAST TILES (prd §1039, 2026-10-01).**
+    #    §750 made them rows in an Actions block, after §553's loud price40
+    #    tiles; the merge deleted the block and made each verb a tile in the
+    #    room's own grid — the scopes' tile, never lit, last. What this asserts
+    #    is that the Frames chrome hands its verbs to the grid and the tap runs
+    #    `FramesActs`, and that no verb panel or verb row grows back on Home.
+    for name in ("DevnetSendPanel", "DevnetVerbRow", "DevnetCreatePanel"):
+        if "struct %s" % name in c_bare:
+            out.append("%s is back — Home's verbs are the grid's last tiles, not a block (prd §1039)" % name)
+    if "DevnetTileSurface" in c_bare:
+        out.append("the loud verb tile's surface is back — a verb is a grid tile (§750, prd §1039)")
+    if "verbs: FramesActs.verbs(for:" not in feed:
+        out.append("the Frames chrome no longer hands its verbs to the grid — Send, Top up and Create have no tile")
 
     # 1b. THE PLAN STRIP STEPS ASIDE RATHER THAN RESERVING SPACE (prd §548).
     #     The amount screen is a plain `VStack` with NO `ScrollView`, so a
@@ -164,12 +160,13 @@ def checks(console: str, card: str, feed: str):
     #    `List` row resolves to the same presenting controller as the screen's
     #    own and half-opens then closes — paid for three times already.
     if ".sheet(" in k_bare:
-        out.append("FramesSendCard presents its own sheet from inside a List row — it will half-open and close")
+        out.append("FramesActs presents its own sheet — it will half-open and close inside a List row")
 
-    # 5. ONE PANEL. A hand-rolled copy of a control carrying the whole budget
-    #    is how a sum quietly stops being true.
-    if "DevnetSendPanel" not in k_bare:
-        out.append("FramesSendCard hand-rolls its own panel instead of using DevnetSendPanel")
+    # 5. ONE DISPATCHER. Each verb tile runs what its row ran; a tap handled
+    #    inline in the room is how Send stops selecting the page's account.
+    for verb in ("FramesActs.send(", "FramesActs.topUp(", "FramesActs.create("):
+        if verb not in feed:
+            out.append("the Frames room no longer routes a verb tile through %s" % verb)
 
     # 6. THE DEMO REACHES IT, AND STOPS WHERE THE MONEY STARTS (prd §552b).
     #    A scope's whole content gated on a device credential is invisible to
@@ -187,14 +184,14 @@ def checks(console: str, card: str, feed: str):
     #    promise that ruling closed; Frames' Top up says it OPENS (`opens`).
     #    Read from the COMMENT-STRIPPED copies, or this fires on the paragraphs
     #    that explain the deletion BY NAMING the flag.
-    for name, bare in (("DevnetSendConsole", c_bare), ("FramesSendCard", k_bare)):
+    for name, bare in (("DevnetSendConsole", c_bare), ("FramesActs", k_bare)):
         if "handsOff" in bare:
             out.append("%s brought back the handsOff tile — §553b deleted it" % name)
 
     # 8. TOP UP DOES NOT ACT IN A DEMO — the tour's account is nobody's, and a
     #    live faucet page for it, from a screen whose banner reads "none of this
     #    is yours", is the gap this catches. The half stays and says why.
-    top = re.search(r"func topUp\(\).*?\n    \}", card, flags=re.S)
+    top = re.search(r"func topUp\(.*?\n    \}", card, flags=re.S)
     if not top or "DemoMode.isActive" not in top.group(0):
         out.append("Frames' Top up acts in a demo — the tour reaches something real")
 
@@ -203,36 +200,33 @@ def checks(console: str, card: str, feed: str):
 
 def self_test() -> int:
     good_console = """
-struct DevnetSendPanel: View {
-    var body: some View {
-        DevnetVerbRow(title: t, glyph: g, tint: c, act: a)
-    }
-}
-struct DevnetVerbRow: View { }
 struct DevnetKeypad { }
 """
-    good_k = ('DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n'
-              '    private func topUp() {\n        guard !DemoMode.isActive else { return }\n    }\n')
+    good_k = ('enum FramesActs {\n'
+              '    static func topUp(account: String?) {\n        guard !DemoMode.isActive else { return }\n    }\n')
     good_f = ('    func sendFrames(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
-              '    func sendFramesStitched(x: String) async -> String? {\n        DemoMode.isActive\n    }\n')
+              '    func sendFramesStitched(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
+              '    verbs: FramesActs.verbs(for: account),\n'
+              '    FramesActs.send(account: a) {}\n    FramesActs.topUp(account: a) {}\n'
+              '    FramesActs.create(store: s)\n')
 
     cases = []
     cases.append(("the shipping shape", good_console, good_k, good_f, False))
-    cases.append(("a verb goes back to the tile rung",
-                  good_console.replace("DevnetVerbRow(title: t, glyph: g, tint: c, act: a)", "Text(x).dsText(.price40)\n        DevnetVerbRow(title: t, glyph: g, tint: c, act: a)"),
-                  good_k, good_f, True))
-    cases.append(("the panel stops drawing rows",
-                  good_console.replace("DevnetVerbRow(title: t, glyph: g, tint: c, act: a)", "VStack { }"),
-                  good_k, good_f, True))
-    cases.append(("the shared verb row is deleted",
-                  good_console.replace("struct DevnetVerbRow: View { }", ""), good_k, good_f, True))
+    cases.append(("the verb panel grows back on Home",
+                  good_console + "struct DevnetSendPanel: View { }\n", good_k, good_f, True))
+    cases.append(("a verb row grows back on Home",
+                  good_console + "struct DevnetVerbRow: View { }\n", good_k, good_f, True))
+    cases.append(("the loud verb tile's surface comes back",
+                  good_console + "DevnetTileSurface()\n", good_k, good_f, True))
+    cases.append(("the chrome stops handing over its verbs",
+                  good_console, good_k, good_f.replace("verbs: FramesActs.verbs(for:", "verbs: ["), True))
     cases.append(("the system keypad comes back",
                   good_console.replace("struct DevnetKeypad { }", "keyboardType(.decimalPad)"),
                   good_k, good_f, True))
     cases.append(("the card presents its own sheet from a List row",
                   good_console, good_k + '.sheet(isPresented: $x)', good_f, True))
-    cases.append(("the card hand-rolls its own panel",
-                  good_console, good_k.replace("DevnetSendPanel(", "VStack {"), good_f, True))
+    cases.append(("a verb tile handled inline instead of through FramesActs",
+                  good_console, good_k, good_f.replace("FramesActs.topUp(account: a) {}", "openURL(u)"), True))
     cases.append(("the console cannot be reached in the demo",
                   good_console, good_k.replace("DemoMode.isActive", "true"), good_f, True))
     cases.append(("send would broadcast from a demo",
@@ -245,7 +239,7 @@ struct DevnetKeypad { }
                   good_console + "\n    if topUp.handsOff { Image(systemName: a) }\n", good_k, good_f, True))
     cases.append(("Top up acts in a demo",
                   good_console,
-                  'DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n    private func topUp() {\n        openURL(u)\n    }\nDemoMode.isActive\n',
+                  'enum FramesActs {\n    static func topUp(account: String?) {\n        openURL(u)\n    }\nDemoMode.isActive\n',
                   good_f, True))
     # A comment naming a banned literal must not fire — these files explain
     # themselves by naming exactly what they must not do.
@@ -282,9 +276,9 @@ def main() -> int:
         for f in found:
             print("\033[31m✗ %s\033[39m" % f)
         return 1
-    print("\033[32m✓ devnet-console audit: Home's verbs are rows on the readings' insets, "
+    print("\033[32m✓ devnet-console audit: Home's verbs are the grid's last tiles, "
           "the keypad is ours, the plan strip steps aside, and nothing acts in a demo "
-          "(prd §750)\033[39m")
+          "(prd §1039)\033[39m")
     return 0
 
 

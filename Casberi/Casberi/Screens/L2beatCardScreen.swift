@@ -22,8 +22,6 @@ struct L2beatRiskCard: View {
 	let chainID: String
 	/// The sheet embeds this without its own navigation chrome; the screen wraps it.
 	var showsHeader = true
-	/// Handed in only where there is a sheet to close before the composer rises.
-	var onDismissForAsk: (() -> Void)?
 	/// Handed in only by a host that OWNS the scroll this card sits inside — which is the
 	/// screen and not the thing sheet. Absent, the strip key is a legend rather than a
 	/// control, because a cell that looks tappable and cannot move anything is exactly the
@@ -278,22 +276,6 @@ struct L2beatRiskCard: View {
 
 	private var footer: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s3) {
-			// Dark while the ask is deprecated (prd §697b, "every door it had is
-			// dark"): this chip raised the composer onto a question, which is the
-			// ask itself, not the capture surface or a connected seat's own door.
-			if AskSurface.enabled, let onDismissForAsk {
-				// A verb, so a row (prd §746).
-				DSDoorRow(icon: "sparkles",
-						  title: Text(AgentKey.active.map { String(localized: "Ask \($0.agent) about this") }
-									  ?? String(localized: "Ask about this"))) {
-					DSHaptic.tap()
-					// Dismiss first: the composer rises over the shell, and a sheet still up
-					// would sit between them.
-					onDismissForAsk()
-					chrome.ask(String(localized: "What does L2BEAT say about \(name)?"),
-							   withKey: AgentKey.isConfigured)
-				}
-			}
 			if let url = project?.pageURL {
 				Link(destination: url) {
 					Text(String(localized: "Full assessment on L2BEAT"))
@@ -464,7 +446,6 @@ struct L2beatCardScreen: View {
 				ScrollView {
 					L2beatRiskCard(
 						chainID: chainID,
-						onDismissForAsk: { dismiss() },
 						// `.center`, not `.top`: the five rows read as a set, and pinning the
 						// picked one to the top hides the four it is being compared against.
 						onScrollToAxis: { axis in

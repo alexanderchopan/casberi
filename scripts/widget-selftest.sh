@@ -4,9 +4,13 @@
 #
 #   Casberi/Shared/WidgetPayload.swift
 #     — WidgetPayload.write/read   (the publish round trip, and the reload budget)
-#     — WidgetAsks.published       (a question is durable, a READING is not)
-#     — WidgetDeadline.isOverdue   (decided at draw time, never published)
 #     — WidgetWalletLine.normalizedPoints  (a flat curve draws down the MIDDLE)
+#     — WidgetFlowBand             (the week's flow, and its disclosure)
+#     — WidgetRunway.positions     (the dated rail's window always contains now)
+#
+# One widget since the ask retired (2026-10-01): the wallet. The Today and
+# kept-ask tiles, and the asks, deadlines, Safe-call, requests and people
+# payloads they read, went with it; the publisher clears what they left.
 #   Casberi/Shared/MoneyFormat.swift
 #     — compactUSD / isFlatPercent / percentLabel
 #
@@ -22,12 +26,11 @@
 #     as a wallet that went to zero, the most alarming possible way to say
 #     nothing happened. `AgentPanel` has carried this rule since §334; this is
 #     the same rule in another process.
-#   • **A stale READING printed as a current one.** `KeptAskStore` refuses to
-#     persist deltas at all ("restoring 'ETH is up 2.1%' from UserDefaults at
-#     launch would put a stale number in the largest type on the screen"). A
-#     widget has no choice but to persist them, so the freshness window is the
-#     only thing standing between a tile and exactly that — and a window that
-#     silently stops being applied looks identical to one that works.
+#   • **A stale READING printed as a current one.** A widget has no choice but
+#     to persist its readings, so the freshness window is the only thing
+#     standing between a tile and a stale number in the largest type on the
+#     screen — and a window that silently stops being applied looks identical
+#     to one that works.
 #   • **A publish that reloads on every foreground.** `reloadTimelines` is
 #     budgeted by the system; spending it rewriting identical bytes is how a
 #     tile stops updating when something REAL changes. Invisible on a desk,
@@ -52,12 +55,10 @@ MONEY="Casberi/Shared/MoneyFormat.swift"
 PUBLISH="Casberi/Casberi/Model/WidgetPublish.swift"
 BUNDLE="Casberi/CasberiWidgets/CasberiWidgets.swift"
 WALLETW="Casberi/CasberiWidgets/WalletWidget.swift"
-KEPTW="Casberi/CasberiWidgets/KeptAskWidget.swift"
-TODAYW="Casberi/CasberiWidgets/TodayWidget.swift"
 ROOT="Casberi/Casberi/Shell/RootShell.swift"
 COMMIT="Casberi/Casberi/Model/ImportCommit.swift"
 PANEL="Casberi/Casberi/Model/AgentPanel.swift"
-for f in "$PAYLOAD" "$MONEY" "$PUBLISH" "$BUNDLE" "$WALLETW" "$KEPTW" "$TODAYW" \
+for f in "$PAYLOAD" "$MONEY" "$PUBLISH" "$BUNDLE" "$WALLETW" \
          "$ROOT" "$COMMIT" "$PANEL"; do
   [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
 done
@@ -91,8 +92,6 @@ PY
 strip_comments "$PUBLISH" > "$TMP/publish.nc"
 strip_comments "$BUNDLE"  > "$TMP/bundle.nc"
 strip_comments "$WALLETW" > "$TMP/walletw.nc"
-strip_comments "$KEPTW"   > "$TMP/keptw.nc"
-strip_comments "$TODAYW"  > "$TMP/todayw.nc"
 strip_comments "$ROOT"    > "$TMP/root.nc"
 strip_comments "$COMMIT"  > "$TMP/commit.nc"
 strip_comments "$PANEL"   > "$TMP/panel.nc"
@@ -113,30 +112,10 @@ if grep -rlE '\b(URLSession|URLRequest)\b' Casberi/CasberiWidgets >/dev/null 2>&
   exit 1
 fi
 
-# Each widget must take its kind from the shared constant, never a literal.
+# The widget must take its kind from the shared constant, never a literal.
 # The app reloads BY KIND (`WidgetCenter.reloadTimelines(ofKind:)`), so a
 # hardcoded string that drifts leaves the tile listening on a channel nobody
-# writes — it keeps drawing, forever, whatever it last had. `WidgetLede.kind`
-# already carries this note for the hero; these are the same rule.
-grep -q 'kind: WidgetAsks.kind' "$TMP/keptw.nc" \
-  || { print -u2 "✗ the kept-ask widget no longer uses WidgetAsks.kind — reloads would never reach it"; exit 1; }
-grep -q 'kind: WidgetToday.kind' "$TMP/todayw.nc" \
-  || { print -u2 "✗ the Today widget no longer uses WidgetToday.kind"; exit 1; }
-# prd §877: Today KEEPS the hero's kind, so a "Your day" tile already on a Home
-# Screen becomes Today instead of the system's "unable to load" placeholder.
-grep -q 'static let kind = "casberi.hero"' "$PAYLOAD" \
-  || { print -u2 "✗ WidgetToday.kind is no longer the hero's — every placed Your day tile would break"; exit 1; }
-# Every payload the tile reads must reload the tile's OWN kind. Needs you's kind
-# is not registered any more, so a reload aimed at it reaches nothing.
-[[ "$(grep -c 'stale.append(WidgetToday.kind)' "$TMP/publish.nc")" -ge 4 ]] \
-  || { print -u2 "✗ requests, people, deadlines and the Safe call must each reload WidgetToday.kind"; exit 1; }
-# Lead pictures reach the tile only as files the APP writes; the widget reads
-# them by key. A face fetched on a bare URLSession with no ledger entry is a
-# host nothing discloses.
-grep -q 'NetworkLedger.shared.record(host: host, as: service)' "Casberi/Casberi/Model/WidgetLeadImages.swift" \
-  || { print -u2 "✗ the Today face fetch no longer names its host to the ledger"; exit 1; }
-grep -q 'WidgetLeadImages.refresh(' "$TMP/publish.nc" \
-  || { print -u2 "✗ nothing writes the Today tile's lead pictures — every row would be a monogram"; exit 1; }
+# writes — it keeps drawing, forever, whatever it last had.
 grep -q 'kind: WidgetWallet.kind' "$TMP/walletw.nc" \
   || { print -u2 "✗ the wallet widget no longer uses WidgetWallet.kind"; exit 1; }
 
@@ -149,9 +128,17 @@ grep -q 'kind: WidgetWallet.kind' "$TMP/walletw.nc" \
        print -u2 "  every tile would be stale in whichever configuration is missing it."; exit 1; }
 
 # Reload only what changed. See `WidgetPayload.write`'s own note.
-grep -qE 'for kind in (Set\()?stale' "$TMP/publish.nc" \
-  || { print -u2 "✗ publishAll no longer reloads only the changed kinds — it would spend the"; \
+grep -q 'if stale { WidgetCenter.shared.reloadTimelines(ofKind: WidgetWallet.kind) }' "$TMP/publish.nc" \
+  || { print -u2 "✗ publishAll no longer reloads only when a payload changed — it would spend the"; \
        print -u2 "  system's refresh budget rewriting identical bytes on every foreground."; exit 1; }
+# What the retired tiles left in the app group is cleared on every pass
+# (2026-10-01) — a payload with no reader is a stale reading kept forever.
+grep -q 'sweepRetired(group)' "$TMP/publish.nc" \
+  || { print -u2 "✗ publishAll no longer clears the retired widgets' payloads"; exit 1; }
+for k in widget.asks widget.deadlines widget.safe widget.requests widget.people; do
+  grep -q "\"$k\"" "$TMP/publish.nc" \
+    || { print -u2 "✗ the retired payload $k is no longer cleared"; exit 1; }
+done
 
 # §374, and the reason it is a WITHHOLD rather than a mask: a Home Screen is the
 # most stood-next-to surface the OS has, and the threat §374 exists for is
@@ -160,14 +147,6 @@ grep -q 'hidden ? nil : last.usd' "$TMP/publish.nc" \
   || { print -u2 "✗ the wallet payload no longer withholds the total under Hide wallet balances (§374)"; exit 1; }
 grep -q 'points: points' "$TMP/publish.nc" \
   || { print -u2 "✗ the wallet payload no longer publishes the curve — §374 rule 3 keeps the SHAPE"; exit 1; }
-
-# The deadline scan must run its OWN fetch. Handed the foreground pass's
-# newest-600-by-capture slice it would silently stop seeing exactly the rows
-# that matter most: a grant expiry or an ENS name lands months before its date.
-grep -q 'FetchDescriptor<Thing>' "$TMP/publish.nc" \
-  || { print -u2 "✗ deadlines no longer run their own fetch — long-dated rows would drop out of view"; exit 1; }
-grep -q 'thing.mark != .done' "$TMP/publish.nc" \
-  || { print -u2 "✗ the deadline scan no longer excludes done rows"; exit 1; }
 
 # The import Live Activity must end on BOTH exits. Ending only on success
 # leaves a lock-screen count frozen forever after a failed import, with no way
@@ -185,27 +164,15 @@ grep -qE '\$%\.1fK' "$TMP/panel.nc" \
 
 # Every tile the bundle declares must actually be in the bundle. A widget
 # struct that compiles and is never listed is invisible with no error anywhere.
-for w in TodayWidget WalletWidget ComposeControl; do
+for w in WalletWidget ComposeControl NoteControl; do
   grep -q "        $w()" "$TMP/bundle.nc" \
     || { print -u2 "✗ $w is not in the widget bundle — it would never appear in the gallery"; exit 1; }
 done
-# ...and the two the ask took with it must STAY out (prd §697b, 2026-09-11).
-# `KeptAskWidget` was a gallery full of doors onto an ask that is deprecated,
-# and `BriefControl` was the Control Center button onto the brief. Their files
-# stay in the target and stay compiling, so listing either again is a one-line
-# mistake with no compiler to catch it — which is what this guard is for.
-for w in KeptAskWidget BriefControl; do
+# ...and the three the ask took with it must STAY out (2026-10-01).
+for w in TodayWidget KeptAskWidget BriefControl; do
   grep -q "        $w()" "$TMP/bundle.nc" \
-    && { print -u2 "✗ $w is back in the bundle — the ask is deprecated (prd §697b)"; exit 1; }
+    && { print -u2 "✗ $w is back in the bundle — it went with the ask"; exit 1; }
 done
-
-# The large family is the only one with room for all three sections.
-grep -q '.systemLarge' "$TMP/todayw.nc" \
-  || { print -u2 "✗ Today no longer offers the large family"; exit 1; }
-# No ring on the circular lock-screen tile (user, 2026-09-22: "it's unnecessary
-# and doesn't mean anything") — a count of open items is not a fraction.
-grep -qE 'Gauge\(|accessoryCircularCapacity|stroke-dasharray' "$TMP/todayw.nc" \
-  && { print -u2 "✗ the Today circular tile draws a gauge ring again"; exit 1; }
 
 print "widget-selftest: drift guards OK"
 
@@ -237,97 +204,57 @@ let d = UserDefaults(suiteName: suiteName)!
 // ── the publish round trip ──────────────────────────────────────────────────
 // The encode and the decode are the one place the two processes can silently
 // disagree; a payload that fails to decode looks exactly like one never sent.
-let cells = [WidgetAskCell(kind: "wallet", title: "What's my wallet doing?",
-                           reading: "$12.5K · +2.1%", changed: true),
-             WidgetAskCell(kind: "overdue", title: "What's overdue?",
-                           reading: "3 things late", changed: false)]
-check(WidgetPayload.write(cells, key: "k", stampKey: "kAt", defaults: d),
+let bands = [WidgetFlowBand(inWeight: 1, outWeight: 0.5, inUSD: 2400, outUSD: 1200,
+                            unpriced: 0, predating: 0, priced: 9),
+             WidgetFlowBand(inWeight: 0.25, outWeight: 1, inUSD: 300, outUSD: 1200,
+                            unpriced: 1, predating: 0, priced: 3)]
+check(WidgetPayload.write(bands, key: "k", stampKey: "kAt", defaults: d),
       "a first publish reports a change")
-let back = WidgetPayload.read([WidgetAskCell].self, key: "k", stampKey: "kAt",
+let back = WidgetPayload.read([WidgetFlowBand].self, key: "k", stampKey: "kAt",
                               freshness: 3600, defaults: d)
 eq(back?.count, 2, "the payload round-trips")
-eq(back?[0].reading, "$12.5K · +2.1%", "a reading survives the round trip")
-eq(back?[0].changed, true, "the changed flag survives the round trip")
+eq(back?[0].inUSD, 2400, "a reading survives the round trip")
+eq(back?[1].unpriced, 1, "the disclosure count survives the round trip")
 
 // THE RELOAD BUDGET. Publishing identical bytes must report no change.
-check(!WidgetPayload.write(cells, key: "k", stampKey: "kAt", defaults: d),
+check(!WidgetPayload.write(bands, key: "k", stampKey: "kAt", defaults: d),
       "republishing identical bytes reports NO change")
 // ...and the stamp must move anyway, or a payload republished unchanged would
 // age out while the app is being used every day.
 let stampAfter = d.double(forKey: "kAt")
 check(stampAfter > 0, "the stamp is written even when the bytes did not change")
 
-var changed = cells
-changed[0] = WidgetAskCell(kind: "wallet", title: "What's my wallet doing?",
-                           reading: "$12.6K · +2.4%", changed: true)
+var changed = bands
+changed[0] = WidgetFlowBand(inWeight: 1, outWeight: 0.6, inUSD: 2400, outUSD: 1440,
+                            unpriced: 0, predating: 0, priced: 9)
 check(WidgetPayload.write(changed, key: "k", stampKey: "kAt", defaults: d),
       "a different reading reports a change")
 
 // Clearing.
-check(WidgetPayload.write(Optional<[WidgetAskCell]>.none, key: "k", stampKey: "kAt", defaults: d),
+check(WidgetPayload.write(Optional<[WidgetFlowBand]>.none, key: "k", stampKey: "kAt", defaults: d),
       "clearing a published payload reports a change")
-check(!WidgetPayload.write(Optional<[WidgetAskCell]>.none, key: "k", stampKey: "kAt", defaults: d),
+check(!WidgetPayload.write(Optional<[WidgetFlowBand]>.none, key: "k", stampKey: "kAt", defaults: d),
       "clearing an already-empty payload reports NO change")
-check(WidgetPayload.read([WidgetAskCell].self, key: "k", stampKey: "kAt",
+check(WidgetPayload.read([WidgetFlowBand].self, key: "k", stampKey: "kAt",
                          freshness: 3600, defaults: d) == nil,
       "a cleared payload reads as nothing")
 
 // ── freshness ───────────────────────────────────────────────────────────────
-_ = WidgetPayload.write(cells, key: "f", stampKey: "fAt", defaults: d)
+_ = WidgetPayload.write(bands, key: "f", stampKey: "fAt", defaults: d)
 let now = Date()
-check(WidgetPayload.read([WidgetAskCell].self, key: "f", stampKey: "fAt",
+check(WidgetPayload.read([WidgetFlowBand].self, key: "f", stampKey: "fAt",
                          freshness: 3600, now: now, defaults: d) != nil,
       "a fresh payload reads")
-check(WidgetPayload.read([WidgetAskCell].self, key: "f", stampKey: "fAt",
+check(WidgetPayload.read([WidgetFlowBand].self, key: "f", stampKey: "fAt",
                          freshness: 3600, now: now.addingTimeInterval(7200),
                          defaults: d) == nil,
       "a payload past its freshness window reads as nothing")
 // A payload with NO stamp at all must not read — the pre-stamp legacy case,
 // and the shape a partial write would leave behind.
 d.set(d.data(forKey: "f"), forKey: "nostamp")
-check(WidgetPayload.read([WidgetAskCell].self, key: "nostamp", stampKey: "missingAt",
+check(WidgetPayload.read([WidgetFlowBand].self, key: "nostamp", stampKey: "missingAt",
                          freshness: 3600, defaults: d) == nil,
       "an unstamped payload reads as nothing")
-
-// ── a question is durable, a READING is not ─────────────────────────────────
-// The rule this whole contract exists for. Past `readingWindow` the questions
-// stand and the numbers go; past `freshness` the questions go too.
-_ = WidgetPayload.write(cells, key: WidgetAsks.key, stampKey: WidgetAsks.stampKey, defaults: d)
-let fresh = WidgetAsks.published(now: now, defaults: d)
-eq(fresh.count, 2, "fresh asks publish whole")
-eq(fresh[0].reading, "$12.5K · +2.1%", "a fresh ask keeps its reading")
-
-let aged = WidgetAsks.published(now: now.addingTimeInterval(WidgetAsks.readingWindow + 60),
-                                defaults: d)
-eq(aged.count, 2, "an aged ask KEEPS its question")
-check(aged.first?.reading == nil, "an aged ask DROPS its reading")
-check(aged.first?.changed == false,
-      "an aged ask drops its changed dot too — a dot claiming 'this moved' is a reading")
-eq(aged[1].title, "What's overdue?", "the aged questions keep their own titles, in order")
-
-let expired = WidgetAsks.published(now: now.addingTimeInterval(WidgetAsks.freshness + 60),
-                                   defaults: d)
-check(expired.isEmpty, "past the outer freshness window even the questions go")
-check(WidgetAsks.readingWindow < WidgetAsks.freshness,
-      "the reading window is SHORTER than the payload's — otherwise stripping never happens")
-
-// ── deadlines ───────────────────────────────────────────────────────────────
-// Decided at draw time. A published boolean would be a claim about a `now` that
-// has already passed by the time anyone sees the tile.
-let due = WidgetDeadline(id: "a", title: "Respond to dispute", source: "Stripe",
-                         due: now.addingTimeInterval(3600))
-let late = WidgetDeadline(id: "b", title: "Renew name", source: "Wallet",
-                          due: now.addingTimeInterval(-3600))
-check(!due.isOverdue(now: now), "a future deadline is not overdue")
-check(late.isOverdue(now: now), "a past deadline is overdue")
-check(due.isOverdue(now: now.addingTimeInterval(7200)),
-      "the SAME entry reads as overdue once its moment passes — no republish needed")
-
-_ = WidgetPayload.write([due, late], key: WidgetDeadlines.key,
-                        stampKey: WidgetDeadlines.stampKey, defaults: d)
-eq(WidgetDeadlines.published(now: now, defaults: d).count, 2, "deadlines round-trip with their dates")
-eq(WidgetDeadlines.published(now: now, defaults: d).first?.id, "a",
-   "a deadline carries the id its row opens")
 
 // ── the wallet curve ────────────────────────────────────────────────────────
 // THE ONE THAT MATTERS MOST: a flat series draws down the MIDDLE. Along the
@@ -359,101 +286,6 @@ eq(hidden.normalizedPoints, [0, 1], "a hidden line still carries its SHAPE")
 _ = WidgetPayload.write(hidden, key: WidgetWallet.key, stampKey: WidgetWallet.stampKey, defaults: d)
 check(WidgetWallet.published(now: now, defaults: d)?.total == nil,
       "the withheld figure is still absent after a round trip")
-
-// ── Today (prd §877) ────────────────────────────────────────────────────────
-// One list: what needs you, then who answered you, then what landed.
-let dLate = WidgetDeadline(id: "late", title: "Dispute evidence", source: "Stripe",
-                           due: now.addingTimeInterval(-2 * 3600))
-let dSoon = WidgetDeadline(id: "soon", title: "Launch review", source: "Linear",
-                           due: now.addingTimeInterval(30 * 3600))
-let dFar = WidgetDeadline(id: "far", title: "casberi.eth renews", source: "Wallet",
-                          due: now.addingTimeInterval(12 * 86_400))
-let tSign = WidgetSafeCall(id: "safe", subject: "move 2 ETH to ops", awaitsYou: 1, ready: 0,
-                          waitingDays: 2)
-let ask = WidgetRequest(id: "req", title: "Review: Feed seam", source: "GitHub",
-                        askedAt: now.addingTimeInterval(-3600))
-let oldAsk = WidgetRequest(id: "old", title: "Review: tStale", source: "GitHub",
-                           askedAt: now.addingTimeInterval(-8 * 86_400))
-let r1 = WidgetReply(id: "r1", who: "ana", words: "where's the data from?", source: "Farcaster",
-                     at: now.addingTimeInterval(-600), face: "face-a")
-let r2 = WidgetReply(id: "r2", who: "mia", words: "saving this", source: "Bluesky",
-                     at: now.addingTimeInterval(-3000), face: nil)
-let crowd = WidgetPeople(replies: [r2, r1], likes: nil)
-let things = (0..<6).map { i in
-    WidgetLanded(id: "t\(i)", title: "thing \(i)", source: "Gmail",
-                 at: now.addingTimeInterval(Double(-i * 900)), face: nil)
-}
-
-let tFull = WidgetTodayPlan.make(deadlines: [dSoon, dLate, dFar], safe: tSign, requests: [ask],
-                                people: crowd, landed: things, capacity: 8, now: now)
-eq(tFull.rows.map(\.id), ["late", "safe", "req", "soon", "r1", "r2", "t0", "t1"],
-   "late, then the signature, then a request, then what is coming; then replies newest first; then landed")
-check(tFull.next == nil, "a tile with something due this week names no 'Next'")
-eq(tFull.late, 1, "one late")
-eq(tFull.toSign, 1, "the Safe count is what waits on you — a request is not counted, it may be answered")
-eq(tFull.faces, ["face-a"], "only replies WITH a face join the pile, newest first")
-eq(tFull.repliers, ["ana", "mia"], "every replier is named, newest first")
-if case .mark(let source) = tFull.rows[5].lead { eq(source, "Bluesky", "a face-less reply leads with its network's mark") }
-else { check(false, "a face-less reply leads with its network's mark") }
-
-// Half the tile is held for the other sections when they have something.
-let medium = WidgetTodayPlan.make(deadlines: [dSoon, dLate], safe: tSign, requests: [ask],
-                                  people: crowd, landed: things, capacity: 4, now: now)
-eq(medium.rows.map(\.id), ["late", "safe", "r1", "r2"],
-   "a medium tile keeps two rows for the people who answered you")
-let onlyNeeds = WidgetTodayPlan.make(deadlines: [dSoon, dLate], safe: tSign, requests: [ask],
-                                     people: WidgetPeople(replies: [], likes: nil), landed: [],
-                                     capacity: 4, now: now)
-eq(onlyNeeds.rows.count, 4, "with nothing else to show, what needs you takes the whole tile")
-
-// A quiet day: nothing inside the week, so the next deadline is named on its
-// own line, which takes one row.
-let quiet = WidgetTodayPlan.make(deadlines: [dFar], safe: nil, requests: [oldAsk],
-                                 people: crowd, landed: things, capacity: 4, now: now)
-eq(quiet.next?.id, "far", "a quiet tile names the next deadline past the week")
-eq(quiet.rows.count, 3, "…and that line takes one of the four rows")
-check(!quiet.rows.contains { $0.id == "old" }, "a request older than a week is not drawn")
-check(!quiet.rows.contains { $0.id == "far" }, "a deadline past the week is not a row")
-
-// A Safe with nothing awaiting you is no row; a thing already shown as a reply
-// is not shown again as landed.
-let calm = WidgetTodayPlan.make(
-    deadlines: [], safe: WidgetSafeCall(id: "s", subject: "x", awaitsYou: 0, ready: 1, waitingDays: nil),
-    requests: [], people: crowd,
-    landed: [WidgetLanded(id: "r1", title: "dup", source: "Farcaster", at: now, face: nil)] + things,
-    capacity: 8, now: now)
-check(!calm.rows.contains { $0.id == "s" }, "a Safe that waits on nobody draws no row")
-eq(calm.rows.filter { $0.id == "r1" }.count, 1, "a reply is not repeated as a landed row")
-check(WidgetTodayPlan.make(deadlines: [], safe: nil, requests: [], people: WidgetPeople(replies: [], likes: nil),
-                           landed: [], capacity: 4, now: now).isEmpty, "nothing at all is an empty plan")
-
-// The readers apply each row's own window at DRAW time.
-_ = WidgetPayload.write([ask, oldAsk], key: WidgetToday.requestsKey,
-                        stampKey: WidgetToday.requestsStampKey, defaults: d)
-eq(WidgetToday.requests(now: now, defaults: d).map(\.id), ["req"],
-   "the request reader drops one asked more than a week ago")
-let tStale = WidgetReply(id: "r0", who: "old", words: "yesterday", source: "X",
-                        at: now.addingTimeInterval(-26 * 3600), face: nil)
-_ = WidgetPayload.write(WidgetPeople(replies: [r1, tStale],
-                                     likes: WidgetLikes(line: "Liked by @mia", source: "Bluesky",
-                                                        at: now.addingTimeInterval(-30 * 3600), id: nil)),
-                        key: WidgetToday.peopleKey, stampKey: WidgetToday.peopleStampKey, defaults: d)
-let readBack = WidgetToday.people(now: now, defaults: d)
-eq(readBack.replies.map(\.id), ["r1"], "a reply older than a day is not news")
-check(readBack.likes == nil, "…and neither is a like roll")
-
-// The clock's span.
-eq(WidgetSpan(20).minutes, 1, "under a minute reads as one minute, never zero")
-eq(WidgetSpan(59 * 60).minutes, 59, "minutes under an hour")
-eq(WidgetSpan(2 * 3600 + 50 * 60).hours, 2, "hours under a day")
-eq([WidgetSpan(30 * 3600).days, WidgetSpan(30 * 3600).hours], [1, 6], "a day and hours while they matter")
-eq(WidgetSpan(4 * 86_400 + 5 * 3600).hours, 0, "past three days the hours go")
-
-// The picture keys must be the same in both processes: FNV-1a, never hashValue.
-eq(WidgetImages.fnv(""), "cbf29ce484222325", "FNV-1a's offset basis for the empty string")
-eq(WidgetImages.fnv("a"), "af63dc4c8601ec8c", "FNV-1a's published vector for \"a\"")
-check(WidgetImages.markKey(source: "GitHub") != WidgetImages.faceKey(url: "GitHub"),
-      "a mark and a face never share a file")
 
 // ── the runway ──────────────────────────────────────────────────────────────
 // THE INVARIANT: the window always CONTAINS now. Get it wrong and late items
@@ -531,28 +363,6 @@ check(WidgetWallet.flow(now: now, defaults: d)?.inUSD == nil,
       "the withheld figures are still absent after a round trip")
 eq(WidgetWallet.flow(now: now, defaults: d)?.outWeight, 0.5,
    "…and the shape still arrives")
-
-// ── the ask link ────────────────────────────────────────────────────────────
-// A kept ask's title is whatever the person typed, and `CharacterSet
-// .urlQueryAllowed` PERMITS `&` — legal in a query string, fatal inside a query
-// ITEM, which is what the other end parses. The obvious spelling truncates the
-// question at the ampersand and the tile silently asks something else.
-func askedQuestion(_ title: String) -> String? {
-    guard let url = WidgetAskLink.url(asking: title) else { return nil }
-    return URLComponents(url: url, resolvingAgainstBaseURL: false)?
-        .queryItems?.first { $0.name == "q" }?.value
-}
-eq(askedQuestion("What's new with M&S?"), "What's new with M&S?",
-   "a question containing & survives the round trip WHOLE")
-eq(askedQuestion("a + b = c?"), "a + b = c?",
-   "so do +, = and ? — every sub-delimiter urlQueryAllowed lets through")
-eq(askedQuestion("what's coming up"), "what's coming up",
-   "an ordinary question is unharmed")
-eq(askedQuestion("Recipes & 30% off?"), "Recipes & 30% off?",
-   "a percent sign is not mistaken for an escape")
-check(WidgetAskLink.url(asking: "   ") == nil,
-      "a blank question mints no link at all — the far side returns early on it anyway")
-check(WidgetAskLink.url(asking: "")?.absoluteString == nil, "…and neither does an empty one")
 
 // ── money ───────────────────────────────────────────────────────────────────
 eq(MoneyFormat.compactUSD(0), "$0", "zero")
@@ -648,55 +458,6 @@ mutate "write compares serialized BYTES instead of decoded values (THE SHIPPED-F
 mutate "read ignores the stamp — a payload never goes stale" \
   WidgetPayload.swift \
   'guard stamp > 0, now.timeIntervalSince1970 - stamp < freshness else { return nil }|||_ = stamp' || mfail=1
-mutate "an aged reading is kept — a stale number in the largest type on the tile" \
-  WidgetPayload.swift \
-  'guard now.timeIntervalSince1970 - stamp < readingWindow else {|||if false {' || mfail=1
-mutate "an aged ask keeps its changed dot — a dot claiming something moved is a reading too" \
-  WidgetPayload.swift \
-  'reading: nil, changed: false)|||reading: nil, changed: $0.changed)' || mfail=1
-mutate "the reading window is as long as the payload's — stripping never happens" \
-  WidgetPayload.swift \
-  'static let readingWindow: TimeInterval = 6 * 3600|||static let readingWindow: TimeInterval = 7 * 24 * 3600' || mfail=1
-
-# Draw-time facts.
-mutate "isOverdue is frozen to the publish moment instead of read at draw time" \
-  WidgetPayload.swift \
-  'func isOverdue(now: Date = .now) -> Bool { due < now }|||func isOverdue(now: Date = .now) -> Bool { false }' || mfail=1
-
-# Today (prd §877).
-mutate "a signature outranks something already late" \
-  WidgetPayload.swift \
-  'var needs: [WidgetTodayRow] = overdue.map(deadlineRow)
-        if let signing {|||var needs: [WidgetTodayRow] = []
-        if let signing {' || mfail=1
-mutate "what needs you takes the whole tile even when people answered you" \
-  WidgetPayload.swift \
-  'let held = min(others, room / 2)|||let held = 0' || mfail=1
-mutate "the Next line is drawn even when something is due this week" \
-  WidgetPayload.swift \
-  'let next = needs.isEmpty ? byDue.first|||let next = true ? byDue.first' || mfail=1
-mutate "a request older than a week still draws" \
-  WidgetPayload.swift \
-  'let asks = requests.filter { now.timeIntervalSince($0.askedAt) < WidgetToday.requestWindow }|||let asks = requests.filter { _ in true }' || mfail=1
-mutate "a reply is drawn again as a landed row" \
-  WidgetPayload.swift \
-  '.filter { !shown.contains($0.id) }|||.filter { _ in true }' || mfail=1
-mutate "requests are counted as waiting on you" \
-  WidgetPayload.swift \
-  'toSign: signing?.awaitsYou ?? 0,|||toSign: (signing?.awaitsYou ?? 0) + asks.count,' || mfail=1
-mutate "the people reader keeps yesterday's replies" \
-  WidgetPayload.swift \
-  'let fresh = { (at: Date) in now.timeIntervalSince(at) < peopleWindow }|||let fresh = { (at: Date) in true }' || mfail=1
-mutate "a span under a minute reads as zero" \
-  WidgetPayload.swift \
-  'days = 0; hours = 0; minutes = max(1, s / 60)|||days = 0; hours = 0; minutes = s / 60' || mfail=1
-mutate "the hours ride beside the days forever" \
-  WidgetPayload.swift \
-  'hours = days < 3 ? (s % 86_400) / 3600 : 0|||hours = (s % 86_400) / 3600' || mfail=1
-mutate "the picture key uses a different hash — the app and the widget name one file two ways" \
-  WidgetPayload.swift \
-  'hash = hash &* 0x0000_0100_0000_01b3|||hash = hash &* 0x0000_0100_0000_01b5' || mfail=1
-
 # The runway. Its whole invariant is that the window contains now.
 mutate "the runway window excludes now — overdue items draw AHEAD of the marker" \
   WidgetPayload.swift \
@@ -721,13 +482,6 @@ mutate "a zero side is drawn as a hairline instead of nothing" \
         return (inUSD / scale, outUSD / scale)|||guard scale > 0 else { return (0, 0) }
         return (max(0.08, inUSD / scale), max(0.08, outUSD / scale))' || mfail=1
 
-# The ask link. THE SECOND BUG THIS HARNESS CAUGHT (2026-08-14): the shipped
-# first cut used `.urlQueryAllowed` unmodified, so "What's new with M&S?"
-# reached the app as "What's new with M".
-mutate "the ask link uses urlQueryAllowed unmodified — a question with & is truncated" \
-  WidgetPayload.swift \
-  'set.remove(charactersIn: "&+=?")|||' || mfail=1
-
 # Money.
 mutate "a change that rounds to zero is given a direction (§83)" \
   MoneyFormat.swift \
@@ -740,4 +494,4 @@ mutate "percentLabel drops the sign on a real move" \
   'return String(format: "%@%.1f%%", pct > 0 ? "+" : "−", abs(pct))|||return String(format: "%.1f%%", abs(pct))' || mfail=1
 
 [[ $mfail -eq 0 ]] || { print -u2 "widget-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
-print "widget-selftest: OK — publish round trip, both freshness windows, the flat curve and the money table all pinned."
+print "widget-selftest: OK — publish round trip, the freshness window, the flat curve, the flow band, the rail and the money table all pinned."

@@ -75,11 +75,11 @@ shot() {
 # first pass. `-openThingDelay` re-fetches after the demo has poured (the
 # mount-time fetch runs before any of it lands).
 #
-# The catalog and the brief take no thing: both are full-window surfaces that
-# own the pane themselves.
+# The catalog takes no thing: it is a full-window surface that owns the pane
+# itself. Shot 1 was the Today brief, which went with the ask (2026-10-01);
+# the numbering keeps its gap so the other files keep their names.
 D=10
 shot 0-catalog  -deeplink "casberi://account"
-shot 1-brief    -deeplink "casberi://brief"
 shot 2-wallet   -deeplink "casberi://feed/source/Wallet"   -openThing "Uniswap can spend" -openThingDelay $D
 shot 3-photos   -deeplink "casberi://feed/source/Photos"   -openThing "Figma — spacing tokens" -openThingDelay $D
 shot 4-social   -deeplink "casberi://feed/source/Snapchat" -openThing "Sam" -openThingDelay $D

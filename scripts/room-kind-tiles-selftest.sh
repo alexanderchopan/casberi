@@ -248,6 +248,10 @@ ALIASES = {
     # meaning under three words (prd §911), so one glyph.
     ("RoomKindTile", "mergeRequests"): "pullRequests",
     ("RoomKindTile", "patches"): "pullRequests",
+    # The Wallet's Follow tile (prd §1039) IS watching an address privately -
+    # Watch's own meaning ("Follow address" is named among its uses), so
+    # Watch's eye, never a second glyph for one meaning.
+    ("WalletSection", "follow"): "watch",
 }
 seen_aliases = set()
 for m in re.finditer(r'extension ([\w.]+): DSTileScope \{(.*?)\n\}', glyphs, re.S):

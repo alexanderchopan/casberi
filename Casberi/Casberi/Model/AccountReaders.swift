@@ -4,8 +4,9 @@ import Foundation
 /// behind the row of reader marks on every account page.
 ///
 /// **A reader is anything that takes a thing out of the corpus to think with
-/// it**: the on-device model, each agent key the person has added (Claude,
-/// Venice, OpenRouter, Grok, Bankr), and a paired MCP client. A person is not a
+/// it**: Apple Intelligence when its seat is on (prd §833), and each agent key
+/// the person has added (Claude, Venice, OpenRouter, Grok, Bankr). The paired
+/// MCP client went with the ask (2026-10-01). A person is not a
 /// reader — Find and the feed are theirs, and nothing here ever hides a row
 /// from the person who captured it.
 ///
@@ -20,10 +21,10 @@ import Foundation
 /// go.
 ///
 /// **The SOURCE rides beside the seat.** Enforcement filters `Thing.source`,
-/// and the seat→source join lives in `BridgeStore`, which the MCP server (off
-/// the main actor, its own `ModelContext`) cannot reach. So a write records
-/// the source name with the denial, and `deniedSources(for:)` answers without
-/// any store — the same reason `NetworkLedger.Entry` carries its own service.
+/// and the seat→source join lives in `BridgeStore`, which a reader off the
+/// main actor cannot reach. So a write records the source name with the
+/// denial, and `deniedSources(for:)` answers without any store — the same
+/// reason `NetworkLedger.Entry` carries its own service.
 ///
 /// App-group `UserDefaults`, never CloudKit: which agent may read what on THIS
 /// phone is a fact about this phone's keys.
@@ -36,13 +37,15 @@ enum AccountReaders {
     /// One reader's identity — stable strings, never a display name, so a
     /// renamed agent keeps its setting.
     enum ID {
+        /// Apple's model answering the composer — "device" since the reader
+        /// was the on-device model; the id stays so a stored denial still
+        /// governs the Apple Intelligence seat that replaced it (2026-10-01).
         static let device = "device"
-        static let mcp = "mcp"
         static func agent(_ providerRaw: String) -> String { "agent:\(providerRaw)" }
     }
 
     /// A reader as the page draws it. `mark` is the catalog name `BridgeIcon`
-    /// keys on, nil for the on-device model (a glyph tile, not a brand).
+    /// keys on, nil for Apple Intelligence (a glyph tile, not a brand).
     struct Reader: Identifiable, Hashable {
         let id: String
         let name: String
@@ -67,7 +70,7 @@ enum AccountReaders {
     }
 
     /// Every `Thing.source` this reader is shut out of — what the answer path
-    /// and the MCP door subtract before a thing reaches a model.
+    /// subtracts before a thing reaches a model.
     static func deniedSources(for reader: String, defaults: UserDefaults? = nil) -> Set<String> {
         Set(load(defaults ?? Self.defaults).values
             .filter { $0.denied.contains(reader) }

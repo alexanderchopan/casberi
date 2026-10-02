@@ -497,10 +497,9 @@ struct MainSurface: View {
         // open, like Farcaster here, we can't have the X room showing", then
         // "to reach X, the person should have to swipe or open the tray").**
         // A social room's faces are that network's people, and X lit between
-        // Farcaster's seat and Farcaster's faces read as if they were X's. On
-        // the phone the capsule carries the standing seat alone, then All and
-        // the faces, open folder or not; the siblings are a swipe or the
-        // tray. Where the rail stands, a folder the rail's chip springs is the
+        // Farcaster's seat and Farcaster's faces read as if they were X's.
+        // On the phone the capsule draws nothing since §959 moved the faces
+        // into the room (§1044): venues are a swipe or the tray. Where the rail stands, a folder the rail's chip springs is the
         // rail's own navigation and keeps its rooms.
         let socialRoom = FeedScreen.isSocialRoom(filter.source)
         let openVenues = socialRoom && !showsRail ? [] : folderVenues
@@ -1838,12 +1837,8 @@ struct MainSurface: View {
     /// sentence describing the layout is not content), then the DAY as a card
     /// (2026-07-31), and now the newest record itself.
     ///
-    /// The day line reads `chrome.paneBrief` — composed by the same `DayBrief`
-    /// pass the whisper capsule uses, published ungated (see
-    /// `ShellChrome.paneBrief`), so the pane and the capsule can never state
-    /// different days. On a day with nothing to say it composes nil and the
-    /// line simply doesn't draw: the honesty law forbids manufacturing a
-    /// headline to fill a column.
+    /// The day line above the record opened the brief, and went with the ask
+    /// (dark since prd §697b, deleted 2026-10-01).
     ///
     /// No berry anywhere in here — §249's ruling ("i like our logo in the
     /// search / whisper bar, but not inside the daily brief itself"). The mark
@@ -1884,18 +1879,11 @@ struct MainSurface: View {
     @ViewBuilder private var paneRest: some View {
         if let latest = latestArrival {
             VStack(alignment: .leading, spacing: 0) {
-                // The iPad pane's day strip is an ASK door — it opens the
-                // brief — so it goes with the ask (prd §697b, 2026-09-11).
-                if AskSurface.enabled, let brief = chrome.paneBrief {
-                    paneDayStrip(brief)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s4)
-                }
                 Text("Latest")
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, chrome.paneBrief == nil ? DS.Space.s4 : DS.Space.s6)
+                    .padding(.top, DS.Space.s4)
                 // `.id` so switching to a newer arrival rebuilds the record
                 // rather than re-theming the old one in place — the same
                 // reason the selection branch above carries one.
@@ -1915,42 +1903,6 @@ struct MainSurface: View {
             }
             .padding(DS.Space.s6)
         }
-    }
-
-    /// The day as one line above the record. Tapping opens the real Today
-    /// brief, routed through `chrome.askRequest` — the same door the whisper
-    /// capsule, the bar's own tap and a typed "how's my day" all use (§132),
-    /// so a fourth entry point can't drift into a fourth presentation of one
-    /// screen.
-    ///
-    /// The accent is read against DARK explicitly, not off the environment:
-    /// this line renders inside `dsInk`, which forces `.colorScheme(.dark)`,
-    /// while `@Environment(\.colorScheme)` on this surface is measured OUTSIDE
-    /// that background — in light mode the two disagree, and the one that
-    /// decides whether a gain reads green is this one.
-    private func paneDayStrip(_ brief: DayBrief.Whisper) -> some View {
-        Button {
-            DSHaptic.tap()
-            chrome.ask(TodayBrief.title)
-            chrome.openComposer()
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                Text(brief.title)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textPrimary)
-                brief.detailText(scheme: .dark)
-                    .dsText(.subhead12)
-                Spacer(minLength: 0)
-                DSChevron()
-            }
-            .lineLimit(1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .dsHover()
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(brief.title). \(brief.detail)")
-        .accessibilityHint("Opens your day")
     }
 
     var body: some View {

@@ -16,8 +16,6 @@ struct WalletbeatReportCard: View {
 	let walletID: String
 	/// The sheet embeds this without its own navigation chrome; the screen wraps it.
 	var showsHeader = true
-	/// Handed in only where there is a sheet to close before the composer rises.
-	var onDismissForAsk: (() -> Void)?
 
 	@Environment(\.modelContext) private var modelContext
 	@Environment(BridgeStore.self) private var store
@@ -276,22 +274,6 @@ struct WalletbeatReportCard: View {
 
 	private var footer: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s3) {
-			// Dark while the ask is deprecated (prd §697b, "every door it had is
-			// dark"): this chip raised the composer onto a question, which is the
-			// ask itself, not the capture surface or a connected seat's own door.
-			if AskSurface.enabled, let onDismissForAsk {
-				// A verb, so a row (prd §746).
-				DSDoorRow(icon: "sparkles",
-						  title: Text(AgentKey.active.map { String(localized: "Ask \($0.agent) about this") }
-									  ?? String(localized: "Ask about this"))) {
-					DSHaptic.tap()
-					// Dismiss first: the composer rises over the shell, and a sheet still
-					// up would sit between them.
-					onDismissForAsk()
-					chrome.ask(String(localized: "What does Walletbeat say about \(name)?"),
-							   withKey: AgentKey.isConfigured)
-				}
-			}
 			if let url = entry?.pageURL ?? URL(string: "https://\(WalletbeatHost.site)/\(walletID)/") {
 				Link(destination: url) {
 					Text(String(localized: "Full review on Walletbeat"))
@@ -485,7 +467,7 @@ struct WalletbeatCardScreen: View {
 	var body: some View {
 		NavigationStack {
 			ScrollView {
-				WalletbeatReportCard(walletID: walletID, onDismissForAsk: { dismiss() })
+				WalletbeatReportCard(walletID: walletID)
 					.padding(DS.Space.s4)
 			}
 			.dsPageBackground()

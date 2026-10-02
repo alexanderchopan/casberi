@@ -2,8 +2,9 @@
 # Casberi answer-figure self-test (2026-08-15) — the deterministic figure above
 # a free-text answer's prose.
 #
-#   Casberi/Casberi/Model/AnswerFigure.swift        — compiled WHOLE, unmodified
-#   Casberi/Casberi/Model/TodayBrief.swift          — sourceMixLine, faces, ownHandles
+#   Casberi/Casberi/Model/AnswerFigure.swift        — compiled WHOLE, unmodified,
+#                                                     sourceMixLine and faces included
+#                                                     (moved from TodayBrief, 2026-10-01)
 #   Casberi/Casberi/Model/KeptAskComposers.swift    — dailyBars, contactSheetLine,
 #                                                     runwayAxis, sourceMapLine
 #   Casberi/Casberi/Model/SocialBridge.swift        — the person gate (extracted)
@@ -66,7 +67,6 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FIGURE="Casberi/Casberi/Model/AnswerFigure.swift"
-BRIEF="Casberi/Casberi/Model/TodayBrief.swift"
 COMPOSERS="Casberi/Casberi/Model/KeptAskComposers.swift"
 THING="Casberi/Shared/Thing.swift"
 ROOTSHELL="Casberi/Casberi/Shell/RootShell.swift"
@@ -75,7 +75,7 @@ PANEL="Casberi/Casberi/Model/AgentPanel.swift"
 PANELFIGS="Casberi/Casberi/Model/AgentPanelFigures.swift"
 RENDERER="Casberi/Casberi/GenUI/GenRenderer.swift"
 
-for f in "$FIGURE" "$BRIEF" "$COMPOSERS" "$THING" "$ROOTSHELL" "$SOCIAL" "$PANEL" "$PANELFIGS" "$RENDERER"; do
+for f in "$FIGURE" "$COMPOSERS" "$THING" "$ROOTSHELL" "$SOCIAL" "$PANEL" "$PANELFIGS" "$RENDERER"; do
   [[ -f "$f" ]] || { print "✗ missing source $f"; exit 1; }
 done
 
@@ -195,8 +195,8 @@ done
 # a tidy-up that re-privatises either one breaks the build, but a tidy-up that
 # DELETES the now-single caller of `sourceMixLine` and re-privatises it would
 # not — it would just make this figure permanently a bar chart.
-grep -qE '^\s*static func sourceMixLine\(' "$BRIEF" \
-  || { print "✗ TodayBrief.sourceMixLine is no longer reachable — the mix half is dead"; exit 1; }
+grep -qE '^\s*static func sourceMixLine\(' "$FIGURE" \
+  || { print "✗ AnswerFigure.sourceMixLine is gone — the mix half is dead"; exit 1; }
 grep -qE '^\s*static func dailyBars\(' "$COMPOSERS" \
   || { print "✗ KeptAskComposers.dailyBars is no longer reachable — the bars half is dead"; exit 1; }
 # The four rungs added 2026-08-16. Each was file-private before that pass and
@@ -209,8 +209,8 @@ grep -qE '^\s*static func runwayAxis\(' "$COMPOSERS" \
   || { print "✗ KeptAskComposers.runwayAxis is no longer reachable — the time rung is dead"; exit 1; }
 grep -qE '^\s*static func sourceMapLine\(' "$COMPOSERS" \
   || { print "✗ KeptAskComposers.sourceMapLine is no longer reachable — the board rung is dead"; exit 1; }
-grep -qE '^\s*static func faces\(' "$BRIEF" \
-  || { print "✗ TodayBrief.faces is no longer reachable — the people rung is dead, and this"; \
+grep -qE '^\s*static func faces\(' "$FIGURE" \
+  || { print "✗ AnswerFigure.faces is gone — the people rung is dead, and this"; \
        print "  figure has already spent one release orphaned with no caller at all."; exit 1; }
 grep -qE '^\s*static func dialLine\(' "$COMPOSERS" \
   || { print "✗ KeptAskComposers.dialLine is gone — the clock rung is dead"; exit 1; }
@@ -240,9 +240,9 @@ grep -q 'rows.filter { $0.dueAt != nil }' "$TMP/figure.nc.swift" \
        print "  onto the marker and read as all due this instant."; exit 1; }
 
 # ── Extract the shipped logic ───────────────────────────────────────────────
-python3 - "$BRIEF" "$COMPOSERS" "$THING" "$TMP/extracted.swift" "$SOCIAL" "$PANEL" "$PANELFIGS" <<'PY'
+python3 - "$COMPOSERS" "$THING" "$TMP/extracted.swift" "$SOCIAL" "$PANEL" "$PANELFIGS" <<'PY'
 import sys
-brief, composers, thing, out, social, panel, panelfigs = sys.argv[1:8]
+composers, thing, out, social, panel, panelfigs = sys.argv[1:7]
 
 def grab(path, signature):
     """The whole declaration whose line contains `signature`, brace-matched
@@ -354,13 +354,6 @@ extension Array where Element == Thing {
     "enum AgentPanelFigures {",
     grab(panelfigs, "struct Entry"),
     grab(panelfigs, "static func dial("),
-    "}\n",
-    "enum TodayBrief {",
-    grab(brief, "static func sourceMixLine"),
-    grab(brief, "static func faces"),
-    grab(brief, "static func ownHandles"),
-    grab(brief, "static func tileSafe"),
-    grab(brief, "static func genSafe"),
     "}\n",
     "enum KeptAskComposers {",
     grab(composers, "static func dailyBars"),
@@ -772,7 +765,7 @@ mutate "window filter dropped (the all-zero skyline)" \
 # The ranking inverted — WHEN would lead, and a set spanning two rooms and two
 # years would answer with an empty week.
 mutate "bars ranked above the mix" \
-  's/^        if let mix = TodayBrief.sourceMixLine($/        if false, let mix = TodayBrief.sourceMixLine(/'
+  's/^        if let mix = sourceMixLine($/        if false, let mix = sourceMixLine(/'
 # The window widened by one day: an 8-day-old row starts counting, which is the
 # boundary that decides whether a chart draws at all.
 mutate "window widened to 8 days" 's/static let barsWindowDays = 7/static let barsWindowDays = 8/'
@@ -790,7 +783,7 @@ mutate "the deadline filter dropped" \
 # The people rung demoted — the roster this pass un-orphaned goes straight back
 # to having no caller, and nothing anywhere says so.
 mutate "people rung skipped" \
-  's/^        if let roster = TodayBrief.faces(rows) { return roster }$/        if false, let roster = TodayBrief.faces(rows) { return roster }/'
+  's/^        if let roster = faces(rows) { return roster }$/        if false, let roster = faces(rows) { return roster }/'
 # The two WHERE scales swapped: the miniature would answer sets big enough for
 # the board, silently dropping every room past the third.
 mutate "the miniature ranked above the board" \

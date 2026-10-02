@@ -4,31 +4,24 @@ import os
 import FoundationModels
 #endif
 
-/// Which Apple model answers the composer (prd §833): the one on this iPhone,
-/// or the same family on Apple's Private Cloud Compute when the person turned
-/// the Apple Intelligence seat on.
+/// Apple's model on Private Cloud Compute answering the composer, when the
+/// person turned the Apple Intelligence seat on (prd §833).
 ///
-/// **ONE CHOICE, READ AT EVERY ASK-PATH SESSION.** The composer's answer is
-/// several model calls — the grounded compose, the streamed synthesis, the
-/// tool-calling agent — and each used to build `LanguageModelSession` itself.
-/// A seat that switched only one of them would answer a question half on the
-/// phone and half off it, and the badge could honestly name neither. So every
-/// ask-path session comes from `session(tools:instructions:)`, and only those:
-/// query expansion, the router, screenshot naming, cluster names, the day
-/// read and Home's line are the
-/// librarian's background work, not a conversation the person started, and
-/// they stay on the phone whatever this says.
+/// **THE PHONE NO LONGER ANSWERS (2026-10-01).** This used to choose between
+/// the model on this iPhone and the same family on Private Cloud Compute, and
+/// a refused cloud call answered on the phone. The on-device model stopped
+/// answering as an agent, so every ask-path session is the cloud's, and its
+/// callers (`FoundationAnswer.compose`, `synthesisStream`, `AnswerToolsModel`)
+/// run only while `usesCloud` holds. `session(forceDevice: true)` remains for
+/// one reading aid that is not an answer — the Addresses verdict
+/// (`ContactVerdictModel`) — and for nothing on the ask path.
 ///
-/// **A turn names what ANSWERED it, not what was asked for.** Private Cloud
-/// Compute can refuse a call (no network, the quota, the service), and the
-/// caller then answers on the phone — so `markAnswered(cloud:)` records the
+/// **A turn names what ANSWERED it.** `markAnswered(cloud:)` records the
 /// model that actually produced the words, and the composer's badge reads it.
-/// The failure this prevents is the one §67 names for keys: a fallback
-/// wearing the badge of the thing that failed.
 ///
-/// **Off unless chosen.** Private Cloud Compute is a network call, which the
-/// on-device answer never was; it happens only after the person turned the
-/// seat on, and the seat says so before they do.
+/// **Off unless chosen.** Private Cloud Compute is a network call; it happens
+/// only after the person turned the seat on, and the seat says so before they
+/// do.
 enum AskModel {
 
     /// The seat's switch. Written by `AppleIntelligenceScreen` only.
@@ -180,8 +173,9 @@ enum AskModel {
 
     #if canImport(FoundationModels)
     /// A session for the composer's answer, and whether it runs in the cloud.
-    /// `forceDevice` is the fallback: after a cloud call failed, the caller
-    /// asks again for the phone's own model.
+    /// Ask-path callers are gated on `usesCloud`, so theirs is the cloud's.
+    /// `forceDevice` is the Addresses verdict's alone (`ContactVerdictModel`),
+    /// a reading aid that stays on the phone.
     @available(iOS 26.0, *)
     static func session(tools: [any Tool] = [], instructions: String,
                         forceDevice: Bool = false) -> (session: LanguageModelSession, cloud: Bool) {

@@ -2596,18 +2596,3 @@ struct AddressHistoryScreen: View {
     }
 }
 
-
-/// Publishes a flight anchor only when there is one to publish (prd §441).
-///
-/// Shared with the filing sheet since §444, where the head's key is derived
-/// from the flight in progress and is therefore nil most of the time.
-///
-/// A modifier rather than an `if` in the view body: branching there would give
-/// the mark two different identities depending on whether the screen it is on
-/// has a shelf, which churns the row on every re-render.
-struct OptionalFlightAnchor: ViewModifier {
-    let key: String?
-    func body(content: Content) -> some View {
-        if let key { content.flightAnchor(key) } else { content }
-    }
-}

@@ -101,7 +101,7 @@ enum DevnetAmountInput {
 
 
     // **BOTH GRAMMARS, BRIEFLY (prd §553).** `append`/`delete`/`display` above
-    // are the retired console's, still called by `FramesSendCard`; `sanitize`
+    // are the retired console's; `sanitize`
     // below is the live one — it holds a PASTE and a held delete to the same
     // rule a refused key already enforced, which per-key editing cannot do.
     // The pair goes when that card migrates.
@@ -142,132 +142,13 @@ enum DevnetAmountInput {
     }
 }
 
-// MARK: - The panel
+// MARK: - The verbs
 
-
-/// **HOME'S VERBS ARE ROWS (prd §750, 2026-09-15).** They were two tiles at
-/// `price40`, the blue one filled (§553, §559), and on the user's screenshot
-/// the loudest thing in the room: "Send" at 34pt over a balance at 22pt, in a
-/// container of its own beside three others ("these all look like different
-/// apps each component"). §746 had already made every other verb in the app a
-/// row; these were the last. Each verb is a `DSPushRow` on the readings'
-/// insets: the glyph at the row's 26pt lead in the venue's tint, the word in
-/// the same tint, the faucet's report as the row's fact. The tint is still the
-/// only thing saying which venue this is.
-///
-/// Neither row presents anything. Send hands upward to the screen's single
-/// `.sheet` (a `.sheet` attached to a view inside a `List` row resolves to the
-/// same presenting controller as the screen's own and half-opens then closes,
-/// paid for three times already); Top up acts in place and reports on itself
-/// — except on Frames, whose faucet is a page (`TopUp.opens`, prd §962) —
-/// in its own row.
-struct DevnetSendPanel: View {
-    let tint: Color
-    var topUp: TopUp? = nil
-    let onSend: () -> Void
-
-    /// Verbs past the two every venue has, drawn after them in the order
-    /// given.
-    var extras: [Act] = []
-    /// Which account Send and Top up act for, as the Send row's fact — passed
-    /// only when this phone holds MORE THAN ONE account on the chain (prd
-    /// §774), because a fact that could not be otherwise changes nothing.
-    var from: String? = nil
-
-    struct Act: Identifiable {
-        let id: String
-        let title: String
-        let glyph: String
-        let act: () -> Void
-        init(id: String, title: String, glyph: String, act: @escaping () -> Void) {
-            self.id = id; self.title = title; self.glyph = glyph; self.act = act
-        }
-    }
-
-    struct TopUp {
-        var busy = false
-        var note: String? = nil
-        /// The row is a DOOR: it opens the faucet's page rather than claiming
-        /// in place, and wears the push row's trailing mark to say so — Frames
-        /// (prd §962), whose faucet is proof-of-work plus a captcha. A faucet
-        /// claimed in place (§553b) stays false.
-        var opens = false
-        var action: () -> Void
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            DevnetVerbRow(title: String(localized: "Send"), glyph: "arrow.up.right",
-                          tint: tint, fact: from, act: onSend)
-            if let topUp {
-                DevnetVerbRow(title: String(localized: "Top up"), glyph: "drop",
-                              tint: tint, note: topUp.note, busy: topUp.busy,
-                              opens: topUp.opens, act: topUp.action)
-                    .disabled(topUp.busy)
-                    .accessibilityLabel(Text("Top up from the faucet"))
-            }
-            ForEach(extras) { extra in
-                DevnetVerbRow(title: extra.title.replacingOccurrences(of: "\n", with: " "),
-                              glyph: extra.glyph, tint: tint, act: extra.act)
-            }
-        }
-    }
-}
-
-/// One verb in a wallet-family room's Actions block (prd §750): the push row,
-/// its glyph on the faint disc at the row's lead, the readings' insets.
-struct DevnetVerbRow: View {
-    let title: String
-    let glyph: String
-    let tint: Color
-    var fact: String? = nil
-    /// A sentence under the title, wrapped. The faucet's answers are whole
-    /// sentences ("Already claimed this hour — …"), and as the trailing fact
-    /// they were cut to "Already claimed t…rk." with the reason in the cut.
-    var note: String? = nil
-    var busy = false
-    /// A door rather than an act — the push row's trailing mark.
-    var opens = false
-    let act: () -> Void
-
-    var body: some View {
-        DSPushRow(title: Text(title),
-                  subtitle: note.map { Text($0) },
-                  fact: fact.map { Text($0) },
-                  tint: tint,
-                  busy: busy,
-                  opens: opens,
-                  action: act) {
-            ZStack {
-                Circle().fill(DS.fillFaint)
-                    .frame(width: DS.Face.row, height: DS.Face.row)
-                Image(systemName: glyph)
-                    .accessibilityHidden(true)
-                    .dsGlyph(.caption, weight: .semibold)
-                    .foregroundStyle(tint)
-            }
-        }
-        .dsScopeRow()
-    }
-}
-
-
-// MARK: - Before there is an account
-
-/// The one verb a venue has before it has a key: a row like the verbs it
-/// becomes (prd §750). `title` keeps each venue's own words.
-struct DevnetCreatePanel: View {
-    let tint: Color
-    let title: String
-    var busy = false
-    let onCreate: () -> Void
-
-    var body: some View {
-        DevnetVerbRow(title: title.replacingOccurrences(of: "\n", with: " "),
-                      glyph: "key", tint: tint, busy: busy, act: onCreate)
-            .disabled(busy)
-    }
-}
+// **HOME'S VERBS ARE TILES (prd §1039, 2026-10-01).** `DevnetSendPanel`,
+// `DevnetVerbRow` and `DevnetCreatePanel` drew Send, Top up and Create account
+// as rows in Home's Actions block (§750); the merge made them the last tiles of
+// the room's grid, dispatched by `FramesActs`, so the three views went with the
+// block (§723). The sheet below is unchanged: Send still raises it.
 
 
 // MARK: - The keypad

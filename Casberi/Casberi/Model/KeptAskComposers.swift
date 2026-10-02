@@ -1,10 +1,17 @@
 import Foundation
 import SwiftData
 
-/// One deterministic doc-composer per kept-ask KIND (docs/agent-brief.md,
-/// ruling 1). Mirrors `HomeComposition`'s own shape: hand-authored
-/// `"root = Stack([...])"` line arrays, built directly from `Thing`/
-/// `WalletStore`/`TokensAsk`/`HomeInsightStore` reads.
+/// One deterministic doc-composer per ask KIND (docs/agent-brief.md, ruling
+/// 1) — and FIND's engine (`search`, the composer's deterministic door). Mirrors
+/// `HomeComposition`'s own shape: hand-authored `"root = Stack([...])"` line
+/// arrays, built directly from `Thing`/`WalletStore`/`TokensAsk` reads.
+///
+/// **Nothing is KEPT any more (2026-10-01).** The name is the one this engine
+/// grew under: a kind used to be pinned as a standing ask and re-run on every
+/// foreground. The kept asks, their store, their pills and their widget went
+/// with the ask, as did the Today brief, the scoped briefs, "While I was
+/// away" and "Noticed today". What remains is what the composer's typed
+/// answers and Find compose with.
 ///
 /// Deliberately NEVER calls `RootShell.answerDocument` — that function's
 /// deterministic branches sit above a model-routing fallback by CONVENTION,
@@ -64,34 +71,14 @@ enum KeptAskComposers {
     /// already calls `TokensAsk.moves(context:)`/`.watched(_:)` — there is no
     /// shared/static ModelContext accessor in this codebase).
     ///
-    /// `presenting` says whether the person is about to SEE this document or
-    /// the app is only computing a digest (`KeptAskStore.refreshDigests` runs
-    /// every kept kind in the background on each foreground). Only the Today
-    /// brief reads it — its ledger (§214) must never record having told you
-    /// something it merely composed — so it defaults to false and a new
-    /// composer is silent by construction.
-    /// `onPartial` is forwarded to `TodayBrief.compose` and to nothing else —
-    /// the brief is the only kind whose document waits on a network read, so
-    /// it is the only one with a half worth painting early. Every other
-    /// composer is deterministic and returns in one pass.
-    static func compose(_ kind: String, things: [Thing], context: ModelContext,
-                        presenting: Bool = false,
-                        onPartial: (([String]) -> Void)? = nil) async -> Result? {
+    static func compose(_ kind: String, things: [Thing], context: ModelContext) async -> Result? {
         // `.live` at this ONE door, so every composer below is handed a valid
-        // array (crash fix, build 250 — see `TodayBrief.compose`). The caller
-        // that matters is `KeptAskStore.refreshDigests`, which awaits this
-        // function once PER KIND in a loop while holding a single `things`
-        // array: each await is a suspension in which the app's own foreground
-        // heals can delete, so by the third kind the array it keeps passing can
-        // hold tombstoned models. Filtering here re-validates on every call,
-        // and this enum is `@MainActor`, so what a composer receives can't be
+        // array (crash fix, build 250): a caller holding one `things` array
+        // across an await can be handed tombstoned models by a foreground heal
+        // in that suspension. Filtering here re-validates on every call, and
+        // this enum is `@MainActor`, so what a composer receives can't be
         // invalidated underneath it before it reads.
         let things = things.live
-        if kind == "today" {
-            return await TodayBrief.compose(things: things, context: context,
-                                            presenting: presenting, onPartial: onPartial)
-        }
-        if kind == "away" { return away(things) }
         if kind == "wallet" { return await wallet(things) }
         if kind == "walletdefi" { return await walletDeFi() }
         if kind == "walletuniswap" { return await walletUniswap() }
@@ -100,28 +87,11 @@ enum KeptAskComposers {
         if kind == "watchlist" { return await watchlist(context: context) }
         if kind == "overdue" { return overdue(things) }
         if kind == "upcoming" { return upcoming(things) }
-        if kind == "noticed" { return noticed() }
         if kind.hasPrefix("showtag:") {
             return showtag(String(kind.dropFirst("showtag:".count)), things: things)
         }
         if kind.hasPrefix("context:") {
             return contextRecap(String(kind.dropFirst("context:".count)), things: things)
-        }
-        if kind.hasPrefix("category:") {
-            // Scoped "What's going on" briefs (scoped-brief-spec.md) — the
-            // SAME pipeline `"today"` runs above, scoped to one catalog
-            // category instead of the whole corpus. Was its own plain
-            // "N things from your X apps this week" recap; that composer
-            // (`categoryRecap`) is gone rather than kept alongside this, since
-            // a kept `category:<c>` pill re-running through this dispatch
-            // must show what the spec calls the SAME "daily brief format" a
-            // scoped chip tap or free-text ask gets — two different answers
-            // for the same kind string would be the drift `KeptAskComposers`'
-            // own header rule (one composer per kind) exists to prevent.
-            return await TodayBrief.compose(things: things, context: context,
-                                            presenting: presenting,
-                                            category: String(kind.dropFirst("category:".count)),
-                                            onPartial: onPartial)
         }
         if kind.hasPrefix("handle:") {
             return handleRecap(String(kind.dropFirst("handle:".count)), things: things)
@@ -164,7 +134,7 @@ enum KeptAskComposers {
     enum CorpusNeed: Equatable {
         /// Reads no rows — the composer takes no `things` argument at all.
         case none
-        /// Reads across everything (counts, tag vocabulary, a brief).
+        /// Reads across everything (counts, tag vocabulary, a search).
         case whole
         /// Only these source rooms.
         case sources(Set<String>)
@@ -177,7 +147,7 @@ enum KeptAskComposers {
     static func corpusNeed(for kind: String) -> CorpusNeed {
         // The six that ignore `things` entirely — every one of them a live
         // read (wallet protocols, token candles) or a cached line.
-        if ["watchlist", "noticed", "walletdefi", "walletuniswap",
+        if ["watchlist", "walletdefi", "walletuniswap",
             "walletgas", "walletsafe"].contains(kind) { return .none }
         if kind == "wallet" { return .sources(walletDocSources) }
         if kind == "overdue" { return .sources(overdueSources) }
@@ -188,10 +158,6 @@ enum KeptAskComposers {
         if kind.hasPrefix("context:") {
             return .sources([String(kind.dropFirst("context:".count))])
         }
-        if kind.hasPrefix("category:") {
-            let sources = categorySources(String(kind.dropFirst("category:".count)))
-            return sources.isEmpty ? .whole : .sources(sources)
-        }
         if kind.hasPrefix("handle:") {
             return .handle(String(kind.dropFirst("handle:".count)))
         }
@@ -200,7 +166,7 @@ enum KeptAskComposers {
         // clean and TRAPS at runtime inside CoreData (see CLAUDE.md). The
         // filter stays in Swift over a full fetch.
         //
-        // `today`, `away` and `search:` span the corpus by definition.
+        // `search:` spans the corpus by definition.
         return .whole
     }
 
@@ -221,27 +187,6 @@ enum KeptAskComposers {
     /// The rows `walletDoc` draws its approvals and activity from.
     static let walletDocSources: Set<String> = ["Wallet", "Peer"]
 
-    // MARK: - While I was away
-
-    private static func away(_ things: [Thing]) -> Result? {
-        guard let pulse = StatusAsk.pulse("while i was away", things: things) else { return nil }
-        let arrived = pulse.pool
-        let mentions = arrived.filter { $0.socialContext == "mention" }.count
-        let delta = arrived.isEmpty ? "" : "\(arrived.count) new"
-        let line = arrived.isEmpty
-            ? "Nothing new since your last visit."
-            : (mentions > 0
-               ? "\(arrived.count) new while you were away, \(mentions) mentioning you."
-               : "\(arrived.count) new while you were away.")
-        var doc = ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
-        let shown = Array(arrived.prefix(4))
-        if !shown.isEmpty {
-            doc[0] = "root = Stack([ins, res])"
-            doc += rows(shown, title: "Worth a look")
-        }
-        return Result(delta: delta, digest: "\(arrived.count)|\(mentions)", doc: doc)
-    }
-
     // MARK: - How's my money
 
     /// The summary line PLUS the real holdings treemap — the same `TagMap`
@@ -258,8 +203,8 @@ enum KeptAskComposers {
         // path, two for the settled one — and `walletDoc` reads `$0.source`
         // and `$0.capturedAt` off every row. That is liveness corollary 6
         // exactly (build 250), and the app's own foreground heals delete in
-        // precisely this window, since `KeptAskStore.refreshDigests` runs this
-        // composer from the same pass those heals run in.
+        // precisely this window (the kept asks' digest refresh ran this
+        // composer from the same pass those heals run in, until 2026-10-01).
         //
         // It is invisible to the liveness audit's check 6, which reads
         // line-wise inside the `async func`: the stored-property reads are one
@@ -650,7 +595,6 @@ enum KeptAskComposers {
     enum NamedAskTarget {
         case source(String)
         case handle(String)
-        case category(String)
 
         /// The kept-ask KIND this target composes as — ONE mapping, so the
         /// live path and the kept-pill re-run can never answer the same
@@ -659,7 +603,6 @@ enum KeptAskComposers {
             switch self {
             case .source(let s):   return "context:\(s)"
             case .handle(let h):   return "handle:\(h)"
-            case .category(let c): return "category:\(c)"
             }
         }
 
@@ -671,38 +614,21 @@ enum KeptAskComposers {
             switch self {
             case .source(let s):   return s
             case .handle(let h):   return h
-            case .category(let c): return c
             }
         }
 
         /// The raw pool this target scopes to, BEFORE any recency windowing —
         /// `RootShell`'s live synthesis path windows/caps this itself; the
         /// deterministic composers below window it again, independently (the
-        /// same "light duplication of window logic" `contextRecap` and
-        /// `TodayBrief.compose(category:)`'s own Stage-1 filter each own, not
-        /// a shared dependency).
+        /// "light duplication of window logic" `contextRecap` owns, not a
+        /// shared dependency).
         func pool(in things: [Thing]) -> [Thing] {
             switch self {
             case .source(let s): return things.filter { $0.source == s }
             case .handle(let h): return things.filter { $0.authorHandle == h }
-            case .category(let c):
-                let sources = KeptAskComposers.categorySources(c)   // hoisted: once, not per row
-                return things.filter { sources.contains($0.source) }
             }
         }
 
-        /// Whether this target is safe to KEEP — `.source`/`.handle` are
-        /// self-gating by construction (`namedAskTarget` only ever returns
-        /// one that already has a matching thing), but `.category` names a
-        /// fixed catalog entry independent of what's actually connected, so
-        /// it needs its own check (mirrors the "never mint a kind that can
-        /// only ever say nothing" rule every other kept kind already keeps).
-        func hasRealThings(in things: [Thing]) -> Bool {
-            switch self {
-            case .source, .handle: return true
-            case .category: return !pool(in: things).isEmpty
-            }
-        }
     }
 
     /// A per-publisher or per-source ask — "synthesize my Verge feed", "what
@@ -720,22 +646,10 @@ enum KeptAskComposers {
     /// because a publisher's real name is free text someone names casually
     /// ("verge" for "The Verge") — unlike a bridge SOURCE or catalog
     /// CATEGORY, both small fixed vocabularies that stay exact-match. Falls
-    /// back to the exact bridge/category match otherwise — every phrase that
-    /// already worked keeps working.
+    /// back to the exact bridge match otherwise. The CATEGORY match ("how's
+    /// my work stuff", "what's going on with money") resolved to a scoped
+    /// brief, and went with the briefs (2026-10-01).
     ///
-    /// The sources a BRIEF SCOPE (Money/Work/Life) covers. ONE join, so the
-    /// live ask, a kept `category:` pill, `TodayBrief.compose(category:)`'s
-    /// Stage-1 filter and the SCOPED FETCH that feeds them can never disagree
-    /// about what a scope contains — four readers, one definition.
-    /// `nonisolated` because `NamedAskTarget.pool(in:)` is — a nested type in a
-    /// `@MainActor` enum does not inherit that isolation, and this reads only
-    /// the catalog's own static tables.
-    nonisolated static func categorySources(_ scope: String) -> Set<String> {
-        Set(BridgeCatalog.offers
-            .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == scope }
-            .map(\.name))
-    }
-
     /// `things` is an `@autoclosure` (PERF 2026-08-11), for the reason
     /// `AggregateAsk.parse` and `StatusAsk.pulse` already take theirs that
     /// way: every check that can resolve WITHOUT the corpus runs first — the
@@ -784,29 +698,6 @@ enum KeptAskComposers {
             }
             name = words.joined(separator: " ")
             guard !name.isEmpty else { continue }
-            // Checked BEFORE `bestHandle` (moved 2026-08-08, found live: "how's
-            // my work stuff" resolved to "@workspaces" — a real demo handle,
-            // matched because `bestHandle` is a SUBSTRING test
-            // (`lower.contains(name)`, so "workspaces".contains("work") is
-            // true) and used to run first). An EXACT match against the brief
-            // scope's small, fixed vocabulary ("money"/"work"/"life") must
-            // beat a fuzzy match against arbitrary corpus handles, or any
-            // scope name that happens to prefix a real handle is
-            // unreachable by voice for as long as that handle is connected.
-            // Checked in this order so BOTH vocabularies resolve: the brief
-            // SCOPE name directly ("money", "work", "life" — what the chips
-            // and the "How's my X stuff?" phrasing actually send), and the
-            // app catalog's own ten category names ("wallet", "markets",
-            // "agents", "notes", …), mapped through the same join
-            // `TodayBrief.compose(category:)` uses — so "what's going on
-            // with wallet" and "what's going on with money" answer
-            // identically rather than one silently falling through.
-            if let scope = BriefScope.scopes.first(where: { $0.lowercased() == name }) {
-                return (.category(scope), synth)
-            }
-            if let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name {
-                return (.category(BriefScope.scope(forCatalogCategory: cat)), synth)
-            }
             if let handle = bestHandle(matching: name, things: things()) {
                 return (.handle(handle), synth)
             }
@@ -844,15 +735,9 @@ enum KeptAskComposers {
         ("what's new from ", false), ("whats new from ", false),
         ("what's up with my ", false), ("whats up with my ", false),
         ("how's my ", false), ("hows my ", false),
-        // Scoped "What's going on" briefs (scoped-brief-spec.md): "what's
-        // going on with work" names a CATEGORY the same way "how's my Work
-        // stuff" already does — `namedAskTarget`'s own category-name match
-        // below only fires once the prefix is stripped and the remainder is
-        // an exact `BridgeCatalog.categories` name, so a real subject that
-        // ISN'T a category ("what's going on with sam") still falls through
-        // exactly as before (the bare, subjectless phrase stays
-        // `TodayBrief.matches`' own exact match, checked earlier and
-        // unaffected — this prefix only ever fires with a trailing name).
+        // "What's going on with sam" names a person or a publisher the way
+        // "what did sam send" does; it named a CATEGORY too, until the scoped
+        // briefs that answered that went with the ask (2026-10-01).
         ("what's going on with ", false), ("whats going on with ", false),
         ("what's going on in ", false), ("whats going on in ", false),
         // Person/sender phrasings (2026-07-22) — resolve to the same handle
@@ -1032,16 +917,6 @@ enum KeptAskComposers {
                             "ins = Insight(\"\(genSafe(line))\")"]
                           + rows(Array(pool.prefix(6)), title: "Newest from \(label)"))
     }
-
-    // MARK: - What's up with my <category>
-    //
-    // The whole-CATEGORY recap ("How's my Markets stuff?") used to live here
-    // as its own plain "N things from your X apps this week" composer. It's
-    // gone (scoped-brief-spec.md): `category:<c>` now dispatches straight to
-    // `TodayBrief.compose(category:)` above, which is the SAME signal-board
-    // pipeline `"today"` runs — the spec's own "one pipeline, two parameters,
-    // not a new feature" — rather than a second, plainer answer shape for the
-    // same question.
 
     /// A recap document: the summary line, a `Bars` chart of when the pool's
     /// things landed over the last week (dropped when too few to shape), then
@@ -1616,24 +1491,6 @@ enum KeptAskComposers {
         return q.contains("on this day") || q.contains("this day in")
             || q.contains("throwback") || q.contains("years ago today")
             || q.contains("what was i doing")
-    }
-
-    // MARK: - Noticed
-
-    /// Ruling 10: reuse `HomeInsightStore`'s existing signature-gated, async
-    /// on-device model call AS-IS — read its cached `line`/`pickedThingID`,
-    /// never recompute here. `HomeInsightStore.shared.refresh(from:)` is what
-    /// actually runs the model; this composer only ever reads the result.
-    private static func noticed() -> Result? {
-        let line = HomeInsightStore.shared.line ?? ""
-        guard !line.isEmpty else { return nil }
-        let openID = HomeInsightStore.shared.pickedThingID ?? ""
-        // Leave the thing-id arg empty rather than falling back to "feed"
-        // when there's no pick — a bare tap inside the agent must never
-        // silently change the background feed filter behind it (ruling 9).
-        return Result(delta: "1 connection", digest: line,
-                      doc: ["root = Stack([ins])",
-                            "ins = Insight(\"\(genSafe(line))\", \"\", \"\(openID)\", \"\")"])
     }
 
     // MARK: - Shared
