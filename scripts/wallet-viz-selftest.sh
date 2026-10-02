@@ -235,6 +235,26 @@ enum WalletWatch {
     }
 }
 
+// The One Wallet's venues and app slices (prd §1048, §1048b). `isVenue` reads
+// the cash prefix and `scoped(to:)` a seat's `holds`, so both are spelled as
+// shipped; neither is under test here (`WalletTotalTests` holds them).
+enum WalletCash {
+    static let holderPrefix = "cash:"
+    struct Held { let currency: String; let amount: Double; let holderID: String; let label: String }
+    // EMPTY, as `WalletStore.shared` is: the demo fixture is not under test.
+    static func held() -> [Held] { [] }
+}
+
+enum RoomAccounts {
+    struct Seat {
+        let holder: String?
+        func holds(_ holderID: String) -> Bool {
+            guard let holder else { return false }
+            return holder.hasSuffix(":") ? holderID.hasPrefix(holder) : holderID == holder
+        }
+    }
+}
+
 SWIFT
 
 cat > "$DRIVER" <<'SWIFT'

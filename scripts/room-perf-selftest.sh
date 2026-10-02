@@ -804,7 +804,7 @@ mutate "headKey stops covering the row budget (deferred becomes dropped)"  feed 
 mutate "headIdentity counts through the @Query getter"  feed 's/String\(revision\.count\)/String(things.count)/' || mfails=$((mfails + 1))
 mutate "rowBudget leaves FeedScreen: Equatable"  feed 's/\n            && a\.rowBudget == b\.rowBudget//' || mfails=$((mfails + 1))
 mutate "the source room stops honouring rowBudget"  feed \
-  's/d\.fetchLimit = min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)/d.fetchLimit = Self.sourceRoomFetchLimit/' \
+  's/d\.fetchLimit = min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)/d.fetchLimit = Self.sourceRoomFetchLimit/g' \
   || mfails=$((mfails + 1))
 mutate "the budget is never released"  main 's/        swipeRowBudget = nil\n//' || mfails=$((mfails + 1))
 
@@ -866,8 +866,10 @@ mutate "the whole-room read is itself bounded (§83 through the back door)"  fee
   || mfails=$((mfails + 1))
 mutate "the whole-room read loses its never-fewer-rows guard"  feed \
   's/return full\.count >= fallback\.count \? full : fallback/return full/' || mfails=$((mfails + 1))
+# Global since the merged rooms took the same ceiling (prd §1048, §1052): with
+# two copies, dropping only the first left the second to satisfy the guard.
 mutate "the source room's permanent ceiling is dropped"  feed \
-  's/d\.fetchLimit = min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)/if let rowBudget { d.fetchLimit = rowBudget }/' \
+  's/d\.fetchLimit = min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)/if let rowBudget { d.fetchLimit = rowBudget }/g' \
   || mfails=$((mfails + 1))
 mutate "the ceiling footer goes back to All-only (the bound reads as the end)"  feed \
   's/return windowRowBudget >= Self\.sourceRoomFetchLimit/return false/' || mfails=$((mfails + 1))

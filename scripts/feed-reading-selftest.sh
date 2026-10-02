@@ -316,17 +316,8 @@ grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\
 # `scopeControl:` argument, and a guard pinned to `)` read that as the cover gone.
 [ "$(grep -c 'cover: heroShown ? nil : ledeThingID(in: days)' "$TMP/feed.nocomment")" -ge 2 ] \
   || { echo "✗ a headless room no longer covers its newest thing (prd §732)"; exit 1; }
-# Music left `groupedSections(cover:)` for its own `musicSections` (prd §995):
-# the newest sitting is picked there and drawn in `standaloneLead`, above the
-# tiles, so the cover is checked in THAT body, and the room must still route
-# through it.
-grep -A1 'case .music:$' "$TMP/feed.nocomment" | grep -q 'musicSections(visible, nextEventID: nextEventID, heroShown: heroShown)' \
-  || { echo "✗ the music room no longer draws through musicSections — its cover is unchecked (prd §732, §995)"; exit 1; }
-_music=$(awk '/func musicSections\(/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/feed.nocomment")
-case "$_music" in
-  *"let coverID = heroShown ? nil : ledeThingID(in: days)"*"standaloneLead(cover: coverThing(coverID, in: live)"*) ;;
-  *) echo "✗ the music room no longer covers its newest thing (prd §732, §995)"; exit 1;;
-esac
+# The music rooms' own cover check is deleted with `musicSections` (prd §1055):
+# Apple Music and Spotify fold into Media, whose plain path covers its newest.
 # Every picture-grid room leads with its newest thing, lifted out ABOVE the
 # grid (`newestLead`): X and Instagram since prd §821, Photos, Files, Snapchat
 # and Telegram since §832. No grid declines the cover any more.
