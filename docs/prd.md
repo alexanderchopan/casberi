@@ -63387,3 +63387,19 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 
 §1050g drew the Settings screen as two lists, your apps and then the catalogue. It is one, as Apps has been since §1033: Casberi pinned first, then every app under its category, a connected one marked on. A connected row and an unconnected one now do the same thing, opening that app's one account page, which is both its connect and its settings (§639, §1050f), so a section split would say nothing a row's state does not. Search runs over the whole list; "Start here" still leads it while nothing is connected (§1045).
 
+
+## §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room, primary-ink headers, no sliders disc, settings open from Apps) (user: "yes", to step 4, 2026-10-01; completes §1048c; builds §1050e and §1050f)
+
+**An app pick draws the app's own head.** The folded rooms' heads carried readings nothing else draws: Safe's (who it waits on by name, rival transactions on one nonce, the guard and module notes, the throttle notice), Privacy Pools' (a deposit that needs proof or a reclaim, the anonymity set), Privy's and CardPointers'. So when the Wallet's menu picks an app, the box draws that app's head in place of the balance: §1049's precedent for Work's Stripe, applied to the Wallet. Every folded app's head is kept, not only the four with unique readings, because a card's spending or Peer's rails beat the empty box a card pick drew before. Nothing is deleted, and nothing is unreachable.
+- `sourceHead(_:for:)` composes a head for any source; `RoomHeads.seatHead` holds the picked app's, re-keyed by the pick in `headIdentity`; `sourceHeadCard` is the one switch that draws a head, for its room and for the Wallet's box.
+- **The first build computed the head and the box stayed on "No balance yet"**: the head was read only inside the crown's closure, so its arrival never redrew the box. It is read in the section's own body now and captured.
+- A head inside the Wallet's box draws neither its own well nor its placement (`dsRoomHeadInWell`), or it is a box in a box; Privacy Pools' head brings no scope tiles of its own there.
+- Measured on the demo: Safe picked, the box reads "1 waiting on your signature", "2 transactions share a queue position — only one of them can execute", a 2/3 transfer marked "Your turn · 5 days"; Privacy Pools picked, "A deposit needs your proof — the oldest has waited 31 days".
+- `RoomAccounts.connected` matches the catalogue name or the row source: Privacy Pools registers as either.
+
+**§1050e and §1050f, built.**
+- The rooms tray draws no marks for a merged category, with no empty grid left under its header; search finds it by its own name or any connected folded app's (a search for Gnosis finds Wallet). Every category header is primary ink, the standing one marked by its filled glyph; Recent, which opens nothing, stays secondary. An unmerged category keeps its marks, each landing in its app's room.
+- No room draws a sliders disc: `RoomAccountDoor` is deleted. A connected row in Apps opens its account page with a chevron (`route.openAccount`), reversing §1040's land-in-room; the status-row machinery goes with it (`isStatusOnly`, `statusRoom`, `roomSeat`, the status press). A devnet row with no account yet still opens its room. `dock-selftest.sh` §13 asserts the Apps door and that no room draws a disc.
+- §1048c's tray circles that opened settings, and §1048b's blue header, are superseded by §1050e and §1050f and are gone from the code.
+
+**Not built here.** §1050g and §1050h (Apps and Settings as one door and one list) are a build of their own.
