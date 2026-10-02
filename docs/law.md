@@ -51,7 +51,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The tray is one grid of five columns. Every button is 46pt. Headers are a bare glyph over a `heading17` word. A Recent line holds the five rooms you last landed in. No badges, no collapsing (§1013).
 - The tray is solid black (`DS.surfaceSheet`), never glass. You doors not standing fill with `DS.surfaceRaised`. The first column sits on the face's axis (§1014).
 - The tray's search narrows the grid in place. The search and the You row stay pinned above the scroll (§1015). A mark has no hold menu (§1033).
-- You doors, in this order: Home, Notes, Apps, Addresses, Settings (§1012, renamed by §1033). While the tray is up, the face shows the octopus (§1009).
+- You doors, in this order: Home, Notes, Addresses, Settings (§1012; Apps folded into Settings by §1050g). While the tray is up, the face shows the octopus (§1009).
 - A category shows in the tray only while it holds a connected seat (§977).
 - No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). No room draws an account door; an app's settings open from its row in Apps (§1050f).
 - On a pushed screen the dock's seat is the back door. The system back button is hidden at the resolver, and the edge swipe goes through `DSSwipeBack` (§767). Content comes to rest clear of the seat via `.dsSeatClearance()` (§829).
@@ -104,7 +104,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - A key is connected in one place, the seat's own page. Settings holds no key (§871).
 
 ### 8. Catalogue (Apps)
-- Apps is the whole catalogue, with no Manage and no switcher. A connected row opens that app's account page: Apps is the one door to an app's settings (§1050f). A connected seat with no room keeps its door (§1033, §1036).
+- Apps is the whole catalogue, with no Manage and no switcher. A connected row opens that app's account page (§1050f). Apps and Settings are one door, Settings: Casberi's own settings pinned first, then your apps, then the catalogue (§1050g). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns, Rocket Money and NerdWallet are on the Wallet shelf (§780c).
 - Markets is one app: Tokens plus Stocktwits' watched stocks. Every catalogue category is a company pack: Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted (§1000).
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1169 of 1227 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1170 of 1228 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1270,7 +1270,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §930 — The dock is a tray behind the face: one button, every room, and the room names itself (amended by §932, §937)
 - §931 — The Wallet review, first round: the marks the read already named, the ribbons' one ink and the faces' names, and one…
 - §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (part superseded by §1014)
-- §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage
+- §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage (amended by §1050g)
 - §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused…
 - §935 — The room's faces and venues sit BESIDE the face, not under it (amended by §1044)
 - §936 — The wallet family's tiles speak one grammar: one number over one caption, bars for "how many of each", one accent and… (part superseded by §944, §952)
@@ -1343,7 +1343,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1007 — Logos: the testnet moved to LEZ v0.3, and the seat reads it
 - §1009 — While the tray is up the face is the octopus, photo or not
 - §1010 — The tray's sections put the name above the marks, five to a line from the name's edge (amended by §1011)
-- §1012 — The tray's You doors are a labelled row across the top, and every mark is 28pt (amended by §1013)
+- §1012 — The tray's You doors are a labelled row across the top, and every mark is 28pt (amended by §1013, §1050g)
 - §1013 — The tray is one grid: headers above, every button the face's size, and a Recent line (amended by §1014, §1015, §1016a)
 - §1014 — The tray is solid black, its doors the room head's charcoal, and its first column is the face's axis
 - §1015 — The tray searches in place, pins the You row, and a hold is Manage account (part superseded by §1033)
@@ -1364,7 +1364,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1030 — GitHub's next step after a connect is a tray, and watching stands in the room (amended by §1031)
 - §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is
 - §1032 — An account page's commit is a check INSIDE the well, where Paste is
-- §1033 — A room's account door stands beside its name, Accounts is Apps with no Manage, and a tray mark has no hold (amended by §1036, §1040, §1045; part superseded by §1050f)
+- §1033 — A room's account door stands beside its name, Accounts is Apps with no Manage, and a tray mark has no hold (amended by §1036, §1040, §1045, §1050g; part superseded by §1050f)
 - §1034 — Logos: the field reads what people actually paste, and turns a public key into its account
 - §1035 — Logos: a reset is detected by its first block and said, and a network account says what it is
 - §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
@@ -1389,7 +1389,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050c — Life is one list by day, with no tiles
 - §1050d — Reading's menu lists apps, and the music shelf's orders are dropped
 - §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it (part superseded by §1050f)
-- §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's…
+- §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's… (amended by §1050g)
+- §1050g — Apps and Settings become one door, Settings: Casberi's own settings first, then your apps, then the catalogue
 
 ## Dead rulings → what replaced them (generated)
 

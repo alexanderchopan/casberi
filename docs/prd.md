@@ -426,6 +426,8 @@ marks chronological position within the pair.
 | §1040 (a connected row in Apps lands in its room) | the row's tap set the room and scoped it | reversed by §1050f — the row opens the app's account page; settings live in Apps |
 | §1033 / §1050e (the room's sliders disc) | a disc beside a room's name opened its account page (§1050e: only while one app is picked) | reversed by §1050f — no room draws the disc; Apps is the one door to an app's settings |
 | §1048c (a merged category's tray header in `DS.tint`) | the header was tinted to read as a door beside settings circles | amended by §1050f — primary ink; with no circles the tint separated nothing |
+| §933 / §1033 (two doors: Apps for the catalogue, Settings for Casberi's own) | the tray carried an Apps door and a Settings door | amended by §1050g — one door, Settings: Casberi pinned first, then your apps, then the catalogue |
+| §1012 (the doors row: Home, Notes, Apps, Addresses, Settings) | five doors | amended by §1050g — four: Home, Notes, Addresses, Settings |
 
 ## §1 — Thesis
 
@@ -63369,4 +63371,14 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 - **The tray's category entries wear the primary ink, not `DS.tint`** (amends §1048c). With no marks beside them the tint separated nothing.
 
 §1050e's tray stands: the doors row and the categories, and an unmerged category keeps its marks, each landing in that app's room, until it merges.
+
+## §1050g — Apps and Settings become one door, Settings: Casberi's own settings first, then your apps, then the catalogue (user: "what if we got rid of the settings icon for casberi that is in the tray and made casberi be one of the apps in the apps list, and it's settings are there?", "we could have it always be first too", then "ok,, lets d o settings", 2026-10-01; amends §933, §1012, §1033 and §1050f)
+
+**Why.** §1050f put every app's settings in Apps, which left Casberi's own Settings as the one settings page that was not an app's row. Folding it in leaves one rule: every settings page is a row on one screen. The screen takes the word people look for, Settings, as iOS's Settings app holds the system's settings first and every app's below.
+
+**The ruling.**
+- **One door, Settings,** replaces the tray's Apps and Settings doors. The doors row is Home, Notes, Addresses, Settings.
+- **The screen, top to bottom:** Casberi, pinned first, always on, never disconnectable, opening what Settings held (§933: theme, iCloud sync, the Data tray, What this app reaches, Diagnostics); then each connected app, whose row opens its account page (§1050f); then the catalogue of apps to connect (§1033's Apps, with its search and "Start here", §1045).
+- **Search** on the screen finds Casberi's row for "settings" as well as its name.
+- `casberi://settings` and `-openSettings YES` open this screen. Copy says "Settings" for the door, and Apps survives only as the catalogue's section name.
 
