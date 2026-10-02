@@ -135,9 +135,7 @@ extension FeedScreen {
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletScopeAllows(thing)
                 && personScopeAllows(thing)
-                && githubScopeAllows(thing)
                 && notesScopeAllows(thing)
-                && pinterestScopeAllows(thing)
                 // Privy's display choices (prd §803e): hidden apps, and empty
                 // apps nobody uses unless the person asked to see them.
                 && (thing.source != PrivyHomeFeed.source
@@ -289,28 +287,6 @@ extension FeedScreen {
     /// that field is nil on essentially every row.
     private func personScopeAllows(_ thing: Thing) -> Bool {
         guard SocialRoom.hasRoster(source), let scope = chrome.personScope else { return true }
-        return thing.authorHandle == scope
-    }
-
-    /// The GitHub room's watch scope (2026-09-11) — the fourth of these, gated
-    /// on the ROOM for the same reason as the three around it: a repo ref
-    /// compared against every other room's rows would empty them.
-    ///
-    /// The match itself is `GitHubRowTag.matches`, which is Foundation-only so
-    /// a harness can drive it — including the one rule that is not obvious, that
-    /// a notification is scoped by REPO and never by PERSON because its face is
-    /// the repository's owner rather than whoever acted.
-    private func githubScopeAllows(_ thing: Thing) -> Bool {
-        guard source == "GitHub", let scope = chrome.githubScope else { return true }
-        return GitHubRowTag.matches(scope: scope, ref: thing.sourceRef,
-                                    url: thing.content, authorHandle: thing.authorHandle)
-    }
-
-    /// The Pinterest room's follow scope (prd §819): every pin carries the
-    /// follow it came through in `authorHandle`. Gated on the room, like
-    /// GitHub's, so the compare never reaches another room's rows.
-    private func pinterestScopeAllows(_ thing: Thing) -> Bool {
-        guard source == "Pinterest", let scope = chrome.pinterestScope else { return true }
         return thing.authorHandle == scope
     }
 

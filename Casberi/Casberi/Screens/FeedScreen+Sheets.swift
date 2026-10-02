@@ -500,8 +500,6 @@ extension FeedScreen {
         WalkScope.feed(source: source, tag: filter.tag,
                        narrowed: Pinboard.isPinnedRoom(source)
                            || (roomTakesWalletScope && selectedWallet != nil)
-                           || (SocialRoom.hasRoster(source) && chrome.personScope != nil)
-                           || (source == "GitHub" && chrome.githubScope != nil)
-                           || (source == "Pinterest" && chrome.pinterestScope != nil))
+                           || (SocialRoom.hasRoster(source) && chrome.personScope != nil))
     }
 }

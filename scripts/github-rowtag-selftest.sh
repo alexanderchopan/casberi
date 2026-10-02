@@ -4,8 +4,9 @@
 #
 #   Casberi/Casberi/Model/GitHubRowTag.swift
 #     — kind / word        (WHAT a row is: the tag under its timestamp)
-#     — matches            (WHOSE it is: the face rail's scope)
-#     — railShows          (whether the rail is drawn at all)
+#     — matches            (WHOSE it is: a watch's rows, counted on the
+#                            account page; the room's rail left with the
+#                            room, prd §1060)
 #
 # Compiled WHOLE AND UNMODIFIED alongside `GitHubLinks.swift`, which it reads
 # URLs through — both are Foundation-only by design, so every assertion below
@@ -27,9 +28,6 @@
 #     GitHub's payload names no actor), so reading that field as "who did this"
 #     files every notification from an org under a watched person who happens
 #     to own it. This is the one rule here nobody would guess;
-#   • the rail drawn with nothing watched — a control with one option, wearing
-#     a band row the feed could have had (user: "if it is just themselves that
-#     would suck to see a third row").
 #
 # WHAT IT DELIBERATELY DOES NOT PROVE. It never reaches GitHub, so it says
 # nothing about whether a row's `content` is still the html_url GitHub serves,
@@ -117,11 +115,11 @@ PY
 grep -q 'GitHubRowTag.word(ref: thing.sourceRef, url: thing.content)' "$TMP/rows.stripped" \
   || { echo "✗ the GitHub row no longer draws its tag in the trailing slot"; exit 1; }
 
-# The scope is APPLIED, and through this file rather than a second rule.
-grep -q 'GitHubRowTag.matches(scope: scope' "$TMP/feedscreen.stripped" \
-  || { echo "✗ the feed no longer applies the GitHub scope through GitHubRowTag"; exit 1; }
-grep -q 'githubScopeAllows(thing)' "$TMP/feedscreen.stripped" \
-  || { echo "✗ githubScopeAllows is no longer in the feed's filter chain"; exit 1; }
+# The scope is READ through this file rather than a second rule: the account
+# page counts a watch's week with it (the room's rail left with the room when
+# GitHub folded into Work, prd §1060).
+grep -q 'GitHubRowTag.matches(scope: scope' Casberi/Casberi/Screens/TokenSetupScreen.swift \
+  || { echo "✗ the account page no longer counts a watch's rows through GitHubRowTag"; exit 1; }
 
 # The room draws NO head (the ruling that deleted §401's card). A head card
 # returning is the exact regression this ruling exists to prevent, and it would
@@ -132,12 +130,6 @@ grep -q 'githubGraphHero' "$TMP/feedscreen.stripped" \
 grep -q 'GitHubRoomCard' "$TMP/feedscreen.stripped" \
   && { echo "✗ the §401 GitHub head card is back — the room is one plain feed"; exit 1; }
 
-# The rail is MOUNTED on the shell, not the screen (§357: a control declared on
-# FeedScreen dies with the `.id(filter.source)` move it commands).
-grep -q 'githubScopeRail' "$SHELL_" \
-  || { echo "✗ the GitHub face rail is not mounted in MainSurface.roomControls"; exit 1; }
-grep -q 'GitHubScopeRail' "$RAIL" \
-  || { echo "✗ GitHubScopeRail is gone from the rail adapters"; exit 1; }
 
 # The watched repo's open work is FETCHED. Without it the repo half of the rail
 # scopes to a release every few weeks — §83's dead control with a face on it.
@@ -273,12 +265,6 @@ check("…but a notification IS scoped by its repo",
 check("a malformed scope matches nothing",
       !GitHubRowTag.matches(scope: "nonsense", ref: "gh:1", url: gh, authorHandle: "mia"))
 
-// ── the rail ──────────────────────────────────────────────────────────────
-print("\nthe rail — drawn only when there is a choice")
-check("nothing watched draws no rail", !GitHubRowTag.railShows(source: "GitHub", watched: 0))
-check("one watch is enough", GitHubRowTag.railShows(source: "GitHub", watched: 1))
-check("another room never draws it", !GitHubRowTag.railShows(source: "Linear", watched: 4))
-
 // ── the helpers the rail leans on ─────────────────────────────────────────
 print("\nscope helpers")
 check("a repo scope is named a repo", GitHubRowTag.scopeIsRepo(repoScope))
@@ -359,23 +345,13 @@ mutate "the person match made case-sensitive" \
   'return handle.lowercased() == login.lowercased()' \
   'return handle == login'
 
-# 6. The rail drawn with nothing watched — the third row the ruling removed.
-mutate "the rail drawn with nothing watched" \
-  'source == "GitHub" && watched > 0' \
-  'source == "GitHub"'
-
-# 7. The rail drawn in every room — a GitHub watch strip over Linear.
-mutate "the rail drawn in every room" \
-  'source == "GitHub" && watched > 0' \
-  'watched > 0'
-
-# 8. The watch row dropped from its own scope — watch something quiet and the
+# 6. The watch row dropped from its own scope — watch something quiet and the
 #    room reads empty with no way to tell whether the watch worked.
 mutate "the watch row dropped from its own scope" \
   'if ref == scope { return true }' \
   'if ref == nil { return true }'
 
-# 9. An unknown ref given a tag anyway — a guess printed as a fact.
+# 7. An unknown ref given a tag anyway — a guess printed as a fact.
 mutate "an unknown ref guessed at" \
   'for entry in refKinds where ref.hasPrefix(entry.prefix) { return entry.kind }' \
   'for entry in refKinds where ref.hasPrefix(entry.prefix) { return entry.kind }

@@ -632,14 +632,14 @@ _controls=$(awk '/private var roomControls: some View/{f=1;print;next} f&&(/^   
 [[ -n "$_controls" ]] \
   || { echo "✗ could not read MainSurface.roomControls — the §753 check below would pass"; \
        echo "  on nothing."; exit 1; }
-[[ "$_controls" == *"socialScopeRail"* || "$_controls" == *"githubScopeRail"* \
-   || "$_controls" == *"pinterestScopeRail"* || "$_controls" == *"accountRail"* ]] \
+[[ "$_controls" == *"socialScopeRail"* || "$_controls" == *"accountRail"* ]] \
   && { echo "✗ roomControls emits a face rail as its own strip again (§753) — the faces"; \
        echo "  ride the folder capsule, after the venues."; exit 1; }
 _inFolder=$(grep -c 'inFolder: true' "$TMP/main.nc" || true)
-# Four rails since prd §819 added Pinterest's (social, GitHub, Pinterest, accounts).
-[[ "$_inFolder" -eq 4 ]] \
-  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 4 (§753) — a rail drawn"; \
+# Two rails since GitHub's and Pinterest's left with their rooms (prd §1060):
+# social and accounts.
+[[ "$_inFolder" -eq 2 ]] \
+  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 2 (§753) — a rail drawn"; \
        echo "  in the capsule without it brings its own glass, scroll view and captions."; exit 1; }
 # --- the capsule always says WHERE YOU ARE (prd §754) ------------------------
 # The closed capsule carried the faces ALONE for a day (user: "this isn't how we

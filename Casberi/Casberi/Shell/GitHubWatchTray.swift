@@ -53,8 +53,8 @@ enum GitHubWatchAdd {
 /// A connect lands in the room (§1029), which skipped the one thing the
 /// account page offered after connecting: watching. Every feed is already on
 /// by default (`GitHubFeeds.defaultOn`), so the step a new person misses is a
-/// repo or a person to follow — and a room with no watch draws no menu
-/// (`GitHubRowTag.railShows`), so nothing in it said watching exists.
+/// repo or a person to follow — and nothing in the room said watching
+/// exists.
 ///
 /// Raised twice, through `FeedScreen`'s one sheet: ONCE on the arrival a
 /// connect made (`ShellChrome.connectLanding`), and from the room's Watch

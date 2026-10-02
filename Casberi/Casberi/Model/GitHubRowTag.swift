@@ -154,24 +154,4 @@ enum GitHubRowTag {
         guard let handle = authorHandle, !handle.isEmpty else { return false }
         return handle.lowercased() == login.lowercased()
     }
-
-    // MARK: - The rail
-
-    /// Whether the room draws a face rail at all.
-    ///
-    /// **Zero watches means NO ROW** (user, 2026-09-11: *"if they paste their
-    /// own key… if it is just themselves that would suck to see a third row"*).
-    /// With nothing watched the rail would be the word "All" alone — a control
-    /// with one option, which is §83's dead control wearing a band row that the
-    /// feed could have used.
-    ///
-    /// ONE watch is enough, unlike Vibenet's `watched > 1`, and the difference
-    /// is real rather than a looser threshold: there, All and the single
-    /// account show the same rows, so the choice is between a thing and itself.
-    /// Here All is your whole GitHub — your issues, your stars, every release
-    /// from every repo you starred — and one watched person is a strict slice
-    /// of it. Two different readings, so two chips earn their row.
-    static func railShows(source: String, watched: Int) -> Bool {
-        source == "GitHub" && watched > 0
-    }
 }

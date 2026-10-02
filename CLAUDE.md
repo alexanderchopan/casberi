@@ -323,7 +323,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - Dropbox (2026-07-27, Model/DropboxBridge.swift, Screens/DropboxScreen.swift) — a first-class → docs/hooks/bridges.md
 - PostHog (2026-07-27, prd §223, Model/PostHogBridge.swift, Screens/PostHogScreen.swift) → docs/hooks/bridges.md · prd §223
 - `-for` — Stripe (2026-07-31, prd §250, Model/StripeBridge.swift, Screens/StripeScreen.swift) → docs/hooks/bridges.md · prd §250
-- **The GitHub room is ONE FEED: row types are tags (`Model/GitHubRowTag.swift`), watched repos and people scope it from a face rail (`github-rowtag-selftest.sh`)** → docs/hooks/bridges.md · prd §699
+- **GitHub's rows are one feed in Work: row types are tags (`Model/GitHubRowTag.swift`, `github-rowtag-selftest.sh`); the face rail that scoped the GitHub room left with the room (prd §1060)** → docs/hooks/bridges.md · prd §699 · §1060
 - **A GitHub events row names its OBJECT, opens it and carries its words — a PR's title and body, a push's commit, a branch named — off the payload, no request (`GitHubEventShape`, `github-event-selftest.sh`); a notification reads its subject's body, capped at 10** → docs/hooks/bridges.md · prd §909 · §912
 - **A connect LANDS in its room (prd §1029): `AccountPage` routes when its seat registers on screen, armed on the seat, never on `state` alone (adopters load `connected` late); GitHub then raises its watch tray once (`ShellChrome.connectLanding`), and Work's tiles end in a Watch verb (`WorkScope.watch` since §1057, `GitHubWatchTray`, `GitHubWatchAdd`, prd §1030 · §1031)** → prd §1029 · §1030 · §1031
 - **Empty-door audit (scripts/empty-door-audit.py) — a landed row with no door; §909 applied to every bridge** → docs/verify.md · prd §912

@@ -443,20 +443,6 @@ final class ShellChrome {
     var logosSections: [LogosSection] = []
     var logosScope: String?
 
-    /// The Privacy Pools room's scope (prd §486, 2026-08-26) — Wallet's
-    /// instance at its smallest: ONE property rather than a
-    /// trio, because that room's card draws its own strip and derives its own
-    /// presence from the composed room. There is no shell-mounted control to
-    /// feed, so a published list and attention set would be state nothing ever
-    /// reads.
-    ///
-    /// Same lifetime rules as Wallet's: not persisted across launches
-    /// (`activity` is the front door, and every room in this app opens on its
-    /// feed), not cleared on a room change (the wallet category spans several
-    /// rooms and a reading survives moving between them), and
-    /// `PrivacyPoolsSection.resolve` handles a remembered scope whose content
-    /// has since gone.
-    var privacyPoolsSection: PrivacyPoolsSection?
 
     /// Which half of an AGENT room is standing (prd §840) — the conversations
     /// you have had, or the one you are having.
@@ -587,21 +573,6 @@ final class ShellChrome {
     /// with nothing on screen able to explain why. Your wallets are the same
     /// wallets in every Wallet room; @dwr is not on Bluesky.
     var personScope: String?
-
-    /// The GitHub room's scoped watch — a repo's or a person's watch REF, or
-    /// nil for everything (2026-09-11).
-    ///
-    /// Its own property rather than reusing another room's: this is a
-    /// different SET from `personScope`, and sharing one would mean a Farcaster
-    /// handle silently scoping the GitHub room to somebody it has never heard
-    /// of. Cleared on a source change, like the person scope and for the same
-    /// argument — a watch belongs to one seat.
-    var githubScope: String?
-
-    /// The Pinterest room's scoped follow — `name` or `name/board`, or nil for
-    /// every pin (prd §819). Its own property for `githubScope`'s reason, and
-    /// cleared on a source change with it.
-    var pinterestScope: String?
 
     /// Who has posted in the room you're looking at since you last opened it —
     /// the face rail's attention ring (prd §362).

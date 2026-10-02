@@ -171,18 +171,12 @@ enum PrivacyPoolsRoomSource {
         // can legitimately have one and not the other.
         out.append("shieldedNote=\(PrivacyPoolsRoom.shieldedNote(room) ?? "none")")
         out.append("activityNote=\(PrivacyPoolsRoom.activityNote(room, now: now) ?? "none")")
-        // WHICH SCOPES THE ROOM WOULD OFFER, and which wears the dot. It is
-        // the strip's own gate, so a room that draws no control has a cause
-        // that is otherwise invisible from outside: one scope is not a
-        // control, and a room of two untagged deposits is meant to look like a
-        // short list.
-        let scopes = PrivacyPoolsSection.present()
-        out.append("privacyPoolsScopes| "
-                   + scopes.map(\.rawValue).joined(separator: ",")
-                   + " · shieldedEmpty=\(room.holdings.isEmpty ? "YES" : "no")"
-                   + " · reviewEmpty=\(room.segments.isEmpty && room.untagged == 0 ? "YES" : "no")"
-                   + " · strip=\(PrivacyPoolsSection.shows(present: scopes) ? "YES" : "no")"
-                   + " · dot=\(PrivacyPoolsSection.attention(needsProof: room.needsYou != nil, declined: room.needsReclaim != nil, present: scopes).map(\.rawValue).sorted().joined(separator: ",").isEmpty ? "none" : "review")")
+        // WHICH READINGS THE HEAD DRAWS (prd §1060): Shielded and Review each
+        // draw a block only when they hold something, so a head missing one
+        // has a cause that is otherwise invisible from outside.
+        out.append("privacyPoolsReadings| "
+                   + "shieldedEmpty=\(room.holdings.isEmpty ? "YES" : "no")"
+                   + " · reviewEmpty=\(room.segments.isEmpty && room.untagged == 0 ? "YES" : "no")")
         out.append("totals| deposits=\(room.deposits) inPools=\(room.inPools)"
                    + " waiting=\(room.waiting)"
                    + " untagged=\(room.untagged) unpriced=\(room.unpriced)"

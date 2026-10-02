@@ -2,19 +2,15 @@ import SwiftUI
 
 // WHOSE FEED THIS IS, IN THE ROOM (prd §959).
 //
-// On the phone the band under the face carried a capsule of faces in three
-// kinds of room — the social rooms, GitHub and Pinterest — after §930 took
-// away the dock strip it had belonged to, so it read as a leftover. The wallet
-// family had already moved its pick into the room (§936). These rooms follow:
-// the control stands under the room's lead (under the tiles where a room has
-// them), in the rows' column, and scrolls with the feed.
-//
-// Two controls for two questions. GitHub and Pinterest pick a SOURCE — a
-// watched repo, a person, a board — whose face is often an org's avatar or a
-// cover shared by its neighbours, so the name does the work: the Wallet's
-// pull-down (`DSScopeMenu`). The social rooms pick a PERSON whose own face,
-// and the ring saying they posted since you looked, is the news: a row of
-// faces (`FaceScopeRail`, standing alone). iPad and Mac keep the shell's rail.
+// On the phone the band under the face carried a capsule of faces after §930
+// took away the dock strip it had belonged to, so it read as a leftover. The
+// wallet family had already moved its pick into the room (§936). The social
+// rooms follow: the control stands under the room's lead, in the rows'
+// column, and scrolls with the feed. They pick a PERSON whose own face, and
+// the ring saying they posted since you looked, is the news: a row of faces
+// (`FaceScopeRail`, standing alone). iPad and Mac keep the shell's rail. A
+// merged room picks its app from `mergedRoomMenu`. (GitHub's and Pinterest's
+// pull-downs left with their rooms, prd §1060.)
 extension FeedScreen {
     /// The phone. Everywhere the shell's rail stands, the band keeps the faces.
     var roomScopeInRoom: Bool { roomSizeClass != .regular }
@@ -25,9 +21,7 @@ extension FeedScreen {
     var roomScopePicked: Bool {
         if mergedMenuDraws && selectedSeat != nil { return true }
         guard roomScopeInRoom else { return false }
-        return (SocialRoom.hasRoster(source) && chrome.personScope != nil)
-            || (source == "GitHub" && chrome.githubScope != nil)
-            || (source == "Pinterest" && chrome.pinterestScope != nil)
+        return SocialRoom.hasRoster(source) && chrome.personScope != nil
     }
 
     /// The control, as its own List section. Draws nothing where the room
@@ -36,78 +30,8 @@ extension FeedScreen {
     var roomScopeSection: some View {
         if mergedMenuDraws {
             mergedRoomMenu
-        } else if roomScopeInRoom {
-            if source == "GitHub" {
-                githubScopeMenu
-            } else if source == "Pinterest" {
-                pinterestScopeMenu
-            } else if SocialRoom.hasRoster(source) {
-                socialFaceRow
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var githubScopeMenu: some View {
-        let watches = GitHubWatchStore.shared.watches
-        // ONE watch is enough here (`GitHubRowTag.railShows`): All is your
-        // whole GitHub and a watched person is a strict slice of it.
-        if GitHubScopeRail.shows(source: source, watched: watches.count) {
-            sourceScopeMenu(GitHubScopeRail.items(watches),
-                            scope: chrome.githubScope,
-                            matches: GitHubScopeRail.matches,
-                            allName: String(localized: "All activity"),
-                            markWord: String(localized: "Repository")) { picked in
-                chrome.githubScope = picked
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var pinterestScopeMenu: some View {
-        let store = PinterestStore.shared
-        if PinterestScopeRail.shows(source: source, follows: store.follows.count) {
-            sourceScopeMenu(PinterestScopeRail.items(store),
-                            scope: chrome.pinterestScope,
-                            matches: GitHubScopeRail.matches,
-                            allName: String(localized: "All pins"),
-                            markWord: String(localized: "Board")) { picked in
-                chrome.pinterestScope = picked
-            }
-        }
-    }
-
-    /// The rail's items as the menu's slots, "All" first. A slot's subtitle
-    /// says what the rail's squircle-or-circle said: a mark is a repo or a
-    /// board, an avatar a person.
-    private func sourceScopeMenu(_ items: [FaceScopeRail.Item], scope: String?,
-                                 matches: @escaping (String, String) -> Bool,
-                                 // "All" names what it holds, as the Wallet's
-                                 // "All accounts" does.
-                                 allName: String,
-                                 markWord: String,
-                                 pick: @escaping (String?) -> Void) -> some View {
-        let all = DSAccountSlot(id: "", name: allName, sub: nil,
-                                faces: items.prefix(2).map(\.face))
-        let slots = [all] + items.map { item in
-            let isMark: Bool = { if case .mark = item.face { return true }; return false }()
-            return DSAccountSlot(id: item.id, name: item.caption,
-                                 sub: isMark ? markWord : String(localized: "Person"),
-                                 faces: [item.face])
-        }
-        let showing = scope.flatMap { picked in
-            slots.first { !$0.id.isEmpty && matches(picked, $0.id) }
-        } ?? all
-        return Section {
-            DSScopeMenu(slots: slots, showing: showing,
-                        spoken: { String(localized: "Showing: \($0)") },
-                        subtitles: true, onPick: pick)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.leadGap,
-                                          trailing: DSRoomChassis.inset))
+        } else if roomScopeInRoom, SocialRoom.hasRoster(source) {
+            socialFaceRow
         }
     }
 

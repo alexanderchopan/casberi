@@ -34,8 +34,6 @@ enum ScopeTileGlyph {
     /// A 3x2 grid of squares, which is the one affordance that says "apps"
     /// without argument — and it is free: `square.grid.2x2` is spoken for.
     static let apps        = "square.grid.3x2"
-    static let shielded    = "lock.shield"
-    static let review      = "checkmark.shield"
     /// Every room's All (prd §815): the dock's own All glyph, read from its
     /// one table rather than retyped.
     static var all: String { CategoryFold.glyph(for: "All") }
@@ -108,9 +106,8 @@ extension NotesScope: DSTileScope {
     }
 }
 
-/// Privacy Pools' three scopes as tiles (prd §763). Conformed here for the
-/// reason `DSSectionScope` is conformed in `MainSurface`: the enum stays
-/// Foundation-only so the harness compiles it whole.
+/// Privy's two scopes as tiles. Conformed here so the enum stays
+/// Foundation-only and a harness compiles it whole.
 extension PrivyHomeFeed.Section: DSTileScope {
     var glyph: String {
         switch self {
@@ -128,16 +125,6 @@ extension AgentRoomScope: DSTileScope {
         switch self {
         case .all:  return ScopeTileGlyph.all
         case .new:  return ScopeTileGlyph.new
-        }
-    }
-}
-
-extension PrivacyPoolsSection: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .activity: return ScopeTileGlyph.activity
-        case .shielded: return ScopeTileGlyph.shielded
-        case .review:   return ScopeTileGlyph.review
         }
     }
 }

@@ -112,7 +112,11 @@ extension FeedScreen {
         // exactly what a head that DECLINED draws.
         // In a merged room an app pick shows that app's own head, or none —
         // never the room's, which describes every app (prd §1048d, §1052).
-        let roomHead = selectedSeat != nil ? heads?.seatHead : heads?.sourceHead
+        // The Wallet draws the picked app's head in its own box (`walletRoom`'s
+        // crown), so here it would be the same card twice (prd §1060).
+        let roomHead = selectedSeat != nil
+            ? (shape == .wallet ? nil : heads?.seatHead)
+            : heads?.sourceHead
         let sourceHead = liveStream == nil && anniversary == nil ? roomHead : nil
         // (The All feed's cross-source "thread" head lived here for one day and
         // was DELETED, prd §333. It ranked a shared WORD as a subject, so its
@@ -900,55 +904,32 @@ extension FeedScreen {
                 }
             }
         case .privacyPools(let room):
-            // Computed once and read three times: presence decides the
-            // strip, the dot and the row gate, and three separate reads
-            // are three chances for them to describe different rooms.
-            // A Privacy Pools head drawn in the Wallet's box (prd §1048d)
-            // carries no scope tiles of its own: the Wallet's are under it.
-            let poolScopes = source == PrivacyPoolsRoomSource.source ? privacyPoolsSections(room) : []
-            PrivacyPoolsRoomCard(
-                room: room,
-                onOpen: { slice in
-                    // Matched on the DEPOSIT ref as well as the tag: an
-                    // alert row about a cleared deposit carries no state
-                    // tag, but a future one might, and landing on the
-                    // announcement instead of the deposit it announces
-                    // is the wrong row by one hop.
-                    //
-                    // The UNKNOWN slice is the same match with the test
-                    // inverted — a deposit wearing none of the bridge's
-                    // state tags (prd §486). It is a real door rather
-                    // than a label for the same reason every other
-                    // legend row is one: these are deposits you can go
-                    // and look at, and the one thing this card cannot
-                    // say about them is on the row itself.
-                    openNewest(source: PrivacyPoolsRoomSource.source, in: visible) { thing in
-                        guard thing.sourceRef?.hasPrefix(PrivacyPoolsRoom.depositPrefix) ?? false
-                        else { return false }
-                        switch slice {
-                        case .state(let state): return thing.tags.contains(state.rawValue)
-                        case .unknown: return PrivacyPoolsRoom.state(tags: thing.tags) == nil
-                        }
+            // Drawn in the Wallet's box when its menu picks 0xBow (prd
+            // §1048d), every reading at once: the Wallet's tiles are the ones
+            // under it (prd §1060).
+            PrivacyPoolsRoomCard(room: room) { slice in
+                // Matched on the DEPOSIT ref as well as the tag: an
+                // alert row about a cleared deposit carries no state
+                // tag, but a future one might, and landing on the
+                // announcement instead of the deposit it announces
+                // is the wrong row by one hop.
+                //
+                // The UNKNOWN slice is the same match with the test
+                // inverted — a deposit wearing none of the bridge's
+                // state tags (prd §486). It is a real door rather
+                // than a label for the same reason every other
+                // legend row is one: these are deposits you can go
+                // and look at, and the one thing this card cannot
+                // say about them is on the row itself.
+                openNewest(source: PrivacyPoolsRoomSource.source, in: visible) { thing in
+                    guard thing.sourceRef?.hasPrefix(PrivacyPoolsRoom.depositPrefix) ?? false
+                    else { return false }
+                    switch slice {
+                    case .state(let state): return thing.tags.contains(state.rawValue)
+                    case .unknown: return PrivacyPoolsRoom.state(tags: thing.tags) == nil
                     }
-                },
-                // WHICH READING IS ON SCREEN (prd §486). Resolved
-                // rather than read raw: a scope remembered from a room
-                // whose last deposit has since been reclaimed falls
-                // back to Activity instead of rendering an empty page
-                // claiming to be a section — `WalletSection.resolve`'s
-                // rule, two rooms over.
-                section: PrivacyPoolsSection.resolve(
-                    chrome.privacyPoolsSection, present: poolScopes),
-                scopes: poolScopes,
-                scopeAttention: PrivacyPoolsSection.attention(
-                    needsProof: room.needsYou != nil,
-                    declined: room.needsReclaim != nil,
-                    present: poolScopes),
-                onPickScope: { picked in
-                    withAnimation(DS.Motion.standard) {
-                        chrome.privacyPoolsSection = picked
-                    }
-                })
+                }
+            }
         case .cardSpend(let room, let seat):
             CardSpendRoomCard(room: room, seat: seat) { currency in
                 // A currency owns many spends, so the honest landing is

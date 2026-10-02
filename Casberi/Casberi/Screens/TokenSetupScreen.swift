@@ -602,9 +602,8 @@ struct TokenSetupScreen: View {
         // spring.
         //
         // ONE walk of the rows already fetched, bucketed by the same
-        // `GitHubRowTag.matches` the room's rail uses — so a watch is "active"
-        // here precisely when picking its face in the room shows you something,
-        // and the two can never disagree about what belongs to whom.
+        // `GitHubRowTag.matches` rule — the one that decides whose a row is,
+        // so a watch is "active" here precisely when it owns a row this week.
         let weekStart = Date.now.addingTimeInterval(-7 * 86_400)
         var counts: [String: Int] = [:]
         for thing in landed where thing.isLive && thing.capturedAt >= weekStart {

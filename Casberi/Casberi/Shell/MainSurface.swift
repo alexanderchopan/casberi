@@ -21,12 +21,6 @@ import UIKit
 // control, several vocabularies, no type dragging SwiftUI into a harness.
 extension WalletSection: DSSectionScope {}
 
-// The second room to take this control (prd §486), conformed beside the call
-// site for the reason the one above is: `PrivacyPoolsSection` stays
-// Foundation-only so `wallet-rooms-selftest.sh` can compile it WHOLE beside
-// the room it scopes.
-extension PrivacyPoolsSection: DSSectionScope {}
-
 struct MainSurface: View {
     // Whole corpus, newest first — but hydrating ONLY the columns this surface
     // reads (2026-07-24 perf). This screen never renders a Thing's body
@@ -605,29 +599,23 @@ struct MainSurface: View {
     /// with no venues in it (prd §753).
     private var roomFacesShow: Bool {
         // **THE PHONE'S BAND CARRIES NO FACES (prd §936, §959).** The wallet
-        // family picks its account from the menu under its tiles; GitHub and
-        // Pinterest from the same menu; the social rooms from a row of faces
+        // family picks its account from the menu under its tiles; the social
+        // rooms from a row of faces
         // under the cover (`FeedScreen.roomScopeControl`). The rail keeps all
         // of them, where no seat shares the band's edge.
         guard showsRail else { return false }
         return SocialScopeRail.shows(source: filter.source, accounts: socialAccounts.count)
-            || GitHubScopeRail.shows(source: filter.source,
-                                     watched: GitHubWatchStore.shared.watches.count)
-            || PinterestScopeRail.shows(source: filter.source,
-                                        follows: PinterestStore.shared.follows.count)
             || accountRailItems.count > 1
     }
 
     /// The faces the folder row carries after its venues (prd §753). At most
-    /// one of the three draws: a source is a social room, GitHub, or in the
-    /// wallet family, never two.
+    /// one of the two draws: a source is a social room or in the wallet
+    /// family, never both.
     @ViewBuilder
     private var roomFaces: some View {
         // On the phone every one of these moved into the room (§959).
         if showsRail {
             socialScopeRail
-            githubScopeRail
-            pinterestScopeRail
             accountRail
         }
     }
@@ -684,27 +672,6 @@ struct MainSurface: View {
     /// The social rail's `+N` list is up (prd §824).
     @State private var allFacesShown = false
 
-    /// **THE GITHUB ROOM'S FACE RAIL** (user ruling, 2026-09-11) — the repos and
-    /// people you watch, scoping one plain feed.
-    ///
-    /// Mounted HERE and not on `FeedScreen` for §357's reason, which this rail
-    /// inherits rather than re-earns: the screen carries `.id(filter.source)`
-    /// under a move transition, so a control declared on it is destroyed by the
-    /// very room change it commands.
-    ///
-    /// **It draws nothing when nothing is watched** (user, 2026-09-11: *"if
-    /// they paste their own key… if it is just themselves that would suck to
-    /// see a third row"*). A rail holding only "All" is a control with one
-    /// option — §83's dead control, wearing a band row the feed could have had.
-    /// The predicate lives in `GitHubRowTag.railShows` so a harness can compile
-    /// it; see there for why ONE watch is enough here and two are needed on the
-    /// devnet rails.
-    ///
-    /// **No re-tap door.** A social face re-taps into that person's own room
-    /// because one exists; a watched repo has no room of its own in this app,
-    /// and a re-tap that opened github.com would leave the app on the one
-    /// gesture whose whole grammar is "narrow what is already here". Re-tapping
-    /// the lit face simply re-picks it, which is what `onReTap: nil` does.
     /// THE WALLET FAMILY'S ACCOUNTS, where the social faces are (prd §750,
     /// user: "should we put the wallets row of accounts on a third row above
     /// the tab bar like we do for socials? … like on farcaster and bluesky").
@@ -740,48 +707,6 @@ struct MainSurface: View {
                     addTitle: nil,
                     onAdd: nil)
             }
-        }
-    }
-
-    @ViewBuilder
-    private var githubScopeRail: some View {
-        let watches = GitHubWatchStore.shared.watches
-        if GitHubScopeRail.shows(source: filter.source, watched: watches.count) {
-            FaceScopeRail(
-                items: GitHubScopeRail.items(watches),
-                scope: chrome.githubScope,
-                compact: chrome.minimized && !showsRail,
-                inFolder: true,
-                matches: GitHubScopeRail.matches,
-                onPick: { picked in
-                    withAnimation(DS.Motion.standard) { chrome.githubScope = picked }
-                },
-                onReTap: nil,
-                addTitle: nil,
-                onAdd: nil)
-        }
-    }
-
-    /// THE PINTEREST ROOM'S FACE RAIL (prd §819) — you and the boards and people
-    /// you follow, scoping one feed. The GitHub rail's shape exactly, and for
-    /// its reasons: mounted on the shell (§357), no re-tap door, nothing drawn
-    /// until there is a second follow to pick between.
-    @ViewBuilder
-    private var pinterestScopeRail: some View {
-        let store = PinterestStore.shared
-        if PinterestScopeRail.shows(source: filter.source, follows: store.follows.count) {
-            FaceScopeRail(
-                items: PinterestScopeRail.items(store),
-                scope: chrome.pinterestScope,
-                compact: chrome.minimized && !showsRail,
-                inFolder: true,
-                matches: GitHubScopeRail.matches,
-                onPick: { picked in
-                    withAnimation(DS.Motion.standard) { chrome.pinterestScope = picked }
-                },
-                onReTap: nil,
-                addTitle: nil,
-                onAdd: nil)
         }
     }
 
@@ -2117,9 +2042,6 @@ struct MainSurface: View {
             // too, and a scope that survives one of the three doors is worse than
             // one that survives none.
             chrome.personScope = nil
-            // A GitHub watch belongs to the GitHub seat, same argument
-            // (2026-09-11) — a repo ref carried into Linear matches no row.
-            chrome.githubScope = nil
             // An agent's Chat tile belongs to that agent, and every room opens
             // on All (prd §815, §841): carried across, swiping
             // from Bankr into Claude's room lands you in a keyboard, which is
@@ -2133,7 +2055,6 @@ struct MainSurface: View {
             chrome.workScope = .all
             // And the Tokens room's packs.
             chrome.tokensScope = .watchlist
-            chrome.pinterestScope = nil
             chrome.freshHandles = []
         }
         // A room asking to move to another room — the Markets switcher. See

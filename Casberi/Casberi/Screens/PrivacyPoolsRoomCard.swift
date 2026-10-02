@@ -3,6 +3,13 @@ import SwiftUI
 /// THE PRIVACY POOLS ROOM'S HEAD (2026-08-10, prd §349; regrouped into scopes
 /// 2026-08-26, prd §486) — where every deposit stands with the screener.
 ///
+/// **ONE READING AGAIN (prd §1060).** Privacy Pools folded into the Wallet
+/// (§1048), whose menu draws this head when 0xBow is picked (§1048d), and the
+/// Wallet's tiles are the ones under it — so the scope tiles below never drew,
+/// and with them Shielded and Review. The tiles and their state are deleted;
+/// the head draws every reading: Shielded, then Review, with the deposits'
+/// line as the footnote under them. The history below is kept as written.
+///
 /// ## What §486 changed, and what it did not
 ///
 /// Reported as *"the 0xbow room looks messy"*. It was: SEVEN blocks in one
@@ -59,17 +66,6 @@ struct PrivacyPoolsRoomCard: View {
     /// honest landing is that slice's newest deposit — resolved by the feed.
     var onOpen: (PrivacyPoolsRoom.Slice) -> Void
 
-    /// Which reading is on screen. Defaulted so `PrivacyPoolsScreen` and any
-    /// other caller with no scope state draws the room whole, exactly as
-    /// before — the narrowing is opt-in by construction rather than by a flag
-    /// every caller has to remember to pass (`VibenetRoomCard.shows`'s rule).
-    var section: PrivacyPoolsSection? = nil
-    /// The strip's own inputs, handed down rather than read from the shell, so
-    /// a caller with no scope state draws no strip for free.
-    var scopes: [PrivacyPoolsSection] = []
-    var scopeAttention: Set<PrivacyPoolsSection> = []
-    var onPickScope: ((PrivacyPoolsSection) -> Void)? = nil
-
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
@@ -87,47 +83,16 @@ struct PrivacyPoolsRoomCard: View {
         BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
     }
 
-    /// Whether a scope's content draws. A nil `section` means the whole room in
-    /// one scroll, which is what the un-scoped callers want.
-    private func shows(_ candidate: PrivacyPoolsSection) -> Bool {
-        section == nil || section == candidate
-    }
-
-    /// **ONE HEAD, LIKE EVERY OTHER ROOM'S (prd §763).** This was a bare lead,
-    /// a chip strip and a block per scope, three objects on the page at
-    /// `scopedHeadGap` — the one room whose top was not `DSRoomChassis.Head`.
-    /// It is the template now: the sentence leads, the scopes are TILES under
-    /// it (the wallet family's own control, §752, and no strip of chips sits
-    /// near the top of a screen), the scope's reading is a block, and the
-    /// activity note is a footnote. The rows below are individually tappable,
-    /// so the lead's own sentence carries its door and there is no face-wide
-    /// gesture. Each scope draws at most one block, and a scope with nothing
-    /// to put in one draws none — **a scoped-to empty scope says what it
-    /// would hold (prd §611).**
-    ///
-    /// **THE TILES STAND UNDER THE WELL, THE WALLET'S WAY (2026-09-15, user:
-    /// "privacy pools page isn't a wallet but it should adhere to our uniform
-    /// template we use for wallet").** They were a block INSIDE the lead, three
-    /// narrow tiles under the sentence, so the one scoped room outside the
-    /// wallet family put its control somewhere no other room does. They ride
-    /// the head's `scopes` slot now: the same four-column grid, the same inset
-    /// and the same height under the well as `DSRoomScopeChrome`.
-    @ViewBuilder
+    /// **ONE HEAD, LIKE EVERY OTHER ROOM'S (prd §763)**: the sentence leads,
+    /// each reading is a block, and the activity note is a footnote. The rows
+    /// below are individually tappable, so the lead's own sentence carries its
+    /// door and there is no face-wide gesture. A reading with nothing in it
+    /// draws no block.
     var body: some View {
-        if onPickScope != nil, PrivacyPoolsSection.shows(present: scopes) {
-            DSRoomChassis.Head(lead: .sentence(PrivacyPoolsRoom.headline(room)), door: headDoor, footnotes: headFootnotes) {
-                scopeBlocks
-            } scopes: {
-                DSScopeTiles(sections: scopes,
-                             active: section ?? .activity,
-                             attention: scopeAttention) { picked in
-                    onPickScope?(picked)
-                }
-            }
-        } else {
-            DSRoomChassis.Head(lead: .sentence(PrivacyPoolsRoom.headline(room)), door: headDoor, footnotes: headFootnotes) {
-                scopeBlocks
-            }
+        DSRoomChassis.Head(lead: .sentence(PrivacyPoolsRoom.headline(room)), door: headDoor,
+                           footnotes: [.quiet(PrivacyPoolsRoom.activityNote(room))]) {
+            if shieldedHasContent { DSRoomChassis.Block { shieldedBody } }
+            if reviewHasContent { DSRoomChassis.Block { reviewBody } }
         }
     }
 
@@ -139,34 +104,11 @@ struct PrivacyPoolsRoomCard: View {
         }
     }
 
-    private var headFootnotes: [DSRoomChassis.Line?] {
-        [shows(.activity) ? .quiet(PrivacyPoolsRoom.activityNote(room)) : nil]
-    }
-
-    @ViewBuilder
-    private var scopeBlocks: some View {
-        if shows(.shielded), shieldedHasContent { DSRoomChassis.Block { shieldedBody } }
-        else if section == .shielded { DSRoomChassis.Block { emptyBody(.shielded) } }
-        if shows(.review), reviewHasContent { DSRoomChassis.Block { reviewBody } }
-        else if section == .review { DSRoomChassis.Block { emptyBody(.review) } }
-    }
-
     // MARK: - Shielded
 
     /// Presence and rendering, ONE expression (§483's own lesson, learned there
-    /// from a Risk chip that opened an empty page): this is exactly the test
-    /// `PrivacyPoolsSection.present(shielded:)` is passed at the call site.
+    /// from a Risk chip that opened an empty page).
     private var shieldedHasContent: Bool { !room.holdings.isEmpty }
-
-    /// The short state over the skeleton, in the card's own type;
-    /// `emptyBody` rides `words:`, VoiceOver's value alone since §769 and one
-    /// clause since §799. No door (prd §611).
-    @ViewBuilder private func emptyBody(_ scope: PrivacyPoolsSection) -> some View {
-        if let words = scope.emptyBody {
-            DSEmptyState(headline: scope.emptyHeadline.map { Text($0) },
-                         words: Text(words), scale: .list(rows: 3))
-        }
-    }
 
     @ViewBuilder
     private var shieldedBody: some View {
@@ -193,7 +135,7 @@ struct PrivacyPoolsRoomCard: View {
 
     /// The legend draws a row per state AND a row for the untagged deposits,
     /// so a room with untagged deposits and no states still has something to
-    /// say — the same test the call site passes as `review:`.
+    /// say.
     private var reviewHasContent: Bool {
         !room.segments.isEmpty || room.untagged > 0
     }

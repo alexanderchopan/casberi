@@ -336,12 +336,6 @@ struct PrivacyPoolsRoom: Equatable {
     /// The one deposit state that needs the person, if any.
     var needsYou: Segment? { segments.first { $0.state.needsYou } }
 
-    /// The state whose money is sitting in a pool waiting for the person to
-    /// take it back out. An errand like `needsYou`, and the second of the two
-    /// slices that light the scope's dot — see `PrivacyPoolsSection.attention`
-    /// for why being in review is not one.
-    var needsReclaim: Segment? { segments.first { $0.state == .declined } }
-
     var lead: Segment? { segments.first }
 
     var leadHolding: Holding? { holdings.first }

@@ -86,11 +86,9 @@ POOLS="Casberi/Casberi/Model/PrivacyPoolsRoom.swift"
 GNOSIS="Casberi/Casberi/Model/CardSpendRoom.swift"
 RAILGUN="Casberi/Casberi/Model/RailgunRoom.swift"
 SAFE="Casberi/Casberi/Model/SafeRoom.swift"
-# The Privacy Pools room's SCOPE enum (prd §486) — Foundation-only for exactly
-# this reason, so the rules behind its strip are compiled WHOLE beside the room
-# they scope rather than reasoned about.
-SECTION="Casberi/Casberi/Model/PrivacyPoolsSection.swift"
-for f in "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$SECTION"; do
+# (The Privacy Pools room's scope enum, `PrivacyPoolsSection`, left with its
+# tiles, prd §1060: the head draws every reading.)
+for f in "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -224,15 +222,18 @@ grep -q 'if room.needsYou != nil {' "$CARD_POOLS" \
 grep -q 'respondURL = URL(string: "https://app.0xbow.io")' "$CARD_POOLS" \
   || { echo "✗ the respond door no longer opens 0xBow — a door telling you to respond must land where responding happens"; exit 1; }
 
-# --- prd §486: the three scopes ---------------------------------------------
-# The card draws its OWN strip (not Wallet's shell-mounted
-# one), so these are the only checks that the control exists at all.
+# --- prd §486's three readings, one head since prd §1060 ---------------------
+# The scope tiles never drew once Privacy Pools folded into the Wallet (whose
+# tiles stand under the head), so the head draws every reading. A tile strip
+# coming back would stand a second row of tiles under the Wallet's.
 CARD_STRIPPED="$TMP/poolscard.swift"
 strip_comments "$CARD_POOLS" > "$CARD_STRIPPED"
 grep -q 'DSScopeTiles(' "$CARD_STRIPPED" \
-  || { echo "✗ the Privacy Pools card no longer draws its scope tiles (§763; was the switcher, §486) — the room goes back to seven blocks in one slab"; exit 1; }
-grep -q 'PrivacyPoolsSection.shows(present: scopes)' "$CARD_STRIPPED" \
-  || { echo "✗ the strip is no longer gated on there being more than one scope — one chip is a label, not a control (§83)"; exit 1; }
+  && { echo "✗ the Privacy Pools card draws scope tiles again — under the Wallet's own, a second row (§1060)"; exit 1; }
+grep -q 'if shieldedHasContent { DSRoomChassis.Block { shieldedBody } }' "$CARD_STRIPPED" \
+  || { echo "✗ the head no longer draws the Shielded reading — what is in the pools is on no screen (§1060)"; exit 1; }
+grep -q 'if reviewHasContent { DSRoomChassis.Block { reviewBody } }' "$CARD_STRIPPED" \
+  || { echo "✗ the head no longer draws the Review reading — where each deposit stands is on no screen (§1060)"; exit 1; }
 # PRESENCE AND RENDERING ARE ONE QUESTION, spelled the same way in both files.
 # §483 shipped a Risk chip that opened an empty page because they were spelled
 # differently two files apart; these are the same two expressions.
@@ -240,16 +241,6 @@ grep -q 'private var shieldedHasContent: Bool { !room.holdings.isEmpty }' "$CARD
   || { echo "✗ the shielded scope's render gate moved — it must stay identical to the presence flag FeedScreen passes"; exit 1; }
 grep -q '!room.segments.isEmpty || room.untagged > 0' "$CARD_STRIPPED" \
   || { echo "✗ the review scope's render gate moved — a room of untagged deposits would offer a chip its card then declines to fill"; exit 1; }
-# EVERY SCOPE, ALWAYS (prd §611): the strip no longer takes evidence, and the
-# two gates above decide figure-or-empty-card inside the card alone.
-grep -q 'PrivacyPoolsSection.present()' "$FEED" \
-  || { echo "✗ the strip is deriving its scopes from evidence again — a chip vanishes on exactly the room that most needs to learn what it is (§611)"; exit 1; }
-grep -q 'PrivacyPoolsSection.present(shielded:' "$FEED" \
-  && { echo "✗ present() is being handed evidence again — the gate §611 removed"; exit 1; }
-grep -q 'else if section == .shielded { DSRoomChassis.Block { emptyBody(.shielded) } }' "$CARD_STRIPPED" \
-  || { echo "✗ a scoped-to empty Shielded scope draws nothing again — the chip is always offered now, so it must say what it would hold (§611)"; exit 1; }
-grep -q 'else if section == .review { DSRoomChassis.Block { emptyBody(.review) } }' "$CARD_STRIPPED" \
-  || { echo "✗ a scoped-to empty Review scope draws nothing again (§611)"; exit 1; }
 # THE HEADLINE BELONGS TO NO SCOPE. Scoped away, the room could be opened
 # without being told the one thing §349 exists to say.
 grep -q 'lead: .sentence(PrivacyPoolsRoom.headline(room))' "$CARD_STRIPPED" \
@@ -282,14 +273,10 @@ if grep -q 'onTapGesture' "$CARD_STRIPPED"; then
 fi
 # The room's rows gate (`privacyPoolsShowsRows`) left with the room: Privacy
 # Pools folded into the Wallet (prd §1048), whose list is its own (prd §1059).
-grep -q 'var privacyPoolsSection: PrivacyPoolsSection?' "Casberi/Casberi/Shell/ShellChrome.swift" \
-  || { echo "✗ the shell no longer remembers which reading is on screen"; exit 1; }
-grep -q 'extension PrivacyPoolsSection: DSSectionScope {}' "Casberi/Casberi/Shell/MainSurface.swift" \
-  || { echo "✗ PrivacyPoolsSection no longer conforms to the scope protocol — the strip cannot draw"; exit 1; }
-# The probe is the only way to see a strip that did not draw, and an empty
-# scope list has causes that are invisible from outside.
-grep -q 'privacyPoolsScopes|' "$SRC_POOLS" \
-  || { echo "✗ -privacyPoolsRoomProbe no longer reports the scopes — a room that draws no control has several causes and only one is a bug"; exit 1; }
+# The probe is the only way to see a reading that did not draw, and an empty
+# one has causes that are invisible from outside.
+grep -q 'privacyPoolsReadings|' "$SRC_POOLS" \
+  || { echo "✗ -privacyPoolsRoomProbe no longer reports which readings are empty — a head missing a block has several causes and only one is a bug"; exit 1; }
 grep -q 'privacyPoolsLegend|' "$SRC_POOLS" \
   || { echo "✗ -privacyPoolsRoomProbe no longer reports the legend as drawn — the untagged row's wording could only be checked by screenshot"; exit 1; }
 
@@ -1114,72 +1101,10 @@ check("a wait under the floor is not worth naming",
         == "1 in review")
 
 print("")
-print("Privacy Pools — the scopes (prd §486)")
-// The room's three readings behind one control. Every failure here renders as
-// an ordinary room: a chip that opens an empty page, a remembered scope
-// resolving somewhere nobody chose, or a strip that reshuffles between opens.
-let ppAll = PrivacyPoolsSection.present()
-check("the order is events → state → hazard, and it is total",
-      ppAll == [.activity, .shielded, .review])
-// EVERY scope, on every room (prd §611): the gate is gone, and each scope that
-// can be empty says what it would hold instead of vanishing.
-check("every scope is present, in order", ppAll == PrivacyPoolsSection.order)
-for s in PrivacyPoolsSection.allCases {
-    check("\(s.rawValue) names its own empty state", !(s.emptyHeadline ?? "").isEmpty)
-    check("\(s.rawValue) says what it would hold", !(s.emptyBody ?? "").isEmpty)
-    check("\(s.rawValue)'s empty state is not its summary restated", s.emptyBody != s.summary)
-    check("\(s.rawValue)'s empty state teaches rather than labels", (s.emptyBody ?? "").count > 24)
-}
-let ppBodies = PrivacyPoolsSection.allCases.compactMap(\.emptyBody)
-check("no two scopes explain themselves the same way", Set(ppBodies).count == ppBodies.count)
-for words in ppBodies {
-    check("an empty scope states a fact and offers no door",
-          !words.lowercased().contains("tap ") && !words.lowercased().contains("respond"))
-}
-check("both readings past activity are conditional",
-      PrivacyPoolsSection.allCases.filter(\.isConditional).sorted { $0.rawValue < $1.rawValue }
-        == [PrivacyPoolsSection.review, .shielded].sorted { $0.rawValue < $1.rawValue })
-check("one scope is not a control",
-      !PrivacyPoolsSection.shows(present: [.activity]))
-check("two are", PrivacyPoolsSection.shows(present: [.activity, .review]))
-// A remembered scope whose content has gone must land on the FEED, never on
-// "whatever is first" — the two differ only when activity is somehow absent,
-// which is the branch that would quietly open a room somewhere nobody chose.
-check("a scope that no longer exists falls back to activity",
-      PrivacyPoolsSection.resolve(.shielded, present: [.activity, .review]) == .activity)
-// THE FIXTURE ABOVE CANNOT TELL THE RULE FROM ITS MUTATION, and this one is
-// why it is here: `order` puts `.activity` first, so "fall back to the feed"
-// and "fall back to whatever is first" give the same answer for every list
-// production can actually build — the mutation swapping one for the other
-// survived on the first run, green. The discriminating case is the branch the
-// type's own doc says cannot happen: a `present` without `.activity` in it.
-// That is exactly the point of naming the fallback rather than taking the
-// head — an unreachable branch that quietly picks a different scope is how a
-// room starts opening somewhere nobody chose.
-//
-// Standing rule, earned again: a fixture only tests the rule it names if it
-// FAILS that rule and passes every other one.
-check("the fallback is the feed by NAME, not whatever happens to be first",
-      PrivacyPoolsSection.resolve(.shielded, present: [.review]) == .activity)
-check("nothing remembered opens the feed",
-      PrivacyPoolsSection.resolve(nil, present: ppAll) == .activity)
-check("a remembered scope that still exists is honoured",
-      PrivacyPoolsSection.resolve(.review, present: ppAll) == .review)
-// EARNED, never mere presence: a deposit in review is this room's NORMAL
-// state, and a dot on every one of them is a dot nobody reads.
-check("being in review earns no dot",
-      PrivacyPoolsSection.attention(needsProof: false, declined: false, present: ppAll).isEmpty)
-check("proof required earns one",
-      PrivacyPoolsSection.attention(needsProof: true, declined: false, present: ppAll) == [.review])
-check("a decline earns one too — the money sits there until you reclaim it",
-      PrivacyPoolsSection.attention(needsProof: false, declined: true, present: ppAll) == [.review])
-check("no dot on a scope that isn't offered",
-      PrivacyPoolsSection.attention(needsProof: true, declined: true,
-                                    present: [.activity]).isEmpty)
+print("Privacy Pools — the head's readings (prd §486, one head since §1060)")
 // Presence and rendering are one question. The card draws the shielded reading
 // on exactly `holdingsLine != nil`, and the review reading on segments-or-
-// untagged; a room that offers a chip its card then declines to fill is §83's
-// dead control wearing a scope's clothes (§483 shipped exactly that once).
+// untagged; a block drawn over nothing is §83's empty drawing.
 check("shielded presence is exactly the money line's own gate",
       (PrivacyPoolsRoom.holdingsLine(held) != nil) == !held.holdings.isEmpty)
 check("a room of only untagged deposits still earns Review — the legend has a row",
@@ -1852,7 +1777,7 @@ cat > "$TMP/build.zsh" <<'BUILDSH'
 MW="$1"
 swiftc -Onone -o "$MW/run" \
   "$MW/PeerRoom.swift" "$MW/PrivacyPoolsRoom.swift" "$MW/CardSpendRoom.swift" \
-  "$MW/RailgunRoom.swift" "$MW/SafeRoom.swift" "$MW/PrivacyPoolsSection.swift" \
+  "$MW/RailgunRoom.swift" "$MW/SafeRoom.swift" \
   "$MW/RoomLede.swift" "$MW/main.swift" 2>/dev/null
 BUILDSH
 
@@ -1876,7 +1801,6 @@ cp "$POOLS"   "$TMP/base/PrivacyPoolsRoom.swift"
 cp "$GNOSIS"  "$TMP/base/CardSpendRoom.swift"
 cp "$RAILGUN" "$TMP/base/RailgunRoom.swift"
 cp "$SAFE"    "$TMP/base/SafeRoom.swift"
-cp "$SECTION" "$TMP/base/PrivacyPoolsSection.swift"
 cp "$LEDE"    "$TMP/base/RoomLede.swift"
 cp "$TMP/main.swift" "$TMP/base/main.swift"
 
@@ -1916,7 +1840,6 @@ mutate() {
     gnosis)  file=CardSpendRoom.swift ;;
     railgun) file=RailgunRoom.swift ;;
     safe)    file=SafeRoom.swift ;;
-    section) file=PrivacyPoolsSection.swift ;;
     *)       echo "✗ mutation '$name' names no known file: $which"; exit 1 ;;
   esac
   MUTN=$((MUTN + 1))
@@ -2120,27 +2043,6 @@ mutate "the observed review time drops out of the activity caption" pools \
 mutate "an unreadable deposit size is no longer named beside the figure" pools \
   'if room.unpriced > 0 {' \
   'if false, room.unpriced > 0 {'
-# THE SCOPE RULES. Each renders as a perfectly ordinary room.
-mutate "a remembered scope resolves to whatever is first instead of the feed" section \
-  'guard let wanted, present.contains(wanted) else { return .activity }' \
-  'guard let wanted, present.contains(wanted) else { return present.first ?? .activity }'
-mutate "the strip draws over a single scope" section \
-  'static func shows(present: [PrivacyPoolsSection]) -> Bool { present.count > 1 }' \
-  'static func shows(present: [PrivacyPoolsSection]) -> Bool { present.count > 0 }'
-mutate "a conditional scope leads the strip" section \
-  'static let order: [PrivacyPoolsSection] = [.activity, .shielded, .review]' \
-  'static let order: [PrivacyPoolsSection] = [.review, .shielded, .activity]'
-mutate "every scope gated again, so a chip vanishes on the room that most needs it" section \
-  'static func present() -> [PrivacyPoolsSection] { order }' \
-  'static func present() -> [PrivacyPoolsSection] { order.filter { !$0.isConditional } }'
-mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" section \
-  'Pending, cleared, asked for proof, or declined.' ' '
-mutate "the dot fires on ordinary progress" section \
-  'guard present.contains(.review), needsProof || declined else { return [] }' \
-  'guard present.contains(.review) else { return [] }'
-mutate "a dot is drawn on a scope the strip does not offer" section \
-  'guard present.contains(.review), needsProof || declined else { return [] }' \
-  'guard needsProof || declined else { return [] }'
 # The cross-currency sum this file exists to refuse.
 mutate "every currency lands in one bucket" gnosis \
   'var bucket = buckets[code] ?? (total: 0, spends: 0, newest: sighting.at)' \

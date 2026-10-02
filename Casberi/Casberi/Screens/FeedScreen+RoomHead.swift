@@ -80,10 +80,6 @@ extension FeedScreen {
             ? Corpus.revision(in: modelContext)
             : Corpus.revision(in: modelContext, source: source)
         return [source, filter.tag, selectedWallet ?? "", chrome.personScope ?? "",
-                // The GitHub rail scopes the whole feed (2026-09-11), so it
-                // belongs here for this property's own stated reason.
-                chrome.githubScope ?? "",
-                chrome.pinterestScope ?? "",
                 // Bridge state is the one input a corpus revision cannot see —
                 // `sourceHead` reads a Stripe balance, PostHog readings, an ASC
                 // standing, none of which is a `Thing`. A pull is when somebody

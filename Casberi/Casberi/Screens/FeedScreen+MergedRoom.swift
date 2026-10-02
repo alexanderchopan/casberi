@@ -19,8 +19,8 @@ extension FeedScreen {
 
     var mergedMenuDraws: Bool { !mergedMenuSeats.isEmpty }
 
-    /// The menu, under the lead in the rows' column — `sourceScopeMenu`'s
-    /// placement, on every size class, as the Wallet's is.
+    /// The menu, under the lead in the rows' column, on every size class, as
+    /// the Wallet's is.
     @ViewBuilder
     var mergedRoomMenu: some View {
         let seats = mergedMenuSeats
