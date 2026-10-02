@@ -63448,3 +63448,13 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 **One order.** The order the person sets in Settings › Dock order (`CategoryOrder.current`) orders the tray and every glass category bar: Settings, Markets, Addresses and What this app reaches all sort through `CategoryOrder.sorted`, where they sorted A to Z. A category the order has never heard of sorts last, then A to Z among its kind.
 
 **Checked.** `dock-selftest.sh`, `category-fold-selftest.sh` and `category-order-selftest.sh` pass. On the simulator: the tray draws no Recent line; Addresses' bar reads All · Wallet · Life · Social in Dock order, where A to Z read Life · Social · Wallet.
+
+## §1050k — Testnets is one room, built: it shows one network at a time, and the account menu crosses to the other (user: "go", to the Testnets merge, 2026-10-02; builds §1050)
+
+**The room.** Hegotá Frames and Logos are `RoomAccounts` seats of a room named Testnets; their own rooms are gone, and every door that named one lands in Testnets with that network picked (`ShellChrome.pickSeat`, the Wallet's redirect generalised; the pick is `ShellChrome.mergedScope`, keyed by room). A merged room no seat names is its own category (`BridgeCatalog.category(forSource:)`), so the tray's Testnets entry opens it and draws no marks.
+
+**One network at a time.** The room shows the picked network's own screen, whole — its box, its tiles, its verbs (Frames' Create · Send · Top up, Logos' Explorer) and its accounts — under the title Testnets (`MainSurface.shownRoom`, `FeedScreen.hostRoom`). With nothing picked it shows the first connected network. There is no All view: test ETH and Logos test coins add to nothing, so no box can say one thing about both (§1049's test), and Frames' moves are read live, not stored, so one list across the two would hold only Logos'.
+
+**The menu.** Each network's account menu ends with a Networks section naming the other network; a pick switches the screen. It is drawn only while both networks are connected — with one, the room is that network.
+
+**Checked.** `RoomAccountsTests` (the fold, the category, the screen shown); `category-fold-selftest.sh`, `dock-selftest.sh`. On the simulator: `-openRoom Logos` and `-openRoom Testnets` land in Testnets titled so, the menu's Networks › Hegotá Frames switches to Frames, and the tray's Testnets entry opens the room.
