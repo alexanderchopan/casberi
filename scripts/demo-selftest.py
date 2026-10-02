@@ -525,6 +525,10 @@ def check_l_seat_names_resolve_at_runtime(files_text):
 # room, and a demo claiming a seat the catalog no longer offers is fake status
 # arriving from the demo's side. Their books are asserted by check N instead,
 # which is the same assertion without the seat.
+# Seats whose rows `agentChats()` pours by looping `AgentProvider`, so no
+# literal names them; check O proves that loop (prd §1065).
+PROVIDER_ROW_SEAT = {"Venice", "Bankr", "OpenRouter", "Grok", "NEAR AI", "Muse"}
+
 KNOWN_ROWLESS_SEAT = {
     "Coinbase", "Kraken", "Binance", "Gemini Exchange",
     # Hegotá Frames (prd §548) — rowless for a different reason from the ones
@@ -684,7 +688,7 @@ def check_e_seat_names_have_rows(files_text):
         # A rowless seat cannot satisfy this by construction — check M proves
         # its fixture instead, and asserts it is still a seat, so a name here
         # can never fall out of both checks at once.
-        if name in KNOWN_ROWLESS_SEAT:
+        if name in KNOWN_ROWLESS_SEAT or name in PROVIDER_ROW_SEAT:
             continue
         check(f'E · seatTable "{name}" has a seeded row',
               f'"{name}"' in rest, True)
