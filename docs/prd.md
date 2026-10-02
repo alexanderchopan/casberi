@@ -63687,3 +63687,12 @@ Found by §1067's sweep: §1048–§1057 merged every category but Social, which
 A Safe picked in the Wallet led Home with its waiting signatures and listed an empty skeleton under the tiles. A Safe is an account: Home now leads with what it holds, and the signatures stand in Coming up, where they already were. Its money is what the detected Safe addresses hold (`SafeBridge.detectedAddresses`, `WalletPortfolio.scoped(toAddresses:)`), sliced in both places the Wallet slices for an app (`FeedScreen.slice(_:for:)`). The crown's order for any picked app is now money, then the app's head, then its newest thing (§1067), so a card seat (no money) keeps its spending head and an exchange its holdings.
 
 **Checked.** The app builds; `wallet-viz-selftest.sh`, `wallet-total-audit.py`. On the simulator with the demo: Safe picked reads $4.2K with its map, its Coming up lists the signatures; Gnosis Pay keeps its spending head.
+
+## §1070 — A post's cover never prints its link (user: "yes fix it", 2026-10-02) — BUILT
+
+Seen in §1068's capture: Bluesky's cover drew `at://did:plc:demo/app.bsky.feed.post/0` under the post. A network's post lands as a `.chat`, and the cover's excerpt for a `.chat` is the last lines of `content`, a transcript's place; a post's `content` is its link. Real Bluesky stores the bsky.app permalink there, so the same line would have printed a URL for every real post.
+
+- The cover's chat excerpt skips any row with `postText` (a post: its words are the title, and the quote and facts rungs say the rest), and drops a line that is only an address (`FeedLedeCard.isBareLink`) from a real transcript too.
+- The demo's Bluesky posts carry a web permalink, as `BlueskyIngest` stores it, not the raw at:// URI (takes effect on the next pour).
+
+**Checked.** The app builds; `demo-selftest.py`, `lead-body-audit.py`. On the simulator: Bluesky picked in Social leads "Small software, made carefully." with no line under it.
