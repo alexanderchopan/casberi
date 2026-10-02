@@ -22,10 +22,15 @@ extension FeedScreen {
             // stablecoins would claim a gain that didn't happen (honesty).
             // With no pulse cached yet the lede says how many are watched
             // and no 24h claim at all (§83).
+            // The day's biggest moves fill the box (prd §1067): the line
+            // alone left a fixed-size box empty under one sentence.
+            let movers = live.compactMap { t in Self.watchChange(t).map { (name: TitleSeam.split(t.title).name, change: $0) } }
+                .sorted { abs($0.change) > abs($1.change) }
             ledeSection(WatchlistLede(
                 up: changes.filter { $0 > 0 }.count,
                 down: changes.filter { $0 < 0 }.count,
-                watched: live.count, read: !changes.isEmpty))
+                watched: live.count, read: !changes.isEmpty,
+                movers: Array(movers.prefix(WatchlistLede.moverCap))))
         }
     }
 

@@ -270,6 +270,14 @@ extension FeedScreen {
             if walletLive != WalletLiveState() { walletLive = WalletLiveState() }
             return
         }
+        // An app picked from the menu (prd §1067): lending, perps and
+        // approvals are an address's, and an app holds none of them, so
+        // reading every address's under the app's name drew Morpho and Aave
+        // under Coinbase.
+        if selectedSeat != nil {
+            if walletLive != WalletLiveState() { walletLive = WalletLiveState() }
+            return
+        }
         let scope = selectedWallet
         let pending = Set(SafeBridge.pendingSnapshot().map(\.ref))
         if pending != walletSafePending { walletSafePending = pending }

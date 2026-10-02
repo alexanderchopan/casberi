@@ -115,7 +115,7 @@ extension FeedScreen {
         let cover = heroShown ? nil : (next ?? visible.first { $0.isLive })
         if let cover {
             Section { ledeListRow(cover, top: 0, bottom: DSRoomChassis.contentGap) }
-        } else {
+        } else if !heroShown {
             Section {
                 emptyLeadRow(headline: DSProse.text("Nothing ahead"),
                              words: Text("Your calendar, to-dos and mail appear here"))
@@ -179,7 +179,9 @@ extension FeedScreen {
         let cover = heroShown ? nil : (deadlines.first ?? visible.first { $0.isLive })
         if let cover {
             Section { ledeListRow(cover, top: 0, bottom: DSRoomChassis.contentGap) }
-        } else {
+        } else if !heroShown {
+            // A head already holds the box (a picked app's own, prd §1067):
+            // a second, empty box under it pushed the tiles off the screen.
             Section {
                 emptyLeadRow(headline: DSProse.text("Nothing yet"),
                              words: Text("What you build lands here"))

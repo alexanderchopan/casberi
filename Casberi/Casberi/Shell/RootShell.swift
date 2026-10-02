@@ -197,6 +197,20 @@ struct RootShell: View {
                 if let s = LogosSection(rawValue: raw), !s.isVerb { chrome.logosSection = s }
                 // And a Tokens company pack, by its category name ("Work").
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
+                // Work's Coming up (prd §1057), for the room sweep.
+                if let s = WorkScope(rawValue: raw), !s.isVerb { chrome.workScope = s }
+            }
+        }
+        // `-roomScope "<room>|seat:<Name>"` picks an app in a merged room's
+        // menu at launch, as `-walletScope` does for the Wallet, so the room
+        // sweep can capture every app pick with no tap.
+        if let raw = UserDefaults.standard.string(forKey: "roomScope"), !raw.isEmpty {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(4))
+                let parts = raw.split(separator: "|", maxSplits: 1).map(String.init)
+                guard parts.count == 2 else { return }
+                NSLog("[Casberi] roomScope: %@", raw)
+                chrome.mergedScope[parts[0]] = parts[1]
             }
         }
         // `-walletScope <address | seat:Name>` picks an account in the Wallet's

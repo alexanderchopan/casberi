@@ -225,6 +225,21 @@ extension FeedScreen {
                             if let head = seatHead {
                                 sourceHeadCard(head, visible: visible)
                                     .environment(\.dsRoomHeadInWell, true)
+                            } else if selectedSeat != nil, !walletScopeIsEmpty(.holdings) {
+                                // An app with money and no head (an exchange,
+                                // prd §1067) has no line of its own to draw,
+                                // so Home draws what it holds: the figure its
+                                // Holdings tile draws, one number between them.
+                                holdingsBlockSection
+                            } else if selectedSeat != nil, let newest = visible.first {
+                                // An app with no money and no head (a Wise
+                                // with nothing priced, Peer, Splits) leads
+                                // with its newest thing (prd §1067), as every
+                                // other room's app pick does, never the
+                                // Wallet's empty balance line.
+                                WalletSeatLatestLead(thing: newest)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { openThing(newest) }
                             } else {
                                 walletTilesSection(visible, streamTotal: streamTotal,
                                                    drawsChart: true)
@@ -1367,11 +1382,16 @@ extension FeedScreen {
             openThing(thing)
         } label: {
             HStack(spacing: DS.Space.s3) {
+                let symbol = WalletFlow.parseAmount(thing.transferAmount ?? "").symbol
                 if let address = thing.counterpartyAddress, !address.isEmpty {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
+                } else if symbol.isEmpty, thing.source != "Wallet" {
+                    // A folded app's row with no token (a Wise transfer, prd
+                    // §1067) wears its app's mark, not a "?" monogram.
+                    BridgeIcon(name: BridgeCatalog.seatName(forSource: thing.source),
+                               size: DS.Face.list, circular: true)
                 } else {
-                    AssetMark(name: WalletFlow.parseAmount(thing.transferAmount ?? "").symbol,
-                              size: DS.Face.list)
+                    AssetMark(name: symbol, size: DS.Face.list)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(who)
@@ -1560,5 +1580,38 @@ extension FeedScreen {
                 // The card needs the page gutter the bare map didn't (it used
                 // to bleed to the screen edge and self-pad its cells).
         }
+    }
+}
+
+
+/// An app's newest thing, drawn inside the Wallet's box (prd §1067): its
+/// mark, where and when, the title on the box's headline rung and a line of
+/// its words. The box supplies the well, so this draws none.
+struct WalletSeatLatestLead: View {
+    let thing: Thing
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s2) {
+                BridgeIcon(name: BridgeCatalog.seatName(forSource: thing.source),
+                           size: DS.Face.badge, circular: true)
+                Text(thing.source)
+                Text(verbatim: "·")
+                LiveTimeText(date: thing.capturedAt)
+            }
+            .dsText(.subhead12)
+            .foregroundStyle(DS.textTertiary)
+            Text(thing.title)
+                .dsText(.heading28)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(3)
+            if !thing.content.isEmpty {
+                Text(thing.content)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(3)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

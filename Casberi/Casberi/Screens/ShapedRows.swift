@@ -2882,8 +2882,49 @@ struct WatchlistLede: View {
     /// §911 — the room draws this lede over one token, and before a read).
     var watched: Int = 0
     var read: Bool = true
+    /// The day's biggest moves, largest first, drawn as bars under the line
+    /// (prd §1067) — the same 24h changes the counts are made of.
+    var movers: [(name: String, change: Double)] = []
+    static let moverCap = 6
 
     var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            header
+            if !movers.isEmpty {
+                let widest = movers.map { abs($0.change) }.max() ?? 1
+                ForEach(Array(movers.enumerated()), id: \.offset) { _, mover in
+                    moverRow(mover, widest: widest)
+                }
+            }
+        }
+    }
+
+    private func moverRow(_ mover: (name: String, change: Double), widest: Double) -> some View {
+        // A change that rounds to zero has no sign and no colour (§83).
+        let flat = TokenChartStyle.isFlat(mover.change)
+        let up = mover.change > 0
+        let hue = flat ? DS.textTertiary : (up ? DS.confirm : DS.destructive)
+        return HStack(spacing: DS.Space.s3) {
+            Text(mover.name)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .frame(width: 104, alignment: .leading)
+            GeometryReader { g in
+                Capsule()
+                    .fill(hue)
+                    .frame(width: max(6, g.size.width * abs(mover.change) / max(widest, 0.0001)),
+                           height: 8)
+                    .frame(maxHeight: .infinity, alignment: .center)
+            }
+            .frame(height: 20)
+            Text(TokenChartStyle.changeText(mover.change))
+                .dsText(.subhead12)
+                .foregroundStyle(flat ? DS.textTertiary : (up ? DS.confirmInk : DS.destructiveInk))
+                .frame(width: 52, alignment: .trailing)
+        }
+    }
+
+    private var header: some View {
         HStack(spacing: DS.Space.s2) {
             Text("Watchlist")
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
