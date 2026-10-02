@@ -528,7 +528,7 @@ print("The body's own structure (prd §399)")
 check("a non-markdown body takes no markers",
       NoteSheet.blocks("- milk\n- bread", markdown: false) == [.paragraph("- milk\n- bread")])
 // …unless the ONE marker a scraped article carries is asked for by name
-// (prd §645 amendment 5): `headings: true` admits `# …` lines and nothing
+// (prd §645 amendment 7): `headings: true` admits `# …` lines and nothing
 // else, so a section title draws as one while a dash stays a dash.
 check("headings: true admits a section title in a non-markdown body",
       NoteSheet.blocks("# How it works\n\nBody.", markdown: false, headings: true)

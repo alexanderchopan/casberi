@@ -25,7 +25,7 @@ CasberiSharePreprocessor.prototype = {
             var root = el || document.body;
             var body = text(root);
             // Spaces collapse; NEWLINES are kept, as the paragraph breaks the
-            // thing sheet draws (prd §645 amendment 4). innerText separates
+            // thing sheet draws (prd §645 amendment 6). innerText separates
             // block elements with blank lines, and collapsing them to one
             // space was half of the wall of text.
             body = body
@@ -36,7 +36,7 @@ CasberiSharePreprocessor.prototype = {
                 .trim();
         }
         // The page's section titles, marked the way the app's own parse marks
-        // them (`# ` for an <h2>, `## ` for an <h3> — prd §645 amendment 5):
+        // them (`# ` for an <h2>, `## ` for an <h3> — prd §645 amendment 7):
         // innerText puts a heading on a line of its own, so the line that
         // equals the heading's text is that heading. The page is never
         // modified; this rewrites the copy.

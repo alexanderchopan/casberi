@@ -5,60 +5,60 @@
 ⚠️ **[Superseded index](#superseded-index) — read this before citing any ruling below.**
 This ledger is append-only, so a dead ruling looks exactly like a live one.
 
-1. [Thesis](#1-thesis)
+1. [Thesis](#1--thesis)
 
 **Users and goals**
 
-2. [Users](#2-users)
-3. [Goals (shared, verb-noun)](#3-goals-shared-verb-noun)
-4. [Persona variables](#4-persona-variables)
+2. [Users](#2--users)
+3. [Goals (shared, verb-noun)](#3--goals-shared-verb-noun)
+4. [Persona variables](#4--persona-variables)
 
 **The world today**
 
-5. [How it works today — Bob](#5-how-it-works-today--bob)
-6. [How it works today — Alice](#6-how-it-works-today--alice)
-7. [Outcomes — Bob (evidence)](#7-outcomes--bob-evidence)
-8. [Outcomes — Alice (evidence)](#8-outcomes--alice-evidence)
+5. [How it works today — Bob](#5--how-it-works-today--bob)
+6. [How it works today — Alice](#6--how-it-works-today--alice)
+7. [Outcomes — Bob (evidence)](#7--outcomes--bob-evidence)
+8. [Outcomes — Alice (evidence)](#8--outcomes--alice-evidence)
 
 **Problems and solutions**
 
-9. [Problems](#9-problems)
-10. [Solutions](#10-solutions)
-11. [Bob vs Alice, per feature](#11-bob-vs-alice-per-feature)
-12. [Run 2 synthesis](#12-run-2-synthesis)
+9. [Problems](#9--problems)
+10. [Solutions](#10--solutions)
+11. [Bob vs Alice, per feature](#11--bob-vs-alice-per-feature)
+12. [Run 2 synthesis](#12--run-2-synthesis)
 
 **The build**
 
-13. [Features](#13-features)
-14. [Platform](#14-platform)
-15. [Write model](#15-write-model)
+13. [Features](#13--features)
+14. [Platform](#14--platform)
+15. [Write model](#15--write-model)
 
 **Surface specs**
 
-16. [Shell](#16-shell)
-17. [Home spec](#17-home-spec)
-18. [Feed spec](#18-feed-spec)
-19. [Thing sheet](#19-thing-sheet)
-20. [Tags](#20-tags)
-21. [Projects](#21-projects)
-22. [Marks](#22-marks)
-23. [Generative UI](#23-generative-ui)
-24. [Composer](#24-composer)
-25. [Apps spec](#25-apps-spec)
-26. [Account tab](#26-account-tab)
+16. [Shell](#16--shell)
+17. [Home spec](#17--home-spec)
+18. [Feed spec](#18--feed-spec)
+19. [Thing sheet](#19--thing-sheet)
+20. [Tags](#20--tags)
+21. [Projects](#21--projects)
+22. [Marks](#22--marks)
+23. [Generative UI](#23--generative-ui)
+24. [Composer](#24--composer)
+25. [Apps spec](#25--apps-spec)
+26. [Account tab](#26--account-tab)
 
 **Product principles**
 
-27. [Analytics](#27-analytics)
-28. [Do, distributed](#28-do-distributed)
-29. [Automations](#29-automations)
-30. [Voice](#30-voice)
-31. [Hero rule](#31-hero-rule)
-32. [Design principles](#32-design-principles)
+27. [Analytics](#27--analytics)
+28. [Do, distributed](#28--do-distributed)
+29. [Automations](#29--automations)
+30. [Voice](#30--voice)
+31. [Hero rule](#31--hero-rule)
+32. [Design principles](#32--design-principles)
 
 **Status**
 
-33. [Open items](#33-open-items)
+33. [Open items](#33--open-items)
 
 ## Superseded index
 
@@ -393,13 +393,13 @@ marks chronological position within the pair.
 | §1033 (a connected row with a room is a status) | read off the tray's live venues, so a seat that had landed nothing kept its chevron | amended by §1036 — every connected seat has a room (bar `LiveRoomSources.landsNothing`), and Apps reads that rule |
 | §998 (Calendar and Reminders keep their room when connected and empty) | the empty-room rule named two seats | extended by §1036 — every connected seat keeps its room, bar `LiveRoomSources.landsNothing` |
 
-## 1. Thesis
+## §1 — Thesis
 
 Doing creates things. Things land in apps. Apps multiply with the doing. Boundaries multiply with apps. Friction grows with boundaries — the producer pays for producing, and productivity funds its own decay. The market answers with agents, and each agent ships as an app: another container, another memory, another settings panel. The remedy repeats the disease.
 
 The answer is one assistant that works across your apps instead of adding another one. It gathers what you make — notes, links, screenshots, bookings — into one place, and you find each thing by what it is, not by remembering which app you left it in. A quick capture doesn't stall as a capture; the assistant helps carry it through to done. Work from agents lands in the same place as everything else, so it stops mattering how many you run. And it gets better as you use it: related things group together on their own, and search has more to find. It's yours in the ordinary sense: things live on your phone, work without a connection, and leave only when you choose to send them.
 
-## 2. Users
+## §2 — Users
 
 **Target: Bob.** The product is built for Bob first. Alice gets served later on the same app — not with new screens, but by extending what already exists: more kinds of things (jobs, runs, skills), more kinds of connections (agents, gateways, machines), plus the two features only she needs — approvals (S10) and machine status in Feed (S11). Her turn starts once connected apps have proven they can write reliably.
 
@@ -407,7 +407,7 @@ The answer is one assistant that works across your apps instead of adding anothe
 
 **Alice.** Power user. Runs agents as labor: Claude Code in a terminal, an OpenClaw-class gateway (software that runs and supervises agents across her machines), ChatGPT on the phone. Work spans machines — laptop, server, phone. She writes prompts, sets scopes, picks models. She tolerates setup when setup buys leverage. Her phone is a remote, not her computer. Bob consumes agent output; Alice operates agent labor.
 
-## 3. Goals (shared, verb-noun)
+## §3 — Goals (shared, verb-noun)
 
 1. Stay mobile — the phone completes the job.
 2. Capture things — any thought, image, link, in the moment.
@@ -418,7 +418,7 @@ The answer is one assistant that works across your apps instead of adding anothe
 
 **Operate** is not a goal. Configure, direct, track, review — work on the machinery, not on things. Goals name outcomes; operate names what the person spends to get them. Every persona carries the six goals plus an operate budget. Tolerance is not desire: the product minimizes operate at every budget.
 
-## 4. Persona variables
+## §4 — Persona variables
 
 | Variable | Bob | Alice |
 |---|---|---|
@@ -428,7 +428,7 @@ The answer is one assistant that works across your apps instead of adding anothe
 | Agent count | One | Many. Count stops mattering |
 | New screens added | The baseline app is built for him | None. New data kinds and two features (S10, S11), no new screens |
 
-## 5. How it works today — Bob
+## §5 — How it works today — Bob
 
 Bob runs two worlds on one phone.
 
@@ -438,7 +438,7 @@ Bob runs two worlds on one phone.
 
 **Onboarding.** ChatGPT opens to a composer and explains nothing after. Personalization, Memory, Apps, Data controls sit in Settings. Reaching goals 3–5 requires configuration the app never walks through.
 
-## 6. How it works today — Alice
+## §6 — How it works today — Alice
 
 Alice runs four worlds across three machines.
 
@@ -454,7 +454,7 @@ Alice runs four worlds across three machines.
 
 **Onboarding.** She does her own. Keys, scopes, configs — paid per machine, per agent, per update.
 
-## 7. Outcomes — Bob (evidence)
+## §7 — Outcomes — Bob (evidence)
 
 1. Recipe in Notes, untitled. Not found. Not cooked.
 2. Trip across three chats. Itinerary 40 messages deep. At the airport: scroll, give up, re-ask; new version drops the hotel address.
@@ -465,7 +465,7 @@ Alice runs four worlds across three machines.
 7. Book recommendation in a screenshot. In the bookstore: not surfaced.
 8. Second agent downloaded. Two histories, two memories, two settings panels. Deleted in a week.
 
-## 8. Outcomes — Alice (evidence)
+## §8 — Outcomes — Alice (evidence)
 
 1. Run finishes at 11pm on the server. She learns at 8am. The result sat nine hours; the follow-up job starts a day late.
 2. Approval lands as a push. The diff exceeds the notification. She opens the gateway on the phone, reads a table built for a desktop, approves on trust. The write breaks a config; she reverts from the desk.
@@ -476,7 +476,7 @@ Alice runs four worlds across three machines.
 7. New laptop. Two days to restore keys, configs, scopes across agents. One scope stays wrong for a month; the agent reads and never writes; she blames the model.
 8. Her phone holds ChatGPT. Her labor runs elsewhere. On the train she can prompt a chat and check nothing — the machines work; she waits for a desk.
 
-## 9. Problems
+## §9 — Problems
 
 One problem set, two rungs of the same ladder: Bob hits each problem at app scale, Alice hits the same one at machine-and-agent scale. The rest of the doc uses "rung" for a problem or feature at one persona's scale.
 
@@ -496,7 +496,7 @@ P7. **They won't add another agent — or pay for five.** Bob declines the secon
 
 P8. **They aren't aware.** Push, where P4 is pull: the state exists and never arrives. Bob: what he keeps stays mute. The book rec sits in a screenshot as he stands in the bookstore; the workout plan holds week two. His corpus waits for a query he won't think to ask. Alice: her machines finish, fail, die — no signal reaches her. She learns by polling or by absence. The monitoring tax is P8 paid by hand. *(Bob 3, 7; Alice 1, 5, 8)*
 
-## 10. Solutions
+## §10 — Solutions
 
 Features. Each names a mechanism; each shows both rungs where the mechanism differs.
 
@@ -522,7 +522,7 @@ Features. Each names a mechanism; each shows both rungs where the mechanism diff
 
 **S11. State lands as things.** Run finished, run failed, cron died — each a Feed thing. An expected thing that fails to arrive is itself a thing. Bob's rung is parked: surfacing the right saved thing at the right moment (the book rec, in the bookstore) needs context signals the build doesn't have yet. *(P8)*
 
-## 11. Bob vs Alice, per feature
+## §11 — Bob vs Alice, per feature
 
 | Feature | Bob | Alice |
 |---|---|---|
@@ -537,7 +537,7 @@ Features. Each names a mechanism; each shows both rungs where the mechanism diff
 | S10. Approvals carry context | — (grants no write that needs judgment) | Diff, scope, agent, target on the sheet |
 | S11. State lands as things | Parked. Waits on context signals | Run finished, failed, died — Feed things. An absence is a thing |
 
-## 12. Run 2 synthesis
+## §12 — Run 2 synthesis
 
 The problems are one set at two magnitudes, so the features are one set at two loads. Bob and Alice differ in degree — count of agents, writes, records — not in kind. The primitives (thing, bridge, feed, sheet) absorb magnitude as data: more thing kinds, more bridge kinds, more rows. Surface count holds at zero.
 
@@ -557,7 +557,7 @@ Bob proves the primitives; Alice stress-tests them. Build order stays Bob-first:
 
 Pool closes at zero surfaces.
 
-## 13. Features
+## §13 — Features
 
 What ships, by surface. Specs for each live in the sections below.
 
@@ -625,11 +625,11 @@ Prewarm + session-lifecycle ruling (2026-07-05, built + verified on the sim): th
 ### Ownership
 - Things live on device (SwiftData), sync through iCloud (CloudKit), no server holds them; reads and capture work offline. Telemetry default off.
 
-## 14. Platform
+## §14 — Platform
 
 Native iOS. The ownership goal decides it. Swift, SwiftUI, SwiftData, CloudKit: things on device, sync through iCloud, no server holds them. EventKit, PhotoKit, Contacts, Reminders through frameworks — the old Shortcuts-based workaround pack is no longer needed. Share extension, Siri, App Intents, widgets carry capture. A thin server remains for Google bridges, agent calls, and the composition model. TestFlight validates; the store launches. Costs logged: review gates releases, store cut on subscriptions, desktop waits for a Mac build, the prototype becomes spec.
 
-## 15. Write model
+## §15 — Write model
 
 Writes sit on a gradient — reworked for native.
 
@@ -642,17 +642,17 @@ v1 ships rungs 1 and 2. Rung 3 ships per bridge as proven. Rung 4 waits on 3.
 
 The composer is the query surface. A question returns a composition through the gen UI engine. Chips over the composer state capability. The parse card carries chip label plus fields; intent switch parked — the chip stays a label until the parse earns correction. Save writes to us. The product states what it does by showing it.
 
-## 16. Shell
+## §16 — Shell
 
 The composer rests as a glass button on the tab bar's axis (amendment: the full-width rest pill died — simpler shell, more reading room). Tap and the same glass morphs into the full composer bubble; placeholder: "Ask anything. Organize everything." Engaged, the composer still takes the surface (principle 4 holds). Tab bar: glass capsule — Account, Home, Feed — sharing the axis with the composer button. Landing: Home. The old "No FAB" rule meant a Material-style + stacked above the bar; the composer-at-rest button on the bar axis replaces the rest pill, not the composer. Liquid glass: translucent fills, backdrop blur, hairline highlight, content scrolls under. The phone frame seen in the prototype is demo chrome, not product.
 
 Apps has no tab. The page lives behind a row in Account: the row leads the A–Z list, subline states the state in force ("6 connected · 1 needs attention"), tap opens the page. Bridge breakage surfaces in the Apps tile subline, in words ("1 needs attention", attention-colored) — the tab badge died on review (2026-07-04): a tab is navigation and carries no indicator; the state exists once and renders where the person manages it (P8).
 
-## 17. Home spec
+## §17 — Home spec
 
 Composition per moment, authored by the model, streamed. Hero: one synthesis statement (see hero rule). Voice constraint: it speaks to themes and content, never obligations — nothing reads as "you should." Tile sublines read content, not status. Insight: one cross-source connection, "Noticed" eyebrow. Projects: an interactive treemap — magnitude fill, tap opens project detail (amendment: the tile bento died). Threads: a widget of links the system found across apps. Evening composition leads with a TagMap of topics ("What your things are about"). No task lists, no notification mirrors. Filters live in Feed. Empty state streams the same choreography with skeleton tiles. StatTile carries usage synthesis. Open question: topic blocks currently route to the Feed tag filter; they should open project detail.
 
-## 18. Feed spec
+## §18 — Feed spec
 
 Load rule: generated surfaces (Home, answers) stream in; record surfaces paint instantly. Feed is a record — it paints from the local store at once. New rows land at top with a mount rise. Pull to refresh runs sync. No stream ticker.
 
@@ -664,11 +664,11 @@ Bridge breakage does not land in Feed (cut on review): it surfaces in the Apps t
 
 **Feed re-ruling (2026-07-04): a feed is a feed.** The type treemap left Feed for Home, reborn as the kind bar (one stacked strip — what your things ARE — segments and legend tap through to the filtered Feed; FeedFilter carries the state, casberi://feed/type/<Tag> routes it). Feed keeps exactly: the machine-presence line (S11 — one line when a gateway listens, never a screen), the source chip row (plus a clear chip when a type filter arrived from Home), then rows. Calendar and Reminders are LIVE read bridges (EventKit, local): events from the past week through today and open reminders land as things, deduped on sourceRef — connect ends in proof. Approvals ship as things (S10, demo grade): kind `approval`, the agent's exact command in a monospaced card, provenance in the header, Approve/Deny as the thing's verbs — no confirm dialog rides them because they ARE the consent; they ride the swipe too for the same reason. Gateway pairing spec (M5): OpenClaw-class connect = scan the QR from `/pair qr`, token to Keychain (S5 secrets ruling), proof = the agents' recent things stream in.
 
-## 19. Thing sheet
+## §19 — Thing sheet
 
 Verbs card: Open in {source} / Open shortcut / type verb — rung 2 lives here. Tags row: read-only provenance (§178 retired the editor) — your own tags wear their hue, type tags stay quiet, nothing opens. Open question: the detail view needs a native rethink — App Intents replace web-era staged hand-offs; the content spec beyond tags and verbs is pending.
 
-## 20. Tags
+## §20 — Tags
 
 Three sources. Type tags: assigned at ingestion. Project tags: assigned through clustering, entirely computed — no rename door either (§229 retired the last one). User tags: land via `#hashtag` in captured text only — §178 retired the thing-sheet editor and the composer's tag/rename commands, and §229 retired project detail's "Rename tag" on top, as hand-filing surfaces the app was never meant to have. Tags act as Feed filters and search terms. Project membership rides a tag. No tag management screen; a tag with zero things dies.
 
@@ -688,27 +688,27 @@ is "how does the person learn the composer organizes," answered by the
 derived organize chip (36aa), never by new tag surfaces. Every future
 "should tags appear here?" resolves against this paragraph.
 
-## 21. Projects
+## §21 — Projects
 
 A project is a computed cluster. The system groups things by theme across sources and names the group; the person never files, never pins (pin died 2026-07-07), never renames (§229). A project carries: name, sources, synthesis line, thing count, tint fill at opacity scaled by count, stable across sessions. Project detail: header paints from the tile, doc streams under.
 
-## 22. Marks
+## §22 — Marks
 
 Things enter the corpus unmarked. Marks from Feed or detail by swipe or tag: to do, doing, saved, done. Home renders marks inside projects. Inference proposes marks through suggestion rows; one tap admits, one dismisses. Status set: todo, doing, done, saved, suggested, none.
 
-## 23. Generative UI
+## §23 — Generative UI
 
 Declarative. Component library: Stack, Hero, Insight, Bento, ProjectTile, Tile, PhotoTile, VoiceTile, Widget, Row, Chip, Shelf, Suggest, Skeleton, StatTile, TagMap, AnswerStream. The model authors compositions per moment in a line-oriented document. The renderer mounts a component when its line parses; string props fill as tokens arrive; declared children render as skeletons until their lines resolve; unresolved references drop. Engine: parser + stream hook + renderer, shared by Home, composer answers, S10 approval sheets. Any prefix of any document renders.
 
-## 24. Composer
+## §24 — Composer
 
 Rest pill: chips (Ask tint, Open app, Open shortcut) + search glyph + mic. Bubble expands from bottom right (origin 100% 100%, radius 24/24/10/24). Action chips show at open and hold while typing. Parse card: chip label + fields. Search intent streams AnswerStream through the engine. Close clears draft. Mic routes voice through the parse — speech becomes a thing. No voice panel, no talk tab.
 
-## 25. Apps spec
+## §25 — Apps spec
 
 A page, not a tab: it lives behind the Apps row in Account. Rows: 44px app icon inside a state ring — green connected, orange fix, gray paused. Broken sorts first. Sort control: Recent / A–Z, attention pinned. Swipe left: Reconnect (tint), Remove (red). Tap: detail — Reconnect button when broken, capabilities as sentences, ask-before-acting toggle per app (writes default on), recent things, Pause/Resume, Remove with keep-or-purge choice. Catalog grouped by value with verb taglines; agent and gateway kinds join for Alice. Every connect ends in proof: things land in Home.
 
-## 26. Account tab
+## §26 — Account tab
 
 The Apps row leads the list: subline states bridge state in force ("6 connected · 1 needs attention"), tap opens the Apps page. Then rows A–Z: Avatar, Connection (state ring: wifi/cell/off), Data ("On device · iCloud sync on"), Privacy ("End-to-end encrypted" — ships when the build proves it; leaving the app redacts content, so the app-switcher snapshot shows choreography, not things; a manual "Hide previews" toggle is an M7 Privacy-sheet option), Subscription ("Free plan"; pricing parked), Theme (Appearance — ruled and shipped, see below), Updates ("Version 0.1"). Usage tile cut on review: usage renders as synthesis where it lives (Home StatTiles), not as a static Account fact.
 
@@ -882,29 +882,29 @@ iCloud-sync setting ruling (2026-07-05, built as the FINAL UI; engine gated to M
 
 Rule: subline states the setting in force; detail holds the control; one fact per row. Account is a tile workspace (re-ruled on review): two labeled groups in a two-column grid — "You" (Apps, Avatar, Connection, Data, Privacy: your things and their state) and "App" (Subscription, Theme, Updates: housekeeping). Eyebrow headers name the groups. A–Z within each group, rows filling left to right; uniform tile size, no exceptions, odd counts fine. One fact per tile — title plus the setting in force; the detail holds the control. Tiles press with a settle. Avatar: once set, the photo becomes the Account tab icon (circle-cropped; active state = tint ring — a photo can't take the tint). Avatar ruling (2026-07-05): the empty seat wears the app's own face — the Casberi berry (vector `CasberiMark`, the icon's real colors, both ramps) in a circle on the icon's field, sitting exactly where the photo lands. Set, the subline goes silent (the photo is the fact; "You" said nothing). Tap when set asks Change or Remove — every setting can be undone. Grants live per app in Apps detail. Offline is behavior, not a setting: reads and capture work without a network. The delete test holds: remove this tab and the person loses identity and ownership facts only — no product function lives here.
 
-## 27. Analytics
+## §27 — Analytics
 
 Two kinds, split. Usage shown to the user: content stats as synthesis — StatTile in the gen UI library. Facts only: no streaks, no goals, no guilt mechanics. Telemetry: default off, consent in Privacy detail, no third-party trackers.
 
-## 28. Do, distributed
+## §28 — Do, distributed
 
 No Actions tab. Do lives where its object lives: the composer creates, Feed triages, bridges export, sheets consent. Reversal trigger: if bridges prove writes at volume and approvals pile past what Feed carries, a queue earns a surface.
 
 Every verb answers back (2026-07-04): no write ends in silence. One toast surface (the glass pill above the bar, owned by the shell, callable from any screen) carries the outcome — "Saved", "Copied", "On your calendar", "On your list" — and failure states the honest route: a system permission denial says "allow Casberi in iOS Settings", never "try again" (iOS never re-asks after a denial). Light mode audited end-to-end (all tabs, thing sheet, composer, Apps, catalog, onboarding — token layer is fully adaptive so screens inherit it). Widget carries the person's accent color across the app group and has placeholder/empty/one-thing states.
 
-## 29. Automations
+## §29 — Automations
 
 Parked. The product takes no alert away from the app that owns it. Automations wait on the do-verb build. Feed carries an "Add to" through the thing sheet tag field.
 
-## 30. Voice
+## §30 — Voice
 
 The agent is infrastructure. No persona, no "I", no thinking indicators. Agency renders as results. Insights state facts the corpus proves.
 
-## 31. Hero rule
+## §31 — Hero rule
 
 One synthesis statement per render. Facts only, provable from the corpus. Linked things one tap away. Priority: project movement > pending decision > imminent event > bridge arrival. Synthesis always renders; priority orders what it leads with.
 
-## 32. Design principles
+## §32 — Design principles
 
 ### 1. Apple grammar, token discipline
 One surface token `--ds-surface-sheet` (#111113 dark, #fff light) for cards, tiles, trays. Tinted background washes are banned. Text ramp: white / 60% / 30%. Hairline separators died by amendment: rows separate by spacing and press fills, groups by their card surfaces; nothing draws a line — zero exceptions (§39, 2026-07-10: the Apps page's Connected strip and its `fillLine` divider died too; the catalog is one grid where connected tiles wear state and open management). Elevation is carried by tone AND a soft ambient shadow, never by a line (§61, 2026-07-12 — the elevation ladder): cards lift off the page, inset-grouped sections lift as one card, wells recess by tone. SF ramp: 34/22/17/15/13/12/10. Squircle radii: cards 10, sheets 16, app icons 22.37%. Motion: 250ms, Apple sheet curve, one animation per moment. Every value routes through a token; components hold zero raw hex.
@@ -933,11 +933,11 @@ One signature moment per screen. No decoration without information. Before shipp
 ### Anti-patterns
 Borders on cards. Filter chips on short lists. Permission matrices. Developer vocabulary where Bob sees it. Two accents on one screen. Letter-initial stand-in tiles anywhere (they read half-made). Rows and chips wear KIND glyphs — one SF Symbol system, one weight, one quiet fill; a row's icon says what the thing is, the tag and place words say where it came from. Brand identity appears only where real assets are licensed and legal: the Apps catalog. Thread lists. Modes and model pickers. Glass on content — cards, tiles, rows never wear glass; glass is the floating layer only (bars, composer, toasts, transient chrome). Glass stacked on glass.
 
-## 33. Open items
+## §33 — Open items
 
 (Cleared 2026-07-03 — new list pending.)
 
-## 34. MCP — Casberi is the server (design spec, 2026-07-06; build is Goal-3, enrollment- and sync-blocked)
+## §34 — MCP — Casberi is the server (design spec, 2026-07-06; build is Goal-3, enrollment- and sync-blocked)
 
 The protocol is a commodity; every load-bearing choice here is product and honesty, so it is specced ahead of the build. This pulls together the rulings already made (Raycast-inverse, OpenClaw "refuse the console", approvals-as-things, QR pairing) and closes the one open fork (read path) that the 2026-07-06 strategy pivot decided.
 
@@ -958,7 +958,7 @@ The protocol is a commodity; every load-bearing choice here is product and hones
 
 **Sequencing (unchanged, now with the fork closed).** Enrollment → M1 CloudKit sync → Goal-3 server + pairing → MCP server on top. It is deliberately one of the last things built, because everything it stands on is enrollment- and sync-blocked — but the design leads the build by a wide margin, which is correct for the one milestone where the thinking is the hard part.
 
-## 35. Feed volume rulings (2026-07-09)
+## §35 — Feed volume rulings (2026-07-09)
 
 Four rulings from the first real-corpus flood (one wallet connect landed 100 transactions over the saved articles and photos):
 
@@ -967,7 +967,7 @@ Four rulings from the first real-corpus flood (one wallet connect landed 100 tra
 - **Perishables show their clock everywhere.** The next event's countdown and a Twitch stream's Live state ride their rows in All, not just in their source's shape. Live is read from the source's own current-live set (refreshed each foreground), never inferred from row age — a row must never claim live longer than the source did.
 - **Chips order by today first.** Source chips sort by today's count, then total, then name — the apps moving now lead; lifetime volume alone doesn't hold the front. And inactive chips are icon-only (amended 2026-07-09): labels made the row scroll past a handful of connected apps; the brand icon is the identity, and only the active chip names itself. Menus stay dead — everything remains one visible tap.
 
-## 36a. Home cover: an explicit banner outranks the automatic screenshot (2026-07-09)
+## §36a — Home cover: an explicit banner outranks the automatic screenshot (2026-07-09)
 
 The automatic cover (day's newest screenshot, full 250pt bleed) had no
 way out — a screenshot the person didn't want leading Home just showed
@@ -992,7 +992,7 @@ screens) was tried and retired 2026-07-06 for the same reason a
 banner stays Home-only and optional: one image, one screen, one clear
 purpose — not a return to that retired feature.
 
-## 36f. Home: the default cover is black, not a color (2026-07-09)
+## §36f — Home: the default cover is black, not a color (2026-07-09)
 
 The no-image cover (no chosen Banner, no lead screenshot) now paints
 black instead of a color. The earlier "Fantastical move" — the quiet
@@ -1003,7 +1003,7 @@ Black is the calm dark field the content floats on; a chosen Banner
 (Settings → Banner, a color or photo) is how color comes back, opt-in.
 The Banner tile's unset preview shows black to match.
 
-## 36g. Home: what landed today rides the cover as chips (2026-07-09)
+## §36g — Home: what landed today rides the cover as chips (2026-07-09)
 
 The day's kind counts moved INTO the cover — one tappable chip row under
 the title (kind hue capsule, glyph, count; tap → Feed filtered to that
@@ -1019,7 +1019,7 @@ the week. A set banner reserves a constant 178pt band whether or not
 chips arrive — the cover's height never depends on the chips arg, which
 streams in last (keying on it made the banner jump mid-stream).
 
-## 36c. Home: the "Noticed" insight line is gone (2026-07-09)
+## §36c — Home: the "Noticed" insight line is gone (2026-07-09)
 
 `insightLine()` was a plain deterministic rule (co-occurrence counting
 — "a screenshot matches this session's chat", "this project spans 3
@@ -1032,7 +1032,7 @@ still use it; only Home's automatic use of it is gone. If a genuinely
 synthesized version (the on-device model writing this line, not a
 fixed rule) is wanted later, it's a fresh build, not a revival of this.
 
-## 36b. Home order: Pinned leads the map (2026-07-09)
+## §36b — Home order: Pinned leads the map (2026-07-09)
 
 Pinned (and the wallet holdings treemap, when pinned) now compose
 right after cover/quiet/insight, ahead of "What's going on" — a
@@ -1040,7 +1040,7 @@ deliberate choice outranks an automatic clustering, and reaching it
 shouldn't cost a scroll past a treemap the person didn't ask for.
 Applies to morning, evening, and weekend alike.
 
-## 36d. Home recomposes when a banner or the wallet pin changes (2026-07-09)
+## §36d — Home recomposes when a banner or the wallet pin changes (2026-07-09)
 
 Home authors its composition imperatively (`streamComposition`) and
 only re-runs it on an explicit signal — it does NOT observe every store
@@ -1055,7 +1055,7 @@ inside Home's own NavigationStack, so popping back never refires Home's
 wallet.pinnedToHome)`. Rule: any new store Home composes from needs its
 own recompose trigger — reason about it when adding one.
 
-## 36e. Wallet: the pin-to-Home toggle leads the holdings (2026-07-09)
+## §36e — Wallet: the pin-to-Home toggle leads the holdings (2026-07-09)
 
 "Connect the wallet, pin it to Home" needs a switch you can find at
 connect. The toggle sat below the holdings treemap, so on a real wallet
@@ -1108,11 +1108,11 @@ Large nav-bar titles stay SF Pro (can't round just the title without a
 custom nav title view, and cascading `.rounded` would round the whole
 screen).
 
-## 36. Bridge selection ruling: live data only (2026-07-09)
+## §36 — Bridge selection ruling: live data only (2026-07-09)
 
 No new import bridges. A bridge whose data arrives via a request-and-wait export (TikTok's 1–4 day JSON, Tinder's 24–48h zip, IMDb's CSV) lands stale and never updates — the person asked for live data or nothing. The ChatGPT import predates this ruling and stays (its framing is explicitly a backfill, and OpenAI offers no live read). Evaluated and declined under this ruling: TikTok, Tinder, IMDb (viable exports, stale), Linktree/Rotten Tomatoes/CardPointers (no surface at all), Duolingo (unofficial API only — ToS-gray breaks the honesty rule), Credit Karma/NerdWallet/Acorns (aggregator-only; needs the post-M2 server), Fileverse (E2EE by design; revisit if they ship a hosted API), Fantastical (already covered — it's a client over the calendars EventKit reads). Pinterest passed: their public per-user RSS feed is live and official-enough (a published feed, not a scraped page).
 
-## 36h. Wallet holdings: one treemap per wallet, leads Feed too, tap-through to Wallet (2026-07-09)
+## §36h — Wallet holdings: one treemap per wallet, leads Feed too, tap-through to Wallet (2026-07-09)
 
 Watching more than one wallet is usually two different purposes (main vs.
 cold, personal vs. a DAO) — combining their balances into one total hid
@@ -1168,7 +1168,7 @@ purposes, pin the one you mean" ruling above is untouched. Applies wherever a
 wallet is watched (the Wallet screen, a social profile's "watch their
 wallet"). Fully reversible — unpinning is one tap.
 
-## 36i. TagMap cells: icons where they're always accurate, never a guess (2026-07-09)
+## §36i — TagMap cells: icons where they're always accurate, never a guess (2026-07-09)
 
 Three treemaps share one renderer (`GenTagMap`): Home's "What's going on"
 (projects, or a by-app fallback before real projects form), Feed's
@@ -1201,7 +1201,7 @@ token-watch screen itself, where you're most likely to reach for it
 right after adding one. Added the same leading-edge pin swipe
 `WalletScreen` already had, verb-for-verb.
 
-## 36j. Home cover is 2-tier now: a set banner, or black (2026-07-10, amends 36a)
+## §36j — Home cover is 2-tier now: a set banner, or black (2026-07-10, amends 36a)
 
 36a's "explicit banner outranks the automatic screenshot" ruling still
 had a 3rd tier underneath: no banner AND no screenshot fell to black,
@@ -1220,7 +1220,7 @@ bled full-height" — is now dead in practice; simplified to a constant
 same as before: a banner only ever substitutes the picture, never the
 words.
 
-## 36k. Home: slim data-first hero; Threads removed; the map stays a map (2026-07-10)
+## §36k — Home: slim data-first hero; Threads removed; the map stays a map (2026-07-10)
 
 The cover leads with the DATA now: today's kind-count chips ride above
 the headline, and "Just landed" dropped from a 26pt full-voice display
@@ -1244,7 +1244,7 @@ TagMap's new 5th arg), shade by value, so each wallet reads as a
 coherent block and money-treemaps stay visually apart from the
 multicolored project map. The Pinned token price chart is untouched.
 
-## 36l. Treemap tiles are cards now — color moved into the ink (2026-07-10, user)
+## §36l — Treemap tiles are cards now — color moved into the ink (2026-07-10, user)
 
 The saturated tile fills were the loudest thing on Home while carrying
 the least information (size already says magnitude; the icon and name
@@ -1256,7 +1256,7 @@ feed rows already follow ("color lives in the tag text, not the row").
 Preview keeps its muted flat wash. Weekend's left-to-right fill sweep
 and the share card render unchanged.
 
-## 36m. A pin is a HOME pin (2026-07-10, user)
+## §36m — A pin is a HOME pin (2026-07-10, user)
 
 Pinning a thing used to do two jobs: put it on Home AND lift it into a
 "Pinned" section at the top of Feed. The Feed section doubled what Home
@@ -1269,7 +1269,7 @@ since nothing on the Feed screen moves anymore. The wallet holdings
 module still leads Feed (36h): it's the one pinned element with no row
 of its own in the record, so it has nowhere else to live.
 
-## 36n. Holdings never lead the All feed (2026-07-10, user — amends 36h/36m)
+## §36n — Holdings never lead the All feed (2026-07-10, user — amends 36h/36m)
 
 The wallet holdings module is a HOME module. Leading Feed's All view
 with it doubled what Home already shows — same information twice, one
@@ -1294,7 +1294,7 @@ wallet-hue pipeline (TagMap arg 5, `hueName(forWalletIndex:)`,
 walletHues) is deleted; a treemap tile is now surface + white label +
 icon, nothing else. Identity rides the name and the icon alone.
 
-## 36o. The Banner is a BACKGROUND now (2026-07-10, user — supersedes 36a/36j)
+## §36o — The Banner is a BACKGROUND now (2026-07-10, user — supersedes 36a/36j)
 
 The banner never settled: as a full-bleed band it flooded the top third
 (status bar, date, chips, and the Just-landed card all sat ON it); as a
@@ -1318,7 +1318,7 @@ image, one screen, one clear purpose.
 - HomeScreen wears `.homePageBackground()` — the one screen with its
   own wallpaper; everything else keeps `.dsPageBackground()`.
 
-## 36p. The Pinned card leads with a pin, not the word (2026-07-10, user)
+## §36p — The Pinned card leads with a pin, not the word (2026-07-10, user)
 
 Home's Pinned card header is an oversized (28pt), tilted (-35°)
 `pin.fill` instead of the word "Pinned" — the pin glyph is one of the
@@ -1326,7 +1326,7 @@ few universally readable icons, and the card earns a little
 personality. Accessibility still reads "Pinned". Wired as a Widget
 title sentinel ("@pin") so the doc grammar is unchanged.
 
-## 36q. Home juice pass: settle, draw-in, interactive pins (2026-07-10)
+## §36q — Home juice pass: settle, draw-in, interactive pins (2026-07-10)
 
 Three touches in the pin's spirit — motion that plays ONCE and means
 something, never loops:
@@ -1360,7 +1360,7 @@ screen — tapping "ETH" used to open an empty project view for a tag
 that doesn't exist. A "What's going on" header count was considered
 and skipped (naggy).
 
-## 36r. Home: pull-to-refresh + the pin coach (2026-07-10)
+## §36r — Home: pull-to-refresh + the pin coach (2026-07-10)
 
 - **Pull-to-refresh.** Home carries live modules now (price charts,
   holdings), so a pull re-fetches them — awaited, so the spinner shows
@@ -1374,7 +1374,7 @@ and skipped (naggy).
   removed. New `-unpinAll YES` debug hook clears pins and re-arms it
   for screenshots.
 
-## 36s. Quiet days invite apps; the pin swipe has ONE direction (2026-07-10, user)
+## §36s — Quiet days invite apps; the pin swipe has ONE direction (2026-07-10, user)
 
 - The quiet-day berry ("Quiet so far today." under a cover that already
   said "A quiet day") said quiet twice and did nothing. The slot is a
@@ -1389,7 +1389,7 @@ and skipped (naggy).
   explicit trailing group replaces the system swipe-delete, Remove/
   Unwatch ride the same group as the second button — nothing lost.
 
-## 36t. One content line, the cover shows its source, the hand-off is everywhere (2026-07-10, user)
+## §36t — One content line, the cover shows its source, the hand-off is everywhere (2026-07-10, user)
 
 - **Alignment:** every card's inner content starts on ONE line now — the
   cover card's inner padding matches GenWidget's rows (s4), and the
@@ -1404,7 +1404,7 @@ and skipped (naggy).
   full-swipe Open too — swipe right to hand off, swipe left keeps
   Pin + Open. Same verb on both edges by design: reach, not redundancy.
 
-## 36u. The composer got smarter — five upgrades (2026-07-10)
+## §36u — The composer got smarter — five upgrades (2026-07-10)
 
 - **Counts and aggregates, computed.** "How many links this week",
   "which app sent the most today" — arithmetic over the corpus
@@ -1430,7 +1430,7 @@ Pinned card stayed STALE after every swipe-pin until an unrelated
 recompose. Every pin writer (Feed swipe, composer verb, Dexscreener
 swipe) now bumps CorpusSignal.
 
-## 36v. The fun pass — six small delights, no widgets (2026-07-10)
+## §36v — The fun pass — six small delights, no widgets (2026-07-10)
 
 Approved batch ("do all of these except 5" — Home Screen widgets
 rejected as complexity we don't need now):
@@ -1458,7 +1458,7 @@ Codable ThingKind enum — it throws at runtime, and `try?` made the
 miss silent (the new chips never appeared). Rule: kind filters happen
 in memory after a plain fetch; enums never enter a #Predicate.
 
-## 36w. Watchlist rows wear a 24h sparkline (Option A ruling, 2026-07-10)
+## §36w — Watchlist rows wear a 24h sparkline (Option A ruling, 2026-07-10)
 
 Recording the ruling the sparkline commit cited but never wrote down:
 a watched token's feed row replaces time-over-tag with a 46pt 24h
@@ -1467,7 +1467,7 @@ the way a Twitch row wears Live. TokenPulse holds the curves in memory
 only (prices are perishable; nothing persists), refreshed per
 foreground alongside the bridges.
 
-## 36x. Feed source chips go Stories-sized (Option A, 2026-07-10)
+## §36x — Feed source chips go Stories-sized (Option A, 2026-07-10)
 
 The chip row is 56pt icon-only circles — the brand logo IS the chip.
 A DS.confirm ring marks a source with things newer than the last
@@ -1477,7 +1477,7 @@ visit stamp advances). The active chip wears the ink ring. No labels
 for words the icons already say); "All" keeps its word — it has no
 app. Ruled from three on-sim mockups.
 
-## 36y. Build-19 review fixes (2026-07-10)
+## §36y — Build-19 review fixes (2026-07-10)
 
 Review of the image-rows diff confirmed and fixed:
 - Tracker-image filter matched substrings ("google-pixel-10-hero.jpg"
@@ -1503,7 +1503,7 @@ deltaText/sparkline are third copies of existing formatters/renderers;
 GenTokenRow + TokenChartContent should read TokenPulse instead of
 fetching their own charts.
 
-## 36aa. The composer invites the first bulk tag (2026-07-10, user)
+## §36aa — The composer invites the first bulk tag (2026-07-10, user)
 
 Companion to the §20 ruling (tags are a retrieval vocabulary; the write
 doors stay two). The person's path to learning that the composer
@@ -1538,7 +1538,7 @@ flag, so pasting the tag name into the prefill still reaches the
 proposal card, never the capture path. The proposal card remains the
 truth surface for what the command actually matches.
 
-## 36z. Follow more than one Bluesky / Farcaster account (2026-07-10)
+## §36z — Follow more than one Bluesky / Farcaster account (2026-07-10)
 
 The handle bridges watch a LIST now, the way Wallet watches a list of
 addresses — a small following feed of people you care about, not just
@@ -1569,7 +1569,7 @@ every profile field in a `messages` array — scan for USER_DATA_TYPE_PFP).
 The connect screen lists watched accounts with swipe-to-remove; the
 field becomes "Add". Pinterest stays single (RSS-backed, one board).
 
-## 36ab. The thing sheet wears its source's hue (2026-07-10, user: "ship it. it's gorgeous")
+## §36ab — The thing sheet wears its source's hue (2026-07-10, user: "ship it. it's gorgeous")
 
 Picked from four live sim mockups (tinted eyebrow ink / brand icon
 eyebrow / hue wash / wash + icon — the user chose the combination and
@@ -1594,7 +1594,7 @@ keeps the eyebrow seat filled either way ("person" for You, "waveform"
 for Voice). ChatGPT's white and X's black wash faithfully — the recipe
 is the brand's own color or nothing.
 
-## 37. Drop the "Ask before acting" writes toggle (2026-07-10)
+## §37 — Drop the "Ask before acting" writes toggle (2026-07-10)
 
 User caught it on a bridge detail: "what does 'writes wait for your OK'
 mean, we don't write." Correct — every bridge is READ-ONLY today, and
@@ -1608,7 +1608,7 @@ status"). Removed the Writes section from BridgeDetailScreen. It returns
 when agent writes ship (the Alice job/run/output kinds). The dormant
 `askBeforeActing` / `setAsk` scaffolding stays in the model for that.
 
-## 38. Social posts always wear the author's avatar (2026-07-10)
+## §38 — Social posts always wear the author's avatar (2026-07-10)
 
 User: "I thought we made it so Farcaster and Bluesky showed the avatar
 of the person you follow" — but a single-account feed showed the source
@@ -1625,7 +1625,7 @@ glyph. Two causes, both corrected:
   in the permalink), so the whole feed wears faces, not just posts
   landed since the field shipped.
 
-## 39. One catalog — the Connected strip dies (2026-07-10)
+## §39 — One catalog — the Connected strip dies (2026-07-10)
 
 User: seeing connected apps in the Apps page AND as feed chips was
 redundant and confused navigation. Ruled: connected apps LIVE in the
@@ -1647,7 +1647,7 @@ updated). Connection health also surfaces where the person lives: a
 feed chip whose bridge is in .attention wears an ORANGE ring (ink =
 active, orange = needs you, green = new since last visit).
 
-## 40. Approve/Deny tell the truth (2026-07-10)
+## §40 — Approve/Deny tell the truth (2026-07-10)
 
 User: "how would a user 'approve' from inside our app?" Audit found
 two behaviors behind one button: an MCP save approval really commits
@@ -1659,7 +1659,7 @@ removed: the toasts now say just "Approved" / "Denied" — the answer
 is recorded on the thing, which is all that happens. Real outbound
 consent returns with the agent transport.
 
-## 41. Mail rows lead with a sender-initial circle (2026-07-10)
+## §41 — Mail rows lead with a sender-initial circle (2026-07-10)
 
 User asked if Gmail/iCloud mail could show sender avatars like the
 social bridges. Email carries none (IMAP hands us headers + body;
@@ -1676,7 +1676,7 @@ beyond the sender. New mail carries the sender in authorHandle;
 older rows parse it from their "From …" content at render — no
 migration. A row with no sender keeps the brand glyph.
 
-## 42. A shaped feed wears its source's hue (Option B, 2026-07-10)
+## §42 — A shaped feed wears its source's hue (Option B, 2026-07-10)
 
 Same request shape as the thing sheet's wash, ruled from three on-sim
 mocks: (A) the sheet's exact 260pt recipe — too quiet at page scale,
@@ -1688,7 +1688,7 @@ room, reading still happens on black. One recipe, no per-hue tuning;
 a source without a brand hue (and the All feed) stays black. The hue
 crossfades between shapes (id-keyed transition), never smears.
 
-## 43. Settings inflates out of the avatar (2026-07-10)
+## §43 — Settings inflates out of the avatar (2026-07-10)
 
 User asked for a glass-bubble / water transition into Settings. Two
 candidates: (A) the system zoom transition anchored on the avatar —
@@ -1700,7 +1700,7 @@ B stays on the shelf unless A proves not enough — a transition tax
 on every Settings visit is a real cost, the bubble is not.
 Also: casberi://settings deep link added (recording + parity).
 
-## 43a. Settings is your room (amendment, 2026-07-10)
+## §43a — Settings is your room (amendment, 2026-07-10)
 
 The bubble transition alone read "fine but not special" (user) — the
 harshness was the DESTINATION, not the motion. Settings is where the
@@ -1713,7 +1713,7 @@ person's own hue. No background chosen = no wash: the room stays
 black until painted, which quietly teaches what the Background tile
 does.
 
-## 43b. The droplet, and the hero dies (amendment, 2026-07-10)
+## §43b — The droplet, and the hero dies (amendment, 2026-07-10)
 
 The avatar hero was rejected within the hour: "this is an app for
 personalization but it's not trying to lock you into some profile."
@@ -1731,7 +1731,7 @@ swallows the screen; Settings pushes beneath at full cover and the
 glass clarifies away. ~280ms to push. Home only for now; Feed keeps
 the plain zoom until this earns its keep on device.
 
-## 43c. The liquid page melt (third draft, 2026-07-10)
+## §43c — The liquid page melt (third draft, 2026-07-10)
 
 The droplet blob was rejected too ("too fast, isn't smooth, weird") —
 the ask was never an object crossing the screen but THE SCREEN ITSELF
@@ -1746,7 +1746,7 @@ the new page. 0.9s, ease-in-out. Works on default black: it's the
 page's own pixels doing the rippling. Home only until it's felt on
 device. (Required the Xcode Metal toolchain component — now installed.)
 
-## 43d. The wave carries its own light (fourth draft, 2026-07-10)
+## §43d — The wave carries its own light (fourth draft, 2026-07-10)
 
 The uniform melt failed on sight ("can't even tell it's happening") —
 diagnosis: displacement alone is INVISIBLE on an ink-black app; black
@@ -1759,7 +1759,7 @@ new page is washed in spatially, never crossfaded. 0.85s ease-out.
 Doctrine for future liquid work: on this app's ink ground, any glass
 effect must EMIT, not just distort.
 
-## 43e. Both pages ride the wave (fifth draft, 2026-07-10)
+## §43e — Both pages ride the wave (fifth draft, 2026-07-10)
 
 User: "the whole thing should transition — not dissolve and then a
 sheet pops up. It looks good paused partially." Diagnosis confirmed:
@@ -1774,7 +1774,7 @@ faintly aglow, relaxing to crisp as the front moves on. Ahead: the
 old page, untouched. At the front: the lit crest. Behind: the new
 page, settling. One substance end to end.
 
-## 43f. The uniform liquid dissolve (sixth draft, 2026-07-10)
+## §43f — The uniform liquid dissolve (sixth draft, 2026-07-10)
 
 The radial wave read as a BURST ("wtf") — an origin point makes an
 explosion, not a dissolve. Final shape: no origin anywhere. An organic
@@ -1786,7 +1786,7 @@ copies) and settles to crisp. A faint shimmer rides the ripple crests
 effect of its own. 0.95s, ease-in-out, both frames frozen around an
 instant push as before.
 
-## 43g. The dissolve slows down and opens the store too (2026-07-10)
+## §43g — The dissolve slows down and opens the store too (2026-07-10)
 
 Ruled on the sixth draft: "close but too fast, and I love how liquid
 it gets." Duration 0.95s → 1.3s (one constant, LiquidPusher.duration).
@@ -1798,7 +1798,7 @@ chip staggers) recreated the struct and RESTARTED the liquid — the
 snap-back jank that had been polluting every draft's smoothness.
 @State now; the ride is monotonic.
 
-## 43h. The liquid system completes (2026-07-10)
+## §43h — The liquid system completes (2026-07-10)
 
 Five upgrades, ruled together ("do all of these including scrubbing"):
 
@@ -1828,7 +1828,7 @@ Five upgrades, ruled together ("do all of these including scrubbing"):
 
 The vestigial zoom transition (43's first draft) is deleted.
 
-## 43i. The end-snap dies (seventh draft, 2026-07-10)
+## §43i — The end-snap dies (seventh draft, 2026-07-10)
 
 User on device: "it snaps at the end." Two real causes, both structural:
 
@@ -1852,7 +1852,7 @@ so the live page can never wear the shader; frozen frames + the lift
 are the only honest mechanism. Settle haptic now fires when the liquid
 stills (lift start), not at unmount.
 
-## 43j. One liquid, both rooms (ruling, 2026-07-10)
+## §43j — One liquid, both rooms (ruling, 2026-07-10)
 
 Asked and ruled: Settings and the app catalog share the SAME liquid
 transition — no per-destination effects. The transition is grammar,
@@ -1864,7 +1864,7 @@ by transition. The system's one motion distinction stays directional:
 arriving 1.5s, leaving 1.1s — entering a room is heavier than
 stepping out.
 
-## 43k. Wetter and quicker (2026-07-10)
+## §43k — Wetter and quicker (2026-07-10)
 
 Ruled after living with 1.5s: "more liquid and faster." Pace: open
 1.15s / pop 0.85s (the bracketing holds: 0.95 was too fast bare, but
@@ -1873,7 +1873,7 @@ and deeper — frequencies down (~8.5/5.5/7/4.5 from 11/7/9/6), outgoing
 amplitude 26→42pt, incoming 22→34pt, shimmer 0.10→0.13, sample offsets
 widened to match. The page heaves instead of buzzing.
 
-## 44. Composer invisible over the store — hardened (2026-07-10)
+## §44 — Composer invisible over the store — hardened (2026-07-10)
 
 Device report: over the app catalog, tapping the FAB opened the
 keyboard but no bubble. Home works; the bubble is truly absent, not
@@ -1891,7 +1891,7 @@ morph can no longer leave the composer invisible, and the look is
 unchanged (glass over ink). If the next build still fails on device,
 next step is on-device instrumentation of the glass container.
 
-## 43l. Fast and subtle — the liquid settles (2026-07-10)
+## §43l — Fast and subtle — the liquid settles (2026-07-10)
 
 After living with big waves ("more liquid and faster" lasted one
 look), the final register: FELT more than watched. Open 0.65s / pop
@@ -1900,7 +1900,7 @@ a gentle heave, not a buzz); shimmer to 0.06/0.04. The liquid should
 read as the page taking a breath, not a water show. Full parameter
 trail: 0.95→1.3→1.5→1.15→0.65; amplitudes 26→42→16.
 
-## 45. The zoom returns; the liquid retires (2026-07-10, the settling)
+## §45 — The zoom returns; the liquid retires (2026-07-10, the settling)
 
 After twelve drafts of liquid, the closing critique named the category
 error: "it feels like an effect, not a transition." A transition reads
@@ -1919,7 +1919,7 @@ One grammar, both rooms (43j holds). The liquid code is deleted (git
 history keeps every draft); its yield stays: the doctrine trail in
 43–43l and prd 44's composer hardening, which remains shipped.
 
-## 46. The ledger holds — everywhere (2026-07-10)
+## §46 — The ledger holds — everywhere (2026-07-10)
 
 The reading tension, mocked and ruled: content sources (RSS, posts)
 were candidates for a "reader" shape in their own chip views (bigger
@@ -1933,7 +1933,7 @@ numeric HTML entities in RSS titles ("&#8217;") — decoding now lives
 in IngestSupport.decodeHTMLEntities (named + numeric refs), shared by
 RSS titles and LinkTitle.
 
-## 46a. Faces AND pictures (amendment, 2026-07-10)
+## §46a — Faces AND pictures (amendment, 2026-07-10)
 
 The one-slot casualty surfaced: since faces always lead (38), a
 post's attached photo vanished from the feed entirely — "From my walk
@@ -1943,7 +1943,7 @@ slot (WHO); when a post carries an image it rides at 26pt just before
 the timestamp (WHAT). Same scale, same one-line band — the ledger's
 rhythm holds, and a photo post finally shows its photo.
 
-## 47. Typography lands where it started (2026-07-10)
+## §47 — Typography lands where it started (2026-07-10)
 
 The "everyone has their own font" question, explored and ruled. The
 list of candidates was surveyed (Söhne, Untitled Sans, ABC Diatype,
@@ -1959,7 +1959,7 @@ functional. The identity carried by type is the soft-display /
 crisp-function contrast, not a licensed face. Revisit only if a real
 legibility or identity failure shows up, not for novelty.
 
-## 47a. Cabinet Grotesk, tested and passed on (2026-07-10)
+## §47a — Cabinet Grotesk, tested and passed on (2026-07-10)
 
 The strongest external candidate got the full live test: Cabinet
 Grotesk (Fontshare, free ITF license) rendered across the whole ramp
@@ -1972,7 +1972,7 @@ at 12-13pt, exactly where SF Pro Text is engineered to win. 47
 holds, now stress-tested against both a mono accent and a real
 licensed-face swap. The mock (MockFonts/, -fontMock) is deleted.
 
-## 48. Screenshots survive Photos (2026-07-10)
+## §48 — Screenshots survive Photos (2026-07-10)
 
 The "green squares" diagnosed and closed: a screenshot thing stored
 only its PHAsset identifier, so when the original left Photos the row
@@ -1991,7 +1991,7 @@ one). Verified end-to-end on sim: 4/4 things thumbed, a seeded
 dangling thing removed. Sim note: `simctl privacy grant photos` does
 NOT take on the iOS 26 runtime — the real dialog is the only path.
 
-## 49. The new-things ring becomes an event (2026-07-10)
+## §49 — The new-things ring becomes an event (2026-07-10)
 
 Two rulings from "could be better". (1) GLASS STAYS OFF THE CHIPS:
 Liquid Glass is the floating layer's material (composer, tab bar,
@@ -2010,7 +2010,7 @@ mount-with-news showed it full). Sim note: recordVideo kept
 truncating mid-run — screenshots + NSLog probes are the reliable
 motion evidence there.
 
-## 49a. Feed keeps the pulse; Diagnostics gets the instrument (2026-07-10)
+## §49a — Feed keeps the pulse; Diagnostics gets the instrument (2026-07-10)
 
 The tab bar's Feed glyph and the Diagnostics tile both wore
 waveform.path.ecg. Candidates for Feed were mocked in the live tab
@@ -2019,7 +2019,7 @@ ECG trace — it's the pulse of your stuff. Diagnostics moves to
 "stethoscope": the instrument that listens, not the trace itself.
 The -feedSymbol mock hook came and went in the same session.
 
-## 50. Home's Pinned card holds six (user, 2026-07-11)
+## §50 — Home's Pinned card holds six (user, 2026-07-11)
 
 The Pinned card's cap rises from 3 to 6 (the 2026-07-06 cap predated
 token watching — a small watchlist alone filled all three seats and
@@ -2027,7 +2027,7 @@ the fourth pin silently never showed). Still newest first, still
 user-chosen only, so the no-obligations voice rule holds; the cap
 exists so Home stays a composition, not a scroll of pins.
 
-## 50a. "Just landed" opens (user, 2026-07-11)
+## §50a — "Just landed" opens (user, 2026-07-11)
 
 The cover's Just-landed card was the one thing-bearing block on Home
 you couldn't tap (user: "shouldn't a user be able to tap it and go to
@@ -2036,7 +2036,7 @@ earned on 2026-07-10, no long-press menu (nothing to unpin). The
 composition carries the thing id as the Cover's new trailing arg; the
 id streams in last, so a half-streamed card simply isn't tappable yet.
 
-## 51. The token chart grows up (user-approved mock, 2026-07-11)
+## §51 — The token chart grows up (user-approved mock, 2026-07-11)
 
 Ruled on an interactive mock (two passes), then built. One anatomy at
 two doses — `TokenChartView` is the sheet's full read, `TokenChartPlot`
@@ -2063,7 +2063,7 @@ range switch is a data arrival. TokenChart.fetch gained a range
 parameter (default .day; TokenPulse and Diagnostics unchanged);
 `change24h` became range-generic `change`.
 
-## 52. Composer invisible — root-caused; the glass becomes a veneer (2026-07-11)
+## §52 — Composer invisible — root-caused; the glass becomes a veneer (2026-07-11)
 
 The prd 44 symptom returned, now on Home (device report: FAB tap →
 keyboard up, no bubble). prd 44's underlay couldn't have held: it was
@@ -2077,7 +2077,7 @@ glass VENEER that carries the "composer" morph id. A failed hardware
 morph now loses only the veneer's sheen — the composer itself cannot
 disappear. Look and morph are unchanged when the glass behaves.
 
-## 53. Shared captures land without a relaunch (2026-07-11)
+## §53 — Shared captures land without a relaunch (2026-07-11)
 
 Device report: a note shared from Apple Notes said "Saved to Casberi"
 and never appeared. The write was real (same app-group store, correct
@@ -2094,7 +2094,7 @@ the dirty-save-as-@Query-kick is the standard workaround, not a
 documented contract — if a shared note still doesn't paint, the next
 step is consuming SwiftData history (HistoryDescriptor) instead.
 
-## 54. The weekend recap opens the week's synthesis (user, 2026-07-11)
+## §54 — The weekend recap opens the week's synthesis (user, 2026-07-11)
 
 "Your week, banked" was a statement you could only read (user: it
 "should be a tappable object that synthesizes the week"). The weekend
@@ -2106,7 +2106,7 @@ bubble on set, the composer consumes the query and commits it. One
 synthesis engine: the recap is a door into the ask, not a second
 week-renderer. A quiet week answers honestly.
 
-## 55. Your notes — the import group, and Notes tells the truth (user, 2026-07-11)
+## §55 — Your notes — the import group, and Notes tells the truth (user, 2026-07-11)
 
 Ruled after API research (verified live, not from memory): Day One has
 no public API and Zapier/IFTTT are write-only, but its iOS app exports
@@ -2132,7 +2132,7 @@ in-session per the standing rule (marquee ×3, "Notes & journals"
 section, self-drawn inline icons — no Apple assets hotlinked or
 bundled).
 
-## 56. Build-29 review: the import batch, hardened (2026-07-11)
+## §56 — Build-29 review: the import batch, hardened (2026-07-11)
 
 Eight-finder review of the notes/chart/composer batch; confirmed
 fixes applied:
@@ -2166,7 +2166,7 @@ pass, heals at next launch), Feed header's loss of Pause for routed
 bridges (deliberate reroute in 363667c, needs a ruling on where Pause
 lives from Feed).
 
-## 52a. The bubble goes solid (2026-07-11)
+## §52a — The bubble goes solid (2026-07-11)
 
 Third pass on the composer surface, and the ruling that ends it: the
 OPEN bubble wears solid ink, no glass. prd 44 put glass ON the
@@ -2179,7 +2179,7 @@ depend on the glass pipeline. The FAB keeps its glass; the scale
 animation carries the open; §8 permits glass on the floating layer,
 it does not require it. Verified crisp on sim via -uiAnswerProbe.
 
-## 57. Messages are social, not media (2026-07-11)
+## §57 — Messages are social, not media (2026-07-11)
 
 Telegram (and Slack with it — the "Your messages" group) moves from
 the Your media category to Social in Browse. Telegram's plan stays
@@ -2204,7 +2204,7 @@ browses just "Network"). Slack remains its own offer. Not on the website
 (Soon apps were never listed), so this is app-only. If Telegram ever
 returns it re-enters this decision from scratch.
 
-## 51a. Ranges speak finance: 1D / 7D / 30D (2026-07-11)
+## §51a — Ranges speak finance: 1D / 7D / 30D (2026-07-11)
 
 Two fixes from a device report: (1) the range chips read 1D/7D/30D
 now — "24h" was both wordier and the odd one out against how every
@@ -2214,7 +2214,7 @@ for width, "24h" folded into a circled "24/h"; under pressure the
 row gives, never the label. Remembered ranges stored under the old
 raw values fall back to 1D once, then re-persist.
 
-## 58. Home becomes the board (ruled 2026-07-11, build TBD)
+## §58 — Home becomes the board (ruled 2026-07-11, build TBD)
 
 The direction that reframes Home, ruled from three mock rounds
 ("holy shit that is so cool"): Home is a PINBOARD of movable,
@@ -2255,7 +2255,7 @@ screens so the board grows from the catalog. Mocks deleted; the
 Desktop comparisons (home-board-ABC, home-rich-board-123) are the
 visual record.
 
-## 58a. The pin is the control (amendment, 2026-07-11)
+## §58a — The pin is the control (amendment, 2026-07-11)
 
 How sizes change, ruled — "why not just tap the pin": TAP THE PIN.
 Every pin on the board is a button: tap it and its card blooms to
@@ -2270,7 +2270,7 @@ pinned-things card, whose large form is the moodboard-tile interior
 (mock B's yield). Long-press still lifts a card to drag; pinch may
 arrive later as an unadvertised extra, or never.
 
-## 59. Catalog reshuffle: X is social, Slack is work, notes stand alone (user, 2026-07-11)
+## §59 — Catalog reshuffle: X is social, Slack is work, notes stand alone (user, 2026-07-11)
 
 Three moves, one ruling: X leaves "Your saves" for "Your network" —
 it's a social account first, bookmarks or not, so it browses under
@@ -2285,7 +2285,7 @@ vault is notes, not project tracking. Website sections mirrored in
 the same session per the standing rule: X → "Social & messages",
 Slack → "Work & scheduling", Obsidian → "Notes & journals".
 
-## 58b. The board is complete (2026-07-11)
+## §58b — The board is complete (2026-07-11)
 
 All four goals of prd 58 shipped: Goal 1 (drag-to-reorder, order
 persists) and Goals 2-4 (tap-the-pin sizing, rich media modules for
@@ -2295,7 +2295,7 @@ promised — movable, resizable, richly-drawn, and growing from wherever
 a person connects an app. prd 58/58a doctrine is now BUILT, not just
 ruled.
 
-## 58c. Large media tiles stay on the page (fix, 2026-07-11)
+## §58c — Large media tiles stay on the page (fix, 2026-07-11)
 
 Bug found in build 32: a screenshot's large-mode moodboard tile
 rendered off-page — the image overflowed past the screen edge. Root
@@ -2310,7 +2310,7 @@ GeometryReader pins an explicit width/height, then `.clipped()`.
 Verified on sim with live Pinterest content (25 things) rendering a
 correctly bounded 2-column grid.
 
-## 58d. Two device reports fixed: wallet loading gap, sticky scroll (2026-07-11)
+## §58d — Two device reports fixed: wallet loading gap, sticky scroll (2026-07-11)
 
 Both traced to real causes, both fixed:
 
@@ -2340,7 +2340,7 @@ moment instead of all N carrying one permanently. Unverifiable on
 simulator by construction (never reproduced there) — needs the
 person's own device to confirm.
 
-## 58e. Weekend chips return (as week counts); music art re-heal (2026-07-11)
+## §58e — Weekend chips return (as week counts); music art re-heal (2026-07-11)
 
 WEEKEND CHIPS — the "Your week, banked" cover dropped the kind-count
 chips entirely; ruled (user) that losing the count row read as the
@@ -2363,7 +2363,7 @@ where it fails if search doesn't cover it. Render path confirmed
 correct on both surfaces (Home shelf + feed row read previewImageURL);
 this was never a display bug.
 
-## 58f. The magazine board (v1, 2026-07-11)
+## §58f — The magazine board (v1, 2026-07-11)
 
 Flipboard elegance, translated to Casberi's law (ink-black, all-SF,
 the sacred pin, the ledger). Three ideas ruled from a two-variant
@@ -2388,7 +2388,7 @@ PARALLAX (images drift within frames on scroll; cover rubber-bands on
 overscroll — the motion that makes it feel alive). Drag FEEL and the
 music tile need device verification (music art can't render on sim).
 
-## 58g. The magazine hero (v2a, 2026-07-11)
+## §58g — The magazine hero (v2a, 2026-07-11)
 
 The "one thing dominates" half of the Flipboard translation, made
 USER-controlled rather than auto: growing a media tile (tap its pin)
@@ -2412,7 +2412,7 @@ image with no tap) was considered and set aside: it duplicates content
 that also appears in the media tiles, a redundancy the user-grown
 hero avoids entirely.
 
-## 60. Casberi speaks five languages (user, 2026-07-11)
+## §60 — Casberi speaks five languages (user, 2026-07-11)
 
 BUILT — localization for English, Spanish, Simplified Chinese, Japanese,
 Korean. Rulings:
@@ -2464,7 +2464,7 @@ lands in one feed / Act on anything / Home is your board / Ask across
 everything. Text auto-localizes (LocalizedStringKey); English until
 the catalogs carry the new keys.
 
-## 58h. Board refinements — OPEN (diagnosed 2026-07-11, for a fresh build)
+## §58h — Board refinements — OPEN (diagnosed 2026-07-11, for a fresh build)
 
 Two board gaps found on device testing (build 35/36), diagnosed in
 code, NOT yet built:
@@ -2495,7 +2495,7 @@ Both need DEVICE verification (drag feel; real token/wallet data — the
 sim can't exercise either, and its Photos re-request dialog blocks
 screenshot repro). Build on prd 58/58a/58f grammar.
 
-## 58i. The bento board (user, 2026-07-12) — BUILT, device verification pending
+## §58i — The bento board (user, 2026-07-12) — BUILT, device verification pending
 
 Supersedes 58h's two fixes and the prd-58a two-state (regular/large)
 size model with a THREE-span bento: every module is a tile the person
@@ -2536,7 +2536,7 @@ NOT YET DEVICE-VERIFIED (sim can't exercise): drag feel, tap-the-pin
 cycling, real token chart data (needs a pinned token + live Dexscreener
 fetch).
 
-## 58j. A pin is a mark, not a card (user, 2026-07-12) — BUILT, verified on sim
+## §58j — A pin is a mark, not a card (user, 2026-07-12) — BUILT, verified on sim
 
 Three consistency rulings, all from the user reviewing 58i's board:
 
@@ -2575,7 +2575,7 @@ its home behind the composer's "What's this week?" ask (prd 54's ruling
 that the recap is a question you pose, not a screen that ambushes you);
 the cover no longer emits `@week`.
 
-## 58k. Pin the app, not the item (user, 2026-07-13) — BUILT, verified on sim
+## §58k — Pin the app, not the item (user, 2026-07-13) — BUILT, verified on sim
 
 Supersedes 58j's "PINS DISSOLVE INTO TILES" and the whole per-item pin
 model. The user's ruling: pinning is per-APP now, not per-thing. You keep
@@ -2644,7 +2644,7 @@ tile. Flagged WIP-in-flight, NOT filed as a regression; re-audit after
 the board work lands. Corpus was the 3-thing reseed and `app.language`
 was left on `ja` by a prior session — both environment, not findings.
 
-## 61. The elevation ladder — depth by tone and shadow, never by line (user, 2026-07-12)
+## §61 — The elevation ladder — depth by tone and shadow, never by line (user, 2026-07-12)
 
 The surfaces read flat: #000 page and one flat #111 sheet, with no border
 and no shadow, made every screen a wireframe — worst in light mode, where
@@ -2685,7 +2685,7 @@ survive light mode (a white chip on a white card), and it would need a
 per-element shadow to work — not worth a fourth mechanic. Lift + recess are the
 two that hold in both modes.
 
-## 62. Contacts leaves onboarding — no address-book ask at minute zero (user, 2026-07-12)
+## §62 — Contacts leaves onboarding — no address-book ask at minute zero (user, 2026-07-12)
 
 The Contacts bridge (added 2026-07-12) auto-joined onboarding's mini store like
 every other one-tap local connect. But an address-book ask at minute zero reads
@@ -2702,7 +2702,7 @@ catalog, Browse (People group), and its connect path are unchanged; it is only
 absent from the first-run mini store. Contacts icons still fall in the glass
 pile (decorative brand art, not a permission ask).
 
-## 63. The source-feed header: one card for expand, its own row for compose (user, 2026-07-12)
+## §63 — The source-feed header: one card for expand, its own row for compose (user, 2026-07-12)
 
 A single-source feed used to stack two full-width bars under the circular chip
 row: the synced header card, then an "act in this source" row. Two slabs of
@@ -2740,7 +2740,7 @@ two-targets-on-one-bar ambiguity the ruling exists to remove). The rule of
 thumb: an affordance may fold onto the card only when it shares the card's
 destination; anything that leaves for elsewhere keeps its own row.
 
-## 58l. A pinned app tile takes all three spans (user, 2026-07-14) — BUILT
+## §58l — A pinned app tile takes all three spans (user, 2026-07-14) — BUILT
 
 Ruling: every pinned app tile — not just media shelves and the wallet — must
 support the full small/wide/big bento range: **small** = a 1×1 tile of ONE
@@ -2772,7 +2772,7 @@ Each solo tile's own long-press already offers Remove from Home (via
 redundant outer contextMenu on the small branch (that would just be shadowed,
 the same bug fixed for the card's rows in 58k).
 
-## 64. Kalshi titles get a third line; Share joins the Feed swipe (user, 2026-07-13) — BUILT
+## §64 — Kalshi titles get a third line; Share joins the Feed swipe (user, 2026-07-13) — BUILT
 
 Two small device reports, same session.
 
@@ -2816,7 +2816,7 @@ exists, but `WalletIngest` already covers ETH activity via Alchemy — Etherscan
 URLs are already used, just as the "view transaction" explorer link, not a
 data source). Neither earns a bridge.
 
-## 65. Alchemy's Prices API becomes a second chart tier (user, 2026-07-13) — BUILT
+## §65 — Alchemy's Prices API becomes a second chart tier (user, 2026-07-13) — BUILT
 
 Follow-up to §64's Alchemy research: could Alchemy's Prices/Token APIs
 replace Dexscreener in `TokenWatch`? Verified live against the shipping key
@@ -2856,7 +2856,7 @@ Dexscreener token-watch) and reverses a deliberate static-over-live
 architecture choice, so it's flagged for a separate decision rather than
 folded into this one.
 
-## 66. Dexscreener the bridge becomes "Tokens" (user, 2026-07-13) — BUILT
+## §66 — Dexscreener the bridge becomes "Tokens" (user, 2026-07-13) — BUILT
 
 §65 already made the point: the chart underneath a watched token blends
 GeckoTerminal, Alchemy, and Dexscreener — three vendors, not one — so
@@ -2896,7 +2896,7 @@ NOT retroactively renamed — they're an append-only record of what was true
 when written. Read them as: "Dexscreener" there means what "Tokens" means
 now.
 
-## 67. The power-user ring stays server-free (user, 2026-07-13)
+## §67 — The power-user ring stays server-free (user, 2026-07-13)
 
 The next ring of capability — everything a power user reaches for after the
 corpus is flowing — was scoped in one sitting, and one constraint rules all
@@ -2966,7 +2966,7 @@ Intents, ⑤ screenshot OCR, ⑥ the librarian digest.
 synthesis App Intents (`CasberiIntents.swift`). The gaps are OCR, the
 search/ask intents, and everything in the list above.
 
-## 68. Delete things / Delete access — two wipes, two verbs (user, 2026-07-13)
+## §68 — Delete things / Delete access — two wipes, two verbs (user, 2026-07-13)
 
 "Delete everything" was one button that wiped the corpus (SwiftData +
 sidecars + the CloudKit zone) and reported "Deleted — this iPhone and
@@ -2992,7 +2992,7 @@ two destructive verbs, each stating what goes AND what stays:
 
 A true scorched-earth exit is both verbs, and each one says so.
 
-## 69. The key is an agent key — four providers, one contract (user, 2026-07-14)
+## §69 — The key is an agent key — four providers, one contract (user, 2026-07-14)
 
 §67's "Try with your key" launched Anthropic-only, and every surface said
 so ("Anthropic API key", "a bigger Claude"). Ruled: the key is an AGENT
@@ -3008,7 +3008,7 @@ contract is unchanged from §67: same grounding, same consent tap, same
 honest nil on failure — the key buys a stronger model, not a different
 contract.
 
-## 70. Venice connects as a key seat; Strava rides Apple Health;
+## §70 — Venice connects as a key seat; Strava rides Apple Health;
 ## Gemini imports via Takeout (user, 2026-07-14)
 
 Three offers went live, each by its honest path:
@@ -3034,7 +3034,7 @@ and OpenClaw left the web catalog (they stay in-app as Soon); Farcaster
 shelves under Onchain on the web; the catalog is packed shelf cards
 (`#catalog`) mirroring `AppsScreen.categories`, Markets last.
 
-## 71. Tokens and Wallet grow features around the corpus, not a
+## §71 — Tokens and Wallet grow features around the corpus, not a
 ## portfolio app (user, 2026-07-14)
 
 The token/wallet enrichment set — the frame is Casberi's own: your
@@ -3081,7 +3081,7 @@ HISTORY with the assets, not a market terminal.
   resolution — a gap past the 30-day candles says "over the last 30
   days" instead, and coarse-fallback tokens are left out, never guessed.
 
-## 72. A pinned wallet's NFTs ride Home by default (user, 2026-07-14)
+## §72 — A pinned wallet's NFTs ride Home by default (user, 2026-07-14)
 
 Pinning a wallet brings TWO cards: its holdings treemap and — when it
 holds any — an NFT strip as its own sibling board module (MediaShelf,
@@ -3097,7 +3097,7 @@ affects every board module's long-press "Remove from Home").
 Re-pinning a wallet resets its strip to the default (fresh pin, fresh
 presence). Wallets with no NFTs contribute nothing.
 
-## 73. Board removal is the minus badge in edit mode (user, 2026-07-14)
+## §73 — Board removal is the minus badge in edit mode (user, 2026-07-14)
 
 The board's long-press belongs to lift/reorder — the drag driver begins
 at 0.35s and pre-empts long-press context menus, so "Remove from Home"
@@ -3117,7 +3117,7 @@ card's badge vanishes and the flash confirms instantly; the card itself
 leaves when editing ends (recompose stays deferred through the wobble
 so modules never shift under an in-flight drag).
 
-## 74. Farcaster grows likes, mentions, channels, replies, faces (user, 2026-07-14)
+## §74 — Farcaster grows likes, mentions, channels, replies, faces (user, 2026-07-14)
 
 User picked five features from the "what else can the keyless node
 serve" shortlist (1, 2, 3, 6, 7 — the follow-graph import and the
@@ -3170,7 +3170,7 @@ Node quirk paid for: castsByParent serves DOUBLE the asked pageSize
 (25 → 50, verified live) — the channel sync and the sheet's replies
 both cap client-side.
 
-## 75. Bluesky mirrors Farcaster's keyless parity set; the two share one renderer (user, 2026-07-14)
+## §75 — Bluesky mirrors Farcaster's keyless parity set; the two share one renderer (user, 2026-07-14)
 
 User, after the Farcaster batch (§74): "can we do all the same with
 Bluesky and make both experiences similar?" Assessed the AT Protocol's
@@ -3289,7 +3289,7 @@ sim's EventKit store can't be granted full access headlessly (iOS 26), so the
 collapse/refresh path is **verified by reasoning + compile only** — confirm on a
 real device with a recurring meeting.
 
-## 76. GeckoTerminal — trending tokens per chain, an OpenSea-shaped discovery bridge (user, 2026-07-14)
+## §76 — GeckoTerminal — trending tokens per chain, an OpenSea-shaped discovery bridge (user, 2026-07-14)
 
 User: "how could we offer something that surfaces trending tokens as a
 feed and select per chain?" — then "yes lets do that and add gecko
@@ -3335,7 +3335,7 @@ duplicates, each carrying a Dexscreener URL the sheet reads for its
 chart. Website: hero rain tile + Markets mini-cell + `.ai-geckoterminal`
 green, per the same-session parity rule.
 
-## 77. Across your wallets — a combined view, additive to the per-wallet ones (user, 2026-07-15)
+## §77 — Across your wallets — a combined view, additive to the per-wallet ones (user, 2026-07-15)
 
 Watching more than one wallet earns ONE combined read — the value across
 them, and one treemap summing the same holdings the per-wallet charts show
@@ -3380,7 +3380,7 @@ line is `WalletStore.combinedValueSamples()`. Section lives atop
 combined line after the alignment fix. No new catalog offer, no website
 catalog change — it's synthesis over connected wallets, not a bridge.
 
-## 78. Two catalog re-shelvings: GeckoTerminal to Onchain, Pinterest to Media (user, 2026-07-15)
+## §78 — Two catalog re-shelvings: GeckoTerminal to Onchain, Pinterest to Media (user, 2026-07-15)
 
 - **GeckoTerminal moves Markets to Onchain** (revises §76's Markets
   placement). Trending crypto tokens per chain are an ONCHAIN interest,
@@ -3401,7 +3401,7 @@ sits under Onchain, Pinterest's under Media (index.html; hero marquee
 tiles carry no category and stay put). Verified: app Onchain shelf leads
 with GeckoTerminal; deploy zip's index.html shelves both correct.
 
-## 79. Wallet — faces, glances, and moments (surprise & delight pass, user, 2026-07-15)
+## §79 — Wallet — faces, glances, and moments (surprise & delight pass, user, 2026-07-15)
 
 A delight + polish pass over the Wallet experience, prompted by "how would
 you improve the wallet and add surprise and delight." Everything stays
@@ -3467,7 +3467,7 @@ ENS avatar and Binance's identicon both render, the row sparkline draws, the
 combined sheet decomposes correctly with §77's alignment (combined "since Jul
 14", Binance's own line its true earlier start).
 
-## 80. Stocktwits — stocks the keyless way: ticker streams + a Yahoo-drawn chart (user, 2026-07-15)
+## §80 — Stocktwits — stocks the keyless way: ticker streams + a Yahoo-drawn chart (user, 2026-07-15)
 
 The user asked for stock tracking ("does Stocktwits or anything like that
 have a public feed?"); research confirmed two keyless halves and the ruling
@@ -3498,7 +3498,7 @@ is to ship them as ONE seat, not two:
   and keep the foreground poll landing). Landed posts are history and follow
   the person's own "remove its things too" choice.
 
-## 81. Social enrichment — the post itself, why it's here, and the people behind it (user, 2026-07-16)
+## §81 — Social enrichment — the post itself, why it's here, and the people behind it (user, 2026-07-16)
 
 User: "how could we enrich the farcaster and bluesky experiences… don't think
 just features, think design too." The assessment found the plumbing already
@@ -3595,7 +3595,7 @@ Debug: `-bskyFeed <query|at-uri>`, `-socialProbe <Bluesky|Farcaster>`, and the
 `casberi://person/<Source>/<handle>` deep link (the card by name, so the screen
 sweep reaches it headlessly like every other surface).
 
-## 82. Bankr joins the agent keys — the one agent with a wallet (user, 2026-07-16) — BUILT
+## §82 — Bankr joins the agent keys — the one agent with a wallet (user, 2026-07-16) — BUILT
 
 Bankr (bankr.bot) is a wallet-attached trading agent with a prompt API the
 same BYOK shape as the other four: a key in a header, a question in, text
@@ -3640,7 +3640,7 @@ was FULL (25 cubes = a 5×5 grid; index 25 starts the Apple row), so Bankr
 SWAPPED Calendly's cube rather than appending — Cal.com already carries
 scheduling there, and the pile is a curated subset, never the catalog.
 
-## 83. Three honesty repairs the nightly audit found (audit, 2026-07-16) — BUILT
+## §83 — Three honesty repairs the nightly audit found (audit, 2026-07-16) — BUILT
 
 The 2026-07-16 screen audit found no regressions but three live honesty
 violations, all shipped, all the same shape: a surface stating something the
@@ -3698,7 +3698,7 @@ Also gated: `RSSScreen`'s toolbar `EditButton` — every other section there is
 gated on `!feeds.isEmpty`, but Edit wasn't, so a user with zero feeds got a
 live Edit over an empty list.
 
-## 84. Approvals — the wallet's security surface, with Revoke.cash as the write (user, 2026-07-16) — BUILT
+## §84 — Approvals — the wallet's security surface, with Revoke.cash as the write (user, 2026-07-16) — BUILT
 
 **Ruling.** Token approvals join the wallet bridge as a READ: a new `Approval`
 / `ApprovalForAll` event on a watched wallet lands as a thing ("Approved
@@ -3749,7 +3749,7 @@ runs the sync, NSLogs the landed count. Verified live: a wallet that had just
 approved unlimited USDT (holding $290K of it) landed exactly 1 thing from a
 5,000-block window while the spam flood landed 0.
 
-## 85. Solana joins the wallet — holdings and `.sol` names, activity honestly held (user, 2026-07-16) — BUILT
+## §85 — Solana joins the wallet — holdings and `.sol` names, activity honestly held (user, 2026-07-16) — BUILT
 
 > **Superseded in part, same day, by §86:** the activity half shipped once its
 > cost was measured instead of assumed. Everything below about HOLDINGS still
@@ -3827,7 +3827,7 @@ passed on: it is an MCP *server* for agent harnesses, Casberi has no MCP client,
 and what it offers is mostly writes — which §82's answer-only ruling already
 settled.
 
-## 86. Solana activity — the half that was held, once the cost was measured (user, 2026-07-16) — BUILT
+## §86 — Solana activity — the half that was held, once the cost was measured (user, 2026-07-16) — BUILT
 
 §85 shipped Solana holdings and held its activity, and the reasons given were
 wrong. The user asked the right question — *"why shouldn't we? because we don't
@@ -3896,7 +3896,7 @@ for) is what makes a stray harmless. And the odd-looking symbols are real:
 `Ctgbpg` is CAPE GRID TOWN PENGUIN, `Svaicf` is SILICON CHIP VALLEY FORGE. Both
 looked like base58 fragments and both survived checking.
 
-## 87. Who they follow — the follow graph as a picker, not a mirror (user, 2026-07-16) — BUILT
+## §87 — Who they follow — the follow graph as a picker, not a mirror (user, 2026-07-16) — BUILT
 
 The question was: both networks expose who you follow, so couldn't we let a
 person automatically follow, in Casberi, everyone they already follow?
@@ -3969,7 +3969,7 @@ the self-follow it includes (78 vs 77).
 A big graph is a real wait (1,848 people ≈ 31s paced), so the sheet counts out
 loud — "Reading the follow list… 450 so far" — rather than spinning mute.
 
-## 88. The feeds swipe; the row swipe dies to pay for it (user, 2026-07-16) — BUILT
+## §88 — The feeds swipe; the row swipe dies to pay for it (user, 2026-07-16) — BUILT
 
 Swiping between feeds was asked for, measured, and shipped. The chip strip is
 no longer the only way across the corpus: the feeds are one `TabView(.page)`
@@ -4027,7 +4027,7 @@ Verified: 10/10 cold-launch survival with three feeds mounted where one was
 (the stack-overflow class of CLAUDE.md — dropping the coach's `hintID` threading
 flattened the row path enough to pay for the pager's depth).
 
-## 89. Onboarding teaches the loop, not the philosophy (user, 2026-07-16) — BUILT
+## §89 — Onboarding teaches the loop, not the philosophy (user, 2026-07-16) — BUILT
 
 A tester finished onboarding and didn't know what to do next. The diagnosis
 (after several rounds): every action in Casberi — connect an app, follow a
@@ -4051,7 +4051,7 @@ connect card (a person / a token / a wallet beside the app rows — "any follow
 is a connect in the store"), and an embedded store shelf on the sparse feed.
 Both aim at the same gap; the four-step greeting is the contained first fix.
 
-## 90. The composer's tool grid dies; "Open in" chips carry the text out (user, 2026-07-16) — BUILT
+## §90 — The composer's tool grid dies; "Open in" chips carry the text out (user, 2026-07-16) — BUILT
 
 The 2026-07-12 tool tiles were built for "oh, I need to…" moments — jump to
 your own tool without hunting the home screen. Two flaws surfaced when the
@@ -4079,7 +4079,7 @@ Reminders, ChatGPT, Claude tiles) died with it, as did the `-forceTools` hook;
 `-composerDraft "<text>"` replaces it as the headless reach for the typed
 state. Typed text still never saves — it gains destinations, not persistence.
 
-## 91. Connect pages redesign — wash, tagline, ghost preview, toggle verbs (user approved from mockups, 2026-07-16) — BUILT
+## §91 — Connect pages redesign — wash, tagline, ghost preview, toggle verbs (user approved from mockups, 2026-07-16) — BUILT
 
 The setup-screen family was redesigned from a three-mockup review (RSS,
 GitHub, OpenSea) the user approved. Four rulings, two of which supersede
@@ -4163,7 +4163,7 @@ mockup was liked but merged down: the existing away chip now wears "Catch me
 up — N things" (count roll kept, canonical "While I was away?" ask kept).
 `-composerDraft "<text>"` reaches the typed states headlessly.
 
-## 92. The composer's empty state goes bold — ask tiles, one featured (user picked "option A" from three mockups, 2026-07-16) — BUILT
+## §92 — The composer's empty state goes bold — ask tiles, one featured (user picked "option A" from three mockups, 2026-07-16) — BUILT
 
 The empty sheet's horizontal chip strip died: it clipped its own labels
 ("How's m…"), and a suggestion you can't read isn't one. The corpus-derived
@@ -4185,7 +4185,7 @@ pairing line, tag completions, Send-to + "Found a time" receipt, mic / field
 **Ruling (user, 2026-07-16): no logo in the composer.** A berry-marked
 greeting was tried and rejected — the mark stays out of the sheet.
 
-## 93. Discover becomes a deck — teaser cards, reasons, the demo moves to the page (user picked from three mockups, 2026-07-16) — BUILT
+## §93 — Discover becomes a deck — teaser cards, reasons, the demo moves to the page (user picked from three mockups, 2026-07-16) — BUILT
 
 The Apps page's Discover carousel (four swipeable 220pt gradient slabs)
 became a DECK: one card visible, the next cards peeking above it as scaled
@@ -4238,7 +4238,7 @@ background TALLER than short cards and the gradient painted past both
 edges (the count rendered ON the card; minHeight 220 had been hiding this
 since the carousel shipped).
 
-## 94. The greeting goes large; onboarding lands in the store (user, 2026-07-16) — BUILT
+## §94 — The greeting goes large; onboarding lands in the store (user, 2026-07-16) — BUILT
 
 Two rulings on §89's four-step greeting, from "make it visually stunning,
 large proportions — I like the icon rain":
@@ -4300,7 +4300,7 @@ place: as a Discover card's eyebrow, where a single card states its
 reason. `Offer.qualifier` itself stays — it powers the reason-or-no-seat
 rule (§93).
 
-## 95. Ask tiles learn from taps; no launcher tile (user + assistant, 2026-07-16) — BUILT
+## §95 — Ask tiles learn from taps; no launcher tile (user + assistant, 2026-07-16) — BUILT
 
 Two rulings from one question ("can the tiles be smarter, and should
 there be an 'open my…' tile?").
@@ -4332,7 +4332,7 @@ answer. Precedent: §90's "counting stays a typed power, never a tile."
 If launcher-ness is ever wanted, it's a typed verb ("open …" routing to
 the existing deep links), not a tile. Held, not built.
 
-## 96. The connect screen dies — onboarding is the greeting, wearing the rain (user, 2026-07-16) — BUILT
+## §96 — The connect screen dies — onboarding is the greeting, wearing the rain (user, 2026-07-16) — BUILT
 
 "I no longer think we should have the first screen that has the apps to
 connect. The icon tiles should rain down on the screen you created, then the
@@ -4375,7 +4375,7 @@ session driving the same booted sim can foreground THEIR binary mid-probe —
 screenshots of a state you didn't launch mean collision, not regression
 (this session's b2/video runs caught the other session's composer work).
 
-## 97. The empty feed is the rain come to rest (2026-07-16) — BUILT
+## §97 — The empty feed is the rain come to rest (2026-07-16) — BUILT
 
 The truly-empty feed's quiet line + "Browse apps" chip + skeleton rows died
 (supersedes §61's item 4 empty-door shape: the door survives, the quiet
@@ -4399,7 +4399,7 @@ dead tile. Rendered FLAT (plain stacks, no Widget/Row path) per the
 eager-head stack-depth rule. Headless: `-pileTap "<Offer name>"`;
 `QuietStateView`/`CasberiMarkDrawOn` deleted with the old state.
 
-## 98. "What apps do you have" answers from the app set, not the retriever (2026-07-17) — BUILT
+## §98 — "What apps do you have" answers from the app set, not the retriever (2026-07-17) — BUILT
 
 The user asked the composer "what apps do you have" and got nonsense: no
 handler owned the question, so it fell through to the term-scored
@@ -4425,7 +4425,7 @@ have made the card a dead control — honesty rule). Like every computed
 ask, it clears `lastAnswerHits` so a keyed retry re-retrieves. Headless:
 `-answerProbe "what apps do you have"`.
 
-## 99. No notifications, no widget (2026-07-17) — RULING
+## §99 — No notifications, no widget (2026-07-17) — RULING
 
 Casberi does not send notifications — not a deferral, a positioning
 ruling (user): the pitch is "easier than relying on notifications," the
@@ -4447,7 +4447,7 @@ thing every audit walks. Not worth it pre-launch with zero users to
 place it. Revisit only post-App-Store if Connect widget analytics say
 otherwise. Do not re-suggest either of these.
 
-## 100. The tab bar dies — one surface, a Pinned-first chip header, a FAB (2026-07-13, recorded 2026-07-17) — BUILT
+## §100 — The tab bar dies — one surface, a Pinned-first chip header, a FAB (2026-07-13, recorded 2026-07-17) — BUILT
 
 Retroactive ruling: the shell change shipped in `0764ee3` (2026-07-13) but
 never got a numbered entry — it lived only in CLAUDE.md's design-law digest,
@@ -4491,7 +4491,7 @@ deep-links line in CLAUDE.md). (3) `casberi://account` still resolves (→ the
 Apps door) for back-compat. Deep links are the audit's way in now that there
 are no tabs to select.
 
-## 101. "Coming up" collapses to one row (2026-07-17) — BUILT
+## §101 — "Coming up" collapses to one row (2026-07-17) — BUILT
 
 User ruling: the card was showing up to five schedule rows at the top of Home,
 which "makes the home feed be something it isn't" — a person who sees their
@@ -4523,7 +4523,7 @@ widget with settings.
   purely GenComingUp's draw decision — `-comingUpProbe` (which logs the
   uncapped lane) and the flat-render crash law are untouched.
 
-## 102. Token surfaces go Big money — the sheet re-ranks, the row gets fat (2026-07-17) — BUILT
+## §102 — Token surfaces go Big money — the sheet re-ranks, the row gets fat (2026-07-17) — BUILT
 
 User asked "can we show market cap on our tokens?", then picked from six
 mockups (three sheet, three feed; "Cash App meets Casberi"). Approved: the
@@ -4557,7 +4557,7 @@ would orphan the rows' long-press verbs).
   sheet now hands the store in, and the read is optional (missing store only
   skips bridge registration on Watch).
 
-## 103. Bitrefill joins the catalog — orders in, balance in the lede, honesty ceiling on the shelf (2026-07-17) — BUILT
+## §103 — Bitrefill joins the catalog — orders in, balance in the lede, honesty ceiling on the shelf (2026-07-17) — BUILT
 
 Bitrefill (crypto gift cards / top-ups / eSIMs) lands as a token bridge — a personal API key from bitrefill.com/account/developers, Bearer auth against `api-bitrefill.com/v2` (a DASH in the host, not a dot). Orders land as link things ("Amazon.com · $50", the product's own artwork as the thumb, dated by `delivered_time`; sourceRef `bitrefill:order:<id>`); invoices with no orders on them are balance refills ("Balance refill · $50 in bitcoin"; sourceRef `bitrefill:invoice:<id>`); the account balance is a UserDefaults reading (`BitrefillBalance`), not a thing, feeding the Bitrefill feed's lede ("Balance … $12.40 · N orders this month") — connected-only, so a removed key never wears yesterday's balance.
 
@@ -4566,13 +4566,13 @@ RULINGS:
 - **The honesty ceiling, measured 2026-07-17:** the orders schema carries NO redemption status (Bitrefill can't know a code was spent at Amazon) and NO expiry. So the approved mock's "Ready to use" shelf, "Unused/Redeemed" trailing words, and the expiring-card pulse row are DEFERRED — rows claim only name, price, and when it arrived. If Bitrefill's API ever reports expiry or redemption, the mock's shelf+pulse design (session 2026-07-17) is the approved shape to build.
 - **Key honesty:** Bitrefill offers no read-only key scope, so the promise is Casberi's conduct, stated on the offer: "nothing here ever buys, pays, or spends your balance" — the Bankr posture, without the mint-it-read-only instruction Bankr can give.
 
-## 104. Wallet screen: Watching and Approvals lead (user, 2026-07-17) — BUILT
+## §104 — Wallet screen: Watching and Approvals lead (user, 2026-07-17) — BUILT
 
 User: watching and revoke sat below the transactions, "but that makes them buried and also less clear on what to pin. i think they should be at the top." Connected-state order is now **Watching → Approvals → portfolio bundle → per-wallet treemaps → NFTs → recent → add / chains / status / disconnect**.
 
 This amends §-adjacent 2026-07-15's "value first, admin at the bottom" inversion without betraying it: the watching rows have carried the value themselves since 2026-07-15 (per-wallet USD subline + sparkline + delta pill), so leading with them still leads with the money — and the pin control lives on those rows, so they're also the answer to "what do I pin," which was unfindable under two treemaps and an activity log. Approvals rides directly beneath Watching: the security read belongs beside the wallets it reads, not below the feed of what already happened. Add/chains/status stay clustered at the bottom — still the settings, still not the point.
 
-## 105. Tokens goes ink — the mark is a green chart on black, and the token sheet drops the wash (user, 2026-07-17) — BUILT
+## §105 — Tokens goes ink — the mark is a green chart on black, and the token sheet drops the wash (user, 2026-07-17) — BUILT
 
 User, on the Big money sheet (§102): "the token thing sheets don't look good w gold background b/c you can't see the data that is on them well… it could be a green one or a black one w/ a green price chart." Shown three treatments (short crown / pure ink / direction glow), picked **pure ink**, and ruled the mark should say so: "we need to make the icon reflect that as a black background green chart. that also makes it more purposeful that the token sheet is ink."
 
@@ -4585,33 +4585,33 @@ RULINGS:
 - **Stat block is one grid** (amends §102's "quiet chips"): FDV/liquidity join market cap/volume as smaller cards in the same two-column grid — "the tiles were chunkier and the whole thing was more cohesive… please update that too." Demotion is SCALE (price16 vs stat24), not a different anatomy. Tile radius (`DS.Radius.widget`), s4 padding, s2 gutters; the since-watched line centers under the centered hero.
 - **Website**: `.ai-tokens` black + green path, and the Tokens/Wallet hero+catalog tiles dropped the `tilefull` class — `.ai.tilefull { background:none }` outranks every per-brand background, so the two glyph-SVG tiles (unlike the full-bleed img tiles the class is for) had been rendering with NO brand field on the live site.
 
-## 106. Translate joins the thing sheet's action row (2026-07-17) — BUILT
+## §106 — Translate joins the thing sheet's action row (2026-07-17) — BUILT
 
 A `.translate` verb rides Apple's own `.translationPresentation` sheet (SwiftUI, iOS 17.4+ — under the app's 18.0 deployment target, so no availability gate needed) over a chat/mail/note/file/voice thing's own words (`postText` when present, else `content`). Zero custom UI: the system picks the source language and presents its own translation surface. Offered only when the thing actually carries text — no dead control on an empty body. Lives in both surfaces that derive verbs from `VerbDerivation.verbs(for:)` (the sheet's action rows AND the feed row's swipe actions), each holding its own `showTranslate`/`translateText` state since the two are separate views.
 
-## 107. Semantic Spotlight — things become `IndexedEntity`s, not just search hits (2026-07-17) — BUILT
+## §107 — Semantic Spotlight — things become `IndexedEntity`s, not just search hits (2026-07-17) — BUILT
 
 `ThingEntity` (`Model/ThingEntity.swift`) is additive, not a replacement: `SpotlightIndex`'s manual `CSSearchableItem` indexing (title/description/keywords) keeps running for system search exactly as before, refactored only to share its attribute-set builder (`SpotlightIndex.attributeSet(for:)`) with the new entity's `IndexedEntity.attributeSet`. `SearchCasberiIntent` now returns `[ThingEntity]` instead of a joined string, so a Shortcuts/Siri search hands back tappable, semantically-indexed things instead of plain text. `AskCasberiIntent` is unchanged (its output is a synthesized answer, not a list of things). Known verification gap, stated honestly: Siri/Spotlight's actual semantic surfacing of a donated entity can't be checked headlessly on the simulator — `-intentProbe` confirms the underlying match set is unchanged, but the richer Shortcuts/Siri presentation is a real-device/manual check.
 
-## 108. WeatherKit joins "Coming up" — a live read, never stored (2026-07-17) — BUILT
+## §108 — WeatherKit joins "Coming up" — a live read, never stored (2026-07-17) — BUILT
 
 Today's forecast decorates the "Coming up" card's Today label ("Today · 72°, partly cloudy"); every other day label (Tomorrow, a weekday, Overdue) is untouched. Deliberately NOT a `Thing` field — no schema change, no migration: `WeatherEnrichment.todaySummary()` is a live WeatherKit fetch at render time, cached ~30 min in memory so a recompose doesn't re-hit the API. Needs a ONE-TIME "When In Use" CoreLocation read (never background, never a stored location) — confirmed acceptable to the user as materially lighter than the significant-locations ("Always") ask that was rejected the same session. Denial or fetch failure leaves the label plain (honesty rule: no fake status).
 
 Measured 2026-07-17, don't re-diagnose without re-measuring: a Simulator build (`Sign to Run Locally`) skips provisioning entirely, so `com.apple.developer.weatherkit` in the entitlements file alone can't prove the capability is live — the location read and WeatherKit call both fire correctly (confirmed via `-weatherProbe YES`: resolved to the simulator's SF coordinates, request reached `WeatherDaemon`), but it fails at Apple's JWT auth step (`WDSJWTAuthenticatorServiceListener` code 2) because the App ID isn't yet provisioned for WeatherKit with Apple's servers. That resolves on a real-device/archive build where automatic signing re-registers capabilities — it is not a code bug.
 
-## 109. HomeKit joins the catalog — live accessory state, not an event history (2026-07-17) — BUILT
+## §109 — HomeKit joins the catalog — live accessory state, not an event history (2026-07-17) — BUILT
 
 **Scope ruling, stated up front:** HomeKit has no historical-event query API (accessory state changes are push-only, delegate callbacks while an app or long-lived observer runs), so there's no way to backfill "what happened while the app was closed" the way Calendar/Contacts refresh does. V1 lands each accessory as a live-state reference thing (a plain-English category + room + reachability — e.g. "Lock · Living Room · Reachable"), refreshed in place on each foreground pass, not a growing feed of "the same door again." A new `ThingKind.accessory` case carries it, search-only like Contacts (`Corpus.searchOnlySources` now `["Contacts", "HomeKit"]`) — a house full of accessories re-updating every refresh shouldn't bury the feed. Decoding an accessory's actual characteristic value (locked vs unlocked) is explicitly DEFERRED: it needs per-service-type reads this session couldn't verify without a paired accessory or the HomeKit Accessory Simulator — reachability is the honest v1 ceiling.
 
 New "Home" category shelf (`AppsScreen.categories`, group `"Home"`) — app catalog, website `#catalog` shelf, and `scripts/catalog-sync.sh` all confirmed in sync. Measured 2026-07-17: on the iOS Simulator, `HMHomeManager`'s `homeManagerDidUpdateHomes` delegate callback never fires at all (no homes, and — unlike Contacts/Health — the permission ALERT DOES appear, but answering it doesn't unblock the callback either) — an unbounded wait would have hung the connect flow forever, which the app's own "no dead controls" rule doesn't allow. `HomeManagerBridge.waitForHomes` therefore races a 20s timeout against the callback (generous for a human answering the real alert, bounded against a broken/absent one), confirmed via `-homeKitProbe YES` resolving to an honest `FAILED (denied)` within the window rather than hanging. Live accessory data itself needs a real device or the HomeKit Accessory Simulator to verify — Simulator has none.
 
-## 110. SpeechAnalyzer — the iOS 26 voice-transcription path, alongside SFSpeechRecognizer (2026-07-17) — BUILT
+## §110 — SpeechAnalyzer — the iOS 26 voice-transcription path, alongside SFSpeechRecognizer (2026-07-17) — BUILT
 
 `VoiceCapture.swift` gained a parallel `if #available(iOS 26.0, *)` path using the new `SpeechAnalyzer`/`SpeechTranscriber` API (async-stream-fed, faster and more accurate on-device transcription), with `SFSpeechRecognizer` kept as the fallback below it — the file's first version gate of any kind (previously unconditional). The modern path only engages when its on-device model is ALREADY installed (`AssetInventory.status(forModules:) == .installed`) — it never triggers a download mid-recording, so tapping the mic always starts instantly regardless of which engine answers. Any setup failure on the modern path falls straight through to the legacy one; the two never both run. `ModernSpeechSession` (the analyzer/transcriber pair, boxed as `Any?` on `VoiceCapture` since the class must still compile and run below iOS 26) is a new private type in the same file.
 
 Verified 2026-07-17 end-to-end via the real composer mic flow (not just a probe, given this file's documented threading fragility): on the iOS 26 Simulator, `AssetInventory.status` reports **`.unsupported`** (not merely "not installed") — Apple Intelligence-tier on-device model support isn't present in Simulator at all — so the app correctly falls back to `SFSpeechRecognizer` every time, logged honestly (`VoiceCapture: SpeechAnalyzer model not installed (status=unsupported)`), and the full record → stop → save flow still lands a "Voice note" thing with no regression. The modern path itself is therefore CODE-COMPLETE but UNVERIFIED live — it can only be exercised on real Apple Intelligence-capable hardware, not Simulator.
 
-## 111. 1Claw joins the catalog — the agents' vault, grants not secrets (2026-07-17) — BUILT, UNMEASURED
+## §111 — 1Claw joins the catalog — the agents' vault, grants not secrets (2026-07-17) — BUILT, UNMEASURED
 
 1Claw (1claw.xyz) is a secrets vault for AI agents: humans grant agents scoped, revocable access to secret paths via policies. Its catalog seat answers exactly one question — **"what can this key actually reach?"** — with the vault's own records, and nothing else. A paste-a-token bridge (`TokenBridge.oneclaw`, Agent group beside Venice/Bankr; fetch in `Model/OneClawBridge.swift`): the agent API key (`ocv_…`) exchanges for a short-lived JWT at the documented endpoint (`POST /v1/auth/agent-token`, body just `{api_key}`; a non-`ocv_` paste is treated as a human's user key and exchanged at `/v1/auth/api-key-token`), then vaults land from `GET /v1/vaults` and each vault's grant table from `GET /v1/vaults/{id}/policies` — one thing per policy (`sourceRef 1claw:policy:<id>`), titled off the record itself ("Prod · secrets/anthropic/* · read, rotate"), dated `created_at`, with `expires_at` stored in `dueAt`. The feed lede is the key's reach ("Access · N grants · M vaults" — vault count cached in `OneClawAccess`, grant count from the rows below so the two can't disagree; cleared on disconnect).
 
@@ -4625,7 +4625,7 @@ Rulings:
 
 **UNMEASURED (2026-07-17):** built against 1Claw's published OpenAPI spec 2.27.0, not the live API — no dev key existed in the session. Before calling this done: store a real key (`scripts/dev-keys.sh set 1claw`), run `-tokenBridge "1Claw:$(scripts/dev-keys.sh get 1claw)"` then `-oneclawProbe YES`, and re-measure (a) the exchange endpoints' envelopes, (b) whether a default agent key carries `policies:read`, (c) whether grant rows should open somewhere better than the dashboard root (the API documents no per-vault web permalink).
 
-## 112. Smart accounts without the finance-app tripwire — the preparing surface (2026-07-17) — BUILT (v1: approvals), UNVERIFIED
+## §112 — Smart accounts without the finance-app tripwire — the preparing surface (2026-07-17) — BUILT (v1: approvals), UNVERIFIED
 
 **Ruling (user, 2026-07-17), the Apple line stated once:** App Review Guideline 3.1.5(b) judges the in-app experience, not the key architecture — an app whose buttons can move money is a wallet/exchange to a reviewer regardless of where keys or funds technically live, and wallets require organization enrollment (Casberi is a solo individual account). So the wallet bridge's ceiling is the **preparing surface**: Casberi READS on-chain state and PREPARES transactions in-app; signatures and delegation grants always happen elsewhere (a wallet app, Revoke.cash, the web). Corollaries: (1) prepared intents stay BOUND to facts the corpus surfaced (this approval, this expiring session key) — never a freeform send screen, which reads as a wallet's home screen no matter how the signing works; (2) the app's own WalletConnect session stays `methods=0 events=0` — requesting `eth_sendTransaction` over it is the exact moment the line is crossed; (3) every door names its destination and carries the footer promise ("a transaction you sign there — never in Casberi"); (4) outcomes close by WATCHING, never callbacks — the executed action lands back as a feed thing / a flipped card because the chain says so.
 
@@ -4634,7 +4634,7 @@ Rulings:
 **UNVERIFIED, stated honestly:** authored off-Mac (no build run). Before relying: build, then `-approvalProbe <n>` + `-prepareProbe YES`, and specifically re-measure whether the §84 public hosts serve `eth_estimateGas`/`eth_gasPrice`/`eth_getTransactionReceipt` (only `eth_getLogs`/`eth_call`-class reads were measured there; the fee line is designed to drop honestly if not, but the receipt read is load-bearing for the whole card).
 
 **Held, deliberately:** session-key/module reads (richer smart-account watching), preparing the delegation grant itself ("grant the agent a $50/week allowance" as calldata), EIP-681 deep links into wallet apps, and stamping the token contract + forAll flag onto the approval thing at ingest (purely additive `Thing` fields — they'd drop the receipt refetch for things landed from then on; the refetch stays regardless, for the corpus already landed) — each rides the same ruling when it comes; none is blocked by it. If execution ever becomes the product, the paths are an LLC re-enrolled as an organization, or execution surfaces on casberi.app (outside App Review) — not architectural cleverness inside the app.
-## 113. Peer joins the catalog — fills as they settle, riding the Wallet bridge (2026-07-17) — BUILT
+## §113 — Peer joins the catalog — fills as they settle, riding the Wallet bridge (2026-07-17) — BUILT
 
 Peer (peer.xyz, the protocol formerly ZKP2P) is non-custodial P2P fiat↔crypto: pay with Venmo/PayPal/Revolut/Cash App, a zero-knowledge proof verifies the payment, and the crypto settles onchain into the buyer's OWN wallet through Peer's escrow contracts on Base. That shape decided everything:
 
@@ -4644,7 +4644,7 @@ Peer (peer.xyz, the protocol formerly ZKP2P) is non-custodial P2P fiat↔crypto:
 - **Catalog category: Markets, by ruling (user, 2026-07-17; corrected same day from Onchain)** — Peer browses beside Kalshi and Stocktwits in the app (offer group `"Markets"`) and leads the website's Markets shelf.
 - **Trailing slot** = which watched wallet (the Wallet rows' rule) — the platform already leads in the title.
 - **UNVERIFIED live (stated honestly):** this session ran in a sandbox whose network policy blocks public RPC hosts, so the sweep compiles against measured constants but hasn't landed a real fill yet. First Mac-side run: `xcrun simctl launch booted com.casberi.app -walletAddress <a wallet that used Peer> -peerProbe 50000` — the probe rewinds the cursors and NSLogs the landed count; Peer does real volume on Base, so a recent buyer's wallet should land its fills. Re-measure before trusting: the 9k-block Base getLogs cap is inherited from WalletApprovals' measurement, and the IntentSignaled join looks back 12k blocks (Peer's own 6h intent expiry, with margin).
-## 114. Catalog re-shelving: Markets leads, Onchain dissolved, Wallet its own, Farcaster social (user, 2026-07-17)
+## §114 — Catalog re-shelving: Markets leads, Onchain dissolved, Wallet its own, Farcaster social (user, 2026-07-17)
 
 The catalog's category spine is re-cut (`AppsScreen.categories`, mirrored by the website `#catalog` shelves and every offer's `group` in `BridgeCatalog`):
 
@@ -4653,7 +4653,7 @@ The catalog's category spine is re-cut (`AppsScreen.categories`, mirrored by the
 - **Reverses two prior rulings:** §78 (GeckoTerminal → Onchain) and the 2026-07-14 "Farcaster is the onchain network, not Social" shelving. Group strings: Tokens/GeckoTerminal → `"Markets"`, Farcaster → `"Network"`, OpenSea keeps `"NFTs"` (maps to Markets), Wallet keeps `"Wallet"` (its own category). No offer carries `"Onchain"` anymore.
 - **Peer** (§113) was already in Markets; it stays, now beside the newcomers. catalog-sync stays green (shelf ↔ connectable set is unchanged — only the grouping and order moved).
 
-## 115. DeFiLlama price backstop — holdings stop vanishing, no new UI (2026-07-17) — BUILT
+## §115 — DeFiLlama price backstop — holdings stop vanishing, no new UI (2026-07-17) — BUILT
 
 A keyless price backstop over DeFiLlama's coins API (`coins.llama.fi`), filling the one gap Alchemy pricing leaves in the wallet's holdings read. **Not a catalog app** — the user never connects or sees it; it's infrastructure, so no Apps/website/onboarding sync applies and no new screen, tile, control, or copy is added.
 
@@ -4663,7 +4663,7 @@ A keyless price backstop over DeFiLlama's coins API (`coins.llama.fi`), filling 
 - **Visible effect, no new chrome:** the treemap fills in (tokens that used to vanish now appear) and the holdings card is less likely to go empty. No price-source badge or confidence marker — mixing sources invisibly is already how `TokenChart`'s cascade works.
 - **Verify:** `-defillamaProbe <address>` (pair with `-walletAddress`) reports unpriced-after-Alchemy count and the backstop's per-mint verdict (rescued / below-floor / no-price) — the rescue is the feature, and a count alone can't show it. `-holdingsProbe` exercises the same path end-to-end. `Model/DefiLlamaPrices.swift`; wired at `WalletIngest.backstopPrices`.
 
-## 116. Home: quiet the bento's chrome, restore one synthesized line (2026-07-18) — DEVICE-VERIFIED 2026-07-17
+## §116 — Home: quiet the bento's chrome, restore one synthesized line (2026-07-18) — DEVICE-VERIFIED 2026-07-17
 
 Three changes from the "is the bento too cute?" review. The three-span board (§58i) is kept — each size is a different information DOSE, not decoration — but its always-on machinery was doing the cutefying, and the composition-per-moment promise had thinned to a single header (after §36c removed Insight and §36k removed Threads, Home became "what you pinned + the map", static day to day).
 
@@ -4677,7 +4677,7 @@ DEVICE-VERIFIED 2026-07-17 (iPhone 17 Pro sim, iOS 26, FoundationModels availabl
 - **Prompt sharpened**: ban single-item restatement, trivial same-kind/same-app groupings, third-person narration of people, and emitting app names / kind labels / timestamps; keep the NONE escape.
 Post-tuning over the demo corpus (~8 samples): mostly a genuine grounded thread or an honest NONE; the residual weak case is an occasional third-person line ("Sam attended…"), prompt-only and left for a real-corpus pass. The pin's hold-to-reveal feel still wants a device (sim can't long-press-lift headlessly). `Model/HomeInsightStore.swift`, `Model/OnDeviceModel.swift` (homeInsight + `HomeNoticeLayout` + echo guard), `GenUI/HomeComposition.swift`, `Screens/HomeScreen.swift`.
 
-## 117. Home is a tool, not a pinboard — auto-pin + invert the hierarchy (user, 2026-07-18) — DEVICE-VERIFIED 2026-07-17
+## §117 — Home is a tool, not a pinboard — auto-pin + invert the hierarchy (user, 2026-07-18) — DEVICE-VERIFIED 2026-07-17
 
 The tension the user named: the app promises to help you stay on top of things, but a bento you arrange feels like a pinboard — good-looking, not powerful. A pinboard makes the PERSON do the triage (pin this, size that); a powerful tool does it for them, which is exactly what this app's ingest + on-device model can do. Two moves, ruled together (one makes the other work):
 
@@ -4689,7 +4689,7 @@ FOLLOW-UPS (deliberately not done blind): (1) tiles-as-signals is only "N new" +
 
 DEVICE-VERIFIED 2026-07-17 (iPhone 17 Pro sim, `-awayGap`): the 10× cold-launch survival loop passed with the deeper auto-pinned tree (no first-frame stack regression); the away card, the "N new" tile subtitles ("On your calendar · 3 new", "In your inbox · 2 new"), the "Keeping an eye on" demotion, and the "In your inbox" voice fix all render. One signal-vs-noise fix the corpus exposed: with the raw away count, `-awayGap 24` read **"29 new — mostly from Wallet"** — the 134-transaction firehose the board deliberately subtracts, i.e. exactly the daily-count noise this card exists to avoid. `appendAway` now excludes the Wallet/Tokens firehose (`HomeComposition.firehoseSources`), so it reads **"12 new — mostly from Calendar and OpenClaw"** — the meaningful arrivals, consistent with the board's own exclusion and the §116 candidate window. The per-tile "N new" is unaffected (a source's own tile still counts its own arrivals). `GenUI/HomeComposition.swift`, `Screens/HomeScreen.swift`, `Model/HomePinnedSources.swift`, `Screens/PinToHomeButton.swift`, `GenUI/GenRenderer.swift` (Insight eyebrow).
 
-## 118. Home: the intelligence is ONE card, pins above the fold (user, 2026-07-18)
+## §118 — Home: the intelligence is ONE card, pins above the fold (user, 2026-07-18)
 
 Seeing §116/§117 on-device, the user's ruling: "coming up, noticed, keeping an eye on — all of this is very similar, we can't repeat things, and the stuff a user pinned is below the fold. Keep the intelligence to one card." §117 had stacked four look-alike synthesis cards (cover → While you were away → Noticed → Coming up → then the board), which both repeated content (Coming up ≈ the "On your calendar" tile; the away line named the same Calendar the tile shows) and pushed the person's own pinned board off the first screen — the opposite of §117's "pins shouldn't cost a scroll" intent.
 
@@ -4703,7 +4703,7 @@ CRASH FIXED (2026-07-17, same session): heavy board scrolling intermittently hit
 
 `GenUI/HomeComposition.swift` (`awayLine`, combined `Insight`, `tileSignal`, appendAway/appendComingUp removed), `GenUI/GenRenderer.swift` (`GenInsight` three sections, `GenWidget.rowContent`), `Screens/{Deals,Shopify,HandleSetup}Screen.swift` (pin controls → shared `PinToHomeButton`).
 
-## 119. Home: the tool does the triage — signal order, doors, bounded board (2026-07-17)
+## §119 — Home: the tool does the triage — signal order, doors, bounded board (2026-07-17)
 
 Six moves in one pass, all DEVICE-VERIFIED same day (build + 10× cold-launch + probes + screenshots):
 
@@ -4718,7 +4718,7 @@ Six moves in one pass, all DEVICE-VERIFIED same day (build + 10× cold-launch + 
 
 Amended same day (user, two de-cute rulings): (1) **tile headers are the app's own name** — "'On your list' — shouldn't it just be called what it is, 'Reminders'?" The whole bespoke-phrase map died with it ("In your inbox" → Gmail, "On your calendar" → Calendar, "Watchlist" → Tokens, "Recent chats" → ChatGPT, …): a tile announces WHICH APP it is and the signal subtitle beside it carries the state; the phrases carried neither. (2) **the "Keeping an eye on" board header is gone** — "it just sounds trite; pinned to Home IS the point of the page." The board follows the one paragraph card directly. Both device-verified ("Reminders · 1 overdue", "Calendar · 2 upcoming", headerless board).
 
-## 120. Home: one row per app (user, 2026-07-17)
+## §120 — Home: one row per app (user, 2026-07-17)
 
 The board's last bento residue named and killed. The user, looking at Reminders wearing three different costumes (a 1×1 solo tile showing one item full-size, a wide card of header + one row, a big card of three rows): "why is email a tile but reminders and calendar aren't… it doesn't make sense and still feels too cute." Ruled (picked over row-plus-signal-card and one-size-cards): **every app gets exactly ONE ROW** — icon · the app's name · its live signal · the thing the signal points at (the most-overdue reminder, the next event, the latest mention — `tileSignal` now returns the exemplar, not just the count) · its time. Tap opens that app's feed (`casberi://feed/source/…`, a route that already existed); long-press offers Open (the item) and Remove from Home. Rows are fixed furniture in signal order — not draggable, not resizable, not capped (a row costs one line, so §119's "Show N more" expander died the same day it shipped, along with the app-tile span logic, the solo-tile dispatch for apps, and `appChild`'s per-kind row forms — an app's richness lives in its feed). **Cards now exist ONLY for true visualizations**: the wallet treemap, the GitHub graph, the media strips — things a row genuinely can't carry. Also: the paragraph card's "Just landed" pick is firehose-excluded like every other aggregate read (it had led with "dogwifhat · $WIF" off a token-watch refresh). DEVICE-VERIFIED: six apps above the fold in signal order, Reminders · 1 overdue · Book dentist leading. `GenUI/HomeComposition.swift` (AppRow emit, tileSignal exemplar), `GenUI/GenRenderer.swift` (`GenAppRow`), `Screens/HomeScreen.swift`.
 
@@ -4726,7 +4726,7 @@ Amended same day (user: "WE NEED THE SPARKLINE"): the Tokens row keeps the one v
 
 Second amendment (user: the 52pt inline plot "doesn't even fill the card"): the Tokens row is a proper watchlist row now — line 1 trailing is ticker · price · 1D delta, and the sparkline is a FULL-WIDTH strip (height 32) spanning the card's inner width beneath it, the same edge-to-edge plot the solo token tile drew, left-to-right reveal on data. The fetch lives on `GenAppRow` itself (keyed like GenTokenChip's; no-op for non-token rows).
 
-## 121. Home: rows drag, visuals earn their space, doors sharpen (2026-07-17)
+## §121 — Home: rows drag, visuals earn their space, doors sharpen (2026-07-17)
 
 Follow-ups the row system exposed, all device-verified:
 - **Rows are draggable again** (user: "what if someone wants to change their order?"). Signal order is only the default; a long-press lift reorders and persists via HomeBoardOrder, exactly as tiles did — app rows are board modules now (boardRefs + `app:<source>` keys). One size still: `allowedSpans(appRow) == [.wide]` — draggable for order, never resizable, never paired. The coach reworded to "Touch and hold to rearrange" (rows don't resize). Verified: Gmail dragged below Voice, order held.
@@ -4738,7 +4738,7 @@ Follow-ups the row system exposed, all device-verified:
 
 `GenUI/GenRenderer.swift` (GenAppRow drag/door, GenGithubGraph strip+gate), `GenUI/HomeComposition.swift` (row boardRefs, media `imaged` gate, github data gate, landed excludes events), `Screens/HomeScreen.swift` (appRow spans, removal, coach).
 
-## 122. Home: cut the last decoration, let urgency show, name the themes (2026-07-17)
+## §122 — Home: cut the last decoration, let urgency show, name the themes (2026-07-17)
 
 A design pass over what remained. All device-verified.
 - **Kind-count chips retired from the cover.** "6 events · 4 links · 4 reminders…" was a whole-corpus LIFETIME tally that only looked like signal — it never changed meaningfully, the feed filters by kind natively, and the board's rows carry the live signal now. Gone: the date is a clean single-line header straight into the intelligence card, and a row more fits above the fold. `coverChips` deleted; `GenCover.textBlock` draws only the quiet/empty message (else nothing).
@@ -4751,7 +4751,7 @@ A design pass over what remained. All device-verified.
 
 Bug fixed same day (user: "Farcaster and Bluesky are rendering like tiles not rows"): `HomeScreen.spanOf` returned the person's STORED size without clamping it to the module's currently-allowed spans — so a Bluesky/Farcaster row still carrying a `.small` from its resizable-tile era paired 2-up at half width (the wrapped "Farcaster"). It now ignores an out-of-range stored size and falls back to the default, so any module whose allowed spans shrank under it (app rows → wide-only, the GitHub graph → one width) renders correctly. Verified by injecting stale `.small` sizes for two demo rows — both still render full-width.
 
-## 123. The app catalogue joins the source strip (user, 2026-07-17)
+## §123 — The app catalogue joins the source strip (user, 2026-07-17)
 
 The catalogue door moved OUT of the top-right cluster and INTO the head of the source chip strip (`SourceChips`) — its own `AppsDoor` grid glyph (attention state and store-zoom intact), as the FIXED first chip, ahead of Pinned/All and the source circles. Reasoning (user's): "add a source" belongs WITH your sources, not stranded next to the avatar; the strip already IS "your sources," so the catalogue is its natural head. Fixed outside the scroll so it stays in reach as the active chip re-centers (an action among filters, distinct as the tinted grid vs neutral source circles). The **avatar stays top-right, alone** — the two doors were on different axes (catalogue = grow my sources; avatar = me/settings), and splitting them lets the avatar be the sole, conventional "me" corner. `TopDoors` is the avatar only now. `Shell/SourceChips.swift`, `Shell/TopDoors.swift`, `Shell/MainSurface.swift`.
 
@@ -4760,17 +4760,17 @@ The catalogue door moved OUT of the top-right cluster and INTO the head of the s
 
 Amends §72's Home-only placement for the NFT strip. The Wallet chip's own feed now leads with the holdings treemap (already true) followed by the NFT strip, then the chronological transaction rows. Reasoning (user's): the wallet source's synthesis — what you hold, both fungible and NFT — belongs at the head of the wallet's own feed, not only on a pinned Home card. Scope is the **Wallet source feed only** (`shape == .wallet`), NOT the mixed "All" feed — the treemap/NFTs stay out of All (they aren't `Thing`s; §72's "a treemap cell / NFT strip is a door, not a thing" still holds — nothing lands in the corpus). Both render as gen-UI blocks (`WalletIngest.holdingsChart()` / `nftShelfDocument()` → `Stack` of `TagMap` / `MediaShelf`), painted into two independent `GenStream`s so a slow NFT read never delays the treemap. The feed shows EVERY watched wallet (not pinned-only, matching the treemap here); Home stays pinned-only via `pinnedNFTGroups`. Feed shelves carry no size pin / "Remove from Home" (arg 4 empty) — they're the source's art, not board modules. `Screens/FeedScreen.swift` (`nftBlockSection`, `streamBlock`), `Model/WalletIngest.swift` (`nftShelfDocument`).
 
-## 124. Media sources become rows with a thumbnail filmstrip (user, 2026-07-18)
+## §124 — Media sources become rows with a thumbnail filmstrip (user, 2026-07-18)
 
 Debated and settled: a text row is a lossy translation of an image source, so Photos/Pinterest/Apple Music/RSS don't collapse to a text line — but they DON'T stay shelf-cards either (that broke Home's one-row rule and duplicated the source feed's grid). The synthesis, generalizing the Tokens-sparkline precedent into a PRINCIPLE: **every app is one row; its content PEEK renders in the source's native medium** — a text line for text sources, the sparkline for Tokens, a **thumbnail filmstrip (up to 4 recent, filling the row width)** for image sources. One uniform row anatomy, medium-native content; a card is never needed for an app.
 
 Image sources now flow through `appendPinnedApps` like every other source (the `mediaSources` subtraction is gone); an image source's `RowSeed` carries up to 4 imaged things (`hasImage`: a remote preview URL or local thumbnail bytes), emitted as `MediaItem` children and referenced by `AppRow` arg 9. `GenAppRow` renders those as `GenMediaTile` thumbnails (the same component the NFT strip uses) when present, else the text peek — so a source with no real imagery (the demo's byteless screenshots) honestly falls back to text. `appendMediaModules`/`appendMediaShelf` and the media entries in `HomePinnedSources.moduleRef` are deleted (media keys `app:<source>` now, so removal clears the right saved state). DEVICE-VERIFIED with a live RSS feed: the RSS row shows real article hero images as a filmstrip; Photos falls back to text (no demo image bytes). `GenUI/HomeComposition.swift`, `GenUI/GenRenderer.swift` (`GenAppRow` filmstrip), `Model/HomePinnedSources.swift`.
 
-## 125. Wallet becomes a Home row; treemap lives only on the wallet feed (user, 2026-07-18)
+## §125 — Wallet becomes a Home row; treemap lives only on the wallet feed (user, 2026-07-18)
 
 The last Home-side duplication closed. The wallet's holdings treemap composed on BOTH Home and the Wallet feed — and it was the final visualization breaking Home's one-row-per-app rule. Now Home carries a single **Wallet row**: the total value (`"$19,204"`, whole dollars — cents are feed precision) and the top holdings (`"ETH · AWETH · MATIC"`, parsed from the value-ordered treemap cells), tapping to `casberi://feed/source/Wallet` where the treemap, NFT strip, and transactions live. Loading/unreachable read as the row's own signal ("Loading…" / "Couldn't reach"), never a vanished slot. `appendWalletHoldings` emits the row (keyed `app:Wallet`, rank 0 — a balance is ambient, not needs-you); the per-wallet/combined `TagMap`s and the loading/error preview cards are gone from Home. `appendWalletNFTs` deleted (the NFT block already composes on the Wallet feed). DEVICE-VERIFIED (vitalik.eth): Home shows "Wallet · $19,204 · ETH · AWETH · MATIC"; the Wallet feed shows the treemap + NFTs + txns. Home is now UNIFORMLY rows (text / sparkline / filmstrip / wallet-total) + the Themes map — every source-level visualization lives in its feed. FOLLOW-UP (minor): HomeScreen still fetches `walletNFTs` for a Home block that no longer exists — a wasted call to drop. `GenUI/HomeComposition.swift`.
 
-## 126. The wallet's own balance line — Home row AND Wallet feed (user, 2026-07-18)
+## §126 — The wallet's own balance line — Home row AND Wallet feed (user, 2026-07-18)
 
 Answers "should the wallet source feed show sparkline / balance line? do we have that data?" — yes: `WalletStore.ValueSample` already samples every real holdings fetch (`recordSample`, throttled to one per 4h), and `combinedValueSamples()` already merges every watched wallet into one honest net-worth line (forward-filled, starts only once every wallet has an aligned sample — no synthesizing). That data just had nowhere to draw until now. `TokenChart` gained `.from(closes:)` / `.from(samples:)` (`Model/TokenChart.swift`) to synthesize a chart from an already-sampled series — no fetch, reusing the exact `TokenChartPlot` renderer a token's sparkline draws.
 
@@ -4778,7 +4778,7 @@ Two draws off the one series: the **Home Wallet row** carries the balance histor
 
 Added `-seedWalletHistory "<usd,usd,…>"` (`Shell/ProbeHooks.swift`, declared after `-walletAddress` since hooks run in list-declaration order) — writes a synthetic `ValueSample` line spaced 4h+ apart so `recordSample`'s real throttle can't fold a headless test into one point; otherwise this class of feature only gains its second data point after 4 real hours of use. DEVICE-VERIFIED (`-walletAddress "vitalik.eth" -pinWallet YES -seedWalletHistory "17000,19260"`): the Home row draws a green upward line under "Wallet · $19,297"; the Wallet feed's Balance lede reads "$19296.65 · +13.5% · watched" with the same line at full width above the treemap.
 
-## 127. Themes moves off Home, onto the "All" feed (user, 2026-07-18)
+## §127 — Themes moves off Home, onto the "All" feed (user, 2026-07-18)
 
 Answers "the themes treemap, should it go on all? and also is it too large? or is it same size as the wallet one" — the same split that already sent the wallet treemap to the Wallet feed (§125): a **cross-source** overview belongs on the **cross-source feed**, not on Home, which is now uniformly per-app rows. "All" is where every source's things already mix, so a themes-of-everything treemap orients that room the way the day's rows orient Home. On sizing: it's the literal same `TagMap` component the wallet treemap draws (`HomeComposition.themesDocument`, mirroring `WalletIngest.holdingsChart`'s doc shape) — so "too large on Home" was really "the one card that never earned a place on a rows-only screen," and off the board it just takes the renderer's own unconstrained size, identical to the wallet treemap's.
 
@@ -4786,7 +4786,7 @@ Answers "the themes treemap, should it go on all? and also is it too large? or i
 
 Cleanup riding along: `HomeScreen.allowedSpans` dropped the dead `walletMap*`/`walletCombined`/`map` branch (those refs haven't existed since §125/this section) and now locks the Wallet row to `.wide` like every app row (`ref == "walletRow"` — it was falling through to the resizable-tile default, the same stale-span bug class §119 fixed for Bluesky/Farcaster). `HomeScreen.moduleRemoval`'s wobble-mode minus badge gained a dedicated `walletRow` case — it had NO working removal control after §125 (its old `walletMap*`/`nftShelf*` cases matched refs that no longer compose, and the generic `AppRow` fallback didn't recognize `walletRow`'s name), so tapping "Remove from Home" on the Wallet row silently did nothing; fixed in both the wobble badge (`moduleRemoval`) and the row's own context menu (`GenAppRow`, `GenUI/GenRenderer.swift`) to unpin every watched wallet. DEVICE-VERIFIED: wobble mode now shows a minus badge on the Wallet row; tapping it unpins the wallet and the row disappears on "Done". The dead per-wallet "Show on Home"/"On Home · remove" NFT-strip control on the Wallet screen (`nftHomeControl`, a casualty of the same rewrite — Home hasn't shown per-wallet NFT strips since §125) and its backing `WalletStore.nftStripHidden`/`setNFTStrip`/`WalletIngest.pinnedNFTGroups` are deleted; `walletNFTs` — the wasted Home fetch flagged as a follow-up in §125 — is dropped from `HomeScreen` and the `HomeComposition.compose`/`daily` signatures. `GenUI/HomeComposition.swift`, `Screens/HomeScreen.swift`, `Screens/FeedScreen.swift`, `Screens/WalletScreen.swift`, `Model/WalletStore.swift`, `Model/WalletIngest.swift`.
 
-## 128. The Wallet FEED scopes to one wallet — a switcher (user, 2026-07-18)
+## §128 — The Wallet FEED scopes to one wallet — a switcher (user, 2026-07-18)
 
 Answers "how does a wallet feed work with more than one wallet — separate or combined? have we thought about it?" The answer was already "combined stream, per-row wallet tags, plus a per-wallet + `All wallets` decomposition" (§72/§125/§126) — but there was no way to say "show me just this wallet." Ruling: a switcher scopes the WHOLE Wallet FEED (`casberi://feed/source/Wallet`, the surface the Home Wallet row opens, §125), not just the activity list — a rows-only filter is incoherent (the combined balance headline still reads across all wallets while the rows below show one), and tapping a wallet should mean "show me this wallet," full stop. Placement is the FEED specifically (user, correcting a first cut that landed it on the `WalletScreen` management screen — that switcher was reverted): the feed is the wallet's consumption surface; the management screen is for add/remove/pin.
 
@@ -4796,7 +4796,7 @@ Match logic: `Thing.walletAddress` equals the stored `WatchedAddress.address` by
 
 VERIFIED 2026-07-18 (iPhone 17 Pro sim, two hex wallets — vitalik `0xd8dA…6045` + Binance-14 `0x28C6…1d60`, framebuffer via `simctl io`): the Wallet feed renders the chip strip `All · 0xd8dA…6045 · 0x28C6…1d60` (resolved ENS avatars) below the source header, above the Balance lede ($405M combined) and the per-wallet treemaps. The scoped-after-tap state wasn't captured (the Mac locked mid-run); the tap→scope path mirrors the management-screen switcher that WAS device-verified end-to-end before the revert, and the build is green. `Screens/FeedScreen.swift` (`walletSwitcherSection`/`walletSwitcherChip`, `selectedWallet`, `walletScopeAllows`/`walletSameAddress`/`walletChipIsOn`, scoped `walletBalanceLedeSection`/`streamBlock`), `Model/WalletIngest.swift` (`holdingsChart(scopeTo:)`/`nftShelfDocument(scopeTo:)`/`scopeMatch`).
 
-## 129. Full ink — the source feeds and thing sheets drop the brand-hue wash (user, 2026-07-18) — VERIFIED
+## §129 — Full ink — the source feeds and thing sheets drop the brand-hue wash (user, 2026-07-18) — VERIFIED
 
 Answers "on the source feeds we have a bloom of color… the app would feel more utile if they were just ink." The per-source brand-hue wash — the bold field that flooded the top of every source feed (Calendar → red, §B "bold like Cash App", 2026-07-13) and poured down the crown of every thing sheet ("it's gorgeous", 2026-07-10) — is **retired for full ink.** The reasoning, weighed against keeping it: the hue is the SOURCE's brand color (`AppIconTile.washHue`), not Casberi's — so the app wore a different company's skin on every screen, **borrowed identity, not owned.** On a browsing surface that's decoration competing with the content stream (the chip already names the source), and hues like Calendar's red collide with the alert/loss meaning red carries elsewhere (the wallet). It was also the inverse of the Cash-App boldness it reasoned from — Cash App is bold in ONE color that's *theirs*, consistently; this was bold in a *borrowed* color per screen.
 
@@ -4804,7 +4804,7 @@ The thing sheet was a genuine judgment call (a deliberate, occasional focus view
 
 Identity now lives where it's information: the source glyph in the chip strip and the row, the tag's own stable hue, the content's own imagery (mosaics, treemaps). **Removed:** `MainSurface.shapeWash` (the feed's resting field) + `FeedScreen.switchFlood` (the on-switch sweep, and its dead `flood` state/animation) + `ThingSheetView`'s wash and "pour" open animation (and dead `washPoured`/`reduceMotion`). `SourceChips`' active ring is always tint now (it went white only to cut against the hue field). **Kept** (the "connect this app" surfaces, where a source IS the subject, not a browsing/detail view for the person's own things): the first-thing connect bloom (once ever per source, on first landing), the app-detail page, the bridge-setup header, the token quick sheet — all still read `washHue`. VERIFIED 2026-07-18 (iPhone 17 Pro sim, `simctl io`): Calendar feed (light + dark) and the Flight-to-Lisbon thing sheet render pure ink, the red surviving only in the Calendar glyph; both builds green. `Shell/MainSurface.swift`, `Screens/FeedScreen.swift`, `Shell/SourceChips.swift`, `Screens/ThingSheetView.swift`, `Design/AppIconTile.swift` (doc).
 
-## 130. Home rows: one image, inline sparklines — no full-width bands (user, 2026-07-18) — VERIFIED
+## §130 — Home rows: one image, inline sparklines — no full-width bands (user, 2026-07-18) — VERIFIED
 
 Answers "the media feeds… should only have one image per row" and "just one photo, one album." Every visual an app row carried had grown into a **full-width band stacked below its header** — the token/wallet sparkline (§121/§126, "the sparkline FILLS the card") and the media filmstrip (§124, up to four tiles at 76pt). A few connected sources turned Home into a column of billboards. This amends §121/§124/§126: a row's visual is a **small trailing DETAIL**, not a band, so every row holds one peek height and Home reads as a calm uniform stack.
 
@@ -4815,7 +4815,7 @@ VERIFIED 2026-07-18 (iPhone 17 Pro sim, `simctl io` + computer-use scroll): Phot
 
 RENAME NAMES THE TAG; "PROJECT" IS GONE (2026-07-19, user: "get rid of project user shouldn't see that word… shouldn't be able to rename a title"): tightening the tag vocabulary so one object (a tag) doesn't wear two confusing verbs. (1) "Rename" now always names its object at every ENTRY POINT — the thing-sheet chip menu reads "Rename tag everywhere…" (was "Rename everywhere…"), the tag-detail toolbar reads "Rename tag" (was a bare "Rename" leaning on a hidden a11y label, now dropped), and the composer proposal card reads "Rename tag X to Y — N things" (was "Rename X to Y…"). Bare "Rename" survives only as the CONFIRM button inside an alert whose title already quotes the tag ("Rename \"Trip\" everywhere"), so it's never ambiguous. (2) The person never sees the word "project" — it was already absent from visible copy (the 2026-07-07 leak fix), confirmed here; code identifiers (ProjectDetailScreen, projectTag, ProjectHue) stay invisible per the line-449 ruling. (3) A thing's TITLE is not user-renameable and stays that way — every Thing.title write is an ingest/system path (LinkTitle, RSS, Shopify, ScheduleIngest) or the wallet counterparty "Name this address" flow (untouched by ruling — "don't mess w wallets"); "Name" (titles, wallet-scoped) and "Rename tag" (tags) are two words for two objects, deliberately. Files: OrganizeCommand.swift, ProjectDetailScreen.swift, ThingSheetView.swift, Localizable.xcstrings. NOT sim-verified (edited in a Linux session with no Xcode) — string-only changes, no structural edits.
 
-## 131. The Pinned board is dismantled; the agent's kept asks are the only per-app glance surface (docs/agent-brief.md rulings 11–12, executed 2026-07-20) — VERIFIED
+## §131 — The Pinned board is dismantled; the agent's kept asks are the only per-app glance surface (docs/agent-brief.md rulings 11–12, executed 2026-07-20) — VERIFIED
 
 Executes the two rulings the agent-shell brief added on top of its main settlement: the board dies (§11) and "Pin to Home" retires as a concept everywhere, not just on Home (§12). The agent (kept-ask chips, rise/lower bar, the Stack) was built and verified end-to-end first, so the app was never left with neither surface — the board only came down once its replacement was live.
 
@@ -4831,7 +4831,7 @@ A fresh inventory at execution time found the brief's own checklist had drifted 
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim, `simctl io`): cold launch opens directly on the All feed (Themes card, "Yesterday"/"Today" rows, no Pinned chip); `casberi://home` lands on the same All feed; `-openComposer YES` still rises the full agent surface with kept-ask tiles ("Tag your 243 Wallet things", "How's my wallet?") — confirming the agent shell survived the landing-path rewrite untouched. Grep sweep for `HomePinnedSources`/`HomeBoardOrder`/`HomeModuleSize`/`PinToHomeButton`/`pinnedToHome`/`BoardDragDriver`/`ReorderableBoard`/`showingBoard`/`HomeBackgroundStore` across `Casberi/Casberi` and `Casberi/Shared` returns zero hits. Build green (`xcodebuild … build` succeeds with zero errors). Files: see agent-brief.md rulings 11–12 for the full call-site inventory; this entry is the "as executed" record.
 
-## 132. Kept-ask decay-dim finished; wallet/watchlist answers gain their real visualization (docs/agent-brief.md rulings 5/13, 2026-07-20) — VERIFIED
+## §132 — Kept-ask decay-dim finished; wallet/watchlist answers gain their real visualization (docs/agent-brief.md rulings 5/13, 2026-07-20) — VERIFIED
 
 Two gaps found once the board's dismantling settled and the agent became the app's only per-app glance surface: ruling 5's "ignored asks decay dim (AskMemory's counters)" had shipped only its first half (the changed-dot), and the "wallet"/"watchlist" kept-ask composers answered in text only, even though both already have a real GenUI visualization elsewhere in the app (the Wallet feed's holdings treemap, the free-text watchlist answer's `TokenChip` rows) that the kept-ask path simply wasn't reusing.
 
@@ -4845,7 +4845,7 @@ Scope held deliberately narrow: no new GenUI component was added (no per-token s
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim, `simctl io` + `-uiAnswerProbe`/`-keepAskProbe`/`-askStats` hooks): "How's my wallet?" through the real UI answer path rendered "$20K across your wallets, +1.5% since Jul 19." followed by the live per-wallet treemap (`0xd8dA…6045 · $20K across 11 tokens`, cells ETH/AWETH/MATIC/RUSSEL/WBTC) — confirming both the summary and the treemap resolve end-to-end. Decay-dim confirmed with a deterministic kind (`overdue`, digest "0", immune to the wallet path's live-price nondeterminism): seeding `AskMemory` to the neglect threshold and marking the ask's digest already-seen rendered the pill visibly faded (no dot, muted text) against the same pill's bright/bold rendering beforehand. Build green throughout. Files: `Model/KeptAskComposers.swift` (`walletDoc`/`watchlistDoc`), `Shell/RootShell.swift` (wallet/watchlist free-text branches), `Shell/Composer.swift` (`keptAskPills`, the `.task(id: isOpen)` `AskMemory.shown` call).
 
-## 133. The chip vocabulary widens — parameterized kinds, kept searches, proactive minting (docs/agent-brief.md ruling 14, 2026-07-20) — VERIFIED
+## §133 — The chip vocabulary widens — parameterized kinds, kept searches, proactive minting (docs/agent-brief.md ruling 14, 2026-07-20) — VERIFIED
 
 Answers "more chips, not just the preset ones" — the kept-ask system (rulings 1/4/5) shipped with only four keepable shapes (`wallet`, `watchlist`, `away`, `showtag:<top tag>`) and a hardcoded ~7-kind suggestion menu, both narrower than ruling 1's promise that "chips are kept asks... a saved question plus a deterministic composer." Two composers already written (`overdue`, `noticed`) were never offered or keepable at all. Three widening mechanisms, all still inside the no-model-in-the-kept-path guarantee:
 
@@ -4861,11 +4861,11 @@ Answers "more chips, not just the preset ones" — the kept-ask system (rulings 
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim): `-keepAskProbe "context:Calendar:What's new in Calendar?"` kept and re-ran the pill reading "What's new in Calendar? · 6"; typing "What's new in Calendar?" through the real UI answer path showed a Keep pill (a nonexistent source, "GitHub", correctly showed none — the recognizer only fires for a source the corpus actually has). Typing "design links" retrieved a real hit ("Design review", a Calendar event) and offered Keep; kept and reopened, the pill read "design links · 1" with no model activity in the device log during the re-run (only a routine OS-level `SensitiveContentAnalysisML` init, unrelated) and near-instant resolution (vs. the multi-second waits every model-backed answer in this session took). Proactive minting: seeding `-asksMade "wallet:3"` then asking "How's my wallet?" upgraded the pill to "✦ You ask this a lot — keep it?", alongside the still-working wallet treemap from §132. Build green throughout every step. Files: `Model/Retriever.swift` (new), `Model/KeptAskComposers.swift` (`contextRecap`, `search`), `Model/AskMemory.swift` (`asked`/`askedOften`/`seedMadeFromLaunchArgs`), `Model/KeptAskStore.swift` (colon-split fix), `Shell/Composer.swift` (`recognizeKeptAskKind`, `computeSuggestions`, the Keep pill's upgrade), `Shell/RootShell.swift` (`retrieve` now forwards to `Retriever.rank`).
 
-## 134. Onboarding teaches three steps, not four (user, 2026-07-20)
+## §134 — Onboarding teaches three steps, not four (user, 2026-07-20)
 
 The "How it works" onboarding screen (`Screens/HowItWorksSheet.swift`) drops from four numbered steps to three, because the app changed under it (the §131 agent-shell redesign): **Connect your apps** (the old "Open the catalog" + "Connect things" folded into one — the catalog is WHERE you connect, not its own act; the step keeps the catalog's real grid glyph and the settled icon strip), **One feed, or one app** (the chip header), **Ask anything** (the agent's "Ask your things" bar, wearing sparkles). Rationale: a step count is a cost — four steps where the first two describe one motion (open the door, connect) taxed the reader for no extra understanding. Rain, entrance, CTA, and the `-howItWorksCTA` hook are unchanged; only the `points` array and its numerals moved.
 
-## 135. The Wallet split — manage is the connection, the feed is the wallet (user, 2026-07-20)
+## §135 — The Wallet split — manage is the connection, the feed is the wallet (user, 2026-07-20)
 
 Answers "there are so many wallet features in the wallet management screen but isn't that supposed to be for just the app connection? it's really confusing what is supposed to be where." It was: `WalletScreen` carried warnings, the combined value bundle, the per-wallet rows AND a recent-transactions list, while per-wallet holdings/DeFi/safety lived in `WalletDetailScreen` and the Feed independently rendered the value chart and the same treemap — the same content in three places, with no rule saying which surface owned what. The rule now:
 
@@ -4883,7 +4883,7 @@ Answers "there are so many wallet features in the wallet management screen but i
 
 Implementation: `Model/WalletWarnings.swift` (new — the roll-up lifted out of the view, so any surface reads one list), `Screens/WalletFeedTiles.swift` (new — flat by the §gotchas eager-head law), `Screens/WalletHistoryScreen.swift` (new), plus edits to `FeedScreen`, `WalletScreen`, `SourceChips`, `BridgeRouting` (`.walletHistory(scope:)`). VERIFIED 2026-07-20 (iPhone 17 Pro sim): tiles/treemap/preview/See-all all render, the door opens the day-grouped history, manage is one screen, `verify.sh` green with 10/10 cold-launch survival (the eager-head risk this change ran straight at), perf flat at 455ms launch / 328MB. The DeFi tile's render path is the one piece unexercised on-device — the demo wallets return "no Aave positions found", which is the tile's own honest-absence case.
 
-## 136. Glass needs something to refract (2026-07-20)
+## §136 — Glass needs something to refract (2026-07-20)
 
 A correction to §135's own glass pass, found by asking where else Liquid Glass belonged and discovering the answer was "nowhere new — fix what's there." The shell was a `VStack` (chip strip above, feed pager below), so nothing ever passed *behind* the chips; what sat behind them was `DS.themedPage`, a flat color. Glass blurring a flat color is a slightly tinted solid — visually indistinguishable from the `DS.gray100` fill it replaced, while paying a backdrop blur per chip. The wallet switcher had the same defect for a different reason: built as a List section, it scrolled *with* content rather than over it.
 
@@ -4897,7 +4897,7 @@ A correction to §135's own glass pass, found by asking where else Liquid Glass 
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim): verify.sh green with 10/10 cold-launch survival (a shell layout change earns that loop), perf flat at 460ms launch / 330MB — the added blur costs nothing measurable. Files: `Shell/MainSurface.swift` (the inset), plus `.dsSoftTopEdge()` across 32 screens.
 
-## 137. The wallet doors keep their promises; manage loses its last reads (user, 2026-07-20)
+## §137 — The wallet doors keep their promises; manage loses its last reads (user, 2026-07-20)
 
 The §135 split shipped with three debts, all found by walking their taps: every feed tile's door pushed the MANAGE screen (which no longer shows warnings — a door to the wrong room); the wallet switcher scrolled away with the very stream it scopes; and manage still leaked reads — the Watching rows wore value sublines and sparklines, and the per-wallet page opened with a holdings treemap (user: "I can see vitalik's holdings — that is so confusing; the manage screen should only be about connecting wallets and disconnecting them").
 
@@ -4911,7 +4911,7 @@ The §135 split shipped with three debts, all found by walking their taps: every
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim, end to end): tile → tray (three delegation rows) → door → vitalik.eth's slimmed page (identity + Safety + remove, nothing else); switcher stays pinned with the treemap dissolving under it; manage shows identity rows and the restored sync's "Connected — watching for activity" line. verify.sh green (cold-launch survival gated), perf flat at 459ms / 329MB.
 
-## 138. Worth-a-look rows are terminal; the see-all door is one phrase (user, 2026-07-20)
+## §138 — Worth-a-look rows are terminal; the see-all door is one phrase (user, 2026-07-20)
 
 Same-day correction to §137, from two screenshots: the see-all row scattered blue text, a gray count, and a chevron across the full row width over a visible List separator ("this looks like crap"), and the Worth-a-look tray's rows deferred to the wallet screen, whose only added value was a Revoke.cash button ("you can't have worth a look pull up a sheet that then says to go look somewhere else").
 
@@ -4923,7 +4923,7 @@ The principle §137 half-stated, now in full: **a door must open onto the thing 
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim): tray shows three delegation rows each with inline Revoke.cash ↗; see-all renders as one centered phrase, no line. verify.sh green (10/10 survival), perf flat 457ms / 329MB.
 
-## 139. Manage is one page, no doors — the per-wallet screen is deleted (user, 2026-07-20)
+## §139 — Manage is one page, no doors — the per-wallet screen is deleted (user, 2026-07-20)
 
 The last cut of the day's wallet arc (user: "the manage screen should really be one page with no doors"). `WalletDetailScreen` — already slimmed to rename + Safety + remove by §137, already half-orphaned when §138 made the tray terminal — is deleted outright, because each of its jobs had a better home that isn't a page:
 
@@ -4935,7 +4935,7 @@ Manage is now literally one page: identity rows (tap renames, swipe removes), Co
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim): row tap opens the rename alert over the one page; chains still expands inline; verify.sh green (10/10 survival), perf flat 457ms / 329MB.
 
-## 140. Manage becomes three cards; the crown feature gets a name (user, 2026-07-20)
+## §140 — Manage becomes three cards; the crown feature gets a name (user, 2026-07-20)
 
 The manage screen, even after §139's door purge, still read as "a bunch of stuff mashed together" — seven vertical zones wearing four visual idioms at equal weight: a labeled card, loose footer prose, a full-width blue CTA slab, a field-in-a-card, another labeled card, a full-width green status card, a red row, more prose. Nothing outranked anything.
 
@@ -4953,7 +4953,7 @@ The manage screen, even after §139's door purge, still read as "a bunch of stuf
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim, post-reboot): manage renders as three cards with the whisper header; see-all renders as one inline door; the feed's Balance tile reads "Across your wallets" on the combined view. verify.sh green (10/10 survival); perf 437ms / 329MB, matching the pre-this-round baseline.
 
-## 141. The wallet feed streams in; it doesn't pop (user, 2026-07-20)
+## §141 — The wallet feed streams in; it doesn't pop (user, 2026-07-20)
 
 The Wallet feed's head is four reads on four different clocks: the Balance tile draws from already-recorded local samples (instant), while warnings, the holdings treemap, and DeFi wait on live chain reads that land seconds later. Unstyled, that truth rendered as a bug — "balance shows then the others pop in but looks unintentional." The reads' timing is honest and stays; what changed is that each arrival now LOOKS intended:
 
@@ -4964,7 +4964,7 @@ The division of labor matters and is the reusable lesson: **an entrance modifier
 
 Frame-verified 2026-07-20 (15fps extraction from a cold-launch recording straight into the Wallet feed): balance renders alone full-width; ~4.3s later a captured mid-tween frame shows it mid-shrink with the warnings tile semi-transparent and offset below its seat, settling side-by-side the next frame — the arrival is a motion, not a cut. DeFi's own entrance is unexercised on-device (demo wallets hold no Aave positions — its honest-absence case) but wears the identical modifier. verify.sh green (10/10 survival — this touched the eager feed head), perf flat 435ms / 328MB.
 
-## 142. Wallet polish round — and the bug the polish recording caught (user, 2026-07-20)
+## §142 — Wallet polish round — and the bug the polish recording caught (user, 2026-07-20)
 
 "Really polish what is already there — surprise and delight and elegance." Four moves, all motion and material, nothing structural, each in vocabulary the app already speaks:
 
@@ -4979,7 +4979,7 @@ Fix: `WalletStore` gains a persisted resolution cache (watched → resolved), fe
 
 verify.sh green (10/10 survival), perf flat 478ms / 329MB. The polish itself is frame-verified: a captured mid-flight frame shows the selection capsule between chips; the draw-on and roll ride standard system transitions.
 
-## 143. The app catalog surprise-&-delight pass (user: "how can we surprise and delight in the app catalog?" → "do it all", 2026-07-21)
+## §143 — The app catalog surprise-&-delight pass (user: "how can we surprise and delight in the app catalog?" → "do it all", 2026-07-21)
 
 A delight pass over the Apps catalog, sibling to §79's Wallet pass —
 everything honest (a moment only ever marks something real), deterministic,
@@ -5030,7 +5030,7 @@ Files: `Design/MicroMotion.swift` (tint on `LandFlash`, new `ConnectPromote`),
 verified on-sim — this session is the Linux web env with no xcodebuild; build +
 screen-sweep to run on the Mac before the checkpoint.
 
-## 144. Source chips learn the front; landing carries over (user: "how do we solve the problem? ... them wanting Wallet to be the default", 2026-07-21)
+## §144 — Source chips learn the front; landing carries over (user: "how do we solve the problem? ... them wanting Wallet to be the default", 2026-07-21)
 
 User's complaint: recency-only chip order means a source you actually live in
 still drifts back the moment anything else lands, and there was no way to make
@@ -5080,7 +5080,7 @@ this session is the Linux remote environment with no Xcode toolchain at all
 (no `xcodebuild`, no `xcrun`, no `swiftc`); build + `scripts/verify.sh` +
 the two probes above need to run on the Mac before this ships to TestFlight.
 
-## 145. The wallet answer shows what the wallets DID, not just what they hold (user, 2026-07-21)
+## §145 — The wallet answer shows what the wallets DID, not just what they hold (user, 2026-07-21)
 
 User, off a screenshot of the "How's my wallet?" answer: "it's all it says and
 it's really not that great. You would expect it to tell me about approvals or
@@ -5112,7 +5112,7 @@ verified on-sim — this session is the Linux web env with no xcodebuild;
 build + `-answerProbe "how's my wallet"` (with `-approvalProbe <blocksBack>`
 first to land an approval) to run on the Mac before the checkpoint.
 
-## 146. More generative UI in the composer answers — five chart types (user: "how can we add more generative UI to the composer? Charts and things like that", → "do all these", 2026-07-21)
+## §146 — More generative UI in the composer answers — five chart types (user: "how can we add more generative UI to the composer? Charts and things like that", → "do all these", 2026-07-21)
 
 The agent's answers spoke almost entirely in `Insight` + `Widget`/`Row`, with
 `TokenChip` and the holdings `TagMap` the only real visuals. This pass adds
@@ -5168,7 +5168,7 @@ Linux web env with no xcodebuild; build + `-answerProbe`/`-uiAnswerProbe` over
 "how's my wallet", "how's my watchlist", "what's new in <source>" and an
 overdue corpus to run on the Mac before the checkpoint.
 
-## 147. Day-cards: a day's rows share one card (user: "would look better if … items in a day are all on one card" → "do it all", 2026-07-21)
+## §147 — Day-cards: a day's rows share one card (user: "would look better if … items in a day are all on one card" → "do it all", 2026-07-21)
 
 The feed's rows each wore their own floating card (surfaceSheet fill + the
 ambient card shadow, s2 gaps), so a busy day read as a confetti of same-sized
@@ -5209,7 +5209,7 @@ xcodebuild; build + a screen sweep (All with bundles + a breaker, a social
 room, Reminders with stale todos, a day split by the new-since divider, light
 and dark) to run on the Mac before the checkpoint.
 
-## 148. Source feeds diverge by their source's nature — grain, "new", the pile, liveness (user: "what else would you do to improve source feeds? ... think how they differ" → "do all these", 2026-07-21)
+## §148 — Source feeds diverge by their source's nature — grain, "new", the pile, liveness (user: "what else would you do to improve source feeds? ... think how they differ" → "do all these", 2026-07-21)
 
 Day-cards (§147) quietly assumed every source shares one rhythm. They don't —
 a source feed should read the way that source actually behaves. Four axes,
@@ -5263,7 +5263,7 @@ reading lede + oldest line), a Wallet feed with a mixed in/out seam, a Twitch
 feed with a live stream leading, and a dense feed (unchanged day grain) — light
 and dark.
 
-## 149. One ask per subject — the signature chip takes the context slot (user: "redundancy in the composer, we can't have that", 2026-07-21)
+## §149 — One ask per subject — the signature chip takes the context slot (user: "redundancy in the composer, we can't have that", 2026-07-21)
 
 Standing on the Wallet feed, the composer offered "What's new in Wallet?"
 (the §context recap lead, 2026-07-12) AND "How's my wallet?" (the dedicated
@@ -5293,7 +5293,7 @@ logs `askTiles: hint:Wallet wallet,…` (no `context:Wallet`); `-landingChip
 Reminders` still logs `context:Reminders,category:Life,…` (recap + sibling
 intact for sources without a signature ask).
 
-## 150. The holdings treemap goes to 160 and wears the wash (user, 2026-07-21)
+## §150 — The holdings treemap goes to 160 and wears the wash (user, 2026-07-21)
 
 The user, on the Wallet feed's holdings map: "the tree map doesn't even have
 to be as large as it is … why does it need to be so large, or does it?" It
@@ -5345,7 +5345,7 @@ Files: `GenUI/GenRenderer.swift` (GenTagMap + KindCountRow.parse),
 an eyeball of the wash opacities on-device need to happen on the Mac before
 this ships.
 
-## 151. The balance takes the headline; Worth a look drops to a line (user, 2026-07-21)
+## §151 — The balance takes the headline; Worth a look drops to a line (user, 2026-07-21)
 
 Second pass on the Wallet feed, after the treemap settled (§145). From a
 three-way mockup (prototype/wallet-feed-directions-v3.html), the user: "i like
@@ -5389,7 +5389,7 @@ rewrite of the shared grouped-row renderer, and the full USD version needs a
 historical-price read we don't do. Parked for the user to weigh against that
 cost rather than shipped with a fabricated number.
 
-## 152. No notifications — ever, as a product identity (user, 2026-07-21)
+## §152 — No notifications — ever, as a product identity (user, 2026-07-21)
 
 **Ruling (user, verbatim rationale): "i dont' want to add notifications because
 then we become annoying and the apps we source are already notifying a user."**
@@ -5418,7 +5418,7 @@ Consequences:
   feed's attention glyphs — surfaces the user comes to, not ones that come to
   the user.
 
-## 153. Semantic Spotlight + Visual Intelligence — the corpus answers system search (2026-07-21)
+## §153 — Semantic Spotlight + Visual Intelligence — the corpus answers system search (2026-07-21)
 
 Two upgrades in one cut, both riding surfaces the user comes to (§152 — no
 notifications; these are pull, not push):
@@ -5464,7 +5464,7 @@ content matches for "machine"; the launch reconcile exercised the association
 path crash-free. The end-to-end VI surface itself needs a real device with
 Apple Intelligence — untested there; the probe covers the app's half.
 
-## 154. Handoff features don't make the cut (user, 2026-07-21)
+## §154 — Handoff features don't make the cut (user, 2026-07-21)
 
 A full survey of "transact through someone else's rails" extensions was
 considered and CUT wholesale — user: "none of these really move the needle
@@ -5492,7 +5492,7 @@ capture-only pattern (settled fills landing as things) also stands — capture
 is the app's job; initiating is not. If a future feature wants a handoff
 button, it argues against this ruling first.
 
-## 155. The combined portfolio, made whole (2026-07-21)
+## §155 — The combined portfolio, made whole (2026-07-21)
 
 User: "the wallet's best feature is being able to see a combined portfolio."
 Everything in this ruling follows from taking that literally — the combined
@@ -5562,7 +5562,7 @@ merged to one map with per-position holders (ETH attributed across both), the
 scoped shape still per-wallet, and the concentration line computed off the
 merged book.
 
-## 156. Accessibility as a feature, not a compliance checkbox (user: "lets do all of these", 2026-07-21)
+## §156 — Accessibility as a feature, not a compliance checkbox (user: "lets do all of these", 2026-07-21)
 
 Prompted by App Store Connect's **Accessibility Nutrition Labels**, which ask an
 app to declare, per feature, what it supports. The labels are metadata — they
@@ -5641,7 +5641,7 @@ circle. The neighbouring chips are app icons, which don't scale at all — that
 strip is fixed-geometry chrome by design, and the one word in it has to respect
 the geometry.
 
-## 157. Morpho rides the watched wallets — the Aave shape, per market (user: "can we still add morpho? if so lets do all", 2026-07-21)
+## §157 — Morpho rides the watched wallets — the Aave shape, per market (user: "can we still add morpho? if so lets do all", 2026-07-21)
 
 Morpho joins Aave as the second lending protocol the Wallet seat reads — no
 account, no key, no catalog offer of its own (the Strava-rides-Health shape,
@@ -5693,7 +5693,7 @@ yield-ranked vault discovery ("top APY vaults") — unlike GeckoTerminal
 trending, surfacing ranked yields drifts toward recommending financial
 products, which the honesty rule and the no-advice line both refuse.
 
-## 158. The wallet room stops being sterile (user: "how do we make it look cooler… i don't think 'ooooh this is lovely'", 2026-07-21)
+## §158 — The wallet room stops being sterile (user: "how do we make it look cooler… i don't think 'ooooh this is lovely'", 2026-07-21)
 
 Ruled from three on-page treatments (`design/wallet-look/wallet-look-mocks.html`,
 same components, different color temperature): **A (the pour) + the four shared
@@ -5750,7 +5750,7 @@ disabled") extended to ink: when there's no action, don't render a control.
 address poisoning but not symbol spoofing; same attack, different field. The
 money column raises the stakes by setting symbols large.
 
-## 159. The crown pour goes permanent, and up to the shell (user, 2026-07-21)
+## §159 — The crown pour goes permanent, and up to the shell (user, 2026-07-21)
 
 Same-day correction to §158's pour, from a screenshot: "is this how we want
 wallet to look w/ a hard black line and all that black over the source chips?
@@ -5783,7 +5783,7 @@ VERIFIED on a dedicated sim (a THIRD device — two Claude sessions were
 fighting over `booted`, per the CLAUDE.md gotcha): dark reads as one
 continuous field from status bar through chips into ink, light reads as sky,
 no seam in either.
-## 160. A fake symbol is address poisoning in the asset field (2026-07-21)
+## §160 — A fake symbol is address poisoning in the asset field (2026-07-21)
 
 Closes the item §158 filed while verifying. The finding was one spoofed symbol
 on poap.eth; the first probe run over the real corpus found **21**, in four
@@ -5936,7 +5936,7 @@ crown and between the parcels, cells keep their brand washes inside the
 holdings card, and the light page renders the two cards as white parcels on
 sky without a seam.
 
-## 161. Settings speaks the feed's row grammar (user: "lets go w/ rows the feed's own grammar", 2026-07-21)
+## §161 — Settings speaks the feed's row grammar (user: "lets go w/ rows the feed's own grammar", 2026-07-21)
 
 The Settings tile grid retires. The screen came up in a vibecoded-parts audit
 as the one surface that read generated rather than drawn: seven one-fact
@@ -5965,7 +5965,7 @@ A–Z single-field ordering and every action/badge/debug hook carry over
 unchanged; the tile's `seats` shelf machinery (dead since the Apps tile
 retired) is deleted with it.
 
-## 162. Privacy Pools rides the watched wallets — the alert IS the feature (user: "ok lets add that and make it a new bridge", 2026-07-21)
+## §162 — Privacy Pools rides the watched wallets — the alert IS the feature (user: "ok lets add that and make it a new bridge", 2026-07-21)
 
 0xBow's Privacy Pools is compliant onchain privacy: you deposit, an
 Association Set Provider (ASP) screens the deposit, and once cleared you can
@@ -6028,7 +6028,7 @@ Verified end to end on a real depositor wallet: two same-day deposits landed
 with real amounts, both their approvals landed as alerts, a re-run deduped to
 zero, and the corpus dupe probe stayed clean.
 
-## 163. Read-only exchange seats — the balance that isn't onchain (user: "i think it should merge and that doesn't change wallet room's can never trade", 2026-07-21)
+## §163 — Read-only exchange seats — the balance that isn't onchain (user: "i think it should merge and that doesn't change wallet room's can never trade", 2026-07-21)
 
 Most people's crypto is not all onchain. A portfolio built only from watched
 addresses is quietly wrong for anyone whose main holding sits on an exchange,
@@ -6117,7 +6117,7 @@ and the refusal path (a trade-capable key actually being turned away) are both
 unexercised. Store a read-only Kraken key via `scripts/dev-keys.sh` and run the
 connect flow before this ships to anyone.
 
-## 164. The feed-head doctrine — one boxed aggregate; rows own recency (user: "how should we think about these visualizations", 2026-07-21)
+## §164 — The feed-head doctrine — one boxed aggregate; rows own recency (user: "how should we think about these visualizations", 2026-07-21)
 
 Asked while extending §160's parcels: should the All feed's Themes map be
 boxed like the wallet map, and should media feeds lead with a hero of their
@@ -6157,7 +6157,7 @@ In three lines: one head parcel per feed, always boxed, always an aggregate
 derived from the feed's own things; rows own recency; a single item reaches
 the head only while it's live.
 
-## 165. The whisper carries the day brief (user: "ooh i like the idea of the whisper capsule with the headline. lets do that", 2026-07-22) — VERIFIED
+## §165 — The whisper carries the day brief (user: "ooh i like the idea of the whisper capsule with the headline. lets do that", 2026-07-22) — VERIFIED
 
 Ruling 6 of docs/agent-brief.md sketched the whisper as optional and
 flag-gated ("one glass whisper capsule above the bar with the top changed
@@ -6207,7 +6207,7 @@ bypasses the day stamp; logs "(nothing to say)" when the brief is honestly
 empty. Found in passing, spun off: the rest greeting truncates on
 "Wednesday morning." (longest weekday vs the ✕ button's row).
 
-## 166. The Today brief — the mosaic, with the agent's own read on top (user: "definitely prefer B the signal board… lets build b2 with b3 synthesis card", 2026-07-22) — VERIFIED
+## §166 — The Today brief — the mosaic, with the agent's own read on top (user: "definitely prefer B the signal board… lets build b2 with b3 synthesis card", 2026-07-22) — VERIFIED
 
 The screen the whisper capsule (§165) opens. Three directions were mocked; the
 user picked the **signal board (B2)** and asked for the **synthesis card (B3)**
@@ -6326,7 +6326,7 @@ secondary, and the chevron; tapping it still raises the agent straight into the
 Today brief. VoiceOver reads the two lines as one element with the hint "Opens
 your day".
 
-## 167. The brief's design pass — six corrections (user: "how would you improve the design of what we have done so far", then "make all six", 2026-07-22) — VERIFIED
+## §167 — The brief's design pass — six corrections (user: "how would you improve the design of what we have done so far", then "make all six", 2026-07-22) — VERIFIED
 
 A refinement pass over §165a/§166 as shipped, driven off the real screenshots
 rather than the mockups. One principle behind all six: **every promise the
@@ -6406,7 +6406,7 @@ provenance badge and Keep pill appear BEFORE the typewriter finishes painting,
 so a screenshot taken too early shows skeleton rows and reads as a bug; wait
 ~20s or the stream is still arriving.
 
-## 168. The brief paints like generative UI — the stream paces by document size (user: "will the daily brief render like generative UI? i'd like it to", 2026-07-22) — VERIFIED
+## §168 — The brief paints like generative UI — the stream paces by document size (user: "will the daily brief render like generative UI? i'd like it to", 2026-07-22) — VERIFIED
 
 It always WAS generative UI structurally: `TodayBrief` composes a real GenUI
 document, the answer path sends it through `answerStream.stream(…)` (not
@@ -6445,7 +6445,7 @@ reads run (the honest in-flight state), then the document assembles top-down —
 synthesis card, hero, tile pair, reading lead, hour strip — complete in about
 1.5–2s, with no raw-token flash in the treemap cells.
 
-## 169. The address book — naming is free, watching is the upgrade (user: "lets imagine a user wants to track N wallets but just their addresses and names", 2026-07-21)
+## §169 — The address book — naming is free, watching is the upgrade (user: "lets imagine a user wants to track N wallets but just their addresses and names", 2026-07-21)
 
 The app had TWO naming systems that never met. `WalletStore` held the labels of
 WATCHED wallets; `CounterpartyLabels` held names for addresses met in your own
@@ -6505,7 +6505,7 @@ of four resolved as `toly.sol → wallet`, `Uniswap router → contract` (real
 `eth_getCode`), `Mom → wallet`, `Main → wallet · WATCHED`, with the square
 contract mark and the round faces rendering as designed.
 
-## 170. Watching is capped at five (user: "should we limit people to how many wallets they can watch? like lets say 5", 2026-07-21)
+## §170 — Watching is capped at five (user: "should we limit people to how many wallets they can watch? like lets say 5", 2026-07-21)
 
 **Five watched wallets.** Watching is the expensive tier — a Zerion
 transactions call plus a share of the Portfolio holdings read per wallet, every
@@ -6544,7 +6544,7 @@ VERIFIED headlessly (`-watchCapProbe`): five added, the sixth returned
 `limitReached`; on screen, the add card states the limit and the address card's
 toggle refuses with "Stop watching one to watch this. Its name stays either way."
 
-## 171. Delight, part two — the moments the wallet work left silent (user: "how would you add surprise and delight and polish the UI?", then "do all these", 2026-07-22)
+## §171 — Delight, part two — the moments the wallet work left silent (user: "how would you add surprise and delight and polish the UI?", then "do all these", 2026-07-22)
 
 §79's definition holds and this pass is measured against it: delight is **a real
 moment, made visible** — never decoration, never an idle loop. Everything below
@@ -6607,7 +6607,7 @@ above the limit sentence, and an address card pours in its wallet's own hue
 (confirmed the tint and the identicon share a seed — the pour is the face's
 first hue, its top-left, so they agree by construction).
 
-## 172. The brief's surprise & delight pass, and a design polish sweep (user: "how would you improve the surprise & delight in the daily brief? how would you polish the UI", then "do all these", 2026-07-22) — VERIFIED
+## §172 — The brief's surprise & delight pass, and a design polish sweep (user: "how would you improve the surprise & delight in the daily brief? how would you polish the UI", then "do all these", 2026-07-22) — VERIFIED
 
 Six delight items plus a small polish sweep over §166/§167's Today brief,
 built from a proposal the user approved wholesale.
@@ -6726,7 +6726,7 @@ non-fallback brief this build ever composed. Build green throughout — two
 build races with a concurrent session's edits (`WalletScreen.swift`,
 `ThingSheetView.swift`) resolved on retry, touching none of this pass's files.
 
-## 173. Lists are air; parcels are for the reads (user, refined across three observations, 2026-07-22)
+## §173 — Lists are air; parcels are for the reads (user, refined across three observations, 2026-07-22)
 
 The day card is gone from the source-feed row lists. It was doing no
 group-work — the DAY HEADER does the grouping — so it was only ever a
@@ -6787,7 +6787,7 @@ in the same OS; we mirror both. So the meta-rule under §173: **a card groups a
 bounded set that belongs together, or features a read; a content stream flows
 without one.** Settings' §161 parcel stays; §173 governs content streams only.
 
-## 174. Named asks widen to publishers, and finally reach the live path (user: "when i talk to the agent i should be able to ask things like 'synthesize my verge feed' or 'what happened in bbc'", 2026-07-22) — VERIFIED
+## §174 — Named asks widen to publishers, and finally reach the live path (user: "when i talk to the agent i should be able to ask things like 'synthesize my verge feed' or 'what happened in bbc'", 2026-07-22) — VERIFIED
 
 Two gaps, found by tracing the exact recognizer path before touching anything.
 
@@ -6861,7 +6861,7 @@ before this session and, per the trace, never actually recapped live — now
 correctly returns Calendar's own 3-day recap on a fresh ask, not just after
 being kept once.
 
-## 175. The suggestion chips get timely, legible, and diverse (user: "how would we improve also the suggestion chips", then "make all these changes", 2026-07-22) — VERIFIED
+## §175 — The suggestion chips get timely, legible, and diverse (user: "how would we improve also the suggestion chips", then "make all these changes", 2026-07-22) — VERIFIED
 
 Six improvements to the composer's empty-field ask chips (`computeSuggestions`/
 `askChips` in `Shell/Composer.swift`), the first half of a two-phase "make the
@@ -6937,7 +6937,7 @@ green alongside a large concurrent refactor of `HomeRoute` in another session,
 which briefly broke the shared build — retried until it settled; none of this
 pass's changes touch those files.
 
-## 176. The agent answers smarter — receipts, more entities, follow-ups, comparatives (user: "how else would we make responses and questions 'smarter'", then "make all these changes", 2026-07-22) — VERIFIED
+## §176 — The agent answers smarter — receipts, more entities, follow-ups, comparatives (user: "how else would we make responses and questions 'smarter'", then "make all these changes", 2026-07-22) — VERIFIED
 
 Phase two of the "make the agent smarter" pass (phase one was §175's chips).
 Five upgrades to the answer path, all deterministic, all reusing existing
@@ -7002,7 +7002,7 @@ computes ("… more than last week"); the next-question chip appears. Build gree
 alongside a concurrent `HomeRoute` refactor in another session; none of this
 touches those files.
 
-## 178. Tags become invisible infrastructure — the filing surface retires (user: "i feel like the tag feature is not useful... we aren't an organizing app really", 2026-07-22)
+## §178 — Tags become invisible infrastructure — the filing surface retires (user: "i feel like the tag feature is not useful... we aren't an organizing app really", 2026-07-22)
 
 Re-ruling on §20/§21, not a reversal of the retrieval-vocabulary framing —
 that framing was right, but two hand-filing doors still lived inside it and
@@ -7041,7 +7041,7 @@ Files touched: `Screens/ThingSheetView.swift`, `Shell/Composer.swift`,
 `Shell/RootShell.swift`; `Model/OrganizeCommand.swift` and
 `Model/OrganizeLLM.swift` deleted.
 
-## 179. A watched wallet always shows its hero — last-known when the read fails, sparkline from recorded history (user: "if a user has a wallet i think we should show it no matter what because it is a rich visualization, even if the daily brief says all steady no changes", then "why doesn't it show a sparkline? even if flat", 2026-07-22) — VERIFIED
+## §179 — A watched wallet always shows its hero — last-known when the read fails, sparkline from recorded history (user: "if a user has a wallet i think we should show it no matter what because it is a rich visualization, even if the daily brief says all steady no changes", then "why doesn't it show a sparkline? even if flat", 2026-07-22) — VERIFIED
 
 Two clarifications framed this. First: a steady day was never the gap — the
 Today brief's money hero (§166) is gated on holdings EXISTING, not on movement,
@@ -7083,7 +7083,7 @@ treemap, a rising green sparkline from recorded history, and "as of 5m ago" —
 nothing vanished, nothing claimed to be current. The live path (vitalik.eth)
 still draws its normal hero with no stale marker. Build green.
 
-## 180. Two more brief visualizations — what landed by source, and the watchlist drawn (user: "how can we add more visualizations to the daily brief", then "add A and B those are both good components to have", 2026-07-23) — VERIFIED
+## §180 — Two more brief visualizations — what landed by source, and the watchlist drawn (user: "how can we add more visualizations to the daily brief", then "add A and B those are both good components to have", 2026-07-23) — VERIFIED
 
 Asked for more visual density in the Today brief (§166) without reopening the
 day-planner lane §101 cut — the user's own instinct ("this isn't really a
@@ -7142,7 +7142,7 @@ WIF sparkline and a red declining ETH sparkline beside their percentages, and
 the source mix's four bridge-icon cells with counts and residual line, paired
 directly under the hour strip. Build green.
 
-## 181. The agent opens on the brief — chips docked, keyboard down (user: "make daily brief be the default when a user opens the agent", picked mockup A, 2026-07-23) — VERIFIED
+## §181 — The agent opens on the brief — chips docked, keyboard down (user: "make daily brief be the default when a user opens the agent", picked mockup A, 2026-07-23) — VERIFIED
 
 The agent used to rise to an empty composer wearing ask chips — but "How's my
 day?" is already the top suggested ask most mornings, so showing the QUESTION
@@ -7195,7 +7195,7 @@ club · 3", "What's overdue? · 1") docked above the ask bar. Tapping "How's my
 watchlist?" settled the brief into a turn, streamed the watchlist answer below
 it, retired the docked chips, and raised the keyboard — the ordinary
 conversation state, unchanged. Build green.
-## 182. The wallet manager stops looking like a settings page (user: "it still looks like a settings feature and not like a pure wallet manager purposely built for adding the addresses… give me three mockups", then "lets do your recommendation", 2026-07-22)
+## §182 — The wallet manager stops looking like a settings page (user: "it still looks like a settings feature and not like a pure wallet manager purposely built for adding the addresses… give me three mockups", then "lets do your recommendation", 2026-07-22)
 
 Recommendation A (the roster) with B's omnibox grafted in, from three mockups
 (`design/wallet-look/wallet-manager-mocks.html`). The old screen was an
@@ -7249,7 +7249,7 @@ omnibox's live filter narrows the book correctly, the Connection door pushes
 and the system back chevron pops it cleanly, and every existing squircle use
 of `WalletFace` elsewhere in the app is confirmed unchanged.
 
-## 183. A tap-coordinate lesson, recorded so it isn't relearned (2026-07-22)
+## §183 — A tap-coordinate lesson, recorded so it isn't relearned (2026-07-22)
 
 Paid for over roughly ninety minutes of this session: the on-device Connection
 door appeared completely unresponsive to taps — through a `NavigationLink`
@@ -7272,7 +7272,7 @@ same code pattern elsewhere in the app already proves works, and that fails
 identically across unrelated rewrites of the code underneath it — that
 combination points at the harness, not the view.
 
-## 184. The manager pattern, generalized — roster for people, ledger for topics (user: "should we do roster in the feeds like the wallet", 2026-07-23)
+## §184 — The manager pattern, generalized — roster for people, ledger for topics (user: "should we do roster in the feeds like the wallet", 2026-07-23)
 
 The wallet manager's rebuild (prd §182) wasn't really about wallets — it was
 three moves any watch-list screen needed: identity leads, one omnibox both
@@ -7337,7 +7337,7 @@ unreviewed.
 
 Build green (`xcodebuild … build`, 2026-07-23).
 
-## 185. The asset roster — every manager is one shelf of circles (user: "circles", then "why wouldn't we do the same horizontal row treatment", 2026-07-23)
+## §185 — The asset roster — every manager is one shelf of circles (user: "circles", then "why wouldn't we do the same horizontal row treatment", 2026-07-23)
 
 The pass that finished the manager family. §182 gave the wallet a roster of
 addresses; §184 gave the social screens a roster of people over a ledger of
@@ -7396,7 +7396,7 @@ same recents ruling.
 
 Build green (`xcodebuild … build`, 2026-07-23).
 
-## 186. The two-state setup screen — connect is a form, connected is a manager (user: "the other manage / connect pages all have a similar shape, and feel like forms… how would you improve the template", then "nah, I like the state today for the form, it's important to know what the steps are. but lets change the connected pages how you recommend", 2026-07-23)
+## §186 — The two-state setup screen — connect is a form, connected is a manager (user: "the other manage / connect pages all have a similar shape, and feel like forms… how would you improve the template", then "nah, I like the state today for the form, it's important to know what the steps are. but lets change the connected pages how you recommend", 2026-07-23)
 
 The manager pattern's last frontier: the ~20 setup screens that aren't
 watch-lists. Their defect was never the form — pasting a key IS a form-filling
@@ -7471,7 +7471,7 @@ synced. Tapping Connection opens the sheet carrying the untouched form: the
 three numbered steps, the token field, the honest "couldn't refresh" line, the
 Keychain footer, and Remove token. Build green.
 
-## 187. Three fixes to the brief landing — one scrolling chip row, no chips the brief already answers, and a `.link` is not a read (user: "i thought the mockup we did had scrolling horizontal chips, but in my app they are stacked", "daily brief tells me about my reading but lists my music", "it also has two wallet chips which is redundant", 2026-07-23) — VERIFIED
+## §187 — Three fixes to the brief landing — one scrolling chip row, no chips the brief already answers, and a `.link` is not a read (user: "i thought the mockup we did had scrolling horizontal chips, but in my app they are stacked", "daily brief tells me about my reading but lists my music", "it also has two wallet chips which is redundant", 2026-07-23) — VERIFIED
 
 Three reports against §181's landing, all real.
 
@@ -7529,7 +7529,7 @@ catalog: Spotify/Apple Music (`Listening`), Steam (`Games`), Twitch
 (`Watching`) all resolve to `Media`; Substack (`Reading`) still counts. Build
 green.
 
-## 188. Connect a wallet app — a real button, and not claiming `wc:` stops meaning "no wallet" (user: "the 'connect a wallet app' doesn't work… also, it should be a button not a link", 2026-07-23)
+## §188 — Connect a wallet app — a real button, and not claiming `wc:` stops meaning "no wallet" (user: "the 'connect a wallet app' doesn't work… also, it should be a button not a link", 2026-07-23)
 
 Two faults in one row, one visual and one real.
 
@@ -7579,7 +7579,7 @@ flips to "Waiting for your wallet — tap to cancel" and reveals the minted
 ended at "No wallet app on this iPhone". The handshake probe separately
 confirms the proposal still mints with `methods=0 events=0`. Build green.
 
-## 189. The Wallet manager below the shelf — one shape, one font, four slabs (user: "we have different fonts, different shapes, and I think to myself, how would Cash App do this screen", then "yes! this is what I want", 2026-07-23)
+## §189 — The Wallet manager below the shelf — one shape, one font, four slabs (user: "we have different fonts, different shapes, and I think to myself, how would Cash App do this screen", then "yes! this is what I want", 2026-07-23)
 
 The shelf was right; everything under it had accumulated. A census of what was
 actually on screen: a recessed field with a side pill, a full-width capsule
@@ -7637,7 +7637,7 @@ Housekeeping: this pass also resolved a THIRD prd numbering collision — two
 sections had been written as §187 by concurrent sessions. The brief-landing
 section (first in file) keeps 187; the wallet Connect-button fix became 188.
 
-## 190. The slab, generalized — one shape per control, one signature shape per page type (user: "how would you make the rest of the app catalogue manage pages stupid simple like you have here, and perhaps different types of pages have different shapes… I do not want to change any of the top shelf rows of avatars", 2026-07-23)
+## §190 — The slab, generalized — one shape per control, one signature shape per page type (user: "how would you make the rest of the app catalogue manage pages stupid simple like you have here, and perhaps different types of pages have different shapes… I do not want to change any of the top shelf rows of avatars", 2026-07-23)
 
 §189 fixed one screen. This makes its rule the app's, across every manage page
 in the catalog — and answers the "different types have different shapes"
@@ -7694,7 +7694,7 @@ paragraph. Caught live and fixed in the same pass: the handle screens' verb
 still read "Add" beside neighbours reading "WATCH" and "FOLLOW" — the exact
 inconsistency this pass exists to remove. Build green.
 
-## 191. The product pages, checked against the slab pass — one real bug found, no shape problem (user: "now what about the app catalogue individual app pages, is there a way you would make them stupid simple", 2026-07-23)
+## §191 — The product pages, checked against the slab pass — one real bug found, no shape problem (user: "now what about the app catalogue individual app pages, is there a way you would make them stupid simple", 2026-07-23)
 
 Checked live rather than assumed. Unlike the manage pages (§189/§190), the
 product pages (`AppDetailScreen`) don't have a shape-consistency problem: one
@@ -7729,7 +7729,7 @@ VERIFIED 2026-07-23 (iPhone 17 Pro sim): Coinbase now shows one honest line, no
 duplicate; Notion's real preview card renders unchanged, confirming the fix is
 scoped to the no-doc fallback only. Build green.
 
-## 192. The three-beat summary rule, and where it actually applies (user: "what consistency rule would you apply", then "yes i agree it's important. show me the scannable version that keeps the content but displays it differently", then "and so we can now apply this to the other places in the catalogue that do this too right?", 2026-07-23)
+## §192 — The three-beat summary rule, and where it actually applies (user: "what consistency rule would you apply", then "yes i agree it's important. show me the scannable version that keeps the content but displays it differently", then "and so we can now apply this to the other places in the catalogue that do this too right?", 2026-07-23)
 
 **The rule**, codified rather than left implicit: every offer's `summary` is
 Hook (1 sentence, payoff only) → Mechanism (1 sentence, credential + where it's
@@ -7776,7 +7776,7 @@ VERIFIED 2026-07-23 (iPhone 17 Pro sim): Wallet's product page renders the
 two-sentence hook, then six green-checkmark capability lines, full width,
 readable at a glance. Build green.
 
-## 193. The brief is renamed "What's going on" — and absorbs the ask that had that name (user: "i think we can just call it 'what's goin on' b/c it's now no longer a daily brief, its a brief whenever you open it", "so we wouldn't say 'Your Thursday brief'", 2026-07-23) — VERIFIED
+## §193 — The brief is renamed "What's going on" — and absorbs the ask that had that name (user: "i think we can just call it 'what's goin on' b/c it's now no longer a daily brief, its a brief whenever you open it", "so we wouldn't say 'Your Thursday brief'", 2026-07-23) — VERIFIED
 
 §181 made this screen the agent's landing, rendered fresh on every rise. That
 broke its own name: "Your Thursday brief" claims a once-a-day artifact, a dated
@@ -7820,7 +7820,7 @@ up-next pair and the Reading card. The docked chip row reads "Show AAPL · 7 /
 Noticed / Show BRK…" — no "What's going on?" chip, confirming the retirement.
 Build green.
 
-## 194. The "What landed" map drew outside its own card (user: "the treemap for what's going on isn't rendered right its larger than the card and doesn't look good", 2026-07-23) — VERIFIED
+## §194 — The "What landed" map drew outside its own card (user: "the treemap for what's going on isn't rendered right its larger than the card and doesn't look good", 2026-07-23) — VERIFIED
 
 §180's source map shipped with four cells — one big, three stacked — copied
 from the money hero's own mini-map, which carries four comfortably. But a
@@ -7856,7 +7856,7 @@ entirely within its card — Stocktwits (39 things) as the big cell, GeckoTermin
 (34) and RSS (5) stacked beside it, icons inline with their names, "and 21 more,
 elsewhere" beneath. Nothing crosses the card's edge. Build green.
 
-## 195. Module order is RANK, not arrival — "What landed" moves up behind the wallet (user: "what landed is more important than the one reading source and when it landed... it should be after the wallet", 2026-07-23) — VERIFIED
+## §195 — Module order is RANK, not arrival — "What landed" moves up behind the wallet (user: "what landed is more important than the one reading source and when it landed... it should be after the wallet", 2026-07-23) — VERIFIED
 
 §180 appended the source map last, simply because it was built last. That was
 the wrong rank and the user caught it: "What landed" is an orienting SUMMARY of
@@ -7886,7 +7886,7 @@ VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): with a wallet watched,
 and watchlist adjacent, the source map directly behind them, the single things
 and the hour strip after. Build green.
 
-## 196. Worth a look splits by TYPE, approvals get a live-checked seat, and the trigger line earns its card back (user: "mock up for me three stupid simple ways we could design that... use cash app, apple, and robinhood for inspiration", then "i would think it would split the different types of warnings up, delegations, approvals, position risk, etc", 2026-07-23) — VERIFIED
+## §196 — Worth a look splits by TYPE, approvals get a live-checked seat, and the trigger line earns its card back (user: "mock up for me three stupid simple ways we could design that... use cash app, apple, and robinhood for inspiration", then "i would think it would split the different types of warnings up, delegations, approvals, position risk, etc", 2026-07-23) — VERIFIED
 
 Three mockup rounds, each narrowing on a real gap the last one exposed.
 
@@ -7996,7 +7996,7 @@ answering in passing why it says "Sent" not "Received": `flagSpoofedSymbol`
 is deliberately called on outgoing transfers too, since a scam contract can
 emit a fake event naming your wallet as sender. Build green throughout.
 
-## 197. The Worth-a-look tray and its detail sheet, de-vibe-coded (user: "this still looks like crap tho, vibe coded" / "channel cashapp" / "you can do better on these" / "nothing is happening when i click the chips", 2026-07-23) — VERIFIED
+## §197 — The Worth-a-look tray and its detail sheet, de-vibe-coded (user: "this still looks like crap tho, vibe coded" / "channel cashapp" / "you can do better on these" / "nothing is happening when i click the chips", 2026-07-23) — VERIFIED
 
 Eight fixes across the tray, its jump chips, and the flagged-transfer
 detail sheet, after the §196 rebuild still read as unfinished.
@@ -8070,7 +8070,7 @@ that fits with nothing to scroll. `uncappedHeight > maxTrayHeight`.
 
 Build green throughout; standalone-verified in a worktree before commit.
 
-## 198. The agent's answer forms — skeleton-first assembly, not a blur (user: "does the whats going on and agent in general render like generative UI or does it just render", "how would you improve it", "yes do that", 2026-07-23) — VERIFIED
+## §198 — The agent's answer forms — skeleton-first assembly, not a blur (user: "does the whats going on and agent in general render like generative UI or does it just render", "how would you improve it", "yes do that", 2026-07-23) — VERIFIED
 
 Asked whether the agent's answers genuinely render like generative UI. They do
 — `GenStream.stream()` reveals module by module with real pacing at each
@@ -8122,7 +8122,7 @@ blocks below; frame 2 (moments later) shows "What landed" and "Reading" now
 holding real content while "Up next" and the module above it are still
 unresolved skeletons — the layout never jumped, it just filled in. Build green.
 
-## 199. The materializing was jittery — hold a module until its own line is complete (user: "they streaming is a bit jittery... the materializing i mean", 2026-07-23) — VERIFIED
+## §199 — The materializing was jittery — hold a module until its own line is complete (user: "they streaming is a bit jittery... the materializing i mean", 2026-07-23) — VERIFIED
 
 §198's skeleton-first assembly fixed the SCREEN-level jump (a module popping
 from `EmptyView` to fully-formed) but left a second, smaller jump: the design
@@ -8166,7 +8166,7 @@ partially-parsed treemap/chart data — then flipping once to real, stable
 content. Final render unchanged and correct (`$1.0M` hero, watchlist/up-next
 pair, "Nothing moved today"). Build green.
 
-## 200. The catalog is a wall, not an App Store (user: "one issue with the app catalogue is that it looks like apple's app store... give me three mockups... use cashapp, robinhood, and your own creative bold ideas", then a live iteration to "each category on its own card", "don't leave any empty spaces", "make sure the search bar is at the top", 2026-07-23)
+## §200 — The catalog is a wall, not an App Store (user: "one issue with the app catalogue is that it looks like apple's app store... give me three mockups... use cashapp, robinhood, and your own creative bold ideas", then a live iteration to "each category on its own card", "don't leave any empty spaces", "make sure the search bar is at the top", 2026-07-23)
 
 The complaint: the catalog wore the App Store's clothes — hero shelves,
 horizontal category scrolls — a grammar built to sell one app at a time, which
@@ -8231,7 +8231,7 @@ top with live filtering, the Discover deck paging (2 of 4), jump chips
 and names — Markets | Wallet in row one exactly as ruled, Wallet correctly
 wearing its live green connected dot. Build green.
 
-## 201. The catalog wall goes horizontal — paired bands, four across, full names (user: "it would be more natural for users if the groups were horizontal instead of vertical... we can't truncate app names... three mockups... four apps per row", then "for sure lets do B", "lets make the order be Wallet, Markets, Social / mail, Agents, Media, and then the rest", 2026-07-23)
+## §201 — The catalog wall goes horizontal — paired bands, four across, full names (user: "it would be more natural for users if the groups were horizontal instead of vertical... we can't truncate app names... three mockups... four apps per row", then "for sure lets do B", "lets make the order be Wallet, Markets, Social / mail, Agents, Media, and then the rest", 2026-07-23)
 
 §200 stood the catalog up as a two-column vertical masonry of category cards.
 That fixed "see it all at once" but introduced two problems the user caught:
@@ -8278,7 +8278,7 @@ chips read Wallet/Markets/Social/Mail; Social+Mail render paired on one row;
 Agents (incl. the new OpenRouter seat), Media, Life (with HomeKit), then
 Reading/Shopping/Notes/Work — every long name whole, no clip. Build green.
 
-## 202. The wallet manager collapses to one list — a star is "watch", the roster is the starred (user: "this whole page is a mess… stupid simple and clear and concise. give me three mockups", then chose stars + roster, 2026-07-24) — VERIFIED
+## §202 — The wallet manager collapses to one list — a star is "watch", the roster is the starred (user: "this whole page is a mess… stupid simple and clear and concise. give me three mockups", then chose stars + roster, 2026-07-24) — VERIFIED
 
 Three mockups (two labeled zones / one list + star / value-prop cards); the
 user picked the star model but kept the face roster: "I like the stars, but
@@ -8319,7 +8319,7 @@ is this even on":
 in a specific state (the field's own arm-on-addable-text case). Build green;
 standalone-verified in a worktree before commit.
 
-## 203. Worth a look sections by whether you can ACT, not by raw severity — and the spam pile can be muted (user: "how would you improve our wallet design 'worth a look' design", three mockups, then "lets do A with C's mut and the jump chips", 2026-07-24) — VERIFIED
+## §203 — Worth a look sections by whether you can ACT, not by raw severity — and the spam pile can be muted (user: "how would you improve our wallet design 'worth a look' design", three mockups, then "lets do A with C's mut and the jump chips", 2026-07-24) — VERIFIED
 
 §196's type split fixed "one undifferentiated wall" but colored rows by raw
 `Severity`, and severity was the wrong axis: a poisoning or spoofed-symbol
@@ -8362,7 +8362,7 @@ actionable is muted or absent and only the aware pile remains unmuted.
 
 Build green.
 
-## 204. The crown pour becomes the person's color — five, curated (user: "let user choose their tint bleed color", then "i want to limit it to a few only. like 5 max", 2026-07-24)
+## §204 — The crown pour becomes the person's color — five, curated (user: "let user choose their tint bleed color", then "i want to limit it to a few only. like 5 max", 2026-07-24)
 
 Amends §159 and re-opens the 2026-07-06 appearance ruling, both deliberately.
 The crown pour (`MainSurface.crownPour`) is the largest color surface in the
@@ -8436,7 +8436,7 @@ picker). NOT `Design/WalletFace.swift`, NOT any `DS.tint` call site.
 
 Status: RULED, NOT BUILT.
 
-## 205. Privacy, made legible — "What this app reaches", the ADP nudge, and the at-rest finding (user: "how if at all would we improve privacy in the app? is there even a need", then "ok do all", 2026-07-24)
+## §205 — Privacy, made legible — "What this app reaches", the ADP nudge, and the at-rest finding (user: "how if at all would we improve privacy in the app? is there even a need", then "ok do all", 2026-07-24)
 
 The privacy posture is already the product's spine: no server, on-device
 answers, no analytics, keys in the Keychain, keyless bridges, read-only
@@ -8499,7 +8499,7 @@ onion-routing proxy (needs the server we've sworn off). And nothing
 mixer-adjacent or entitlement-churning while build 103 is in App Store
 review. The privacy win on the table was legibility, not more crypto.
 
-## 206. Bigger reading text and a roomier scale — the app read like a technical manual (user: "at times I feel like I'm reading a technical manual", "the components in the wallet are too close to each other... the wallet overall is very dense... there should be more spacing between elements", "we can't just apply something one-off to wallet, we need to do this globally so rest of app would feel the same", 2026-07-25)
+## §206 — Bigger reading text and a roomier scale — the app read like a technical manual (user: "at times I feel like I'm reading a technical manual", "the components in the wallet are too close to each other... the wallet overall is very dense... there should be more spacing between elements", "we can't just apply something one-off to wallet, we need to do this globally so rest of app would feel the same", 2026-07-25)
 
 The feed and wallet the user loves also read dense — the wallet worst, because it stacks four cards over the treemap. Two rulings, both GLOBAL by the user's own instruction (a one-off wallet fix was built, then dropped: it would only make the wallet drift from the rest of the app).
 
@@ -8509,7 +8509,7 @@ The feed and wallet the user loves also read dense — the wallet worst, because
 
 Amends build-brief §8 (the type ramp is law there): the reading band is now 14/16/18 and the spacing scale is 4/10/14/18/24/32. WATCH on-device: a few components use literal pixel heights (some fixed-height rows, chips, DSTray heights) rather than tokens, so their internal padding grows while their frame doesn't — scan for clipping.
 
-## 207. Peer & Privacy Pools stop being things to connect — watching a wallet is consent (user: "if you use a wallet in peer or privacy pools for example it should automatically watch them", then "they should show in the address book", 2026-07-25) — VERIFIED
+## §207 — Peer & Privacy Pools stop being things to connect — watching a wallet is consent (user: "if you use a wallet in peer or privacy pools for example it should automatically watch them", then "they should show in the address book", 2026-07-25) — VERIFIED
 
 Started as a navigation-simplification question ("how would you simplify the wallet navigation and keep the same features"). The first proposal — surface Peer/Privacy Pools as switch slabs inside the wallet manager — was built, screenshotted, and rejected on sight: **"i don't really like that it is confusing."** A manual switch for something that should just follow the wallet was the confusion, not the fix. The ruling that replaced it:
 
@@ -8524,7 +8524,7 @@ Also this session (a separate, approved cleanup): **`CombinedWalletsSheet` becam
 
 Deleted: `PeerBridge.connected`/`seatKey`/`disconnect()`, `PrivacyPoolsBridge.connected`/`seatKey`/`disconnect()`, and the `DSSlabSwitch` connect verb on both screens. The `-peerProbe`/`-privacyPoolsProbe` hooks no longer set a seat flag (the probe runs the sweep directly over watched wallets — pair with `-walletAddress`).
 
-## 208. The "Across your wallets" sheet dissolves into the feed (user: "don't we already show this same stuff on the 'all' wallets tab… why is it a separate screen?", then "yes lets do 2", 2026-07-25) — VERIFIED
+## §208 — The "Across your wallets" sheet dissolves into the feed (user: "don't we already show this same stuff on the 'all' wallets tab… why is it a separate screen?", then "yes lets do 2", 2026-07-25) — VERIFIED
 
 The user caught the real problem: the combined-wallets sheet (`CombinedWalletsSheet`, opened by tapping the "All"-scope balance headline) re-showed the **exact number + line you just tapped** before reaching its only unique content — the per-wallet split. Its top third duplicated the feed; nowhere else, though, could you see **all your wallets side by side** (the feed's treemap is by *token*, and the switcher shows *one* wallet at a time). So the sheet wasn't pointless — it was mis-scoped, and it violated the app's own "reads are inline, not doored" law (§139).
 
@@ -8536,7 +8536,7 @@ Resolution — kill the separate surface, fold its unique content inline:
 
 Known edge (faithful to the old component, worth a later pass): if only *some* watched wallets have sample history, "Each wallet" shows a partial list — inline that reads slightly odd where in a deliberately-opened sheet it didn't. A future pass could show every watched wallet, dimmed until it has a line. Verified on sim: the section renders inline with the door gone; build green, catalog-sync unaffected.
 
-## 209. Peer/0xBow "connect" routes straight to the Wallet manager — one screen removed (user: "we made the wallet experience for peer and 0xbow worse… there is an extra screen… we need to remove a screen somehow", 2026-07-25) — VERIFIED
+## §209 — Peer/0xBow "connect" routes straight to the Wallet manager — one screen removed (user: "we made the wallet experience for peer and 0xbow worse… there is an extra screen… we need to remove a screen somehow", 2026-07-25) — VERIFIED
 
 A regression from §207. Once Peer/0xBow went automatic, their setup screen (`PeerScreen`/`PrivacyPoolsScreen`) lost its only action — the connect toggle — and became a pass-through that just re-doored to the Wallet manager. So the connect flow was **product page → setup screen (which only says "watch a wallet") → Wallet manager** — three screens where the middle one did nothing.
 
@@ -8546,13 +8546,13 @@ Fix, one line in the router: `BridgeRouter.destination(forOffer:)` returns `.wal
 
 `PeerScreen`/`PrivacyPoolsScreen` still exist as the connected "recent fills" view (the Open target); they're simply no longer in the connect path. A later pass could retire them entirely in favor of the Peer/0xBow *source feed*, but that wasn't the ask.
 
-## 210. Peer moves from Markets to the Wallet catalog group (user: "move Peer from Markets category into Wallet category in app store", 2026-07-25)
+## §210 — Peer moves from Markets to the Wallet catalog group (user: "move Peer from Markets category into Wallet category in app store", 2026-07-25)
 
 Amends the 2026-07-17 ruling (recorded in the `BridgeCatalog` comment) that placed Peer under **Markets**. A Peer fill is the person's OWN settled transaction landing in their OWN wallet — not a market they watch — the same shape as Privacy Pools / Coinbase / Kraken, all already in **Wallet**. §207 made this literal: Peer now rides the watched wallets automatically, and §209 routes its connect straight to the Wallet manager — so it already walks and talks like a wallet feature, not a marketplace. The mechanism argument the old ruling leaned on (Peer's seat is a switch over the watched list, the way Strava rides Apple Health) is now Wallet's own argument too, so it no longer distinguishes the two groups.
 
 One line: `Offer(name: "Peer", … group: "Markets")` → `group: "Wallet"` in `Model/BridgeCatalog.swift`. The website `#catalog` shelf mirrors this — Peer's `.mini-cell` moves from the Markets shelf into the Wallet shelf (after Kraken, matching declaration order); `catalog-sync.sh` stays green (it checks the set, and the shelf grouping mirrors `AppsScreen.categories`). No CSS/JS touched, so no `?v=` bump.
 
-## 211. Catalog & manage-sheet prose breaks into short paragraphs (user: "only two sentences together and then if a third is needed there is a return between them", 2026-07-25)
+## §211 — Catalog & manage-sheet prose breaks into short paragraphs (user: "only two sentences together and then if a third is needed there is a return between them", 2026-07-25)
 
 The App Store detail-page summaries and the longer setup/manage-sheet `Text` blocks had grown into walls of prose in places. The user did NOT want the text cut — the honesty and specificity are the point — but wanted it broken up so it scans.
 
@@ -8560,7 +8560,7 @@ THE RULE: a paragraph holds at most two sentences; when a summary needs a third,
 
 Applied to the 27 catalog summaries with three or more sentences (`Model/BridgeCatalog.swift`), rendered by `AppDetailScreen`'s `Text(LocalizedStringKey(offer.summary))` where the `\n\n` becomes a real paragraph gap. Localization carries the same breaks: the 12 already-translated summaries (es/ja/ko/zh-Hans) were re-split at the matching sentence boundary per language — the beats translate, so the same paragraph structure holds; no string fell back to English. The rule is recorded on the `summary` field's doc comment and governs the long setup/manage-sheet `Text` blocks too (English-only until extracted). This is the same "don't delete real information to hit a length target, restructure it" instinct as §192 (the `features` list) — there the fix was a scannable checklist; here it's paragraph breaks.
 
-## 212. The wallet room's Cash App pass — six surfaces become two, and one row shape (user: "how would you improve the design of our wallet pages? some seem too cumbersome… i do not want to get rid of components we use, i just want to cashapp-ify the way we present", 2026-07-25) — VERIFIED
+## §212 — The wallet room's Cash App pass — six surfaces become two, and one row shape (user: "how would you improve the design of our wallet pages? some seem too cumbersome… i do not want to get rid of components we use, i just want to cashapp-ify the way we present", 2026-07-25) — VERIFIED
 
 The Wallet feed stacked **six translucent `dsWidgetSurface` cards of near-identical weight** before a single transaction row: balance (§160), Worth a look (§196), Each wallet (§208), holdings + concentration (§155), Aave (2026-07-20), Morpho (§157). Each carried its own caption, its own padding, its own chevron. When everything is a parcel, nothing leads. Three supporting tells the census found: the same watched wallets were enumerated in **three places** (the switcher bar, the Each-wallet card, the manager's roster shelf); one screen carried **six grammars for "there's more"** (chevron, "Where it's held ›", centered "See all N transactions ›", "Revoke ↗", range chips, jump chips); and every card named itself in a caption its own rows already said.
 
@@ -8594,7 +8594,7 @@ The ruling behind the fix: **a name is not an identity.** The book keys on the A
 
 Two consequences beyond the duplicate. Two spellings could also become two WATCHES against a 5-wallet cap — the field resolves before adding, a probe hook or a starred book row doesn't — so `outcome(ofAdding:)` now compares both sides in resolved form. And the roster's per-wallet USD note (keyed the book's way, above) silently missed every ENS-watched wallet, because the holdings read answers in hex; aliasing the key fixes that read too.
 
-## 213. The day brief's Cash App pass — volume stops being news, and the money takes the crown (user: "people do not care how many thing[s] landed. because we have dozens a day", "when a user has a wallet active the money is going to always be the most important thing", "the treemap of themes… is more important than 'what landed' and when", 2026-07-25) — VERIFIED
+## §213 — The day brief's Cash App pass — volume stops being news, and the money takes the crown (user: "people do not care how many thing[s] landed. because we have dozens a day", "when a user has a wallet active the money is going to always be the most important thing", "the treemap of themes… is more important than 'what landed' and when", 2026-07-25) — VERIFIED
 
 The same question §212 asked of the wallet room, asked of "What's going on?". Same diagnosis — seven modules, each its own captioned surface, near-identical weight — but the transferable half turned out to be the grammar, not the crown: the wallet room has one subject and one number that can outrank everything, while the brief's subject is plural by construction. What settled it was the user's own amendment, which cut deeper than layout.
 
@@ -8621,7 +8621,7 @@ One layout lesson paid for immediately: the answer column does NOT inset its chi
 
 Verified on sim with 24h of seeded history (`walletMove` needs an anchor 20h+ old — three samples at 4h spacing is not enough to make one): `root = Stack([lede, hero, pair, themes, notes])`, `lede = DayLede("Up $800 today. ETH did the lifting.")`, rendered inset and aligned with the masthead.
 
-## 214. The brief gets a memory — continuity, cross-source joins, and a lede that isn't wallet-only (user: "how if at all would we make the what's going on brief smarter?" → "do all", 2026-07-25) — VERIFIED
+## §214 — The brief gets a memory — continuity, cross-source joins, and a lede that isn't wallet-only (user: "how if at all would we make the what's going on brief smarter?" → "do all", 2026-07-25) — VERIFIED
 
 §213 settled what the brief SHOWS. This asks what it KNOWS. The census found three
 structural ceilings, none of them about adding modules.
@@ -8770,7 +8770,7 @@ word" rule twice, now `words(of:)`; `BriefLedger.record` re-decoded the ledger i
 had already snapshotted, breaking the read-once rule the file's own comments assert.
 Re-verified on sim after all of it — same lede, same continuity subline, same absence line.
 
-## 215. Find gets a door, the widget stops counting, and the dead-Thing rule stops being remembered (user: "how would you improve the app", then "lets do 3 and 4 and improve the widget", 2026-07-25) — VERIFIED
+## §215 — Find gets a door, the widget stops counting, and the dead-Thing rule stops being remembered (user: "how would you improve the app", then "lets do 3 and 4 and improve the widget", 2026-07-25) — VERIFIED
 
 Three separate improvements, one session. Two of them are the same shape: a capability the
 app already had, reachable only if you already knew it was there.
@@ -8850,7 +8850,7 @@ rather than settled: money at risk (a health factor crossing under liquidation w
 is in a pocket) is the one event where silence is a bug and the widget's hourly timeline may be
 too quiet. Not built, not ruled — recorded here so it isn't rediscovered from scratch.
 
-## 216. The holdings read gets a freshness window — and the news does not (user: "do the refresh window first", then "trying to see if their privacy pool happened / then we'd miss that for them", 2026-07-25) — VERIFIED
+## §216 — The holdings read gets a freshness window — and the news does not (user: "do the refresh window first", then "trying to see if their privacy pool happened / then we'd miss that for them", 2026-07-25) — VERIFIED
 
 **Corrected first: the wallet's metered read is ZERION, not Alchemy** (user: "WE USE ZERION NOT
 ALCHEMY"). Holdings have been Zerion-first since 2026-07-19 — `collectCandidatesZerion`, one
@@ -8900,7 +8900,7 @@ Not built: an adaptive window (shorter while the Wallet screen is open). The exi
 card ("as of Xh ago") already owns anything genuinely old, and a value that twitches costs
 quota to say nothing.
 
-## 217. Onboarding forks — "Try it", then three verbs instead of forty apps (user: "would a user pick a few screenshots or just connect", "lets ship it", 2026-07-25) — VERIFIED
+## §217 — Onboarding forks — "Try it", then three verbs instead of forty apps (user: "would a user pick a few screenshots or just connect", "lets ship it", 2026-07-25) — VERIFIED
 
 Onboarding was one greeting straight into a catalog of ~40 apps. A new person had to PICK
 something, CONNECT it, and WAIT for a sync before the app did anything — three steps and a wait
@@ -8970,7 +8970,7 @@ means a stranger); the Files arm can't have one at all (it opens the system pick
 alongside the toggle tripwire above: both are the same rule — an arm may not grow a second
 question.
 
-## 218. The All feed says what things are (user: "how if at all would you change our 'all' feed", then "i like all these", "what else would you add for surprise and delight", "do it", 2026-07-25) — VERIFIED
+## §218 — The All feed says what things are (user: "how if at all would you change our 'all' feed", then "i like all these", "what else would you add for surprise and delight", "do it", 2026-07-25) — VERIFIED
 
 Six changes to the landing screen, from one root cause: **the feed was titled by convention, and
 for its highest-volume source the convention was a constant.**
@@ -9036,7 +9036,7 @@ NOT yet seen on screen: the wide wordless tile, the coarsened tail and the floor
 is dense, recent, and has no wordless screenshots, so none of those three conditions occur in it.
 Their logic is covered by `-photoHealProbe` and reading, not by a screenshot.
 
-## 219. The media feeds stop being squares (user: "how would you improve the media source feeds", then "numbers are annoyances tho… i mean more visually", then "do it all", 2026-07-25) — BUILD-BLOCKED, NOT YET SEEN
+## §219 — The media feeds stop being squares (user: "how would you improve the media source feeds", then "numbers are annoyances tho… i mean more visually", then "do it all", 2026-07-25) — BUILD-BLOCKED, NOT YET SEEN
 
 The first answer offered was data — parse `itunes:duration`, sum a backlog, count what's
 unopened — and the user rejected the whole frame: **"numbers are annoyances."** The re-read
@@ -9204,7 +9204,7 @@ self-dismissal on connect, the bloom landing on the product page behind it, and
 the slabbed forms' layout. Walk one keyed bridge (Notion or Readwise), one
 two-field bridge (Steam or Mail) and one import screen before calling it done.
 
-## 220. A step that was already on screen twice (user: "these should be the same or different? also very dense and wordy why", then "you decide", 2026-07-26)
+## §220 — A step that was already on screen twice (user: "these should be the same or different? also very dense and wordy why", then "you decide", 2026-07-26)
 
 Two screenshots, Kraken and Coinbase connect. The first question answers itself
 in the source: there is no Kraken screen and no Coinbase screen, only
@@ -9248,7 +9248,7 @@ has not run. Build and open both venues before trusting the layout: the
 unnumbered line's left alignment against the slabs above and below it is the
 one thing a diff can't show.
 
-## 221. A like of a post you already have (user: "vitalik liked one of my posts on farcaster but it isn't showing", then "i'm following vitalik and i don't see the post (mine) that he liked. i'd like that to be fixed. the marker is fine too but separate", 2026-07-26)
+## §221 — A like of a post you already have (user: "vitalik liked one of my posts on farcaster but it isn't showing", then "i'm following vitalik and i don't see the post (mine) that he liked. i'd like that to be fixed. the marker is fine too but separate", 2026-07-26)
 
 **The bug.** `FarcasterIngest.landLikes` walks a watched account's outbound
 likes (`reactionsByFid`) and lands each liked cast, stamped with the LIKE's
@@ -9320,7 +9320,7 @@ gates (`catalog-sync.sh`, the SwiftData liveness audit) pass, but `verify.sh`
 has not run and the Snapchain node is unreachable from this host (port 3381
 blocked by egress), so the reaction envelope's `data.timestamp` parse is
 carried over from the existing code rather than re-measured.
-## 222. Gnosis Pay: the card that settles onchain, read the Peer way (user: "does gnosis pay have an api or some way we can read it like we do peer and 0xbow", then "lets do it, we have users who want to watch their transactions", then "lets do the layer 1 version b/c that's great enough", 2026-07-26) — VERIFIED BY BUILD + AUDITS + LIVE PROBE, NOT YET SEEN ON SCREEN
+## §222 — Gnosis Pay: the card that settles onchain, read the Peer way (user: "does gnosis pay have an api or some way we can read it like we do peer and 0xbow", then "lets do it, we have users who want to watch their transactions", then "lets do the layer 1 version b/c that's great enough", 2026-07-26) — VERIFIED BY BUILD + AUDITS + LIVE PROBE, NOT YET SEEN ON SCREEN
 
 A Gnosis Pay account is a Safe on Gnosis Chain carrying a Roles Module, and
 every card purchase settles as a real ERC-20 transfer out of that Safe to Gnosis
@@ -9501,7 +9501,7 @@ Build green, both static audits green. NOT simulator-verified, per the standing
 direction — what still hasn't been seen on screen is the raise itself, the
 self-dismissal, and a watch-list sheet staying up across two adds.
 
-## 224. Bookmarks — one importer for Safari and Chrome, Reading List folded in (user, 2026-07-28)
+## §224 — Bookmarks — one importer for Safari and Chrome, Reading List folded in (user, 2026-07-28)
 
 **Research first, same as §55.** Neither browser offers a live read: Safari
 has no bookmarks API at all, and Chrome's own "Export bookmarks" never
@@ -9550,7 +9550,7 @@ without a wash. Debug: `-bookmarksImport <path>` (lands everything
 headlessly, logs `readingList=N` too — the UI's scope choice is a
 person's call, not a probe's).
 
-## 225. Two dead controls in the brief — a watchlist row, and a themes cell that ejected nowhere (user: "how would you improve the daily brief even more now... in terms of UI and UX and capacity", then "ok", 2026-07-27) — VERIFIED
+## §225 — Two dead controls in the brief — a watchlist row, and a themes cell that ejected nowhere (user: "how would you improve the daily brief even more now... in terms of UI and UX and capacity", then "ok", 2026-07-27) — VERIFIED
 
 Asked how to improve the brief's capacity. The brief had been substantially
 rebuilt since an earlier pass in this session (§207–224, concurrent work):
@@ -9601,7 +9601,7 @@ VERIFIED 2026-07-27 (iPhone 17 Pro sim, pinned UDID), two different ways:
   shutdown/boot — not touched further, since it asks for a real Apple ID
   password. Build green.
 
-## 226. Bitcoin — a third address family, read keyless (user: "what more could we do with bitcoin addresses", then "lets do 1-5", 2026-07-27)
+## §226 — Bitcoin — a third address family, read keyless (user: "what more could we do with bitcoin addresses", then "lets do 1-5", 2026-07-27)
 
 Casberi read EVM and Solana wallets; a pasted Bitcoin address was silently
 accepted as a WATCH (`WalletStore.outcome(ofAdding:)`'s validation is
@@ -9672,7 +9672,7 @@ NSLogs balance, tx count, landed things, pending confirmations, and both
 insights' verdicts; pair with `-walletAddress <a BTC address>` to also
 exercise the watched-wallet path (holdings fold, per-wallet card).
 
-## 227. Bitcoin's surprise and delight — the facts only Bitcoin can state (user: "how would you add surprise and delight to our bitcoin experience", then "do all", then "wait we can't make Bitcoin be a source chip, it's part of wallet! isn't it", 2026-07-27)
+## §227 — Bitcoin's surprise and delight — the facts only Bitcoin can state (user: "how would you add surprise and delight to our bitcoin experience", then "do all", then "wait we can't make Bitcoin be a source chip, it's part of wallet! isn't it", 2026-07-27)
 
 Five additions to §226, held to the test §218's floor entry already set:
 **delight that is a FACT, not a compliment — it can't fire wrongly, it can't
@@ -10400,7 +10400,7 @@ twin market, no single "follow both" tap, no payout/stake language on a
 resolved receipt. Saying yes to a venue on the connect page follows
 *zero* markets by itself — it only adds the chip and lights the room.
 
-## 228. 0xBow Privacy Pools, the rest of the lifecycle — the exit, the ask, and the cover (user: "what else can we do with 0xbow", then "ok lets do all", 2026-07-29)
+## §228 — 0xBow Privacy Pools, the rest of the lifecycle — the exit, the ask, and the cover (user: "what else can we do with 0xbow", then "ok lets do all", 2026-07-29)
 
 The seat read only half the story: the deposit going in, and the clear-to-
 withdraw flip. Three reads round it out, all still capture-only, all off
@@ -10547,7 +10547,7 @@ app. A buyer's own stuck intent stays unbuildable without an indexed
 recipient field Peer's contracts don't have; this isn't a "later" — it's a
 structural dead end unless Peer's own event shapes change.
 
-## 229. Project detail's "Rename tag" retires — the last write door on tags closes (user: opened a project from the Home treemap, "it says rename tag, but we got rid of that feature" → "i want to retire this one too", 2026-07-30)
+## §229 — Project detail's "Rename tag" retires — the last write door on tags closes (user: opened a project from the Home treemap, "it says rename tag, but we got rid of that feature" → "i want to retire this one too", 2026-07-30)
 
 §178 (2026-07-22) killed the thing sheet's tag editor and the composer's
 `tag X as Y`/`rename A to B` commands, and explicitly *kept* one write —
@@ -10579,7 +10579,7 @@ is a pure deletion (no new surface, no new state to misrender), but build
 and open a project from Home before trusting the toolbar is actually
 empty.
 
-## 230. The screenshots feed leads with an OCR treemap, not a capture-year heatmap (user: "for screenshots today on the source feed we have a visualization for your photo shooting history. seems kinda lame. could we do a treemap based on ocr?", then chose the deterministic terms/entities method, 2026-07-30)
+## §230 — The screenshots feed leads with an OCR treemap, not a capture-year heatmap (user: "for screenshots today on the source feed we have a visualization for your photo shooting history. seems kinda lame. could we do a treemap based on ocr?", then chose the deterministic terms/entities method, 2026-07-30)
 
 The Photos feed led with `FeedHeatmap`'s "Your capture year" — the same
 GitHub-contributions grid every habit source (journaling, training, notes)
@@ -10625,7 +10625,7 @@ built from the real DS values (per the no-sim working preference), not a
 screenshot. Open the Photos feed on a real screenshot library before
 trusting the cell layout and the wash.
 
-## 231. Deleting a screenshot from Photos removes it from Casberi (user reported screenshots "don't refresh"; the real symptom was "the old images that are deleted from my phone still stay", then chose "Remove it here too", 2026-07-30)
+## §231 — Deleting a screenshot from Photos removes it from Casberi (user reported screenshots "don't refresh"; the real symptom was "the old images that are deleted from my phone still stay", then chose "Remove it here too", 2026-07-30)
 
 The user spent multiple sessions convinced screenshots had a broken REFRESH.
 They didn't — the ingest path lands new screenshots every foreground, and a
@@ -15189,7 +15189,7 @@ dynamic host (`https://\(host)/…`) can be checked by neither and declared by
 nobody — those are reported as info, and their call sites are the attribution
 above.
 
-## 232. The flow band comes to the brief — where the money moved, not just what it's worth (user: "you know we have different visualizations in our source rooms. how come the daily brief isn't those… sankey diagrams, music listening, document and rss theme treemaps", then "ok do it", 2026-08-03) — BUILT, NEVER SEEN RENDERED
+## §232 — The flow band comes to the brief — where the money moved, not just what it's worth (user: "you know we have different visualizations in our source rooms. how come the daily brief isn't those… sankey diagrams, music listening, document and rss theme treemaps", then "ok do it", 2026-08-03) — BUILT, NEVER SEEN RENDERED
 
 Asked why the brief doesn't use the rooms' visualizations. The answer turned
 out to be structural rather than editorial, and worth writing down.
@@ -24089,7 +24089,7 @@ Gone with it: `onFind`, `onVoice` (hold-to-talk lived on the magnifier; the mic 
 
 Two AgentBar doc paragraphs that argued FOR keeping the magnifier ("a lone berry would re-bury it") are corrected rather than left standing — they were true when written and are the reasoning this ruling overturns.
 
-## 386p. The agent panel is deleted (2026-08-15)
+## §386p — The agent panel is deleted (2026-08-15)
 
 **User ruling: "we don't need it."** Asked what the agent panel even was, then ruled it out on sight. It was the grid of per-room figure tiles that mounted under the brief when the agent rose — up to 20 cards, one per connected room, each drawing that room's own hero figure, ranked by `ChipMemory` affinity.
 
@@ -27238,7 +27238,7 @@ were still CALLED, after they shipped in July and nothing reached them for six
 weeks. There is no toast layer left for them to fire into, so there is nothing
 to keep reachable.
 
-## 412. A presented sheet takes the system's concentric corner; nested radii get a name (user: "what polish would you add to the app to level up its design and make it look really professional and native", then "ok lets do all of these", 2026-08-20)
+## §412 — A presented sheet takes the system's concentric corner; nested radii get a name (user: "what polish would you add to the app to level up its design and make it look really professional and native", then "ok lets do all of these", 2026-08-20)
 
 A design-polish audit against iOS 26's own chrome. Three proposals went to the
 user; **one of the three was already shipped and is recorded here as a
@@ -27366,7 +27366,7 @@ mounts on the shell).
 a given card still earns its seat, which is a design review's job and not a
 header's.
 
-## 415. The keyed agent stops re-paying for the same prompt, reads the page behind a saved link, and gets a ceiling it can honestly keep (user: "what more can we do with agents? or things like open router?", then "lets do the cache, and fetch, and open router thing", 2026-08-20)
+## §415 — The keyed agent stops re-paying for the same prompt, reads the page behind a saved link, and gets a ceiling it can honestly keep (user: "what more can we do with agents? or things like open router?", then "lets do the cache, and fetch, and open router thing", 2026-08-20)
 
 Three changes to the BYOK path, each fixing something that had been true since
 §318 and invisible from every screen. None of them is a new provider or a new
@@ -27708,7 +27708,7 @@ stays one sentence. Anywhere a tappable child is added under
 **Costs nothing:** no new `Thing` field, no request, no CloudKit deploy, no new
 type rung. The one renamed symbol has a single call site.
 
-## 418. The agent rooms: how long the conversation was, code drawn as code, and carrying it on (user: "Anything else you would do to improve the Claude and Chatgpt and codex experience? in terms of UI?", then "lets do 1, 2, 4", 2026-08-20)
+## §418 — The agent rooms: how long the conversation was, code drawn as code, and carrying it on (user: "Anything else you would do to improve the Claude and Chatgpt and codex experience? in terms of UI?", then "lets do 1, 2, 4", 2026-08-20)
 
 Four changes to the imported-chat rooms, and **one of the three things asked
 for turned out to already ship** — which is the entry's standing lesson, not an
@@ -27888,7 +27888,7 @@ fade this fixes, which is the failure nobody re-checks for. Reduce Motion keeps
 both undecorated forms exactly as before.
 
 
-## 419. Walletbeat — the wallet apps you use, reviewed by somebody independent (user: "anything we could do with walletbeat", then "wallet beat rates wallets, so we would use that as a feed for someone", "that is primarily what i want it for", 2026-08-20)
+## §419 — Walletbeat — the wallet apps you use, reviewed by somebody independent (user: "anything we could do with walletbeat", then "wallet beat rates wallets, so we would use that as a feed for someone", "that is primarily what i want it for", 2026-08-20)
 
 Every other seat in the **Wallet** group reads what your MONEY did. This one reads what
 the SOFTWARE HOLDING IT does — where your keys are generated, who your addresses are
@@ -28034,7 +28034,7 @@ it does not have. The demo seeds the real incidents with their real statuses.
 make Walletbeat revise a rating or publish an incident, so the revision and heal paths are
 reasoned about rather than observed.
 
-## 420. CardPointers — the offers sitting unused on your cards, and the wire measured before a line was trusted (user: "i want to include Cardpointers. We have many bridges i do not use", then "it is ok if it requires paid account", 2026-08-20)
+## §420 — CardPointers — the offers sitting unused on your cards, and the wire measured before a line was trusted (user: "i want to include Cardpointers. We have many bridges i do not use", then "it is ok if it requires paid account", 2026-08-20)
 
 **§36 declined CardPointers for "no surface at all" and that is no longer true.**
 They shipped an MCP API — the one their Claude and ChatGPT integrations ride — so
@@ -28191,7 +28191,7 @@ last, the `-32001` code drifting, an absent `is_pro` defaulting to true,
 `invalid_grant` read as pending, the poll interval losing its floor, the host
 drifting to the marketing domain.
 
-## 421. Walletbeat is a publication you follow, and its directory belongs to the room (user: "so we didn't do walletbeat how i wanted, i wanted it as a feed in the app, not just if you follow a wallet… maybe what you did is better i can't tell. wdyt", then "i guess it is better to choose which wallets to watch", then "yes do it", 2026-08-20)
+## §421 — Walletbeat is a publication you follow, and its directory belongs to the room (user: "so we didn't do walletbeat how i wanted, i wanted it as a feed in the app, not just if you follow a wallet… maybe what you did is better i can't tell. wdyt", then "i guess it is better to choose which wallets to watch", then "yes do it", 2026-08-20)
 
 Amends §419. Its watch list stands — the disagreement turned out to be about a gate
 nobody chose, not about the design.
@@ -28293,7 +28293,7 @@ that phrase passed whether or not the recent branch was reached, and the mutatio
 The standing rule again: **a fixture only tests the rule it names if it fails that rule and
 passes every other one.**
 
-## 422. Three Walletbeat facts that were landed and on no screen (user: "how else can we improve the walletbeat experience and design", then "ok, do 1, 2, 4", 2026-08-20)
+## §422 — Three Walletbeat facts that were landed and on no screen (user: "how else can we improve the walletbeat experience and design", then "ok, do 1, 2, 4", 2026-08-20)
 
 Amends §421. Nothing here reads anything new from Walletbeat — every fact below was
 already in the corpus or in `WalletbeatIncidentBook`, and the only thing missing was a
@@ -28404,7 +28404,7 @@ own declaration proves the function exists, never that anything calls it** — w
 the whole failure it was written to catch. It is anchored to the call site now, and both
 corrections came from mutating the real tree rather than from reading.
 
-## 423. Walletbeat folds into Wallet after all — a source room does not get a top-level chip (user: "the wallet beat icon when followed is in the category chip header", "it is NOT supposed to be there", "it should be in the wallet section", "it's a source room", 2026-08-20)
+## §423 — Walletbeat folds into Wallet after all — a source room does not get a top-level chip (user: "the wallet beat icon when followed is in the category chip header", "it is NOT supposed to be there", "it should be in the wallet section", "it's a source room", 2026-08-20)
 
 Reverses the §419/§420 amendment of the same morning, which added
 `CategoryFold.neverFold = ["Walletbeat", "CardPointers"]`.
@@ -28433,7 +28433,7 @@ chip AND appear inside that chip's switcher. Exempt-and-in-the-switcher is reach
 twice; folded-and-absent is reachable never, which is the failure the day-long exemption
 was written to fix and the one to keep an eye on.
 
-## 424. The onboarding fork: watch it arrive, a real name to start from, and an order that answers the person in front of you (user: "how would you improve the onboarding fork's UI and stickiness and make it engaging", then "ok do all 4", "you can use vitalik.eth for wallet suggestion", "for farcaster you can use vitalik.eth too", 2026-08-20)
+## §424 — The onboarding fork: watch it arrive, a real name to start from, and an order that answers the person in front of you (user: "how would you improve the onboarding fork's UI and stickiness and make it engaging", then "ok do all 4", "you can use vitalik.eth for wallet suggestion", "for farcaster you can use vitalik.eth too", 2026-08-20)
 
 Four changes to `StartHereScreen`, and the shape of the screen is untouched: three cards, one
 verb each, pick-one, the cost lines, the room figures, the "Browse the catalog" escape hatch.
@@ -28587,7 +28587,7 @@ check's own first-run correction: ChatGPT and Claude build their rows from a `ch
 across all eight — every seat that furnishes anything carries at least one literal, and Reminders
 carries exactly zero.
 
-## 425. A key that can sign and can never spend — Casberi as a Safe co-signer (user: "would it be possible to make Casberi have a Wallet that can sign but doesn't hold money?", then "just wondering if we could make Casberi an alternative signer for things or like for multi sig", "could we do it without requiring a server or a Wallet factory?", "ok lets do this. the benefit is having a signer not tied to a wallet a user has funds in", 2026-08-21)
+## §425 — A key that can sign and can never spend — Casberi as a Safe co-signer (user: "would it be possible to make Casberi have a Wallet that can sign but doesn't hold money?", then "just wondering if we could make Casberi an alternative signer for things or like for multi sig", "could we do it without requiring a server or a Wallet factory?", "ok lets do this. the benefit is having a signer not tied to a wallet a user has funds in", 2026-08-21)
 
 **This amends §112**, which has been the standing wallet ruling since it was written: reads and
 previews in-app, **signatures always elsewhere**. That ruling is not overturned — it is narrowed
@@ -28693,7 +28693,7 @@ verified and the Swift is unwritten; whether `swift-secp256k1` compiles for Mac 
 unmeasured, and `verify.sh` step 1b is the gate that will say. Nothing before a device test
 against a real 2-of-3 Safe holding trivial funds counts as evidence.
 
-## 426. Building §425 — what the spec got right, the two things it got wrong, and the four questions it left unmeasured (2026-08-21)
+## §426 — Building §425 — what the spec got right, the two things it got wrong, and the four questions it left unmeasured (2026-08-21)
 
 §425 and `docs/signer-spec.md` were authored on Linux with no Xcode and no Swift toolchain, and
 graded themselves **SPEC ONLY**. This is the build. Every constant in §3 of the spec survived
@@ -28773,7 +28773,7 @@ including the spec's own "let `threshold == 1` through". iOS and Mac Catalyst bo
 never happened is a signature over a real Safe transaction on a real device, and until it does,
 nothing here is evidence that it works.
 
-## 427. The multisig that cannot be repaired, and the key that dies quietly — two failures §425 could create and did not say (user: "but we can't create a risk for a situation where a multisig would be locked, the owner would just have to change the multi sig rules", 2026-08-21)
+## §427 — The multisig that cannot be repaired, and the key that dies quietly — two failures §425 could create and did not say (user: "but we can't create a risk for a situation where a multisig would be locked, the owner would just have to change the multi sig rules", 2026-08-21)
 
 **Amends §425 and §426.** Both entries treated "the key dies with the phone" as a cost the person
 accepts. That is true, and it is not the whole account, because the cost is not always the same
@@ -28853,7 +28853,7 @@ that removes the read that GATES SIGNING survived. Both guards are anchored to `
 call sites now. The standing rule, restated: **a guard must prove the condition is the whole
 condition, not that the words appear somewhere in the file.**
 
-## 428. L2BEAT — the rails your money sits on, reviewed by somebody independent (user: "in the same way we added walletbeat, could we add l2beat?", then "i imagine we would add it to markets", "full walletbeat parity", 2026-08-21)
+## §428 — L2BEAT — the rails your money sits on, reviewed by somebody independent (user: "in the same way we added walletbeat, could we add l2beat?", then "i imagine we would add it to markets", "full walletbeat parity", 2026-08-21)
 
 §419 gave the app a seat that reads what the SOFTWARE holding your money does. This is the
 same idea one layer down: what the RAILS underneath are made of. [L2BEAT](https://l2beat.com)
@@ -29045,7 +29045,7 @@ the rotating walk have only ever run in the harness and in the reasoning. Every 
 safe — an unreachable summary leaves the bundle drawing, an unparseable milestone is skipped,
 an unknown sentiment reads `unknown` and never `good`.
 
-## 429. The L2BEAT surfaces, past §428 — an event with no date, a sort that said nothing, and a strip nothing ever named (user: "how would you improve the UI of the l2beat experience", then "do it all", 2026-08-21)
+## §429 — The L2BEAT surfaces, past §428 — an event with no date, a sort that said nothing, and a strip nothing ever named (user: "how would you improve the UI of the l2beat experience", then "do it all", 2026-08-21)
 
 §428 landed the feature whole and six days of its design decisions are deliberate refusals
 that should not be re-litigated: the risk card never re-sorts its five, the strip's cells are
@@ -29161,7 +29161,7 @@ its own.
 **Still UNMEASURED, unchanged from §428**: no sweep has ever run against a device, so none of
 these surfaces has drawn a live reading.
 
-## 430. Four Walletbeat facts, three of which were already in the corpus (user: "how if at all would you improve the UI and UX of the walletbeat experience", then "OK do all", 2026-08-21)
+## §430 — Four Walletbeat facts, three of which were already in the corpus (user: "how if at all would you improve the UI and UX of the walletbeat experience", then "OK do all", 2026-08-21)
 
 Amends §419, §421 and §422.
 
@@ -29373,7 +29373,7 @@ that matter most are the two that fail invisibly — removing the trailing-`wall
 accepting an ambiguous key (the first-listed entry wins, and a person is offered a review of
 software they do not run).
 
-## 431. The room's own settings door (2026-08-21)
+## §431 — The room's own settings door (2026-08-21)
 
 A scoped room had no route to the seat behind it. The only in-room door was
 `RoomQuiet`'s copy, which appears exactly when the seat is broken or empty — so
@@ -29443,7 +29443,7 @@ with the `.id()` subtree (§357), and inside the `NavigationStack` so a pushed
 room covers it — a settings door floating over a screen it does not configure is
 the dead control §83 bans, wearing a live control's clothes.
 
-## 432. Three micro-motions the design system already had a word for, and five proposals it turned out had already shipped (user: "how can we add extremely small surprise and delight in the app? like little microanimations?… are we good now?… could there be more? and super subtle in places without it slowing the app down", then "ok do all", 2026-08-21)
+## §432 — Three micro-motions the design system already had a word for, and five proposals it turned out had already shipped (user: "how can we add extremely small surprise and delight in the app? like little microanimations?… are we good now?… could there be more? and super subtle in places without it slowing the app down", then "ok do all", 2026-08-21)
 
 **The answer to "are we good now" is yes, and the audit that produced this entry
 was wrong five times out of six in the same direction §412 already named.** Five
@@ -29536,7 +29536,7 @@ was a line number that moved between two reads of the same file** — the plan s
 2001, grep said 2047, a third read said 2076. Re-run the filter in this entry to
 finish those two files once the tree is quiet.
 
-## 433. The wallet manager, rebalanced — the reading that was last, the groups that were a mode, and one face that meant three things (user: "how if at all would you improve the wallet address / contacts experience? i love seeing the addresses that are connected, but also wonder if a user has several they may not see that on the screen unless they scroll… even the way we have groups and folders looks like half thought out features… the wallet set up screen should be absolutely top notch… we need the way you do groups to be cool too… lets add some subtle surprise and delight there too. this really needs to be amazing b/c it is one of the most frequently visited screens in the app", 2026-08-21)
+## §433 — The wallet manager, rebalanced — the reading that was last, the groups that were a mode, and one face that meant three things (user: "how if at all would you improve the wallet address / contacts experience? i love seeing the addresses that are connected, but also wonder if a user has several they may not see that on the screen unless they scroll… even the way we have groups and folders looks like half thought out features… the wallet set up screen should be absolutely top notch… we need the way you do groups to be cool too… lets add some subtle surprise and delight there too. this really needs to be amazing b/c it is one of the most frequently visited screens in the app", 2026-08-21)
 
 Three prototypes were drawn (overview-first, a contacts-app hero slab, a swipeable passport deck) and the first was chosen. Everything here is a rearrangement or a grammar correction of pieces that already existed; **no ruling is overturned, no new fact is invented, and nothing new is read from the network.** §295's factual-only ruling over the connections card stands untouched (equal ribbons, no hue, first-dealt order), §202's star stays the watch verb, §170's cap stays a shape you can see rather than a sentence you hit.
 
@@ -29584,7 +29584,7 @@ Deliberately NOT built: a `matchedGeometryEffect` flying the row's face up into 
 
 The connections card's contents (§295 and its 2026-08-20 follow-up), the watch cap (§170), what the star means (§202), the read-only promise, the field's two verbs and the bulk paste (§212, 2026-08-01), the Connection door at the foot, or any bridge. No new `Thing` property, no CloudKit deploy, no new network read beyond the ENS/SNS resolve the WATCH verb already makes — moved half a second earlier.
 
-## 434. The swipe and the rise, as one perf pass — and the one thing a person is now shown a beat later (user: "the app is starting to lag, swiping between screens, and also the agent launching is still janky — for a split second it tries to launch the composer only and you see a greeting glitch on top of the composer before the brief shows. it's unacceptable", 2026-08-21)
+## §434 — The swipe and the rise, as one perf pass — and the one thing a person is now shown a beat later (user: "the app is starting to lag, swiping between screens, and also the agent launching is still janky — for a split second it tries to launch the composer only and you see a greeting glitch on top of the composer before the brief shows. it's unacceptable", 2026-08-21)
 
 The full record is `docs/perf-swipe-and-rise-spec.md`. This entry is the ledger's
 half: the two rulings that change what somebody SEES, and the one that does not
@@ -29687,7 +29687,7 @@ rows) and `risePhase|` (raise → consumed → commit → firstDoc). The rise in
 particular is animation-frame timing, which a simulator distorts; one device
 trace closes it.
 
-## 435. The map IS the manager — five renderings of one graph, fused into three (user: "how would you make it gorgeous and like cash app this screen and it's sub screens… none of these are inspiring… WE DO NOT WANT BALANCES SHOWING WITH ADDRESSES WE HAVE THAT ELSEWHERE… i imagine how the wallet looks today w/ different sections. and here there are connections, address book, who you follow, groups, and presumably some history with each if you open them", 2026-08-21)
+## §435 — The map IS the manager — five renderings of one graph, fused into three (user: "how would you make it gorgeous and like cash app this screen and it's sub screens… none of these are inspiring… WE DO NOT WANT BALANCES SHOWING WITH ADDRESSES WE HAVE THAT ELSEWHERE… i imagine how the wallet looks today w/ different sections. and here there are connections, address book, who you follow, groups, and presumably some history with each if you open them", 2026-08-21)
 
 §433 rebalanced this screen and the user's own diagnosis of what remained is the ruling: **the manager was five sections that were all renderings of the same graph** — a shelf of the watched wallets, a connections card of who reaches two of them, group headers with face decks, a book row per address, and a card per person behind a tap. Reordering them (§433) helped and could not fix it, because the problem was that there were five. This is three: **the MAP** (who is in your world and how they relate), **the LIST** (the record), **the CARD** (one person's history, one tap in).
 
@@ -29755,7 +29755,7 @@ One change followed: the caption now reads **"3 of 5 watched · 6 of 27 connecte
 
 No simulator run and no device: the sky has never been drawn on a screen. Its arithmetic is harness-proven, its wiring is not.
 
-## 436. The sky's first real drawing found the two shapes the harness never posed (user: "this is messed up. This is not how connected addresses are supposed to look", with a screenshot, 2026-08-22)
+## §436 — The sky's first real drawing found the two shapes the harness never posed (user: "this is messed up. This is not how connected addresses are supposed to look", with a screenshot, 2026-08-22)
 
 §435 closed with "the sky has never been drawn on a screen. Its arithmetic is harness-proven, its wiring is not." The first device to draw it produced the report above: six connected bodies in an overlapping diagonal chain running clean through both watched wallets' faces, every caption buried under the bubble after it, and the caption beneath the drawing reading **"2 of 5 watched · 8 of 5 connected"** — eight out of five. Two defects, and neither is a wiring bug: both are in the arithmetic the harness proved, posed at inputs the harness never posed. This entry **amends §435** twice.
 
@@ -29777,7 +29777,7 @@ The cluster is a small ring on the shared midpoint now, radius `twinSpread / (2�
 
 Authored on Linux with no Xcode and no Swift toolchain, the recurring grade: the harness has not run and no simulator has drawn the new ring. The geometry was verified numerically (a Python mirror of the exact arithmetic, old against new, at the screenshot's own input) — the numbers above are measured from it, not estimated. Run `scripts/verify.sh` before trusting; the six-twin fixture is written to fail the old code two independent ways, so a wrongly-applied fix cannot pass it.
 
-## 437. The sky reads as rings inside rings — two rings, straight chords, and the empty state the shelf was standing in for (user: "iterate on c… some lines crossing the circle where two are connected not just in a ring… we still need to see the address book on this screen below watch an address, and show me empty state?", 2026-08-22)
+## §437 — The sky reads as rings inside rings — two rings, straight chords, and the empty state the shelf was standing in for (user: "iterate on c… some lines crossing the circle where two are connected not just in a ring… we still need to see the address book on this screen below watch an address, and show me empty state?", 2026-08-22)
 
 Reviewed as three mockups against the shipped screen; the user picked the one that keeps a drawing and tames it. This entry **amends §435** on placement and **amends §436** on the twin spread, which it replaces with a simpler mechanism rather than a different constant.
 
@@ -29831,7 +29831,7 @@ The layout is compiled and exercised against the real arithmetic rather than the
 
 **No device has drawn it.** The empty state in particular has only ever been reasoned about — one `GeometryReader`, three dots and an invitation — and "it compiles" is not "it looks right"; the taller sky in particular is a judgement (400pt is a lot of an iPhone screen for one drawing) that only looking can settle.
 
-## 438. The two-wallet sky is a wheel, and the rings are drawn (user: "i din't understand my addresses are NOT in a circle, they are still in some weird cluster. what is going on w/ all this?", with a screenshot, 2026-08-22)
+## §438 — The two-wallet sky is a wheel, and the rings are drawn (user: "i din't understand my addresses are NOT in a circle, they are still in some weird cluster. what is going on w/ all this?", with a screenshot, 2026-08-22)
 
 §437 shipped and the first device to draw it produced the report above: six connected faces in a curved clump between two watched wallets, nothing circular anywhere on the screen. The computed layout for that corpus reproduces the screenshot exactly — the code did precisely what it was designed to do, and the design was wrong twice, both times AT THE MINIMUM WALLET COUNT, which is the most common corpus and keeps being treated as an edge case (§436 made this exact observation about the twin chain; this is the same lesson at the next layer up). This entry **amends §437** twice.
 
@@ -29855,7 +29855,7 @@ The two-wallet twin fixtures asserted the crescent (pairs one `twinSpread` apart
 
 The build is green and the harness passes with every mutation proven. No device has drawn the wheel or the ring strokes; the geometry for the reported corpus is verified numerically (hexagon, 63pt neighbours, 47pt to the nearest ring body against 46 needed — the margins are real but thin, and only a screen says whether thin reads as fine).
 
-## 439. Two of your own wallets, joined — the plainest reading the map never made (user: "it still isn't showing me if the two wallets I am following are connected", 2026-08-22)
+## §439 — Two of your own wallets, joined — the plainest reading the map never made (user: "it still isn't showing me if the two wallets I am following are connected", 2026-08-22)
 
 Everything §295 through §438 drew is a SHARED COUNTERPARTY — "you both dealt with somebody else" — which is an inference about two wallets made through a third party. The plainest fact of all was the one it skipped: **did money move between these two wallets, directly?** It is in the same landed transfers the rest of `AddressConnections` reads, and nothing was looking for it, so somebody watching exactly two wallets that pay each other every week saw a picture with no line between them and asked, correctly, what the diagram was for.
 
@@ -29863,7 +29863,7 @@ Everything §295 through §438 drew is a SHARED COUNTERPARTY — "you both dealt
 
 `Map.isEmpty` widened with it: a book whose only relationship is between two of your own is not an empty map, and reading it as one prints "nothing is connected" over the very fact being reported.
 
-## 440. The address book, rebuilt — the spine restored, the sky retired, and groups given a room (user: "we need to totally redesign the wallet set up screen which is basically an address book… watched, followed/saved, and groups… a way to move an address between groups… could show those connected like we used to… i want a really gorgeous address book how cash app might do it or apple", then "A. lets do it", then "ok do all", 2026-08-22)
+## §440 — The address book, rebuilt — the spine restored, the sky retired, and groups given a room (user: "we need to totally redesign the wallet set up screen which is basically an address book… watched, followed/saved, and groups… a way to move an address between groups… could show those connected like we used to… i want a really gorgeous address book how cash app might do it or apple", then "A. lets do it", then "ok do all", 2026-08-22)
 
 Three mockup directions were drawn (`design/address-book/address-book-mocks.html`) and A was chosen and then iterated (`address-book-A.html`). This entry **supersedes §435** on the drawing and **amends §433** on the list.
 
@@ -29931,7 +29931,7 @@ iPad and Mac Catalyst put the shelf and the spine side by side. Not decoration: 
 
 No simulator run and no device. The build is green, `address-book-selftest.sh` passes with every mutation caught, and the drag-to-file gesture is the one thing here that cannot be proven without hardware — which is why there are three ways to move an address and only one of them depends on it.
 
-## 441. Five moments and three walks — the address book's delight pass (user: "now based on the experience we have how would you add surprise and delight? improve the UI? smooth the UX?", then "do all", 2026-08-22)
+## §441 — Five moments and three walks — the address book's delight pass (user: "now based on the experience we have how would you add surprise and delight? improve the UI? smooth the UX?", then "do all", 2026-08-22)
 
 §440 built the screen; this is what it earns once you use it. Five moments and three costs, and the rule every one of them obeys is §79's: **a moment is animated only when something real happened.** Nothing here animates an arrival, a re-render or a scroll.
 
@@ -29981,7 +29981,7 @@ Group cards reordered by activity (alphabetical is stable, and a strip that resh
 
 The build is green on both platforms and every harness and audit passes. **No simulator run and no device**: the flight's two anchors, the drop absorb and the scrubber bubble are all gesture-driven and none of them can be exercised by a static check — and the drag that feeds the absorb is the same `draggable`/`contextMenu` arbitration §440 already flagged as unverified on hardware.
 
-## 442. What the first device drawing of §440 found — five things a build cannot see (2026-08-22)
+## §442 — What the first device drawing of §440 found — five things a build cannot see (2026-08-22)
 
 §440 and §441 shipped green: both platforms built, every audit passed, the harness caught all thirteen of its mutations, and `verify.sh` came back clean with zero warnings. Then the screen was opened on a simulator for the first time. **Five defects, none of which any static check could have seen**, which is the same lesson §436 recorded about the sky and is worth recording again in the room that replaced it: a harness proves arithmetic, and a layout is not arithmetic.
 
@@ -30013,7 +30013,7 @@ Tapping a group card did nothing. The push was correct; the ROUTE the probe arri
 
 The A–Z sections and their sticky headings, the scrubber, the recency subline ("2 together · 4 days ago", "1 together · August"), the kind labels, the group card's face deck and its "3 addresses · none watched", `NewGroupSheet` → a card appearing in the strip → the group's own screen with its ⋯ menu. The spine's own drawing is still UNSEEN — this corpus has no address reaching two watched wallets, which is the honest common case and exactly what the "None of your addresses are connected" state is for.
 
-## 443. The address sheet, ranked — one subject, one number, one verb (user: "how would you improve the design of an address thing sheet from the wallet set up page, think like cash app", then "if we go with your proposal, how else would you improve your design", then "ok, build it", 2026-08-22)
+## §443 — The address sheet, ranked — one subject, one number, one verb (user: "how would you improve the design of an address thing sheet from the wallet set up page, think like cash app", then "if we go with your proposal, how else would you improve your design", then "ok, build it", 2026-08-22)
 
 §435 already took one Cash-App-shaped run at this card — face 64 → `DS.Face.profile`, name `heading22` → `heading28`, the pour 0.26 → 0.40, the address as a capsule chip, and the watch verb it never had. What was left after that is not more colour. It is **RANK**: the screen had five `dsWidgetSurface` cards at one weight (a look-alike security notice, the live approvals, groups, the history, a link to Etherscan), a lede made of metadata, its best reading tenth, and its one decision scrolling away.
 
@@ -30067,7 +30067,7 @@ This entry was written as §442 and renumbered to §443 before it landed: anothe
 
 The build is green on iOS Simulator and Mac Catalyst, every audit and both address harnesses pass, and the string catalog is level with source in all five languages. **No simulator run and no device**: the scroll hand-off, the pinned bar over a scrolling record, the group-chip menu and the look-alike band's full-width ground are all rendering behaviour no static check can exercise.
 
-## 444. Six moves on the address book's sheets — the comparison made, the name edited where it stands, the filing given a flight (user: "how would you add surprise and delight and level up the design of the sheets in the address book? we did a couple turns on them but we didn't quite get them", then "ok do all", 2026-08-22)
+## §444 — Six moves on the address book's sheets — the comparison made, the name edited where it stands, the filing given a flight (user: "how would you add surprise and delight and level up the design of the sheets in the address book? we did a couple turns on them but we didn't quite get them", then "ok do all", 2026-08-22)
 
 §443 RANKED the address card's content and §441 spent its delight on the LIST behind it. The result is a sheet that is correctly ordered and completely still: the only motion inside any address sheet was the rename cascade, and the two secondary sheets — "File under" and "New group" — had never had a delight pass at all. Six moves, all six built.
 
@@ -30147,7 +30147,7 @@ Four, all found by reading the diff rather than by any check, and each fixed her
 
 iOS Simulator and Mac Catalyst build green, every static audit passes, both address harnesses pass, and the string catalog is level with source in all five languages. **No simulator run and no device.** Every one of the six is gesture- or render-driven and no static check can exercise one: the diff's ink at Dynamic Type sizes, the ring sweep, the ends-first mask, the filing flight's arc inside a tray, the deck's absorb, the inline field's keyboard, and the wallets strip's horizontal scroll.
 
-## 445. The rise stops re-laying out the brief on every frame, and the document dissolves into the chrome instead of being cut by it (user: "the agent still opens in a janky way, and the bottom of the screen has a hard black box you can see", 2026-08-22)
+## §445 — The rise stops re-laying out the brief on every frame, and the document dissolves into the chrome instead of being cut by it (user: "the agent still opens in a janky way, and the bottom of the screen has a hard black box you can see", 2026-08-22)
 
 Two reported symptoms, one screenshot. Both are structural — work removed, and an edge given a gradient. Nothing tuned.
 
@@ -30177,7 +30177,7 @@ A gradient overlay now fades the document into the ground over its last 40pt. **
 
 iOS Simulator and Mac Catalyst build green; every static audit and the extended guard pass. **No simulator run and no device.** The rise is animation-frame timing, which a simulator distorts and which no static check can exercise — the reading that would close it is `risePhase|` on a device, a cold first open and a same-day re-open, which is the same open item `docs/perf-swipe-and-rise-spec.md` already carries. The bottom fade is a render, unverified at any Dynamic Type size.
 
-## 446. The address card becomes one dated spine (design handoff, 2026-08-22)
+## §446 — The address card becomes one dated spine (design handoff, 2026-08-22)
 
 Built from a design handoff (`design_handoff_address_card/`), whose thesis is one sentence: `AddressCard` drew six blocks — `identityHeader`, `lookalikeBand`, `lede`, `reachedWallets`, `historySection`, `detailsList` — and five of them were **the same shape in five treatments**, a dated fact about one address. They collapse into one vertical spine, newest first, with the standing approval exposure as the event at the head and "you named them" at the root.
 
@@ -30237,7 +30237,7 @@ Its zone fixture is `AddressBookShape.lastPhrase`'s bug in a second file: an ins
 
 iOS Simulator build green; every static audit, both address harnesses and the wallet-viz harness pass. **No simulator run and no device.** Nothing here has been looked at: the wrap point of the address block at 390pt and at accessibility sizes, the chunk reveal's hand-off from the face ring, the rail's fill against a two-line caption, and whether `stat24` is a rung too small for the head of a spine — the handoff flags that last one as a judgement to make on device. Three transfers before the fold is the handoff's own guess.
 
-## 447. Seven text objects over one drawing — the holdings block's redundancy cut (user: "how would you remove text redundancy on the wallet screen in the 'What you hold' section, there is tons of redundancy and i don't even think we need words besides the title above the treemap", then "i was looking at it on the 'All' wallets feed", then "i like proposed A. do it", 2026-08-22)
+## §447 — Seven text objects over one drawing — the holdings block's redundancy cut (user: "how would you remove text redundancy on the wallet screen in the 'What you hold' section, there is tons of redundancy and i don't even think we need words besides the title above the treemap", then "i was looking at it on the 'All' wallets feed", then "i like proposed A. do it", 2026-08-22)
 
 **Amends §417** (which promoted the concentration reading to a `heading22`
 lead above the map) and **§155** (whose subline named the wallet count).
@@ -30381,7 +30381,7 @@ be run end-to-end: a concurrent session's in-flight edit to
 `AddressConnections.swift` removed `headline`/`subhead`, which that file's
 existing assertions still name.
 
-## 448. One face per address — the watched shelf folds into the book, and the connected card stops narrating its own drawing (user: "i think perhaps having those circles in 'watching' as faces just make the page messier when we already have a list … you can't see their entire name and it just looks forced", then "i like A", then "in the connected section we have redundancy … i want it with the least amount of words ever there", then "don't say n watched — it's just extra text we don't need", 2026-08-22)
+## §448 — One face per address — the watched shelf folds into the book, and the connected card stops narrating its own drawing (user: "i think perhaps having those circles in 'watching' as faces just make the page messier when we already have a list … you can't see their entire name and it just looks forced", then "i like A", then "in the connected section we have redundancy … i want it with the least amount of words ever there", then "don't say n watched — it's just extra text we don't need", 2026-08-22)
 
 Three cuts on the Addresses screen, one principle: **draw a thing once, and let the drawing do the talking.** Nothing here is a new capability; every line is a deletion, and each deleted thing was saying something a neighbour already said.
 
@@ -30439,7 +30439,7 @@ The spine drawing, its ribbons, §439's bracket, the naming affordance, the grou
 
 Every claim above is about what is drawn, and this pass ran no simulator (standing user preference). The build is green on iOS and Catalyst and the static audits pass; **the row moving between sections is unproven on a device** — SwiftUI animates a `Section` change by identity and this one has never been watched happening.
 
-## 449. The Worth-a-look sheet stops being a second copy of the room (user: "how would you improve the 'worth a look' sheet in the wallet, and remove redunancy", then "proposed is fine but eliminate redundancy in text where you can … in spam transfers it should say Received, not Sent", then "go ahead", 2026-08-22)
+## §449 — The Worth-a-look sheet stops being a second copy of the room (user: "how would you improve the 'worth a look' sheet in the wallet, and remove redunancy", then "proposed is fine but eliminate redundancy in text where you can … in spam transfers it should say Received, not Sent", then "go ahead", 2026-08-22)
 
 The tray is a **July** surface. Two passes landed after it and each gave one of
 its four actionable kinds a better home in the same room: §292 gave approvals a
@@ -30561,7 +30561,7 @@ type rung. One new anchor (`approvalsAnchor`) and one gate spelled once
 can exercise the dismiss-and-scroll pair; the ink contrast finding in (6) was
 measured from the tokens, not photographed.
 
-## 450. The wallet rail stops naming its faces, and the crown card names the pick instead (user: "i hate how the wallets that show in the wallet screen, the avatars up top truncate the wallet name … when it's something like accountless.eth you end up seeing accountle…", then "none of those look good. i almost feel like we should remove the names there", then "D is best", 2026-08-22)
+## §450 — The wallet rail stops naming its faces, and the crown card names the pick instead (user: "i hate how the wallets that show in the wallet screen, the avatars up top truncate the wallet name … when it's something like accountless.eth you end up seeing accountle…", then "none of those look good. i almost feel like we should remove the names there", then "D is best", 2026-08-22)
 
 **The cause was an asymmetry, not a width.** An ADDRESS is shortened in the model — `WalletStore.shortAddress` cuts it to `…4f4f` before the rail ever sees it, so it fits. A NAME is handed over whole and the LAYOUT cuts it, tail-first, which destroys a word. Measured in real SF Pro Text at `label12` against the 66pt slot: `accountless.eth` 92.0, `jesse.base.eth` 83.9, `Cold storage` 74.1 — all over; `vitalik.eth` 56.7 and `…4f4f` 34.3 — both fine. So short names were never broken, and the fix was never "one more character".
 
@@ -30599,7 +30599,7 @@ Eight drift guards in `category-fold-selftest.sh`, each mutation-proven in an is
 
 **Unverified on a device.** Both platforms compile and every static audit passes; nothing here has been looked at on hardware, and the 356pt arithmetic assumes a 393pt screen.
 
-## 451. The redundancy sweep, everywhere but the wallet (user: "sweep the app everywhere besides the wallet for extra subtext that is redundant. i'm seeing it in the wallet and shouldn't be", then "do 1, 2, and 3", 2026-08-22)
+## §451 — The redundancy sweep, everywhere but the wallet (user: "sweep the app everywhere besides the wallet for extra subtext that is redundant. i'm seeing it in the wallet and shouldn't be", then "do 1, 2, and 3", 2026-08-22)
 
 §447/§448/§449 cut the wallet's restatements one screen at a time. This is the
 question that follows: is the same thing happening anywhere else. Two of the
@@ -30728,7 +30728,7 @@ shape as "Connected" under "How they connect". It stays, because it is drawn
 in the source's brand hue and does double duty as the mark: identification,
 not subtext. Flagged here so the next pass knows it was considered.
 
-## 452. The room heads stop introducing themselves (user: "oh get rid of those that is totally redundant", 2026-08-22)
+## §452 — The room heads stop introducing themselves (user: "oh get rid of those that is totally redundant", 2026-08-22)
 
 §451 flagged this and did not cut it. Every room head card opened with a
 `label12` line carrying its own source's name — "Instagram", "Cursor",
@@ -30766,7 +30766,7 @@ Verified by both builds and by every harness that guards one of these cards
 applewallet, agent-panel, safe-room, github-room, altana, radicle, railgun,
 x402) — a fuller pass runs separately.
 
-## 453. Nothing in the app shouts (user: "Fix it", then "you decide", 2026-08-22)
+## §453 — Nothing in the app shouts (user: "Fix it", then "you decide", 2026-08-22)
 
 Build-brief §8 bans the ALL-CAPS eyebrow in the same sentence that bans
 letter-spacing. `.kerning()` was made a rule people remembered; the caps half
@@ -30831,7 +30831,7 @@ wrong for an eyebrow with no static rule between them. The spine's own harness
 guards its `localizedUppercase` directly instead. `KNOWN_ACRONYMS` is EMPTY by
 design.
 
-## 454. The wallet room gets one card recipe (user: "how would you improve the wallet design? is the spacing ok", then "make all the changes you suggested", 2026-08-22)
+## §454 — The wallet room gets one card recipe (user: "how would you improve the wallet design? is the spacing ok", then "make all the changes you suggested", 2026-08-22)
 
 Asked whether the room's spacing was OK. It was not, and the interesting part is
 that §160's `WalletCardStyle` had already been written to prevent exactly this
@@ -30900,7 +30900,7 @@ Nothing was removed and nothing changed what it says. `scripts/accessibility-aud
 `KNOWN_EXEMPT` key for the flow band's slab gesture moved 384 → 388, exactly
 the safe drift its own note describes.
 
-## 455. The reading rooms, past §312 — an article you can actually read, a board that narrows its own room, and a feed that says when it stopped answering (user: "how would you improve the RSS experience", then "do all", 2026-08-23)
+## §455 — The reading rooms, past §312 — an article you can actually read, a board that narrows its own room, and a feed that says when it stopped answering (user: "how would you improve the RSS experience", then "do all", 2026-08-23)
 
 §312 answered this question fourteen days ago and answered the PLUMBING half of
 it: a YouTube resolver that had been following the wrong channel, a conditional
@@ -31060,7 +31060,7 @@ no harness here has an audio device. Both fail safe (a fetch that misses leaves
 the preview card that was already there; a voice that never starts leaves a
 button that does nothing visible and stops on disappear regardless).
 
-## 456. Telegram returns, through the two doors §57 never weighed (user: "what can we do with telegram", then "lets do 1 and 2", 2026-08-23)
+## §456 — Telegram returns, through the two doors §57 never weighed (user: "what can we do with telegram", then "lets do 1 and 2", 2026-08-23)
 
 §57's 2026-07-14 amendment REMOVED Telegram from the catalog, and it closed with
 the standing invitation this entry takes up: "if Telegram ever returns it
@@ -31186,7 +31186,7 @@ rests on, because when a scrape's markup moves the room does not break, it goes
 QUIET, which from outside is indistinguishable from a channel that stopped
 posting.
 
-## 457. The agent rooms get a head, Claude Code gets measured, and two registries that answered nil (user: "what more can we do with claude and chatgpt", then "ok do all", 2026-08-23)
+## §457 — The agent rooms get a head, Claude Code gets measured, and two registries that answered nil (user: "what more can we do with claude and chatgpt", then "ok do all", 2026-08-23)
 
 Asked what more the ChatGPT/Claude/Gemini/Claude Code rooms could do. §418
 (three days old) had already shipped the fold, the turn count on the row, code
@@ -31325,7 +31325,7 @@ Gemini export has ever been imported on this host, so the importers themselves
 remain unverified against real exports — only Claude Code's transcript FORMAT
 was measurable here, and only because this machine already holds one.
 
-## 458. WhatsApp is passed on, and the reasons are of two grades (user: "if we are adding telegram we may as well add what's app wdyt?", then "if the export is per chat then that is not going to work, unless it i export chats to yourself", then "seems like we should pass on it for now and that even the self chats are unclear?", 2026-08-23)
+## §458 — WhatsApp is passed on, and the reasons are of two grades (user: "if we are adding telegram we may as well add what's app wdyt?", then "if the export is per chat then that is not going to work, unless it i export chats to yourself", then "seems like we should pass on it for now and that even the self chats are unclear?", 2026-08-23)
 
 Asked the same afternoon §456 landed, and it looks like it follows from it and does
 not. §456 turned on the door §57 never weighed — a public CHANNEL is broadcast media
@@ -31379,7 +31379,7 @@ the timestamp line is where a `.txt` with no schema will hurt. Absent those, the
 stays unbuilt and — unlike §57's Soon card — is never listed, so nothing on any
 surface promises a sync that does not exist.
 
-## 459. What more can we do with OpenRouter (user: "what more can we do with openrouter", then "ok do all", 2026-08-23)
+## §459 — What more can we do with OpenRouter (user: "what more can we do with openrouter", then "ok do all", 2026-08-23)
 
 Every other agent seat here is one company answering with its own models — no second
 backend to prefer, no plugin to enable. OpenRouter is a router, so the headroom was in
@@ -31467,7 +31467,7 @@ build host and there is no egress to `openrouter.ai` from it; every path fails s
 (an ignored body key changes nothing, a refused route is a worded failure, an unknown
 fact reads as the conservative answer).
 
-## 460. Every connect page gets a door back to its room (user: "in the same way we now have a settings icon in source rooms, each set up page should have a view feed cta or button so users don't have to come back through many steps wdyt", then "it needs to not be at the bottom of the screen either", 2026-08-24)
+## §460 — Every connect page gets a door back to its room (user: "in the same way we now have a settings icon in source rooms, each set up page should have a view feed cta or button so users don't have to come back through many steps wdyt", then "it needs to not be at the bottom of the screen either", 2026-08-24)
 
 **`RoomGear`'s inverse, and the pair is the point.** §CLAUDE's `RoomGear` (2026-08-21)
 gave a source room a door to its seat's settings; nothing gave a seat's settings a
@@ -31596,7 +31596,7 @@ day the rule moves) and refuses them with their own message.
 Forty-five doors across the catalog. Both platforms compile clean and every static
 audit passes; the tap itself remains UNMEASURED on a device for §460's reason.
 
-## 461. The setup screen is your five wallets; the address book is everyone else (user: "i think we should make the wallet address book only be for watching, no interaction… we are having this problem where an app setup screen is basically doubling as a room… it's almost like address book should be its own room in the wallet area", then "when you say a People Room you are basically saying an Address Book and that's what we should call it", then "since a user can only follow five wallets, perhaps we put the address book as a thing next to the account avatars inside the wallet room", then "i'm not sure of the solution but we are still not fully separating them", then "this means then that the setup screen only allows five wallets and there is no concept of starring", 2026-08-24)
+## §461 — The setup screen is your five wallets; the address book is everyone else (user: "i think we should make the wallet address book only be for watching, no interaction… we are having this problem where an app setup screen is basically doubling as a room… it's almost like address book should be its own room in the wallet area", then "when you say a People Room you are basically saying an Address Book and that's what we should call it", then "since a user can only follow five wallets, perhaps we put the address book as a thing next to the account avatars inside the wallet room", then "i'm not sure of the solution but we are still not fully separating them", then "this means then that the setup screen only allows five wallets and there is no concept of starring", 2026-08-24)
 
 Reviewed as five artboards before any code (`design/address-book/room-split/`). This
 entry **supersedes §440** on the manager's shape and **§448** on where watching is
@@ -31728,7 +31728,7 @@ simulator run and no device** (standing user preference): the rail's eighth slot
 the roster's swipe-to-remove, and the book room's push are all rendering and
 gesture behaviour no static check can exercise.
 
-## 463. Vibenet's scope 0 is the ADMIN, and the key tray is chips per key (user: "for the key tray i think we can use chips for the policies?", then "i really wish it was in some sort of matrix a user could see", then "the grid is just really bad", then "maybe totally rethink it from first principles", then "who would understand what those dashes mean. and is 'delegate' same as 'Admin key'? … i'm worried we are taking too many liberties. also for ease the keys could just be listed in alphabetical order then we aren't making some judgement call. i think we are stuck doing chips per key", 2026-08-24)
+## §463 — Vibenet's scope 0 is the ADMIN, and the key tray is chips per key (user: "for the key tray i think we can use chips for the policies?", then "i really wish it was in some sort of matrix a user could see", then "the grid is just really bad", then "maybe totally rethink it from first principles", then "who would understand what those dashes mean. and is 'delegate' same as 'Admin key'? … i'm worried we are taking too many liberties. also for ease the keys could just be listed in alphabetical order then we aren't making some judgement call. i think we are stuck doing chips per key", 2026-08-24)
 
 **THE BUG THIS PASS EXISTS FOR: `VibenetScope` had scope 0 exactly backwards.**
 EIP-8130 is explicit — *"A value of `0x00` means unrestricted (admin), while
@@ -31820,7 +31820,7 @@ harness remains the only proof — which is exactly the standing said in §440's
 terms: a harness proves the arithmetic, never that the arithmetic answered the
 right question.
 
-## 462. The book answers back — the save's three answers, the quiet top, WHEN down the edge, the card's void filled, and the connect row's second verb (user: "how would you improve the ui, add surprise and delight, and if necessary some of the ux for the address book?", then "and specifically the sheets too", then "ok, i'm in sync. yes lets do it", then "address book also needs a way to connect wallet… remember we had a way for the user to be able to detect and add many", 2026-08-24)
+## §462 — The book answers back — the save's three answers, the quiet top, WHEN down the edge, the card's void filled, and the connect row's second verb (user: "how would you improve the ui, add surprise and delight, and if necessary some of the ux for the address book?", then "and specifically the sheets too", then "ok, i'm in sync. yes lets do it", then "address book also needs a way to connect wallet… remember we had a way for the user to be able to detect and add many", 2026-08-24)
 
 Reviewed as six artboards grounded in SIMULATOR SCREENSHOTS of the shipped §461
 screens (`design/…/address-book-delight`) — the "Today" boards are what actually
@@ -31951,7 +31951,7 @@ REAL wallet handshake (no wallet app exists on the simulator — `wc-handshake.s
 exercises the wire, not this sheet). Everything else above was walked on the
 simulator this session.
 
-## 464. The Safe room's rings become rows (user: "how would you improve the design of the visualizations in the safe room? they cllip some words and i think we could do better", then "do A", 2026-08-24)
+## §464 — The Safe room's rings become rows (user: "how would you improve the design of the visualizations in the safe room? they cllip some words and i think we could do better", then "do A", 2026-08-24)
 
 The clipping was real and had three separate causes, and all three came out of
 one decision: `SafeRoomCard` drew its entries as a horizontal `ScrollView` of
@@ -32059,7 +32059,7 @@ whether `SafeBridge.describe` can hand back an empty string on a real Safe —
 the fallback exists and is tested, but if it is the COMMON case then the room
 leads three rows with one noun and the subject was never the fix it looks like.
 
-## 465. Setup is what you do once; the room is what you do repeatedly — vibenet's roster becomes an address book (user: "is that clear to a user? in setup screen you follow up to five wallets, but in address book you track addresses? … i'm just not happy or seeing an elegant solution to how we are doing this. the set up screens need to feel like they are only for set up", then "maybe then the solution is in the app catlogue wallet setup and vibenet setup just create the room and you do all the things there", then "vibenet needs to be treated differntly b/c it's not a live network just fyi. same like altana", then "agree connect lands you in the room / but room can have address book", 2026-08-24)
+## §465 — Setup is what you do once; the room is what you do repeatedly — vibenet's roster becomes an address book (user: "is that clear to a user? in setup screen you follow up to five wallets, but in address book you track addresses? … i'm just not happy or seeing an elegant solution to how we are doing this. the set up screens need to feel like they are only for set up", then "maybe then the solution is in the app catlogue wallet setup and vibenet setup just create the room and you do all the things there", then "vibenet needs to be treated differntly b/c it's not a live network just fyi. same like altana", then "agree connect lands you in the room / but room can have address book", 2026-08-24)
 
 §461 split Wallet's addresses into a capped roster on the setup screen and an
 unlimited book of names beside it. It answered the question it was asked and
@@ -32148,7 +32148,7 @@ has no cap to relocate.
 no simulator run has walked the new book, and the first-watch routing has never
 been seen to happen.
 
-## 466. Wallet finishes the move — the roster leaves the setup screen too, and the rail loses its second slot (user: "drop the plus", then "wallet should only have book in the rail not a plus", then "i think we should make wallet setup screen not have the roster either", 2026-08-24)
+## §466 — Wallet finishes the move — the roster leaves the setup screen too, and the rail loses its second slot (user: "drop the plus", then "wallet should only have book in the rail not a plus", then "i think we should make wallet setup screen not have the roster either", 2026-08-24)
 
 §465 moved Vibenet's roster into its book and left Wallet's exactly where §461
 put it — a deliberate scoping, named as not-done in that entry. Asked to
@@ -32231,7 +32231,7 @@ and `swiftdata-liveness-audit` all pass. No simulator run has watched a first
 wallet, watched a second from the book, or renamed/removed a roster row
 through its new home.
 
-## 467. The vibenet room becomes four cards, and its event sheet becomes a sheet (RECONSTRUCTED, 2026-08-25 — see the renumbering note)
+## §467 — The vibenet room becomes four cards, and its event sheet becomes a sheet (RECONSTRUCTED, 2026-08-25 — see the renumbering note)
 
 **THIS ENTRY IS RECONSTRUCTED FROM THE COMMITS AND THE SOURCE, and it is
 labelled as such for §340's reason: inventing the reasoning would poison the
@@ -32337,7 +32337,7 @@ expiry (§349's Peer/Privacy Pools demo-ref class, again); and "You can act
 for" on the account detail was a clause that stopped dead, while its sibling
 "Can act for you" was complete, so the pair read as one broken and one fine.
 
-## 468. The vibenet room says when it was read, what it could not see, and what moved (user: "how else would you improve the vibenet experience and information to the user", then "do all", then "on the All page the key card should open to a list of keys and permissions that show which keys are in which category", then "on the individual account page, we don't need the avatar before the address b/c its already in the source strip", 2026-08-25)
+## §468 — The vibenet room says when it was read, what it could not see, and what moved (user: "how else would you improve the vibenet experience and information to the user", then "do all", then "on the All page the key card should open to a list of keys and permissions that show which keys are in which category", then "on the individual account page, we don't need the avatar before the address b/c its already in the source strip", 2026-08-25)
 
 Eight items proposed and all eight taken, plus two the user added while it
 ran. §467 made this room four cards; this is the pass about what those cards
@@ -32558,7 +32558,7 @@ fail one balance read out of three, so the harness is again not the best
 proof these numbers are right but the only one. The key tray, the chevron and
 the stood-down face are all rendering no static check can exercise.
 
-## 469. The address book's keys card was the All room's, drawn twice — and `onScope` had been dead since afda3c10 (user: "the address book shows a card for keys that duplicates what is on the all aggregate screen. we don't need it in address book", then "its the same thing isn't it?", then "so if we restore it then the user is moving through doors to different accounts insstead of using the source avatars for the accounts above it? that seems like not needed", 2026-08-25)
+## §469 — The address book's keys card was the All room's, drawn twice — and `onScope` had been dead since afda3c10 (user: "the address book shows a card for keys that duplicates what is on the all aggregate screen. we don't need it in address book", then "its the same thing isn't it?", then "so if we restore it then the user is moving through doors to different accounts insstead of using the source avatars for the accounts above it? that seems like not needed", 2026-08-25)
 
 ### 1. The duplicate, and why it was real rather than a lookalike
 
@@ -32601,7 +32601,7 @@ anchored on `onScope:` and now pins the surviving shape — an inert `onRemove`
 and, as the negative half carrying §463's ruling, **no `onOpen:`**, which is
 the managing roster returning to the feed room.
 
-## 470. A key gets an identity, the tray stops dead-ending, and the raw read gets a clipboard (user: "how else would you improve the vibenet experience? imagine there is a power user dev trying to often find accounts, keys, and permissions", then "do all", 2026-08-25)
+## §470 — A key gets an identity, the tray stops dead-ending, and the raw read gets a clipboard (user: "how else would you improve the vibenet experience? imagine there is a power user dev trying to often find accounts, keys, and permissions", then "do all", 2026-08-25)
 
 Three items, all clustered on one gap: **`actorId` is the primary key of this
 entire system and no screen showed it.**
@@ -32706,7 +32706,7 @@ conventions they encode.
 wrapped doors row are gesture and layout behaviour no static check can
 exercise; iOS Simulator and Mac Catalyst both compile clean.
 
-## 471. The room reads as unrefined because its air, not its drawings, was wrong — plus the expiry rail that was never legible here (user: "how would you improve the UI of the vibenet all screen, it's a bit messy and looks unrefined. same w/ the key screen when it shows all keys… it looks like a giant slab of gray card that could be broken up, the font looks like padding on the edges or indentation maybe is wrong i'm not sure, and its also tightly packed together", then "yes i like all of your choices except this part / for expires what is a better diagram for it?", then "lets go and do B and all the other changes you suggested", 2026-08-25)
+## §471 — The room reads as unrefined because its air, not its drawings, was wrong — plus the expiry rail that was never legible here (user: "how would you improve the UI of the vibenet all screen, it's a bit messy and looks unrefined. same w/ the key screen when it shows all keys… it looks like a giant slab of gray card that could be broken up, the font looks like padding on the edges or indentation maybe is wrong i'm not sure, and its also tightly packed together", then "yes i like all of your choices except this part / for expires what is a better diagram for it?", then "lets go and do B and all the other changes you suggested", 2026-08-25)
 
 Six measured causes, none of them in any one drawing. §467 answered "some
 hodge podge put together view" by giving each reading its own surface, and the
@@ -32870,7 +32870,7 @@ approach its expiry, so the harness is again not the best proof these bars are
 right but the only one. Every spacing change is rendering no static check can
 exercise.
 
-## 472. The Address Book said the read had failed before it had tried, and the one clock that ticks did not (user: "how else would you improve the vibenet experience", then "we want it really really polished", then "do all", 2026-08-25)
+## §472 — The Address Book said the read had failed before it had tried, and the one clock that ticks did not (user: "how else would you improve the vibenet experience", then "we want it really really polished", then "do all", 2026-08-25)
 
 Asked a third time (§468, §470), so the first act was reading those two
 entries rather than grepping for absences — this room's own §418 lesson, that
@@ -32974,7 +32974,7 @@ into an unlock delay, so the ticking countdown — the item most worth seeing �
 has never been watched running. The confirm, the pull and the discovery door
 are gesture behaviour no static check can exercise.
 
-## 473. A revoked key kept its deadline, a key could not say when it began, and the timelock reaches the lock screen (user: "what else would you do to improve the vibenet experience? in terms of design and utility", then "where would the key page live?", then "mock up the different approaches", then "yes lets do B. lets also solve the thing you said about a revoked key deadline never cleared. and we can make unlock delay a live activity", 2026-08-25)
+## §473 — A revoked key kept its deadline, a key could not say when it began, and the timelock reaches the lock screen (user: "what else would you do to improve the vibenet experience? in terms of design and utility", then "where would the key page live?", then "mock up the different approaches", then "yes lets do B. lets also solve the thing you said about a revoked key deadline never cleared. and we can make unlock delay a live activity", 2026-08-25)
 
 The fourth pass on this room, and the fourth time the first act was reading
 the previous entries rather than grepping for absences (§468, §470, §472).
@@ -33146,7 +33146,7 @@ activity in particular has never been rendered at all, since no simulator
 shows a lock screen or a Dynamic Island. The harness proves the arithmetic and
 the wiring; the moving picture is a device check.
 
-## 474. The room's margin from the screen edge (user: "the vibenet room - the margins. they aren't the same consistency as on the wallet, so it looks like they are touching the screen", 2026-08-25)
+## §474 — The room's margin from the screen edge (user: "the vibenet room - the margins. they aren't the same consistency as on the wallet, so it looks like they are touching the screen", 2026-08-25)
 
 Real and measurable, not a matter of taste. This room is presented through
 `insightSection` (`FeedScreen.swift`), which is DELIBERATELY edge-to-edge —
@@ -33196,7 +33196,7 @@ thing a screenshot settles in seconds and no static check can — the guard
 proves the modifier is present, not that the resulting margin reads as
 consistent with Wallet's own.
 
-## 475. Vibenet borrows Wallet's own hero, chips, headers and crown (user: "how do we make it more cohesive with the Wallet experience? … the sparkline and balance are in one card in the vibenet room, but in the wallet room neither are in a card … it shows the account icons and what their performance is below the sparkline … the wallet uses Green for money and blue for helper text but the vibenet only uses gray … we also have section headers in the wallet like what you hold, and what it's doing … additionally on the individual account sheets in vibenet, they lost their sparkline and also have a totally different format", then "yes, but we don't use blue for the treemaps on wallet i don't think. and for 'what's authorized' underneath it just say 8 keys instead of '8 keys authorized', we don't need to repeat that word", 2026-08-25)
+## §475 — Vibenet borrows Wallet's own hero, chips, headers and crown (user: "how do we make it more cohesive with the Wallet experience? … the sparkline and balance are in one card in the vibenet room, but in the wallet room neither are in a card … it shows the account icons and what their performance is below the sparkline … the wallet uses Green for money and blue for helper text but the vibenet only uses gray … we also have section headers in the wallet like what you hold, and what it's doing … additionally on the individual account sheets in vibenet, they lost their sparkline and also have a totally different format", then "yes, but we don't use blue for the treemaps on wallet i don't think. and for 'what's authorized' underneath it just say 8 keys instead of '8 keys authorized', we don't need to repeat that word", 2026-08-25)
 
 Five observations, four of them real defects, one of them mine to correct in
 the mockup rather than the app. Every value below was traced out of
@@ -33330,7 +33330,7 @@ surface), that the chips read each account's OWN history and stay gated on
 guards prove the modifiers are present, never that the result reads as
 cohesive with Wallet beside it.
 
-## 476. Seven things between a person and "the accounts and their keys" (user: "now lets say a user's goal is to quickly see the accounts and keys are we doing the best design we can for them?", then "do all of these, but i like having the linked accounts as a card to see", 2026-08-25)
+## §476 — Seven things between a person and "the accounts and their keys" (user: "now lets say a user's goal is to quickly see the accounts and keys are we doing the best design we can for them?", then "do all of these, but i like having the linked accounts as a card to see", 2026-08-25)
 
 Seven reports against one goal. Two of them were not what they looked like,
 and the difference changed the fix — the standing reason this room's passes
@@ -33477,7 +33477,7 @@ before and after and it has not been measured — the decode was found by
 reading, and whether the scroll is smooth now is a device check. Every other
 item is layout, wiring and taps that no static check can exercise.
 
-## 477. The scoped account was never restructured, the jitter was in another file, and Linked accounts folds into Accounts (user: "the All screen in vibenet is good, but the individual account screens are not in the same format, why not? you have one giant slab that contains all the components in it", then "i agree with you now about linked accounts is kind of placed in a weird spot after keys… we could have it be a part of the first section but is a tap to expand", then "the jitters are still there when scrolling on those two pages", 2026-08-25)
+## §477 — The scoped account was never restructured, the jitter was in another file, and Linked accounts folds into Accounts (user: "the All screen in vibenet is good, but the individual account screens are not in the same format, why not? you have one giant slab that contains all the components in it", then "i agree with you now about linked accounts is kind of placed in a weird spot after keys… we could have it be a part of the first section but is a tap to expand", then "the jitters are still there when scrolling on those two pages", 2026-08-25)
 
 Three reports, with screenshots. All three are corrections to work done earlier
 the same day, and the honest summary of the first two is that a fix was applied
@@ -33574,7 +33574,7 @@ jitter is the one item with a before and after that a person can feel, and it
 has now been "fixed" twice by reading rather than profiling. If it survives
 this pass too, the next step is an Instruments trace rather than a third guess.
 
-## 478. The keys stop being a census you decode and become a list you scan — plus the two rules the room had been quietly breaking (user: "how would you improve the UI of the vibenet experience, more like robinhood or apple… we have the bones right, but it still looks poor. cards in cards, inline expanding in weird ways and so on… I want the vibenet expereince to feel like a tool you can move through quickly to see information like the keys", then "ok, do it", then "can you make sure instead of 'lapsing' you say 'expiring'", then "hey also in your version i see harilines" / "do NOT USE HAIRLINES", then "perhaps for policies like send anywhere pay own gass etc they should be chips instead of like a sentence", 2026-08-25)
+## §478 — The keys stop being a census you decode and become a list you scan — plus the two rules the room had been quietly breaking (user: "how would you improve the UI of the vibenet experience, more like robinhood or apple… we have the bones right, but it still looks poor. cards in cards, inline expanding in weird ways and so on… I want the vibenet expereince to feel like a tool you can move through quickly to see information like the keys", then "ok, do it", then "can you make sure instead of 'lapsing' you say 'expiring'", then "hey also in your version i see harilines" / "do NOT USE HAIRLINES", then "perhaps for policies like send anywhere pay own gass etc they should be chips instead of like a sentence", 2026-08-25)
 
 Two Apple-grammar and two Robinhood-grammar artboards were drawn before any
 code changed, and the diagnosis they produced is that **the room's contents
@@ -33698,7 +33698,7 @@ agreement with it, and proves no hairline is drawn — it cannot prove the room
 reads better, which is the claim being made.
 
 
-## 479. The room gets a first line, a window, and four moments (user: "how else would you improve the overall UI, make it more consumer friendly, colorful if needed and add surprise and delight", then "i don't want a hue, but do ALL the other things you mentioned / at the same time, we need to make sure the Mac experience doesn't suffer while we improve mobile, just keep that in mind. / also need to make sure the demo version has parity", 2026-08-25)
+## §479 — The room gets a first line, a window, and four moments (user: "how else would you improve the overall UI, make it more consumer friendly, colorful if needed and add surprise and delight", then "i don't want a hue, but do ALL the other things you mentioned / at the same time, we need to make sure the Mac experience doesn't suffer while we improve mobile, just keep that in mind. / also need to make sure the demo version has parity", 2026-08-25)
 
 Casberi already owns a delight grammar — berry rain, coin flips, the star
 flight (§441), staged arrivals, the receipt tear (§369), count-up numerals —
@@ -33824,7 +33824,7 @@ windowing and which ranges are offered — including that the demo's own curve
 can draw the strip — and cannot prove any of it feels right.
 
 
-## 480. The detail sheet had no anatomy, and the two key lists were two grammars (user, with screenshots: "how can we improve the design of these detail sheets, they look like they were made poorly", then "on the individual account page, why isn't the way we display keys similar in some way to how we display them on the All page", then "what happens if an account has like ten keys, won't they still need to be able to see it the same way?", 2026-08-25)
+## §480 — The detail sheet had no anatomy, and the two key lists were two grammars (user, with screenshots: "how can we improve the design of these detail sheets, they look like they were made poorly", then "on the individual account page, why isn't the way we display keys similar in some way to how we display them on the All page", then "what happens if an account has like ten keys, won't they still need to be able to see it the same way?", 2026-08-25)
 
 Three reports, and the second explains the first.
 
@@ -33901,7 +33901,7 @@ argument.
 
 **UNMEASURED on a device.** Every claim here is about how a screen reads.
 
-## 481. A spam NFT mint is one you didn't sign, not one that's cheap (user: "the user problem is that they get an event for minting an NFT, but most NFT's are spam… what can we do to filter those out? any NFT below a certain dollar we don't show an event for?", 2026-08-26)
+## §481 — A spam NFT mint is one you didn't sign, not one that's cheap (user: "the user problem is that they get an event for minting an NFT, but most NFT's are spam… what can we do to filter those out? any NFT below a certain dollar we don't show an event for?", 2026-08-26)
 
 **The reported problem.** A junk NFT is minted to a watched wallet and lands as
 an event in the feed. Notifications already decline it (`NotifySweep` never
@@ -34044,7 +34044,7 @@ fold" is the standing answer to hiding things behind a switch. Nothing here
 touches the Solana arm — Alchemy's NFT API is EVM-only, so a Solana NFT was never
 in this filter's reach and the copy claims nothing about it.
 
-## 482. The attention strip is deleted and the room becomes four scopes, the account rail folds into the crown, and the delegate spine stops drawing authority backwards (user, with screenshots: "this looks old on the all screen", then "what is the section tho? i mean what's it for?", then "'Needs you' should we call it 'worth a look'?" / "worth a look is what we use in Wallet", then "i think below because that way holdings and sparkline are together", then "also the linked account image with two accounts its hard to tell who can do what in terms of parent child or whatever. presuming the first one has greater authority but not really clear", then "Vibenet has it's own categories… no need to invent things or use wallet's exactly where we don't have. the goal is to have this experience and overall look", then "o wait no way… we can' hta ve the positions risk etc at the top" / "needs to be below the sparkline" / "we cannot have four rows of chips", then "if you click one of the accounts, it should still keep the row in the same place so user can navigate back", then "make the account circles the same size then that we have for social avatars… should always be consistent", 2026-08-26)
+## §482 — The attention strip is deleted and the room becomes four scopes, the account rail folds into the crown, and the delegate spine stops drawing authority backwards (user, with screenshots: "this looks old on the all screen", then "what is the section tho? i mean what's it for?", then "'Needs you' should we call it 'worth a look'?" / "worth a look is what we use in Wallet", then "i think below because that way holdings and sparkline are together", then "also the linked account image with two accounts its hard to tell who can do what in terms of parent child or whatever. presuming the first one has greater authority but not really clear", then "Vibenet has it's own categories… no need to invent things or use wallet's exactly where we don't have. the goal is to have this experience and overall look", then "o wait no way… we can' hta ve the positions risk etc at the top" / "needs to be below the sparkline" / "we cannot have four rows of chips", then "if you click one of the accounts, it should still keep the row in the same place so user can navigate back", then "make the account circles the same size then that we have for social avatars… should always be consistent", 2026-08-26)
 
 Three artboards were drawn before any code changed — the room as it ships, the
 two directions, and the strip at 1.7× — which is §478's own method, and it is
@@ -34207,7 +34207,7 @@ untouched — the strip's blue is still spent on expiry urgency and nothing else
 (§463). §295's same-weight ruling on the spine's ribbons is untouched. No new
 `Thing` field, no request, no CloudKit deploy.
 
-## 483. The wallet room becomes six scopes, and every card lands in exactly one (user: "i love our wallet bones and IA, but i just don't yet feel 'wow' when i see it", then "what would cashapp do with the stuff below", then "we can't really have the sections we what you hold etc b/c they are too long. so it needs to be Transactions, Holdings, Positions, NFTs, Risk", then "I think it is Permissions", 2026-08-26)
+## §483 — The wallet room becomes six scopes, and every card lands in exactly one (user: "i love our wallet bones and IA, but i just don't yet feel 'wow' when i see it", then "what would cashapp do with the stuff below", then "we can't really have the sections we what you hold etc b/c they are too long. so it needs to be Transactions, Holdings, Positions, NFTs, Risk", then "I think it is Permissions", 2026-08-26)
 
 Asked why the room didn't feel special, the honest first answer was not a taste
 problem. **The room ran to ~2,900pt of standing cards before the first ordinary
@@ -34493,7 +34493,7 @@ balance card. No new `Thing` field, no request, no CloudKit deploy. The four
 `walletGroupHeader` questions survive as headers the day a scope holds two
 unlike kinds of thing.
 
-## 484. Every catalog category is walked, and the demo's nine missing seats are the ones that never landed a row (user: "the demo mode does not show all sources active, for example, wallet is missing coinbase kraken, and soem others. shouldn't we have ALL that way we have a north star and reference and also user can see for any of the things that matter to them?", then "make sure to go through each category of apps in the catalogue to make sure we have a demo room", 2026-08-26)
+## §484 — Every catalog category is walked, and the demo's nine missing seats are the ones that never landed a row (user: "the demo mode does not show all sources active, for example, wallet is missing coinbase kraken, and soem others. shouldn't we have ALL that way we have a north star and reference and also user can see for any of the things that matter to them?", then "make sure to go through each category of apps in the catalogue to make sure we have a demo room", 2026-08-26)
 
 The catalog was walked group by group rather than seat by seat, and the answer
 is narrow: **eighteen of the twenty-one categories were already complete.** 103
@@ -34610,7 +34610,7 @@ No new `Thing` field, no request, no CloudKit deploy. The demo's row count is
 unchanged — every one of these nine is a reading, not a row, which is the whole
 reason they were missing.
 
-## 485. The Railgun room stops talking over itself, and two money rooms become ledgers (user: "the railgun room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
+## §485 — The Railgun room stops talking over itself, and two money rooms become ledgers (user: "the railgun room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
 
 §483's editing pass, applied one room over. Railgun is a VENUE inside the Wallet
 fold, so it is reached from the very rail that room's restraint was spent on —
@@ -34730,7 +34730,7 @@ Obsidian/Cursor lesson, and it fired on the first run exactly as predicted).
 simulator was skipped by standing preference — this is a build, the audits and
 the harness, not a look at the room.
 
-## 486. The 0xBow room becomes three scopes, and the gap in the bar gets a name (user: "the 0xbow room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
+## §486 — The 0xBow room becomes three scopes, and the gap in the bar gets a name (user: "the 0xbow room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
 
 The third room in three days to take `DSSectionSwitcher` — Wallet (§483),
 vibenet (§482), this — and the one where the diagnosis was easiest to state,
@@ -34838,7 +34838,7 @@ headline reading would have shipped unexercised.
 simulator was skipped by standing preference — this is the build, the audits and
 the harness, not a look at the room.
 
-## 487. The CardPointers room had no shape, so the head said everything and the rows said nothing (user: "the cardpointers room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
+## §487 — The CardPointers room had no shape, so the head said everything and the rows said nothing (user: "the cardpointers room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
 
 **Two thirds of this was not a taste problem.** `FeedScreen.Shape.init(source:)`
 had no `"CardPointers"` case, so the room fell to `.plain` and drew a `BandRow`
@@ -34956,7 +34956,7 @@ this project can reach has ever read a single offer, so every field shape is
 still guessed. This is the build on both platforms, the audits and the harness —
 the simulator was skipped by standing preference.
 
-## 488. The Altana room stops being a diagram and becomes a list (user: "the altana room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
+## §488 — The Altana room stops being a diagram and becomes a list (user: "the altana room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
 
 Asked how to clean it up, and the honest first answer was that almost none of
 it was taste. Five findings, four of them measurable, and the largest was not a
@@ -35118,7 +35118,7 @@ harness is again not the best proof these rows are right but the only one, and
 every spacing decision here is rendering no static check can exercise. iOS
 Simulator and Mac Catalyst both compile.
 
-## 489. Eight social rooms were eight different rooms, and one switch statement was why (user: "the social rooms have drifted somewhat. how do we make the rooms more cohesive? presumably you have the same kinds of things in each room so they shoudln't looks so different. example nostr doesn't even have avatars showing at the top like the others. but ther eis more than just that. inventory and propose solutions", 2026-08-26)
+## §489 — Eight social rooms were eight different rooms, and one switch statement was why (user: "the social rooms have drifted somewhat. how do we make the rooms more cohesive? presumably you have the same kinds of things in each room so they shoudln't looks so different. example nostr doesn't even have avatars showing at the top like the others. but ther eis more than just that. inventory and propose solutions", 2026-08-26)
 
 Asked to inventory the drift and propose a fix. The named example — Nostr with
 no faces above its room — turned out to be one symptom of a structural cause
@@ -35281,7 +35281,7 @@ harness is green, but no screenshot of any of these rooms has been taken this
 pass; a Nostr room with two watched accounts is the one worth looking at first,
 since its rail, its rings and its person filter all turn on together.
 
-## 492. A letter glyph is wrong exactly where the real bridge draws an image (user, with a screenshot of the GeckoTerminal strip: "do a sweep of the demo and make sure we have images and icons instead of letter glyphs everywhere like this", 2026-08-26)
+## §492 — A letter glyph is wrong exactly where the real bridge draws an image (user, with a screenshot of the GeckoTerminal strip: "do a sweep of the demo and make sure we have images and icons instead of letter glyphs everywhere like this", 2026-08-26)
 
 Three coloured squircles reading **A · J · B**, then "GeckoTerminal · 3h" — a
 `StripRow` folding the demo's three trending tokens, drawing each member's
@@ -35374,7 +35374,7 @@ green. **No screenshot of the fixed strip has been taken** — the resolver chan
 is one lookup and the assets are on disk, but the Markets room's own tiles are
 unseen this pass.
 
-## 490. Permissions gets the reading a dollar ranking cannot make (user: "for permissions... it could even be a count in some way N delegations N spam transfers or something i dunno" → "ok lets do D", 2026-08-26)
+## §490 — Permissions gets the reading a dollar ranking cannot make (user: "for permissions... it could even be a count in some way N delegations N spam transfers or something i dunno" → "ok lets do D", 2026-08-26)
 
 The wallet room's last empty slot. `Permissions` opened straight onto its own
 approvals list — §247's gap, a room leading with a list of its own rows — and
@@ -35430,7 +35430,7 @@ compiled WHOLE, 11 mutations, 10 drift guards. No simulator can install a Safe
 module or make a delegate appear, so the harness is the only proof these rungs
 are ordered right.
 
-## 491. The vibenet room gets Wallet's chassis, and one file owns the geometry (user: "we want to make the room as much like wallet as we can" → "they are NOT the same. can you make sure you have a tempalte for wallet that you are applying here to vibenet", 2026-08-26)
+## §491 — The vibenet room gets Wallet's chassis, and one file owns the geometry (user: "we want to make the room as much like wallet as we can" → "they are NOT the same. can you make sure you have a tempalte for wallet that you are applying here to vibenet", 2026-08-26)
 
 Reported three times in one session — *"the home toggle bar is in the wrong
 place, so it's not like Wallet"*, then *"they still are not in teh same place"*,
@@ -35534,7 +35534,7 @@ sub-account web's "Watch it" verb is not wired (`onWatch: nil`, so the row is a
 plain read), and the single-account chassis was verified by scoping rather than
 by the state a real single-account user is in.
 
-## 494. A catalog seat's Open lands on the thing it advertised (user: "we show hyperliquid, aerodrom, morpho, and aave in the app catalogue but they don't have rooms… isn't whatever is on them automatically shown on the wallet? so what is the logic?" → "yes do it", 2026-08-26)
+## §494 — A catalog seat's Open lands on the thing it advertised (user: "we show hyperliquid, aerodrom, morpho, and aave in the app catalogue but they don't have rooms… isn't whatever is on them automatically shown on the wallet? so what is the logic?" → "yes do it", 2026-08-26)
 
 The question was whether these seats should exist at all, and the answer already
 in the tree is yes, for the reason the user guessed: **the seat is
@@ -35606,7 +35606,7 @@ screenshot was taken; the tap to check first is Open on a connected Aave seat
 while already standing in the Wallet room, where `go(to:)`'s same-source guard
 returns early and the pop is the whole of the movement.
 
-## 493. Headers instead of cards, and four slots stop being lists (user: "I don't like whats in the slot. It's more words than graphics… What would Apple do? Lets emulate and stay consistent", 2026-08-26)
+## §493 — Headers instead of cards, and four slots stop being lists (user: "I don't like whats in the slot. It's more words than graphics… What would Apple do? Lets emulate and stay consistent", 2026-08-26)
 
 A tuning pass over both rooms, and the ruling that governs the rest of it is
 the smallest one: **no cards in a scope's list, anywhere.**
@@ -35688,7 +35688,7 @@ bar moving on a pick, a sub-account that opens somewhere wrong, and one that
 does not open at all), and whether Positions and Risk sharing a column-on-a-
 baseline silhouette is one shape too many for two scopes.
 
-## 495. A key event opens to what happened, not to a label (user: "show me three mockups for activity thing" → "so i like B", 2026-08-26)
+## §495 — A key event opens to what happened, not to a label (user: "show me three mockups for activity thing" → "so i like B", 2026-08-26)
 
 §467 built this sheet's first anatomy and was right about the diagnosis —
 the row it replaced opened to a title, a Share disc and a one-row table
@@ -36014,7 +36014,7 @@ template", and it is why the standing lesson of the day is: **shared
 COMPONENTS are not a shared TEMPLATE.** Five scopes built from the same
 parts drifted into five shapes while every check stayed green.
 
-## 496. One address book, two rooms — Kind.key, a note field, and where an address was met (user: "i want to combine the address book for wallet and vibenet, basically one address book even tho it shows in both rooms. i want to add keys as an address type. i want to add a 'note' field for ever address entry so a user can add a note, and i want to tag or somehow denot where the address is from so someone knows vibenet over something else", then "build the spec", 2026-08-27)
+## §496 — One address book, two rooms — Kind.key, a note field, and where an address was met (user: "i want to combine the address book for wallet and vibenet, basically one address book even tho it shows in both rooms. i want to add keys as an address type. i want to add a 'note' field for ever address entry so a user can add a note, and i want to tag or somehow denot where the address is from so someone knows vibenet over something else", then "build the spec", 2026-08-27)
 
 **Amends §465 and §472.** §465 split Wallet's book from vibenet's roster into
 two screens on the reasoning "the structure is copied, never the type" — and
@@ -36126,7 +36126,7 @@ and write the one ledger underneath.
 real cross-device iCloud pull carrying a `.key` entry from an older-vs-newer
 build pair; the vibenet-side note tray has not been seen on a device.
 
-## 497. The Connected spine leaves the address book (user, with a screenshot of it: "please remove this from the address book", 2026-08-27)
+## §497 — The Connected spine leaves the address book (user, with a screenshot of it: "please remove this from the address book", 2026-08-27)
 
 **Amends §295/§440/§448/§462's placement of the connections card; the
 arithmetic survives.** `AddressSpineCard` — the Sam-to-your-two-wallets spine
@@ -36143,7 +36143,7 @@ naming alert, its empty-state sentence in the quiet foot, and the
 `connections`/`hasWalked`/`newConnections` state all leave with it —
 `refreshReadings` walks the corpus once for `AddressActivity` alone now.
 
-## 498. The book becomes the app's one people surface — filter chips, contacts and social, a badge instead of a chip, and a sheet that is a piece of paper (user: "we need filter chips somehow" → "onchain as a filter" → "maybe even 'keys' as a filter" → "right now it is a mix of wallet address and non wallet address but user can only enter wallet here" → "we could put it next to the user avatar, apps, and all feed buttons in the source tray 🙂" → "i don't necessarily think vibenet needs its own filter. it just needs some use of the vibenet icon for avatars" → "maybe we need 'contacts' for literal apple contacts? and 'social' for social profiles? bc those would include twitch and such too" → "we also need the sheet for when you open one up. should look like the activity sheets we have… still look like a contact page… i want it to look nice", 2026-08-27)
+## §498 — The book becomes the app's one people surface — filter chips, contacts and social, a badge instead of a chip, and a sheet that is a piece of paper (user: "we need filter chips somehow" → "onchain as a filter" → "maybe even 'keys' as a filter" → "right now it is a mix of wallet address and non wallet address but user can only enter wallet here" → "we could put it next to the user avatar, apps, and all feed buttons in the source tray 🙂" → "i don't necessarily think vibenet needs its own filter. it just needs some use of the vibenet icon for avatars" → "maybe we need 'contacts' for literal apple contacts? and 'social' for social profiles? bc those would include twitch and such too" → "we also need the sheet for when you open one up. should look like the activity sheets we have… still look like a contact page… i want it to look nice", 2026-08-27)
 
 **Amends §169's copy test.** That ruling made the book crypto-only — "emails
 and phone numbers fail that test", so "the list stays scannable at fifty rows
@@ -36242,7 +36242,7 @@ destinations.
 **UNSEEN on a device**: the badge, the monogram, the paper and the strip are
 all compiled and harnessed, and none has been looked at on a simulator.
 
-## 499. The account sheet stops looking like a database (user: "we need a better way to design the individual account sheet, and the landing part of the address book" → "make it look like somethign apple or cashapp would do or robinhood, right now it looks like someones database" → "we want the notes field to be first class citizen too, not like some random empty box" → "think about how Fantastical and CardHoppers does its addresses" → "and 'together' can be called 'activity' like we do in wallet" → "looks great. ship it", 2026-08-27)
+## §499 — The account sheet stops looking like a database (user: "we need a better way to design the individual account sheet, and the landing part of the address book" → "make it look like somethign apple or cashapp would do or robinhood, right now it looks like someones database" → "we want the notes field to be first class citizen too, not like some random empty box" → "think about how Fantastical and CardHoppers does its addresses" → "and 'together' can be called 'activity' like we do in wallet" → "looks great. ship it", 2026-08-27)
 
 **Amends §498's own head, hours old.** That entry gave this card the money
 receipt's paper (§495's `DSSheetHead`, via the extracted `dsReceiptPaper`) and
@@ -36301,7 +36301,7 @@ Consumer grammar inverts it, and every change here is one inversion:
 and mocked, and the mock is what was approved; the built screen has not been
 looked at.
 
-## 500. Ethrex Hegotá — a seat for a chain that publishes what other chains hide (user: "in the same way we had vibenet would it be possible to add this?" → "it is a new network, and it is very important. we would make a seat for it called Ethrex Hegota" → "what i don't know and want your answer on is what would the userflow be?" → "i'd want to know what the output is that we would show before building it" → "spec this out and use the wallet template we have bc i want to know what would be in the toggle row" → "Lanes is weird is there a better term for it?" → "should it be queues or orders or literally 'nonces'" → "decide and build it, but nonces is the literal term", 2026-08-27)
+## §500 — Ethrex Hegotá — a seat for a chain that publishes what other chains hide (user: "in the same way we had vibenet would it be possible to add this?" → "it is a new network, and it is very important. we would make a seat for it called Ethrex Hegota" → "what i don't know and want your answer on is what would the userflow be?" → "i'd want to know what the output is that we would show before building it" → "spec this out and use the wallet template we have bc i want to know what would be in the toggle row" → "Lanes is weird is there a better term for it?" → "should it be queues or orders or literally 'nonces'" → "decide and build it, but nonces is the literal term", 2026-08-27)
 
 Hegotá is a public devnet testing EIP-8141 frame transactions. Chain id 3151908,
 three keyless RPC hosts, blocks every six seconds. `HegotaBridge`, `HegotaCoins`,
@@ -36420,7 +36420,7 @@ device**: nothing here has been run in a simulator, and the room has never been
 looked at.
 
 
-## 501. Surprise and delight, wallet and vibenet — eleven moments, two of which already shipped (user: "spec out how we can add surprise and delight to wallet and to vibenet rooms and sheets", then "ok, as long as you don't change existing UI how our charts and stuff are do all", 2026-08-27)
+## §501 — Surprise and delight, wallet and vibenet — eleven moments, two of which already shipped (user: "spec out how we can add surprise and delight to wallet and to vibenet rooms and sheets", then "ok, as long as you don't change existing UI how our charts and stuff are do all", 2026-08-27)
 
 Eleven moments were drawn on a canvas first, then built. **The constraint the
 user set with the go-ahead governs every one of them: no drawing changes.** No
@@ -36572,7 +36572,7 @@ Motion, and that no tombstone is read. None of them can prove a single one of
 these feels right, and no harness here can make a transfer land, a key expire
 or a timelock open.
 
-## 502. Five moments the address book did not have, and the one it cannot have (user: "how would you add surprise and delight to the address book", then "do all", 2026-08-27)
+## §502 — Five moments the address book did not have, and the one it cannot have (user: "how would you add surprise and delight to the address book", then "do all", 2026-08-27)
 
 Reviewed as six artboards against the shipped §498/§499 screen — the book as it
 is, then one board per moment. **Numbered 502 and not 501**: a sibling session
@@ -36696,7 +36696,7 @@ opened this session: the build is green, the harness is green, and none of it ha
 been looked at. The hero's growth against the sheet's own rise is the one to
 watch first — two springs on one surface, started by different events.
 
-## 503. The Hegotá room's three figures, and six moments (user: "prpose new diagrams for activity, accounts, and nonces. only one per each. think what apple would show" → "look at what the data can support please!" → "hegota is unique tho but has the same bones" → "how would you add surprise and delight to the hegota room and sheets" → "just describe them and build it", 2026-08-27)
+## §503 — The Hegotá room's three figures, and six moments (user: "prpose new diagrams for activity, accounts, and nonces. only one per each. think what apple would show" → "look at what the data can support please!" → "hegota is unique tho but has the same bones" → "how would you add surprise and delight to the hegota room and sheets" → "just describe them and build it", 2026-08-27)
 
 §500 landed the seat and its five scopes; every one of its figures was then
 rejected on a device, three times over, and the reason each time was the same
@@ -36836,7 +36836,7 @@ The three figures have been seen on the simulator and measured against Wallet's
 own insets; no sweep has ever run against the live chain from a device.
 
 
-## 504. The Hegotá room's other four figures, a scope it refused, and the failure every guard missed (user: "how would you improve the hegota room", then "i figured you would say stuff about design polish and data the chain reads we aren't displaying and better ways to present things", then "are there other toggles that should be on the toggle strip?" → "YES I WANT A FRAMES TOGGLE", then "and would you improve the design of any of the slot charts" → "Home is fine. the others could be improved", 2026-08-27)
+## §504 — The Hegotá room's other four figures, a scope it refused, and the failure every guard missed (user: "how would you improve the hegota room", then "i figured you would say stuff about design polish and data the chain reads we aren't displaying and better ways to present things", then "are there other toggles that should be on the toggle strip?" → "YES I WANT A FRAMES TOGGLE", then "and would you improve the design of any of the slot charts" → "Home is fine. the others could be improved", 2026-08-27)
 
 §503 landed three figures and recorded that a Frames scope was refused. This
 entry reverses that refusal, fixes a geometry bug in the accounts bars, spends
@@ -37038,7 +37038,7 @@ harness and its copy by reading. Everything else is measured against the live
 chain as of 2026-08-27.
 
 
-## 505. The Hegotá sheets — the coin gets its name back, and three sheets stop dead-ending (user: "how else would you improve the hegota room UI · utxo sheets · frames sheets · account sheets · activity sheets", then "is 'change' the right word or is utxo the right word for the header. i don't know" → "ok, do that and build all the sheets, but also reduce wordiness in the utxo one", 2026-08-27)
+## §505 — The Hegotá sheets — the coin gets its name back, and three sheets stop dead-ending (user: "how else would you improve the hegota room UI · utxo sheets · frames sheets · account sheets · activity sheets", then "is 'change' the right word or is utxo the right word for the header. i don't know" → "ok, do that and build all the sheets, but also reduce wordiness in the utxo one", 2026-08-27)
 
 §504 rebuilt the room's figures; this is the four sheets under them. Every
 addition below is composed from data the sweep already holds — no new read, no
@@ -37132,7 +37132,7 @@ share and the split bar are all sized from data and all wipe in under
 `chartWipe`; the crossing and the neighbour doors are gesture paths no static
 check exercises.
 
-## 506. The type ramp made mechanical — what drifted, what only looked like drift, and the check that could not be built (user: "can you do a sweep and make sure we are adhering to our font guidelines in terms of sizes and weights and haven't drifted", then "what do you suggest" → "do all and your recommendation", 2026-08-28)
+## §506 — The type ramp made mechanical — what drifted, what only looked like drift, and the check that could not be built (user: "can you do a sweep and make sure we are adhering to our font guidelines in terms of sizes and weights and haven't drifted", then "what do you suggest" → "do all and your recommendation", 2026-08-28)
 
 The sweep found the app in better shape than the ledger was. 1,858 `dsText` call
 sites against 28 raw fonts, of which 21 are derived mark sizes that the ramp
@@ -37229,7 +37229,7 @@ failing to draw — the three `heading28`→`stat24` figures (28pt → 24pt) are
 only visible change and none has been photographed.
 
 
-## 509. Hegotá reads one block, and the counter it could not ask for (user: "how else would you improve the hegota room? in terms of technical accuracy and data we can read", then "do all", 2026-08-28)
+## §509 — Hegotá reads one block, and the counter it could not ask for (user: "how else would you improve the hegota room? in terms of technical accuracy and data we can read", then "do all", 2026-08-28)
 
 Six items, all TECHNICAL rather than visual, and every one of them measured
 against the live chain before it was built rather than reasoned about after.
@@ -37333,7 +37333,7 @@ No sweep has run against the live chain from a device. The pinned block, the
 producer badge and the per-key counters are all reasoned from measurements taken
 by curl, not observed in the app.
 
-## 507. The vibenet reads the bridge was making and throwing away (user: "how would you improve the vibenet experience in terms of data we can read but aren't using effectively", then "do all", 2026-08-28)
+## §507 — The vibenet reads the bridge was making and throwing away (user: "how would you improve the vibenet experience in terms of data we can read but aren't using effectively", then "do all", 2026-08-28)
 
 Eight items, and the shape of every one of them is the same: **the read was
 already happening and no surface asked for its answer.** Nothing here needs a
@@ -37503,7 +37503,7 @@ unlock said "started unlocking" without the one thing anybody wants from it.
 on the conversion, which matters because these are words off a chain anybody
 can emit a log on.
 
-## 507a. Every assumption in §507, measured against the live devnet (same session, 2026-08-28)
+## §507a — Every assumption in §507, measured against the live devnet (same session, 2026-08-28)
 
 §507 shipped its reasoning UNMEASURED, in this project's usual sense — doc-
 derived shapes, failing safe. It is measured now, by curl from this host
@@ -37575,7 +37575,7 @@ on this host has ever held a vibenet token, so the ledger's own rendering —
 the counterparty list, the reconstructed curve, the landed transfer rows — has
 been proven as arithmetic and not yet seen.
 
-## 510. The Frames card counted two populations and narrated a coin flip (user: "how does this math add up? … Is this a bug?", 2026-08-29)
+## §510 — The Frames card counted two populations and narrated a coin flip (user: "how does this math add up? … Is this a bug?", 2026-08-29)
 
 Reported against a screenshot reading **19 steps** / **12 transactions ·
 mostly Send steps**, over six bars, under a legend saying **Send 7 · Verify 7
@@ -37660,7 +37660,7 @@ and the sample is what says so.
 
 **UNBUILT** — authored on Linux with no Xcode and no Swift toolchain, so
 `verify.sh` and the harness have not run; all 28 static audits pass.
-## 510a. The demo rows that could not be left behind (user: "cardpointers is showing up in my feed on a new install even tho i haven't connected it… also its not rendering properly", then "i can't even remove cardpointers from my feed, it think i am not connected but is showing me stuff", 2026-08-28)
+## §510a — The demo rows that could not be left behind (user: "cardpointers is showing up in my feed on a new install even tho i haven't connected it… also its not rendering properly", then "i can't even remove cardpointers from my feed, it think i am not connected but is showing me stuff", 2026-08-28)
 
 Reported as a new install showing four CardPointers offers — Amazon, Shell, Uber, Hilton — for a seat that had never been connected, with no way to remove them. They are `DemoSeedAll.cardPointers()`'s own four rows, verbatim.
 
@@ -37687,7 +37687,7 @@ Check K gained the matching assertion: a shape listed as retired must no longer 
 
 **And the head had no chrome.** `CardPointersRoomCard` shipped without the `.padding(s4)` / `.dsWidgetSurface()` / `.padding(.horizontal, s4)` / `.padding(.top, s2)` every other room card wears — `FeedScreen.insightSection` sets `.listRowInsets(EdgeInsets())`, so a head card is edge-to-edge unless it pads itself. The headline sat flush against the screen and `WalletRunwayRail` ran under both bezels, clipping the last deadline dot, which is the one mark whose position is the whole reading.
 
-## 513. Altana's Connect button did nothing, and the seat it guarded had nobody to show (user: "the altana connect button isn't working", then "also should we give someone ability to peek at example accounts or keys like we do with vibenet", then "but if you have an altana key it would work, and we had one before so we can suggest one for them to watch", "same like vibenet", 2026-08-28)
+## §513 — Altana's Connect button did nothing, and the seat it guarded had nobody to show (user: "the altana connect button isn't working", then "also should we give someone ability to peek at example accounts or keys like we do with vibenet", then "but if you have an altana key it would work, and we had one before so we can suggest one for them to watch", "same like vibenet", 2026-08-28)
 
 **The button was a silent no-op, and had been since §403 shipped it ten days
 earlier.** Altana is `needsSetup: true`, so its Connect runs
@@ -37808,7 +37808,7 @@ words appear.**
 **UNSEEN on a device.** The build is green and every static audit passes; no
 simulator run has walked this screen, and the first-watch routing has never been
 observed to happen.
-## 512. Three more chains, and one that was already there (user: "can we add more chains to the wallet, specifically hyperliquid, monad, and bitcoin", 2026-08-28)
+## §512 — Three more chains, and one that was already there (user: "can we add more chains to the wallet, specifically hyperliquid, monad, and bitcoin", 2026-08-28)
 
 **Bitcoin needed nothing — it has been a first-class watched chain since 2026-07-27.** `BitcoinBridge` reads Esplora keylessly (mempool.space, blockstream.info second), `BitcoinAddress.isAddress` gates the same paste field every EVM and Solana address goes through, and its balance folds into the combined total. What it is NOT is a row in the chain picker, and that is deliberate rather than an omission: that picker is `WalletChainStore`, whose whole content is Alchemy network ids, and Bitcoin rides neither Alchemy nor Zerion — an entry there would leak a phantom network into the transfer sync, the holdings routing and the value samples alike, which is the same reasoning `WalletIngest.chainName(forContent:)` already states for keeping Bitcoin out of `allChains`. So the answer to the third of the three is that it ships; the only real gap is that a person cannot LEARN it ships from the screen that lists chains, which is a discoverability item and not a read.
 
@@ -37832,7 +37832,7 @@ observed to happen.
 
 **MEASURED against the live providers, UNSEEN on a device.** Every static audit passes and the iOS build is green; no wallet holding MON or HYPE has been watched from this host, so the first thing to look at is a real HyperEVM wallet's treemap beside its Hyperliquid L1 book — the one screen where the two halves of that product now sit together.
 
-## 511. The address book stopped being two lists, and a starter pack's forty people got a verb (user: "it's not clear how you unwatch an address i guess you long press … you remove from watching and then remove from address book to clear it", then "if a user can only watch five addresses, why do we even have a watched section", then "if someone follows the farcaster starterpack, should all those people go into the address book?", 2026-08-29)
+## §511 — The address book stopped being two lists, and a starter pack's forty people got a verb (user: "it's not clear how you unwatch an address i guess you long press … you remove from watching and then remove from address book to clear it", then "if a user can only watch five addresses, why do we even have a watched section", then "if someone follows the farcaster starterpack, should all those people go into the address book?", 2026-08-29)
 
 Three reports, one screen, one cause: the address book was showing several populations and giving each a different number of ways to act on it — from two spellings of one word down to none at all.
 
@@ -37872,7 +37872,7 @@ Three reports, one screen, one cause: the address book was showing several popul
 
 **UNSEEN on a device** — every change is a list, a menu or a chip, and no screenshot of the merged book has been taken.
 
-## 514. The Permissions scope lists what it counts, and the NFT slot gets denser instead of taller (user: "the permissions tab doesn't show my permissions in the list. shouldn't it?", then "on NFTs if a user picks more than 4 to show can we make the slot in the wallet that shows 4 resize to show five or six somehow? maybe we show them in tiles in a three by three grid or something?", 2026-08-28)
+## §514 — The Permissions scope lists what it counts, and the NFT slot gets denser instead of taller (user: "the permissions tab doesn't show my permissions in the list. shouldn't it?", then "on NFTs if a user picks more than 4 to show can we make the slot in the wallet that shows 4 resize to show five or six somehow? maybe we show them in tiles in a three by three grid or something?", 2026-08-28)
 
 Two reports against a real wallet on a real device, in two scopes of the same room. Both are a surface failing to carry data the app had already read — the §397 shape.
 
@@ -37913,7 +37913,7 @@ The arithmetic is `NFTGrid`, in the Foundation-only picks file rather than besid
 `wallet-permissions-selftest.sh` grew 18 mutations and 20 drift guards; `wallet-nft-selftest.sh` grew 20 assertions, 8 mutations and 6 guards.
 
 **One mutation survived its first run**, and the cause is the standing one. The "unpriced holders only" rule was spelled twice — once in the guard, once in the line that records a holder for later merging — so breaking one half left the other doing the work and the harness stayed green. It is one named condition now (`let mergeable = holder.usd == nil`), which is what makes the rule breakable in one place and therefore testable. A rule spelled twice is a rule half of which has no test.
-## 512a. The chain that shipped and never said so (user: "on the wallet right now it shows which chains to connect and doesn't show monad or hyper", then "bitcoin also doesn't show as an address for the wallet to watch", 2026-08-28)
+## §512a — The chain that shipped and never said so (user: "on the wallet right now it shows which chains to connect and doesn't show monad or hyper", then "bitcoin also doesn't show as an address for the wallet to watch", 2026-08-28)
 
 Two reports on one screen, and they are not the same kind of thing.
 
@@ -37926,7 +37926,7 @@ Three sentences fixed it, each where the question is actually asked. The placeho
 **That row is STATED, never a toggle, and the distinction is §83's.** Bitcoin has no `WalletChainStore` id to switch — it rides neither Alchemy nor Zerion, which is the same reason it is kept out of `WalletIngest.allChains` — and it reads only when a Bitcoin address is actually watched, so a switch would govern nothing at all for everyone watching none. It is not a `Button`, so there is no tap to disappoint, and the trailing words ("When you watch one") carry the condition rather than a checkmark implying a setting. The section footer says the rest.
 
 **Standing lesson, and this is the fourth room it has been learned in** (§283's Files pixels, §313's X words, §397's Instagram covers): when a capability is reported missing, check whether the READ exists before building anything. Three of those four were a surface catching up with data the app had already gone and got; this one is a surface catching up with a door that was already open.
-## 515. Five icons, one room: the wallet's DeFi seats stop being apps (user: "the connect things for wallet the flow is messed up. I clicked on Aave and I shown a link to my address book. What is that supposed to tell a user?", then "it seems that if they don't have a room, why do we have an icon for them?", 2026-08-29)
+## §515 — Five icons, one room: the wallet's DeFi seats stop being apps (user: "the connect things for wallet the flow is messed up. I clicked on Aave and I shown a link to my address book. What is that supposed to tell a user?", then "it seems that if they don't have a room, why do we have an icon for them?", 2026-08-29)
 
 **This supersedes §494**, which answered the same question from the same person three days earlier and answered it about the wrong half. There the reading was "the seat is right, the door is wrong", and `roomSource(forID:)` sent a connected Aave seat to the Wallet room instead of the wallet manager. That fix worked exactly as designed, and working is what exposed the real defect: **the room it correctly opens is the room the Wallet seat's own Open already opens.** Five icons, one destination, and that destination has an icon of its own.
 
@@ -38017,7 +38017,7 @@ see something missing that a 4-across wall of marks hid — and the user's answe
 on being shown it was that the absence is correct. The catalog is not where a
 wallet-detected protocol is discovered; the Wallet room's own DeFi tiles are.
 
-## 516. A transaction row says what it DID (user: "this activity sheet in wallet uses the same icons for each action, but send should be different arrow than receive. mint should be something and so on. can we change them so it's not a wall of the same icon", 2026-08-28)
+## §516 — A transaction row says what it DID (user: "this activity sheet in wallet uses the same icons for each action, but send should be different arrow than receive. mint should be something and so on. can we change them so it's not a wall of the same icon", 2026-08-28)
 
 Reported against the wallet's own history page (`WalletHistoryScreen`), and the screenshot is the argument: twelve rows, four different events between them — a send, a receipt, a mint, a swap — and one identical `⇄` glyph twelve deep down the left edge.
 
@@ -38064,7 +38064,7 @@ Three assertions are the feature stated in its own terms rather than by fixture:
 
 **Seen on a device, twice — before the colour ruling and after it.** All six marks were checked on the iPhone 17 Pro simulator over the demo corpus: send ↗ red, receipt ↙ green, mint `sparkles` gold, burn `flame` orange, grant `hand.raised` crimson, and `⇄` purple standing on the swap, the Solana buy, the staked-HYPE unlock, the Aerodrome vote and the ENS expiry. Two demo gaps were closed to make that possible and are worth keeping: `DemoSeedAll.walletRoom` now seeds a mint and a burn (two of the five marks had no row to draw on any corpus this project can show itself), and `DemoCorpus`'s four dev fixtures — which predate `transferDirection` entirely — carry the field on their two directional rows. Direction only, never an amount: every other reader of that field requires both, so the stamp is inert everywhere except the mark.
 
-## 515a. Vibenet went dark, and the chain being reset was only half of it (user: "VIBNET sitll isn't working it says 'nothing has landed here'", then "oh, this is becasue the chain was reset!", "but also what happens is onchain state resets", "so i had to top up my accounts to make them redeploy", "i have an address that is redeployed and it says couldn't reach the chain", 2026-08-29)
+## §515a — Vibenet went dark, and the chain being reset was only half of it (user: "VIBNET sitll isn't working it says 'nothing has landed here'", then "oh, this is becasue the chain was reset!", "but also what happens is onchain state resets", "so i had to top up my accounts to make them redeploy", "i have an address that is redeployed and it says couldn't reach the chain", 2026-08-29)
 
 Reported as an empty room. The chain HAD been reset — the user diagnosed that themselves and they were right — but a reset alone does not explain what was on screen, and chasing only the reset would have shipped a better sentence over a seat that still read nothing.
 
@@ -38113,7 +38113,7 @@ Measured the same day: genesis re-dated to the previous evening, tip **285,133 �
 
 **The address book's redesign is NOT in this section.** The same session reported that screen as *"gross"* — the page called itself "Address Book" while listing vibenet accounts, "Find another account" unfolded eight strangers' addresses above the user's own account in four type sizes, and the verbs were a wrapping run of 12pt blue text. That is its own ruling and its own pass.
 
-## 517. The vibenet book is rows on ink, and finding another account is a sheet (user: "also in the address book the behavior is weird and the font sizes are all different when in vibenet set up", then "can we fix that design please. how woudl apple design that page", "it's not clear for user where they are or what to do. and it's a lot of text in weird places.. they have an address they are watching but may want ot watch another it's just not really clear, adn then when you lick find another account it opens inline and all different font sizes. presumably the watched accout would be at top. this whole thing is gross and needs a redesign", then "make sure its ink black not the grayish black you have and we don't use cards so i don't think you need those around things", 2026-08-29)
+## §517 — The vibenet book is rows on ink, and finding another account is a sheet (user: "also in the address book the behavior is weird and the font sizes are all different when in vibenet set up", then "can we fix that design please. how woudl apple design that page", "it's not clear for user where they are or what to do. and it's a lot of text in weird places.. they have an address they are watching but may want ot watch another it's just not really clear, adn then when you lick find another account it opens inline and all different font sizes. presumably the watched accout would be at top. this whole thing is gross and needs a redesign", then "make sure its ink black not the grayish black you have and we don't use cards so i don't think you need those around things", 2026-08-29)
 
 Two screenshots came with it, and everything in the report is visible in them. Four faults, and they compounded rather than merely coexisting.
 
@@ -38151,7 +38151,7 @@ The user's ruling, given on seeing the first pass: *"make sure its ink black not
 
 **UNSEEN on a device.** It compiles and the harness is green; no screenshot of the rebuilt screen has been taken, and none of the four artboards this was drawn from has been checked against a running build.
 
-## 518. The catalog is a LIST — sectioned, filtered by chips, with All (user: "would our app feel simpler if the app catalgoue was in list format?", then "i feel like it would look more professional in a list", "i feel like the app catalogue in current form competes w the Your feeds tray and is confusing which is which", then "build it, sectioned list. but probably needs an all section too", 2026-08-29)
+## §518 — The catalog is a LIST — sectioned, filtered by chips, with All (user: "would our app feel simpler if the app catalgoue was in list format?", then "i feel like it would look more professional in a list", "i feel like the app catalogue in current form competes w the Your feeds tray and is confusing which is which", then "build it, sectioned list. but probably needs an all section too", 2026-08-29)
 
 Supersedes §201 whole and amends §200: the WALL is gone. What §200 ruled
 around it stands and is untouched — the search field leads the page, the
@@ -38291,7 +38291,7 @@ not chosen: it is a lookup surface, and the catalog still has browsing to do.
 has been taken, and neither the filter transition nor the attention dot has
 been watched on a running app.
 
-## 520. The name's own verb joins the swipe, so the gesture stops being Move-only (user: "why do the address book items have a swip to move but not to remove", 2026-08-29)
+## §520 — The name's own verb joins the swipe, so the gesture stops being Move-only (user: "why do the address book items have a swip to move but not to remove", 2026-08-29)
 
 Not a bug report so much as a reading of the screen, and the reading was right
 for exactly one population.
@@ -38345,7 +38345,7 @@ scores one occurrence and fails the guard; the fixed tree scores two and passes.
 **UNSEEN on a device** — it is a swipe, so no static check and no screen sweep
 can exercise it. iOS build green, harness green.
 
-## 519. GitHub could follow repos and not people (user: "for github do we have a way to follow people and repos?", then "yes please do", 2026-08-29)
+## §519 — GitHub could follow repos and not people (user: "for github do we have a way to follow people and repos?", then "yes please do", 2026-08-29)
 
 **Repos: two ways. People: none.** The seat mirrored the account's own stars
 and subscriptions (`GitHubFeed.stars` / `.following`), and `GitHubRepoWatch`
@@ -38478,7 +38478,7 @@ this code. Every read is a GET returning nil on failure, and a person whose
 feed fails contributes nothing rather than failing the refresh, so it degrades
 to today's behaviour throughout.
 
-## 521. The rooms said the same thing twice (2026-08-29)
+## §521 — The rooms said the same thing twice (2026-08-29)
 
 A sweep for verboseness and redundancy, asked for across the app and named for
 the wallet. Four findings, all of them a surface saying something a surface
@@ -38558,7 +38558,7 @@ here was seen on a device or a simulator. Every finding is a duplication two
 files could be shown to make, and none of them is a judgement about how the
 result looks.
 
-## 522. The two devnets could not reach a lock screen — Hegotá structurally, vibenet almost (user: "how would you improve notifications for hegota and vibenet", then "do all", 2026-08-29)
+## §522 — The two devnets could not reach a lock screen — Hegotá structurally, vibenet almost (user: "how would you improve notifications for hegota and vibenet", then "do all", 2026-08-29)
 
 `Model/NotifyPlan.swift`'s new `NotifyDevnet` (the judgement), `Model/DevnetNotify.swift`
 (the gathering), `VibenetUnlockBook` in `VibenetUnlockActivityDriver.swift`,
@@ -38786,7 +38786,7 @@ ever been delivered, and no simulator runs a `BGAppRefreshTask` at all —
 `notifyDevnet|` census per seat, because silence here is the healthy answer
 almost every day and only a drifted read is a bug.
 
-## 524. Ten sheets read as ten places, and the disc above each one already said so (user: "i am wondering if the app would be cleaner if we made them ink or a bit lighter like super dark gray so we can keep the shape and pour, but not have colors like blue etc", then "i don't think any of those you said keep its color need to keep color", 2026-08-29)
+## §524 — Ten sheets read as ten places, and the disc above each one already said so (user: "i am wondering if the app would be cleaner if we made them ink or a bit lighter like super dark gray so we can keep the shape and pour, but not have colors like blue etc", then "i don't think any of those you said keep its color need to keep color", 2026-08-29)
 
 **Every pour in the app is a neutral now, on one token.** Asked for an
 inventory of the coloured crowns and then for the change, and — shown three
@@ -38918,7 +38918,7 @@ the real tokens — the paper, the pour height, the tooth and the type ramp — 
 not against a running app. The one thing worth checking first is whether the
 lift reads as the paper having a top or as a grey band, in both themes, on a
 real display; it is a one-number change either way.
-## 523. This phone can hold a vibenet signing key, and the write it cannot yet make (user: "user feedback i get is that we should add write capabilities. is there a way to do that without us having to maintain a server?", then "FUCK YES THIS IS SO COOL", 2026-08-29)
+## §523 — This phone can hold a vibenet signing key, and the write it cannot yet make (user: "user feedback i get is that we should add write capabilities. is there a way to do that without us having to maintain a server?", then "FUCK YES THIS IS SO COOL", 2026-08-29)
 
 Reported as user feedback asking for write capability without a server. The
 answer is that three server-free write patterns already ship here — a pasted
@@ -39311,7 +39311,7 @@ only thing distinguishing one verb from the next a card-width from the word it
 belongs to. Every text line starts at one indent, so the next glyph down is the
 next row.
 
-## 525. Hegotá's write path, measured off the wire (2026-08-29)
+## §525 — Hegotá's write path, measured off the wire (2026-08-29)
 
 Read-only measurement of the Ethrex Hegotá devnet (chainId 3151908), taken so
 the answers exist before anything is built against them. **Nothing here is
@@ -39396,7 +39396,7 @@ accepts an envelope we built" is untested; payer ≠ sender never exercised; the
 ARBITRARY and P256 signature-entry encodings unobserved; the UTXO frame's inner
 grammar (mode 5) undecoded.
 
-## 526. Hegotá can sign and send too, and the vibenet receipt gap this pass closed along the way (2026-08-29)
+## §526 — Hegotá can sign and send too, and the vibenet receipt gap this pass closed along the way (2026-08-29)
 
 Continuation of §525 in the same session, on the user's explicit ruling that
 Hegotá's key may be a plain exportable secp256k1 scalar rather than an Enclave
@@ -39470,7 +39470,7 @@ management and the faucet only — a destination-address input is a real second
 piece of UI, stated as absent rather than silently partial), and the fresh
 signed proof above.
 
-## 527. The onboarding fork reads as one question again: the arms group, the demo card goes, the catalog capsule stops shouting (user: "it kind of presents a bunch of options: connect 1-3 things, show demo, browse catalogue … maybe we should give user option to connect 1 thing or make it feel like it is one not a menu of three … so instead of feeling like 5 total things it is 3", then "i think it works as Try a demo", 2026-08-29)
+## §527 — The onboarding fork reads as one question again: the arms group, the demo card goes, the catalog capsule stops shouting (user: "it kind of presents a bunch of options: connect 1-3 things, show demo, browse catalogue … maybe we should give user option to connect 1 thing or make it feel like it is one not a menu of three … so instead of feeling like 5 total things it is 3", then "i think it works as Try a demo", 2026-08-29)
 
 Three changes to `StartHereScreen` and one word on `HowItWorksSheet`. This amends §217
 and §424, and reverses one half of the 2026-08-23 legibility fix recorded in
@@ -39752,7 +39752,7 @@ grouping judgement, no static check can see one, and the slab's proportions in p
 (three tall rows in one surface, separated by air rather than a line) were reasoned about
 and compiled, never looked at.
 
-## 528. The greeting is three things too: one block of steps, one demo, one way to start (user: "there are four things for a user to see, steps 1, 2, 3 and then demo or skip. those are five things. how can we make them feel like three? … 1 could be (connect apps, read as feeds, ask an agent), then demo, then skip", then "basically we are telling the user they can How it works, Try it, or Get Started in some way", 2026-08-29)
+## §528 — The greeting is three things too: one block of steps, one demo, one way to start (user: "there are four things for a user to see, steps 1, 2, 3 and then demo or skip. those are five things. how can we make them feel like three? … 1 could be (connect apps, read as feeds, ask an agent), then demo, then skip", then "basically we are telling the user they can How it works, Try it, or Get Started in some way", 2026-08-29)
 
 §527's move, applied one screen earlier and for a slightly different reason. `HowItWorksSheet`
 drew its three steps as three separate `dsWidgetSurface` cards, so a screen that offers
@@ -39816,7 +39816,7 @@ them, and the first tap should not be a decision.
 check can see one, and the block's proportions — three rows of unequal height, the first
 carrying the settled app-icon strip — were reasoned about and compiled, never looked at.
 
-## 529. Bankr becomes a first-class agent — a conversation, an in-app sign-up, and a permission that can act (2026-08-29)
+## §529 — Bankr becomes a first-class agent — a conversation, an in-app sign-up, and a permission that can act (2026-08-29)
 
 Asked what the app's new write capabilities change for the catalog's agent seats. The
 answer for six of the seven providers is nothing: they are models behind a key and they
@@ -39960,7 +39960,7 @@ two places where the offer is about something they are actually doing.
 **UNSEEN on a device.** Both placements are layout and weight judgements no static check can
 see, and the Wallet one sits at the head of the app's densest card.
 
-## 530. "The network refused it: the node refused the transaction" — the write path could not say why, and one refusal it should have made before the Face ID (user: "error creating new account in vibenet", 2026-08-30)
+## §530 — "The network refused it: the node refused the transaction" — the write path could not say why, and one refusal it should have made before the Face ID (user: "error creating new account in vibenet", 2026-08-30)
 
 Reported as a screenshot: "Create with Face ID", and under it, in red, **"The network
 refused it: the node refused the transaction."** Two defects, and the second is
@@ -40065,7 +40065,7 @@ safe: an unreadable answer reports unreachable rather than inventing a refusal,
 and the new refusal happens before anything is signed, so its worst case is
 declining to send a transaction that could not have landed.
 
-## 531. The Hegotá account that could never be made again, and the faucet sentence that could never be said (user: "cannot create account or claim from faucet on hegota", 2026-08-30)
+## §531 — The Hegotá account that could never be made again, and the faucet sentence that could never be said (user: "cannot create account or claim from faucet on hegota", 2026-08-30)
 
 **Written concurrently with §530 and reconciled against it after the fact**,
 which is the first thing to know here: two sessions were handed the same
@@ -40209,7 +40209,7 @@ safe — a classification that comes out wrong yields a worse sentence, never a
 worse act — but **the fix for the reported bug is unverified on a device**,
 and the one check that would settle it in a single launch is
 `-hegotaKeyProbe YES` on a build installed over an existing one.
-## 532. Five sizes, one family: the type ramp becomes the brand (user: "i think we are now coming into our own with a design langugage based on ink. i don't yet feel like we are using fonts in a unique way on trays and other places … i would think the headers have extreme proportions and the tiny text in places all be same size b/c of equal importance", then "lets go extreme", then "i think we need display on the face", "we don't want serif", "is it possible to use Figtree font and still have dynaimc text?", 2026-08-29)
+## §532 — Five sizes, one family: the type ramp becomes the brand (user: "i think we are now coming into our own with a design langugage based on ink. i don't yet feel like we are using fonts in a unique way on trays and other places … i would think the headers have extreme proportions and the tiny text in places all be same size b/c of equal importance", then "lets go extreme", then "i think we need display on the face", "we don't want serif", "is it possible to use Figtree font and still have dynaimc text?", 2026-08-29)
 
 §524 made every pour a neutral by deleting near-duplicates. The type ramp had
 the same disease in the same shape, and this is that treatment.
@@ -40322,7 +40322,7 @@ Both platforms compile, every static audit is green, and the weight-resolution
 claim above is measured. **Nothing here has been seen on a device or a
 simulator** — no screenshot was taken of any screen in the new ramp.
 
-## 533. Category chips get a user-set order, past the 2026-08-11 constant (2026-08-29)
+## §533 — Category chips get a user-set order, past the 2026-08-11 constant (2026-08-29)
 
 The strip's CATEGORY chips (Wallet, Markets, Work, Agents, Life, Social, Media,
 Reading, Notes, Voice, Shopping) sat in a hand-authored order nothing let the
@@ -40365,7 +40365,7 @@ ordinary strip in a slightly wrong order — `xcodebuild` is happy, the static
 audits are text checks, and a screen sweep proves a strip painted, never that
 it painted the right sequence.
 
-## 534. ENS becomes a seat — follow a name you don't own, and know the whole ladder it walks (user: "how can we add ENS app as a seat and lean into it so user can follow names and when they expire?", 2026-08-29)
+## §534 — ENS becomes a seat — follow a name you don't own, and know the whole ladder it walks (user: "how can we add ENS app as a seat and lean into it so user can follow names and when they expire?", 2026-08-29)
 
 **§515a's tripwire almost refused this outright.** That ruling bans a catalog
 seat for any protocol the wallet already reads on its own — `ENSExpiry` has
@@ -40446,7 +40446,7 @@ and `L2beatRating` state about a third party's live registry. Built on Linux
 with no Xcode; verified to compile clean against the full iOS Simulator target
 the same day.
 
-## 535. Polar becomes a room — Stripe's doctrine applied to a second Merchant of Record (user: "look at polar.sh can we add that as a room", 2026-08-30)
+## §535 — Polar becomes a room — Stripe's doctrine applied to a second Merchant of Record (user: "look at polar.sh can we add that as a room", 2026-08-30)
 
 **Polar is a developer-first Merchant of Record — the "Stripe alternative"
 indie SaaS founders and open-source maintainers increasingly bill through —
@@ -40677,7 +40677,7 @@ four causes that render as one silence (a pre-§537 token, a quiet account,
 an account whose every order is a refused renewal, and shape drift) and only
 the last is a bug.
 
-## 538. Sending is the room, not a door to a room — vibenet's Home scope becomes the form, and three sheets stop saying their own name twice (user: "how would you improve the send modal on the home screen of vibenet? it's in an inline menu nw and should be on the screen, it is really bad right now", then "it shouldn't have a door", then "it should be part of the screen", 2026-08-31)
+## §538 — Sending is the room, not a door to a room — vibenet's Home scope becomes the form, and three sheets stop saying their own name twice (user: "how would you improve the send modal on the home screen of vibenet? it's in an inline menu nw and should be on the screen, it is really bad right now", then "it shouldn't have a door", then "it should be part of the screen", 2026-08-31)
 
 **§533's own second half, corrected the day after it shipped.** That ruling
 retired Home's "Latest 3" preview — a truncated copy of the stream Activity
@@ -40767,7 +40767,7 @@ Guarded by `scripts/sheet-title-audit.py` (see §539). All harnesses green:
 plus the static audits. UNSEEN on a device — every change here is drawn, not
 computed, and no screenshot of any of it has been taken.
 
-## 539. The same ruling carried to Hegotá, one divergence on gas, and the duplicate-title rule becomes a check (user: "what i want to do is apply this way of thinking and design to Hegota. it also has a home screen with a list that can be replaced with send etc like we did here", 2026-08-31)
+## §539 — The same ruling carried to Hegotá, one divergence on gas, and the duplicate-title rule becomes a check (user: "what i want to do is apply this way of thinking and design to Hegota. it also has a home screen with a list that can be replaced with send etc like we did here", 2026-08-31)
 
 **§538's faults were all present here and two were worse.**
 `HegotaRoomList` was `case .home: movesList(Array(moves.prefix(4)))` sitting
@@ -40834,7 +40834,7 @@ in the file so the refusal stays checkable rather than remembered.
 Both Hegotá harnesses green (`hegota-selftest` 45 mutations and 19 drift guards,
 `hegota-tx-selftest` 11 mutations). UNSEEN on a device, for §538's reason.
 
-## 540. ENS renewal, prepared and handed off (2026-08-31)
+## §540 — ENS renewal, prepared and handed off (2026-08-31)
 
 §534 gave ENS a seat that says WHEN a name expires and could do nothing about
 it. This is the act: a renew card on a followed name's sheet that prices the
@@ -40925,7 +40925,7 @@ rounding test fed `payable(base:)` an exactly-representable price, so `.up` and
 instance: **a fixture only tests the rule it names if it FAILS that rule and
 passes every other one**).
 
-## 541. The venue switcher's marks become the circle they sit in, and its chips reach the touch floor (user: "should the source strips icons be larger? are they too small tap targets and also smaller than the silhouette rail or social avatars", then "I feel like we have all these things different sizes on the page and it just makes it confusing", 2026-09-01)
+## §541 — The venue switcher's marks become the circle they sit in, and its chips reach the touch floor (user: "should the source strips icons be larger? are they too small tap targets and also smaller than the silhouette rail or social avatars", then "I feel like we have all these things different sizes on the page and it just makes it confusing", 2026-09-01)
 
 Asked whether the source strip's icons should be bigger. **The strip itself was
 fine** — its mark chips draw a 46pt icon in a 56pt slot, larger than any face in
@@ -41131,7 +41131,7 @@ has been compiled and `verify.sh` has not run. Every static audit passes. The tw
 things that need eyes: whether a 4pt tint halo still reads as selected, and
 whether seven 44pt seats in one bar read as crowded rather than as the fix.
 
-## 542. The paper is ink everywhere, and the account sheet fits what it draws (2026-08-31)
+## §542 — The paper is ink everywhere, and the account sheet fits what it draws (2026-08-31)
 
 Two rulings from one look at Hegotá's sheets, both user-worded.
 
@@ -41173,7 +41173,7 @@ the session's verify evidence) and the ink change is a one-token swap on a
 shared modifier, so the thing needing eyes is light mode — a white paper on
 the white thing-sheet ground separates by shadow alone there.
 
-## 543. Nothing is prepopulated, and one capsule says who will answer (2026-08-31)
+## §543 — Nothing is prepopulated, and one capsule says who will answer (2026-08-31)
 
 Reported, unprompted and in one breath: *"asking it about wallet, work, day
 doesn't seem to do much difference … 'noticed today' is same as 'day' and
@@ -41349,7 +41349,7 @@ reasoned from the shipped chip metrics rather than measured on a device, and the
 overflow threshold is the number that follows from that reasoning — check a
 three-key configuration on hardware before trusting `agentSlots`.
 
-## 544. The send console — a keypad, not a form (2026-08-31)
+## §544 — The send console — a keypad, not a form (2026-08-31)
 
 §538 and §539 made sending the room's own Home scope and left the FORM alone:
 two labelled wells and a button. Across a design pass that drew: *"this looks
@@ -41397,7 +41397,7 @@ leading zero, and a digit REPLACES a bare placeholder zero rather than making
 **UNSEEN ON A DEVICE.** iOS Simulator build passes and the liveness, motion and
 ramp audits are green; no screenshot of the console has been taken.
 
-## 545. One address book, and the roster's verbs move onto its own rows (2026-08-31)
+## §545 — One address book, and the roster's verbs move onto its own rows (2026-08-31)
 
 Asked why vibenet has an address book and Hegotá does not. The answer was that
 the book slot is opt-in per rail and Hegotá's call site never passes it — so the
@@ -41456,7 +41456,7 @@ and vibenet harnesses are green. The field fix is reasoned from the constraint
 rather than observed — if the report was at DEFAULT type size then something
 else is also wrong and this did not fix it.
 
-## 546. The Permissions slot stops repeating its own list — counts, big, no names (user: "we need a graphic for the slot or something we can't just repeat the list" → "god these are so generic… they just repeat the same things that are in the list" → "maybe they should be counts" → "do the counts", 2026-08-31)
+## §546 — The Permissions slot stops repeating its own list — counts, big, no names (user: "we need a graphic for the slot or something we can't just repeat the list" → "god these are so generic… they just repeat the same things that are in the list" → "maybe they should be counts" → "do the counts", 2026-08-31)
 
 The report was structural, not cosmetic. §490's rungs drew a count beside the
 rung's sentence WITH A NAME SUBLINE, and §514 then added the acting list
@@ -41506,7 +41506,7 @@ Obsidian/Cursor lesson), and the counts must stay at figure size — a stat24
 demotion is the old list wearing a new doc. UNSEEN on a device: iOS build and
 the harness are green, the grid budget is arithmetic from the ramp.
 
-## 547. The account rail and the scope switcher become one component (user: "what if we made the silouheet row and the scope rail seem like more of a component together", 2026-09-01)
+## §547 — The account rail and the scope switcher become one component (user: "what if we made the silouheet row and the scope rail seem like more of a component together", 2026-09-01)
 
 Asked while looking at three layout directions for the wallet room, none of
 which had touched this. It is the better question, and the diagnosis is why:
@@ -41592,7 +41592,7 @@ screenshot of any of the three rooms has been taken, and the one thing to look
 at first is a wallet with five watched addresses, where the rail scrolls inside
 the slab and the pick's fill has to stay legible against the glass.
 
-## 548. A seat for the chain that is only frames — the envelope Hegotá's could not sign (user: "there is now a Frames devnet, we need to build on it like we have w Vibenet and Hegota … can you check and spec. it out", then "hegota is for hegota writ large" → "this one is for Frames specifically", then "this chain is brand new is why it's empty. what do you need to get started? please do", 2026-09-01)
+## §548 — A seat for the chain that is only frames — the envelope Hegotá's could not sign (user: "there is now a Frames devnet, we need to build on it like we have w Vibenet and Hegota … can you check and spec. it out", then "hegota is for hegota writ large" → "this one is for Frames specifically", then "this chain is brand new is why it's empty. what do you need to get started? please do", 2026-09-01)
 
 The Frames devnet is the reference test network for **EIP-8141 frame
 transactions** — chain id **81410** (`0x13e02`), three keyless RPC hosts,
@@ -42031,7 +42031,7 @@ device next merges; and the corpus half of the demo's mirroring cost is
 unchanged and still accepted, which is a separate question this entry does not
 reopen.
 
-## 550. The capsule above the bar stops being a daily headline and teaches the gesture, and the empty chat says where agents come from (user: "i don't want a whisper once a day, i want it once. after onboarding only", then "we either kill it or add something else there but not once a day", then "it could have a whisper that says long press to talk to agents and then empty chat has a link to where to set up agents", 2026-09-01)
+## §550 — The capsule above the bar stops being a daily headline and teaches the gesture, and the empty chat says where agents come from (user: "i don't want a whisper once a day, i want it once. after onboarding only", then "we either kill it or add something else there but not once a day", then "it could have a whisper that says long press to talk to agents and then empty chat has a link to where to set up agents", 2026-09-01)
 
 **Supersedes §165** (the whisper capsule) and **amends §167 item 1** (the
 travelling title). §166's Today brief itself is untouched and still reachable
@@ -42174,7 +42174,7 @@ catalog landing filtered to Agents. Both fail safe — an unresolvable category
 leaves the All chip selected, and the hint's gate is a persisted Bool that
 defaults to showing it once.
 
-## 551. One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the permissions census drawn whole (user: "on Wallet, Home, the balance is in such a large font, but on all the other screens … we should be consistent"; "this screen looks like shit and we shouldn't need subtext"; "on Permissions, this looks bad. really. we should use blocks", 2026-09-01)
+## §551 — One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the permissions census drawn whole (user: "on Wallet, Home, the balance is in such a large font, but on all the other screens … we should be consistent"; "this screen looks like shit and we shouldn't need subtext"; "on Permissions, this looks bad. really. we should use blocks", 2026-09-01)
 
 **AMENDED 2026-09-03 (§587) — to record the ATTEMPT, not to change the ruling.**
 This entry states the outcome (one rung, and the crown came down to meet the
@@ -42389,7 +42389,7 @@ effects, not from status**, per the trap above: a batched frame reports
 place this feature can be wrong in a way that costs real trust, on a chain
 where nothing else can.
 
-## 552. The send console fits the screen — and its height becomes a written-down sum (user: "the new send module is good, but how can we improve it? it needs to fit all on the screen so user doesn't have to scroll" → "needs to fit where it is. we can't make the slot shorter because it needs to be that same size on all the other screens and wallets", 2026-09-01)
+## §552 — The send console fits the screen — and its height becomes a written-down sum (user: "the new send module is good, but how can we improve it? it needs to fit all on the screen so user doesn't have to scroll" → "needs to fit where it is. we can't make the slot shorter because it needs to be that same size on all the other screens and wallets", 2026-09-01)
 
 §544 gave both devnets a real payment console — a recipient row, the money
 giant and centred, a keypad of bare digits, one button carrying the verb — and
@@ -42493,7 +42493,7 @@ static audit passes, the new one included. The first thing to look at on a
 device is the recipient row on a narrow phone, where the sender's name, an
 arrow, three overlapped faces and "Choose who" now share one 44pt line.
 
-## 552a. The keypad is the system's — the space has to come from below the slot, and 176pt of it was a keypad that was always there (user: "needs to come from below the slot", "and maybe that means we can't have a keypad I don't know", 2026-09-01)
+## §552a — The keypad is the system's — the space has to come from below the slot, and 176pt of it was a keypad that was always there (user: "needs to come from below the slot", "and maybe that means we can't have a keypad I don't know", 2026-09-01)
 
 §548 took the card from 601pt to 394 by cutting everything that was not the
 console, and closed on a ceiling it could not do anything about: **the chrome
@@ -42596,7 +42596,7 @@ are the keyboard's arrival — whether the room scrolls the figure clear of the
 pad — and the recipient row on a narrow phone, where the sender's name, an
 arrow, three overlapped faces and "Choose who" share one 44pt line.
 
-## 552b. The console was never in the demo — a scope's content, gated on a credential a tour cannot have (user: "did you do the demo b/c in demo i see empty", "this is on vibenet", 2026-09-01)
+## §552b — The console was never in the demo — a scope's content, gated on a credential a tour cannot have (user: "did you do the demo b/c in demo i see empty", "this is on vibenet", 2026-09-01)
 
 Reported against the demo, on vibenet's Home: **an empty scope under a full
 crown.** Not a regression from §548 or §548a — **the send console has never
@@ -42670,7 +42670,7 @@ Every static audit passes. The demo is the thing to look at first on a fresh
 simulator install — vibenet's Home should now open on the console, with the
 three seeded accounts in the recipient picker.
 
-## 552c. One crown rung across Wallet, vibenet and Hegotá (user: "wallet, hegota, and vibenet have different size numbers on their home crown slot. which size works best for us? pick one and make it consistent", 2026-09-01)
+## §552c — One crown rung across Wallet, vibenet and Hegotá (user: "wallet, hegota, and vibenet have different size numbers on their home crown slot. which size works best for us? pick one and make it consistent", 2026-09-01)
 
 > **SUPERSEDED BY §551 — and reversed, not merely renumbered.** This entry
 > promoted Hegotá's crown UP to `price48` so all three rooms matched at 64pt.
@@ -42749,7 +42749,7 @@ thing to look at on a device is Hegotá's Home — its crown moves from 24pt to
 64pt and its curve now shares the slot with it, so the bottom of that chart is
 where a clip would show.
 
-## 552d. A scope never draws nothing — the console could not be found because its absence had no words (user: "hegota and vibenet are still empty the send modal isn't there", "we started this session trying to fit the send module below Home on Vibenet and Hegota and i have yet to see it", 2026-09-01)
+## §552d — A scope never draws nothing — the console could not be found because its absence had no words (user: "hegota and vibenet are still empty the send modal isn't there", "we started this session trying to fit the send module below Home on Vibenet and Hegota and i have yet to see it", 2026-09-01)
 
 §538 and §539 each gated the console on a credential and each stated the reason
 well — *"a room with no key draws no form rather than a dead one"* (§83's
@@ -42795,7 +42795,7 @@ toolchain and no simulator, in a session where four commits accumulated without
 a single compile. That is the standing cost of this environment and it is worth
 recording next to the work it produced.
 
-## 553. Home stopped holding a form — a split panel, and the send on a sheet with its own keypad (user: "the send module has NO WAY to enter Eth. it's dead", "we want both buttons persistent", "the ink is what makes it bold", 2026-09-01)
+## §553 — Home stopped holding a form — a split panel, and the send on a sheet with its own keypad (user: "the send module has NO WAY to enter Eth. it's dead", "we want both buttons persistent", "the ink is what makes it bold", 2026-09-01)
 
 §544 built a payment console in the devnet rooms' Home scope and §548/§548a
 spent an entire session trying to make it fit under the room's chrome. **That
@@ -43216,7 +43216,7 @@ mutations are green, and no screen in this room has been looked at — the tile
 proportions, the figure's per-scope readings and the strip's placement are all
 reasoned from measured constants and none has been rendered.
 
-## 553b. The top up claims in the app — the endpoint was in the page all along (user: "for vibenet, the top up redirects me to a new page in their explorer, it doesn't top up in the app like hegota and frames do can you fix it?", 2026-09-01)
+## §553b — The top up claims in the app — the endpoint was in the page all along (user: "for vibenet, the top up redirects me to a new page in their explorer, it doesn't top up in the app like hegota and frames do can you fix it?", 2026-09-01)
 
 **Reported in one line, and the second time this room has been wrong about its own faucet in one day.** §553 shipped vibenet's Home with a Send half and no Top up at all, on the finding that this devnet "has nothing to top up from": its faucet is a PAYER (`VibenetSend.payerEndpoint`) that sponsors gas on a transaction somebody else composed, and no endpoint in our bridge funds an address. §553's amendment corrected half of that — the chain does run a faucet, and the app already knew, since `VibenetAccountDetail` and `VibenetRoomCard` have both carried a "Devnet faucet" door since the seat shipped — and then shipped the verb as a HAND-OFF that opened the faucet's web page, on a second finding: **the page is client-rendered, so nothing in its markup names the endpoint it calls, and guessing at one is how a write path gets built against a shape nobody measured.**
 
@@ -43267,7 +43267,7 @@ Eight assertions and four mutations on `ofDrip` in `hegota-tx-selftest.sh`, whic
 **UNMEASURED on a device**: the wire is measured against the live service, the tile has never been tapped on hardware.
 
 
-## 554. Helper text stands down where the next tap already says it — and a word budget is not minimalism (user: "we removed a lot of helper text today in wallet, hegota, vibenet, and i'd really like the app overall to be super minimal with copy, can you scan other places you think we can get rid of extraneous subtext?", 2026-09-01)
+## §554 — Helper text stands down where the next tap already says it — and a word budget is not minimalism (user: "we removed a lot of helper text today in wallet, hegota, vibenet, and i'd really like the app overall to be super minimal with copy, can you scan other places you think we can get rid of extraneous subtext?", 2026-09-01)
 
 A scan of every `Text`/`String(localized:)` drawn in a secondary or tertiary
 tier across `Screens/`, `Shell/`, `Design/` and `GenUI/` found **121 strings of
@@ -43360,7 +43360,7 @@ harnesses are green.
 so the only claim made is that the words are fewer and the facts survive — not
 that any of these screens was looked at afterwards.
 
-## 555. The Hegotá room's charts stop explaining themselves (user: "how can we improve the Activity chart in Hegota, and the Accounts chart. I don't like all the helper text and i want something more juicy for the charts" → "for the UTXO chart we need to get rid of the '1% of everything...' helper text bc it clips the image of the treemap" → "if we are in utxo's i dunno why we say 'change' on all the treemap cells" → "for accounts, no b/c accounts isn't about balances. it could sum how many or how many watching" → "show three most recently used" → "i don't like seeing so many different sizes of silhouette avatars", 2026-09-01)
+## §555 — The Hegotá room's charts stop explaining themselves (user: "how can we improve the Activity chart in Hegota, and the Accounts chart. I don't like all the helper text and i want something more juicy for the charts" → "for the UTXO chart we need to get rid of the '1% of everything...' helper text bc it clips the image of the treemap" → "if we are in utxo's i dunno why we say 'change' on all the treemap cells" → "for accounts, no b/c accounts isn't about balances. it could sum how many or how many watching" → "show three most recently used" → "i don't like seeing so many different sizes of silhouette avatars", 2026-09-01)
 
 Three figures, and the same defect in all three: the drawing was small and
 quiet and the sentences around it were doing the work. Every fix below deletes
@@ -44134,7 +44134,7 @@ check and no simulator sweep can exercise a transaction settling on a chain
 four days old. The build is green and all 29 audits pass; the settle, the
 first-settle toast and the glance have never been watched happen.
 
-## 557. Dodo Payments moves to Wallet — a reconstructed stub, not a reconstructed ruling (2026-08-30)
+## §557 — Dodo Payments moves to Wallet — a reconstructed stub, not a reconstructed ruling (2026-08-30)
 
 **This entry exists because the section it names never did.** §535 cites
 `§"Dodo Payments moves to Wallet"` twice, by TITLE rather than by number, and no
@@ -44169,7 +44169,7 @@ index audit, so it is invisible full stop. Cite a number or cite nothing —
 `prd-index-audit.py --next` exists to make that cheap, and a title citation is
 the one form that reads as a reference while referring to nothing.
 
-## 558. The payments rooms get a grammar, and the two with no head at all get one (user: "we have several payments rooms like dodo, polar, privacy, apple card, and i'm not sure what else, but should their room heads be similar and how would you improve each if at all", 2026-09-01)
+## §558 — The payments rooms get a grammar, and the two with no head at all get one (user: "we have several payments rooms like dodo, polar, privacy, apple card, and i'm not sure what else, but should their room heads be similar and how would you improve each if at all", 2026-09-01)
 
 **The question's own premise turned out to be the finding.** Asked whether the
 payments heads should be more alike, the answer is that they already share a
@@ -44294,7 +44294,7 @@ guarded.
 Privacy.com key has ever been held by this project — so the harness is not the
 best proof these numbers are right, it is the only one.
 
-## 559. The hero verb — an act at the head rung, past the devnet rooms (user: "this is more and more becoming our identity. Where else should we be using font that size", then "do all your recommendations", 2026-09-01)
+## §559 — The hero verb — an act at the head rung, past the devnet rooms (user: "this is more and more becoming our identity. Where else should we be using font that size", then "do all your recommendations", 2026-09-01)
 
 §553 put "Send", "Top up" and "Create account" at `price40` on the devnet rooms'
 Home panel. Until that day the two head rungs were worn by FIGURES alone — the
@@ -44371,7 +44371,7 @@ LOOKED at — a 40pt verb inside a tray is exactly the class §538 and §553 bot
 got wrong by arithmetic — so the tray heights and the onboarding inset are
 reasoned, not measured.
 
-## 560. The nav-sheet family gets a chassis, and two sheets get a way out (user: "what are things we could do to make our sheets more cohesive across the app, or are they already", then "do all the recommendations you suggested", 2026-09-01)
+## §560 — The nav-sheet family gets a chassis, and two sheets get a way out (user: "what are things we could do to make our sheets more cohesive across the app, or are they already", then "do all the recommendations you suggested", 2026-09-01)
 
 **The honest first answer was that the CONTENT is cohesive and the CHROME is
 not**, and the split falls exactly where this ledger has and has not ruled.
@@ -44540,7 +44540,7 @@ down a rung, a corner below iOS 26 — and §394a's standing lesson is that for
 presentation work a green build proves nothing. The build is green on iOS
 Simulator and nothing here has been run.
 
-## 561. Sentence case became a check, because the manual sweep had already missed it (user: "do a sweep of all copy, identify what is not Sentence case, and change all to Sentence case. we keep drifting", 2026-09-01)
+## §561 — Sentence case became a check, because the manual sweep had already missed it (user: "do a sweep of all copy, identify what is not Sentence case, and change all to Sentence case. we keep drifting", 2026-09-01)
 
 "We keep drifting" is the whole finding, and this repo's standing answer to it
 is a script rather than a written reminder. §8 has said "headers are sentence
@@ -44641,7 +44641,7 @@ this file's first-run false positives, both now handled and both pinned.
 **The website and the docs were swept too and are clean**: every `<h1>`–`<h6>`
 and button label on casberi.app is already sentence case or a product name.
 
-## 562. The vibenet roster could be renamed and unwatched from and not added to — the watch sheet had no presenter (2026-09-02)
+## §562 — The vibenet roster could be renamed and unwatched from and not added to — the watch sheet had no presenter (2026-09-02)
 
 Found by a red harness, which is the only thing that could have found it.
 `scripts/vibenet-selftest.sh` had been failing on `main` on a §517 drift guard
@@ -44762,7 +44762,7 @@ a whole ruling about how two points on that edge read.
 **Unblocks a measured speedup.** `scripts/support/harness-opt-probe.sh` refuses
 to license an `-O` → `-Onone` swap for a harness that fails, and vibenet is the
 longest in the suite. Green, it can now be probed.
-## 563. The empty room's one act takes the head rung, and the tint budget becomes a check (user: "how would you improve app design to make it more of this style — this is a new look we have been going with the extreme proportion of things", then "build all", 2026-09-02)
+## §563 — The empty room's one act takes the head rung, and the tint budget becomes a check (user: "how would you improve app design to make it more of this style — this is a new look we have been going with the extreme proportion of things", then "build all", 2026-09-02)
 
 §559 generalised the devnet Home panel's treatment — a disc top-left, a verb
 hard against the bottom-left at `price40`, a filled tile at the widget radius —
@@ -45075,7 +45075,7 @@ build is green, all 30 audits pass and the harness is at 63 mutations, but not
 one of the four has been photographed on a simulator or a device. The first
 thing to look at is the frame sheet on a two-frame transaction, where the
 budget bar, the permission pair and the neighbour doors all appear at once.
-## 564. The two-tier rule gets an instrument, and five of six proposals died on the tree (user: "how else would you extend this design to other parts of the app, not necessarily the blue and white, but the style", then "do all", 2026-09-02)
+## §564 — The two-tier rule gets an instrument, and five of six proposals died on the tree (user: "how else would you extend this design to other parts of the app, not necessarily the blue and white, but the style", then "do all", 2026-09-02)
 
 The style §553/§559/§563 built is four rules with the colour removed: one thing
 is enormous and nothing is medium, a 36pt disc anchors it, the big thing sits
@@ -45173,7 +45173,7 @@ nothing, which no mockup ever does.
 measurement behind its wrap: "There is no server." at 40pt heavy is 19
 characters and will take two lines on a narrow phone, which is fine and has not
 been looked at.
-## 565. The treemap's leader cell becomes the lockup, and the rule is that a leader must be a number (user: "how would this make you change how we do treemaps?", then "mock it up", then "do all", 2026-09-02)
+## §565 — The treemap's leader cell becomes the lockup, and the rule is that a leader must be a number (user: "how would this make you change how we do treemaps?", then "mock it up", then "do all", 2026-09-02)
 
 The treemap was already the most disciplined figure in the app — ONE rank table
 (`UnitTreemap.frames`), a six-cell ceiling with a folded tail, area for rank and
@@ -45343,7 +45343,7 @@ All four sheets, all four scopes, on iPhone 17 Pro. What is still unseen is
 every state the demo cannot produce: a sponsor with more than one transaction,
 a frame carrying calldata, a state-starved frame, and any of it on a device
 rather than a simulator.
-## 566. Six room figures take the language — and the one deletion that lost facts, caught and reversed (user: "using our new language mock up a new version of" six charts, then "do all", 2026-09-02)
+## §566 — Six room figures take the language — and the one deletion that lost facts, caught and reversed (user: "using our new language mock up a new version of" six charts, then "do all", 2026-09-02)
 
 §563/§564/§565 put the house grammar on an act, a claim and a treemap's leader.
 This applies it to the six figures of the three devnet rooms. **The chassis is
@@ -45431,7 +45431,7 @@ different populations.** They did here, and §510 exists because they did.
 **UNSEEN on a device.** Every one of the six is a fixed-slot layout whose budget
 is arithmetic, and §552/§553 are two entries about that arithmetic being wrong on
 the first run. Six figures, no screenshots.
-## 567. The feed's first object takes the head rung — and the header it was going to fix needed nothing (user: "how would you improve if at all our home All screen? it is the most visited screen and is currently imo our best one", then "build it", 2026-09-02)
+## §567 — The feed's first object takes the head rung — and the header it was going to fix needed nothing (user: "how would you improve if at all our home All screen? it is the most visited screen and is currently imo our best one", then "build it", 2026-09-02)
 
 The All feed is the app's most-visited surface and, by the user's own reading,
 its best. The language's answer is therefore SMALL, and the size is the finding:
@@ -45503,7 +45503,7 @@ to look different from its arithmetic, and the threshold that decides between
 the two rungs is a character count rather than a measurement — a title of 56
 wide characters may still take five lines. First thing to look at.
 
-## 568. One file, one name — §562 fixed the guards and left the mechanism that killed them (2026-09-02)
+## §568 — One file, one name — §562 fixed the guards and left the mechanism that killed them (2026-09-02)
 
 **`scripts/vibenet-selftest.sh` read ONE file under TWO variable names.** `$CARD`
 and `$BOOK` both held
@@ -45571,7 +45571,7 @@ down (plus a redundant second `FEED=`), collapsed here in the same pass on the
 same by-construction argument. No path in this harness is now held under two
 names, which is a one-line check anybody can re-run:
 `grep -E '^[A-Z_]+="Casberi' | cut -d'"' -f2 | sort | uniq -d`.
-## 569. The people surfaces take the language — and two of the three changes are smaller than the mockup drew (user: "how would you apply this new design style to address book and contact sheets. mock it up", then "build it", 2026-09-02)
+## §569 — The people surfaces take the language — and two of the three changes are smaller than the mockup drew (user: "how would you apply this new design style to address book and contact sheets. mock it up", then "build it", 2026-09-02)
 
 Three surfaces: the book (§498/§511), the address sheet (§499) and the social
 profile card. **The standing rule is that no balance ever appears on any of
@@ -45649,7 +45649,7 @@ drawing to be wrong in.
 tinted profile tile are all compiled and none has been looked at; the sheet's
 name threshold is a character count on a centred column, which is the value most
 likely to want a measurement.
-## 570. One tint, one book door, and a stale guard's reason (user: "the devnets should all be 'create an account', and why not use blue since we do everywhere? changing different colors is going to make the language drift wont' it?", then "why do the set up screens even need to have a link to the address book? isn't that kind of confusing", then "one thing to make sure is that all the devnets have the book in their rails", 2026-09-02)
+## §570 — One tint, one book door, and a stale guard's reason (user: "the devnets should all be 'create an account', and why not use blue since we do everywhere? changing different colors is going to make the language drift wont' it?", then "why do the set up screens even need to have a link to the address book? isn't that kind of confusing", then "one thing to make sure is that all the devnets have the book in their rails", 2026-09-02)
 
 Three rulings on a setup-screen mockup, and each one turned out to be about
 something already in the tree rather than about the drawing.
@@ -45732,7 +45732,7 @@ their own and the anatomy is the next pass.
 **UNSEEN on a device.**
 
 
-## 571. The stitch sheet takes the language — and the frame slots turn out to be the part that was wrong (user: "using our new design language how would you improve the Frames send sheet. mock it up", then "i think even those frame slots could be better. not sure how but please improve it", then "but i like what you gave so build it", 2026-09-02)
+## §571 — The stitch sheet takes the language — and the frame slots turn out to be the part that was wrong (user: "using our new design language how would you improve the Frames send sheet. mock it up", then "i think even those frame slots could be better. not sure how but please improve it", then "but i like what you gave so build it", 2026-09-02)
 
 §563/§564/§565/§566/§569 put the house grammar on an act, a claim, a treemap's
 leader, six room figures and the people surfaces. This is the stitch send
@@ -45911,7 +45911,7 @@ signed from this build, so the busy tile, the disabled tile and the error line
 under the toggle have not been looked at — and the simulator cannot make a
 transaction settle.
 
-## 572. The two rails stop saying "selected" four ways (user: "how if at all would you change the category chips in our top rail in the app", then "mock it", then "and would you change in anyway the source strip that is below it w/ the source room icons?", then "mock both rails together", then "ok, build it", 2026-09-02)
+## §572 — The two rails stop saying "selected" four ways (user: "how if at all would you change the category chips in our top rail in the app", then "mock it", then "and would you change in anyway the source strip that is below it w/ the source room icons?", then "mock both rails together", then "ok, build it", 2026-09-02)
 
 The category strip and the room rail beneath it had **four selection grammars
 inside about 100pt of vertical chrome**: a solid fill for a word chip, a 2.5pt
@@ -45986,7 +45986,7 @@ the demo corpus and photographed in both states. The Markets room shows the ink
 strip, the blue active chip, and the ringed Stocktwits mark on a bare row of
 venue marks.
 
-## 573. The sources tray's empty state, and the populated one left alone with its reasons (user: "now, how would you apply our new language to the Your Sources tray", then "mock it up", then "ok build it", 2026-09-02)
+## §573 — The sources tray's empty state, and the populated one left alone with its reasons (user: "now, how would you apply our new language to the Your Sources tray", then "mock it up", then "ok build it", 2026-09-02)
 
 **The populated tray is already in the language, and saying so is most of the
 answer.** Marks select by a 2.5pt tint ring with a dashed orange for a broken
@@ -46047,7 +46047,7 @@ device, the Apps door is the one to stand down while the tray is empty.
 **UNSEEN on a device.** The empty tray needs an install with no connected
 sources, which is not the state any demo or dev corpus is in.
 
-## 573a. The guard was stale, not the code — a red that stopped a release for a reformat (2026-09-02)
+## §573a — The guard was stale, not the code — a red that stopped a release for a reformat (2026-09-02)
 
 `verify.sh` went red on `purchase-stage-selftest` ("the From row no longer
 stands down") and the failure gated an App Store submit, which is the one ship
@@ -46082,7 +46082,7 @@ proves anything.
 establish whether the RULE was broken or the PATTERN was outrun before touching
 either. Both of today's reds were the pattern.
 
-## 574. §572's ring was wrong for one of the three controls, and the guard caught it after it shipped (2026-09-02)
+## §574 — §572's ring was wrong for one of the three controls, and the guard caught it after it shipped (2026-09-02)
 
 §572 gave every MARK a selection ring on one argument: a fill cannot speak on a
 brand mark, because the mark IS its own fill. That argument is right for the
@@ -46128,7 +46128,7 @@ guards. `HEAD` carries it, the working tree does not, and build 487 is clean of
 it. Recorded here so the next reader of that log does not go looking for it in
 this work.
 
-## 575. The composer takes the design language — and the one lockup that was refused because the document already says it (user: "how would you apply our design langugage to improve the chat interface and ux", then "can you be more dramatic in rest, draft, and answering", then "ok build it", 2026-09-02)
+## §575 — The composer takes the design language — and the one lockup that was refused because the document already says it (user: "how would you apply our design langugage to improve the chat interface and ux", then "can you be more dramatic in rest, draft, and answering", then "ok build it", 2026-09-02)
 
 The style §553/§559/§563/§564 built is four rules with the colour removed: one
 thing is enormous and nothing is medium, a 36pt disc anchors it, the big thing
@@ -46384,7 +46384,7 @@ one-rung argument does not reach across them); the ink fill and shadow on the
 input panel, which already make it the hero by tone; and every word of the
 provenance sentence.
 
-## 576. "Watch an account" was a button wired to nothing, and the guard had been saying so since §545 (2026-09-02)
+## §576 — "Watch an account" was a button wired to nothing, and the guard had been saying so since §545 (2026-09-02)
 
 Found by `verify.sh` run AFTER an upload rather than before it, which is the
 only reason it was found at all: iOS build 488 was already on TestFlight and
@@ -46446,7 +46446,7 @@ TestFlight upload can be re-done for free. A store swap cannot.
 **UNSEEN on a device**: the wiring is the sibling's exact shape and the harness
 is green, but nobody has tapped "Watch an account" on a phone.
 
-## 577. The surface turns blue when you ask — the destination as a face, the words at the head rung, and the wait as a clock (user: "i still think the agent experience can be improved… it's not a joy to touch and engage with", then "what i care about is someone using Bankr (or any other agent) and what that experience is like", then "we could be using the extreme sizes b/c it's just a question… something creative and bold", then "even using the blue and white motif", then "build it", 2026-09-02)
+## §577 — The surface turns blue when you ask — the destination as a face, the words at the head rung, and the wait as a clock (user: "i still think the agent experience can be improved… it's not a joy to touch and engage with", then "what i care about is someone using Bankr (or any other agent) and what that experience is like", then "we could be using the extreme sizes b/c it's just a question… something creative and bold", then "even using the blue and white motif", then "build it", 2026-09-02)
 
 Three mocks, then a synthesis, then this. The first two mocks (a spine of receipts; a face rail with the question at 40pt) and the third (the screen turning blue) each carried one idea the user kept, and the build is the intersection that survived a measurement — see item 5 for what did not.
 
@@ -46569,7 +46569,7 @@ So: `askSurface` and the `asking` gate are deleted. The panel is ONE container i
 
 **Verification:** iOS build green, harness green, rest and draft states seen on the simulator with the field holding still across the keystroke boundary. **Not yet re-shipped** — the redesign below (§578) was asked for first.
 
-## 578. The agent becomes a console — keys, not chips (user: "mock up another version of what the chat could look like b/c we aren't at it right now it's not good and we already got rid of the blue", then "ink, extreme, large logo for bankr, large buttons to touch to select, large text kinda stuff", then "less like a phone chat and more like a device interface", then "love it. build it", 2026-09-02)
+## §578 — The agent becomes a console — keys, not chips (user: "mock up another version of what the chat could look like b/c we aren't at it right now it's not good and we already got rid of the blue", then "ink, extreme, large logo for bankr, large buttons to touch to select, large text kinda stuff", then "less like a phone chat and more like a device interface", then "love it. build it", 2026-09-02)
 
 §577 gave the destination an 88pt round face and §577c made the panel one stable container. On a device it still read as a chat with big avatars. The instruction was to stop drawing a chat: **ink only, one thing enormous, controls you press without looking.**
 
@@ -46587,7 +46587,7 @@ So: `askSurface` and the `asking` gate are deleted. The panel is ONE container i
 
 **Verification:** iOS build green; rest, draft and the three-key multi-agent case all seen on the simulator. **Unseen:** the `.strip` size under a settled answer, and the wait clock, which still needs a live Bankr key.
 
-## 579. The send that sent nothing, and the keystroke that read the Keychain (user: "I should be able to send anything to banker, but I can't. also, the performance when you first start clicking, it's just not good... The window needs to not be jittery", 2026-09-03)
+## §579 — The send that sent nothing, and the keystroke that read the Keychain (user: "I should be able to send anything to banker, but I can't. also, the performance when you first start clicking, it's just not good... The window needs to not be jittery", 2026-09-03)
 
 Two reports, two separate causes, both invisible to every check in this repo — the build is green, the screen is right, and the audits are static.
 
@@ -46626,7 +46626,7 @@ The cost was known and enforced in exactly one place: `keyAvailable` was mirrore
 
 **Verification:** all 33 static audits green; every new guard mutation-proven both ways (the shipped bug restored fails each one; the fixed tree passes). **UNBUILT and UNMEASURED** — authored on Linux with no Xcode and no Swift toolchain, so nothing here has been compiled, `verify.sh` has not run, and the keystroke cost is arithmetic over the call sites rather than a profile. Run `scripts/verify.sh` before shipping.
 
-## 580. The wait becomes a receipt, the destinations become tiles, and a pick mid-wait re-addresses the question (user: "this is ridiculous looking. please prepare a new mockup for how we can do this better. consider the rest of our app and language and even like the devnet rooms that have the send and top up", then "can they be tiles too", then "what would be the point of 'stopping' to switch models?", 2026-09-02)
+## §580 — The wait becomes a receipt, the destinations become tiles, and a pick mid-wait re-addresses the question (user: "this is ridiculous looking. please prepare a new mockup for how we can do this better. consider the rest of our app and language and even like the devnet rooms that have the send and top up", then "can they be tiles too", then "what would be the point of 'stopping' to switch models?", 2026-09-02)
 
 ### 1. THE WAIT IS A RECEIPT, AND A RECEIPT ALREADY KNOWS HOW TO WAIT
 
@@ -46672,7 +46672,7 @@ The sim's stored Bankr key answers **401** (`bankrProbe| failed=rejectedKey`, 43
 
 iOS build green in an isolated worktree at HEAD, 29 static audits green, `ask-destination-selftest` at 16 mutations and 66 drift guards, `bankr-selftest` green, the String Catalog synced and the five new keys translated into all four languages. **The receipt wait itself is UNSEEN**: reaching it needs a keyed ask, `-uiAnswerProbe` commits to the device, and no launch-arg picks a destination — the tile row, the inverted selection and the Stop pill were seen on the device path and the receipt was not. First thing to look at on a device.
 
-## 581. The chat becomes a terminal — blank paper, the switcher in the foot, and the answer as the screen (user: "please totallay reimagine teh chat interface and ux. it is horrible. it is cconfusing. we want it simple and extremem proportinos so it seem slike an interface not a chat window", then "i'm speaking of bankr specifically", then "why an ask or do button they are basically the same. also bankr icon should be large", then "i like the swirtcher tho at the footer", then "we don't even need the logo at the top of the screen in rest until user selects it", then "i hate all the versions of the response so far. the text just always looks like ass and blends into the question and bankr name", then "lets d C", then "ok do a", 2026-09-03)
+## §581 — The chat becomes a terminal — blank paper, the switcher in the foot, and the answer as the screen (user: "please totallay reimagine teh chat interface and ux. it is horrible. it is cconfusing. we want it simple and extremem proportinos so it seem slike an interface not a chat window", then "i'm speaking of bankr specifically", then "why an ask or do button they are basically the same. also bankr icon should be large", then "i like the swirtcher tho at the footer", then "we don't even need the logo at the top of the screen in rest until user selects it", then "i hate all the versions of the response so far. the text just always looks like ass and blends into the question and bankr name", then "lets d C", then "ok do a", 2026-09-03)
 
 Six mockups over one session, each answering one objection, and the result is
 that **§575, §577, §577a, §577b, §577c, §578, §579 and §580 were all fixing the
@@ -47101,7 +47101,7 @@ you most want to read was the one being dimmed. A fade earns its place where
 content runs UNDER floating chrome, which is what this surface used to be; the
 foot is opaque and adjacent now, and the field's own bar is the boundary.
 
-## 582. Bankr stops being promoted, and asks again (§529 amended, 2026-09-03)
+## §582 — Bankr stops being promoted, and asks again (§529 amended, 2026-09-03)
 
 Apple rejected macOS **1.0.11** under **Guideline 3.1.5** — "your wallet app
 facilitates the transmission and/or storage of a virtual currency but was
@@ -47202,7 +47202,7 @@ the organization account they named. That is why the reply asks them to name
 the feature and the screen. Everything here is reversible in one commit the day
 the account converts.
 
-## 583. The sheet heads lose their paper (2026-09-03)
+## §583 — The sheet heads lose their paper (2026-09-03)
 
 **User, on a mockup: *"i think it looks WAY better without the card"*.**
 Reverses §495's paper, §363's tear and §524's pour-on-every-paper; amends
@@ -47359,7 +47359,7 @@ seventeen has been taken. The money receipt is the one to look at first — it i
 the only head whose horizontal inset CHANGED rather than merely losing a
 surface, and the only one that lost a state it was drawing.
 
-## 584. The ramp is already right, and the pill was the real finding (2026-09-03)
+## §584 — The ramp is already right, and the pill was the real finding (2026-09-03)
 
 **Two recommendations were made, both measured, and only one survived.** The
 survivor is three lines of code. Recording the one that died is the point of
@@ -47465,7 +47465,7 @@ also had in common.
 
 Three lines changed in three files; both platforms build. No screenshot taken.
 
-## 585. The lede, given to every room that has a figure (2026-09-03)
+## §585 — The lede, given to every room that has a figure (2026-09-03)
 
 **User: *"what design changes can we do to add more personality… we have added
 exaggerated font sizes in the Devnets and the Chat functionality which i like,
@@ -47563,7 +47563,7 @@ the one to look at first: it is the only lede threading §374's mask, and the
 mask must suppress the digit ROLL as well as the string, or the magnitude leaks
 through the animation while the figure reads as hidden.
 
-## 586. The feed's grammar, made mechanical (2026-09-03)
+## §586 — The feed's grammar, made mechanical (2026-09-03)
 
 **Three design changes were proposed. Measuring them found TWO of the three
 were already right, and the third was real.** Recording the two non-changes is
@@ -47683,7 +47683,7 @@ asserted the old one*, in the same pass. The alternative is what happened here:
 the harness goes red, the red is ambient, and it takes an unrelated full pass
 to notice.
 
-## 587. One rung for a signed amount in a row (2026-09-03)
+## §587 — One rung for a signed amount in a row (2026-09-03)
 
 **Asked how to improve the Wallet room, and the answer that survived was the
 smallest of three.** The other two are recorded in §551's amendment above and
@@ -47747,7 +47747,7 @@ Three rows changed size or position. The Wallet history screen is the one to
 look at: it is the only one where a title lost words as well as a slot gaining
 a figure, and the strip is a `range(of:)` on a localized string.
 
-## 589. The Activity slot draws its decline, and the rail stops touching the figure (user: "on my wallet the activity chart isn't showing. for me or vitalik" → "also the treemaps are clipping w/ the rail" → "the silhouette scope rail", 2026-09-03)
+## §589 — The Activity slot draws its decline, and the rail stops touching the figure (user: "on my wallet the activity chart isn't showing. for me or vitalik" → "also the treemaps are clipping w/ the rail" → "the silhouette scope rail", 2026-09-03)
 
 Two reports on the Wallet room, and neither was the bug it looked like.
 
@@ -47761,7 +47761,7 @@ Two reports on the Wallet room, and neither was the bug it looked like.
 
 **Unmeasured:** the reporter's own decline reason — the Diagnostics sheet's `Flow:` lines are how to read it.
 
-## 590. The catalogue's sections lose their cards, and the search field its well (2026-09-03)
+## §590 — The catalogue's sections lose their cards, and the search field its well (2026-09-03)
 
 **User: *"in the app catalogue we have cards around the sections. for example if
 you click markets the list is on a card like we had on the thing sheets, please
@@ -47829,7 +47829,7 @@ change, not after. `DSSlabField` has 55 callers and only the catalogue's was
 looked at; a field sitting inside a card is the case to check, since that is
 where this trade gives something up.
 
-## 588. The crown gets the screen back, and four lists stop being four fonts (user: "the lists we have below the rail are long and the crown charts are short. i think we could make the charts crown area larger, move the rail down, and have less of the list above the fold. as long as three items show user can scroll below the fold", then "it also feels like the font size is inconsistent in the lists on each of those", then "do it all", 2026-09-03)
+## §588 — The crown gets the screen back, and four lists stop being four fonts (user: "the lists we have below the rail are long and the crown charts are short. i think we could make the charts crown area larger, move the rail down, and have less of the list above the fold. as long as three items show user can scroll below the fold", then "it also feels like the font size is inconsistent in the lists on each of those", then "do it all", 2026-09-03)
 
 Asked after three sets of mocks for the fused rail slab (§547) were all
 refused — the first proposing readings on it, the second motion on it, both
@@ -47997,7 +47997,7 @@ a clipped bottom edge, and the clipped direction is the one worth checking:
 `crownChrome` is documented as a floor for that reason, but a floor is only as
 good as the sum behind it.
 
-## 591. The dock (user: "what if the rail for source chips was at the bottom of the screen instead of the top and fab became one of them but was first and fixed on the left", 2026-09-03)
+## §591 — The dock (user: "what if the rail for source chips was at the bottom of the screen instead of the top and fab became one of them but was first and fixed on the left", 2026-09-03)
 
 Asked as a "bizarre question maybe dumb maybe wonderful", refined over the
 conversation to "it would kind of be like a mac dock" / "on the phone". **The
@@ -48136,7 +48136,7 @@ device answers are whether three stacked rows at the bottom of a Social room
 leave enough reading height, and whether the reserved seat lands the bar clear
 of the first chip at the real metrics.
 
-## 592. The room's empty state overruled the rescue that had already saved it (user: "i clicked on activity and this is what happened", over a demo Wallet room full of transactions, 2026-09-03)
+## §592 — The room's empty state overruled the rescue that had already saved it (user: "i clicked on activity and this is what happened", over a demo Wallet room full of transactions, 2026-09-03)
 
 The screenshot is the whole-room empty state — the Wallet mark, "Nothing from Wallet yet.", a "Show everything" button and the shape preview — drawn over a corpus that plainly holds Wallet rows, on a tap that changes nothing about the corpus.
 
@@ -48244,7 +48244,7 @@ time (the `roomFigure` lesson).
 tapping Work opened its eight sources with All still lit and the feed unmoved,
 a re-tap closed it, and the octopus opened its four doors in the same slot.
 
-## 593. The ethrex Privacy devnet, measured (user: "why would we even keep the other hegota devnet we do this?" / "what does it allow user to do differently?", 2026-09-04)
+## §593 — The ethrex Privacy devnet, measured (user: "why would we even keep the other hegota devnet we do this?" / "what does it allow user to do differently?", 2026-09-04)
 
 ethrex stood up a third devnet at `privacy.ethrex.xyz` and announced it as a Privacy testnet on Glamsterdam carrying EIP-8141 (frame transactions), EIP-8250 (keyed nonces), EIP-8272 (recent roots), EIP-7805 (FOCIL) and EIP-8369 (VOPS profiles). Everything below was measured against the live chains on 2026-09-04 by `scripts/support/privacy-devnet-probe.py` and by hand; nothing here is doc-derived.
 
@@ -48748,7 +48748,7 @@ the same size now, but a chip's FRAME is larger than its mark because it carries
 the active ring's room, so bottom-aligning would still drop the bar half that
 difference — and the difference still changes with the fold.
 
-## 594. Vibenet's four acts move to Home, batching and revoking get callers, and three errors of one shape (user: "i'm not sure we are using it to the full extent (also the chain was reset today, what do we need to do on the app...)", then "so we would need one to send gas in any otken, modify owners, get gas paid by a sponsor, and compose 8130 transactions, presumably use the subscriptions too", then "lets do B b/c folks testing won't want to just send, the others are just as important", then "and this means you would remove from the account and permissions pages the create account and authorize key features there so all controls are on home", then "why park and and not do all", then "how is that possible they already could create account authorize key and send", 2026-09-04)
+## §594 — Vibenet's four acts move to Home, batching and revoking get callers, and three errors of one shape (user: "i'm not sure we are using it to the full extent (also the chain was reset today, what do we need to do on the app...)", then "so we would need one to send gas in any otken, modify owners, get gas paid by a sponsor, and compose 8130 transactions, presumably use the subscriptions too", then "lets do B b/c folks testing won't want to just send, the others are just as important", then "and this means you would remove from the account and permissions pages the create account and authorize key features there so all controls are on home", then "why park and and not do all", then "how is that possible they already could create account authorize key and send", 2026-09-04)
 
 Prompted by the explorer's own feature cards — Sponsorship, Batched Calls, Pay
 Gas in Any Token, Modify Owners, Advanced Transactions, Subscriptions — and the
@@ -48914,7 +48914,7 @@ that survivable: a wrong signing hash is silent and somebody else's money, while
 a wrong envelope is refused by the node with an error. A two-leg batch to two
 fresh addresses is the first thing to try.
 
-## 595. The four devnet setup screens become one anatomy (user: "those designs look bad, the 'open the explorer' i mean doesn't really seem like rest of the style. also i think the watch / paste field should be at top not bottom", after "i think they should share common framework and also be better", 2026-09-04)
+## §595 — The four devnet setup screens become one anatomy (user: "those designs look bad, the 'open the explorer' i mean doesn't really seem like rest of the style. also i think the watch / paste field should be at top not bottom", after "i think they should share common framework and also be better", 2026-09-04)
 
 Base Vibenet, Ethrex Hegotá, Hegotá Frames and Ethrex Privacy ask somebody the same question — *which addresses on this chain do you want to read?* — and asked it four different ways. Measured across the four files as they stood, not inferred:
 
@@ -48965,7 +48965,7 @@ All seven assertions were mutation-probed against the real tree before landing �
 
 **UNSEEN on a device.** iOS and Mac Catalyst both compile, all 30 static audits pass and the four affected harnesses are green, but no screenshot of any of these four screens has been taken since the change.
 
-## 596. The Privacy room joins the family for real: rows open sheets, headlines are counts, charts fill the slot (user: "none of the lists open thing sheets. WOrds are jammed, Charts have sentences over them. It also needs to be cohesive iwth the other devnets", then "we need better charts too" / "it all seems vibecoded", 2026-09-04)
+## §596 — The Privacy room joins the family for real: rows open sheets, headlines are counts, charts fill the slot (user: "none of the lists open thing sheets. WOrds are jammed, Charts have sentences over them. It also needs to be cohesive iwth the other devnets", then "we need better charts too" / "it all seems vibecoded", 2026-09-04)
 
 §593e made the room USE the family's components; this pass makes it BEHAVE like the family. Four complaints, four causes, each one structural rather than cosmetic — and the "vibecoded" impression was all four at once: assembled parts, none wired the way the siblings wire theirs.
 
@@ -48983,7 +48983,7 @@ All seven assertions were mutation-probed against the real tree before landing �
 
 **UNSEEN ON A DEVICE.** iOS builds green and the guards pass; no simulator was opened (standing rule). The chart designs were mocked in `prototype/privacy-room-596-mock.html` for review instead. The one interaction reasoned rather than seen: the account sheet's door dispatch writes `privacyDevnetScope` + `privacyDevnetSection` in the same beat it dismisses — Frames does exactly this and it ships, so the shape is proven one seat over.
 
-## 597. `.wei` and `.gwei` names, and the six copies of one ordering rule (user: "how do we add support for .wei and .gwei names?", then "if we watch an address we could populate also its wei name?", then "would be cool if in our address book for any wallet address saved we displayed the ENS they hold and the wei and gwei names", 2026-09-04)
+## §597 — `.wei` and `.gwei` names, and the six copies of one ordering rule (user: "how do we add support for .wei and .gwei names?", then "if we watch an address we could populate also its wei name?", then "would be cool if in our address book for any wallet address saved we displayed the ENS they hold and the wei and gwei names", 2026-09-04)
 
 Two name services this app could not read, and — found on the way in — a rule about name services that was written down six times.
 
@@ -49019,7 +49019,7 @@ Measured live on four public hosts, and the fixtures in `wei-names-selftest.sh` 
 
 **UNSEEN ON A DEVICE.** Every changed file parses, the harness is green and the reach audit passes; no simulator was opened (standing rule) and no full `verify.sh` has run. The one thing genuinely unmeasured is the app's own path end to end: the contracts were measured directly and the Swift encoders were fired at them from a scratch binary, but no book row or card has drawn a `.wei` name on a screen.
 
-## 599. Surprise and delight in the address book, and the two proposals that were already built (user: "how would you add surprise and delight to the address book", then "do all", 2026-09-04)
+## §599 — Surprise and delight in the address book, and the two proposals that were already built (user: "how would you add surprise and delight to the address book", then "do all", 2026-09-04)
 
 Five moments were proposed. **Two of them already existed and a third aimed at dead code** — which is §418's lesson arriving for the fourth time in this file, and the reason it is recorded before anything else: *read the room's most recent ledger entry before proposing against it, because the code will not tell you which of its gaps were deliberate.*
 
@@ -49057,7 +49057,7 @@ The reach list GROWS while you read it — the names land asynchronously — and
 
 **UNSEEN ON A DEVICE.** The iOS build is green and every changed file parses; no simulator was opened (standing rule) and no full `verify.sh` has run. Every moment here is a motion, so none of them is provable by any static check in this repo — the typewriter's clock, the caret's height at Dynamic Type sizes, and whether the arrival reads as one moment or two are device questions. The ENS verification is the one change with a testable consequence and it has not been exercised against a live resolver from the app.
 
-## 600. The source room's list is bounded and its head is not (user: "how would you optimize the app. feels laggy on load and also swiping between screens", then "do all of what you suggest and recommend", 2026-09-04)
+## §600 — The source room's list is bounded and its head is not (user: "how would you optimize the app. feels laggy on load and also swiping between screens", then "do all of what you suggest and recommend", 2026-09-04)
 
 Third report of this symptom pair in fifteen days, after the passes recorded in `docs/perf-swipe-and-rise-spec.md` (2026-08-21) and `docs/perf-spec.md` (2026-09-01). **The fact that decides everything here: no number has ever been taken on a phone in Release.** Every measurement in this project's perf record is Debug on a simulator, so a report arriving three days after a green pass has two readings — the fixes landed and the lag is something no instrument spans, or the fixes landed and the phone is not the simulator — and nothing on this machine can tell them apart. The full plan, the mechanism table and the decision table live in `docs/perf-load-and-swipe-spec.md`; this entry records the rulings and the four changes that did not need the phone first.
 
@@ -49079,7 +49079,7 @@ Third report of this symptom pair in fifteen days, after the passes recorded in 
 
 **UNMEASURED, and that is the honest grade for every number in this entry.** The build is green on both platforms, the guard is green, and not one frame of any of it has been observed on a device. `docs/perf-load-and-swipe-spec.md` Phase 0 is the reading that would change that, and it needs the phone.
 
-## 598. The Privacy devnet's ring, its plain words, its own moments (user: "how else would you improve the Privacy devnet UI", then "and also add surprise and delight", then "can you make sure we are not hand rolling anything either and are using components from the other wallet and devnet rooms", 2026-09-04)
+## §598 — The Privacy devnet's ring, its plain words, its own moments (user: "how else would you improve the Privacy devnet UI", then "and also add surprise and delight", then "can you make sure we are not hand rolling anything either and are using components from the other wallet and devnet rooms", 2026-09-04)
 
 §596 made the room BEHAVE like the family. This pass is about what it SAYS, what it DRAWS, and the fact that it had never once marked anything.
 
@@ -49119,7 +49119,7 @@ Asked directly whether anything was hand-rolled, the answer was measured rather 
 
 **UNSEEN ON A DEVICE.** iOS builds green and all 38 mutations are caught; no simulator was opened (standing rule). The ring, the seal and the drift were mocked in `prototype/privacy-room-598-mock.html` for review instead. Three things are reasoned rather than seen: the arc's offset-then-rotate placement (the counter-rotation that keeps an ordinal upright), the `TimelineView` cadence at 6s, and whether a 128pt ring plus a four-line sentence still fits Home's 300pt slot — which is the measurement that has already been wrong twice in this room (§593b).
 
-## 602. The Privacy room's false promise, its missing rows, its own account, and what a transaction actually cost (user: "how else would you improve the privacy room", then "do all", 2026-09-04)
+## §602 — The Privacy room's false promise, its missing rows, its own account, and what a transaction actually cost (user: "how else would you improve the privacy room", then "do all", 2026-09-04)
 
 Six items, and the first is the only one that was a lie rather than a gap.
 
@@ -49147,7 +49147,7 @@ Six items, and the first is the only one that was a lie rather than a gap.
 
 **What is still unseen**: the used bar has never drawn. The demo's moves carry no `gasUsed` and inventing one would be a fabricated fixture in a file whose own rule is that every hex value was read back off the chain, so the arithmetic is proven by the harness and the drawing by nothing. The two `chrome.flash` moments from §598 are likewise unfired — both need a chain event no simulator can produce.
 
-## 604. The screenshots in a connected folder never became screenshots, and iCloud was never the reason (user: "screenshots in my files folder are still not showing as screenshots", 2026-09-04)
+## §604 — The screenshots in a connected folder never became screenshots, and iCloud was never the reason (user: "screenshots in my files folder are still not showing as screenshots", 2026-09-04)
 
 Reported twice. The second time is the interesting one, because the first fix had already shipped and changed nothing.
 
@@ -49167,7 +49167,7 @@ Reported twice. The second time is the interesting one, because the first fix ha
 
 **Still unproven on a device.** The scope's closure is demonstrable in the source and the symptom set matches it exactly and asymmetrically, but no read has been watched succeeding on a real picked folder from this host. The tell that it worked will be titles: a CleanShot name is in `isMachineGeneratedName`, so a healed row stops saying `CleanShot 2026-09-04 at 18.17.43@2x.png` and starts saying what the picture says.
 
-## 605. The devnet sheets say less — one fact, one place, across three rooms (user: "i want the devnet rooms to be super tidy and very polished. the thing sheets for example on privacy room seem like a lot of words are they or is it just me? please also check hegot and frames. these need to be world class", 2026-09-04)
+## §605 — The devnet sheets say less — one fact, one place, across three rooms (user: "i want the devnet rooms to be super tidy and very polished. the thing sheets for example on privacy room seem like a lot of words are they or is it just me? please also check hegot and frames. these need to be world class", 2026-09-04)
 
 It was not just them. Measured before touching anything — every `String(localized:)` of six words or more drawn in the ten sheets under the three rooms: **Privacy 2, Frames 27, Hegotá 20.** The count understates it, because the worst copy was not the longest sentence but a fact said four times on one document: a Privacy spend key wore the caption "spend keys", the row subtitle "One-time spend key", the stamp "used once" and a 27-word explainer beginning "Each key was used once and can never be used again". A Frames sponsored transaction said who paid in the head sentence AND in a "Paid by" spec row; a Hegotá one said it in the head ("It cost you nothing — X paid 0.001 ETH in gas."), in a "Paid by" row AND in a "Gas" row pricing a fee somebody else paid. A Hegotá step read "Step 2 of 4 · moved by this step" over a `price40` figure that IS what it moved, then printed "Step 2 of 4" again as the strip's caption one block down.
 
@@ -49195,7 +49195,7 @@ The figures, the rooms, the rows, the demo — nothing outside the sheets. The F
 
 **UNSEEN ON A DEVICE.** Strings and structure; iOS compiles. The before/after is mocked in `prototype/devnet-sheets-605-mock.html` for the design ruling. The one thing reasoned rather than seen is the tray heights, which are guesses reduced by roughly what the cuts removed — and every sheet here already scrolls and carries `.large`, so a short guess costs a scroll, not a clip.
 
-## 606. Four of the Privacy room's five figures drew a count as N identical shapes (user: "i also don't think all these charts make sense, like the activity one, i mean wtf does it even mean", then "it says twelve steps who cares what does that even tell anyone", "spend keys just shows 8 rings, i mean we can count what does that do", "the charts on the privacy room are subotopimal and not intelligence", "need to be more clear about the data we are using and what to show as an aggregate", 2026-09-04)
+## §606 — Four of the Privacy room's five figures drew a count as N identical shapes (user: "i also don't think all these charts make sense, like the activity one, i mean wtf does it even mean", then "it says twelve steps who cares what does that even tell anyone", "spend keys just shows 8 rings, i mean we can count what does that do", "the charts on the privacy room are subotopimal and not intelligence", "need to be more clear about the data we are using and what to show as an aggregate", 2026-09-04)
 
 §596 answered *"we need them for each scope"* by giving every scope a figure. Seen on a device for the first time in §602, four of the five turned out to be drawing the same thing: **a number, rendered as that many identical shapes.** This reverses that ruling on the evidence it produced.
 
@@ -49229,7 +49229,7 @@ The figures, the rooms, the rows, the demo — nothing outside the sheets. The F
 
 **Seen on a device, all of it** — which is the whole reason this entry exists, and the correction to six passes that each ended "unseen".
 
-## 607. The Mac's iCloud sync could switch itself off in silence, and two instructions named a gesture it does not have (user: "how can we improve the mac experience? it doesn't icloud sync well, the UX or UI maybe could be improved, it needs parity with ios. what else?", then "do all", 2026-09-04)
+## §607 — The Mac's iCloud sync could switch itself off in silence, and two instructions named a gesture it does not have (user: "how can we improve the mac experience? it doesn't icloud sync well, the UX or UI maybe could be improved, it needs parity with ios. what else?", then "do all", 2026-09-04)
 
 **THE FIRST FINDING IS THAT FIVE OF SIX PROPOSED UI ITEMS WERE ALREADY BUILT, and that is the entry's most reusable part.** Asked to improve the Mac, a first read of the tree produced a list: no multi-window, an icon-only rail, no text selection, no ⌘F, no keyboard walk. Every one of those was wrong. Multi-window landed 2026-08-02 with `SceneState` and a New Window item; §273 gave the rail word chips with labels; ⌘F, ⌘R, ⌘N, ⌘0, ⌘1–9, the arrow walk and Escape have all been menu commands since §256; text selection is enabled at fourteen sites. **This is §418's lesson for the third recorded time: before proposing a change to a mature surface, read that surface's most recent ledger entry, because the code will not tell you which of its gaps were deliberate.** The Mac has had four dedicated passes (§256, §273, §360, §371) plus a pointer audit and a sheet audit, and its UI is not where its problems are.
 
@@ -49284,7 +49284,7 @@ Three instruments close it. `-syncProbe YES` is the first instrument this subsys
 ### A note on the nightly, which is why any of this is checkable
 
 `nightly-mac.log` was red on **eleven of the last twelve nights**, so the Mac has had no runtime verdict since 08-28. Every one of those reds resolves green on today's tree, including `sweep-clock-selftest.sh`, which failed three separate nights and passes 3/3 now. That is not flakiness — it is the ledger's own recorded pattern, that `main` was genuinely broken at push and fixed during the following day, with nothing saying so for up to twelve hours. The reds were real; the process gap is that nobody reads a log that is always red.
-## 608. The setup screens had one vocabulary and forty-eight anatomies (user: "how would you clean up and standardize the set up screens UI", then "do all", 2026-09-04)
+## §608 — The setup screens had one vocabulary and forty-eight anatomies (user: "how would you clean up and standardize the set up screens UI", then "do all", 2026-09-04)
 
 Sixty-two screens carry `BridgeSetupHeader`, and the words were already law: one header with a closed six-case mode chip and a one-sentence intro (§315, audited), one slab family (§190), one disconnect row, one proof row. Asked to standardize them, the census found the vocabulary intact and the drift somewhere nothing had ever looked — in the SHAPE.
 
@@ -49340,7 +49340,7 @@ The answer's own copy said so and had to change with it: "the glint only lights 
 
 **Checked, not assumed:** no harness, audit or selftest guarded the glint (`grep glint scripts/` is empty), so nothing here was protected by a check that would have to be amended. The liveness, ramp and motion audits pass; every edited file parses.
 
-## 610. The Activity figure restated its own headline, the empty state was below the fold, and four scopes were invisible (user: "60 transactiosn repeats 60 plain transfers… i'm not even sure what it is supposed to demonstrate", "the empty state is weird, nothing from this address on the chain is below the fold", "even if they have no data for the account, they should still be present w/ an empty state", 2026-09-05)
+## §610 — The Activity figure restated its own headline, the empty state was below the fold, and four scopes were invisible (user: "60 transactiosn repeats 60 plain transfers… i'm not even sure what it is supposed to demonstrate", "the empty state is weird, nothing from this address on the chain is below the fold", "even if they have no data for the account, they should still be present w/ an empty state", 2026-09-05)
 
 Four findings on the Ethrex Privacy room, three of them reported from a device and one found while reading for the others. Every one renders as a perfectly ordinary room, which is why none of the 67 mutations or 84 drift guards this seat already carries could see any of them.
 
@@ -49411,7 +49411,7 @@ The example-address doors stand down for `.moved`: they exist for a room with no
 **UNSEEN on a device.** The spine has never been drawn, no empty scope has been opened, and no room has been watched saying "60 transactions" over sixty marks.
 
 
-## 611. Every scope is a chip on every room, and an empty scope says what it would hold (user: "when i land and am on All … it doesn't show all the scopes in the rail. I think it should even if they are not present, don't you? and we have empty state text for it" — "all do all", 2026-09-05)
+## §611 — Every scope is a chip on every room, and an empty scope says what it would hold (user: "when i land and am on All … it doesn't show all the scopes in the rail. I think it should even if they are not present, don't you? and we have empty state text for it" — "all do all", 2026-09-05)
 
 §610 ruled this for the Ethrex Privacy room the same morning, and the report that prompted it was about Frames; asked whether to carry it to one room or every room, the user said all. So it is the family rule now: **Wallet, vibenet, Hegotá, Frames and Privacy Pools all offer every scope, always**, and every scope that can be empty carries an `emptyHeadline` and an `emptyBody`.
 
@@ -49429,7 +49429,7 @@ The example-address doors stand down for `.moved`: they exist for a room with no
 
 **Mechanical.** Five harnesses pin `present()` as the full order, the empty-copy obligation, and each carries a gate-restored mutation and an empty-scope-left-wordless mutation. **UNSEEN on a device**: no empty scope has been opened in any of the five rooms.
 
-## 612. The verify pass was mostly idle cores, and the answer to "should it take this long?" is no (user: "how would you optmize our verify sh testing. it always seems to take forever, should it?", 2026-09-05)
+## §612 — The verify pass was mostly idle cores, and the answer to "should it take this long?" is no (user: "how would you optmize our verify sh testing. it always seems to take forever, should it?", 2026-09-05)
 
 **Asked why verifying takes forever, the answer was again not "the standard cost of good tests" — the third recorded instance of that shape** (§257's launch climb, §318's ranking floor, 2026-09-01's double-run). Measured on the 2026-09-04 passes before touching anything: a cached harness phase ran ~6 minutes of which the last ~4 were **ONE harness on ONE core while seven sat idle**; the uncached nightly ran 93 harnesses in ~21 minutes of wall for ~130 minutes of CPU; the room-head step spent ~90 seconds on **28 cold app launches** to run a report that costs milliseconds; and **no step in the pass was timed at all**, so the only number anyone could see was the total.
 
@@ -49474,7 +49474,7 @@ The example-address doors stand down for `.moved`: they exist for a room with no
 
 **The end-to-end measurement, on the full uncached suite of 93.** The 2026-09-05 nightly ran **21m18s**; the same suite after this pass ran **12m20s**, with **one red — `wallet-permissions-selftest`, green on HEAD and red only in a working tree a concurrent session was mid-edit in.** That is the harness phase alone and does not count the room-head collapse (~80s), the duplicate Catalyst compile (72s warm), or the build overlap, which is deliberately unmeasured. The longest-first ordering landed after that run, so its benefit is not in the 12m20s either.
 
-## 613. The connect screens' verb is a component, not a hand-rolled fill (user: "what if we made these buttons we have fatter like we have 'send' and 'top up' buttons elsewhere in the app on the devnet screens", then "this is a component we need to not hand roll things", 2026-09-05)
+## §613 — The connect screens' verb is a component, not a hand-rolled fill (user: "what if we made these buttons we have fatter like we have 'send' and 'top up' buttons elsewhere in the app on the devnet screens", then "this is a component we need to not hand roll things", 2026-09-05)
 
 **The complaint was that a connect page reads as a FORM next to the devnet rooms, which do not** — *"the connect screen ones i mean so it looks more styled and less like a form."* The obvious answer was the devnet anatomy whole: `DevnetSendPanel`'s 140pt tile, a 36pt glyph disc and the verb at `price40`. **It was mocked up at true 390pt width and REFUSED, by the user, on arithmetic he did himself:** three of those blocks plus the screen's identity header pushes the commit past the fold, and *"it will make things not fit on the one screen which is worse than having more appealing buttons."* That is §552's own failure shape — a layout that renders perfectly and simply continues past the bottom — arriving on a different screen, and it is the second recorded instance of this project choosing fit over weight.
 
@@ -49509,7 +49509,7 @@ Asked *"so there are no more blue buttons with centered text anymore, we got all
 
 **UNSEEN on a device.** Both platforms compile and every audit is green, but no screenshot of a restyled connect page has been taken — the disc's wash against `gray100` in light mode, and the 28pt disc beside a roster of 36pt faces on the four wallet-riding screens, are the two things to look at first.
 
-## 614. Shield and View for the Privacy devnet, and why Unshield is deferred (user: "add shield and unshield", then "explain to me the on device prover and if we can actually do it", 2026-09-05)
+## §614 — Shield and View for the Privacy devnet, and why Unshield is deferred (user: "add shield and unshield", then "explain to me the on device prover and if we can actually do it", 2026-09-05)
 
 The Ethrex Privacy seat could read the pool and never touch it. This adds
 **Shield** — a deposit that turns test ETH into a private note in the pool — and
@@ -49623,7 +49623,7 @@ Indexed now — `offerByName` and `seatNameBySource`, both built once — plus `
 
 `category-fold-selftest.sh` went red on the rename and was amended, not deleted: its switcher guard accepts either catalog route (both resolve the alias family, which is what it is actually about), and its Foundation-only `BridgeCatalog` stub gained `seatName` **as the LINEAR reference** — the stub is `CategoryFold`'s oracle, so it must state the semantics the real one has to match rather than re-import its optimisation.
 
-## 616. The connect screens said the chip again in prose, and the field's pour drew over the step above it (user: "do a sweep of the app connect screens for wordiness", then the 1Claw screenshot, 2026-09-05)
+## §616 — The connect screens said the chip again in prose, and the field's pour drew over the step above it (user: "do a sweep of the app connect screens for wordiness", then the 1Claw screenshot, 2026-09-05)
 
 Two findings from one sweep of the sixty connect screens and the twenty-five `TokenBridges.setupIntro` lines. One is copy, one is a layout bug that READ as copy.
 
@@ -49806,16 +49806,6 @@ Five screens that all ask for an address — Wallet, Base Vibenet, Ethrex Hegot�
 
 **The ruling.** `Shell/FirstPaint.swift`: a one-pixel `UIViewRepresentable` in the shell's root marks the first paint one run-loop turn after its first layout in a window (the turn after the commit that carried it), and the Spotlight reindex, the dedupe, the digest sweeps and the insight recompute `await FirstPaint.painted()` before they start. Nothing the first frame needs is touched. **Measured, recorded on a simulator:** `init→firstPaint` 1939ms cold / 1382ms warm, against ~2900ms before; launch-to-first-frame on video 2.5s cold / 1.9s warm, against 2.9–3.0s. The remaining cost is the launch itself — the store open, the first feed build — and belongs to the perf session.
 
-## §626 amendment — the ink memo keyed on the wrong theme property (2026-09-06, same day)
-
-`legibleInk`'s memo (the seventh row cost, `91eff8d0`) keyed on `ThemeStore.bleed`. **`legibleInk` never reads the bleed.** What it reads is `DS.themedPage`, which is `background.lightHex` or `background.darkHex` chosen by `isLight` and the photo — so changing the page BACKGROUND while keeping the same bleed served an ink solved against the previous page.
-
-**The consequence is the exact failure the function exists to prevent.** `solveInk` promises 4.5:1, or 7.0:1 under Increase Contrast; a stale ink is a ratio below that, and `solveInk`'s own doc-comment says why that would never have been noticed — *"a contrast failure renders perfectly, so a build and a screenshot both pass it, which is precisely how the ink this replaces shipped at ~3.4:1 and stayed there until somebody measured it."* No harness could see it either: `legible-ink-selftest.sh` tests the pure solver, which is correct and untouched, and the whole point of that split is that the environment reads live outside it — which is exactly where the bug was.
-
-**Not in build 525.** The commit landed after the ship froze at `68b9ee0f`, so no shipped binary ever carried it.
-
-**The generalisable rule: a memo key is a claim about what a function reads.** Derive it by reading the function, never by picking the theme property whose name sounds right — `bleed` and `background` are both `ThemeStore` colour properties with a `name`, so the wrong one type-checks, renders and reviews clean. Pinned in `scripts/row-cost-audit.py`, which now requires `background.name` in the key and forbids `bleed` (8 mutations).
-
 ## §626 — Six costs that ran per row, per render; and the first sweep of the row bodies (2026-09-06)
 
 **Why nothing had found these.** `docs/perf-spec.md` P3 is titled *"Per-row body costs (scroll, unmeasured)"* and says in its first line that no instrument covers scroll, so it named two candidates and optimised neither, under this project's own rule: sample before fixing. That rule is right about tuning and wrong as a reason not to LOOK. A read of the row bodies found six costs, and the top one is not a constant factor.
@@ -49833,6 +49823,16 @@ Five screens that all ask for an address — Wallet, Base Vibenet, Ethrex Hegot�
 **Guarded by `scripts/row-cost-audit.py`** (6 mutations, each restoring the pre-fix shape and proven to fail the check), wired into `verify.sh` beside `fetch-bound-audit.py`. It also sweeps the whole tree for `previewImageData` + `UIImage(data:)` in one statement, allowing it only in the three load functions that run once. **A static check is the only thing that can hold these**: there is no scroll instrument, the build is happy either way, every existing self-test passes either way, and the symptom is "the feed feels slower on a big corpus" — the exact report this codebase has already chased four times down three wrong paths.
 
 **Not measured, and said plainly.** Every fix here is structural — work that no longer runs, or runs once instead of per row — so each can be stated as a removal rather than a tuning guess, which is `perf-spec`'s rule 3 and the bar it sets for shipping without a number. But no before/after was taken: there is still no scroll instrument, and the A/B this project demands needs one. The quadratic is arithmetic rather than a measurement, and the rest are removals whose size is unknown. **Six findings from the same read remain unfixed** and are listed in `docs/perf-spec.md` P3: a per-row `NSDataDetector` in the share link that a §260 amendment claims was removed, `NotifySweep.classify` twice per row, a WCAG binary search per labelled row, an accessibility label built per row whether or not VoiceOver is running, and two SQL `COUNT`s in `.task(id:)` keys that run on every body pass.
+
+## §626 amendment — the ink memo keyed on the wrong theme property (2026-09-06, same day)
+
+`legibleInk`'s memo (the seventh row cost, `91eff8d0`) keyed on `ThemeStore.bleed`. **`legibleInk` never reads the bleed.** What it reads is `DS.themedPage`, which is `background.lightHex` or `background.darkHex` chosen by `isLight` and the photo — so changing the page BACKGROUND while keeping the same bleed served an ink solved against the previous page.
+
+**The consequence is the exact failure the function exists to prevent.** `solveInk` promises 4.5:1, or 7.0:1 under Increase Contrast; a stale ink is a ratio below that, and `solveInk`'s own doc-comment says why that would never have been noticed — *"a contrast failure renders perfectly, so a build and a screenshot both pass it, which is precisely how the ink this replaces shipped at ~3.4:1 and stayed there until somebody measured it."* No harness could see it either: `legible-ink-selftest.sh` tests the pure solver, which is correct and untouched, and the whole point of that split is that the environment reads live outside it — which is exactly where the bug was.
+
+**Not in build 525.** The commit landed after the ship froze at `68b9ee0f`, so no shipped binary ever carried it.
+
+**The generalisable rule: a memo key is a claim about what a function reads.** Derive it by reading the function, never by picking the theme property whose name sounds right — `bleed` and `background` are both `ThemeStore` colour properties with a `name`, so the wrong one type-checks, renders and reviews clean. Pinned in `scripts/row-cost-audit.py`, which now requires `background.name` in the key and forbids `bleed` (8 mutations).
 
 ## §627 — A mutation that changed nothing is not a passing mutation (2026-09-06)
 
@@ -50564,7 +50564,7 @@ one draws text with a human author. What it amends is the sentence after it —
 from, the dial, the earlier copy"*, and "the thing" is now allowed to be the
 words rather than a card that links to them.
 
-## §643 amendment — the copy was pushed, and it was never in the file this entry said it was staged in (2026-09-08)
+## §643 second amendment — the copy was pushed, and it was never in the file this entry said it was staged in (2026-09-08)
 
 **Two corrections, and the second is the one that costs something.**
 
@@ -51967,7 +51967,7 @@ Mechanical as checks 5 and 6 of `scripts/rain-tiles-audit.py`: `roomRevision` mu
 
 **Unseen.** That the removed showers are the right ones to remove is a judgement about grammar, not a measurement — nothing here can prove a person wanted no rain on an unwatch. What IS proven is that the unwatch dealt two of them, which no reading defends.
 
-## §645 amendment 4 — the article has paragraphs again (user: "it is all in one paragraph like a giant wall of text. could we format it somewhat w/ rules, like every three or four sentences enter a line break", 2026-09-08)
+## §645 amendment 6 — the article has paragraphs again (user: "it is all in one paragraph like a giant wall of text. could we format it somewhat w/ rules, like every three or four sentences enter a line break", 2026-09-08)
 
 **The wall was made by the parse, not by the page.** `ReadableParse.parseReadable` joined every `<p>` with a single space and then collapsed all whitespace, and the share extension's `SharePreprocessor.js` did the same to `innerText` — right for text whose only reader was the retriever, and since pass 1 it meant 8,000 characters at `reading20` with no break anywhere. `NoteSheet.blocks` already ends a paragraph at a blank line for every source, so the sheet was ready; nothing ever gave it one.
 
@@ -51979,7 +51979,7 @@ Mechanical in `scripts/readable-body-selftest.sh`: seventeen new assertions (the
 
 **Unseen.** How three-sentence paragraphs at `reading20` sit on a phone, and whether `.bySentences` splits well on non-English pages, are device questions.
 
-## §645 amendment 5 — section titles: the page's `<h2>`/`<h3>` come with the paragraphs (user: "ok do it", 2026-09-08)
+## §645 amendment 7 — section titles: the page's `<h2>`/`<h3>` come with the paragraphs (user: "ok do it", 2026-09-08)
 
 **Amendment 4 gave a long piece paragraphs and left it unsigned.** The parse walked `<p>` only, so a 2,000-word explainer with five sections read as one stretch of paragraphs with no way to tell where a section ended — the structure the publisher wrote was thrown away before the sheet could draw it, and `NoteProse` has drawn a heading block for notes since §399.
 
@@ -53965,7 +53965,7 @@ overturned for the card and kept for the art.
 **And a third thing the mockups made visible, fixed because it is the same
 defect.** `ThingContentView` draws `kindContent` then `summaryBlock` for every
 kind. A fetched body LEADS with the page's description
-(`ReadableBody.compose`, §645 amendment 4), and an RSS row's `summary` is that
+(`ReadableBody.compose`, §645 amendment 6), and an RSS row's `summary` is that
 description — so under every fetched article the sheet drew the lede a second
 time, at `callout15`, after the piece. The article arm owns the lede now:
 `summaryBlock` is gated on `readsAsArticle`, and `ArticleBody` draws the

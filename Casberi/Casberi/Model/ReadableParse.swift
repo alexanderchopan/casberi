@@ -95,11 +95,11 @@ enum ReadableParse {
 
         // De-dupe (a description often repeats the first paragraph). Each
         // piece is flattened to one line, and the pieces are joined with a
-        // BLANK LINE, not a space (prd §645 amendment 4): the page's own
+        // BLANK LINE, not a space (prd §645 amendment 6): the page's own
         // paragraphs are the breaks the sheet draws, and joining them with a
         // space was the wall of text. See `ReadableBody.separator`.
         //
-        // A HEADING is held until a paragraph follows it (§645 amendment 5):
+        // A HEADING is held until a paragraph follows it (§645 amendment 7):
         // a section title with no section under it is chrome — "Related
         // stories", "Most popular" — or the last title on a page whose body
         // the cap will cut anyway. Headings take no 24-character floor (a
@@ -189,7 +189,7 @@ enum ReadableParse {
     /// code into the excerpt. `limit` bounds the PARAGRAPHS; headings ride
     /// free, because a page has few and the cap is the real bound.
     ///
-    /// Section titles joined the walk in §645 amendment 5: a long explainer
+    /// Section titles joined the walk in §645 amendment 7: a long explainer
     /// has five of them, and with only its `<p>`s taken it read as one
     /// unsigned stretch even after amendment 4 gave it paragraphs.
     static func blocks(in html: String, limit: Int) -> [Piece] {

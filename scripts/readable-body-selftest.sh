@@ -276,7 +276,7 @@ let pw = ReadableParse.parseReadable(in: paywall) ?? ""
 check("the teaser is drawn", pw.contains("six hours"))
 check("…and it is not padded out to look like an article", pw.count < 200)
 
-// ── paragraphs (prd §645 amendment 4): the page's breaks, or a rule ───────
+// ── paragraphs (prd §645 amendment 6): the page's breaks, or a rule ───────
 // User: "it is all in one paragraph like a giant wall of text. could we format
 // it somewhat w/ rules, like every three or four sentences enter a line break".
 print("\nparagraphs")
@@ -325,7 +325,7 @@ check("compose: no article means the description",
 check("compose: no description means the article",
       ReadableBody.compose(description: nil, article: "The piece.") == "The piece.")
 
-// ── section titles (prd §645 amendment 5) ─────────────────────────────────
+// ── section titles (prd §645 amendment 7) ─────────────────────────────────
 print("\nsection titles")
 func h2(_ s: String) -> String { "<h2 class=\"x\">\(s)</h2>" }
 func h3(_ s: String) -> String { "<h3>\(s)</h3>" }
@@ -472,7 +472,7 @@ mutate "the sentence-grouping rule dropped" ReadableBody.swift \
   'out.append(block)'
 
 # 9e. Headings out of the walk again — the parse reads only <p>, and a long
-#     explainer loses its section titles (prd §645 amendment 5).
+#     explainer loses its section titles (prd §645 amendment 7).
 mutate "headings dropped from the walk" ReadableParse.swift \
   '<(p|h2|h3)\\b[^>]*>(.*?)</\\1\\s*>' \
   '<(p)\\b[^>]*>(.*?)</\\1\\s*>'

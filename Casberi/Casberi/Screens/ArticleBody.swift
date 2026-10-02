@@ -70,7 +70,7 @@ struct ArticleBody: View {
                 // as ONE block the body could never fold, and an article you
                 // opened to read is not §366's note with a "Read the rest".
                 // `headings: true` — the page's own `<h2>`/`<h3>`, stored as
-                // `# …` lines by the parse (§645 amendment 5), are the one
+                // `# …` lines by the parse (§645 amendment 7), are the one
                 // marker scraped prose takes.
                 NoteProse(text: ReadableBody.paragraphed(body),
                           foldable: false,

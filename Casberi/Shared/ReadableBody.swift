@@ -72,7 +72,7 @@ enum ReadableBody {
             .filter { !$0.isEmpty }
         // A section title is left as it is, and one with no section under it
         // — the last block, or a title straight before another — is dropped
-        // (§645 amendment 5). The parse already holds a heading until a
+        // (§645 amendment 7). The parse already holds a heading until a
         // paragraph follows; this is the same rule for a body the share
         // extension's script marked, which cannot see what follows.
         var out: [String] = []

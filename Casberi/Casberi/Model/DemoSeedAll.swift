@@ -2764,7 +2764,7 @@ enum DemoSeedAll {
     /// The demo's one whole article — original copy, written for the demo
     /// (2026-09-08). Blank lines are `ReadableBody.separator`; `# ` lines are
     /// the section titles `NoteSheet.blocks` draws for a scraped body (prd
-    /// §645 amendment 5). Under `ReadableBody.limit`.
+    /// §645 amendment 7). Under `ReadableBody.limit`.
     private static let quieterNotifications = """
     Every app on my phone believes it is the most important thing that happened today. The weather has an opinion at 7 a.m. A game I have not opened since March would like me to know about a limited-time event. My bank, correctly, tells me a charge went through, and then a second app tells me the same charge went through, and a third offers to categorise it.
 
