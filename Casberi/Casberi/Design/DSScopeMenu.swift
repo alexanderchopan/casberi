@@ -31,13 +31,12 @@ struct DSScopeMenu: View {
 
     var body: some View {
         Menu {
-            // Ungrouped slots ("All") first, then each group under its own
-            // section header, in the order the room listed them.
+            // One plain list, no section headers (user: "don't categorize
+            // these"): "All" first, then each group's slots in the order the
+            // room listed them — the faces say what kind each one is.
             ForEach(slots.filter { $0.group == nil }) { slot in item(slot) }
             ForEach(groups, id: \.self) { group in
-                Section(group) {
-                    ForEach(slots.filter { $0.group == group }) { slot in item(slot) }
-                }
+                ForEach(slots.filter { $0.group == group }) { slot in item(slot) }
             }
         } label: {
             HStack(spacing: DS.Space.s2) {
