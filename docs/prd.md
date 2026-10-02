@@ -63696,3 +63696,14 @@ Seen in §1068's capture: Bluesky's cover drew `at://did:plc:demo/app.bsky.feed.
 - The demo's Bluesky posts carry a web permalink, as `BlueskyIngest` stores it, not the raw at:// URI (takes effect on the next pour).
 
 **Checked.** The app builds; `demo-selftest.py`, `lead-body-audit.py`. On the simulator: Bluesky picked in Social leads "Small software, made carefully." with no line under it.
+
+## §1071 — One 30pt icon for rows, the tray and the account list (user: "i think the rows could use smaller icons so they have more room and more rows could fit. i'd like them all to be one size … the 30 seems good"; "leave face fab same size and turn everything else to 30", 2026-10-02) — BUILT
+
+Amends §1017. Rows and the face button had been one 46pt size since §1017; the tray (30) and the account list (24) got their own sizes when they were built (§1058, §1066), three sizes with no ramp between them. Now:
+
+- `DS.Face.row`, `rowCircle` and `list` are 30 (and `DS.Mark.row`/`list`, which follow them): every feed row's lead, the Wallet's rows, the lead box's source mark.
+- `DSFeedRow.headHeight` is 44, the 30pt lead with §1017's 7pt either side; 44 is also the tap minimum. About a third more rows fit a screen (Home shows five where it showed four).
+- The tray's icons and the account list's faces read `DS.Face.row`, so the three cannot drift apart again.
+- The face button keeps `DS.Face.seat` (46): it is the one navigation control, not a list icon. `shelf` (face rails, sheet heads) and `Mark.tile` (catalogue cells) keep it too; they are standalone, not rows.
+
+**Checked.** The app builds; `feed-seam-selftest.sh`, `dock-selftest.sh`, `design-ramp-audit.py`, `ds-template-audit.py`, `lead-body-audit.py`, `row-cost-audit.py`. Before and after on the simulator: Home, Wallet, Social and the tray.
