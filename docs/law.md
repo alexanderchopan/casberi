@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1186 of 1244 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1187 of 1245 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1269,7 +1269,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §929 — The Privacy ring stands under the crown's reading (part superseded by §1038)
 - §930 — The dock is a tray behind the face: one button, every room, and the room names itself (amended by §932, §937)
 - §931 — The Wallet review, first round: the marks the read already named, the ribbons' one ink and the faces' names, and one…
-- §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (part superseded by §1014)
+- §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (part superseded by §1014, §1058)
 - §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage (amended by §1050g)
 - §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused…
 - §935 — The room's faces and venues sit BESIDE the face, not under it (amended by §1044)
@@ -1407,6 +1407,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1055 — Media is one room, built: its apps and Photos fold in, its list is one square grid, and the music shelf is deleted
 - §1056 — Life splits into Life and Day, each one room, and Notes is no category, built
 - §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows…
+- §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu
 
 ## Dead rulings → what replaced them (generated)
 
