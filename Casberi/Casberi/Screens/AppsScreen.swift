@@ -699,13 +699,12 @@ struct AppsScreen: View {
     /// an empty list is the dead control §83 bans, and a strip is the one place
     /// on this screen where that stays invisible until somebody taps it.
     private var scopes: [CatalogScope] {
-        // All, then A to Z (user, 2026-09-17). The home dock keeps the ruled
-        // wall order (§322); this strip is a directory's index, and the list
-        // under it is already alphabetical.
-        [CatalogScope(name: nil)] + Self.categories
+        // All, then the person's own category order (prd §1050j, amending
+        // 2026-09-17's A to Z): the tray and every glass category bar read the
+        // one order Settings › Dock order sets.
+        [CatalogScope(name: nil)] + CategoryOrder.sorted(Self.categories
             .filter { cat in ranked.contains { category(of: $0.offer) == cat.name } }
-            .map(\.name)
-            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            .map(\.name))
             .map { CatalogScope(name: $0) }
     }
 

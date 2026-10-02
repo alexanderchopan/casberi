@@ -108,6 +108,20 @@ enum CategoryOrder {
         order.firstIndex(of: label) ?? Int.max
     }
 
+    /// Category names in the person's order (prd §1050j): the rooms tray and
+    /// every glass category bar — Settings, Markets, Addresses, What this app
+    /// reaches —
+    /// read the one order Settings › Dock order sets, so rearranging it moves
+    /// them all. A name the order has never heard of sorts A–Z after it.
+    static func sorted(_ names: [String]) -> [String] {
+        let order = current
+        return names.sorted { a, b in
+            let ra = rank(of: a, in: order), rb = rank(of: b, in: order)
+            if ra != rb { return ra < rb }
+            return a.localizedStandardCompare(b) == .orderedAscending
+        }
+    }
+
     /// Store a rearrangement. Reconciled on the way IN as well as on the way
     /// out, so a screen handing over a list with a stray name in it cannot
     /// persist one.

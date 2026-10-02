@@ -445,8 +445,9 @@ struct AddressesSection: View {
     private var scopes: [AddressScope] {
         let held = Set(contacts.flatMap(\.categories))
         return [AddressScope(name: nil)]
-            + BridgeCatalog.categories.map(\.name).filter { held.contains($0) }
-                .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            // The person's category order (prd §1050j), as every glass
+            // category bar reads it, not A to Z.
+            + CategoryOrder.sorted(BridgeCatalog.categories.map(\.name).filter { held.contains($0) })
                 .map { AddressScope(name: $0) }
     }
 

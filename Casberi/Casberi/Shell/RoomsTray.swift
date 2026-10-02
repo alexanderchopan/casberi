@@ -98,8 +98,6 @@ struct RoomsTray: View {
     static let dealStep: Double = 0.02
 
     @State private var drag: CGFloat = 0
-    /// Recent's seats, read when the tray rises — never from a body (§628).
-    @State private var recent: [String] = []
     @State private var contentHeight: CGFloat = 0
     @State private var grown = false
     @State private var dealt = false
@@ -160,18 +158,12 @@ struct RoomsTray: View {
             }
         }
         #endif
-        // Every room landed in, from anywhere, is the newest on Recent — a
-        // connected seat only, never a category, All or the notes room.
-        .onChange(of: filter.source) { _, source in
-            if connectedSeats.contains(source) { RecentRooms.record(source) }
-        }
         .onChange(of: searchFocused) { _, focused in
             if focused, !grown {
                 withAnimation(DS.Motion.glide) { grown = true }
             }
         }
         .onChange(of: chrome.roomsTray) { _, up in
-            if up { recent = RecentRooms.list }
             // Deal the marks in once the panel has landed; under Reduce
             // Motion they are simply there.
             grown = false
@@ -195,7 +187,6 @@ struct RoomsTray: View {
         let full = min(natural, screen.height * Self.grownShare)
         // A header's glyph centres on the axis its first mark stands on.
         let headInset = Self.axis - Self.glyphSlot / 2
-        let recent = recentShown
         let height = grown ? full : rest
         let searching = !trimmedQuery.isEmpty
         let hits = searching ? searchHits : []
@@ -231,9 +222,6 @@ struct RoomsTray: View {
                                         headInset: headInset, named: true)
                         }
                     } else {
-                        if !recent.isEmpty {
-                            recentSection(recent, headInset: headInset)
-                        }
                         ForEach(Array(categories.enumerated()), id: \.element) { index, category in
                             categoryRow(category, present: trayMarks(in: category), index: index,
                                         headInset: headInset, named: false)
@@ -349,17 +337,6 @@ struct RoomsTray: View {
         chrome.chipOrder.filter {
             CategoryFold.isCategory($0) && !(chrome.categoryVenues[$0] ?? []).isEmpty
         }
-    }
-
-    /// Every connected seat the tray draws in a category.
-    private var connectedSeats: Set<String> {
-        Set(chrome.categoryVenues.values.joined())
-    }
-
-    /// Recent, as drawn: seats still connected, at most one line.
-    private var recentShown: [String] {
-        let seats = connectedSeats
-        return Array(recent.filter { seats.contains($0) }.prefix(Self.marksPerLine))
     }
 
     /// The category the room you are standing in belongs to.
@@ -533,7 +510,7 @@ struct RoomsTray: View {
                 pick(category)
             } label: {
                 header(glyph: glyph(for: category, lit: lit), word: category,
-                       lit: lit, broken: needsYou, opens: true)
+                       lit: lit, broken: needsYou)
             }
             .buttonStyle(RowPress())
             .padding(.leading, headInset)
@@ -558,27 +535,8 @@ struct RoomsTray: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Recent (prd §1013): the rooms you opened last, newest first, on one
-    /// line. Not a room, so its header opens nothing. Drawn only once there
-    /// is something in it — a section of nothing is not a section.
-    private func recentSection(_ recent: [String], headInset: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header(glyph: "clock", word: String(localized: "Recent"),
-                   lit: false, broken: false, opens: false)
-                .padding(.leading, headInset)
-                .accessibilityAddTraits(.isHeader)
-            MarkGrid(columns: Self.marksPerLine, edge: Self.axis, lineAir: Self.lineAir) {
-                ForEach(Array(recent.enumerated()), id: \.element) { slot, venue in
-                    markButton(venue, key: .recent(venue), named: false)
-                        .modifier(Dealt(on: dealt, index: slot, reduceMotion: reduceMotion))
-                }
-            }
-        }
-    }
-
     /// One account's mark: tap lands in its room, and the mark flies to the
-    /// room's head (§932); no hold since §1033. `key` tells a Recent mark from the same seat's
-    /// mark in its category, so the flight starts from the one touched. A
+    /// room's head (§932); no hold since §1033. A
     /// search's hit carries its name (`named`): a hit is read, not scanned.
     private func markButton(_ venue: String, key: MarkKey, named: Bool) -> some View {
         Button {
@@ -626,20 +584,18 @@ struct RoomsTray: View {
     /// once, so it reads in the page's own ink; the standing room says so with
     /// its filled glyph (`glyph(for:lit:)`), and a broken seat with the
     /// attention hue on the glyph.
-    private func header(glyph: String, word: String, lit: Bool, broken: Bool,
-                        opens: Bool) -> some View {
+    private func header(glyph: String, word: String, lit: Bool, broken: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: glyph)
                 .dsGlyph(.subhead, weight: .medium)
                 .frame(width: Self.glyphSlot)
-                .foregroundStyle(broken ? DS.attention : (opens ? DS.textPrimary : DS.textSecondary))
+                .foregroundStyle(broken ? DS.attention : DS.textPrimary)
                 .symbolEffect(.bounce.up, value: lit ? bounceTick : 0)
-            // Recent opens nothing, so it stays the secondary label it was.
             Text(word)
                 .dsText(.heading17)
-                .foregroundStyle(opens ? DS.textPrimary : DS.textSecondary)
+                .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
-            if opens { DSChevron() }
+            DSChevron()
         }
         .frame(minHeight: DS.Hit.min)
         .contentShape(Rectangle())
@@ -735,11 +691,10 @@ struct RoomsTray: View {
     }
 }
 
-/// A mark in the tray: a source by its seat — in its category, or on the
-/// Recent line — so the flight starts from the one touched.
+/// A mark in the tray: a source by its seat, so the flight starts from the
+/// one touched. Recent and its line are deleted (prd §1050j).
 enum MarkKey: Hashable {
     case source(String)
-    case recent(String)
 }
 
 /// The tray's layout, in window space: where each mark stands, for the

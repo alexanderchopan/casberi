@@ -127,8 +127,8 @@ struct NetworkReachScreen: View {
     private var scopes: [ReachScope] {
         let held = Set(Self.categories.values)
         return [ReachScope(name: nil)]
-            + BridgeCatalog.categories.map(\.name).filter { held.contains($0) }
-                .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            // The person's category order (prd §1050j), not A to Z.
+            + CategoryOrder.sorted(BridgeCatalog.categories.map(\.name).filter { held.contains($0) })
                 .map { ReachScope(name: $0) }
     }
 

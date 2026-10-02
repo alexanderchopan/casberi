@@ -31,10 +31,11 @@ struct TokensScope: DSTileScope {
     }
 
     /// Watchlist, then every category whose pack holds a company — a tile
-    /// that opens an empty list is a dead control (§83).
-    static let all: [TokensScope] = [.watchlist] + packs.keys
-        .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-        .map { TokensScope(category: $0) }
+    /// that opens an empty list is a dead control (§83) — in the person's
+    /// category order (prd §1050j), read fresh so a rearrangement moves it.
+    @MainActor static var all: [TokensScope] {
+        [.watchlist] + CategoryOrder.sorted(Array(packs.keys)).map { TokensScope(category: $0) }
+    }
 
     /// Every pack, built once off the static catalogue.
     private static let packs: [String: [CompanyPacks.Company]] = {
