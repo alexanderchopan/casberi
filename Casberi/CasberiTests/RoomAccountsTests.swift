@@ -55,7 +55,7 @@ struct RoomAccountsTests {
         }
     }
 
-    // MARK: - Reading (prd §1050m)
+    // MARK: - Reading (prd §1052)
 
     /// Reading's menu is the catalogue's Reading members, A to Z, with
     /// NerdWallet, L2BEAT and Walletbeat among them and no Wallet app.

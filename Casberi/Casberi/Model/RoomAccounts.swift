@@ -100,7 +100,7 @@ enum RoomAccounts {
     /// the room exists while Hegotá Frames or Logos is connected.
     static let testnetsRoom = "Testnets"
 
-    /// The Reading room (prd §1049, §1050d, §1051a, built §1050m).
+    /// The Reading room (prd §1049, §1050d, §1051a, built §1052).
     static let readingRoom = "Reading"
 
     /// The merged room a category opens, nil while the category still opens

@@ -1,7 +1,7 @@
 import SwiftUI
 
 // THE ACCOUNT MENU OF A MERGED ROOM THAT DRAWS NO SCREEN OF ITS OWN
-// (prd §1049, §1050d, built §1050m). Reading first; Agents, Media, Life, Day
+// (prd §1049, §1050d, built §1052). Reading first; Agents, Media, Life, Day
 // and Work follow. The Wallet keeps its own menu (addresses and apps), and
 // Testnets crosses networks from each network's menu (§1050k). A pick
 // narrows the list to that app (`selectedSeat`, through `walletScopeAllows`)

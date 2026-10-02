@@ -672,7 +672,7 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Kindle",      tagline: "Import your highlights",                group: "Reading",   connectable: true,
               needsSetup: true),
-        // READING (prd §1049, built §1050m), reversing §780c's Wallet: news
+        // READING (prd §1049, built §1052), reversing §780c's Wallet: news
         // has no dollar figure, so it cannot sit in the One Wallet, and
         // finance is its topic, not its kind. See `NerdWalletBridge` for why
         // it is one switch and not a follow list.

@@ -517,7 +517,7 @@ struct RoomsTray: View {
 
     /// A You door (prd §976a, reshaped by §1050l): the categories' charcoal
     /// (`surfaceRaised`) with the glyph in the brand pink — a pink wash read
-    /// as mud (§1050m), and the standing door FILLS — the pink
+    /// as mud (§1052), and the standing door FILLS — the pink
     /// tile, white glyph and the top sheen `BridgeIcon` gives a seat with no
     /// art. Selection is the fill, so the door needs no ring.
     private func doorTile(_ glyph: String, lit: Bool) -> some View {

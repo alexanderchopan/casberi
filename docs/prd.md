@@ -63474,3 +63474,15 @@ Life (Apple Journal, Day One, Obsidian, Files, Dropbox, Apple Health with Strava
 ## §1050m — The You doors are charcoal with a pink glyph, the categories' tile (user: "the home etc icons look stupid those colors. should be black and pink or charcoal and pink like the others … that background is just gross", 2026-10-02; amends §1050l's door, restores §976a's colours on §1050l's shape)
 
 An unlit You door is `surfaceRaised` charcoal, the categories' own tile, with its glyph in `DS.brand`; the standing door still fills pink with a white glyph. The pink wash at a fifth (§1050l) read as mud on the black tray. **Checked.** On the simulator (`-openTray YES`): Notes, Addresses and Settings stand on the categories' charcoal, Home fills pink.
+
+## §1052 — Reading is one room, built: its apps fold in, the menu lists them A to Z, and an app pick shows that app's own head (user: "go", to the Reading merge, then "when you are done with reading move to the next section", 2026-10-02; builds §1049's Reading, §1050d and §1051a)
+
+**The room.** RSS, Substack, Readwise, Kindle, Bookmarks, Raindrop, NerdWallet, L2BEAT and Walletbeat are seats of one room named Reading. Their seats are the catalogue's Reading members, derived (`RoomAccounts.catalogSeats`), so an app added to the category joins with nothing else to write; rows stamped under a seat's old name ride too (`Seat.owns`, `roomSources`). NerdWallet moves to the Reading shelf (§1049, reversing §780c's Wallet; `nerdwallet-selftest.sh` amended, the "news" tagline guard kept).
+
+**What it draws.** One list, newest first, every row in its own app's design (a rating change as one, an article as an article: `rowShape` keeps a folded row's own shape outside the Wallet). No tiles (§1049: All alone). The box leads with the newest row (§749).
+
+**The menu.** Under the box, "All apps" and every connected Reading app, A to Z (§995's order for a room's picks), drawn once two are connected (`FeedScreen+MergedRoom`). A pick narrows the list to that app and puts that app's own head in the box when it has one — Walletbeat's ratings, L2BEAT's rails — or its newest row (§1048d, generalised: `ShellChrome.roomScope`, `selectedSeat`, `seatHead`). This is the shape Agents, Media, Life, Day and Work take next.
+
+**Not done here.** The website's catalogue shelves still carry the old categories (L2BEAT, Walletbeat and NerdWallet under Wallet; no Markets or Testnets shelf); moving them is a website deploy.
+
+**Checked.** `RoomAccountsTests` (the seats, A to Z, the fold, NerdWallet's category), `nerdwallet-selftest.sh`, `category-fold-selftest.sh`, `catalog-sync.sh`, `dock-selftest.sh`, `wallet-total-audit.py`. On the simulator: `-openRoom Reading` leads with NerdWallet's newest article over Walletbeat's rows; the menu lists the nine apps A to Z; Bookmarks narrows to bookmarks; Walletbeat puts its ratings head in the box.

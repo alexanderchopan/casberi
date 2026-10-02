@@ -107,7 +107,7 @@ grep -qE 'TokenVault|WKWebView|Authorization|bearer' "$STRIPPED" "$SCREEN_STRIPP
 # --- guard 8: the catalog and the registry agree ----------------------------
 grep -q '"NerdWallet"' "$CATALOG" \
   || note "NerdWallet left the catalog but the seat is still here"
-# READING since §1049 (built §1050m), reversing §780c's Wallet: news has no
+# READING since §1049 (built §1052), reversing §780c's Wallet: news has no
 # dollar figure, so it cannot sit in the One Wallet, whose box is one total.
 # The guard was amended, not deleted (a red guard after a ruling is a guard to
 # amend): back on the Wallet shelf, NerdWallet would join the Wallet's menu
