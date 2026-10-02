@@ -491,7 +491,7 @@ ok "connect form opens (RSS)"
 # of listing them here instead of trusting a comment.
 step "Account detail sheets open without crashing"
 DETAIL_FILE="$ROOT/Casberi/Casberi/Screens/AccountDetailSheet.swift"
-DETAIL_SWEPT=(data mcp notifications)
+DETAIL_SWEPT=(data notifications)   # mcp left with the ask (prd §1047)
 DETAIL_DECLARED=($(awk '/^enum AccountDetail/{f=1} f && /^    case /{print $2} f && /^}/{exit}' "$DETAIL_FILE"))
 if [[ "${(j:,:)${(o)DETAIL_SWEPT}}" != "${(j:,:)${(o)DETAIL_DECLARED}}" ]]; then
   fail "AccountDetail cases swept here (${(j:, :)DETAIL_SWEPT}) do not match the enum (${(j:, :)DETAIL_DECLARED}) — add the new case to DETAIL_SWEPT in this script"
