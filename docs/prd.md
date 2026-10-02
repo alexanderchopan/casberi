@@ -63727,3 +63727,13 @@ Every app the demo connects, picked from its room's menu by launch hook (`-walle
 **Seen and left.** Peer's 13-second capture drew the whole Wallet's chart over blank rows; at 25 seconds it draws its own head and rows (a slow first read, not a defect). Its card names the lead rail in the sentence and bars only the rest, by design. A handful of apps have one row, so their list under the cover is empty (Cal.com, Calendly, Venice, Bankr): thin demo data, not a broken room.
 
 **Checked.** The app builds; `demo-selftest.py` and its self-test, `logos-selftest.sh`. Re-captured: GitHub, Stripe and Day measured, Logos, the tray.
+
+## §1074 — The detail-sheet sweep (user: "go ahead", 2026-10-02) — BUILT
+
+One thing opened per category and per kind (`-openThing`), 27 sheets: an event, a swap, a Wise transfer, a card spend, a Safe transaction, a token, a GitHub notification, a Stripe payout, a Linear issue, a mail, a reminder, a workout, two notes and a journal entry, a chat, a video, a photo, a song, an X notice, a Bluesky post, a Telegram chat, an Instagram notice, an article, a highlight, a Logos move and a note of yours. Each drew its own anatomy, words and verbs. Fixed:
+
+- **An onchain card spend read "Spent at" over nothing.** Gnosis Pay and ether.fi carry no merchant (the chain has none; real rows are titled "Spent €X with Gnosis Pay"), so the sheet's lead dangled on every real spend. With no merchant on an onchain card the lead completes itself: "Spent with Gnosis Pay", "Refunded to ether.fi". A card that names the shop keeps "Spent at <shop>".
+
+**Seen and left.** The demo's YouTube and RSS items carry no link, so their sheets offer no Open; real ones carry one (`empty-door-audit.py` holds the bridges to it). "Send to Reminders" on a note is the standing hand-off (`Verbs.swift`), not a write. A Linear issue's sheet says its state twice (the stamp and the line under the title).
+
+**Checked.** The app builds; `money-receipt-selftest.sh`. On the simulator: the Gnosis Pay spend's sheet reads "Spent with Gnosis Pay".
