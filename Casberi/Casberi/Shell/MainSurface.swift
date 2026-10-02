@@ -1430,6 +1430,16 @@ struct MainSurface: View {
     /// strip decides on main — the connected live-room seats, the Notes
     /// room, the catalog fold and the stored category order. Shared by the
     /// synchronous fallback and the background walk (PERF 2026-09-08).
+    /// The screen the room on stage shows: itself, or — in a merged room of
+    /// own-screen apps, Testnets — the picked app's (prd §1050k).
+    private var shownRoom: String {
+        let room = filter.source
+        guard RoomAccounts.mergedRooms.contains(room) else { return room }
+        let names = Set(store.bridges.lazy.filter { $0.status != .paused }.map(\.name))
+        return RoomAccounts.shownSource(room: room, scope: chrome.mergedScope[room], names: names)
+            ?? room
+    }
+
     private func assembleChips(ordered walked: [String])
         -> (labels: [String], venues: [String: [String]], sources: [String]) {
         var ordered = walked
@@ -2095,7 +2105,7 @@ struct MainSurface: View {
             // `go(to:)`, so a folded app's name is caught here too and sent on
             // to its merged room, scoped (prd §1048, step 4).
             if let fold = RoomAccounts.host(ofSource: source) {
-                chrome.walletScope = RoomAccounts.scopeID(fold.seat)
+                chrome.pickSeat(fold.seat, in: fold.room)
                 filter.source = fold.room
                 return
             }
@@ -2228,7 +2238,7 @@ struct MainSurface: View {
             // 4).** Every door that named it lands in the merged room, scoped
             // to it — set BEFORE the same-room guard, so a door taken while
             // already standing in the Wallet still narrows it.
-            chrome.walletScope = RoomAccounts.scopeID(fold.seat)
+            chrome.pickSeat(fold.seat, in: fold.room)
             target = fold.room
         } else {
             target = label
@@ -2716,7 +2726,9 @@ struct MainSurface: View {
                 // the drag — the neighbour is not pre-built, for the §258
                 // reason recorded below.
                 PagerDrag {
-                    FeedScreen(source: filter.source, isActive: true, nearActive: true,
+                    FeedScreen(source: shownRoom,
+                               hostRoom: shownRoom == filter.source ? nil : filter.source,
+                               isActive: true, nearActive: true,
                                // Only the room the swipe is going TO — see
                                // `swipeBudgetSource`.
                                rowBudget: swipeBudgetSource == filter.source ? swipeRowBudget : nil)
@@ -2725,7 +2737,9 @@ struct MainSurface: View {
                         // (measured 15 body builds → 2).
                         .equatable()
                 }
-                    .id(filter.source)
+                    // A pick that changes the screen a merged room shows
+                    // remounts it, as a room change does (prd §1050k).
+                    .id(shownRoom)
                     .transition(.asymmetric(
                         // ARRIVES, never materializes (user, 2026-09-06: "when
                         // content from the new screen materializes it looks

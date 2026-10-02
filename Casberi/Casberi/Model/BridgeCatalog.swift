@@ -873,7 +873,9 @@ enum BridgeCatalog {
     /// the table that filed Voice under Notes had no other entry, and it is
     /// deleted with it.
     static func category(forSource source: String) -> String? {
-        offer(forSource: source).map { category(of: $0) }
+        // A merged room no seat names (Testnets, prd §1050k) is its category.
+        if let offer = offer(forSource: source) { return category(of: offer) }
+        return RoomAccounts.room(ofCategory: source)
     }
 
     /// The catalog offer a landed SOURCE belongs to — the join itself, factored

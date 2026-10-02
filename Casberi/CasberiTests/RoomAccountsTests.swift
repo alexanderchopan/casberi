@@ -50,9 +50,44 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)
         #expect(RoomAccounts.host(ofSource: "L2BEAT") == nil)
         #expect(RoomAccounts.host(ofSource: "Walletbeat") == nil)
-        for room in [CategoryFold.walletRoom, "Markets", "Hegotá Frames", "Logos", "Stripe"] {
+        for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom, "Stripe"] {
             #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
         }
+    }
+
+    // MARK: - Testnets (prd §1050k)
+
+    /// The two networks fold into Testnets, never into the Wallet: test money
+    /// and real money never share a room (§1050).
+    @Test func theTestnetsFoldIntoTestnetsNotTheWallet() {
+        for source in [FramesIdentity.source, LogosRoom.source] {
+            #expect(RoomAccounts.host(ofSource: source)?.room == RoomAccounts.testnetsRoom)
+            #expect(!RoomAccounts.rides(room: CategoryFold.walletRoom, source: source))
+        }
+        #expect(RoomAccounts.seats(for: CategoryFold.walletRoom).allSatisfy { !$0.ownScreen })
+    }
+
+    /// The room no seat names is its own category, so the strip folds it there
+    /// and the tray opens it.
+    @Test func testnetsIsItsCategory() {
+        #expect(BridgeCatalog.category(forSource: RoomAccounts.testnetsRoom) == "Testnets")
+        #expect(RoomAccounts.room(ofCategory: "Testnets") == RoomAccounts.testnetsRoom)
+        #expect(RoomAccounts.room(ofCategory: "Work") == nil)
+    }
+
+    /// The room shows the picked network's screen, the first connected one
+    /// with no pick, never a network that is not connected, and nothing for a
+    /// room that draws itself.
+    @Test func theRoomShowsOneConnectedNetwork() {
+        let room = RoomAccounts.testnetsRoom
+        let both: Set = [FramesIdentity.source, LogosRoom.source]
+        #expect(RoomAccounts.shownSource(room: room, scope: nil, names: both) == FramesIdentity.source)
+        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos", names: both) == LogosRoom.source)
+        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos",
+                                         names: [FramesIdentity.source]) == FramesIdentity.source)
+        #expect(RoomAccounts.shownSource(room: room, scope: nil, names: []) == nil)
+        #expect(RoomAccounts.shownSource(room: CategoryFold.walletRoom, scope: "seat:Safe",
+                                         names: ["Safe"]) == nil)
     }
 
     /// The query, the history screen and the row filter read one list.

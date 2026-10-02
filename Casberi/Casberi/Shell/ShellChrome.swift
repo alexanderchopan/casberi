@@ -342,6 +342,22 @@ final class ShellChrome {
     /// wallet is a feed with no rows and no way to explain itself.
     var walletScope: String?
 
+    /// The app picked in every other merged room (prd §1050k), keyed by room
+    /// and held as a `RoomAccounts` scope id — the Wallet keeps `walletScope`,
+    /// which also holds addresses. Here for `walletScope`'s reason: the room
+    /// remounts when its pick changes the screen it shows.
+    var mergedScope: [String: String] = [:]
+
+    /// A door that named a folded app lands in its merged room, scoped to it.
+    func pickSeat(_ seat: RoomAccounts.Seat, in room: String) {
+        let id = RoomAccounts.scopeID(seat)
+        if room == CategoryFold.walletRoom {
+            walletScope = id
+        } else if mergedScope[room] != id {
+            mergedScope[room] = id
+        }
+    }
+
     /// THE ACCOUNT RAIL, PUBLISHED TO THE SHELL (prd §750, 2026-09-15, user:
     /// "should we put the wallets row of accounts on a third row above the tab
     /// bar like we do for socials? … like on farcaster and bluesky").

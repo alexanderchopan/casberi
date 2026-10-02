@@ -53,9 +53,11 @@ extension FeedScreen {
                         ?? LogosIngest.explorer
                     if let url = URL(string: page) { UIApplication.shared.open(url) }
                 },
-                accounts: logosAccountSlots(roster),
+                accounts: logosAccountSlots(roster) + hostedNetworkSlots,
                 scope: chrome.logosScope,
-                onPickAccount: logosPickAccount,
+                onPickAccount: { picked in
+                    if !pickHostedNetwork(picked) { logosPickAccount(picked) }
+                },
                 crown: { slot in
                     Group {
                         if slot.isShowing(chrome.logosScope) {

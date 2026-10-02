@@ -6,8 +6,8 @@ import Foundation
 /// narrows the room to that app.
 ///
 /// One table per room, read by the menu, the row filter and the total, so the
-/// three cannot disagree about what an app owns. Only the Wallet has entries
-/// so far; each room merged later adds its own beside it.
+/// three cannot disagree about what an app owns. Only the Wallet and Testnets
+/// have entries so far; each room merged later adds its own beside it.
 enum RoomAccounts {
 
     struct Seat: Equatable {
@@ -23,6 +23,10 @@ enum RoomAccounts {
         let group: String
         /// The mark the menu draws.
         let mark: String
+        /// Whether a pick shows the app's own screen inside the merged room
+        /// rather than narrowing the room's (prd §1050k): a testnet's tiles,
+        /// verbs and accounts are its own, and no view adds the two networks.
+        var ownScreen = false
 
         func holds(_ holderID: String) -> Bool {
             guard let holder else { return false }
@@ -48,7 +52,11 @@ enum RoomAccounts {
     /// Every app the room can list, in menu order. The menu shows the
     /// connected ones (`connected`).
     static func seats(for room: String) -> [Seat] {
-        room == CategoryFold.walletRoom ? wallet : []
+        switch room {
+        case CategoryFold.walletRoom: return wallet
+        case testnetsRoom: return testnets
+        default: return []
+        }
     }
 
     /// Matched on the catalogue name or the row source: a seat can register
@@ -75,9 +83,31 @@ enum RoomAccounts {
         return nil
     }
 
-    /// Every room that has absorbed apps. The rooms tray draws these as rooms
-    /// (a header that opens the room, circles that open settings).
-    static let mergedRooms: [String] = [CategoryFold.walletRoom]
+    /// Every room that has absorbed apps. Each is named for its category,
+    /// so the category's tray row and the room are one name (the Wallet's
+    /// balance room always was).
+    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom]
+
+    /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
+    /// the room exists while Hegotá Frames or Logos is connected.
+    static let testnetsRoom = "Testnets"
+
+    /// The merged room a category opens, nil while the category still opens
+    /// its apps' own rooms.
+    static func room(ofCategory category: String) -> String? {
+        mergedRooms.contains(category) ? category : nil
+    }
+
+    /// THE SCREEN A ROOM OF OWN-SCREEN APPS SHOWS (prd §1050k): the picked
+    /// app's when it is connected, else the first connected one in menu
+    /// order. Nil for a room that draws itself (the Wallet), and for one with
+    /// nothing connected.
+    static func shownSource(room: String, scope: String?, names: Set<String>) -> String? {
+        let own = connected(in: room, names: names).filter(\.ownScreen)
+        guard !own.isEmpty else { return nil }
+        let picked = seat(scope, in: room).flatMap { pick in own.first { $0 == pick } }
+        return (picked ?? own[0]).source
+    }
 
     /// Every source a room's query, its row filter and its safety-net probe
     /// fetch: the room alone, or the room with every app it folded in.
@@ -98,6 +128,16 @@ enum RoomAccounts {
     private static let trades = String(localized: "Trades and privacy")
     private static let names = String(localized: "Names")
     private static let teams = String(localized: "Teams")
+    private static let networks = String(localized: "Networks")
+
+    /// The testnets (prd §1050): test money, never in the Wallet's menu or
+    /// total (§83).
+    private static let testnets: [Seat] = [
+        Seat(name: FramesIdentity.source, source: FramesIdentity.source,
+             holder: nil, group: networks, mark: FramesIdentity.source, ownScreen: true),
+        Seat(name: LogosRoom.source, source: LogosRoom.source,
+             holder: nil, group: networks, mark: LogosRoom.source, ownScreen: true),
+    ]
 
     /// The Wallet's (prd §1048; Bitrefill since §1051a). L2BEAT and Walletbeat
     /// are Reading's (§1051a), not the Wallet's.

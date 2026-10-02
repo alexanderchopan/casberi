@@ -61,6 +61,7 @@ extension FeedScreen: Equatable {
             // 150-row query for the life of the mount and "Show older" would
             // stop at the bound with nothing on screen able to say why.
             && a.rowBudget == b.rowBudget
+            && a.hostRoom == b.hostRoom
     }
 }
 
@@ -122,6 +123,11 @@ struct FeedScreen: View {
     /// than a person can open inside the transition.
     let rowBudget: Int?
 
+    /// The merged room this screen stands inside, when it is one app's own
+    /// screen shown there (prd §1050k: a testnet inside Testnets). The room
+    /// names itself by it, and the account menu leads with its other apps.
+    let hostRoom: String?
+
     /// across the person's own swipes instead of all at once on launch.
     @State private var everBuilt = false
     /// The room's own share card, raised by the door under its tiles
@@ -160,8 +166,10 @@ struct FeedScreen: View {
     /// (prd §959); regular keeps it on the shell's rail.
     @Environment(\.horizontalSizeClass) var roomSizeClass
 
-    init(source: String, isActive: Bool, nearActive: Bool = true, rowBudget: Int? = nil) {
+    init(source: String, hostRoom: String? = nil, isActive: Bool, nearActive: Bool = true,
+         rowBudget: Int? = nil) {
         self.source = source
+        self.hostRoom = hostRoom
         self.rowBudget = rowBudget
         // The mark the trace was missing (PERF 2026-09-01). `mount` fires from
         // a `.task`, i.e. after the first body AND after SwiftUI has installed
@@ -1366,7 +1374,7 @@ struct FeedScreen: View {
     private var roomName: String {
         if source == "All" { return String(localized: "Home") }
         if source == Pinboard.room { return String(localized: "Notes") }
-        return BridgeCatalog.seatName(forSource: source)
+        return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
 
     /// Scroll the room back to its own head, with the standard motion so it

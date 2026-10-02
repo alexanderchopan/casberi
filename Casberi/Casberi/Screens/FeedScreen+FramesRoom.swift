@@ -367,9 +367,11 @@ extension FeedScreen {
                         chrome.framesSection = picked
                     }
                 },
-                accounts: framesAccountSlots(roster),
+                accounts: framesAccountSlots(roster) + hostedNetworkSlots,
                 scope: chrome.framesScope,
-                onPickAccount: framesPickAccount,
+                onPickAccount: { picked in
+                    if !pickHostedNetwork(picked) { framesPickAccount(picked) }
+                },
                 crown: { slot in
                     // The room figure carries its own slot (prd §953); a second
                     // one inset the Home crown 12pt past every other crown.
