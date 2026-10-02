@@ -1999,7 +1999,6 @@ harness "Note folders self-test" "note folders self-test" "scripts/note-folders-
 # name whatever its case, Spotify's year off the album — and every room's
 # tile grid drawn A–Z with its lead first. Each renders as an ordinary list
 # when wrong.
-harness "Music shelf self-test" "music shelf self-test" "scripts/music-shelf-selftest.sh" "the music shelf self-test failed — run scripts/music-shelf-selftest.sh"
 
 # Recently Deleted (prd §985): a note archived before it is deleted, a window
 # that never reads 0 while a note can come back, and Delete everything that

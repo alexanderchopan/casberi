@@ -93,7 +93,21 @@ struct RoomAccountsTests {
         }
         #expect(names.contains("Claude Code"))
         #expect(RoomAccounts.host(ofSource: "Claude")?.room == RoomAccounts.agentsRoom)
-        #expect(AgentRoomScope.chat.label == "New")
+        #expect(AgentRoomScope.new.label == "New")
+    }
+
+    // MARK: - Media (prd §1055)
+
+    /// Media holds the watching, listening, games and pictures apps, Photos
+    /// included (§1050b), and Photos is no longer Life's.
+    @Test func mediaHoldsPhotosAndTheMediaApps() {
+        let names = Set(RoomAccounts.seats(for: RoomAccounts.mediaRoom).map(\.name))
+        for app in ["YouTube", "Twitch", "Apple Music", "Spotify", "Podcasts", "Steam",
+                    "Pinterest", "Photos"] {
+            #expect(names.contains(app), "\(app) is in Media")
+        }
+        #expect(BridgeCatalog.category(forSource: "Photos") == "Media")
+        #expect(RoomAccounts.host(ofSource: "Spotify")?.room == RoomAccounts.mediaRoom)
     }
 
     // MARK: - Testnets (prd §1050k)

@@ -64,6 +64,7 @@ enum RoomAccounts {
         case testnetsRoom: return testnets
         case readingRoom: return reading
         case agentsRoom: return agents
+        case mediaRoom: return media
         default: return []
         }
     }
@@ -95,7 +96,7 @@ enum RoomAccounts {
     /// Every room that has absorbed apps. Each is named for its category,
     /// so the category's tray row and the room are one name (the Wallet's
     /// balance room always was).
-    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, readingRoom, agentsRoom]
+    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, readingRoom, agentsRoom, mediaRoom]
 
     /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
     /// the room exists while Hegotá Frames or Logos is connected.
@@ -106,6 +107,9 @@ enum RoomAccounts {
 
     /// The Agents room (prd §1049, built §1054).
     static let agentsRoom = "Agents"
+
+    /// The Media room (prd §1049, §1050b, built §1055).
+    static let mediaRoom = "Media"
 
     /// The merged room a category opens, nil while the category still opens
     /// its apps' own rooms.
@@ -167,6 +171,10 @@ enum RoomAccounts {
     /// Agents' (prd §1049): every agent, its imported history and its keyed
     /// conversations alike.
     private static let agents = catalogSeats(agentsRoom)
+
+    /// Media's (prd §1049, §1050b): YouTube, Twitch, Apple Music, Spotify,
+    /// Podcasts, Steam, Pinterest and Photos.
+    private static let media = catalogSeats(mediaRoom)
 
     /// The testnets (prd §1050): test money, never in the Wallet's menu or
     /// total (§83).

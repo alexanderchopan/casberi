@@ -1910,7 +1910,7 @@ struct FeedScreen: View {
         .modifier(WhichAgentDialog(open: $askingWhichAgent, agents: answeringAgents) { provider in
             pickAgent(provider)
             chrome.beginConversation(with: provider.agent)
-            withAnimation(DS.Motion.standard) { chrome.agentScope = .chat }
+            withAnimation(DS.Motion.standard) { chrome.agentScope = .new }
         })
         .modifier(NoteTrashSheet(open: $trashOpen, onRecover: recoverNote,
                                  onErase: { NoteTrash.shared.erase($0) }))

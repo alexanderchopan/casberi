@@ -800,9 +800,11 @@ enum BridgeCatalog {
         // "Learning" joins Life 2026-09-16 with Duolingo (prd §776) rather
         // than earning a category of its own: a category is a dock chip with
         // a glyph and a room, and one seat does not fill one.
-        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Storage", "Mail", "Learning"]),
+        // Photos moved to Media (prd §1050b, built §1055): the square grid
+        // Media draws is the one Photos already had.
+        ("Life",    "Calendar",    ["Schedule", "Fitness", "People", "Storage", "Mail", "Learning"]),
         ("Agents",  "Claude",      ["Agent"]),
-        ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images"]),
+        ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images", "Photos"]),
         ("Social",  "Bluesky",     ["Network"]),
         // Reading sits AHEAD of Shopping (user ruling 2026-08-06, "should
         // reading come before shopping?"). Two reasons, both about the band

@@ -2140,9 +2140,6 @@ struct MainSurface: View {
             chrome.mailScope = .all
             // The Calendar room opens on Week (prd §994).
             chrome.calendarScope = .week
-            // The music rooms open on Activity (prd §995).
-            chrome.musicScope = .activity
-            chrome.musicGroup = nil
             // And the Tokens room's packs.
             chrome.tokensScope = .watchlist
             chrome.pinterestScope = nil

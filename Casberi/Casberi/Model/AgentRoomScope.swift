@@ -22,16 +22,17 @@ import Foundation
 /// every other one, so a `swiftc` harness can compile this file whole.
 enum AgentRoomScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     case all
-    case chat
+    /// New (§1054; Chat until then): start a conversation.
+    case new
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
         case .all:  return String(localized: "All")
-        // NEW since §1054: in the Agents room it starts a conversation with
-        // the agent the menu picked, which lands as a row there (§1049).
-        case .chat: return String(localized: "New")
+        // In the Agents room it starts a conversation with the agent the
+        // menu picked, which lands as a row there (§1049, §1054).
+        case .new:  return String(localized: "New")
         }
     }
 
@@ -42,7 +43,7 @@ enum AgentRoomScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .all:  return String(localized: "Conversations you have had")
-        case .chat: return String(localized: "Start a conversation")
+        case .new:  return String(localized: "Start a conversation")
         }
     }
 }

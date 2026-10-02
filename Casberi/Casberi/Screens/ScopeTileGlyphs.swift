@@ -122,11 +122,6 @@ enum ScopeTileGlyph {
     /// Life glyph, and one glyph carries one meaning (prd §999).
     static let week         = "calendar.day.timeline.left"
     static let month        = "tablecells"
-    /// The music rooms' orders (prd §995), each the Music app's own symbol
-    /// for the same list. Activity is the wallet family's: the same meaning.
-    static let songs        = "music.note"
-    static let albums       = "square.stack"
-    static let artists      = "music.mic"
     /// The mail rooms' Attachments (prd §1019). The note sheet's attach tool
     /// wears the same clip for the same meaning; no tile or dock seat does.
     static let attachments  = "paperclip"
@@ -168,19 +163,6 @@ extension CalendarScope: DSTileScope {
         case .week:  return ScopeTileGlyph.week
         case .month: return ScopeTileGlyph.month
         case .new:   return ScopeTileGlyph.new
-        }
-    }
-}
-
-/// The music rooms' tiles (prd §995). Conformed here for `NotesScope`'s
-/// reason: `MusicScope` stays Foundation-only.
-extension MusicScope: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .activity: return ScopeTileGlyph.activity
-        case .songs:    return ScopeTileGlyph.songs
-        case .albums:   return ScopeTileGlyph.albums
-        case .artists:  return ScopeTileGlyph.artists
         }
     }
 }
@@ -285,7 +267,7 @@ extension AgentRoomScope: DSTileScope {
     var glyph: String {
         switch self {
         case .all:  return ScopeTileGlyph.all
-        case .chat: return ScopeTileGlyph.new
+        case .new:  return ScopeTileGlyph.new
         }
     }
 }

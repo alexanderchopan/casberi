@@ -459,7 +459,7 @@ extension FeedScreen {
             pickAgent(answering[0])
         }
         if let roomAgent { chrome.beginConversation(with: roomAgent.agent) }
-        withAnimation(DS.Motion.standard) { chrome.agentScope = .chat }
+        withAnimation(DS.Motion.standard) { chrome.agentScope = .new }
     }
 
     /// Pick an agent in the Agents room's menu.
@@ -477,7 +477,7 @@ extension FeedScreen {
         return DSScopeTiles(sections: AgentRoomScope.allCases,
                             active: roomAgent == nil ? .all : chrome.agentScope,
                             attention: []) { picked in
-            if picked == .chat, source == RoomAccounts.agentsRoom {
+            if picked == .new, source == RoomAccounts.agentsRoom {
                 startNewConversation()
                 return
             }

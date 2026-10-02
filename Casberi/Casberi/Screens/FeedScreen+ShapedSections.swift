@@ -542,8 +542,6 @@ extension FeedScreen {
                             boundary: boundaryThingID(in: days))
         case .reminders:
             reminderSections(visible, nextEventID: nextEventID, heroShown: heroShown)
-        case .music:
-            musicSections(visible, nextEventID: nextEventID, heroShown: heroShown)
         case .cardPointers:
             // Deadlines, not days — see `cardPointersGroups`. No `boundary:`,
             // because every offer carries the
@@ -649,10 +647,12 @@ extension FeedScreen {
                 // Pinterest's pins tile under their day at 2:3 (the picture
                 // rooms' grid, prd §910); a pin with no image stays a row.
                 let pins = source == "Pinterest"
+                // Media is one square grid (§1055): every picture tiles.
+                let media = source == RoomAccounts.mediaRoom
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
                                 replies: threadReplies,
                                 cover: heroShown ? nil : ledeThingID(in: days),
-                                isTile: pins ? Self.isPinTile : nil,
+                                isTile: media ? Self.isMediaTile : (pins ? Self.isPinTile : nil),
                                 tileShape: pins ? .pin : .square,
                                 scopeControl: true)
             }
@@ -753,7 +753,7 @@ extension FeedScreen {
     @ViewBuilder
     private func agentRoomSections(_ visible: [Thing], nextEventID: UUID?,
                                    heroShown: Bool) -> some View {
-        let chatting = chrome.agentScope == .chat && roomAgent != nil
+        let chatting = chrome.agentScope == .new && roomAgent != nil
         // The thread and the entry are the agent's own: its source, not the
         // Agents room's (prd §1054).
         let agentSource = roomAgent?.agent ?? source

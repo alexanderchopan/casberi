@@ -128,6 +128,16 @@ extension FeedScreen {
             && !(thing.previewImageURL ?? "").isEmpty
     }
 
+    /// THE MEDIA ROOM'S GRID (prd §1049, built §1055): every row with a
+    /// picture is a square tile — a photo, a screenshot, a pin, a video's or
+    /// an album's art — and a row with none stays a row, because a tile
+    /// promises a picture. The stored pixels are read last (the note above).
+    static func isMediaTile(_ thing: Thing) -> Bool {
+        guard thing.isLive else { return false }
+        if !(thing.previewImageURL ?? "").isEmpty { return true }
+        return thing.previewImageData != nil
+    }
+
     static func isTelegramPhotoTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == TelegramChannel.source
             && Corpus.arrivedLive(thing)
