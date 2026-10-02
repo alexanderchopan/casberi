@@ -3671,11 +3671,14 @@ else
   # was green anyway: the sim's store still held 1Claw rows poured before the
   # retirement, and `pourIfNeeded` never removes a row. A fresh store is what
   # found it. The shape itself is alive for its shipped rows (prd §638).
+  # `purchase.watch` left with Deals and Shopify (prd §1051): no seat lands a
+  # product row any more, so the demo cannot reach it by ruling. The archetype
+  # stays for rows already stored until the dead-view cleanup removes it.
   EXPECTED_SHAPES=(
     social.post social.person social.save social.transcript
     note.entry note.note note.passage
     agent.conversation
-    purchase.receipt purchase.watch
+    purchase.receipt
     work.words work.code work.money work.stars
     money.receipt life.facts
   )
