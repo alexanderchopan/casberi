@@ -1299,6 +1299,11 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   padding: 1.26cqw; background: #0B0B0C; border-radius: 2.7cqw;
   box-shadow: 0 0 0 .14cqw #3A3B40, 0 0 0 .6cqw #0A0C10; }
 .slab-ipad img { border-radius: 1.3cqw; }
+/* The phone stands in front of the Mac's right corner, where the iPad stood (2026-10-02). */
+.slab-phone { position: absolute; right: 2%; bottom: 0; width: 19.5%; box-sizing: border-box;
+  padding: .9cqw; background: #0B0B0C; border-radius: 3.6cqw;
+  box-shadow: 0 0 0 .14cqw #3A3B40, 0 0 0 .6cqw #0A0C10; }
+.slab-phone img { border-radius: 2.8cqw; }
 @media (max-width: 760px) {
   .slab-get .slab-plat { font-size: 15px; margin-top: 14px; }
   .slab-devices { margin-top: 44px; }
@@ -2093,3 +2098,12 @@ body { overflow-x: clip; }
 .showreel video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 24px;
   background: #0b0b0d; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
 @media (max-width: 560px) { .showreel video { border-radius: 16px; } }
+
+/* ---------- Next (2026-10-02): what is coming, each item marked soon ---------- */
+#next .m-h2 .g { color: #8e8e93; }
+.next-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 980px; margin: 36px auto 0; text-align: left; }
+.next-item { background: #151517; border-radius: 20px; padding: 22px 24px; }
+.next-item b { display: flex; align-items: baseline; gap: 10px; font-size: 22px; font-weight: 800; color: var(--ink); }
+.next-item .soon { font-size: 14px; font-weight: 700; color: #f5458f; }
+.next-item p { margin: 8px 0 0; font-size: 16px; line-height: 1.4; color: #A1A1A6; }
+@media (max-width: 760px) { .next-row { grid-template-columns: 1fr; } }
