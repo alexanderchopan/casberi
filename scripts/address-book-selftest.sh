@@ -399,7 +399,7 @@ grep -q 'rows: rows,' "$SCREEN" \
 grep -q 'onRemoveRow: forget,' "$SCREEN" \
   || { echo "✗ a directory row lost its one verb (§690)"; exit 1; }
 for f in Casberi/Casberi/Shell/FaceScopeRail.swift Casberi/Casberi/Shell/MainSurface.swift \
-         Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift; do
+         Casberi/Casberi/Screens/FeedScreen*.swift; do
   # Comment-stripped: a file's history may NAME the callback it lost
   # (the Obsidian/Cursor lesson — a guard on raw source fires on the prose).
   sed 's|//.*$||' "$f" | grep -q 'onOpenBook' \

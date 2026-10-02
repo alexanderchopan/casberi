@@ -34,7 +34,11 @@ SEAM="Casberi/Casberi/Model/FeedSeam.swift"
 DIVIDER="Casberi/Casberi/Screens/FeedDayDivider.swift"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 HAPTICS="Casberi/Casberi/Design/Haptics.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 FLOOR="Casberi/Casberi/Screens/CorpusFloor.swift"
 MARK="Casberi/Casberi/Design/CasberiMark.swift"
 for f in "$SEAM" "$DIVIDER" "$CHROME" "$HAPTICS" "$FEED" "$FLOOR" "$MARK"; do
@@ -286,7 +290,7 @@ awk -v f="$floor_pt" -v c="$cut_at" 'BEGIN { exit !(f >= c) }' \
   || { echo "✗ the floor draws at ${floor_pt}pt, under smallCutBelow (${cut_at}) — the solid mark takes the SMALL cut there, so the full-arm outline now loses two arms at the settle instead of gaining them"; exit 1; }
 # §218's gate is what makes this honest at all: a floor on a young corpus reads
 # as an empty-state apology, and now it would perform on the way.
-floor=$(awk '/private func corpusFloorSection\(/,/^    }$/' "$FEED")
+floor=$(awk '/func corpusFloorSection\(/,/^    }$/' "$FEED")
 echo "$floor" | grep -q 'live.count >= 8' \
   || { echo "✗ the floor's row minimum is gone (prd §218) — it fires on a corpus with no history"; exit 1; }
 echo "$floor" | grep -q '7 \* 86_400' \

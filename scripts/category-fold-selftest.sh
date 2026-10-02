@@ -69,7 +69,7 @@ CHIPS="Casberi/Casberi/Shell/SourceChips.swift"
 # text, so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 # `CategoryVenueSwitcher.swift` is DELETED (2026-09-05): a folder opens IN
 # PLACE now — the category chip itself grows to hold its venues
 # (`SourceChips.categoryTile` / `folderVenue`) — so every guard below that

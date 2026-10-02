@@ -21,7 +21,11 @@ cd "$(dirname "$0")/.."
 FOLDERS="Casberi/Casberi/Model/NoteFolders.swift"
 STORE="Casberi/Casberi/Model/NoteFolderStore.swift"
 PINBOARD="Casberi/Casberi/Model/Pinboard.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 SHEET="Casberi/Casberi/Shell/NoteCaptureSheet.swift"
 GLYPHS="Casberi/Casberi/Screens/ScopeTileGlyphs.swift"
 THING="Casberi/Shared/Thing.swift"

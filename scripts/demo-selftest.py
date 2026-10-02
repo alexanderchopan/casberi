@@ -294,6 +294,10 @@ def read(path):
     if not path.exists():
         print(f"✗ {path} not found")
         sys.exit(1)
+    if path.name == "FeedScreen.swift":
+        # FeedScreen is split across files (prd §718): read the room as ONE text.
+        return path.read_text() + "".join(
+            p.read_text() for p in sorted(path.parent.glob("FeedScreen+*.swift")))
     return path.read_text()
 
 

@@ -49,7 +49,7 @@ SOCSRC="Casberi/Casberi/Model/SocialRoomSource.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 RENDER="Casberi/Casberi/GenUI/GenRenderer.swift"
 for f in "$HEALTH" "$SOURCE" "$ARTICLE" "$BODY" "$CONTENT" "$INSIGHT" "$FEED" "$RENDER" \
          "$LEDE" "$ROWS" "$SOCSRC"; do
@@ -322,7 +322,7 @@ grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\
 # through it.
 grep -A1 'case .music:$' "$TMP/feed.nocomment" | grep -q 'musicSections(visible, nextEventID: nextEventID, heroShown: heroShown)' \
   || { echo "✗ the music room no longer draws through musicSections — its cover is unchecked (prd §732, §995)"; exit 1; }
-_music=$(awk '/private func musicSections\(/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/feed.nocomment")
+_music=$(awk '/func musicSections\(/{f=1} f{print} f&&/^    }$/{exit}' "$TMP/feed.nocomment")
 case "$_music" in
   *"let coverID = heroShown ? nil : ledeThingID(in: days)"*"standaloneLead(cover: coverThing(coverID, in: live)"*) ;;
   *) echo "✗ the music room no longer covers its newest thing (prd §732, §995)"; exit 1;;

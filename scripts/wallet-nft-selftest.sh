@@ -48,7 +48,7 @@ INGEST="Casberi/Casberi/Model/WalletIngest.swift"
 # text, so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 CARD="Casberi/Casberi/Screens/WalletNFTShelfCard.swift"
 PICKER="Casberi/Casberi/Screens/WalletNFTPickerSheet.swift"
 STORE="Casberi/Casberi/Model/WalletStore.swift"

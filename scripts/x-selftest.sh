@@ -60,7 +60,11 @@ grep -q '"X"' Casberi/Shared/Thing.swift \
 # while a category never landed, a video that tiles as a photograph, a thread
 # that reads as twelve unrelated rows.
 MEDIA="Casberi/Casberi/Model/ImportMedia.swift"
-FEEDSCREEN_395="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEEDSCREEN_395_DIR="$(mktemp -d)"
+FEEDSCREEN_395="$FEEDSCREEN_395_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEEDSCREEN_395"
 RETRIEVER_395="Casberi/Casberi/Model/Retriever.swift"
 
 # (1) VIDEO. The whole defect was that `xMediaIndex` indexed mp4s and the
@@ -303,7 +307,7 @@ grep -q 'summary.droppedPosts += max(0, rows.count - postCap)' "$XARCH" \
 # so a guard can neither fail nor pass because its code moved next door.
 FEEDSCREEN_DIR="$(mktemp -d -t feedscreen)"
 FEEDSCREEN="$FEEDSCREEN_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEEDSCREEN"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEEDSCREEN"
 grep -q 'case "X":                   self = .x' "$FEEDSCREEN" \
   || { echo "✗ X has no room shape again — it falls to .plain and the room is a wall of 80-char BandRows"; exit 1; }
 # …and the shape must still hand the room's newest thing to the cover (prd

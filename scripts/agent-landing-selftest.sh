@@ -37,7 +37,11 @@ SHEET="Casberi/Casberi/Model/AgentSheet.swift"
 ANSWER="Casberi/Casberi/Model/AgentAnswer.swift"
 SHELL_="Casberi/Casberi/Shell/RootShell.swift"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 SRC="Casberi/Casberi/Model/AgentSheetSource.swift"
 GPT="Casberi/Casberi/Model/ChatGPTImport.swift"
 for f in "$LANDING" "$SCOPE" "$SHEET" "$ANSWER" "$SHELL_" "$CHROME" "$FEED" "$SRC" "$GPT"; do
@@ -249,7 +253,7 @@ SLOTS
 guard "the tiles stand only where a key is present" \
   'guard roomAgent != nil else \{ return nil \}' "$FEED"
 guard "the agent is resolved outside the body (build 525)" \
-  'private func resolveRoomAgent' "$FEED"
+  'func resolveRoomAgent' "$FEED"
 
 # --- the landed shape -------------------------------------------------------
 guard "the transcript goes through the importers' own serializer" \

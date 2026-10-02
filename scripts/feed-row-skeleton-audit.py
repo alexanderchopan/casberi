@@ -359,7 +359,9 @@ if __name__ == "__main__":
         src = by_file.setdefault(path, pathlib.Path(path).read_text())
         bad += check(src, only=name)
     bad += check_template(pathlib.Path(TEMPLATE).read_text())
-    bad += check_complete(pathlib.Path(FEEDSCREEN).read_text())
+    # FeedScreen is split across files (prd §718): read the room as ONE text.
+    feed_parts = [pathlib.Path(FEEDSCREEN)] + sorted(pathlib.Path(FEEDSCREEN).parent.glob("FeedScreen+*.swift"))
+    bad += check_complete("".join(p.read_text() for p in feed_parts))
     files = []
     for d in ROLL_DIRS:
         for f in sorted(pathlib.Path(d).glob("*.swift")):

@@ -391,7 +391,7 @@ CARD="Casberi/Casberi/Screens/FramesRoomCard.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 for f in "$CARD" "$FEED"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
@@ -490,7 +490,7 @@ PYTIE
 python3 - "$WORK/feed.nc" <<'PYPREV' || exit 1
 import sys, io
 src = io.open(sys.argv[1], encoding="utf-8").read()
-i = src.find("private func framesPreviewRun(")
+i = src.find("func framesPreviewRun(")
 if i < 0:
     print("✗ framesPreviewRun is gone"); sys.exit(1)
 body = src[i:src.find("\n    }", i)]
@@ -756,7 +756,7 @@ if "FramesRoomSource.accounts(scope: chrome.framesScope)" not in feed:
 if "compose(scope: chrome.framesScope)" not in feed:
     print("✗ the Frames head is composed unscoped — the crown would describe an address the room is not showing")
     sys.exit(1)
-i = feed.find("private var headIdentity")
+i = feed.find("var headIdentity")
 key = feed[i:feed.find("\n    }", i)]
 if "chrome.framesScope" not in key:
     print("✗ chrome.framesScope is not in headIdentity — a head memoised under one scope would survive the pick that changed it")

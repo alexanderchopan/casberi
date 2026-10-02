@@ -19,7 +19,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SHELF="Casberi/Casberi/Model/MusicShelf.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 TILES="Casberi/Casberi/Design/DSScopeTiles.swift"
 GLYPHS="Casberi/Casberi/Screens/ScopeTileGlyphs.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"

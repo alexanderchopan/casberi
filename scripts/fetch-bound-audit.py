@@ -257,16 +257,14 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
     # unreachable and this audit correctly refused to keep it. Removed rather
     # than left: an exemption nothing can reach is a check satisfied for the
     # wrong reason, which is this file's own rule.
-    ("Screens/FeedScreen.swift", "fullRoomRows"):
-        "THE HEAD'S OWN READ, and the reason the room's `@Query` above is "
-        "allowed to carry a `fetchLimit` at all (prd §600). A source room's "
-        "head — 'your loudest year', the topic treemap, every leaderboard — "
-        "states a reading about the WHOLE room, so composing it over a "
-        "truncated slice is §83 fake status in the largest type on the screen. "
-        "It is affordable because it is not a `@Query`: it runs inside "
-        "`.task(id: headKey)` and is memoised in `headMemo`, i.e. once per "
-        "(room, corpus revision) rather than on every body pass, which is "
-        "strictly less total work than the unbounded query it replaced.",
+    # `fullRoomRows` (the head's own whole-room read, prd §600) USED to sit
+    # here too. It was only ever flagged because its local `d` shared a name
+    # with the `Query(d)` in `FeedScreen.init`, in the same file; when
+    # FeedScreen was split across files (prd §718) the read moved to
+    # `FeedScreen+RoomHead.swift`, away from that name, and this audit stopped
+    # flagging it — so the exemption became unreachable and is removed by the
+    # rule above. The read is predicated and not `@Query`-backed: it runs inside
+    # `.task(id: headKey)` and is memoised in `headMemo`.
 }
 
 

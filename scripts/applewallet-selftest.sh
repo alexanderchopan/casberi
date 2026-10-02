@@ -91,7 +91,7 @@ SCREEN="Casberi/Casberi/Screens/AppleWalletScreen.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 ENT="Casberi/Casberi/Casberi.entitlements"
 CAT_ENT="Casberi/Casberi/Casberi-Catalyst.entitlements"
 

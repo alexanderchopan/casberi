@@ -34,7 +34,7 @@ PORTFOLIO="Casberi/Casberi/Model/WalletPortfolio.swift"
 # text, so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 TILES="Casberi/Casberi/Screens/WalletFeedTiles.swift"
 INGEST="Casberi/Casberi/Model/WalletIngest.swift"
 for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$PORTFOLIO"; do

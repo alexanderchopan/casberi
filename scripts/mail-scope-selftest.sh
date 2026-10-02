@@ -32,7 +32,11 @@ SCOPE="Casberi/Casberi/Model/MailScope.swift"
 BRIDGE="Casberi/Casberi/Model/MailBridge.swift"
 LIVE="Casberi/Casberi/Model/LiveRoomSources.swift"
 ACTIONS="Casberi/Casberi/Model/SourceActions.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 for f in "$SCOPE" "$BRIDGE" "$LIVE" "$ACTIONS" "$FEED" "$SURFACE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

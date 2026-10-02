@@ -36,7 +36,11 @@ cd "$(dirname "$0")/.."
 
 MONEY="Casberi/Casberi/Design/MoneyClause.swift"
 ROWS="Casberi/Casberi/Screens/ShapedRows.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 TEMPLATE="Casberi/Casberi/Design/DSFeedRow.swift"
 DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"
 for f in "$MONEY" "$ROWS" "$FEED" "$TEMPLATE" "$DEMO"; do

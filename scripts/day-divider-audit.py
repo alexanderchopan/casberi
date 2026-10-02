@@ -100,7 +100,7 @@ def audit(feed: str, tokens: str, mark: str, heads: dict) -> list:
     # (2) the flag exists on both builders, defaulting true
     for fn in ("groupedSections", "daySection"):
         body = re.search(
-            rf"private func {fn}\(.*?\) -> some View", code, flags=re.S
+            rf"(?:private )?func {fn}\(.*?\) -> some View", code, flags=re.S
         )
         if not body:
             out.append(f"{fn} not found — this audit is reading the wrong file")
@@ -262,8 +262,11 @@ def main() -> int:
 
     # The All feed's divider moved into its own view in prd §767, so the two
     # label sites span two files; check (1) counts across both.
+    # FeedScreen is split across files (prd §718): every part joins the text.
+    parts = sorted((root / FEED).parent.glob("FeedScreen+*.swift"))
     feed = "\n".join(
-        (root / f).read_text(encoding="utf-8", errors="replace") for f in (FEED, DIVIDER)
+        p.read_text(encoding="utf-8", errors="replace")
+        for p in [root / FEED, *parts, root / DIVIDER]
     )
     tokens = (root / TOKENS).read_text(encoding="utf-8", errors="replace")
     mark = (root / "Casberi/Casberi/Design/CasberiMark.swift").read_text(

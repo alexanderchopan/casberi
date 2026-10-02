@@ -47,7 +47,7 @@ SHEET="Casberi/Casberi/Screens/ThingSheetView.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 PLIST="Casberi/Casberi/Info.plist"
 for f in "$LOC" "$BRIDGE" "$VERBS" "$SHEET" "$FEED" "$PLIST"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

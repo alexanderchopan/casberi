@@ -271,7 +271,8 @@ def main() -> int:
         if not p.exists():
             print("\033[31m✗ devnet-console audit: %s is missing\033[39m" % p.name)
             return 1
-    found = checks(CONSOLE.read_text(), CARD.read_text(), FEED.read_text() + FEED_WALLET.read_text())
+    feed = "".join(p.read_text() for p in [FEED] + sorted(FEED.parent.glob("FeedScreen+*.swift")))
+    found = checks(CONSOLE.read_text(), CARD.read_text(), feed)
     if found:
         for f in found:
             print("\033[31m✗ %s\033[39m" % f)

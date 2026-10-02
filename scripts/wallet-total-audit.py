@@ -373,6 +373,9 @@ def read() -> dict:
             print(f"✗ missing: {path}")
             sys.exit(1)
         out[name] = path.read_text()
+        if name == "FeedScreen":
+            # FeedScreen is split across files (prd §718): read the room as ONE text.
+            out[name] += "".join(p.read_text() for p in sorted(path.parent.glob("FeedScreen+*.swift")))
     return out
 
 

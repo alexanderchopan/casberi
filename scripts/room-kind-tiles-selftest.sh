@@ -107,7 +107,11 @@ grep -qF 'var title = "Dispute opened' Casberi/Casberi/Model/StripeBridge.swift 
   || { echo "✗ the Stripe dispute title moved — openDisputes reads \"Dispute opened\""; exit 1; }
 # The feed wiring: the pick narrows the room, the presence is read BEFORE the
 # pick, and the pick dies with the room.
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 grep -qF 'let full = liveVisible(rawOverride: raw, kindPick: false).live' "$FEED" \
   || { echo "✗ the tiles' presence is read off the narrowed list — a picked tile would hide its siblings"; exit 1; }
 grep -qF 'RoomKindTiles.allows(pick, kind:' "$FEED" \
@@ -155,7 +159,7 @@ src = "\n".join("" if l.strip().startswith("//") else l
 fails = []
 # The kind-tile rooms' lead, tiles and empty state are one drawing since
 # prd §911 (`standaloneLead`, shared with Cursor, Walletbeat and L2BEAT).
-for fn, tiles in (("private func standaloneLead", "if let tiles {"),
+for fn, tiles in (("func standaloneLead", "if let tiles {"),
                   ("private func agentRoomSections", "if let agentTiles {")):
     i = src.find(fn)
     if i < 0:
@@ -331,7 +335,7 @@ done
 # The Cursor room draws its tiles by hand inside its repository shape, and
 # Walletbeat's and L2BEAT's stand alone when their head is nil (prd §911).
 # Generic over the tile scope since prd §969 (Notes' tiles ride it too).
-grep -qF 'private func standaloneLead<Scope: DSTileScope>(' "$FEED" \
+grep -qF 'func standaloneLead<Scope: DSTileScope>(' "$FEED" \
   && grep -qF 'cover: Thing?, tiles: DSScopeTiles<Scope>?,' "$FEED" \
   || { echo "✗ FeedScreen lost standaloneLead — the cover, empty lead and tiles in one drawing"; exit 1; }
 [[ $(grep -c 'standaloneLead(cover:' "$FEED") -ge 4 ]] \

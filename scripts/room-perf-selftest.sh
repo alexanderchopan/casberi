@@ -70,7 +70,7 @@ if [[ -n "${ROOM_PERF_FEED:-}" ]]; then
 else
   FEED_DIR="$(mktemp -d -t feedscreen)"
   FEED="$FEED_DIR/FeedScreen.swift"
-  cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+  cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 fi
 MAIN="${ROOM_PERF_MAIN:-Casberi/Casberi/Shell/MainSurface.swift}"
 SIGNAL="${ROOM_PERF_SIGNAL:-Casberi/Casberi/Model/CorpusSignal.swift}"
@@ -152,7 +152,7 @@ check "headMemo is static (survives the room remount)" \
 FEED_STRIPPED="$(strip_comments "$FEED")"
 MAIN_STRIPPED="$(strip_comments "$MAIN")"
 
-head_fields="$(perl -0777 -ne 'print $1 if /private struct RoomHeads \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
+head_fields="$(perl -0777 -ne 'print $1 if /struct RoomHeads \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
 if [[ -z "$head_fields" ]]; then
   fail "RoomHeads not found (did it move or get renamed?)"
 elif print -r -- "$head_fields" | grep -Eq '\bThing\b'; then
@@ -216,7 +216,7 @@ check "recomputeHeads takes its base whole" \
 
 # A7. The key covers every scope the head describes. A head that survived a
 #     scope change would be a card about rows no longer on screen.
-head_key="$(perl -0777 -ne 'print $1 if /private var headIdentity: String \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
+head_key="$(perl -0777 -ne 'print $1 if /var headIdentity: String \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
 # `x402Lane` was one of these until 2026-09-06 and `readingScope` until prd
 # §723; both were per-room view filters, and both were deleted with the control
 # that set them. No per-room filter survives, so this list is the shell-held
@@ -261,7 +261,7 @@ if print -r -- "$head_key" | grep -q 'rowBudget'; then
 else
   ok "headIdentity excludes rowBudget (the memo still hits mid-swipe)"
 fi
-task_key="$(perl -0777 -ne 'print $1 if /private var headKey: String \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
+task_key="$(perl -0777 -ne 'print $1 if /var headKey: String \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
 if print -r -- "$task_key" | grep -q 'rowBudget'; then
   ok "headKey carries rowBudget (the task re-fires when the bound lifts)"
 else
@@ -330,7 +330,7 @@ fi
 # `scenePhase` alone the guard above would not defer the net but DISABLE it for
 # the life of the mount — and a room entered by swiping is most rooms.
 check "the staleness nets re-fire when the bound lifts" \
-      "$FEED" 'private var safetyNetKey' yes
+      "$FEED" 'var safetyNetKey' yes
 check "safetyNetKey carries the budget" \
       "$FEED" 'rowBudget == nil \? "\|full" : "\|bounded"' yes
 
@@ -541,7 +541,7 @@ check "the source room's query carries the permanent ceiling" \
 
 # D2. The head does NOT read that bounded list. This is the §83 condition, and
 #     it is the whole reason the bound is allowed to exist.
-heads_body="$(perl -0777 -ne 'print $1 if /private func recomputeHeads\(\) \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
+heads_body="$(perl -0777 -ne 'print $1 if /func recomputeHeads\(\) \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
 if print -r -- "$heads_body" | grep -Eq 'fullRoomRows\(fallback:'; then
   ok "recomputeHeads reads the whole room, not the bounded list"
 else
@@ -784,7 +784,7 @@ mutate "the All-room staleness net stops declining on a bound room"  feed \
 # past the per-source net into another block.
 mutate "the per-source staleness net stops declining on a bound room"  feed \
   's/guard rowBudget == nil else \{ return \}\n((?:[^\n]*\n){0,14}?            if things\.isEmpty)/$1/s' || mfails=$((mfails + 1))
-mutate "RoomHeads gains a Thing"  feed 's/(private struct RoomHeads \{)/$1\n        let row: Thing?/' || mfails=$((mfails + 1))
+mutate "RoomHeads gains a Thing"  feed 's/(struct RoomHeads \{)/$1\n        let row: Thing?/' || mfails=$((mfails + 1))
 mutate "the memo is keyed by source alone (a scope change flashes the wrong head)"  feed \
   's/headMemo\[headIdentity\]/headMemo[source]/g' || mfails=$((mfails + 1))
 mutate "the head is recomputed inline again"  feed 's/\? heads\?\.topicMap : nil/? FeedInsight.topicMap(source: source, things: visible) : nil/' \

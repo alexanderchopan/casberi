@@ -124,7 +124,7 @@ grep -q 'bankr.canAct' "$WORK/agent.nocomment" \
 #    NOTHING, and the room must carry the entry.
 grep -q 'composerRequest' "$WORK/setup.nocomment" \
   && { echo "✗ an ask door is back on the Bankr account page — the room is the door (§844)"; exit 1; }
-grep -q 'AgentChatEntry' "Casberi/Casberi/Screens/FeedScreen.swift" \
+grep -q 'AgentChatEntry' Casberi/Casberi/Screens/FeedScreen*.swift \
   || { echo "✗ the room carries no chat entry — removing the account page's door left Bankr unreachable (§844)"; exit 1; }
 grep -q 'keyedAgent' "Casberi/Casberi/Shell/MainSurface.swift" \
   || { echo "✗ a keyed agent earns no dock chip — the room it needs has no door either (§842)"; exit 1; }

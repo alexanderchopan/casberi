@@ -172,7 +172,7 @@ grep -q 'guard reached else { return nil }' "$DEFI" \
 grep -q 'Deposit(place: "WLD Vault"' Casberi/Casberi/Model/WalletComposition.swift \
   || { echo "✗ the WLD Vault no longer joins the composition"; exit 1; }
 grep -q 'worldApp: live.worldApp' Casberi/Casberi/Shell/ProbeHooks.swift \
-  && grep -q 'worldApp: walletLive.worldApp' Casberi/Casberi/Screens/FeedScreen.swift \
+  && grep -q 'worldApp: walletLive.worldApp' Casberi/Casberi/Screens/FeedScreen*.swift \
   || { echo "✗ a WalletComposition caller drops the WLD Vault book"; exit 1; }
 grep -q 'WorldAppDeFi.syncGrantEvents' Casberi/Casberi/Model/WalletIngest.swift \
   || { echo "✗ the next-grant row is not synced"; exit 1; }

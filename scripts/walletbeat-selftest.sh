@@ -31,7 +31,7 @@ DIRSCREEN="Casberi/Casberi/Screens/WalletbeatDirectoryScreen.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"

@@ -208,6 +208,10 @@ def audit(root: Path):
     # The raw key may be read ONLY through that one door.
     for rel in (SURFACE, FEED):
         body = read(rel)
+        if rel == FEED:
+            # FeedScreen is split across files (prd §718): read the room as ONE text.
+            body += "".join(read(p.relative_to(root).as_posix())
+                            for p in sorted((root / FEED).parent.glob("FeedScreen+*.swift")))
         if rel == SURFACE and capture not in body:
             findings.append(
                 f"{rel} does not read `{capture}`, so `-hideDemoBanner YES` "

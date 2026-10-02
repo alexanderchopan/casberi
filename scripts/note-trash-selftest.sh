@@ -18,7 +18,11 @@ cd "$(dirname "$0")/.."
 
 RULES="Casberi/Casberi/Model/NoteTrashRules.swift"
 STORE="Casberi/Casberi/Model/NoteTrash.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 ACCOUNT="Casberi/Casberi/Screens/AccountDetailSheet.swift"
 for f in "$RULES" "$STORE" "$FEED" "$ACCOUNT"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
@@ -37,7 +41,7 @@ echo "Drift guards"
 if python3 - "$FEED" <<'PY'
 import sys
 src = open(sys.argv[1]).read()
-start = src.index("private func deleteNote(_ thing: Thing)")
+start = src.index("func deleteNote(_ thing: Thing)")
 body = src[start:start + 1500]
 k, d = body.find("guard NoteTrash.shared.keep(thing) else"), body.find("modelContext.delete(thing)")
 sys.exit(0 if 0 <= k < d else 1)

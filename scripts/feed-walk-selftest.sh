@@ -43,7 +43,7 @@ SOURCE="Casberi/Casberi/Model/NoteSheetSource.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 SHEET="Casberi/Casberi/Screens/ThingSheetView.swift"
 for f in "$WALK" "$SOURCE" "$FEED" "$SHEET"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

@@ -112,7 +112,7 @@ CARD_SAFE="Casberi/Casberi/Screens/SafeRoomCard.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"
 

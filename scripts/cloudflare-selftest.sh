@@ -76,7 +76,7 @@ grep -q 'guard furthest > 60 else { return 60 }' "$RUNWAY" \
 # The card's whole reason to exist is that it draws on an EMPTY room.
 grep -q 'CloudflareRunway.quietHeadline' Casberi/Casberi/Screens/CloudflareRunwayCard.swift \
   || { echo "✗ the runway card no longer has a quiet state — a healthy account is back to a blank room"; exit 1; }
-grep -q 'CloudflareRunwaySource.compose' Casberi/Casberi/Screens/FeedScreen.swift \
+grep -q 'CloudflareRunwaySource.compose' Casberi/Casberi/Screens/FeedScreen*.swift \
   || { echo "✗ the Cloudflare room no longer composes the runway at all"; exit 1; }
 
 # --- field names, pinned against Cloudflare's OpenAPI schema (prd §847) ------

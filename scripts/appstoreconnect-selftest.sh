@@ -231,7 +231,7 @@ SCREEN="Casberi/Casberi/Screens/AppStoreConnectScreen.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 for f in "$ROOM" "$SCREEN" "$FEED"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done

@@ -162,7 +162,7 @@ def net_key_ignores_emptiness(text: str):
     """`safetyNetKey` must move when the room's own emptiness moves."""
     clean = strip_comments(text)
     out = []
-    for m in re.finditer(r"private\s+var\s+safetyNetKey:\s*String\s*\{", clean):
+    for m in re.finditer(r"(?:private\s+)?var\s+safetyNetKey:\s*String\s*\{", clean):
         depth, i, n = 0, m.end() - 1, len(clean)
         while i < n:
             if clean[i] == "{":
@@ -269,7 +269,8 @@ def main() -> int:
                     f"an @Observable write during body invalidates the body that reads it. "
                     f"Publish from .onChange(of:initial:) instead, the way the wallet "
                     f"room already does.")
-            if path.name == "FeedScreen.swift":
+            # FeedScreen is split across files (prd §718): every part is checked.
+            if path.name == "FeedScreen.swift" or path.name.startswith("FeedScreen+"):
                 for line in emptiness_ignores_fallback(text):
                     findings.append(
                         f"{rel}:{line}: `roomHasContent` does not consult "

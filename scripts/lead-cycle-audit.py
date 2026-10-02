@@ -338,7 +338,10 @@ def main() -> int:
         print("  self-test passed")
         return 0
     read = lambda p: (root / p).read_text(encoding="utf-8", errors="replace")
-    findings = audit(read(CYCLE), read(ROWS), read(FEED), read(LEDGER), read(ROOT), read(DEMO))
+    # FeedScreen is split across files (prd §718): read the room as ONE text.
+    feed = "".join([read(FEED)] + [p.read_text(encoding="utf-8", errors="replace")
+                                   for p in sorted((root / FEED).parent.glob("FeedScreen+*.swift"))])
+    findings = audit(read(CYCLE), read(ROWS), feed, read(LEDGER), read(ROOT), read(DEMO))
     if findings:
         print(f"lead-cycle-audit: {len(findings)} finding(s)")
         for f in findings:

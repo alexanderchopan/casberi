@@ -25,7 +25,7 @@ MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 # text, so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
 # The one template the wallet family wears (prd §747, the box · tiles · menu

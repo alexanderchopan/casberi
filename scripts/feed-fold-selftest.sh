@@ -43,7 +43,7 @@ FOLD="Casberi/Casberi/Model/FeedFold.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 ROWS="Casberi/Casberi/Screens/ShapedRows.swift"
 for f in "$FOLD" "$FEED" "$ROWS"; do
   [[ -f "$f" ]] || { print -u2 "feed-fold-selftest: missing $f"; exit 1; }

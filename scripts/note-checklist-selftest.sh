@@ -28,7 +28,11 @@ VIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
 SOURCE="Casberi/Casberi/Model/NoteSheetSource.swift"
 LOCK="Casberi/Casberi/Model/NoteLock.swift"
 PREVIEW="Casberi/Casberi/Model/NotePreview.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+# FeedScreen is split across files (prd §718). Checks read the room as ONE text,
+# so a guard can neither fail nor pass because its code moved next door.
+FEED_DIR="$(mktemp -d)"
+FEED="$FEED_DIR/FeedScreen.swift"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 
 fail=0
 guard() {  # name, pattern, file

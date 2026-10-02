@@ -819,7 +819,7 @@ grep -q 'static let swipeTableInk = Color.fixed("#ffffff")' "$TMP/tokens.nc" \
 strip_comments "Casberi/Casberi/Shell/RoomAccountDoor.swift" > "$TMP/door.nc"
 strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
 grep -q 'RoomAccountDoor(source: source)' "$TMP/feed.nc" 2>/dev/null \
-  || grep -q 'RoomAccountDoor(source: source)' Casberi/Casberi/Screens/FeedScreen.swift \
+  || grep -q 'RoomAccountDoor(source: source)' Casberi/Casberi/Screens/FeedScreen*.swift \
   || { echo "✗ the room's title row lost its account door (prd §1033)."; fail=1; }
 grep -q '"slider.horizontal.3"' "$TMP/door.nc" && ! grep -q 'gearshape' "$TMP/door.nc" \
   || { echo "✗ the room's account door is not the sliders — the gear is Settings' (prd §1033)."; fail=1; }

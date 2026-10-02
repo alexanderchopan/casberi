@@ -34,10 +34,15 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
+# FeedScreen is split across files (prd §718). Its checks read the room as ONE
+# text — FeedScreen.swift, then every `FeedScreen+*.swift` — under this key, which
+# is not a `.swift` path, so the per-file sweeps below do not read it twice.
+FEED_ROOM = "Casberi/Casberi/Screens/FeedScreen (the room, every part)"
+
 # (file, must-contain, must-NOT-contain, what it was, why it cost)
 CHECKS = [
     (
-        "Casberi/Casberi/Screens/FeedScreen.swift",
+        FEED_ROOM,
         "private func refreshWatchedIDs() {",
         r"Set\(visible\.live\.compactMap \{ (Walletbeat|L2beat)Watch\.",
         "walletbeatWatchedIDs / l2beatWatchedIDs walking visible.live themselves",
@@ -85,7 +90,7 @@ CHECKS = [
         "detector pass per row per body evaluation — the scan a §260 amendment says was removed",
     ),
     (
-        "Casberi/Casberi/Screens/FeedScreen.swift",
+        FEED_ROOM,
         "RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,",
         # The builder is non-escaping, so anything between `.contextMenu {`
         # and its first closing brace runs per row per body build. The verbs
@@ -298,6 +303,9 @@ def read_all():
     for sub in ("Casberi/Casberi", "Casberi/Shared"):
         for p in (ROOT / sub).rglob("*.swift"):
             files[str(p.relative_to(ROOT))] = p.read_text()
+    screens = ROOT / "Casberi/Casberi/Screens"
+    files[FEED_ROOM] = "".join(
+        p.read_text() for p in [screens / "FeedScreen.swift"] + sorted(screens.glob("FeedScreen+*.swift")))
     return files
 
 
@@ -312,7 +320,7 @@ def self_test():
 
     mutations = [
         ("the quadratic watched-id walk returns",
-         "Casberi/Casberi/Screens/FeedScreen.swift",
+         FEED_ROOM,
          lambda t: t.replace(
              "        refreshWatchedIDs()\n        return memo.walletbeatWatched",
              "        Set(visible.live.compactMap { WalletbeatWatch.walletID(from: $0) })")),
@@ -351,7 +359,7 @@ def self_test():
              "        if let stored = await StoredPixels.prepared(for: thing) {\n            image = stored.image",
              "        if let data = thing.previewImageData, let stored = UIImage(data: data) {\n            image = stored")),
         ("the row's verbs derive per row build again",
-         "Casberi/Casberi/Screens/FeedScreen.swift",
+         FEED_ROOM,
          lambda t: t.replace(
              "RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,",
              "let verbs = VerbDerivation.verbs(for: thing)\n"

@@ -41,7 +41,7 @@ REFRESH="Casberi/Casberi/Model/BridgeRefresh.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEEDSCREEN_DIR="$(mktemp -d -t feedscreen)"
 FEEDSCREEN="$FEEDSCREEN_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEEDSCREEN"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEEDSCREEN"
 for f in "$GPT" "$CLA" "$GEM" "$TOPICS" "$INSIGHT"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done

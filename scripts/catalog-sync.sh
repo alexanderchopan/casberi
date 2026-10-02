@@ -60,7 +60,7 @@ trap 'rm -rf "$tmp"' EXIT
 # accept — GNU's `-t feedscreen` fails ("too few X's"), which is what turned
 # the audits job red on every push since §718. CI runs this on ubuntu.
 FEED="$tmp/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEED"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 
 # --- 1. Canonical sets from the Swift source of truth ---------------------
 # Each Offer(...) declares name and connectable on the same physical line.

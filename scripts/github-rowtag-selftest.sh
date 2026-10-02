@@ -48,7 +48,7 @@ ROWS="Casberi/Casberi/Screens/ShapedRows.swift"
 # so a guard can neither fail nor pass because its code moved next door.
 FEEDSCREEN_DIR="$(mktemp -d -t feedscreen)"
 FEEDSCREEN="$FEEDSCREEN_DIR/FeedScreen.swift"
-cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift > "$FEEDSCREEN"
+cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEEDSCREEN"
 RAIL="Casberi/Casberi/Shell/FaceScopeRail.swift"
 SHELL_="Casberi/Casberi/Shell/MainSurface.swift"
 WATCH="Casberi/Casberi/Model/GitHubRepoWatch.swift"
