@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1185 of 1243 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1186 of 1244 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1406,6 +1406,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1054 — Agents is one room, built: every agent folds in, New starts a conversation with the agent the menu picked
 - §1055 — Media is one room, built: its apps and Photos fold in, its list is one square grid, and the music shelf is deleted
 - §1056 — Life splits into Life and Day, each one room, and Notes is no category, built
+- §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows…
 
 ## Dead rulings → what replaced them (generated)
 
