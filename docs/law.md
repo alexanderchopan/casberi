@@ -121,7 +121,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 ### 10. Wallet
 - Which chains are on is one rule, `WalletChainStore.effectiveIDs`, and every ingest reads it. A total may not silently omit a chain (§827).
 - One refused chain may not empty every read. An unreachable wallet stands on its last reading, stamped (§825).
-- Zerion and Alchemy results are unioned, not either/or. Privy app wallets are not in the wallet total (§826).
+- Zerion and Alchemy results are unioned, not either/or (§826).
+- The money rooms merge into one Wallet; Markets, Frames and Logos stay their own rooms (§1048). The total counts the chains, exchanges, validators, cash (Wise, Apple Wallet's asset accounts, converted at Kraken's six USD pairs; any other currency is left out and named) and Privy's apps. Privy never stands alone, and cash and Privy count only on the combined page (§1048).
 - Zerion goes through one lane: one request a second, 300 a day for every install. A refusal is waited out (§934).
 - Robinhood is read on Alchemy beside Zerion. A DEX-only token is priced off a pool of at least $10K, holding at most 25% of it. A native coin takes the cent floor (§968).
 - Tempo is on, read through Zerion only, with no native balance (§810). Arc rides Alchemy and Zerion (§808a). World Chain is on by default (§788).
@@ -213,7 +214,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1158 of 1215 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1159 of 1216 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1145,7 +1146,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §823 — A dock capsule the faces already hold up shows the category's rooms
 - §824 — A long social face rail draws eight faces, most recent poster first, and the rest behind `+N`
 - §825 — The wallet room showed an app wallet's money and none of your own: one chain may not empty every read, and a wallet w…
-- §826 — The wallet crown counted an app's money and missed a whole chain: Privy comes out, Robinhood comes on, and $1.99 stop…
+- §826 — The wallet crown counted an app's money and missed a whole chain: Privy comes out, Robinhood comes on, and $1.99 stop… (part superseded by §1048)
 - §827 — The `seeded` mechanism never reached the wire: one rule for which chains are on, and a total may not silently omit one
 - §827a — The `.v1` seed flags are poisoned, so every key bumps to `.v2`
 - §827b — A learned chain refusal can be forgotten
@@ -1364,7 +1365,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
-- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041)
+- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048)
 - §1040 — A connected row in Apps that has a room is still a status, and tapping it lands in its room
 - §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re…
 - §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
@@ -1373,6 +1374,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1045 — "Start here" leads Apps while nothing is connected
 - §1046 — §1006's items 4 and 7 are declined
 - §1047 — The ask is deleted: the on-device model reads and no longer answers, and the composer keeps Find and the agents you c…
+- §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and…
 
 ## Dead rulings → what replaced them (generated)
 

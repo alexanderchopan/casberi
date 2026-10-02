@@ -47,6 +47,9 @@ struct WalletPortfolio: Equatable {
     /// subline has carried since 2026-07-17. §83 — a dated number may be
     /// shown, a dated number presented as current may not.
     var asOf: Date? = nil
+    /// Cash a seat holds in a currency Kraken cannot price ("SGD at Wise"),
+    /// left OUT of `totalUSD` and named by the crown's note (prd §1048).
+    var unpricedCash: [String] = []
 
     var isEmpty: Bool { positions.isEmpty }
     var tokenCount: Int { positions.count }
@@ -72,7 +75,8 @@ struct WalletPortfolio: Equatable {
     static let validatorHolderID = "ethvalidators"
 
     /// Whether a holder is a PLACE rather than a watched wallet — a connected
-    /// exchange venue or the validator pool.
+    /// exchange venue, the validator pool, a cash account (`cash:`) or a Privy
+    /// app (`privy:`), prd §1048.
     ///
     /// Matched against the known sentinels rather than by asking whether the
     /// id parses as an address: a misclassified wallet would be stated twice
@@ -80,7 +84,10 @@ struct WalletPortfolio: Equatable {
     /// that aren't wallets is small, closed and known right here.
     static func isVenue(_ holderID: String) -> Bool {
         holderID == validatorHolderID || ExchangeBridge.Venue(rawValue: holderID) != nil
+            || holderID.hasPrefix(WalletCash.holderPrefix) || holderID.hasPrefix(privyHolderPrefix)
     }
+
+    static let privyHolderPrefix = "privy:"
 
     /// Every non-wallet place holding money, biggest first, totalled across
     /// symbols (2026-07-31).
@@ -131,11 +138,20 @@ struct WalletPortfolio: Equatable {
     static func from(groups: [WalletIngest.HoldingsGroup],
                      exchange: [(symbol: String, usd: Double, venue: ExchangeBridge.Venue)] = [],
                      validatorsUSD: Double = 0,
+                     venues: [(symbol: String, usd: Double, holderID: String, label: String)] = [],
                      asOf: Date? = nil)
     -> WalletPortfolio {
         var usdBySymbol: [String: Double] = [:]
         var holdersBySymbol: [String: [Holder]] = [:]
         var routeBySymbol: [String: (usd: Double, route: String)] = [:]
+
+        // Cash accounts and Privy apps (prd §1048): places, like the exchanges
+        // below, each under its own holder id and name.
+        for holding in venues where holding.usd > 0 {
+            usdBySymbol[holding.symbol, default: 0] += holding.usd
+            holdersBySymbol[holding.symbol, default: []]
+                .append(Holder(address: holding.holderID, label: holding.label, usd: holding.usd))
+        }
 
         for holding in exchange where holding.usd > 0 {
             usdBySymbol[holding.symbol, default: 0] += holding.usd
@@ -205,7 +221,9 @@ struct WalletPortfolio: Equatable {
     ///
     /// Scoped the same way the live read is: filtered AFTER gathering, so every
     /// wallet still contributes to the combined shape.
-    static func demoFixture(scopeTo address: String? = nil) -> WalletPortfolio {
+    static func demoFixture(scopeTo address: String? = nil,
+                            privy: [(symbol: String, usd: Double, holderID: String, label: String)] = [])
+    -> WalletPortfolio {
         let watched = WalletStore.shared.addresses.filter {
             guard let address else { return true }
             return WalletWatch.sameAddress($0.address, address)
@@ -245,6 +263,18 @@ struct WalletPortfolio: Equatable {
                 holders[holding.symbol, default: []].append(
                     Holder(address: holding.venue.rawValue,
                            label: holding.venue.display, usd: holding.usd))
+            }
+            // Cash and Privy join as they do live (prd §1048), from what their
+            // seats actually hold, so the total never counts money their own
+            // rooms don't show (§837). Dollars only: the demo reaches nothing
+            // (§483), so there is no rate for anything else.
+            let cash = WalletCash.held().filter { $0.currency == "USD" }
+                .map { (symbol: $0.currency, usd: $0.amount, holderID: $0.holderID, label: $0.label) }
+            for holding in cash + privy where holding.usd > 0 {
+                total += holding.usd
+                bySymbol[holding.symbol, default: 0] += holding.usd
+                holders[holding.symbol, default: []].append(
+                    Holder(address: holding.holderID, label: holding.label, usd: holding.usd))
             }
         }
         guard !bySymbol.isEmpty else { return WalletPortfolio() }

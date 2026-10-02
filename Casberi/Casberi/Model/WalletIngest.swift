@@ -1812,7 +1812,13 @@ enum WalletIngest {
         // samples, so the map can never disagree with the crown; see
         // `WalletPortfolio.demoFixture`.
         if DemoMode.isActive {
-            let portfolio = WalletPortfolio.demoFixture(scopeTo: address)
+            var privy: [(symbol: String, usd: Double, holderID: String, label: String)] = []
+            if address == nil {
+                privy = await MainActor.run { PrivyHomeStore.shared.walletHoldings }
+                    .map { (symbol: $0.symbol, usd: $0.usd,
+                            holderID: WalletPortfolio.privyHolderPrefix + $0.appID, label: $0.app) }
+            }
+            let portfolio = WalletPortfolio.demoFixture(scopeTo: address, privy: privy)
             guard !portfolio.isEmpty else { return nil }
             let cells = portfolio.treemapCells.joined(separator: ", ")
             // The line carries the total the room's crown reads (prd §953);
@@ -1855,23 +1861,35 @@ enum WalletIngest {
         // Watched validators merge into the COMBINED read only, same reasoning
         // as exchanges above — they aren't scoped to any one address.
         let validatorsUSD = address == nil ? (await EthValidatorRead.totalUSD() ?? 0) : 0
-        // **PRIVY IS NOT IN THIS NUMBER (prd §826, user: "do not combine privy
-        // with the regular wallet balance leave privy separate").** §803g
-        // merged an app wallet's money into the crown behind a toggle that
-        // defaulted ON, and it was the wrong shape twice over: money in an app
-        // somebody else made is not money in your wallet, and it was the ONE
-        // contributor read from a STORED last read while every other one was
-        // live — so a pass where the chains answered nothing showed a crown
-        // made entirely of app wallets ("it's showing my zora balance but not
-        // my wallets"). Privy's money is stated in Privy's own room, where the
-        // app that holds it is named. Nothing here reads `PrivyHomeStore`.
-        // Either source alone is a real portfolio — someone whose crypto is all
-        // on an exchange still has one, and returning nil would paint the empty
-        // state over a balance we successfully read.
-        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 else { return nil }
-        let portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
+        // Cash at a bank — Wise and Apple Wallet's asset accounts — joins the
+        // COMBINED read, as the exchanges do (prd §1048, user: "top number
+        // should include cash and exchange balances").
+        var cash: [(symbol: String, usd: Double, holderID: String, label: String)] = []
+        var unpricedCash: [String] = []
+        if address == nil { (cash, unpricedCash) = await WalletCash.priced() }
+        // **PRIVY IS IN THIS NUMBER AGAIN, AND NEVER ALONE (prd §1048, user:
+        // "you need to include privy with wallet"; reverses §826).** §826 took
+        // it out because it was the one STORED reading beside live ones, and a
+        // pass that reached no chain drew a crown made of nothing but app
+        // wallets ("it's showing my zora balance but not my wallets"). So it
+        // counts only beside some other contributor: with none, there is no
+        // portfolio, exactly as before.
+        var privy: [(symbol: String, usd: Double, holderID: String, label: String)] = []
+        if address == nil {
+            privy = await MainActor.run { PrivyHomeStore.shared.walletHoldings }
+                .map { (symbol: $0.symbol, usd: $0.usd,
+                        holderID: WalletPortfolio.privyHolderPrefix + $0.appID, label: $0.app) }
+        }
+        // Any one source alone is a real portfolio — someone whose crypto is
+        // all on an exchange still has one, and returning nil would paint the
+        // empty state over a balance we successfully read. Privy is the one
+        // that may not stand alone.
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty else { return nil }
+        var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
                                              validatorsUSD: validatorsUSD,
+                                             venues: cash + privy,
                                              asOf: asOf)
+        portfolio.unpricedCash = unpricedCash
 
         // More than one PLACE, not more than one wallet — a single wallet plus
         // a connected exchange is exactly the case this feature exists for.
@@ -1880,7 +1898,8 @@ enum WalletIngest {
         // builds its doc by indexing INTO `groups`, so with none to index a
         // portfolio that's real (exchange/validator balances) would otherwise
         // fall through to an empty, broken `root = Stack([])` document.
-        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
+        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) + (cash.isEmpty ? 0 : 1)
+            + (privy.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
             // NO TITLE AND NO SUBLINE (2026-08-22, prd §447) — the map draws
             // bare, and both empties are load-bearing rather than tidying.
             //

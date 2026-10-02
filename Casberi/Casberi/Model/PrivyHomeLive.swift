@@ -143,13 +143,30 @@ final class PrivyHomeStore {
         DefaultsWrite.set(Data((on ? "1" : "0").utf8), forKey: Self.showEmptyKey)
     }
 
-    // `walletHoldings` and the "Count in Wallet total" toggle are DELETED
-    // (prd §826, user: "do not combine privy with the regular wallet balance
-    // leave privy separate"). They were the only readers of `countsInWallet`,
-    // so the flag, its default and its stored key go with them — a feature off
-    // the surface is deleted from the model (§723), or it is a dead control one
-    // layer down. An app's money is stated in THIS room, beside the app that
-    // holds it; `PrivyHomeStore.room` is where that total lives.
+    /// Every shown app's money by symbol, for the Wallet total (prd §1048,
+    /// user: "you need to include privy with wallet"; reverses §826's "leave
+    /// privy separate"). No toggle: §803g's "Count in Wallet total" defaulted
+    /// on and is not coming back, because the merged Wallet is the one place
+    /// money is stated. A hidden app stays out, as it does in the room.
+    ///
+    /// This is a STORED reading beside live ones, which is how §826's crown
+    /// once showed Zora's money and none of the person's own. So
+    /// `WalletIngest.portfolioRead` never lets it stand ALONE.
+    var walletHoldings: [(symbol: String, usd: Double, appID: String, app: String)] {
+        var out: [(symbol: String, usd: Double, appID: String, app: String)] = []
+        for app in apps where !hidden.contains(PrivyHomeFeed.ref(app)) {
+            var bySymbol: [String: Double] = [:]
+            for wallet in app.wallets {
+                for (symbol, usd) in balances[PrivyHomeFeed.key(wallet.address)]?.bySymbol ?? [:] {
+                    bySymbol[symbol, default: 0] += usd
+                }
+            }
+            for (symbol, usd) in bySymbol where usd > 0 {
+                out.append((symbol, usd, app.id, app.name))
+            }
+        }
+        return out
+    }
 
     func setHidden(_ ref: String, _ isHidden: Bool) {
         if isHidden { hidden.insert(ref) } else { hidden.remove(ref) }

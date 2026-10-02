@@ -87,6 +87,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Robinhood is read on Alchemy BESIDE Zerion (`WalletIngest.zerionOmits`), and a DEX-only token is priced by `DexPrices` (GeckoTerminal) only off a pool ≥$10K holding ≤25% of it; a native coin takes the cent floor on either arm (prd §968)** → prd §968
 - **Zerion is ONE request a second and 300 a day for EVERY install (`ratelimit-org-tier: demo`, measured 2026-09-26, prd §934)** → docs/hooks/wallet.md · prd §934
 - **The wallet crown counts YOUR accounts, and Zerion answering does not end the read (prd §826).** → docs/hooks/wallet.md · prd §826
+- **One Wallet (prd §1048): the money rooms merge into one room (Markets, Frames, Logos stay apart); its total adds cash (`WalletCash`: Wise + Apple Wallet assets, Kraken's six fiat pairs, the rest left out and named) and Privy's apps, never Privy alone, both on the combined page only (`wallet-total-audit.py` rule 6)** → prd §1048
 - **One chain may not empty every wallet's balances, and a wallet we could not reach stands on its LAST READING, stamped (prd §825) — the room showed a Privy app wallet's stored figure and none of the person's own.** → docs/hooks/wallet.md · prd §825
 - **The address book's delight pass** → docs/hooks/wallet.md · prd §441
 - **Address-book shape self-test (scripts/address-book-selftest.sh)** → docs/verify.md · prd §440

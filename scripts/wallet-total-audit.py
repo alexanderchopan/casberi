@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wallet-total audit (prd §825 + §826, 2026-09-18).
+"""Wallet-total audit (prd §825 + §826, 2026-09-18; §1048, 2026-10-01).
 
 WHAT THE WALLET ROOM'S CROWN NUMBER IS MADE OF, AND HOW IT FAILS. Renamed from
 `chain-filter-audit.py` when §826 added the composition rules — the chain filter
@@ -36,12 +36,14 @@ So the shape is the check, not any particular chain:
   5. The crown DRAWS that stamp, and the room passes it. A fallback nothing
      says is a fallback that lies.
 
-  6. `portfolioRead` reads NOTHING from `PrivyHomeStore`. §803g merged an app
-     wallet's money into the crown behind a toggle that defaulted on, and the
-     user ruled it out: "do not combine privy with the regular wallet balance
-     leave privy separate". It was also the one contributor read from a STORED
-     last read while every other was live, which is how a pass that reached no
-     chain still drew a confident figure.
+  6. Privy IS in the number again, and NEVER ALONE (prd §1048, user: "you need
+     to include privy with wallet", reversing §826's "leave privy separate").
+     §826's case against it stands as the guard: it is the one contributor
+     read from a STORED last read while the chains are live, and a pass that
+     reached no chain drew a crown made of nothing but app wallets. So
+     `portfolioRead`'s no-portfolio guard may not name Privy, the merge has no
+     toggle (`countsInWallet`, §803g's, stays deleted), and cash (`WalletCash`)
+     joins at the COMBINED scope only, as the exchanges do.
   9. `activeNetworkIDs()` — the static path EVERY ingest reads — resolves
      through the same rule the picker's instance uses, so a `seeded` row
      actually reaches the wire. It did not for World Chain, Arc or Robinhood:
@@ -206,14 +208,25 @@ def audit(texts: dict) -> list:
     if "var asOf: Date?" not in code["WalletPortfolio"]:
         bad.append("WalletPortfolio dropped `asOf` — nothing can carry the stamp (prd §825)")
 
-    # 6 — Privy is not in this number, under any spelling.
-    if "PrivyHomeStore" in pr:
-        bad.append("portfolioRead reads PrivyHomeStore — an app wallet's money is not the "
-                   "person's wallet balance, and it is a stored read standing beside live "
-                   "ones (prd §826)")
-    if "walletHoldings" in ingest or "countsInWallet" in code["PrivyHomeLive"]:
-        bad.append("the Privy-into-Wallet merge is back (`walletHoldings` / `countsInWallet`) "
-                   "— it was deleted from the surface AND the model (prd §826, §723)")
+    # 6 — Privy counts, never alone; cash counts at the combined scope only.
+    if "PrivyHomeStore.shared.walletHoldings" not in pr:
+        bad.append("portfolioRead no longer reads Privy's app wallets — the merged Wallet "
+                   "counts them (prd §1048)")
+    if "venues: cash + privy" not in pr:
+        bad.append("portfolioRead reads Privy and cash but doesn't hand them to the "
+                   "portfolio — read and never counted (prd §1048)")
+    guard_line = next((l for l in pr.split("\n") if "else { return nil }" in l and "groups.isEmpty" in l), "")
+    if not guard_line:
+        bad.append("portfolioRead's no-portfolio guard is gone — this audit is blind (prd §1048)")
+    elif "privy" in guard_line.lower():
+        bad.append("Privy can stand ALONE as the wallet total — a pass that reached no chain "
+                   "draws a crown made of stored app-wallet money (prd §826, §1048)")
+    if "countsInWallet" in code["PrivyHomeLive"]:
+        bad.append("the Privy toggle is back (`countsInWallet`) — the merged Wallet counts "
+                   "Privy with no switch (prd §1048)")
+    if "if address == nil { (cash, unpricedCash) = await WalletCash.priced() }" not in pr:
+        bad.append("cash is not gated on the combined scope — a page scoped to one address "
+                   "would count a bank balance (prd §1048)")
 
     # 7 — the dust floor belongs to the arm that answered.
     fh = body(ingest, "static func fetchHeldTokensUncached(")
@@ -396,12 +409,20 @@ def self_test() -> int:
          lambda t: t.replace("var asOf: Date? = nil", "var stampedAt: Date? = nil", 1)),
         ("the crown stops passing the stamp", "FeedScreen",
          lambda t: t.replace("asOf: portfolio?.asOf,", "")),
-        ("Privy is merged back into the wallet total", "WalletIngest",
-         lambda t: t.replace("let read = await holdingsByWallet()",
-                             "let privy = PrivyHomeStore.shared.x\n        let read = await holdingsByWallet()")),
-        ("the Privy merge returns through the model", "PrivyHomeLive",
-         lambda t: t.replace("    // `walletHoldings` and the",
-                             "    var countsInWallet = true\n    // `walletHoldings` and the")),
+        ("Privy may stand alone", "WalletIngest",
+         lambda t: t.replace("|| !cash.isEmpty else { return nil }",
+                             "|| !cash.isEmpty || !privy.isEmpty else { return nil }")),
+        ("Privy is read and never counted", "WalletIngest",
+         lambda t: t.replace("venues: cash + privy,", "venues: cash,")),
+        ("Privy leaves the total", "WalletIngest",
+         lambda t: t.replace("await MainActor.run { PrivyHomeStore.shared.walletHoldings }",
+                             "await MainActor.run { [(symbol: String, usd: Double, appID: String, app: String)]() }")),
+        ("the Privy toggle returns", "PrivyHomeLive",
+         lambda t: t.replace("    var walletHoldings:",
+                             "    var countsInWallet = true\n    var walletHoldings:")),
+        ("cash leaks into a scoped page", "WalletIngest",
+         lambda t: t.replace("if address == nil { (cash, unpricedCash) = await WalletCash.priced() }",
+                             "(cash, unpricedCash) = await WalletCash.priced()")),
         ("Zerion answering ends the read again", "WalletIngest",
          lambda t: t.replace("collectCandidatesAlchemy(addresses: answered, only: blind)",
                              "collectCandidatesAlchemy(addresses: addresses)")),
@@ -475,9 +496,10 @@ if __name__ == "__main__":
         print("✗ wallet-total audit findings:")
         for line in findings:
             print("  " + line)
-        print("\nThe crown counts the person's OWN accounts; one refused chain must not empty "
-              "them all; a real position is not dust; and a wallet we could not reach stands on "
-              "its last reading, stamped (prd §825, §826).")
+        print("\nThe crown counts the person's OWN accounts, their cash and their Privy apps "
+              "(never Privy alone); one refused chain must not empty them all; a real position "
+              "is not dust; and a wallet we could not reach stands on its last reading, stamped "
+              "(prd §825, §826, §1048).")
         sys.exit(1)
     print("✓ wallet-total audit: the crown counts the person's own accounts, one refused "
           "chain costs only itself, no real position is dropped as dust, and an unreachable "

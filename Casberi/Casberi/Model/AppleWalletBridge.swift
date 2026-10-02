@@ -130,6 +130,7 @@ enum AppleWalletBridge {
     private static let balanceKey = "applewallet.balances"
     private static let balanceAtKey = "applewallet.balancesAt"
     private static let dueKey = "applewallet.dues"
+    private static let cashKey = "applewallet.cash"
 
     static var connected: Bool {
         get { UserDefaults.standard.bool(forKey: connectedKey) }
@@ -151,6 +152,28 @@ enum AppleWalletBridge {
     static var balances: [String: String] {
         get { UserDefaults.standard.dictionary(forKey: balanceKey) as? [String: String] ?? [:] }
         set { UserDefaults.standard.set(newValue, forKey: balanceKey) }
+    }
+
+    /// What an ASSET account holds, as a number, for the Wallet total (prd
+    /// §1048): Apple Cash and Savings, keyed by account name. A liability (Apple
+    /// Card) is money owed, not money held, so it never lands here. `balances`
+    /// stays the display string the room already draws.
+    static var cash: [String: CashBalance] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: cashKey),
+                  let value = try? JSONDecoder().decode([String: CashBalance].self, from: data)
+            else { return [:] }
+            return value
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            UserDefaults.standard.set(data, forKey: cashKey)
+        }
+    }
+
+    struct CashBalance: Codable, Equatable {
+        var value: Double
+        var currency: String
     }
 
     static var balancesAt: Date? {
@@ -242,6 +265,7 @@ enum AppleWalletBridge {
         cursor = nil
         balances = [:]
         dues = [:]
+        UserDefaults.standard.removeObject(forKey: cashKey)
         UserDefaults.standard.removeObject(forKey: balanceAtKey)
         let name = sourceName
         let fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == name })
@@ -329,6 +353,7 @@ enum AppleWalletBridge {
     private static func readBalances(accounts: [Account]) async {
         if let at = balancesAt, Date().timeIntervalSince(at) < balanceWindow { return }
         var out: [String: String] = [:]
+        var held: [String: CashBalance] = [:]
         var due: [String: Double] = [:]
         for account in accounts {
             let query = AccountBalanceQuery(
@@ -336,6 +361,11 @@ enum AppleWalletBridge {
             if let balance = (try? await FinanceStore.shared.accountBalances(query: query))?.first,
                let text = format(balance) {
                 out[account.displayName] = text
+                if case .asset = account, let amount = currentAmount(balance) {
+                    held[account.displayName] = CashBalance(
+                        value: NSDecimalNumber(decimal: amount.amount).doubleValue,
+                        currency: amount.currencyCode)
+                }
             }
             // The one real deadline this source hands over. Never inferred —
             // `AppleWalletRoom`'s rail sorts a payment above any recurring date
@@ -346,22 +376,26 @@ enum AppleWalletBridge {
                 due[account.displayName] = date.timeIntervalSince1970
             }
         }
-        if !out.isEmpty { balances = out }
+        if !out.isEmpty { balances = out; cash = held }
         dues = due
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: balanceAtKey)
     }
 
     @available(iOS 17.4, *)
     private static func format(_ balance: AccountBalance) -> String? {
-        let amount: CurrencyAmount
-        switch balance.currentBalance {
-        case .available(let b): amount = b.amount
-        case .booked(let b): amount = b.amount
-        case .availableAndBooked(let available, _): amount = available.amount
-        @unknown default: return nil
-        }
+        guard let amount = currentAmount(balance) else { return nil }
         return AppleWalletRoom.money(NSDecimalNumber(decimal: amount.amount).doubleValue,
                                      amount.currencyCode)
+    }
+
+    @available(iOS 17.4, *)
+    private static func currentAmount(_ balance: AccountBalance) -> CurrencyAmount? {
+        switch balance.currentBalance {
+        case .available(let b): return b.amount
+        case .booked(let b): return b.amount
+        case .availableAndBooked(let available, _): return available.amount
+        @unknown default: return nil
+        }
     }
 
     /// Turn transactions into rows, deduped on `sourceRef`.

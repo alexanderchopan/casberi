@@ -989,6 +989,11 @@ struct FeedScreen: View {
         if !unpricedChains.isEmpty {
             parts.append(String(localized: "Couldn't price \(unpricedChains.joined(separator: ", "))"))
         }
+        // Cash in a currency Kraken can't price (prd §1048). Combined read
+        // only, so a scoped page never carries it.
+        if selectedWallet == nil, let cash = portfolio?.unpricedCash, !cash.isEmpty {
+            parts.append(String(localized: "Couldn't price \(cash.joined(separator: ", "))"))
+        }
         guard !parts.isEmpty else { return nil }
         return String(localized: "\(parts.joined(separator: "; ")) — not in this total")
     }
