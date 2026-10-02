@@ -126,7 +126,7 @@ struct DSScopeMenu: View {
 
     static let listWidth: CGFloat = 260
     static let listMaxHeight: CGFloat = 480
-    static let faceSize: CGFloat = 24
+    static let faceSize: CGFloat = DS.Face.row
 
     /// **A GLASS PILL IN THE TITLE ROW (prd §1066, user: "a glass pill … in
     /// top right corner same axis as the category title, and it should say

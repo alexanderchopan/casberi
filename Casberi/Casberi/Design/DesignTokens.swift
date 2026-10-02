@@ -647,7 +647,13 @@ enum DS {
         /// Since prd §1017 the row lead is the face button's size too: ONE
         /// circle size for every mark and face (user: "why not make the row be
         /// same size as the fab?"), with the row given room to breathe.
-        static let row: CGFloat = seat
+        ///
+        /// **30 since prd §1071** (user: "the rows could use smaller icons so
+        /// they have more room and more rows could fit … i'd like them all to
+        /// be one size … the 30 seems good"): every row, the tray and the
+        /// account list wear one size; the face button keeps `seat`, a
+        /// control and not a list icon.
+        static let row: CGFloat = 30
         /// The optical size a full-bleed CIRCLE draws at inside the `row`
         /// SEAT (2026-08-13, user: the feed's leaders read unevenly sized).
         /// They were already one frame — the unevenness is optics: a circle
@@ -659,10 +665,10 @@ enum DS {
         /// stands in a MIXED column beside squircle marks (the feed rows);
         /// an all-circle line (a venue switcher, a sheet head) has no weight
         /// mismatch to correct and stays on `row`.
-        static let rowCircle: CGFloat = seat
+        static let rowCircle: CGFloat = row
         /// A list or picker you tap through — bigger than a feed row because
         /// choosing between people is the screen's whole job.
-        static let list: CGFloat = seat
+        static let list: CGFloat = row
         /// A horizontal face shelf, a profile head, a sheet's stage — every
         /// circle that stands on its own, at the face button's size (prd
         /// §1016a, user: "it would look cohesive when you are scrolling"). It

@@ -32,7 +32,7 @@ struct RoomsTray: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// A row's round icons: the category's own and its apps', one size.
-    static let icon: CGFloat = 30
+    static let icon: CGFloat = DS.Face.row
     static let iconGap: CGFloat = 6
     /// How many apps a row shows before its "+N".
     static let appsShown = 3

@@ -63,10 +63,11 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// like a row whose content rides below. A post's words and picture, a
     /// music row's tiles, a fold's art — all of that is `below`, under the
     /// head and untouched.
-    /// 60 since prd §1017: the 46pt lead with 7pt of air above and below —
-    /// the room to breathe the user asked for when the lead grew, the type
-    /// unchanged.
-    static var headHeight: CGFloat { 60 }
+    /// 60 since prd §1017 (the 46pt lead with 7pt of air either side); 44
+    /// since §1071, the 30pt lead with the same 7pt, so a third more rows fit
+    /// a screen — and 44 is the tap minimum, so no row gets smaller than a
+    /// finger.
+    static var headHeight: CGFloat { 44 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
