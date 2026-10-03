@@ -343,6 +343,12 @@ extension LogosWire {
         mutating func u64() -> UInt64? {
             bytes(8).map { $0.reversed().reduce(0) { $0 << 8 | UInt64($1) } }
         }
+        mutating func u128() -> Decimal? { bytes(16).flatMap { LogosWire.u128($0[...]) } }
+        /// A Borsh `String`: a u32 length, then UTF-8.
+        mutating func string() -> String? {
+            guard let n = u32(), n < 10_000, let b = bytes(Int(n)) else { return nil }
+            return String(bytes: b, encoding: .utf8)
+        }
         /// A `Vec<u8>` read past, length-checked.
         mutating func blob() -> Bool {
             guard let n = u32() else { return false }
@@ -405,12 +411,15 @@ extension LogosWire {
     /// the house seam (` — `, `TitleSeam`), and every tag is STATE, never
     /// subject (HomeComposition's mechanical list carries them).
     ///
-    /// Only the NATIVE transfer is named with its amount. v0.3 names every
-    /// other program by an account id `getProgramIds` does not map to (it
-    /// answers image ids), and no token transfer has run on the new chain to
-    /// read one against — so anything else is "Used a program", never a
-    /// guessed amount (prd §1007).
-    static func events(_ tx: Transaction, watched: Set<Data>) -> [Event] {
+    /// The NATIVE transfer and the TOKEN program's calls are named (prd
+    /// §1084): a built-in program's account id is derived from its name
+    /// (`builtinProgram`), and the token calls were measured on the 10-01
+    /// chain — 10 transfers, 6 new tokens and a mint in its first 6,000
+    /// blocks. Every other program (the AMM and associated-token programs
+    /// have never run there; the rest are people's own deployments) is
+    /// "Used a program", never a guessed amount (prd §1007).
+    static func events(_ tx: Transaction, watched: Set<Data>,
+                       names: [Data: String] = [:]) -> [Event] {
         let mine = tx.accounts.enumerated().filter { watched.contains(Data($0.element)) }
         guard !mine.isEmpty else { return [] }
         func id(_ i: Int) -> String { base58Encode(tx.accounts[i]) }
@@ -437,8 +446,366 @@ extension LogosWire {
                     : Event(account: id(0), title: "Sent \(n) — to \(other(1))", tags: ["Sent"])
             }
         }
+        // The token program (prd §1084): named from its own instruction.
+        if tx.program == tokenProgram, let call = tokenCall(tx.instruction),
+           let events = tokenEvents(call, tx: tx, mine: mine.map(\.offset), names: names) {
+            return events
+        }
         // Anything else a watched account took part in: said, never guessed at.
         return mine.map { Event(account: id($0.offset), title: "Used a program", tags: ["Program"]) }
+    }
+}
+
+// MARK: - Tokens (prd §1084)
+
+extension LogosWire {
+
+    /// A built-in program's ACCOUNT id, as LEZ derives it
+    /// (`lee/state_machine/core/src/program/mod.rs`, v0.3.0):
+    /// `SHA256("/LEE-BuiltinProgram/v1/AccountId" ‖ name)`. MEASURED
+    /// 2026-10-03: `token` is `AxDd…ifPj`, the key every token shard sits
+    /// under in `getAccount`.
+    static func builtinProgram(_ name: String) -> [UInt8] {
+        Array(SHA256.hash(data: Array("/LEE-BuiltinProgram/v1/AccountId".utf8) + Array(name.utf8)))
+    }
+
+    static let tokenProgram = builtinProgram("token")
+
+    /// A token's kind (`token_core::TokenKind`): one fungible kind and two
+    /// NFT kinds — the master a collection prints from, and a printed copy.
+    enum TokenKind: UInt8, Equatable { case fungible = 0, nftMaster = 1, nftCopy = 2 }
+
+    /// `token_core::Instruction`, v0.3.0, by variant. Read EXACTLY: a byte
+    /// left over is a drifted layout, and a drifted layout names the wrong
+    /// amount on a real row, so it falls back to "Used a program".
+    enum TokenCall: Equatable {
+        case transfer(amount: Decimal, definition: [UInt8], kind: TokenKind)   // 0
+        case define(name: String, supply: Decimal, nft: Bool)                  // 1, 2
+        case initialize                                                        // 3
+        case burn(amount: Decimal)                                             // 4
+        case mint(amount: Decimal)                                             // 5
+        case printNFT(definition: [UInt8])                                     // 6
+    }
+
+    static func tokenCall(_ bytes: [UInt8]) -> TokenCall? {
+        var r = Reader(bytes)
+        guard let variant = r.u8() else { return nil }
+        let call: TokenCall
+        switch variant {
+        case 0:
+            guard let a = r.u128(), let def = r.bytes(32),
+                  let k = r.u8().flatMap(TokenKind.init(rawValue:)) else { return nil }
+            call = .transfer(amount: a, definition: def, kind: k)
+        case 1:
+            guard let name = r.string(), let supply = r.u128() else { return nil }
+            call = .define(name: name, supply: supply, nft: false)
+        case 2:
+            // NewTokenDefinition { Fungible { name, total_supply } |
+            // NonFungible { name, printable_supply } }, then the boxed
+            // metadata: standard u8, uri String, creators String.
+            guard let shape = r.u8(), shape < 2, let name = r.string(), let supply = r.u128(),
+                  let standard = r.u8(), standard < 2, r.string() != nil, r.string() != nil
+            else { return nil }
+            call = .define(name: name, supply: supply, nft: shape == 1)
+        case 3:
+            guard r.u8().flatMap(TokenKind.init(rawValue:)) != nil else { return nil }
+            call = .initialize
+        case 4:
+            guard let a = r.u128(), r.u8().flatMap(TokenKind.init(rawValue:)) != nil else { return nil }
+            call = .burn(amount: a)
+        case 5:
+            guard let a = r.u128() else { return nil }
+            call = .mint(amount: a)
+        case 6:
+            guard let def = r.bytes(32) else { return nil }
+            call = .printNFT(definition: def)
+        default:
+            return nil
+        }
+        return r.atEnd ? call : nil
+    }
+
+    /// The token definition a call is about, when the instruction or its
+    /// accounts say: what the walk looks a NAME up for. A definition names
+    /// itself, so `define` needs none.
+    static func tokenDefinition(_ call: TokenCall, tx: Transaction) -> [UInt8]? {
+        switch call {
+        case .transfer(_, let def, _), .printNFT(let def): return def
+        case .initialize, .burn, .mint: return tx.accounts.first   // [definition, holding]
+        case .define: return nil
+        }
+    }
+
+    /// What a token call means for each watched account in it. Accounts,
+    /// from `token_core`'s own docs: Transfer `[sender, recipient]`; a new
+    /// definition `[definition, holding(, metadata)]`; InitializeAccount,
+    /// Burn and Mint `[definition, holding]`; PrintNft `[master, copy]`.
+    /// `names` maps a definition id to the name its own account carries —
+    /// "tokens" when the walk could not read it, never a guess.
+    static func tokenEvents(_ call: TokenCall, tx: Transaction, mine: [Int],
+                            names: [Data: String]) -> [Event]? {
+        guard tx.accounts.count >= 2 else { return nil }
+        func id(_ i: Int) -> String { base58Encode(tx.accounts[i]) }
+        func other(_ i: Int) -> String { short(id(i)) }
+        let named = tokenDefinition(call, tx: tx).flatMap { names[Data($0)] }
+        func of(_ value: Decimal) -> String { "\(amount(value)) \(named ?? "tokens")" }
+        let nft = named.map { "a \($0) NFT" } ?? "an NFT"
+        return mine.compactMap { i -> Event? in
+            let holder = i == 1
+            switch call {
+            case .transfer(let value, _, let kind):
+                let what = kind == .fungible ? of(value) : nft
+                return holder
+                    ? Event(account: id(1), title: "Received \(what) — from \(other(0))", tags: ["Received"])
+                    : Event(account: id(0), title: "Sent \(what) — to \(other(1))", tags: ["Sent"])
+            case .define(let name, let supply, let isNFT):
+                // The definition and the holding it fills are one act; the
+                // metadata account (third) is part of it, not a party.
+                guard i < 2 else { return nil }
+                let what = isNFT ? "\(name) NFT" : "\(name) — \(amount(supply))"
+                return Event(account: id(i), title: "Created \(what)", tags: ["Created"])
+            case .initialize:
+                let what = named ?? "a token"
+                return holder
+                    ? Event(account: id(1), title: "Ready to hold \(what)", tags: ["Token"])
+                    : Event(account: id(0), title: "Opened a \(named ?? "token") holding — for \(other(1))", tags: ["Token"])
+            case .burn(let value):
+                return holder
+                    ? Event(account: id(1), title: "Burned \(of(value))", tags: ["Burned"])
+                    : Event(account: id(0), title: "Burned \(of(value)) — from \(other(1))", tags: ["Burned"])
+            case .mint(let value):
+                return holder
+                    ? Event(account: id(1), title: "Received \(of(value)) — minted", tags: ["Received", "Minted"])
+                    : Event(account: id(0), title: "Minted \(of(value)) — to \(other(1))", tags: ["Minted"])
+            case .printNFT:
+                return holder
+                    ? Event(account: id(1), title: "Received \(nft) — printed", tags: ["Received"])
+                    : Event(account: id(0), title: "Printed \(nft) — for \(other(1))", tags: ["Printed"])
+            }
+        }
+    }
+
+    // MARK: Holdings
+
+    /// `getAccount`'s result as its shards: the base58 id of the program each
+    /// sits under → its bytes. MEASURED 2026-10-03: `{nonce, data: {shards:
+    /// {<program>: [byte, …]}}}`, the native balance under thirty-two 1s (the
+    /// all-zero id) as a 16-byte u128, a token holding under `AxDd…ifPj`.
+    static func shards(_ result: Any?) -> [String: [UInt8]]? {
+        guard let obj = result as? [String: Any], let data = obj["data"] as? [String: Any],
+              let shards = data["shards"] as? [String: Any] else { return nil }
+        var out: [String: [UInt8]] = [:]
+        for (program, value) in shards {
+            guard let list = value as? [Any] else { return nil }
+            var bytes: [UInt8] = []
+            for v in list {
+                guard let n = (v as? NSNumber)?.intValue, (0...255).contains(n) else { return nil }
+                bytes.append(UInt8(n))
+            }
+            out[program] = bytes
+        }
+        return out
+    }
+
+    /// The token an account holds in its token shard (`TokenHolding`):
+    /// Fungible `{definition, balance u128}`, NftMaster `{definition,
+    /// print_balance u128}`, NftPrintedCopy `{definition, owned bool}`. One
+    /// shard per program, so one holding per account — exact length or nil.
+    struct TokenHolding: Equatable {
+        let kind: TokenKind
+        let definition: [UInt8]
+        /// The balance (fungible) or copies left to print (a master); nil
+        /// for a printed copy, which is one NFT.
+        let amount: Decimal?
+        /// A printed copy the holder owns; true for every other kind.
+        let owned: Bool
+    }
+
+    static func tokenHolding(_ shard: [UInt8]) -> TokenHolding? {
+        var r = Reader(shard)
+        guard let k = r.u8().flatMap(TokenKind.init(rawValue:)), let def = r.bytes(32) else { return nil }
+        let holding: TokenHolding
+        switch k {
+        case .fungible, .nftMaster:
+            guard let a = r.u128() else { return nil }
+            holding = TokenHolding(kind: k, definition: def, amount: a, owned: true)
+        case .nftCopy:
+            guard let b = r.u8(), b < 2 else { return nil }
+            holding = TokenHolding(kind: k, definition: def, amount: nil, owned: b == 1)
+        }
+        return r.atEnd ? holding : nil
+    }
+
+    /// A definition account's name (`TokenDefinition`: Fungible `{name,
+    /// total_supply, metadata_id: Option}` or NonFungible `{name,
+    /// printable_supply, metadata_id}`). MEASURED: `5NVd…5hgc` reads
+    /// "FIELDTEST". Only the name is read; nil for anything else.
+    static func tokenName(definitionShard shard: [UInt8]) -> String? {
+        var r = Reader(shard)
+        guard let shape = r.u8(), shape < 2, let name = r.string(), !name.isEmpty else { return nil }
+        return name
+    }
+
+    /// The native balance in a native shard: a 16-byte u128, or empty for
+    /// zero (`native_token::decode_balance`).
+    static func nativeBalance(_ shard: [UInt8]?) -> Decimal? {
+        guard let shard else { return 0 }
+        if shard.isEmpty { return 0 }
+        return u128(shard[...])
+    }
+
+    static let nativeShardKey = base58Encode(nativeProgram)
+    static let tokenShardKey = base58Encode(tokenProgram)
+}
+
+// MARK: - Sending (prd §1084)
+
+extension LogosWire {
+
+    /// The prefix LEZ hashes a public message under, padded to 32 bytes
+    /// (`lee/state_machine/src/public_transaction/message.rs`, v0.3.0).
+    static let messagePrefix: [UInt8] = {
+        let p = Array("/LEE/v0.3/Message/Public/".utf8)
+        return p + [UInt8](repeating: 0, count: 32 - p.count)
+    }()
+
+    /// The fee declaration, as the live wallet sends it (MEASURED 2026-10-03,
+    /// every signed native transfer on the 10-01 chain): a 2,000,000 gas
+    /// limit, no tip, and a ceiling of i128::MAX — no ceiling in practice.
+    /// v0.3.0's source computes `(gas + 100,000) × 64` instead, which a base
+    /// fee above 63 would refuse (`MaxFeeBelowReserve`); the chain is what
+    /// was copied. The payer is charged what it used, at the block's base
+    /// fee, and is ADMITTED only holding the reserve (`feeReserve`).
+    static let gasLimit: UInt64 = 2_000_000
+    static let maxFee: [UInt8] = [UInt8](repeating: 0xff, count: 15) + [0x7f]
+
+    /// What the sequencer holds back before it admits a send
+    /// (`fee_core::assess::fee_reserve`): `gas_limit × base_fee_exec +
+    /// data_bytes × base_fee_stor + tip`, from `getFeeState`'s base fees.
+    static func feeReserve(baseFeeExec: Decimal, baseFeeStor: Decimal, dataBytes: Int) -> Decimal {
+        Decimal(gasLimit) * baseFeeExec + Decimal(dataBytes) * baseFeeStor
+    }
+
+    /// `getFeeState`: `{base_fee_exec, base_fee_stor, …}`.
+    static func feeState(_ result: Any?) -> (exec: Decimal, stor: Decimal)? {
+        guard let obj = result as? [String: Any], let e = decimal(obj["base_fee_exec"]),
+              let s = decimal(obj["base_fee_stor"]) else { return nil }
+        return (e, s)
+    }
+
+    /// A signed native transfer's length: the tag, a 270-byte message and
+    /// one witness (4 + 96). What `feeReserve` is asked about.
+    static let transferBytes = 1 + 270 + 100
+
+    /// The Borsh of a native transfer's `Message`: program (the native id,
+    /// all zeros), shard selectors `[(from, native), (to, native)]`, the
+    /// signer's nonce, the instruction `Transfer { amount }` as a byte Vec,
+    /// and `Some(fee)` paid by the sender.
+    static func transferMessage(from: [UInt8], to: [UInt8], amount: Decimal, nonce: Decimal) -> [UInt8]? {
+        guard from.count == 32, to.count == 32, from != to, amount > 0,
+              let a = u128Bytes(amount), let n = u128Bytes(nonce)
+        else { return nil }
+        var m: [UInt8] = nativeProgram
+        m += le32(2) + from + nativeProgram + to + nativeProgram
+        m += le32(1) + n
+        m += le32(17) + [0] + a
+        m += [1] + from + le64(gasLimit) + le64(0) + maxFee
+        return m
+    }
+
+    /// What every signer signs: `SHA256(prefix ‖ message)`.
+    static func messageHash(_ message: [UInt8]) -> [UInt8] {
+        Array(SHA256.hash(data: messagePrefix + message))
+    }
+
+    /// The `LeeTransaction::Public` bytes `sendTransaction` takes as base64:
+    /// the variant tag, the message, and the witness set — one
+    /// `(signature 64, x-only key 32)`.
+    static func publicTransaction(message: [UInt8], signature: [UInt8], publicKey: [UInt8]) -> [UInt8]? {
+        guard signature.count == 64, publicKey.count == 32 else { return nil }
+        return [0] + message + le32(1) + signature + publicKey
+    }
+
+    /// The hash a landed row is keyed by — `SHA256` of the transaction
+    /// WITHOUT its tag, the same as `block(_:)` computes, so the walk finds
+    /// a sent row already in place and lands no second one.
+    static func transactionHash(_ tx: [UInt8]) -> String {
+        SHA256.hash(data: tx.dropFirst()).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// `getAccountsNonces([id])`'s one nonce.
+    static func nonce(_ result: Any?) -> Decimal? { decimal((result as? [Any])?.first) }
+
+    /// Why the sequencer refused a send, from a reply's `error` (the
+    /// sequencer's own error names); nil when the reply is not an error.
+    /// The words are the sheet's, localized there.
+    enum Refusal: Equatable { case funds, nonce, other }
+
+    static func refusal(_ reply: Any?) -> Refusal? {
+        guard let obj = reply as? [String: Any], let err = obj["error"] as? [String: Any] else { return nil }
+        let message = (err["message"] as? String ?? "") + " " + String(describing: err["data"] ?? "")
+        // MEASURED 2026-10-03: a correctly signed send from an empty account
+        // answers `-32602 "Incorrect fee"`, which LEZ's own wallet FFI reads
+        // as `PayerCannotFund`; a broken signature answers "Invalid
+        // signature(-s)", which is ours to fix, never the person's.
+        if message.contains("Incorrect fee") || message.contains("PayerCannotFund")
+            || message.contains("InsufficientBalance") { return .funds }
+        if message.lowercased().contains("nonce") { return .nonce }
+        return .other
+    }
+
+    /// A whole amount typed by a person: digits and grouping only, more than
+    /// zero, at most a u128. LEZ has no decimals (measured), so a fraction is
+    /// refused rather than rounded.
+    static func typedAmount(_ raw: String) -> Decimal? {
+        let digits = raw.filter { !" ,_\u{00A0}".contains($0) }
+        guard !digits.isEmpty, digits.allSatisfy(\.isASCII), digits.allSatisfy(\.isNumber),
+              let value = Decimal(string: digits), value > 0, u128Bytes(value) != nil,
+              // `Decimal` keeps 38 digits and silently rounds a 39th
+              // (measured: 2^128 parses as …450), which would sign an amount
+              // nobody typed. What was typed must come back exactly.
+              "\(value)" == String(digits.drop { $0 == "0" })
+        else { return nil }
+        return value
+    }
+
+    /// Why a send cannot go, or nil when it can: the balance must cover the
+    /// amount AND the fee reserve, because admission checks the reserve.
+    enum SendBlock: Equatable { case sameAccount, nothingToSend, short(needs: Decimal) }
+
+    static func sendBlock(from: String, to: String, amount: Decimal, balance: Decimal,
+                          reserve: Decimal) -> SendBlock? {
+        if from == to { return .sameAccount }
+        guard amount > 0 else { return .nothingToSend }
+        let needs = amount + reserve
+        return balance < needs ? .short(needs: needs) : nil
+    }
+
+    // MARK: Little-endian
+
+    static func u128Bytes(_ value: Decimal) -> [UInt8]? {
+        guard value >= 0, value == value.rounded0 else { return nil }
+        var v = value
+        var out: [UInt8] = []
+        for _ in 0..<16 {
+            let q = (v / 256).rounded0
+            let byte = v - q * 256
+            out.append(UInt8(NSDecimalNumber(decimal: byte).intValue))
+            v = q
+        }
+        return v == 0 ? out : nil
+    }
+
+    private static func le32(_ v: UInt32) -> [UInt8] { (0..<4).map { UInt8(truncatingIfNeeded: v >> ($0 * 8)) } }
+    private static func le64(_ v: UInt64) -> [UInt8] { (0..<8).map { UInt8(truncatingIfNeeded: v >> ($0 * 8)) } }
+}
+
+private extension Decimal {
+    /// Rounded toward zero to a whole number.
+    var rounded0: Decimal {
+        var source = self, out = Decimal()
+        NSDecimalRound(&out, &source, 0, .down)
+        return out
     }
 }
 

@@ -151,6 +151,10 @@ struct HoldingsTreemap: View {
     /// devnet, whose number is a count.
     var caption: String = ""
     let holdings: [Holding]
+    /// False when the sizes are not shares at all — a devnet where nothing
+    /// has a price draws every tile one size, which says "how many", and a
+    /// "33%" on each would state a split nobody measured (§83, prd §1084).
+    var showsShares: Bool = true
     var onOpen: ((Holding) -> Void)? = nil
     @State private var lit: String?
     /// The lit tile's share as drawn, so "Other" can state its value.
@@ -186,7 +190,9 @@ struct HoldingsTreemap: View {
     private var reading: some View {
         if let lit, let holding = holdings.first(where: { $0.id == lit }) {
             DSFigureReading(number: holding.display ?? WalletValue.money(holding.usd), caption: holding.id)
-        } else if lit == HoldingsTreemapLayout.otherID {
+        } else if lit == HoldingsTreemapLayout.otherID, showsShares {
+            // With no shares (nothing priced), the folded tail has no share to
+            // state either; the count stands.
             // Test money states no dollars (§949): the folded tail reads its share.
             DSFigureReading(number: holdings.contains { $0.display != nil }
                                 ? HoldingsTreemapLayout.percent(litShare)
@@ -217,12 +223,14 @@ struct HoldingsTreemap: View {
                     AssetMark(name: tile.id, size: HoldingsTreemapLayout.markSize(for: tile.rect))
                 }
                 Spacer(minLength: 0)
-                Text(HoldingsTreemapLayout.percent(tile.share))
-                    .dsText(large ? .stat24 : (small ? .label12 : .price17))
-                    .monospacedDigit()
-                    .foregroundStyle(isOther && !isLit ? DS.textSecondary : (isLit ? Color.white : DS.textPrimary))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                if showsShares {
+                    Text(HoldingsTreemapLayout.percent(tile.share))
+                        .dsText(large ? .stat24 : (small ? .label12 : .price17))
+                        .monospacedDigit()
+                        .foregroundStyle(isOther && !isLit ? DS.textSecondary : (isLit ? Color.white : DS.textPrimary))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
             }
             .padding(small ? DS.Space.s2 : DS.Space.s3)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -232,7 +240,9 @@ struct HoldingsTreemap: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(Text("\(isOther ? String(localized: "Other") : tile.id), \(HoldingsTreemapLayout.percent(tile.share))"))
+        .accessibilityLabel(showsShares
+            ? Text("\(isOther ? String(localized: "Other") : tile.id), \(HoldingsTreemapLayout.percent(tile.share))")
+            : Text(isOther ? String(localized: "Other") : tile.id))
         .accessibilityAddTraits(isLit ? .isSelected : [])
     }
 }

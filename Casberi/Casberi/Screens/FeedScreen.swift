@@ -1118,7 +1118,9 @@ struct FeedScreen: View {
             let logosSection = LogosSection.resolve(chrome.logosSection,
                                                     present: chrome.logosSections)
             logosScopeChromeSection(logosSection)
-            if logosSection != .explorer {
+            if logosSection == .holdings {
+                logosHoldingsSection
+            } else if !logosSection.isVerb {
                 let days = chronoGroups(logosRows(rows, section: logosSection))
                 groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
             }

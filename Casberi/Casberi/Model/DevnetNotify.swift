@@ -41,8 +41,11 @@ enum DevnetNotify {
     static func census() -> [String] {
         let fWatching = FramesWatch.shared.addresses.count + (FramesKey.address() == nil ? 0 : 1)
         let fReset = FramesLiveState.observedRelaunch()
+        let lReset = LogosStore.shared.resetSeen
         return ["frames watching=\(fWatching) relaunch=" +
-                (fReset.map { "\($0.key) observed \($0.at)" } ?? "none observed")]
+                (fReset.map { "\($0.key) observed \($0.at)" } ?? "none observed"),
+                "logos watching=\(LogosStore.shared.accounts.count) reset=" +
+                (lReset.map { "\($0.key) observed \($0.at)" } ?? "none observed")]
     }
 
     // MARK: - What was reset
@@ -56,6 +59,12 @@ enum DevnetNotify {
             out.append(.init(seat: .frames, key: seen.key, observedAt: seen.at,
                              watching: FramesWatch.shared.addresses.count
                                  + (FramesKey.address() == nil ? 0 : 1)))
+        }
+        // Logos (prd §1084): the accounts watched, this phone's own among
+        // them (Create watches it).
+        if let seen = LogosStore.shared.resetSeen {
+            out.append(.init(seat: .logos, key: seen.key, observedAt: seen.at,
+                             watching: LogosStore.shared.accounts.count))
         }
         return out
     }

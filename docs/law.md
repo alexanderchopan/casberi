@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1211 of 1270 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1212 of 1271 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1325,10 +1325,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §985 — The rest of the Notes room stands under "Notes", and a deleted note waits thirty days in Recently deleted
 - §986 — New folder starts where the folders do
 - §987 — The voice note plays like a player: a length on the row, a playhead you can tap, three speeds, and the words lit as t…
-- §988 — Logos: watch a public LEZ account, keyless, forward from the moment you watch (amended by §989, §1034, §1035)
+- §988 — Logos: watch a public LEZ account, keyless, forward from the moment you watch (amended by §989, §1034, §1035, §1084)
 - §989 — Logos: your own node, read at the address you give it (amended by §1016)
 - §990 — No suggested addresses on the devnets
-- §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016)
+- §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016, §1084)
 - §993 — The Reminders room holds its lead when empty, and scopes like Apple's lists (amended by §997)
 - §994 — The Calendar room is a month grid over Today · Week · Month · New (amended by §999)
 - §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039, §1050d)
@@ -1369,7 +1369,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
-- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048)
+- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084)
 - §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078)
 - §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
 - §1043 — `enrichedText` is the sheet's body and never a row's line; provider-authored display copy stays on `summary` and `pos…
@@ -1432,6 +1432,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082)
 - §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the…
 - §1083 — The cover says "Here's a demo." in words
+- §1084 — Logos: tokens named, Holdings, Create and Send from this phone, and a stopped node or a reset notifies
 
 ## Dead rulings → what replaced them (generated)
 

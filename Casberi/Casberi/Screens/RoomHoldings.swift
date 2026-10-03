@@ -121,7 +121,8 @@ struct RoomHoldingsFigure: View {
             HoldingsTreemap(total: String(cells.count),
                             caption: cells.count == 1 ? String(localized: "asset")
                                                       : String(localized: "assets"),
-                            holdings: holdings)
+                            holdings: holdings,
+                            showsShares: !priced.isEmpty)
             if read, !unpriced.isEmpty {
                 Text(unpricedLine(unpriced))
                     .dsText(.label12)

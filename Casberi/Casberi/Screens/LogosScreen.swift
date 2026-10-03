@@ -13,8 +13,9 @@ import SwiftData
 /// **No balances on the roster.** Money lives in the room, as on every wallet
 /// and devnet page; the roster says which accounts and what arrived this week.
 ///
-/// No key, no account: the LEZ sequencer answers anyone, and a node's read
-/// API has no auth layer. A PRIVATE id is refused by name — its state is
+/// The watch needs no key and no account: the LEZ sequencer answers anyone,
+/// and a node's read API has no auth layer. Sending (prd §1084) is the room's
+/// Create and Send, with this phone's own key (`LogosKey`). A PRIVATE id is refused by name — its state is
 /// encrypted to its owner and the sequencer answers it as an empty public
 /// account, which a watch would draw as a confident zero.
 struct LogosScreen: View {
@@ -262,7 +263,7 @@ struct LogosScreen: View {
                     id: "logos", name: "Logos", proof: proof,
                     can: ["Reads the balance and activity of the public LEZ accounts you watch, on the Logos testnet.",
                           "Reads your own node's sync state, peers, mining and reward vouchers, at the address you give it.",
-                          "Read-only — no key, and nothing it could send."])
+                          "Sends test coins from an account made on this phone, signed with a key that never leaves it."])
             } else {
                 lastResult = .failed(String(localized: "Couldn't reach the Logos testnet — check your connection."))
             }

@@ -158,9 +158,12 @@ extension LogosSection: DSTileScope {
     var glyph: String {
         switch self {
         case .home:     return ScopeTileGlyph.home
+        case .holdings: return ScopeTileGlyph.holdings
         case .node:     return ScopeTileGlyph.node
         case .rewards:  return ScopeTileGlyph.rewards
+        case .create:   return ScopeTileGlyph.create
         case .explorer: return ScopeTileGlyph.explorer
+        case .send:     return ScopeTileGlyph.send
         }
     }
 }

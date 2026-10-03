@@ -356,7 +356,7 @@ enum NetworkReach {
         // The explorer is a link a row opens, never fetched.
         Endpoint(service: "Logos",
                  reach: .whenConnected(bridge: "Logos"),
-                 purpose: "Reads the balance and activity of the public LEZ accounts you watch, from the Logos testnet's sequencer, and your own node's sync state, peers and reward vouchers at the address you give it. Carries only the account ids you asked about and the block numbers it reads; there is no account and no key.",
+                 purpose: "Reads the balance, tokens and activity of the public LEZ accounts you watch, from the Logos testnet's sequencer, and your own node's sync state, peers and reward vouchers at the address you give it. Carries the account ids you asked about and the block numbers it reads; a send you make carries the transaction this phone signed, and nothing else about you.",
                  // The node's address is TYPED BY THE PERSON (prd §989), the
                  // §289 case: every node request names this service to
                  // `NetworkLedger`, so a self-chosen address is attributed.

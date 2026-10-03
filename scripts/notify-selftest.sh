@@ -250,7 +250,7 @@ guard "the headline has ONE authority, forwarded from the sweep" \
 # A seat name that does not equal the source the bridge really stamps fails at
 # NEITHER end: the notification arrives with a blank right-hand slot and its tap
 # opens the All feed. Derived from the bridges rather than typed twice here.
-for pair in "Frames:$FRAMESB"; do
+for pair in "Frames:$FRAMESB" "Logos:Casberi/Casberi/Model/LogosRoom.swift"; do
   label="${pair%%:*}"; file="${pair#*:}"
   src=$(grep -oE 'static let source = "[^"]+"' "$file" | head -1 | sed 's/.*"\(.*\)"/\1/')
   if [[ -n "$src" ]] && grep -qF "return \"$src\"" "$PLAN"; then
@@ -512,6 +512,15 @@ ok(dr1.body.contains("addresses"),
    "the body says the ADDRESSES survive — §515a's easily-missed half")
 ok(dr1.cls == .alarm && !dr1.isTimeSensitive,
    "a devnet reset is an alarm that never breaks a Focus")
+// Logos (prd §1084) joins with its own words, under its own source.
+let lr = NotifyDevnet.plan(reset: reset(.logos), now: dnow)!
+ok(lr.source == "Logos", "the Logos reset carries the Logos source (LogosRoom.source)")
+ok(lr.body.contains("Logos") && lr.body.contains("accounts you watch"),
+   "the Logos body names the testnet and says the watched accounts survive")
+ok(lr.id != dr1.id, "a Logos reset and a Frames reset are two ids")
+ok(NotifyKind.nodeDown.cls == .alarm && NotifyKind.nodeDown.severity > NotifyKind.runningLow.severity
+   && NotifyKind.nodeDown.severity < NotifyKind.priceRose.severity && !NotifyKind.nodeDown.isTimeSensitive,
+   "a stopped node: an alarm above running low, below money, never breaking a Focus")
 
 // Each seat's door must PARSE. The name carries a space and an accent, so an
 // unencoded link is one `URL(string:)` hands back as nil — a tap that opens
@@ -1172,6 +1181,16 @@ func row(ref: String, source: String = "Wallet", tags: [String] = []) -> Thing {
 @MainActor
 func runFixtures() {
     let now = Date()
+
+    // ── Logos (prd §1084): your node stopping is news; the chain's content is not ──
+    ok(NotifySweep.classify(row(ref: "logos:node:offline:1790000000"), now: now) == .nodeDown,
+       "a Logos node that stopped answering classifies as nodeDown")
+    ok(NotifySweep.classify(row(ref: "logos:node:tickets:1790000000"), now: now) == nil,
+       "mining tickets stay a row, never a notification")
+    ok(NotifySweep.classify(row(ref: "logos:node:back:1790000000"), now: now) == nil,
+       "a node answering again is not news")
+    ok(NotifySweep.classify(row(ref: "logos:lez:6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV:e246"), now: now) == nil,
+       "test coins arriving never notify (§522: devnet content is not news)")
 
     // ── positionAtRisk: Aave/Morpho share `wallet:defi:`, Hyperliquid its own ──
     ok(NotifySweep.classify(row(ref: "wallet:defi:aave:ethereum:0xabc:1700000000"), now: now) == .positionAtRisk,

@@ -233,6 +233,12 @@ enum NotifySweep {
             return state?.alarming == true ? .appRejected : nil
         }
 
+        // — Logos: your own node stopped answering (prd §1084). The ref
+        //   carries the kind (`logos:node:<kind>:<seconds>`, `LogosIngest
+        //   .readNode`), so this reads the machine value, never the title.
+        //   Every other Logos row stays quiet: test coins are not news (§522).
+        if ref.hasPrefix("logos:node:offline:") { return .nodeDown }
+
         // — Wallet: something gained the power to move funds.
         if ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:") {
             return .approvalGranted

@@ -97,6 +97,14 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// kind for exactly that reason. The body names the chain; the plan carries
     /// its source, so the right-hand slot carries its mark.
     case chainReset
+    /// YOUR LOGOS NODE STOPPED ANSWERING (prd §1084) — the machine you run
+    /// went quiet while you were elsewhere. §522's devnet doctrine keeps
+    /// the chain's CONTENT silent (test coins arriving are not news), and
+    /// this is not content: it is your own node, and a node that stopped is
+    /// also one that stopped mining — mining is off after every restart.
+    /// Landed as a row (`logos:node:offline:`) only on a CHANGE between two
+    /// readings, so a node that was never up says nothing.
+    case nodeDown
     // — arrival
     case moneyIn
     case payoutPaid
@@ -118,7 +126,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose, .priceAlert,
              .appRejected, .runningLow, .safeSignatureNeeded,
-             .walletIncident, .chainReset:
+             .walletIncident, .chainReset, .nodeDown:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest:
             return .arrival
@@ -171,6 +179,10 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // devnet reset must never win a batch against revenue that stopped.
         case .chainReset:       return 55
         case .poolCleared:      return 50    // good news, act whenever
+        // Your own machine stopped: something to do, no money at risk and
+        // no clock — above `runningLow` (a stop has already happened, where
+        // running low is about to) and below a price rise (money left).
+        case .nodeDown:         return 30
         case .priceRose:        return 40    // recurring money, already charged
         case .priceAlert:       return 45    // a level you asked to hear about
         // The lowest alarm on purpose — "do this soon" rather than "something
@@ -252,6 +264,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // source, so the mark says which devnet, and the body names it in
         // words (see `NotifyKind.chainReset`).
         case .chainReset:       return String(localized: "A devnet was reset")
+        case .nodeDown:         return String(localized: "Your node stopped")
         case .moneyIn:          return String(localized: "Money arrived")
         case .payoutPaid:       return String(localized: "Paid out")
         case .likesReceived:    return String(localized: "Liked your post")
@@ -281,6 +294,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .appRejected:         return String(localized: "App Review said no")
         case .runningLow:          return String(localized: "running low")
         case .chainReset:          return String(localized: "devnet reset")
+        case .nodeDown:            return String(localized: "node stopped")
         case .moneyIn:             return String(localized: "money arrived")
         case .payoutPaid:          return String(localized: "paid out")
         case .likesReceived:       return String(localized: "new likes")
@@ -329,6 +343,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .appRejected:         (one, many) = (String(localized: "rejection"), String(localized: "rejections"))
         case .runningLow:          (one, many) = (String(localized: "running low"), String(localized: "running low"))
         case .chainReset:          (one, many) = (String(localized: "reset"), String(localized: "resets"))
+        case .nodeDown:            (one, many) = (String(localized: "node stopped"), String(localized: "nodes stopped"))
         case .moneyIn:             (one, many) = (String(localized: "transfer in"), String(localized: "transfers in"))
         case .payoutPaid:          (one, many) = (String(localized: "payout"), String(localized: "payouts"))
         case .likesReceived:       (one, many) = (String(localized: "liked post"), String(localized: "liked posts"))
@@ -641,6 +656,9 @@ enum NotifyDevnet {
     /// be acted on", failed. The room says it instead.
     enum Seat: String, Sendable, CaseIterable {
         case frames
+        /// The Logos testnet (prd §1084), once it recorded the reset it
+        /// observes (`LogosStore.resetSeen`, block 1's hash changing, §1035).
+        case logos
 
         /// **MUST equal `FramesIdentity.source`.** It routes the deep link and
         /// picks the brand mark for the right-hand slot, and a wrong string
@@ -650,6 +668,8 @@ enum NotifyDevnet {
         var source: String {
             switch self {
             case .frames:  return "Hegotá Frames"
+            // MUST equal `LogosRoom.source` (`notify-selftest.sh`).
+            case .logos:   return "Logos"
             }
         }
 
@@ -698,6 +718,8 @@ enum NotifyDevnet {
         switch r.seat {
         case .frames:
             body = String(localized: "Hegotá Frames was relaunched from genesis, so everything it held is gone. Your key and the addresses you watch are still yours.")
+        case .logos:
+            body = String(localized: "The Logos testnet was reset, so every account on it starts empty. Your key and the accounts you watch are still yours.")
         }
         return NotifyPlan(id: "devnet:reset:\(r.seat.rawValue):\(r.key)",
                           kind: .chainReset,

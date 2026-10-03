@@ -38,6 +38,70 @@ final class LogosStore {
     private static let genesisKey = "logos.genesis.v1"
     private static let chainStartKey = "logos.chainStart.v1"
     private static let systemKey = "logos.systemAccounts.v1"
+    private static let tokenNamesKey = "logos.tokenNames.v1"
+    private static let holdingsKey = "logos.holdings.v1"
+    private static let resetSeenKey = "logos.resetSeen.v1"
+
+    /// A token definition's id → the name its own account carries (prd
+    /// §1084). Names never change once a definition exists, so a name is
+    /// read once and kept until the chain resets.
+    private(set) var tokenNames: [String: String] {
+        didSet { UserDefaults.standard.set(tokenNames, forKey: Self.tokenNamesKey) }
+    }
+
+    func tokenNamesByID() -> [Data: String] {
+        var out: [Data: String] = [:]
+        for (id, name) in tokenNames {
+            if let bytes = LogosWire.base58Decode(id) { out[Data(bytes)] = name }
+        }
+        return out
+    }
+
+    func rememberTokenName(_ name: String, for definition: String) {
+        if tokenNames[definition] != name { tokenNames[definition] = name }
+    }
+
+    /// What one watched account holds besides its native coins (prd §1084):
+    /// the one token its token shard carries. LEZ v0.3 keeps one shard per
+    /// program on an account, so an account holds one token at most.
+    struct Holding: Codable, Equatable {
+        let definition: String
+        /// "fungible", "nftMaster" or "nftCopy".
+        let kind: String
+        /// A decimal string; nil for a printed NFT copy (it is one NFT).
+        let amount: String?
+    }
+
+    private(set) var holdings: [String: Holding] {
+        didSet {
+            if let data = try? JSONEncoder().encode(holdings) {
+                UserDefaults.standard.set(data, forKey: Self.holdingsKey)
+            }
+        }
+    }
+
+    func holding(for id: String) -> Holding? { holdings[id] }
+
+    /// Replaces what the accounts in `read` hold; an account missing from
+    /// `read` (its read failed) keeps its last answer (prd §825).
+    func rememberHoldings(_ read: [String: Holding?]) {
+        for (id, holding) in read {
+            if holdings[id] != holding { holdings[id] = holding }
+        }
+    }
+
+    /// The reset this phone last OBSERVED (prd §1084): the new chain's block-1
+    /// hash and when this phone saw it. What `DevnetNotify` announces, once.
+    private(set) var resetSeen: (key: String, at: Date)? {
+        didSet {
+            if let resetSeen {
+                UserDefaults.standard.set(["key": resetSeen.key, "at": resetSeen.at.timeIntervalSince1970],
+                                          forKey: Self.resetSeenKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.resetSeenKey)
+            }
+        }
+    }
 
     /// The hash of the chain's block 1 (prd §1035). A reset is a NEW chain, so
     /// a different block 1 is the one sure sign of it — the cursor test
@@ -70,6 +134,7 @@ final class LogosStore {
     func rememberChain(genesis hash: String, start: Date?) -> Bool {
         let reset = genesis != nil && genesis != hash
         if genesis != hash { genesis = hash }
+        if reset { resetSeen = (hash, .now) }
         if let start, chainStart != start { chainStart = start }
         return reset
     }
@@ -146,6 +211,13 @@ final class LogosStore {
         genesis = UserDefaults.standard.string(forKey: Self.genesisKey)
         chainStart = UserDefaults.standard.object(forKey: Self.chainStartKey) as? Date
         systemAccounts = Set(UserDefaults.standard.stringArray(forKey: Self.systemKey) ?? [])
+        tokenNames = UserDefaults.standard.dictionary(forKey: Self.tokenNamesKey) as? [String: String] ?? [:]
+        holdings = UserDefaults.standard.data(forKey: Self.holdingsKey)
+            .flatMap { try? JSONDecoder().decode([String: Holding].self, from: $0) } ?? [:]
+        if let seen = UserDefaults.standard.dictionary(forKey: Self.resetSeenKey),
+           let key = seen["key"] as? String, let at = seen["at"] as? Double {
+            resetSeen = (key, Date(timeIntervalSince1970: at))
+        } else { resetSeen = nil }
         nodeSnapshot = UserDefaults.standard.data(forKey: Self.nodeSnapshotKey)
             .flatMap { try? JSONDecoder().decode(LogosWire.NodeSnapshot.self, from: $0) }
     }
@@ -185,6 +257,7 @@ final class LogosStore {
     func remove(_ id: String) {
         accounts.removeAll { $0 == id }
         balances.removeValue(forKey: id)
+        holdings.removeValue(forKey: id)
         systemAccounts.remove(id)
         if accounts.isEmpty { cursor = nil }
     }
@@ -205,6 +278,8 @@ final class LogosStore {
     func resetDetected(head: Int) {
         cursor = head
         balances = [:]
+        holdings = [:]
+        tokenNames = [:]
         readAt = nil
         systemAccounts = []
     }
@@ -217,6 +292,9 @@ final class LogosStore {
         cursor = nil
         readAt = nil
         systemAccounts = []
+        holdings = [:]
+        tokenNames = [:]
+        resetSeen = nil
     }
 
     private func persist(_ list: [String], _ key: String) {
@@ -268,6 +346,36 @@ enum LogosIngest {
         LogosWire.balance(await call("getAccountBalance", [id]))
     }
 
+    /// The token an account's token shard holds, named (prd §1084). nil
+    /// when it holds none — or when the shard is a token DEFINITION (a
+    /// token's own account), which is not a holding.
+    @MainActor
+    static func holding(in shards: [String: [UInt8]]) async -> LogosStore.Holding? {
+        guard let shard = shards[LogosWire.tokenShardKey],
+              let h = LogosWire.tokenHolding(shard) else { return nil }
+        let definition = LogosWire.base58Encode(h.definition)
+        await name(definition)
+        let kind: String
+        switch h.kind {
+        case .fungible:  kind = "fungible"
+        case .nftMaster: kind = "nftMaster"
+        case .nftCopy:   kind = "nftCopy"
+        }
+        // A printed copy that is not owned holds nothing.
+        guard h.owned else { return nil }
+        return LogosStore.Holding(definition: definition, kind: kind, amount: h.amount.map { "\($0)" })
+    }
+
+    /// Reads a token definition's name once, from its own account.
+    @MainActor
+    static func name(_ definition: String) async {
+        guard LogosStore.shared.tokenNames[definition] == nil,
+              let shards = LogosWire.shards(await call("getAccount", [definition])),
+              let shard = shards[LogosWire.tokenShardKey],
+              let name = LogosWire.tokenName(definitionShard: shard) else { return }
+        LogosStore.shared.rememberTokenName(name, for: definition)
+    }
+
     /// Raw blocks, base64 Borsh, `[from, to]` inclusive.
     static func blocks(from: Int, to: Int) async -> [Data]? {
         guard let rows = await call("getBlockRange", [from, to]) as? [Any] else { return nil }
@@ -308,8 +416,12 @@ enum LogosIngest {
         }
 
         var read: [String: Decimal] = [:]
+        var held: [String: LogosStore.Holding?] = [:]
         for id in store.accounts {
             if let balance = await balance(id) { read[id] = balance }
+            if let shards = LogosWire.shards(await call("getAccount", [id])) {
+                held[id] = await holding(in: shards)
+            }
         }
 
         // Which chain this is (prd §1035): block 1's hash names it, block 2's
@@ -332,6 +444,7 @@ enum LogosIngest {
             store.advance(to: tip)
         }
         store.rememberBalances(read, at: .now)
+        store.rememberHoldings(held)
         // The Home crown's line (prd §991): one sample per account per pass,
         // the devnets' `RoomValueHistory`, so the line is what this phone saw
         // rather than a reconstruction.
@@ -406,6 +519,7 @@ enum LogosIngest {
         }
         let watched = Set(store.accounts.compactMap(LogosWire.base58Decode).map { Data($0) })
         var existing = IngestSupport.existingSourceRefs(context, source: "Logos")
+        var names = store.tokenNamesByID()
         var added = 0
         var at = from
         var size = pageSize
@@ -425,11 +539,21 @@ enum LogosIngest {
                     break walking
                 }
                 for tx in block.transactions {
+                    // A token call naming a watched account: read its
+                    // token's name first, so the row says FIELDTEST rather
+                    // than "tokens" (prd §1084).
+                    if tx.program == LogosWire.tokenProgram,
+                       tx.accounts.contains(where: { watched.contains(Data($0)) }),
+                       let call = LogosWire.tokenCall(tx.instruction),
+                       let definition = LogosWire.tokenDefinition(call, tx: tx) {
+                        await name(LogosWire.base58Encode(definition))
+                        names = store.tokenNamesByID()
+                    }
                     if LogosWire.isSystem(tx) {
                         store.markSystem(Set(tx.accounts.filter { watched.contains(Data($0)) }
                                                 .map(LogosWire.base58Encode)))
                     }
-                    for event in LogosWire.events(tx, watched: watched) {
+                    for event in LogosWire.events(tx, watched: watched, names: names) {
                         let ref = "logos:lez:\(event.account):\(tx.hashHex)"
                         guard !existing.contains(ref) else { continue }
                         land(event, tx: tx, block: block, ref: ref, context: context)

@@ -56,6 +56,9 @@ extension FeedScreen {
         /// the card: a `.sheet` on a view inside this List resolves to the same
         /// presenting controller as this one and half-opens before closing again.
         case framesSend
+        /// The Logos send form (prd §1084) — the same sheet, routed here for
+        /// `framesSend`'s reason.
+        case logosSend
         /// ONE FRAMES TRANSACTION, and the three routes below it — all four
         /// here for two reasons at once: the seat lands no
         /// `Thing` so nothing can ride `.thing`, and every card that opens one
@@ -111,6 +114,7 @@ extension FeedScreen {
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
             case .framesSend: "framesSend"
+            case .logosSend: "logosSend"
             case .framesMove(let m, _): "framesMove:\(m.id)"
             case .framesFrame(let m, let i): "framesFrame:\(m.id)#\(i)"
             case .framesPayer(let p, _): "framesPayer:\(p.id)"
@@ -344,6 +348,21 @@ extension FeedScreen {
         // knows: who the book knows, what the account holds, whether a Max is
         // honest, and the one closure that actually sends. Everything visual
         // lives in `DevnetSendSheet`.
+        case .logosSend:
+            // **A NATIVE TRANSFER, ONE SIGNER, NO MAX (prd §1084).** The
+            // sender pays the fee and must hold its reserve besides, so the
+            // whole balance cannot send itself — Frames' reason for no Max.
+            DevnetSendSheet(
+                venue: String(localized: "Logos"),
+                seat: LogosRoom.source,
+                tint: DS.tint,
+                unit: String(localized: "test coins"),
+                candidates: logosSendCandidates,
+                heldLine: logosHeldLine,
+                maxAmount: nil,
+                isValidAddress: { LogosWire.watchableID($0) != nil },
+                isValidAmount: { LogosWire.typedAmount($0) != nil },
+                perform: { to, amount in await sendLogos(to: to, amount: amount) })
         case .framesSend:
             DevnetSendSheet(
                 venue: String(localized: "Frames"),
