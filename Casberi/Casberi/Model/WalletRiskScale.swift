@@ -27,9 +27,16 @@ import Foundation
 /// stable-denominated (the ordinary case — stablecoins borrowed against
 /// volatile collateral) and an approximation when both sides move together
 /// (ETH borrowed against staked ETH, where price moves barely shift HF at
-/// all). That is why every dot still wears its protocol's OWN number, and why
-/// no dot ever claims a specific "can fall X%" figure on screen: the axis
-/// carries the ordering, the label carries the fact.
+/// all). That is why every dot still wears its protocol's OWN number.
+///
+/// **The sentence a person can act on (prd §1090)** is said AGAINST THE DEBT,
+/// which is exact by the health factor's own definition rather than an
+/// approximation: HF falls to 1 when the collateral's value, measured in the
+/// debt, falls by `1 − 1/HF`. So a Morpho market says "wstETH can fall 24%
+/// against WETH" (a correlated pair, where the sentence is still true and
+/// plainly rare), and an Aave account, whose collateral and debt are baskets,
+/// says "Your collateral can fall 58% against your debt". Never "ETH −24%":
+/// that names a price the debt may move with.
 ///
 /// ## Why there is no shared danger threshold
 ///
@@ -106,6 +113,21 @@ enum WalletRiskScale {
         return Entry(id: id, label: label,
                      detail: String(localized: "\(pct)% from liquidation"),
                      headroom: headroom, atRisk: proximity < riskProximity)
+    }
+
+    /// What a lending position can bear, in words (prd §1090). `market` is
+    /// Morpho's "collateral / loan"; anything else (Aave's basket) speaks of
+    /// collateral and debt. Nil for a perp (it already states its distance)
+    /// and for a position already at the edge.
+    static func fallLine(_ entry: Entry) -> String? {
+        guard !entry.id.hasPrefix("hl:"), entry.headroom > 0 else { return nil }
+        let pct = max(1, Int((entry.headroom * 100).rounded(.down)))
+        let parts = entry.label.components(separatedBy: " · ")
+        let pair = parts.count > 1 ? parts[1].components(separatedBy: " / ") : []
+        if pair.count == 2, !pair[0].isEmpty, !pair[1].isEmpty {
+            return String(localized: "\(pair[0]) can fall \(pct)% against \(pair[1])")
+        }
+        return String(localized: "Collateral can fall \(pct)% against your debt")
     }
 
     /// The strip itself — worst first — or nil when there is nothing to

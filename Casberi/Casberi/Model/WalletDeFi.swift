@@ -99,7 +99,7 @@ enum WalletDeFi {
     /// `MorphoDeFi`, `WalletWarnings` and the brief's lede each held their
     /// own copy of the same 1.5, and a threshold that decides whether the app
     /// warns you must not be able to disagree with itself.
-    private static var riskThreshold: Double { DeFiRisk.floor }
+    private static var riskThreshold: Double { DeFiRisk.alertLine }
 
     struct Position: Equatable {
         let network: String

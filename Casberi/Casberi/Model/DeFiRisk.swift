@@ -28,6 +28,19 @@ enum DeFiRisk {
     /// room's warnings and the brief's lede all mean by "at risk".
     static let floor: Double = 1.5
 
+    /// **YOUR LINE (prd §1090).** The health factor under which a borrow
+    /// notifies — `floor` until you pick another from a Risk row ("Tell me
+    /// below 2.0"). Only the NOTIFICATION moves: what the room calls "at
+    /// risk" stays `floor`, so the bars and the count never change meaning
+    /// with a preference. Never below `floor`: the app's own margin is the
+    /// least warning it gives.
+    static let alertChoices: [Double] = [1.5, 1.75, 2.0, 2.5]
+    static let alertLineKey = "wallet.defi.alertLine"
+    static var alertLine: Double {
+        let v = UserDefaults.standard.double(forKey: alertLineKey)
+        return alertChoices.contains(v) ? v : floor
+    }
+
     /// One open borrow, wherever it lives.
     struct Debt {
         let hf: Double

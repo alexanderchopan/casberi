@@ -2718,6 +2718,7 @@ enum WalletIngest {
         var reached = false
         var unreached: [String] = []
         var icons: [(symbol: String, url: String)] = []
+        var moves: [HoldingMoves.Read] = []
         for (i, result) in holdings.enumerated() {
             guard let result else {   // this wallet unreached — Alchemy asks for it (§934), the set stands
                 unreached.append(routed[i].address)
@@ -2729,6 +2730,11 @@ enum WalletIngest {
                 // The mark this read named, into the book (prd §931) — the
                 // same cleaned symbol the cell will be keyed by.
                 if let icon = h.iconURL { icons.append((symbol: clean(h.symbol), url: icon)) }
+                // The day's move, for the Holdings box (prd §1090), keyed by
+                // the same cleaned symbol the tile is.
+                if let change = h.change1d, let price = h.price {
+                    moves.append(.init(symbol: clean(h.symbol), usd: h.amount * price, change: change))
+                }
                 // `clean`, not the raw symbol (fixed 2026-07-21, prd §160):
                 // this arm is the PRIMARY holdings read now, and it was the
                 // one path that skipped the shared label rule — so a spoofed
@@ -2741,6 +2747,7 @@ enum WalletIngest {
             }
         }
         TokenIconBook.note(icons)
+        HoldingMoves.note(moves)
         return (candidates, reached, unreached)
     }
 

@@ -55,7 +55,7 @@ enum MorphoDeFi {
     /// heads-up margin. One definition for both (`DeFiRisk.floor`, 2026-07-25);
     /// this comment used to point at Aave's private copy, which is the
     /// codebase noticing the duplication without fixing it.
-    private static var riskThreshold: Double { DeFiRisk.floor }
+    private static var riskThreshold: Double { DeFiRisk.alertLine }
 
     /// Positions below this stay invisible — `WalletIngest.holdingFloor`,
     /// the same line the treemap draws. Without it the measured dust

@@ -27,9 +27,16 @@ extension FeedScreen {
     /// that the board has always been a partial answer with nothing saying so.
     /// The list is where the rest live, which is the other reason it belongs
     /// here rather than behind a door.
+    /// Each holding's day move (`HoldingMoves`, prd §1090): the last read's,
+    /// while fresh; the demo's fixed table in the demo, which reaches nothing.
+    var walletHoldingMoves: [String: Double] {
+        DemoMode.isActive ? HoldingMoves.demo : HoldingMoves.current()
+    }
+
     @ViewBuilder
     var walletTokenListSection: some View {
         if let portfolio = portfolioShown, !portfolio.isEmpty {
+            let moves = walletHoldingMoves
             Section {
                 ForEach(portfolio.positions) { position in
                     Button {
@@ -74,7 +81,17 @@ extension FeedScreen {
                             // to the amount's left, so every amount ends on
                             // the same line.
                             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                                if portfolio.totalUSD > 0 {
+                                // **THE DAY'S MOVE, WHERE A READ HAS ONE (prd
+                                // §1090).** The box already draws each share;
+                                // the row says what the box's colour means.
+                                if let move = moves[HoldingMoves.key(position.symbol)] {
+                                    let flat = TokenChartStyle.isFlat(move)
+                                    Text(TokenChartStyle.changeText(move))
+                                        .dsText(.subhead12)
+                                        .foregroundStyle(flat ? DS.textTertiary
+                                                         : (move > 0 ? DS.confirmInk : DS.destructiveInk))
+                                        .monospacedDigit()
+                                } else if portfolio.totalUSD > 0 {
                                     let pct = Int((position.usd / portfolio.totalUSD * 100).rounded())
                                     if pct >= 1 {
                                         Text("\(pct)%")
@@ -91,6 +108,12 @@ extension FeedScreen {
                     }
                     .buttonStyle(RowPress())
                     .dsHover()
+                    .contextMenu {
+                        // ALERT ME (prd §1090): Markets' alerts, from the
+                        // money you hold. A token with no route has no price
+                        // to watch, so it offers none.
+                        if position.route != nil { walletHoldingAlertMenu(position) }
+                    }
                     .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                               leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                               bottom: DS.Space.s2, trailing: DS.Space.s4))
@@ -98,6 +121,55 @@ extension FeedScreen {
                     .listRowSeparator(.hidden)
                 }
             }
+        }
+    }
+
+    /// Markets' four alert choices (`PriceAlert.choices`), worded relative to
+    /// the price because the menu opens before the price is read.
+    @ViewBuilder
+    func walletHoldingAlertMenu(_ position: WalletPortfolio.Position) -> some View {
+        Section(String(localized: "Alert me when \(position.symbol)")) {
+            Button { walletSetHoldingAlert(position, choice: 0) } label: { Text("Rises 10%") }
+            Button { walletSetHoldingAlert(position, choice: 1) } label: { Text("Rises 25%") }
+            Button { walletSetHoldingAlert(position, choice: 2) } label: { Text("Falls 10%") }
+            Button { walletSetHoldingAlert(position, choice: 3) } label: { Text("Moves 10% in a day") }
+        }
+    }
+
+    /// Watches the token in Markets if it isn't yet — an alert is checked on
+    /// a watched token's price (prd §1081) — then sets the alert there, where
+    /// the Alerts tile lists it and its switch turns it off.
+    func walletSetHoldingAlert(_ position: WalletPortfolio.Position, choice: Int) {
+        guard !DemoMode.isActive else {
+            chrome.flash(String(localized: "Alerts work once you leave the demo."))
+            return
+        }
+        guard let routeString = position.route,
+              let r = TokenQuickRoute.from(sentinel: "@token:\(routeString):\(position.symbol)") else { return }
+        let context = modelContext
+        let store = bridges
+        Task { @MainActor in
+            var thing = r.watchedThing(in: context)
+            var price = thing.flatMap { TokenPulse.shared.pulse(for: $0)?.price ?? $0.watchPriceUsd }
+            if thing == nil {
+                guard let resolved = await TokenWatch.search(r.address).first(where: { $0.id == r.id }) else {
+                    chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to watch."))
+                    return
+                }
+                thing = TokenWatch.add(resolved, context: context) ?? r.watchedThing(in: context)
+                TokenWatch.registerBridge(store: store, context: context)
+                price = resolved.priceUsd.flatMap(Double.init)
+            }
+            guard let thing, thing.isLive, let ref = thing.sourceRef, let price, price > 0 else {
+                chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to watch."))
+                return
+            }
+            let choices = PriceAlert.choices(ref: ref, name: position.symbol, price: price)
+            guard choices.indices.contains(choice) else { return }
+            PriceAlertStore.shared.add(choices[choice])
+            DSHaptic.success()
+            chrome.flash(String(localized: "Alert set: \(position.symbol) \(WatchAlertsSection.title(choices[choice]).lowercased())"),
+                         tone: .success)
         }
     }
 
@@ -205,8 +277,11 @@ extension FeedScreen {
                 // everything below and settles it back. A verb acts and never
                 // scopes (GitHub's Watch, prd §1031).
                 onPick: { picked in
+                    // Follow is a tray in the room (prd §1090), as Social's
+                    // and Reading's are; the account page keeps its own field
+                    // behind the sliders disc beside the room's name.
                     if picked == .follow {
-                        route.pushBridge(.wallet)
+                        feedSheet = .walletFollow
                         return
                     }
                     chrome.walletSection = picked
@@ -264,7 +339,20 @@ extension FeedScreen {
                                       bottom: DSRoomChassis.contentGap, trailing: 0))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+            .task { walletFollowProbe() }
         }
+    }
+
+    /// `-walletFollow YES` — raise the Follow tray at mount (prd §1090;
+    /// NSLogs `walletFollow:`). Once per launch; a no-op in Release.
+    private func walletFollowProbe() {
+        #if DEBUG
+        guard !Self.walletFollowProbed,
+              UserDefaults.standard.bool(forKey: "walletFollow") else { return }
+        Self.walletFollowProbed = true
+        NSLog("[Casberi] walletFollow: raised")
+        feedSheet = .walletFollow
+        #endif
     }
 
     /// The watched wallets as deck cards, "All" first.
@@ -477,9 +565,12 @@ extension FeedScreen {
                                 Text(name)
                                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                                     .lineLimit(1)
+                                // What it can bear, against its debt (prd
+                                // §1090), else the market it is in.
+                                let tail = WalletRiskScale.fallLine(entry) ?? market
                                 (Text(entry.detail)
                                     .foregroundStyle(entry.atRisk ? DS.destructiveInk : DS.textTertiary)
-                                 + Text(market.isEmpty ? "" : " · \(market)")
+                                 + Text(tail.isEmpty ? "" : " · \(tail)")
                                     .foregroundStyle(DS.textTertiary))
                                     .dsText(.subhead12)
                                     .lineLimit(1)
@@ -487,12 +578,42 @@ extension FeedScreen {
                             Spacer(minLength: 0)
                         }
                         .padding(.vertical, DS.Space.s2)
+                        .contentShape(Rectangle())
                         .accessibilityElement(children: .combine)
+                        .contextMenu {
+                            // YOUR LINE (prd §1090): a borrow notifies when its
+                            // health falls under it. Lending only — a perp
+                            // carries its own distance and its own sweep.
+                            if !entry.id.hasPrefix("hl:") { walletAlertLineMenu }
+                        }
                     }
                 }
                 .listRowInsets(WalletCardStyle.rowInsets)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    /// "Tell me below …" — the health line a borrow notifies under, one
+    /// setting for every lending position (`DeFiRisk.alertLine`).
+    @ViewBuilder
+    var walletAlertLineMenu: some View {
+        let line = DeFiRisk.alertLine
+        Section(String(localized: "Tell me when health falls below")) {
+            ForEach(DeFiRisk.alertChoices, id: \.self) { choice in
+                Button {
+                    UserDefaults.standard.set(choice, forKey: DeFiRisk.alertLineKey)
+                    DSHaptic.success()
+                    chrome.flash(String(localized: "You'll hear when a borrow falls below \(choice.formatted(.number.precision(.fractionLength(1...2))))"),
+                                 tone: .success)
+                } label: {
+                    if choice == line {
+                        Label(choice.formatted(.number.precision(.fractionLength(1...2))), systemImage: "checkmark")
+                    } else {
+                        Text(choice.formatted(.number.precision(.fractionLength(1...2))))
+                    }
+                }
             }
         }
     }
@@ -1358,13 +1479,22 @@ extension FeedScreen {
     /// `capturedAt` is when it was read, not news.
     @ViewBuilder
     func walletComingUpSections(_ upcoming: [Thing], nextEventID: UUID?) -> some View {
-        walletDaySections(walletComingUpDays(upcoming), boundary: nil, nextEventID: nextEventID)
+        walletDaySections(walletComingUpDays(upcoming), boundary: nil,
+                          named: [Self.needsYouGroup], nextEventID: nextEventID)
     }
+
+    /// **"NEEDS YOU" LEADS COMING UP (prd §1090, Work's §1080 carried over).**
+    /// The undated rows — a Safe transaction in the queue, a deposit waiting
+    /// on proof — are the ones the box counts as "need you now", so their
+    /// group says so, named by what it is rather than a time word, in the
+    /// primary ramp (§740: only a day wears the brand hue).
+    static var needsYouGroup: String { String(localized: "Needs you") }
 
     /// The day sections both lists draw — the stream's and Coming up's.
     @ViewBuilder
     func walletDaySections(_ groups: [(String, [FeedRow])], boundary: String?,
                            ownMoves: [UUID: KeyedThing] = [:],
+                           named: Set<String> = [],
                            nextEventID: UUID?) -> some View {
         ForEach(Array(groups.enumerated()), id: \.element.0) { groupIndex, group in
             let (label, dayRows) = group
@@ -1390,7 +1520,8 @@ extension FeedScreen {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     // The day wears the brand hue, as every day header in
                     // the feed does (prd §740); this was the one in primary.
-                    Text(label).dsText(.heading20).foregroundStyle(DS.brandInk)
+                    Text(label).dsText(.heading20)
+                        .foregroundStyle(named.contains(label) ? DS.textPrimary : DS.brandInk)
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4)
@@ -1500,26 +1631,40 @@ extension FeedScreen {
     func walletMoveRow(_ thing: Thing, index: Int) -> some View {
         let received = thing.transferDirection == "received"
         let sign = received ? "+" : "−"
+        // **WHO, THEN DOLLARS, THEN THE QUANTITY ON THE LINE (prd §1090).**
+        // A card spend names no merchant on chain, so its title was "Spent
+        // $12.40 with Gnosis Pay" beside "−12.40 USDC": the amount twice and
+        // the card cut off. Its who is the card; the dollars stand on the
+        // right; the token's quantity moves to the line under the name.
         let who = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
             ?? thing.counterpartyAddress.map(WalletStore.shortAddress)
-            ?? thing.title
+            ?? (WalletCards.isSpend(thing) ? BridgeCatalog.seatName(forSource: thing.source) : thing.title)
         let account = selectedWallet == nil && wallet.addresses.count > 1
             ? WalletStore.shared.label(forAddress: thing.walletAddress) : nil
+        let parsed = WalletFlow.parseAmount(thing.transferAmount ?? "")
+        // A dollar coin's quantity IS dollars; anything else needs the read's price.
+        let usd = thing.transferUSD.flatMap { $0.isFinite ? $0 : nil }
+            ?? (WalletStables.isDollar(parsed.symbol) ? parsed.amount : nil)
         // **AN AMOUNT THAT READS AS NOTHING WEARS NO SIGN (§83).** Dollars
         // where they round to something; else the token's own quantity; and a
         // stamp that says no quantity ("ETH") or only zeros ("0.0000 ETH") is
         // drawn quiet and unsigned, never "+$0".
-        let amount: (text: String, known: Bool) = {
-            if let usd = thing.transferUSD, usd.isFinite {
-                let money = WalletValue.money(usd)
-                if money.contains(where: { ("1"..."9").contains($0) }) { return (sign + money, true) }
+        let amount: (text: String, known: Bool, dollars: Bool) = {
+            if let usd {
+                let money = WalletValue.payment(usd)
+                if money.contains(where: { ("1"..."9").contains($0) }) { return (sign + money, true, true) }
             }
             let raw = thing.transferAmount ?? ""
-            if raw.contains(where: { ("1"..."9").contains($0) }) { return (sign + raw, true) }
+            if raw.contains(where: { ("1"..."9").contains($0) }) { return (sign + raw, true, false) }
             // A bare unit ("ETH") with no number read as a broken row (prd
             // §953): draw nothing on the right; a real zero keeps its "0".
-            return raw.contains(where: \.isNumber) ? (raw, false) : ("", false)
+            return raw.contains(where: \.isNumber) ? (raw, false, false) : ("", false, false)
         }()
+        // The quantity rides the line only when the right side is dollars —
+        // otherwise it IS the right side, and saying it twice is the defect.
+        let quantity = amount.dollars && (thing.transferAmount ?? "").contains(where: { ("1"..."9").contains($0) })
+            ? WalletValue.transferAmount(thing) : nil
+        let line = [account, quantity].compactMap { $0 }.joined(separator: " · ")
         Button {
             openThing(thing)
         } label: {
@@ -1547,8 +1692,8 @@ extension FeedScreen {
                     Text(who)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                    if let account {
-                        Text(account)
+                    if !line.isEmpty {
+                        Text(line)
                             .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
@@ -1580,7 +1725,7 @@ extension FeedScreen {
         // What is pending with no date (a Safe transaction in the queue, a
         // deposit under review, prd §1048 step 4) is waiting NOW, so it leads
         // under a time word rather than dropping off the list it heads.
-        let now = String(localized: "Now")
+        let now = Self.needsYouGroup
         for thing in upcoming.live where thing.dueAt == nil || (thing.dueAt ?? .distantFuture) <= .now {
             if groups[now] == nil { order.append(now) }
             groups[now, default: []].append(.single(thing))
@@ -1651,6 +1796,8 @@ extension FeedScreen {
                     // line it always belonged with; the header is the card's
                     // title and always was.
                     GenRender(id: "root", els: blockStream.els)
+                        // The day's heat map (prd §1090): each tile's move.
+                        .environment(\.holdingsDayMoves, walletHoldingMoves)
                         // A tapped holdings cell opens its token's chart
                         // (2026-07-14): the thing sheet when watched, the quick
                         // sheet when it's just held; a routeless native-coin

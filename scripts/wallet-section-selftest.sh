@@ -372,9 +372,10 @@ CHROME="Casberi/Casberi/Design/DSRoomScopeChrome.swift"
 # head's place in the order is the `lead` call and `lead` must draw the crown.
 grep -q "if let showing { crown(showing) }" "$CHROME" \
   || fail "drift: the chrome's lead box no longer draws the crown on Home (§765)"
-# The wallet's verb is handed to the chrome, and the tap acts (prd §1039).
-[[ "$chrome_fn" == *"verbs: WalletSection.verbs"* && "$chrome_fn" == *"route.pushBridge(.wallet)"* ]] \
-  || fail "drift: the wallet's Follow tile is not handed to the chrome, or no longer opens the follow field (prd §1039)"
+# The wallet's verb is handed to the chrome, and the tap acts (prd §1039) —
+# in the room, as the Follow tray, since prd §1090.
+[[ "$chrome_fn" == *"verbs: WalletSection.verbs"* && "$chrome_fn" == *"feedSheet = .walletFollow"* ]] \
+  || fail "drift: the wallet's Follow tile is not handed to the chrome, or no longer raises the Follow tray (prd §1039, §1090)"
 
 # ── §757: the rows stand on nothing, and Home reserves no box ────────────────
 # **THE PLATES** (user, 2026-09-15: "they should not have cards"). Actions and

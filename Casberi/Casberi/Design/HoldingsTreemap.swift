@@ -136,6 +136,13 @@ enum HoldingsTreemapLayout {
     }
 }
 
+extension EnvironmentValues {
+    /// Each holding's day move by upper-cased symbol (`HoldingMoves`, prd
+    /// §1090). Empty everywhere but the Wallet's Holdings box, where a fresh
+    /// read turns the grey blocks into the day's heat map.
+    @Entry var holdingsDayMoves: [String: Double] = [:]
+}
+
 struct HoldingsTreemap: View {
     struct Holding: Equatable {
         let id: String
@@ -160,6 +167,7 @@ struct HoldingsTreemap: View {
     /// The lit tile's share as drawn, so "Other" can state its value.
     @State private var litShare: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.holdingsDayMoves) private var dayMoves
 
     static let gap: CGFloat = 4
     static let minSide: CGFloat = 44
@@ -198,9 +206,44 @@ struct HoldingsTreemap: View {
                                 ? HoldingsTreemapLayout.percent(litShare)
                                 : WalletValue.money(litShare * sum),
                             caption: String(localized: "Other"))
+        } else if let today = todayCaption {
+            DSFigureReading(number: total, caption: today)
         } else {
             DSFigureReading(number: total, caption: caption)
         }
+    }
+
+    /// The day's move for a tile, when a fresh read has one.
+    private func move(_ id: String) -> Double? {
+        dayMoves.isEmpty || id == HoldingsTreemapLayout.otherID ? nil : dayMoves[HoldingMoves.key(id)]
+    }
+
+    /// The biggest move among the holdings, the full strength of the board.
+    private var widest: Double {
+        holdings.compactMap { move($0.id) }.map(abs).max() ?? 0
+    }
+
+    /// "2 up, 1 down today", Markets' box line (§1081), when any tile moved.
+    private var todayCaption: String? {
+        let moves = holdings.compactMap { move($0.id) }
+        guard !moves.isEmpty else { return nil }
+        let t = HoldingMoves.tally(moves)
+        switch (t.up, t.down) {
+        case (0, 0): return String(localized: "Flat today")
+        case (_, 0): return String(localized: "\(t.up) up today")
+        case (0, _): return String(localized: "\(t.down) down today")
+        default:     return String(localized: "\(t.up) up, \(t.down) down today")
+        }
+    }
+
+    /// A tile's fill: the tint when pressed; else its move's hue at its
+    /// strength against the board's biggest move (Markets' rule, §1081); a
+    /// flat or unread move keeps the plain fill (§83).
+    private func fill(_ id: String, lit isLit: Bool) -> Color {
+        if isLit { return DS.tint }
+        guard let m = move(id), abs(m) >= 0.0005, widest > 0 else { return DS.fillFaint }
+        let strength = min(1, abs(m) / widest)
+        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.22 + 0.58 * strength)
     }
 
     @ViewBuilder
@@ -223,7 +266,23 @@ struct HoldingsTreemap: View {
                     AssetMark(name: tile.id, size: HoldingsTreemapLayout.markSize(for: tile.rect))
                 }
                 Spacer(minLength: 0)
-                if showsShares {
+                if let m = move(tile.id) {
+                    // The heat map's tile (prd §1090): its dollars where it
+                    // has the room, and the day's move.
+                    if large, let holding = holdings.first(where: { $0.id == tile.id }) {
+                        Text(holding.display ?? WalletValue.money(holding.usd))
+                            .dsText(.label12)
+                            .monospacedDigit()
+                            .foregroundStyle(isLit ? Color.white : DS.textPrimary.opacity(0.9))
+                            .lineLimit(1)
+                    }
+                    Text(TokenChartStyle.changeText(m))
+                        .dsText(large ? .stat24 : (small ? .label12 : .price17))
+                        .monospacedDigit()
+                        .foregroundStyle(isLit ? Color.white : DS.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                } else if showsShares {
                     Text(HoldingsTreemapLayout.percent(tile.share))
                         .dsText(large ? .stat24 : (small ? .label12 : .price17))
                         .monospacedDigit()
@@ -235,14 +294,16 @@ struct HoldingsTreemap: View {
             .padding(small ? DS.Space.s2 : DS.Space.s3)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(RoundedRectangle(cornerRadius: small ? 12 : 14, style: .continuous)
-                .fill(isLit ? DS.tint : DS.fillFaint))
+                .fill(fill(tile.id, lit: isLit)))
             .opacity(lit != nil && !isLit ? 0.35 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(showsShares
+        .accessibilityLabel(move(tile.id).map {
+                Text("\(tile.id), \(HoldingsTreemapLayout.percent(tile.share)), \(TokenChartStyle.changeText($0)) today")
+            } ?? (showsShares
             ? Text("\(isOther ? String(localized: "Other") : tile.id), \(HoldingsTreemapLayout.percent(tile.share))")
-            : Text(isOther ? String(localized: "Other") : tile.id))
+            : Text(isOther ? String(localized: "Other") : tile.id)))
         .accessibilityAddTraits(isLit ? .isSelected : [])
     }
 }

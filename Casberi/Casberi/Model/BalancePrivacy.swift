@@ -142,6 +142,14 @@ enum WalletValue {
         BalancePrivacy.shared.value(TokenStats.compact(usd))
     }
 
+    /// "$12.40" — a single payment's dollars to the cent below $1,000 (prd
+    /// §1090), where the compact voice would round a card spend to "$12";
+    /// compact above it. Gated the same way.
+    static func payment(_ usd: Double) -> String {
+        guard abs(usd) < 1000 else { return money(usd) }
+        return BalancePrivacy.shared.value(abs(usd).formatted(.currency(code: "USD")))
+    }
+
     /// "$8,924" for display — the EXACT dollar voice §292 uses on the approvals
     /// and address cards, where the whole job is ordering figures against each
     /// other and compacting would throw away the resolution the ranking is made

@@ -343,6 +343,7 @@ struct WalletBalanceHeadline: View {
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
                                // Wait out the draw-on below, then land (§171).
                                markDelay: 0.95,
+                               ringsNewestMark: true,
                                // Scrub (2026-08-03, §297): a press-then-drag —
                                // or a resting cursor on the Mac — rolls the
                                // crown number to that sample. The sheet

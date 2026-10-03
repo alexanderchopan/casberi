@@ -249,44 +249,30 @@ struct WalletWatchField: View {
 
     private func resolvePreview() async {
         let asked = draft
-        guard let target = NameResolve.followTarget(of: asked) else { return }
+        guard NameResolve.followTarget(of: asked) != nil else { return }
         try? await Task.sleep(for: .milliseconds(450))
         guard !Task.isCancelled else { return }
-        switch target {
-        case .name:
-            let hit = await NameResolve.resolve(asked)
-            guard !Task.isCancelled, let hit else { return }
-            withAnimation(DS.Motion.standard) {
-                resolvedDraft = WalletResolvedDraft(input: asked, address: hit)
-            }
-        case .worldAppUsername(let name):
-            let lookup = await WorldAppDeFi.holder(ofUsername: name)
-            guard !Task.isCancelled else { return }
-            withAnimation(DS.Motion.standard) {
-                // A retyped name asks again, and the new answer replaces
-                // whichever half the last one left for the same draft.
-                if resolvedDraft?.input == asked { resolvedDraft = nil }
-                if missedDraft?.input == asked { missedDraft = nil }
-                switch lookup {
-                case .found(let holder):
-                    resolvedDraft = WalletResolvedDraft(input: asked, address: holder.address,
-                                                        worldAppName: holder.name)
-                case .notFound:
-                    missedDraft = WalletMissedDraft(input: asked, note: Self.noWorldAppUser(asked))
-                case .unreachable:
-                    missedDraft = WalletMissedDraft(input: asked, note: Self.worldAppUnreachable(asked))
+        let answer = await WalletFollow.resolve(asked)
+        guard !Task.isCancelled else { return }
+        withAnimation(DS.Motion.standard) {
+            // A retyped name asks again, and the new answer replaces
+            // whichever half the last one left for the same draft.
+            if resolvedDraft?.input == asked { resolvedDraft = nil }
+            if missedDraft?.input == asked { missedDraft = nil }
+            switch answer {
+            case .found(let target)?:
+                resolvedDraft = WalletResolvedDraft(input: asked, address: target.address,
+                                                    worldAppName: target.worldAppName)
+            case .missed(let note)?:
+                // A name that found nobody says so; an ENS miss stays quiet
+                // in the preview, as it always has, and is worded on Follow.
+                if case .worldAppUsername? = NameResolve.followTarget(of: asked) {
+                    missedDraft = WalletMissedDraft(input: asked, note: note)
                 }
+            case nil:
+                break
             }
         }
-    }
-
-    // One spelling each, shared by the preview and the Follow press.
-    private static func noWorldAppUser(_ name: String) -> String {
-        String(localized: "No World App user is named \(name).")
-    }
-
-    private static func worldAppUnreachable(_ name: String) -> String {
-        String(localized: "Couldn't reach World App to look up \(name).")
     }
 
     // MARK: - Watching
@@ -303,55 +289,22 @@ struct WalletWatchField: View {
     private func watch() {
         let input = draft
         guard !input.isEmpty else { return }
-        if case .worldAppUsername(let name)? = NameResolve.followTarget(of: input) {
-            Task {
-                switch await WorldAppDeFi.holder(ofUsername: name) {
-                case .found(let holder):
-                    // A World App wallet keeps its money on World Chain; the
-                    // chain is on by default (§788), and this keeps it on for
-                    // somebody who switched it off, as a `.sol` name does
-                    // for Solana.
-                    WalletChainStore.shared.ensureEnabled("worldchain-mainnet")
-                    addWatched(address: holder.address, label: holder.name)
-                case .notFound:
-                    resultIsError = true
-                    result = Self.noWorldAppUser(input)
-                case .unreachable:
-                    resultIsError = true
-                    result = Self.worldAppUnreachable(input)
-                }
+        Task {
+            switch await WalletFollow.resolve(input) {
+            case .found(let target)?:
+                addWatched(target)
+            case .missed(let note)?:
+                resultIsError = true
+                result = note
+            case nil:
+                // Not an address and not a name: the store words it.
+                addWatched(WalletFollow.Target(address: input, label: "", chain: nil))
             }
-            return
-        }
-        if let family = NameResolve.family(of: input) {
-            Task {
-                guard let address = await NameResolve.resolve(input) else {
-                    resultIsError = true
-                    // The advice differs by family because the fallback does:
-                    // a `.sol` name's address is base58 and everything else's
-                    // is `0x`, and telling somebody to paste the wrong shape
-                    // is worse than not telling them anything.
-                    result = family == .sns
-                        ? String(localized: "Couldn't resolve \(input) — check the name, or paste the address.")
-                        : String(localized: "Couldn't resolve \(input) — check the name or paste a 0x address.")
-                    return
-                }
-                if family == .sns { WalletChainStore.shared.ensureEnabled("solana-mainnet") }
-                addWatched(address: address, label: input)
-            }
-        } else {
-            // A legacy/P2SH Bitcoin address is base58-shaped too, the same
-            // band Solana pubkeys occupy — check the checksum-verified kind
-            // FIRST, or a pasted BTC address flips Solana on by mistake.
-            if SNS.isAddress(input), !BitcoinAddress.isAddress(input) {
-                WalletChainStore.shared.ensureEnabled("solana-mainnet")
-            }
-            addWatched(address: input, label: "")
         }
     }
 
-    private func addWatched(address: String, label: String) {
-        switch wallet.outcome(ofAdding: address, label: label) {
+    private func addWatched(_ target: WalletFollow.Target) {
+        switch WalletFollow.follow(target) {
         case .added:
             // Watching is consent (prd §207): the wallet-riding seats reflect
             // it immediately, not only at the next foreground.

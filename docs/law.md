@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1216 of 1275 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1217 of 1276 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1276,7 +1276,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §936 — The wallet family's tiles speak one grammar: one number over one caption, bars for "how many of each", one accent and… (part superseded by §944, §952)
 - §937 — The room's corner door is deleted: the tray's Manage is the one door to a room's account page (amended by §1033; part superseded by §958)
 - §938 — A day whose only row is the cover draws no header
-- §939 — The Wallet's holdings are a true-area treemap: the total alone, grey tiles with the mark and the share, the tail as o… (part superseded by §957)
+- §939 — The Wallet's holdings are a true-area treemap: the total alone, grey tiles with the mark and the share, the tail as o… (amended by §1090; part superseded by §957)
 - §940 — The Wallet's Accounts: the crown counts what it draws, the list is yours then the accounts tied to them, a row names… (part superseded by §941, §954)
 - §941 — The Wallet's Accounts crown is your accounts, face by face, and a face picks the account
 - §942 — The Wallet's Activity is the moves in time: one number over one noun, bars to the floor, the window as slim text, and…
@@ -1284,7 +1284,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §944 — The Wallet's Permissions: the dollars in reach over the holders' marks, and two lists, Delegations and Approvals, in…
 - §945 — The Wallet's Positions: the total at work over one bar per protocol, and Lending, Liquidity and Perps as rows of one…
 - §946 — The demo is marked ONCE: the blue pill stands in All too, and the All feed's `DemoLead` is deleted
-- §947 — The Wallet's Risk is Leveraged then Worth a look, and Safe signatures lead Permissions; the face shrinks about its ce…
+- §947 — The Wallet's Risk is Leveraged then Worth a look, and Safe signatures lead Permissions; the face shrinks about its ce… (amended by §1090)
 - §948 — The devnets' Accounts are your accounts face by face, like the Wallet's, and a devnet crown sits on the Wallet's line (amended by §1039)
 - §949 — The devnets' Holdings are the Wallet's treemap over test money: the count, never a dollar total, and a pressed tile r…
 - §950 — The devnets' Activity lists read like the Wallet's: moves under the day, no ages, no strips, one plain figure, on the…
@@ -1369,8 +1369,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
-- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084)
-- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078)
+- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084, §1090)
+- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078, §1090)
 - §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
 - §1043 — `enrichedText` is the sheet's body and never a row's line; provider-authored display copy stays on `summary` and `pos…
 - §1044 — On the phone, a room draws no capsule beside the face: its venues are the tray and a swipe, and its "whose" control s…
@@ -1437,6 +1437,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1086 — Social gets its tiles: All · To you · Follow; what is to you leads All
 - §1087 — Day's box is Box B: the next thing over today's shape
 - §1089 — Frames says what you did, not how it was built: rows titled by who, one word for row and sheet, your own accounts in…
+- §1090 — The Wallet, Markets' way: Follow in the room, Holdings as the day's heat map, one line per move, Needs you leads Comi…
 
 ## Dead rulings → what replaced them (generated)
 

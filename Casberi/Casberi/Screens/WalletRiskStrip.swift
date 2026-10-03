@@ -47,6 +47,7 @@ struct WalletRiskStrip: View {
     @State private var lit: String?
 
     private static let columnCap = 4
+    private static let labelRoom: CGFloat = 20
     private var shown: [WalletRiskScale.Entry] { Array(entries.prefix(Self.columnCap)) }
     private var pressed: WalletRiskScale.Entry? { lit.flatMap { id in shown.first { $0.id == id } } }
     /// Closest to the floor first — the entries come sorted that way.
@@ -127,14 +128,22 @@ struct WalletRiskStrip: View {
     private func columns(height: CGFloat) -> some View {
         HStack(alignment: .bottom, spacing: DS.Space.s3) {
             ForEach(shown) { entry in
-                let h = max(8, clamped(entry.headroom) * height)
+                // Room for the distance over the bar (prd §1090).
+                let h = max(8, clamped(entry.headroom) * max(0, height - Self.labelRoom))
                 let quiet = lit != nil && lit != entry.id
                 Button {
                     DSHaptic.selection()
                     lit = lit == entry.id ? nil : entry.id
                 } label: {
-                    VStack(spacing: 0) {
+                    VStack(spacing: 4) {
                         Spacer(minLength: 0)
+                        // **EACH BAR SAYS ITS DISTANCE (prd §1090)** — the room
+                        // before liquidation, the height in words.
+                        Text(verbatim: "\(Int((clamped(entry.headroom) * 100).rounded(.down)))%")
+                            .dsText(.label12)
+                            .monospacedDigit()
+                            .foregroundStyle(entry.atRisk ? DS.destructiveInk : DS.textSecondary)
+                            .lineLimit(1)
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .fill(entry.atRisk ? DS.destructive : DS.tint)
                             .frame(height: h)

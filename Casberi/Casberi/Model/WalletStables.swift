@@ -39,6 +39,19 @@ enum WalletStables {
         "EURE", "EURC", "EURS", "AGEUR", "EURT", "GBPE", "GBPT",
     ]
 
+    /// The US-dollar half of `symbols` — a quantity of one IS a dollar
+    /// amount, so a move in it can be stated in dollars with no rate (prd
+    /// §1090). The euro and sterling coins are not here: they need a rate.
+    static let dollarSymbols: Set<String> = [
+        "USDC", "USDC.E", "USDBC", "USDT", "USDT.E", "DAI", "USDS", "USDE", "PYUSD",
+        "TUSD", "FDUSD", "LUSD", "SUSD", "CRVUSD", "GHO", "FRAX", "BUSD", "RLUSD",
+        "USDG", "USDP", "GUSD", "USDD", "USD0", "DOLA", "USDL", "AUSD", "USDF",
+    ]
+
+    static func isDollar(_ symbol: String) -> Bool {
+        dollarSymbols.contains(symbol.trimmingCharacters(in: .whitespaces).uppercased())
+    }
+
     /// Whether a held symbol is stable. Case-folded because the symbol
     /// reaching us is whatever the token contract says it is, and casing is
     /// not consistent across chains or sources.

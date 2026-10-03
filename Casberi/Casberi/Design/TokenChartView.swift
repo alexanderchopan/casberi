@@ -260,6 +260,10 @@ struct TokenChartPlot: View {
     /// Where along the series you started watching (fractional, like a
     /// mark's x), drawn as the brand's ring on the line (prd §1081).
     var watchedX: Double? = nil
+    /// The newest mark wears the brand's ring (prd §1090): the Wallet's Home
+    /// keeps its line, and the box's standing rule — the newest thing, in
+    /// every room (§1085) — is met ON it, a tap from the move it marks.
+    var ringsNewestMark = false
     /// Price levels to rule across the plot (a price alert's, prd §1081),
     /// drawn only where they fall inside it: a level off the plot is not
     /// squeezed in by rescaling the line.
@@ -504,15 +508,25 @@ struct TokenChartPlot: View {
     /// on the line, never a second series competing with it.
     @ViewBuilder
     private func markLayer(proxy: ChartProxy, plot: CGRect) -> some View {
+        let newest = ringsNewestMark ? marks.max(by: { $0.x < $1.x })?.id : nil
         ForEach(Array(marks.enumerated()), id: \.element.id) { i, mark in
             if let x = proxy.position(forX: mark.x),
                let y = proxy.position(forY: value(at: mark.x)) {
-                Circle()
-                    .fill(accent)
-                    .frame(width: 5, height: 5)
-                    .overlay {
-                        Circle().stroke(accent.opacity(0.3), lineWidth: 4)
+                Group {
+                    if mark.id == newest {
+                        Circle()
+                            .strokeBorder(DS.brand, lineWidth: 2.5)
+                            .background(Circle().fill(DS.surfaceSheet))
+                            .frame(width: 12, height: 12)
+                    } else {
+                        Circle()
+                            .fill(accent)
+                            .frame(width: 5, height: 5)
+                            .overlay {
+                                Circle().stroke(accent.opacity(0.3), lineWidth: 4)
+                            }
                     }
+                }
                     .position(x: plot.minX + x, y: plot.minY + y)
                     // The marks LAND (prd §171, 2026-07-22) — they wait for the
                     // line to finish drawing itself, then spring in left to

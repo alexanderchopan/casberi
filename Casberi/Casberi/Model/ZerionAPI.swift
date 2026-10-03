@@ -101,6 +101,9 @@ enum ZerionAPI {
         /// nil when Zerion lists none — junk mostly. Read into `TokenIconBook`
         /// by the ingest (prd §931); the parser keeps only `cdn.zerion.io`.
         var iconURL: String? = nil
+        /// The position's day change as a fraction (`changes.percent_1d`), for
+        /// the Holdings box's heat map (prd §1090). Nil when Zerion sends none.
+        var change1d: Double? = nil
     }
 
     /// One response's `data` array, or nil when the call did not answer with
@@ -277,8 +280,11 @@ enum ZerionAPI {
                 }
             let icon = ((info?["icon"] as? [String: Any])?["url"] as? String)
                 .flatMap { TokenIconBook.accepts($0) ? $0 : nil }
+            let change = doubleValue((attrs["changes"] as? [String: Any])?["percent_1d"])
+                .flatMap { $0.isFinite ? $0 / 100 : nil }
             out.append(Holding(symbol: clean(symbol), contract: contract, network: network,
-                               amount: amount, price: price, owner: owner, iconURL: icon))
+                               amount: amount, price: price, owner: owner, iconURL: icon,
+                               change1d: change))
         }
         return out
     }
