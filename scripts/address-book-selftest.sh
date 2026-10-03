@@ -102,6 +102,8 @@ PY
 }
 strip_comments "$SCREEN" > "$TMP/screen-bare.swift"
 strip_comments "$FIELD"  > "$TMP/field-bare.swift"
+strip_comments "Casberi/Casberi/Model/WalletFollow.swift" > "$TMP/follow-bare.swift"
+strip_comments "Casberi/Casberi/Screens/WalletFollowSheet.swift" > "$TMP/tray-bare.swift"
 strip_comments "$UNWATCH" > "$TMP/unwatch-bare.swift"
 strip_comments "$UNFOLLOW" > "$TMP/unfollow-bare.swift"
 strip_comments "$PEOPLE" > "$TMP/people-bare.swift"
@@ -145,8 +147,12 @@ grep -q 'static func summaries(in context: ModelContext)' "$ACTIVITY" \
 #
 # The strongest is the NEGATIVE: `outcome(ofAdding:)` is the one call that
 # enrols an address, and it may appear in the roster and nowhere else.
-grep -q 'outcome(ofAdding:' "$TMP/field-bare.swift" \
-  || { echo "✗ nothing watches anything — WalletWatchField is the only place that may (§461/§466)"; exit 1; }
+# **ONE WORDING DOOR, TWO WAYS IN (prd §1090).** The enrolling call moved
+# from the field into `WalletFollow.follow`, which the account page's field and
+# the room's Follow tray both call, so a paste is answered one way wherever it
+# is typed. The field must still reach it; nothing else may word a watch.
+grep -q 'WalletFollow.follow(' "$TMP/field-bare.swift" \
+  || { echo "✗ nothing watches anything — WalletWatchField no longer follows through WalletFollow (§461/§466/§1090)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/screen-bare.swift" \
   && { echo "✗ WalletScreen calls outcome(ofAdding:) directly again — that call belongs to WalletWatchField alone, or the setup screen and the book answer a paste two different ways (§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/unwatch-bare.swift" \
@@ -175,8 +181,14 @@ count_of() { python3 -c "import sys;print(open(sys.argv[1]).read().count(sys.arg
 # and it watches through `outcome(ofAdding:)` so the cap and the duplicate case
 # are answered in words rather than swallowed. §511's row menu stays on the
 # shared row in $VIEWS (counted below). Nothing else may watch.
-[[ "$(count_of "$TMP/field-bare.swift" 'wallet.outcome(ofAdding:')" == "1" ]] \
+[[ "$(count_of "$TMP/follow-bare.swift" 'outcome(ofAdding:')" == "1" ]] \
+  || { echo "✗ WalletFollow has other than exactly one watch door (§498/§690/§1090)"; exit 1; }
+[[ "$(count_of "$TMP/field-bare.swift" 'WalletFollow.follow(')" == "1" ]] \
   || { echo "✗ the Wallet page's field has other than exactly one watch door (§498/§690)"; exit 1; }
+[[ "$(count_of "$TMP/tray-bare.swift" 'WalletFollow.follow(')" == "1" ]] \
+  || { echo "✗ the Wallet's Follow tray has other than exactly one watch door (§1090)"; exit 1; }
+grep -q 'outcome(ofAdding:' "$TMP/field-bare.swift" "$TMP/tray-bare.swift" \
+  && { echo "✗ a follow door calls outcome(ofAdding:) itself — the wording belongs to WalletFollow (§1090)"; exit 1; }
 [[ "$(count_of "$TMP/views-bare.swift" 'WalletStore.shared.add(')" == "1" ]] \
   || { echo "✗ the address card has other than exactly one watch door — §511 allows the overflow menu's Watch row and nothing else"; exit 1; }
 # The card may only ADD. Stopping a watch carries a corpus prune, §511's
