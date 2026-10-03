@@ -220,6 +220,29 @@ final class CompanyQuotes {
     private var inFlight: Set<String> = []
     private static let freshFor: TimeInterval = 600
 
+    /// The demo's quotes (prd §1082): sample prices near the real ones for
+    /// the names a viewer would know, a fixed sample for the rest, and a day
+    /// move from the ticker itself — the same every launch, never a network
+    /// read, so Markets' index and its heat map draw in the demo as they do
+    /// for real. The demo is "not your things"; these are not prices.
+    private static let demoPrices: [String: Double] = [
+        "AAPL": 254, "MSFT": 520, "AMZN": 230, "GOOGL": 250, "META": 760, "NVDA": 180,
+        "TEAM": 160, "NET": 210, "GTLB": 45, "CRM": 250, "SNAP": 8, "PINS": 34,
+        "SPOT": 690, "RDDT": 220, "DUOL": 280, "HOOD": 140, "COIN": 330, "PYPL": 68,
+        "SHOP": 150, "DDOG": 135, "NOW": 920, "ADBE": 350, "TWLO": 105, "DBX": 30,
+    ]
+
+    private func seedDemo(_ companies: [CompanyPacks.Company]) {
+        for company in companies {
+            guard let key = company.listing.key, quotes[key] == nil,
+                  let ticker = company.listing.ticker else { continue }
+            let seed = ticker.unicodeScalars.reduce(UInt32(7)) { ($0 &* 31) &+ $1.value }
+            let change = (Double(seed % 900) / 100 - 4) / 100        // −4% … +5%
+            let price = Self.demoPrices[ticker.uppercased()] ?? Double(20 + seed % 280)
+            quotes[key] = CompanyQuote(price: price, change: change, marketCap: nil, at: .now)
+        }
+    }
+
     func quote(_ listing: CompanyPacks.Listing) -> CompanyQuote? {
         listing.key.flatMap { quotes[$0] }
     }
@@ -228,7 +251,10 @@ final class CompanyQuotes {
     func load(_ companies: [CompanyPacks.Company]) async {
         // The demo reaches nothing (verify's "Demo reaches nothing"): a demo
         // company row draws without a quote rather than asking Nasdaq.
-        if DemoMode.isActive { return }
+        if DemoMode.isActive {
+            seedDemo(companies)
+            return
+        }
         let stale = companies.map(\.listing).filter { listing in
             guard let key = listing.key, !inFlight.contains(key) else { return false }
             guard let q = quotes[key] else { return true }

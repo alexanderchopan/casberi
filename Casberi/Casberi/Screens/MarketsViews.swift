@@ -16,6 +16,8 @@ struct WatchHeatBox: View {
     let down: Int
     let watched: Int
     @Binding var span: WatchRanges.Span
+    /// The index's box reads one day only (its quotes carry the day).
+    var showsSpans = true
     let open: (String) -> Void
 
     var body: some View {
@@ -23,7 +25,7 @@ struct WatchHeatBox: View {
             HStack(spacing: DS.Space.s2) {
                 summary
                 Spacer(minLength: 0)
-                ForEach(WatchRanges.Span.allCases) { s in
+                ForEach(showsSpans ? WatchRanges.Span.allCases : []) { s in
                     Button {
                         DSHaptic.selection()
                         withAnimation(DS.Motion.standard) { span = s }
@@ -356,5 +358,59 @@ struct WatchAlertsSection: View {
         case .move:
             return title(choice)
         }
+    }
+}
+
+// MARK: - The index (prd §1082)
+
+/// One company in the index: the app you know it by, its name and ticker over
+/// the apps it makes, its price and day, and the star.
+struct IndexRow: View {
+    let company: CompanyPacks.Company
+    let apps: [String]
+    let quote: CompanyQuote?
+    let watched: Bool
+    let star: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            BridgeIcon(name: company.seats.first ?? company.name, size: DS.Mark.row)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: company.name)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                Text(verbatim: ([company.listing.ticker].compactMap(\.self) + [apps.joined(separator: ", ")])
+                        .joined(separator: " · "))
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+            }
+            Spacer(minLength: DS.Space.s2)
+            if let quote {
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(TokenChartStyle.priceText(quote.price))
+                        .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                    if let change = quote.change {
+                        let flat = TokenChartStyle.isFlat(change)
+                        Text(TokenChartStyle.changeText(change))
+                            .dsText(.subhead12).fontWeight(.semibold).monospacedDigit()
+                            .foregroundStyle(flat ? DS.textTertiary : (change > 0 ? DS.confirmInk : DS.destructiveInk))
+                    }
+                }
+            }
+            if let star {
+                Button(action: star) {
+                    Image(systemName: watched ? "star.fill" : "star")
+                        .dsGlyph(.title, weight: .regular)
+                        .foregroundStyle(watched ? DS.brand : DS.textTertiary)
+                        .symbolEffect(.bounce, value: watched)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(watched ? String(localized: "Stop watching \(company.name)")
+                                                 : String(localized: "Watch \(company.name)")))
+                .accessibilityAddTraits(watched ? .isSelected : [])
+            }
+        }
+        .frame(minHeight: 56)
     }
 }

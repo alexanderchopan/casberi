@@ -163,6 +163,22 @@ struct WatchAddSheet: View {
     // MARK: - As you type
 
     @ViewBuilder private var results: some View {
+        // The index first (prd §1082): a company, its ticker, or an app it
+        // makes — "slack" finds Salesforce — instant, from the catalogue.
+        let indexHits = Array(MarketsIndex.search(query, in: TokensScope.everyCompany.map(MarketsWatch.entry))
+            .prefix(5))
+        let byName = Dictionary(TokensScope.everyCompany.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
+        let companies = indexHits.compactMap { byName[$0.name] }
+        if !companies.isEmpty {
+            head(String(localized: "Behind your apps"))
+            ForEach(companies) { company in
+                let on = company.listing.ticker.map { watchedSymbols.contains($0.uppercased()) } ?? false
+                IndexRow(company: company, apps: company.seats,
+                         quote: CompanyQuotes.shared.quote(company.listing), watched: on,
+                         star: company.listing == .unlisted ? nil : { toggle(company: company, on: on) })
+                    .padding(.horizontal, DS.Space.s4)
+            }
+        }
         let chains = Array(Set(tokens.map(\.chain))).sorted()
         let shownTokens = stocksOnly ? [] : tokens.filter { chain == nil || $0.chain == chain }
         let shownStocks = chain == nil ? stocks : []
@@ -181,7 +197,7 @@ struct WatchAddSheet: View {
             head(String(localized: "Stocks"))
             ForEach(shownStocks) { stock in stockRow(stock) }
         }
-        if DemoMode.isActive || (!searching && tokens.isEmpty && stocks.isEmpty) {
+        if DemoMode.isActive || (!searching && tokens.isEmpty && stocks.isEmpty && companies.isEmpty) {
             footnote
         }
     }
@@ -310,6 +326,26 @@ struct WatchAddSheet: View {
         "tokens:\(token.chain):\(token.address.lowercased())"
     }
 
+    private func toggle(company: CompanyPacks.Company, on: Bool) {
+        guard let ticker = company.listing.ticker?.uppercased() else { return }
+        if on {
+            MarketsWatch.unwatch(company, context: modelContext)
+            watchedSymbols.remove(ticker)
+            DSHaptic.tap()
+            return
+        }
+        Task {
+            switch await MarketsWatch.watch(company, context: modelContext) {
+            case .success(let thing):
+                watchedSymbols.insert(ticker)
+                if let ref = thing.sourceRef { landed(key: ref, thing: thing) }
+            case .failure(let why):
+                DSHaptic.failure()
+                chrome?.flash(why.message)
+            }
+        }
+    }
+
     private func toggle(token: TokenWatch.Resolved) {
         let key = ref(of: token)
         if watched.contains(key) {
@@ -363,6 +399,9 @@ struct WatchAddSheet: View {
 
     private func search() async {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hits = MarketsIndex.search(q, in: TokensScope.everyCompany.map(MarketsWatch.entry)).prefix(5)
+        let names = Set(hits.map(\.name))
+        Task { await CompanyQuotes.shared.load(TokensScope.everyCompany.filter { names.contains($0.name) }) }
         // The demo reaches nothing (its pour is not your things to add to).
         guard !q.isEmpty, !DemoMode.isActive else {
             tokens = []; stocks = []; searching = false

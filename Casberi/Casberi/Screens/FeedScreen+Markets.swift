@@ -107,7 +107,7 @@ extension FeedScreen {
     }
 
     #if DEBUG
-    /// `-marketsScope alerts|add` — land on the Alerts tile, or raise Add,
+    /// `-marketsScope alerts|all|<Category>|search` — land on a tile, or raise Search,
     /// at mount (prd §1081; NSLogs `marketsScope:`). Once per launch.
     private func marketsProbe() {
         guard !Self.marketsProbed,
@@ -115,9 +115,14 @@ extension FeedScreen {
         Self.marketsProbed = true
         NSLog("[Casberi] marketsScope: %@", raw)
         switch raw {
-        case "alerts": chrome.tokensScope = .alerts
-        case "add":    feedSheet = .watchAdd
-        default:       break
+        case "alerts":        chrome.tokensScope = .alerts
+        case "add", "search": feedSheet = .watchAdd
+        case "all":           chrome.tokensScope = .everything
+        default:
+            // A category's index by its name (`Work`).
+            if let scope = TokensScope.all.first(where: { $0.category == raw }) {
+                chrome.tokensScope = scope
+            }
         }
     }
     #endif
@@ -190,6 +195,151 @@ extension FeedScreen {
         .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
         .listRowSeparator(.hidden)
+    }
+
+    // MARK: - The index (prd §1082)
+
+    /// A category's companies, or all of them, as an index: the day's heat
+    /// map of what trades, then From your apps, Everything else and Not
+    /// traded (`MarketsIndex.sections`), each row starred in one tap.
+    @ViewBuilder
+    func marketsIndexSections(_ scope: TokensScope, visible: [Thing]) -> some View {
+        let pack = scope.pack
+        let quotes = CompanyQuotes.shared
+        let connected = connectedSeatNames
+        let byName = Dictionary(pack.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
+        let split = MarketsIndex.sections(pack.map(MarketsWatch.entry), connected: connected)
+        let watched = MarketsWatch.watchedTickers(visible)
+        let moves = pack.compactMap { company -> (id: String, symbol: String, change: Double)? in
+            guard let ticker = company.listing.ticker,
+                  let change = quotes.quote(company.listing)?.change else { return nil }
+            return (company.name, ticker, change)
+        }
+        Group {
+            if moves.isEmpty {
+                ledeSection(CompanyPackLede(name: scope.label, companies: pack, quotes: quotes))
+            } else {
+                let changes = moves.map(\.change)
+                Section {
+                    WatchHeatBox(tiles: WatchHeat.tiles(moves),
+                                 up: changes.filter { !TokenChartStyle.isFlat($0) && $0 > 0 }.count,
+                                 down: changes.filter { !TokenChartStyle.isFlat($0) && $0 < 0 }.count,
+                                 watched: pack.count, span: .constant(.day), showsSpans: false) { name in
+                        if let company = byName[name] { openCompany(company) }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
+                           maxHeight: DSRoomChassis.leadBox, alignment: .topLeading)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                         bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+                    .listRowSeparator(.hidden)
+                }
+            }
+        }
+        .task(id: scope.id) { await quotes.load(pack) }
+        tokensInlineTiles
+        indexSection(String(localized: "From your apps"), split.yours, byName: byName,
+                     connected: connected, watched: watched, watchAll: true)
+        indexSection(split.yours.isEmpty ? scope.label : String(localized: "Everything else"),
+                     split.rest, byName: byName, connected: connected, watched: watched, watchAll: false)
+        indexSection(String(localized: "Not traded"), split.untraded, byName: byName,
+                     connected: connected, watched: watched, watchAll: false)
+    }
+
+    @ViewBuilder
+    private func indexSection(_ title: String, _ entries: [MarketsIndex.Entry],
+                              byName: [String: CompanyPacks.Company], connected: Set<String>,
+                              watched: Set<String>, watchAll: Bool) -> some View {
+        let companies = entries.compactMap { byName[$0.name] }
+        if !companies.isEmpty {
+            let unwatched = companies.filter { c in
+                c.listing.ticker.map { !watched.contains($0.uppercased()) } ?? false
+            }
+            Section {
+                HStack {
+                    Text(title).dsText(.heading20).foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: 0)
+                    if watchAll, unwatched.count > 1 {
+                        Button {
+                            watchAllCompanies(unwatched)
+                        } label: {
+                            Text("Watch all \(unwatched.count)").dsText(.body17)
+                                .foregroundStyle(DS.tint)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(RowPress())
+                    }
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(.init(top: DS.Space.s4, leading: DSRoomChassis.rowInset,
+                                     bottom: 0, trailing: DSRoomChassis.rowInset))
+                ForEach(companies) { company in
+                    let isWatched = company.listing.ticker.map { watched.contains($0.uppercased()) } ?? false
+                    Button {
+                        openCompany(company)
+                    } label: {
+                        IndexRow(company: company,
+                                 apps: MarketsIndex.appsLine(MarketsWatch.entry(company), connected: connected),
+                                 quote: CompanyQuotes.shared.quote(company.listing),
+                                 watched: isWatched,
+                                 star: company.listing == .unlisted ? nil : { toggleCompany(company, watched: isWatched) })
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                         bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+                }
+            }
+        }
+    }
+
+    /// A watched company opens its own page (alerts and all); one you don't
+    /// watch opens `CompanySheet`.
+    func openCompany(_ company: CompanyPacks.Company) {
+        if let thing = MarketsWatch.watchedThing(company, context: modelContext) {
+            openThing(thing)
+        } else if company.listing != .unlisted {
+            feedSheet = .company(company)
+        }
+    }
+
+    private func toggleCompany(_ company: CompanyPacks.Company, watched: Bool) {
+        if watched {
+            MarketsWatch.unwatch(company, context: modelContext)
+            DSHaptic.tap()
+            chrome.flash(String(localized: "Stopped watching \(company.name)"))
+            return
+        }
+        Task {
+            switch await MarketsWatch.watch(company, context: modelContext) {
+            case .success:
+                DSHaptic.success()
+                chrome.flash(String(localized: "Watching \(company.name)"),
+                             action: .init(label: String(localized: "Undo")) {
+                                 MarketsWatch.unwatch(company, context: modelContext)
+                             })
+            case .failure(let why):
+                DSHaptic.failure()
+                chrome.flash(why.message)
+            }
+        }
+    }
+
+    private func watchAllCompanies(_ companies: [CompanyPacks.Company]) {
+        Task {
+            var landed = 0
+            for company in companies {
+                if case .success = await MarketsWatch.watch(company, context: modelContext) { landed += 1 }
+            }
+            DSHaptic.success()
+            chrome.flash(landed == companies.count
+                         ? String(localized: "Watching \(landed)")
+                         : String(localized: "Watching \(landed) of \(companies.count)"))
+        }
     }
 
     /// A watched row's face: a token's own logo, a stock's from its ticker.

@@ -34,28 +34,6 @@ extension FeedScreen {
         }
     }
 
-    /// A company pack (`CompanyPacks`): the category's lead, then one row per
-    /// company behind its accounts, A to Z. The quotes are read when the pack
-    /// opens and held ten minutes; nothing here is a `Thing`, so a row opens
-    /// nothing — it is a fact, not a door.
-    @ViewBuilder
-    func companyPackSections(_ scope: TokensScope) -> some View {
-        let pack = scope.pack
-        let quotes = CompanyQuotes.shared
-        ledeSection(CompanyPackLede(name: scope.label, companies: pack, quotes: quotes)
-            .task(id: scope.id) { await quotes.load(pack) })
-        tokensInlineTiles
-        Section {
-            ForEach(pack) { company in
-                CompanyRow(company: company, quote: quotes.quote(company.listing))
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                         bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
-
     /// The Tokens room's tiles where the rail stands (iPad, Mac); on the phone
     /// they ride the glass capsule beside the seat (`dsScopeDock`, the
     /// Addresses and What-this-app-reaches control) and nothing stands here.
@@ -64,7 +42,7 @@ extension FeedScreen {
         if !DSScopeDock<TokensScope>.atBottom(roomSizeClass) {
             Section {
                 DSScopeTiles(sections: TokensScope.all, active: chrome.tokensScope,
-                             strip: true, verbs: [.add]) { pickTokensScope($0) }
+                             strip: true, verbs: [.search]) { pickTokensScope($0) }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
@@ -75,8 +53,8 @@ extension FeedScreen {
     }
 
     func pickTokensScope(_ picked: TokensScope) {
-        // Add is a verb (prd §1081): it opens the search, and never lights.
-        if picked == .add {
+        // Search is a verb (prd §1081, §1082): it opens the sheet, never lights.
+        if picked == .search {
             feedSheet = .watchAdd
             return
         }
@@ -128,7 +106,7 @@ extension FeedScreen {
     /// geometry — the box inside `dsRoomHeadBlock`, the pinned foot, `s2`
     /// above and `leadGap` below — so Tokens and Bitrefill open at the same
     /// height as every other room.
-    private func ledeSection(_ content: some View) -> some View {
+    func ledeSection(_ content: some View) -> some View {
         let box = DSRoomChassis.leadBox
         return Section {
             VStack(alignment: .leading, spacing: 0) {

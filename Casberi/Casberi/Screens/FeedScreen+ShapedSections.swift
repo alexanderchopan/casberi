@@ -484,7 +484,7 @@ extension FeedScreen {
             // The Watchlist, or a catalogue category's company pack
             // (`CompanyPacks`), picked on the tiles.
             if chrome.tokensScope.isPack {
-                companyPackSections(chrome.tokensScope)
+                marketsIndexSections(chrome.tokensScope, visible: visible)
             } else if chrome.tokensScope == .alerts {
                 marketsAlertsSections(visible, nextEventID: nextEventID)
             } else {

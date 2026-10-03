@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1210 of 1268 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1211 of 1269 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1335,7 +1335,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §997 — The Reminders room drops Scheduled, and its tiles never rise
 - §998 — A connected Calendar or Reminders keeps its room with nothing in it (amended by §1036)
 - §999 — The Calendar room's tiles read in time, and its month title stands at the day dividers' size (part superseded by §1006)
-- §1000 — Markets: Tokens and Stocktwits are one app, and every catalogue category is a company pack
+- §1000 — Markets: Tokens and Stocktwits are one app, and every catalogue category is a company pack (amended by §1082)
 - §1003 — The redundancy and wordiness sweep, the whole app
 - §1004 — A status word takes the INK, never the hue
 - §1005 — The vibecoded audit, first pass: the demo, the wallet crown, Settings (amended by §1039)
@@ -1430,7 +1430,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1078 — The One Wallet, five changes: your own moves are one row, Holdings dates a stored reading and the total names a card…
 - §1079 — Work and Reading show one row per object, Work's box is its newest event, and Social gets its threads and faces back (amended by §1080)
 - §1080 — Work's Coming up leads with what needs you, then what is due
-- §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos
+- §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082)
+- §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the…
 
 ## Dead rulings → what replaced them (generated)
 

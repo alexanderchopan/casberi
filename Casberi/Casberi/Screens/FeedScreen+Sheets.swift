@@ -77,6 +77,8 @@ extension FeedScreen {
         case socialFaces
         /// Markets' Add (prd §1081): find a token or a stock and watch it.
         case watchAdd
+        /// A company from Markets' index you don't watch yet (prd §1082).
+        case company(CompanyPacks.Company)
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
         /// connect made, and from the room's Watch tile (§1031).
         case githubWatch
@@ -102,6 +104,7 @@ extension FeedScreen {
             case .worthALook: "worthALook"
             case .socialFaces: "socialFaces"
             case .watchAdd: "watchAdd"
+            case .company(let c): "company:\(c.name)"
             case .deposits: "deposits"
             case .locks: "locks"
             case .web(let url): "web:\(url.absoluteString)"
@@ -247,6 +250,8 @@ extension FeedScreen {
             socialFacesTray
         case .watchAdd:
             WatchAddSheet()
+        case .company(let company):
+            CompanySheet(company: company)
         case .githubWatch:
             GitHubWatchTray()
         case .allocation:

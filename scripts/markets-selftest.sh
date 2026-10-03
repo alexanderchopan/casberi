@@ -18,7 +18,8 @@ cd "$(dirname "$0")/.."
 
 ALERT="Casberi/Casberi/Model/PriceAlert.swift"
 LINE="Casberi/Casberi/Model/WatchLine.swift"
-for f in "$ALERT" "$LINE"; do
+INDEX="Casberi/Casberi/Model/MarketsIndex.swift"
+for f in "$ALERT" "$LINE" "$INDEX"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -32,12 +33,16 @@ grep -q 'WatchLine.pick(' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ the watchlist rows no longer pick their line through WatchLine"; exit 1; }
 grep -q 'WatchHeat.frames(count:' Casberi/Casberi/Screens/MarketsViews.swift \
   || { echo "✗ the heat map no longer lays out through WatchHeat.frames"; exit 1; }
+grep -q 'MarketsIndex.sections(' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
+  || { echo "✗ the index no longer splits into your apps, everything else and not traded"; exit 1; }
+grep -q 'MarketsIndex.search(' Casberi/Casberi/Screens/WatchAddSheet.swift \
+  || { echo "✗ Search no longer finds a company by an app it makes"; exit 1; }
 grep -q 'PriceAlertStore.shared.removeAll(ref: ref)' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ unwatching no longer takes the row's alerts with it — they would fire for a row you cannot see"; exit 1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-cp "$ALERT" "$LINE" "$TMP/"
+cp "$ALERT" "$LINE" "$INDEX" "$TMP/"
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 
@@ -134,10 +139,31 @@ for n in 1...WatchHeat.cap {
 }
 check(WatchHeat.frames(count: 0).isEmpty, "no tiles, no frames")
 
+// ── The index ────────────────────────────────────────────────────────
+let msft = MarketsIndex.Entry(name: "Microsoft", ticker: "MSFT", apps: ["GitHub", "npm"])
+let atl = MarketsIndex.Entry(name: "Atlassian", ticker: "TEAM", apps: ["Trello", "Jira"])
+let linear = MarketsIndex.Entry(name: "Linear", ticker: nil, apps: ["Linear"])
+let crm = MarketsIndex.Entry(name: "Salesforce", ticker: "CRM", apps: ["Slack"])
+let split = MarketsIndex.sections([msft, linear, crm, atl], connected: ["GitHub", "Linear"])
+check(split.yours == [msft], "a company you use an app of leads (got \(split.yours.map(\.name)))")
+check(split.rest == [atl, crm], "the rest follow, A to Z")
+check(split.untraded == [linear], "not traded closes the list, even when it is yours")
+check(MarketsIndex.sections([msft, crm], connected: []).yours.isEmpty, "nothing connected, nothing is yours")
+check(MarketsIndex.appsLine(atl, connected: ["Jira"]) == ["Jira", "Trello"], "your apps lead a company's line")
+check(MarketsIndex.matches("slack", crm), "an app's name finds the company behind it")
+check(MarketsIndex.matches("$msft", msft), "a ticker finds it, with or without the $")
+check(MarketsIndex.matches("micro", msft), "a name finds it")
+check(!MarketsIndex.matches("m", msft), "one letter finds nothing")
+check(!MarketsIndex.matches("zzz", msft), "a stranger finds nothing")
+let found = MarketsIndex.search("git", in: [MarketsIndex.Entry(name: "GitLab", ticker: "GTLB", apps: ["GitLab"]), msft])
+check(found.map(\.name) == ["GitLab", "Microsoft"], "a direct match before one found through an app")
+let merged = MarketsIndex.merged([[msft], [MarketsIndex.Entry(name: "Microsoft", ticker: "MSFT", apps: ["npm", "Teams"])]])
+check(merged.count == 1 && merged[0].apps == ["GitHub", "npm", "Teams"], "All holds each company once, with all its apps")
+
 if failures > 0 { print("✗ markets: \(failures) failing"); exit(1) }
 print("✓ markets self-test passed")
 SWIFT
 
-swiftc -O -o "$TMP/markets" "$TMP/PriceAlert.swift" "$TMP/WatchLine.swift" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
+swiftc -O -o "$TMP/markets" "$TMP/PriceAlert.swift" "$TMP/WatchLine.swift" "$TMP/MarketsIndex.swift" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
 [[ -x "$TMP/markets" ]] || { echo "✗ markets harness did not compile"; exit 1; }
 "$TMP/markets"

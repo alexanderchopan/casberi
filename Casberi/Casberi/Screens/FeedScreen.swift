@@ -1453,7 +1453,7 @@ struct FeedScreen: View {
         // The Tokens room's tiles — Watchlist and the company packs — on the
         // phone's bottom line beside the seat, the Addresses control.
         .dsScopeDock(sections: shape == .tokens ? TokensScope.all : [],
-                     active: chrome.tokensScope, verbs: [.add], clearance: 0) { pickTokensScope($0) }
+                     active: chrome.tokensScope, verbs: [.search], clearance: 0) { pickTokensScope($0) }
         // Width buys COLUMNS in a picture room and LINE LENGTH everywhere else
         // (2026-08-17). The 700pt reading cap is right for prose and wrong for
         // a grid: a Mac window at 1120 drew the same three-across grid it draws

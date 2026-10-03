@@ -63843,3 +63843,20 @@ It reads the folded room (§1079), so an incident later resolved, a dispute late
 **Hook**: `-marketsScope alerts|add` — land on Alerts, or raise Add, at mount (DEBUG).
 
 **Checked.** `markets-selftest.sh` (new, in `verify.sh`: firing, turning off, once a day, the choices, the line's order, the heat map's order, strength and frames for every count), `notify-selftest.sh` (five kinds stand alone now, with a mutation for the price alert), `dock-selftest.sh`, `work-stage-selftest.sh`, `network-reach-audit.sh`, CasberiTests (103), Catalyst compiles, and the liveness, template, row-cost, query-read, tile-glyph, footnote, defaults-lock, plate, status-ink and design-ramp audits. On a simulator, demo, dark and light: the heat map over three priced rows, the rows with sparklines and lines, Add pinned, the Add sheet with its field over the keyboard, the Alerts tile empty, and Ethereum's page with its Alerts section. **Not seen:** a star tapped, an alert set or fired, a 1W/1M read (the demo reaches nothing), and a stock logo (none in the demo). The ring was built, not seen: every demo watch predates the line on screen, and the chart correctly draws none before its first close.
+
+## §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the index and the market (user: "we really want to make sure we highlight the apps by category and we want users to have a way to search it so it's like an experience or an index even. and we use that same bar pattern w/ the categories elsewhere … and if we did only the apps someone has connected then they wouldn't see the others", then "yes love it do it", 2026-10-02; the deck's "Invest in your apps"; amends §1000's packs and §1081's Add) — BUILT
+
+**The tiles keep the app's category language** — Watchlist · Alerts · All · Wallet · Work · Day · … · Search, the same bar every merged room speaks — but a category tile is now an **index**, not a pack: every company behind every catalogue app in that category, so nothing is hidden behind what you connected (`MarketsIndex`, `TokensScope.everything` for All).
+- **From your apps** leads: the companies behind apps you connected, each row naming them, yours first ("Amazon — AMZN · Twitch, Kindle, AWS"), with **Watch all N**.
+- **Everything else** follows, A to Z; with nothing connected it is the whole index under the category's name.
+- **Not traded** closes it once, instead of "n/a" on every row (a company you use stays there: it has nothing to watch).
+- The box is the same heat map over the category's quotes (one day; the quotes carry no week).
+- Every row is a door and carries the star: a company you watch opens its own page (chart, alerts); one you don't opens `CompanySheet` — its chart for a stock, the apps it makes, and Watch. `MarketsWatch` is the one rule: a stock by its ticker, a token as the most liquid token wearing exactly its symbol.
+
+**Search** (was Add, the verb pinned last): the index answers first, instantly — a company, its ticker, or an app it makes ("slack" finds Salesforce) — then tokens and stocks from the market, as §1081 built.
+
+**The demo** now carries sample quotes for the index (`CompanyQuotes.seedDemo`): prices near the real ones for the names a viewer knows, a fixed day move per ticker, never a network read — the demo draws the index and its heat map as the real app does. A token from the index cannot be watched in the demo (it needs a search), and says so.
+
+**Deleted with the packs** (the deleted-surface rule): `companyPackSections`, the pack's rows that opened nothing.
+
+**Checked.** `markets-selftest.sh` (the index's split, your apps leading a line, search by name, ticker and app, one letter finding nothing, All merging a company's apps), the §1081 checks, and on a simulator, demo, dark: Work's index with its heat map, "From your apps" and Watch all 8; All with 19 up, 12 down and Watch all 29. **Not seen:** a star tapped from the index, Watch all run, a company's sheet, Search finding a company by its app.

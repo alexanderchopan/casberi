@@ -43,6 +43,9 @@ enum ScopeTileGlyph {
     /// Markets' Alerts (prd §1081): the system's bell, the bell a note's
     /// reminder already wears for "tell me".
     static let alerts       = "bell"
+    /// Markets' Search verb (prd §1082): the system's magnifier, the app's
+    /// search glyph wherever a field searches.
+    static let search       = "magnifyingglass"
     /// Logos' Node scope (prd §991) — the node you run.
     static let node         = "server.rack"
     /// Logos' Rewards scope (prd §1016) — what that node earns. The app's own
