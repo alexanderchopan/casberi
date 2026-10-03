@@ -183,6 +183,13 @@ enum NotifySweep {
                          watchedWallets: Set<String> = []) -> NotifyKind? {
         guard let ref = thing.sourceRef else { return nil }
 
+        // — A price alert you set crossed (prd §1081). Landed only by
+        //   `PriceAlertStore.check`, under its own ref prefix, so nothing
+        //   else in Markets (a watch, a pulse) can ever read as one.
+        if ref.hasPrefix("alert:"), thing.source == "Markets" {   // TokenWatch.source
+            return .priceAlert
+        }
+
         // — Walletbeat: a serious, still-open incident naming a wallet app the
         //   person told us they use (prd §422). Three gates, each load-bearing.
         //

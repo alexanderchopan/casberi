@@ -2466,6 +2466,54 @@ enum WalletIngest {
             fresh.removeAll()
             UserDefaults.standard.removeObject(forKey: Self.storeKey)
         }
+
+        /// The newest read of every address set, whatever its age, never a
+        /// fetch — Markets' "You hold" line (prd §1081) speaks only of what
+        /// the Wallet already read.
+        func lastKnown() -> [HeldToken] {
+            var all = fresh
+            if all.isEmpty, let data = UserDefaults.standard.data(forKey: Self.storeKey),
+               let stored = try? JSONDecoder().decode([String: Entry].self, from: data) {
+                all = stored
+            }
+            // Address sets overlap (one wallet's read, then all of them), so
+            // each holding counts once, from the newest read that names it.
+            var best: [String: (token: HeldToken, at: Date)] = [:]
+            for entry in all.values {
+                for token in entry.tokens {
+                    let key = "\(token.owner)|\(token.network)|\(token.contract ?? token.symbol)"
+                    if entry.at > (best[key]?.at ?? .distantPast) { best[key] = (token, entry.at) }
+                }
+            }
+            return best.values.map(\.token)
+        }
+    }
+
+    /// What the Wallet last read you hold, in dollars, by lowercased contract
+    /// and by symbol (native coins carry no contract). Never a network read
+    /// (prd §1081): Markets says "You hold" only from a reading already made.
+    /// The same last reading as a list, biggest first — the Add sheet's
+    /// "From your Wallet" (prd §1081). Holdings under a dollar are dust.
+    static func lastKnownHoldings() async -> [(symbol: String, contract: String?, network: String, usd: Double)] {
+        var merged: [String: (symbol: String, contract: String?, network: String, usd: Double)] = [:]
+        for token in await HoldingsCache.shared.lastKnown() {
+            let key = "\(token.network)|\(token.contract?.lowercased() ?? token.symbol.uppercased())"
+            let usd = (merged[key]?.usd ?? 0) + token.usd
+            merged[key] = (token.symbol, token.contract, token.network, usd)
+        }
+        return merged.values.filter { $0.usd >= 1 }.sorted { $0.usd > $1.usd }
+    }
+
+    static func lastKnownHeld() async -> (byContract: [String: Double], bySymbol: [String: Double]) {
+        var byContract: [String: Double] = [:]
+        var bySymbol: [String: Double] = [:]
+        for token in await HoldingsCache.shared.lastKnown() {
+            if let contract = token.contract?.lowercased(), !contract.isEmpty {
+                byContract[contract, default: 0] += token.usd
+            }
+            bySymbol[token.symbol.uppercased(), default: 0] += token.usd
+        }
+        return (byContract, bySymbol)
     }
 
     /// Clears the holdings cache so the next read is live — for pull-to-refresh

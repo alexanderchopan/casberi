@@ -1962,6 +1962,10 @@ harness "Object fold self-test" "object fold self-test" "scripts/object-fold-sel
 # stable signal per service, never the to-do mark, and a week at most.
 harness "Work ask self-test" "work ask self-test" "scripts/work-ask-selftest.sh" "the work ask self-test failed — run scripts/work-ask-selftest.sh"
 
+# Markets' watchlist and alerts (prd §1081): when an alert fires and turns
+# itself off, which line a row says, and a heat map that fills its box.
+harness "Markets self-test" "markets self-test" "scripts/markets-selftest.sh" "the markets self-test failed — run scripts/markets-selftest.sh"
+
 # The Social room's faces, one per person across networks (prd §1079): joined
 # only by the Addresses index, never by a handle or a display name.
 harness "Followed people self-test" "followed people self-test" "scripts/followed-people-selftest.sh" "the followed people self-test failed — run scripts/followed-people-selftest.sh"

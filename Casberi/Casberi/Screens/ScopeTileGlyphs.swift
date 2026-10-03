@@ -40,6 +40,9 @@ enum ScopeTileGlyph {
     /// person follows something privately (Follow address, the address
     /// book's Watch, Markets' Watchlist).
     static let watch        = "eye"
+    /// Markets' Alerts (prd §1081): the system's bell, the bell a note's
+    /// reminder already wears for "tell me".
+    static let alerts       = "bell"
     /// Logos' Node scope (prd §991) — the node you run.
     static let node         = "server.rack"
     /// Logos' Rewards scope (prd §1016) — what that node earns. The app's own

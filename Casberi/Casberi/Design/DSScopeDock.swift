@@ -23,6 +23,8 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
     let sections: [Scope]
     let active: Scope
     var attention: Set<Scope> = []
+    /// Tiles that are verbs (Markets' Add, prd §1081): tint, never lit.
+    var verbs: Set<Scope> = []
     /// How far the content's bottom stands above the safe area's: a pushed
     /// screen stops at its seat clearance, a room's page (the Tokens packs)
     /// reaches the safe area itself, so it passes 0.
@@ -47,7 +49,7 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
         content.overlay(alignment: .bottomLeading) {
             if sizeClass == .compact, sections.count > 2, !chrome.keyboardUp {
                 DSScopeTiles(sections: sections, active: active,
-                             attention: attention, strip: true, onPick: onPick)
+                             attention: attention, strip: true, verbs: verbs, onPick: onPick)
                     .padding(.horizontal, DS.Space.s1)
                     .frame(height: Self.height)
                     .clipShape(Capsule())
@@ -77,10 +79,11 @@ extension View {
     /// search in progress, a list with nothing to scope).
     func dsScopeDock<Scope: DSTileScope>(sections: [Scope], active: Scope,
                                          attention: Set<Scope> = [],
+                                         verbs: Set<Scope> = [],
                                          clearance: CGFloat = DSDock.seatClearance,
                                          onPick: @escaping (Scope) -> Void) -> some View {
         modifier(DSScopeDock(sections: sections, active: active,
-                             attention: attention, clearance: clearance,
+                             attention: attention, verbs: verbs, clearance: clearance,
                              onPick: onPick))
     }
 }

@@ -132,15 +132,27 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
 
     var body: some View {
         if sections.count > 1, strip {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s1) {
-                    ForEach(sections) { section in
-                        tile(section)
-                            .frame(width: Self.stripTileWidth)
+            // A VERB STANDS STILL AT THE STRIP'S END (prd §1081): the scopes
+            // scroll, and a verb (Markets' Add) is pinned after them, so it
+            // is never off the edge of a long row — a verb nobody can see is
+            // a verb nobody can find.
+            HStack(spacing: DS.Space.s1) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s1) {
+                        ForEach(sections.filter { !verbs.contains($0) }) { section in
+                            tile(section)
+                                .frame(width: Self.stripTileWidth)
+                        }
                     }
                 }
+                // With a verb pinned after it, the scopes clip where the verb
+                // begins, or they slide under it.
+                .scrollClipDisabled(verbs.isEmpty)
+                ForEach(sections.filter { verbs.contains($0) }) { section in
+                    tile(section)
+                        .frame(width: Self.stripTileWidth)
+                }
             }
-            .scrollClipDisabled()
         } else if sections.count > 1 {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
                                      count: Self.columns),

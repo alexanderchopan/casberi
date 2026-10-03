@@ -2332,7 +2332,8 @@ private struct TokenChartContent: View {
                            // so this card carries the identity.
                            object: PriceObjectSource.identity(
                                title: thing.title,
-                               authorHandle: thing.authorHandle)) {
+                               authorHandle: thing.authorHandle),
+                           levels: alertLevels(thing)) {
                 // No pool (dead/illiquid) — the plain link, honestly.
                 if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
                     LinkPreviewCard(url: url)
@@ -2340,6 +2341,7 @@ private struct TokenChartContent: View {
             }
             statStrip
             if offersWatch { watchRow }
+            watchAlerts(thing)
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
@@ -2473,12 +2475,15 @@ private struct TokenPulseChartContent: View {
             // EmptyView, not a link fallback: `TokenChart.from(closes:)` only
             // returns nil under 2 points, which a seeded 24-point pulse never
             // is — the `.dead` phase this would cover is unreachable here.
-            TokenChartView<TokenRange, EmptyView>(
-                memoryKey: "pulse.\(ref)",
-                fetch: { _ in TokenChart.from(closes: pulse.closes) },
-                since: since, hero: true) { EmptyView() }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s3)
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                TokenChartView<TokenRange, EmptyView>(
+                    memoryKey: "pulse.\(ref)",
+                    fetch: { _ in TokenChart.from(closes: pulse.closes) },
+                    since: since, hero: true, levels: alertLevels(thing)) { EmptyView() }
+                watchAlerts(thing)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
         }
     }
 }
@@ -2510,6 +2515,7 @@ private struct StockChartContent: View {
     }
 
     @ViewBuilder private var liveBody: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
         TokenChartView(memoryKey: "stock.range.\(ticker)",
                        fetch: { (range: StockRange) in
                            await StockChart.fetch(ticker: ticker, range: range)
@@ -2523,13 +2529,36 @@ private struct StockChartContent: View {
                        hero: true,
                        object: PriceObjectSource.identity(
                            title: thing.title,
-                           authorHandle: thing.authorHandle)) {
+                           authorHandle: thing.authorHandle),
+                       levels: alertLevels(thing)) {
             if let url = URL(string: thing.content) {
                 LinkPreviewCard(url: url)
             }
         }
+        watchAlerts(thing)
+        }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
+    }
+}
+
+/// A watched row's price levels still on, for its chart (prd §1081).
+@MainActor
+private func alertLevels(_ thing: Thing) -> [Double] {
+    guard thing.isLive, thing.source == TokenWatch.source, let ref = thing.sourceRef else { return [] }
+    return PriceAlertStore.shared.alerts(for: ref).filter { $0.on && $0.kind != .move }.map(\.target)
+}
+
+/// A watched row's alerts on its page (prd §1081) — only on the watchlist's
+/// own row, never on a token a post merely mentions, and never on a fired
+/// alert's row.
+@MainActor @ViewBuilder
+private func watchAlerts(_ thing: Thing) -> some View {
+    if thing.isLive, thing.source == TokenWatch.source, !PriceAlertStore.isAlertRow(thing),
+       let ref = thing.sourceRef {
+        WatchAlertsSection(ref: ref, name: TokensAsk.name(of: thing.title),
+                           price: PriceAlertStore.reading(for: thing)?.price)
+            .padding(.top, DS.Space.s2)
     }
 }
 

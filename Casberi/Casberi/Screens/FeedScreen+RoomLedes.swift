@@ -64,7 +64,7 @@ extension FeedScreen {
         if !DSScopeDock<TokensScope>.atBottom(roomSizeClass) {
             Section {
                 DSScopeTiles(sections: TokensScope.all, active: chrome.tokensScope,
-                             strip: true) { pickTokensScope($0) }
+                             strip: true, verbs: [.add]) { pickTokensScope($0) }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
@@ -75,6 +75,11 @@ extension FeedScreen {
     }
 
     func pickTokensScope(_ picked: TokensScope) {
+        // Add is a verb (prd §1081): it opens the search, and never lights.
+        if picked == .add {
+            feedSheet = .watchAdd
+            return
+        }
         withAnimation(DS.Motion.standard) { chrome.tokensScope = picked }
     }
 
@@ -97,9 +102,10 @@ extension FeedScreen {
     /// bottom by time.
     @ViewBuilder
     func watchlistSection(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        // The span the box is on orders "Movers" too (prd §1081).
         let ordered = TokenWatchOrder.shared.apply(
             visible, sourceRef: \.sourceRef,
-            change24h: Self.watchChange)
+            change24h: { marketsChange($0) })
         // One flat run: pulsed tokens wear the fat TokenRow and stand alone
         // (standsAlone), so merging only ever joins the still-unpulsed rows.
         let positions = cardRunPositions(count: ordered.count,

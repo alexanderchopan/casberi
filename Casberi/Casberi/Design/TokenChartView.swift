@@ -257,6 +257,13 @@ struct TokenChartPlot: View {
     /// (prd §171). 0 lands them immediately — the default everywhere that
     /// draws no line of its own.
     var markDelay: Double = 0
+    /// Where along the series you started watching (fractional, like a
+    /// mark's x), drawn as the brand's ring on the line (prd §1081).
+    var watchedX: Double? = nil
+    /// Price levels to rule across the plot (a price alert's, prd §1081),
+    /// drawn only where they fall inside it: a level off the plot is not
+    /// squeezed in by rescaling the line.
+    var levels: [Double] = []
     /// Scrubbing — the line interrogated. Given a handler, a press-then-drag
     /// (or, on Catalyst, a resting cursor) reports the sample index under it,
     /// nil on release, and `cursorIndex` draws the scrub cursor at the
@@ -397,6 +404,33 @@ struct TokenChartPlot: View {
                         .frame(width: 9, height: 9)
                         .position(x: plot.minX + x, y: plot.minY + y)
                 }
+                // A price alert's level, dashed in the brand's colour, and the
+                // day you started watching, the brand's ring on the line
+                // (prd §1081).
+                if let plotAnchor = proxy.plotFrame {
+                    let plot = geo[plotAnchor]
+                    ForEach(levels.indices, id: \.self) { i in
+                        if let y = proxy.position(forY: levels[i]), y >= 0, y <= plot.height {
+                            Path { p in
+                                p.move(to: CGPoint(x: plot.minX, y: plot.minY + y))
+                                p.addLine(to: CGPoint(x: plot.maxX, y: plot.minY + y))
+                            }
+                            .stroke(DS.brand.opacity(0.8),
+                                    style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
+                            .accessibilityHidden(true)
+                        }
+                    }
+                    if let watchedX, !chart.closes.isEmpty,
+                       let x = proxy.position(forX: watchedX),
+                       let y = proxy.position(forY: Self.close(chart.closes, at: watchedX)) {
+                        Circle()
+                            .strokeBorder(DS.brand, lineWidth: 2.5)
+                            .background(Circle().fill(DS.surfaceSheet))
+                            .frame(width: 11, height: 11)
+                            .position(x: plot.minX + x, y: plot.minY + y)
+                            .accessibilityLabel(Text("You started watching here"))
+                    }
+                }
                 if !marks.isEmpty, let plotAnchor = proxy.plotFrame {
                     markLayer(proxy: proxy, plot: geo[plotAnchor])
                         .onAppear {
@@ -415,6 +449,14 @@ struct TokenChartPlot: View {
                 }
             }
         }
+    }
+
+    /// The line's value at a fractional x, between its two neighbours.
+    static func close(_ closes: [Double], at x: Double) -> Double {
+        let i = max(0, min(Int(x.rounded(.down)), closes.count - 1))
+        let j = min(i + 1, closes.count - 1)
+        let t = max(0, min(1, x - Double(i)))
+        return closes[i] + (closes[j] - closes[i]) * t
     }
 
     /// Whether this plot can be scrubbed at all — a handler, and a real curve
@@ -620,6 +662,8 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     /// want the bare plot, and every existing call site is unchanged by this.
     /// nil keeps the classic/hero header stack exactly as it was.
     var object: (name: String?, symbol: String)? = nil
+    /// A watched row's alert levels (prd §1081), ruled across the plot.
+    var levels: [Double] = []
     @ViewBuilder let fallback: () -> Fallback
 
     private enum Phase { case loading, ready, dead }
@@ -642,17 +686,29 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     init(memoryKey: String, fetch: @escaping (R) async -> TokenChart?,
          since: (price: Double, date: Date)? = nil, hero: Bool = false,
          object: (name: String?, symbol: String)? = nil,
+         levels: [Double] = [],
          @ViewBuilder fallback: @escaping () -> Fallback) {
         self.memoryKey = memoryKey
         self.fetch = fetch
         self.since = since
         self.hero = hero
         self.object = object
+        self.levels = levels
         self.fallback = fallback
         _range = State(initialValue: TokenChartStyle.rememberedRange(key: memoryKey))
     }
 
     private var chart: TokenChart? { charts[range] }
+
+    /// Where on this range's line you started watching (prd §1081): the
+    /// newest close is "now", each step back is one `range.step`. Nil when
+    /// you started before the line begins, or never did.
+    private func watchedX(_ chart: TokenChart) -> Double? {
+        guard let since, chart.closes.count > 1, range.step > 0 else { return nil }
+        let back = chart.fetchedAt.timeIntervalSince(since.date) / range.step
+        let x = Double(chart.closes.count - 1) - back
+        return x >= 0 ? x : nil
+    }
     private var displayIndex: Int? {
         guard let chart else { return nil }
         return scrubIndex.map { min($0, chart.closes.count - 1) }
@@ -921,7 +977,8 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         // the read is no longer recent, so nothing is lost but the claim.
         let fresh = TokenChartStyle.isFresh(chart.fetchedAt)
         return TokenChartPlot(chart: chart, accent: accent,
-                              pulses: fresh, endpointDot: !fresh)
+                              pulses: fresh, endpointDot: !fresh,
+                              watchedX: watchedX(chart), levels: levels)
             // Draw-on reveal, replayed per range — a range switch is a
             // data arrival (the GenTokenRow entrance, shared).
             .mask(alignment: .leading) {
@@ -1083,10 +1140,11 @@ extension TokenChartView {
     init(chain: String, address: String,
          since: (price: Double, date: Date)? = nil, hero: Bool = false,
          object: (name: String?, symbol: String)? = nil,
+         levels: [Double] = [],
          @ViewBuilder fallback: @escaping () -> Fallback) where R == TokenRange {
         self.init(memoryKey: "token.range.\(chain).\(address)",
                   fetch: { await TokenChart.fetch(chain: chain, address: address, range: $0) },
-                  since: since, hero: hero, object: object, fallback: fallback)
+                  since: since, hero: hero, object: object, levels: levels, fallback: fallback)
     }
 }
 

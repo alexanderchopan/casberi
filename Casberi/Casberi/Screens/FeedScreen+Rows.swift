@@ -379,7 +379,9 @@ extension FeedScreen {
                 // the thing and derives when the press raises it — so this is
                 // work that no longer runs, not a cache over it.
                 RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
-                            onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) })
+                            onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) },
+                            onUnwatch: source == TokenWatch.source ? { unwatch($0) } : nil,
+                            onMoveToTop: source == TokenWatch.source ? { moveToTop($0, in: things) } : nil)
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
@@ -592,7 +594,11 @@ extension FeedScreen {
                 // watched token whose pulse has landed wears the fat anatomy
                 // (TokenRow, prd §102) everywhere too; until it lands, the
                 // plain band + timestamp — never a faked price.
-                if let pulse = TokenPulse.shared.pulse(for: thing) {
+                if source == TokenWatch.source, !PriceAlertStore.isAlertRow(thing) {
+                    // Markets' own row (prd §1081): the one line, the day's
+                    // shape and the span's move.
+                    marketsRow(thing)
+                } else if let pulse = TokenPulse.shared.pulse(for: thing) {
                     TokenRow(thing: thing, pulse: pulse)
                 } else if let symbol = StockWatch.symbol(of: thing) {
                     // A stock watched in Markets: a pack's row, on Nasdaq's
@@ -693,6 +699,9 @@ struct RowVerbMenu: View {
     var onFile: ((Thing, String?) -> Void)? = nil
     /// Asks for a new folder's name, then files the row in it.
     var onNewFolder: ((Thing) -> Void)? = nil
+    /// A watched row in Markets (prd §1081): Move to top and Stop watching.
+    var onUnwatch: ((Thing) -> Void)? = nil
+    var onMoveToTop: ((Thing) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
 
@@ -706,6 +715,28 @@ struct RowVerbMenu: View {
         // Edit, and Copy and Translate are the system's on selected words.
         // Nothing to open in another app, so no Open in app either.
         let note = Pinboard.isNote(thing)
+        // A watched row holds three (prd §1081): Move to top, Share, Stop
+        // watching. Nothing else in the menu is about a thing you watch.
+        if let onUnwatch, let onMoveToTop, !PriceAlertStore.isAlertRow(thing) {
+            Button {
+                onMoveToTop(thing)
+            } label: {
+                Label("Move to top", systemImage: "arrow.up.to.line")
+            }
+            ThingShareLink(thing: thing) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            Button(role: .destructive) {
+                onUnwatch(thing)
+            } label: {
+                Label("Stop watching", systemImage: "star.slash")
+            }
+        } else {
+            standardMenu(note: note)
+        }
+    }
+
+    @ViewBuilder private func standardMenu(note: Bool) -> some View {
         let verbs = note ? [] : perfAccum("rowVerbs[\(room)]") {
             VerbDerivation.verbs(for: thing)
         }

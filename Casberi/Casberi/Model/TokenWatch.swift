@@ -32,6 +32,11 @@ enum TokenWatch {
         let priceUsd: String?
         /// The token's logo, when Dexscreener has one — for the search rows.
         let imageURL: String?
+        /// The most liquid pair's facts, for the Add sheet's rows (prd §1081):
+        /// liquidity tells the real token from a copy wearing its name.
+        var liquidityUsd: Double? = nil
+        var marketCap: Double? = nil
+        var change24h: Double? = nil
         var id: String { "\(chain):\(address.lowercased())" }
     }
 
@@ -106,13 +111,16 @@ enum TokenWatch {
             // A pinned household name shows the coin's name, not the
             // wrapper's — the address (WETH's) is the real tell, so this
             // stays honest where the "Ethereum · $ETH" scam tokens weren't.
-            let token = Resolved(
+            var token = Resolved(
                 chain: chain, address: address,
                 name: pinned?.name ?? name,
                 symbol: pinned?.symbol ?? symbol,
                 priceUsd: pair["priceUsd"] as? String,
                 imageURL: IngestSupport.imageURL(
                     (pair["info"] as? [String: Any])?["imageUrl"] as? String))
+            token.liquidityUsd = liq > 0 ? liq : nil
+            token.marketCap = (pair["marketCap"] as? Double) ?? (pair["fdv"] as? Double)
+            token.change24h = ((pair["priceChange"] as? [String: Any])?["h24"] as? Double).map { $0 / 100 }
             if liq > (best[token.id]?.liquidity ?? -1) {
                 best[token.id] = (token, liq)
             }

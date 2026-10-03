@@ -50,6 +50,11 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case poolCleared
     case paymentsSilent
     case priceRose
+    /// A price alert you set crossed (prd §1081): a level reached, or a day
+    /// move as large as you asked about. You named the condition yourself,
+    /// so it stands alone like a deadline — the digest would deliver it at
+    /// 18:00, hours after the level it was set to catch.
+    case priceAlert
     /// App Store Connect turned your release down (2026-08-06, prd §324).
     /// Only the ALARMING verdicts reach here — an approval is welcome news you
     /// will see the moment you open anything, and it already rains in-app.
@@ -111,7 +116,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     var cls: NotifyClass {
         switch self {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
-             .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
+             .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose, .priceAlert,
              .appRejected, .runningLow, .safeSignatureNeeded,
              .walletIncident, .chainReset:
             return .alarm
@@ -167,6 +172,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .chainReset:       return 55
         case .poolCleared:      return 50    // good news, act whenever
         case .priceRose:        return 40    // recurring money, already charged
+        case .priceAlert:       return 45    // a level you asked to hear about
         // The lowest alarm on purpose — "do this soon" rather than "something
         // is wrong right now". Ranked under a price rise (money already
         // left, so at least that one is definite) but still a real severity,
@@ -199,7 +205,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// Safe signature have no clock, but neither keeps until then.
     var standsAlone: Bool {
         switch self {
-        case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded:
+        case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .priceAlert:
             return true
         default:
             return false
@@ -233,6 +239,9 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .poolCleared:      return String(localized: "Clear to withdraw")
         case .paymentsSilent:   return String(localized: "Payments went quiet")
         case .priceRose:        return String(localized: "A subscription went up")
+        // The row's own title says what crossed and where; this says it was
+        // the alert you set, which the row does not.
+        case .priceAlert:       return String(localized: "Your price alert")
         // Deliberately not "Rejected": the ROW's title already leads with the
         // exact verdict ("Metadata rejected · Casberi 1.4") and rides in the
         // body, so a headline repeating it would say one word twice. This says
@@ -268,6 +277,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .poolCleared:         return String(localized: "clear to withdraw")
         case .paymentsSilent:      return String(localized: "payments went quiet")
         case .priceRose:           return String(localized: "a price went up")
+        case .priceAlert:          return String(localized: "price alert")
         case .appRejected:         return String(localized: "App Review said no")
         case .runningLow:          return String(localized: "running low")
         case .chainReset:          return String(localized: "devnet reset")
@@ -315,6 +325,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .poolCleared:         (one, many) = (String(localized: "withdrawal ready"), String(localized: "withdrawals ready"))
         case .paymentsSilent:      (one, many) = (String(localized: "quiet account"), String(localized: "quiet accounts"))
         case .priceRose:           (one, many) = (String(localized: "price rise"), String(localized: "price rises"))
+        case .priceAlert:          (one, many) = (String(localized: "price alert"), String(localized: "price alerts"))
         case .appRejected:         (one, many) = (String(localized: "rejection"), String(localized: "rejections"))
         case .runningLow:          (one, many) = (String(localized: "running low"), String(localized: "running low"))
         case .chainReset:          (one, many) = (String(localized: "reset"), String(localized: "resets"))

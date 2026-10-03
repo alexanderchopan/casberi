@@ -144,6 +144,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Retriever self-test (scripts/retriever-selftest.sh)** → docs/verify.md · prd §318
 - **One row per object in Work and Reading (`Model/ObjectFold.swift`, `object-fold-selftest.sh`): Work folds only on a per-service object URL, never a dashboard; the keys read `content` off the main actor; the sheet lists what folded. Social's faces are people across networks (`FollowedPeople`, `followed-people-selftest.sh`)** → prd §1079
 - **Work's Coming up leads with "Needs you" (`Model/WorkAsk.swift`, `work-ask-selftest.sh`): asks and breakages by stable signal, never the to-do mark, a week at most; `WorkStage.Row(thing)` is the one row builder** → prd §1080
+- **Markets (prd §1081): the box is a heat map (`WatchHeat`), one line per row (`WatchLine`), Add pinned last (`WatchAddSheet`), price alerts that stand alone (`PriceAlert`, `PriceAlertStore`, checked before every notify sweep), stock logos from Financial Modeling Prep (`markets-selftest.sh`)** → prd §1081
 - **Ranking sweep (-rankSweep "q1|q2|…")** (`-rankSweep` `-semanticFloor` `-expandDistance`) → docs/verify.md · prd §318
 - **Perf pass (scripts/perf.sh)** (`-Onone`) → docs/verify.md · prd §257
 - **Mac verify (scripts/verify-mac.sh)** → docs/verify.md
@@ -182,6 +183,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-demoCensus YES` — over a poured demo (`-demoEnter YES` first), compose every surface in one process and NSLog `demoCensus| <surface> | … | ok|empty|skipped`; a new surface is one row in `DemoCensus.registry` (`Shell/DemoCensus.swift`, prd §617).
 - `-chipStats "<source:n[,…]>"|clear` — seed the source strip's tap-learning counters (`Model/ChipMemory.swift`); every mount NSLogs `chipLabels:`.
 - `-openRoom "<seat name>"` — land in a source's room headlessly at mount (`RootShell.openRoomIfRequested`; NSLogs `openRoom:`). Pair with `-demoEnter YES` on a prior launch for a furnished room.
+- `-marketsScope alerts|add` — land on Markets' Alerts tile, or raise its Add sheet, at mount (prd §1081; NSLogs `marketsScope:`). Pair with `-openRoom Markets`.
 - `-walletScope <address | seat:Name>` — pick an account in the Wallet's menu at launch, an app the Wallet folded in included (`RoomAccounts`, prd §1048b; NSLogs `walletScope:`)
 - `-roomScope "<room>|seat:<Name>"` — pick an app in a merged room's menu at launch (`chrome.mergedScope`; NSLogs `roomScope:`), the room sweep's door to every app pick, as `-walletScope` is the Wallet's (prd §1067)
 - `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (or a Markets company pack by its category name, `Work`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953

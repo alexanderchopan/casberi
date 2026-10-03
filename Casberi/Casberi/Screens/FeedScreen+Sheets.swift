@@ -75,6 +75,8 @@ extension FeedScreen {
         /// routed here since the row moved into the room (§959): a `.sheet`
         /// inside a List row tears this screen's own sheet down mid-rise.
         case socialFaces
+        /// Markets' Add (prd §1081): find a token or a stock and watch it.
+        case watchAdd
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
         /// connect made, and from the room's Watch tile (§1031).
         case githubWatch
@@ -99,6 +101,7 @@ extension FeedScreen {
             case .allocation: "allocation"
             case .worthALook: "worthALook"
             case .socialFaces: "socialFaces"
+            case .watchAdd: "watchAdd"
             case .deposits: "deposits"
             case .locks: "locks"
             case .web(let url): "web:\(url.absoluteString)"
@@ -242,6 +245,8 @@ extension FeedScreen {
             TokenQuickSheet(route: route)
         case .socialFaces:
             socialFacesTray
+        case .watchAdd:
+            WatchAddSheet()
         case .githubWatch:
             GitHubWatchTray()
         case .allocation:

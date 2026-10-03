@@ -806,6 +806,14 @@ struct FeedScreen: View {
     /// Work's and Reading's object keys, by row (prd §1079): computed off the
     /// main actor in `.task(id: objectFoldKey)`, read by `objectFolded`.
     @State var objectKeys: [UUID: String] = [:]
+    /// Markets' span (prd §1081): the box and the rows' moves, 1D · 1W · 1M.
+    @State var watchSpan: WatchRanges.Span = .day
+    #if DEBUG
+    /// `-marketsScope` fires once per launch, not once per page build.
+    @MainActor static var marketsProbed = false
+    #endif
+    /// What the Wallet last read you hold, for Markets' "You hold" line.
+    @State var held: (byContract: [String: Double], bySymbol: [String: Double]) = ([:], [:])
 
     // MARK: - Body
 
@@ -1445,7 +1453,7 @@ struct FeedScreen: View {
         // The Tokens room's tiles — Watchlist and the company packs — on the
         // phone's bottom line beside the seat, the Addresses control.
         .dsScopeDock(sections: shape == .tokens ? TokensScope.all : [],
-                     active: chrome.tokensScope, clearance: 0) { pickTokensScope($0) }
+                     active: chrome.tokensScope, verbs: [.add], clearance: 0) { pickTokensScope($0) }
         // Width buys COLUMNS in a picture room and LINE LENGTH everywhere else
         // (2026-08-17). The 700pt reading cap is right for prose and wrong for
         // a grid: a Mac window at 1120 drew the same three-across grid it draws

@@ -566,9 +566,11 @@ ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0
 // the same things told twice, a digest at 03:00, a category switched off that
 // still speaks, two categories folded into one, or a second delivery in a day
 // the settings footnote promised would not come.
+// prd §1081 adds the fifth: a price alert you set names its own moment, and
+// the digest would deliver it hours after the level it was set to catch.
 ok(Set(NotifyKind.allCases.filter(\.standsAlone)) ==
-   [.disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded],
-   "exactly four kinds stand alone; everything else waits for the digest")
+   [.disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .priceAlert],
+   "exactly five kinds stand alone; everything else waits for the digest")
 ok(Set(ts).isSubset(of: Set(NotifyKind.allCases.filter(\.standsAlone))),
    "a kind that pierces a Focus never waits for the evening slot")
 ok(NotifyKind.digest.cls == .arrival && !NotifyKind.digest.standsAlone,
@@ -961,9 +963,11 @@ mutate "a kind loses its headline, so a notification arrives with an empty title
 
 # ── the digest (prd §770) ───────────────────────────────────────────────────
 mutate "money arriving stands alone again, one buzz per transfer" \
-       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .moneyIn:/'
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .priceAlert, .moneyIn:/'
+mutate "a price alert you set waits for the evening digest (prd §1081)" \
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded:/'
 mutate "a Safe signature waits for the evening digest" \
-       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk:/'
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .priceAlert:/'
 mutate "a second digest a day" \
        's/static let slots = \[18 \* 60\]/static let slots = [9 * 60, 18 * 60]/'
 mutate "every category folds into one digest again" \

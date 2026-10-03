@@ -483,12 +483,12 @@ extension FeedScreen {
         case .tokens:
             // The Watchlist, or a catalogue category's company pack
             // (`CompanyPacks`), picked on the tiles.
-            if chrome.tokensScope.category == nil {
-                watchlistLedeSection(visible)
-                tokensInlineTiles
-                watchlistSection(visible, nextEventID: nextEventID)
-            } else {
+            if chrome.tokensScope.isPack {
                 companyPackSections(chrome.tokensScope)
+            } else if chrome.tokensScope == .alerts {
+                marketsAlertsSections(visible, nextEventID: nextEventID)
+            } else {
+                marketsWatchlistSections(visible, nextEventID: nextEventID)
             }
         default:
             if Pinboard.isPinnedRoom(source) {

@@ -290,11 +290,13 @@ enum NetworkReach {
         // neither is a literal the audit could read without this line.
         Endpoint(service: "Markets",
                  reach: .whenConnected(bridge: "Markets"),
-                 purpose: "Fetches the public price history of a token or stock you watch to draw its chart on \(DS.device), and finds a company's ticker through Stocktwits' public symbol search. When you open a company pack, reads the public price and market cap of the companies and coins behind that category's accounts — Nasdaq's quote for a stock, CoinPaprika's for a coin. Carries only the ticker — nothing about you, and never a portfolio.",
+                 purpose: "Fetches the public price history of a token or stock you watch to draw its chart on \(DS.device), and finds a company's ticker through Stocktwits' public symbol search. When you open a company pack, reads the public price and market cap of the companies and coins behind that category's accounts — Nasdaq's quote for a stock, CoinPaprika's for a coin. Draws a watched stock's logo from Financial Modeling Prep's public image. Carries only the ticker — nothing about you, and never a portfolio.",
                  hosts: ["api.dexscreener.com", "api.geckoterminal.com",
                          "api.stocktwits.com",
                          "query1.finance.yahoo.com", "query2.finance.yahoo.com",
-                         "api.nasdaq.com", "api.coinpaprika.com"]),
+                         "api.nasdaq.com", "api.coinpaprika.com",
+                         // A watched stock's logo (prd §1081), keyless.
+                         "financialmodelingprep.com"]),
         // The thumbnail CDN is listed beside the API because a Daily Paper row
         // draws its cover image, and an image loaded into a row is a real
         // reach even though `NetworkLedger` doesn't record it (its own stated

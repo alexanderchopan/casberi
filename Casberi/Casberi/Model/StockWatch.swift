@@ -63,6 +63,15 @@ enum StockWatch {
     }
 
     /// The ticker a watched stock row carries, or nil for any other row.
+    /// A stock's logo (prd §1081): Financial Modeling Prep's public 250px
+    /// image, keyless. A ticker it has no image for answers 404 and the row
+    /// keeps its lettered mark.
+    static func logoURL(_ symbol: String) -> String? {
+        let ticker = symbol.uppercased().filter { $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" }
+        guard !ticker.isEmpty else { return nil }
+        return "https://financialmodelingprep.com/image-stock/\(ticker).png"
+    }
+
     static func symbol(of thing: Thing) -> String? {
         guard let ref = thing.sourceRef, ref.hasPrefix(refPrefix) else { return nil }
         return String(ref.dropFirst(refPrefix.count))
