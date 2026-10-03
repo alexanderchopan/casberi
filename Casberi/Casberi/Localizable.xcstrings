@@ -1793,6 +1793,34 @@
         }
       }
     },
+    "Find something you read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca algo que leíste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読んだものを探す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽은 것 찾기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "查找你读过的内容"
+          }
+        }
+      }
+    },
     "Finds your things with someone in Addresses — transfers, mail, posts and more, newest first." : {
       "localizations" : {
         "es" : {
@@ -1905,6 +1933,62 @@
         }
       }
     },
+    "Highlight · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Destacado · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ハイライト · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하이라이트 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "高亮 · %@"
+          }
+        }
+      }
+    },
+    "Highlights" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Destacados"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ハイライト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하이라이트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "高亮"
+          }
+        }
+      }
+    },
     "In %lld posts this week" : {
       "localizations" : {
         "es" : {
@@ -1929,6 +2013,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "本周 %lld 条帖子"
+          }
+        }
+      }
+    },
+    "In %lld posts you saw · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %lld publicaciones que viste · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "見た %lld 件の投稿で · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "본 게시물 %lld개에서 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你看过的 %lld 条帖子中 · %@"
           }
         }
       }
@@ -4632,6 +4744,34 @@
         }
       }
     },
+    "%@ available · the fee comes out of it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ disponible · la comisión sale de ahí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 利用可能 · 手数料はここから差し引かれます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 사용 가능 · 수수료는 여기서 차감됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可用 %@ · 手续费从中扣除"
+          }
+        }
+      }
+    },
     "%@ before that" : {
       "localizations" : {
         "es" : {
@@ -5338,6 +5478,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 未作为 Radicle 种子响应。"
+          }
+        }
+      }
+    },
+    "%@ doesn't publish a feed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ no publica un feed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ はフィードを公開していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에는 피드가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 未发布订阅源"
           }
         }
       }
@@ -9432,6 +9600,34 @@
         }
       }
     },
+    "%@ overlaps %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ se superpone con %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は %@ と重なっています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) %@와(과) 겹칩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 与 %@ 时间重叠"
+          }
+        }
+      }
+    },
     "%@ paid %@ in gas" : {
       "localizations" : {
         "en" : {
@@ -11630,6 +11826,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "用于扩展状态 %@"
+          }
+        }
+      }
+    },
+    "%@ to print" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ para imprimir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "印刷できるのは %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "인쇄 가능 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可印制 %@"
           }
         }
       }
@@ -16244,6 +16468,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已导入 %lld 个%@"
+          }
+        }
+      }
+    },
+    "%lld NFTs" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld NFT"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のNFT"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "NFT %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个 NFT"
           }
         }
       }
@@ -28565,6 +28817,34 @@
         }
       }
     },
+    "1 NFT" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 NFT"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 個のNFT"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "NFT 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 个 NFT"
+          }
+        }
+      }
+    },
     "1 account" : {
       "localizations" : {
         "es" : {
@@ -34437,6 +34717,34 @@
         }
       }
     },
+    "A name or a handle" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un nombre o un usuario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前またはハンドル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름 또는 핸들"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名字或用户名"
+          }
+        }
+      }
+    },
     "A name, or one you're waiting on" : {
       "localizations" : {
         "es" : {
@@ -35116,6 +35424,34 @@
         }
       }
     },
+    "A site's address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La dirección de un sitio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サイトのアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사이트 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "网站地址"
+          }
+        }
+      }
+    },
     "A sponsored transaction is one somebody else covered the gas for. Nothing here was." : {
       "localizations" : {
         "es" : {
@@ -35336,6 +35672,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "代币授权、Safe 模块、委托方。"
+          }
+        }
+      }
+    },
+    "A token held by an account you watch." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un token de una cuenta que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチしているアカウントが保有するトークン。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 계정이 보유한 토큰입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的账户持有的代币。"
           }
         }
       }
@@ -36030,6 +36394,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "账户"
+          }
+        }
+      }
+    },
+    "Account made. Its id is copied — send test coins to it to fund it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta creada. Su id está copiado: envíale monedas de prueba para financiarla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントを作成しました。IDをコピーしました — テストコインを送って入金してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정을 만들었습니다. ID가 복사되었습니다 — 테스트 코인을 보내 충전하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "账户已创建，ID 已复制 — 向它发送测试币即可充值。"
           }
         }
       }
@@ -39938,6 +40330,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这是一次批准，不是交易。模块会等待其延迟期结束，在此之前现有所有者都可以取消。"
+          }
+        }
+      }
+    },
+    "An earlier send from this account is still settling. Try again in a minute." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un envío anterior desde esta cuenta aún se está liquidando. Inténtalo en un minuto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントからの前回の送金がまだ処理中です。1分後にもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정의 이전 송금이 아직 처리 중입니다. 1분 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此账户的上一笔发送仍在结算中，请一分钟后再试。"
           }
         }
       }
@@ -44967,6 +45387,34 @@
         }
       }
     },
+    "Booked until the day is out" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ocupado hasta el final del día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日は最後まで予定あり"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 끝까지 일정 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今天剩余时间已排满"
+          }
+        }
+      }
+    },
     "Bookings land in your feed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -47350,6 +47798,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Casberi 没有服务器。下面的每一次请求都直接从 %@ 发往所列出的服务。"
+          }
+        }
+      }
+    },
+    "Casberi note" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nota de Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi メモ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 메모"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 笔记"
           }
         }
       }
@@ -60400,6 +60876,34 @@
         }
       }
     },
+    "Enter an amount." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Introduce una cantidad."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "金額を入力してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "금액을 입력하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请输入金额。"
+          }
+        }
+      }
+    },
     "Enter any domain (casberi.app works) and copy the key." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -61300,6 +61804,34 @@
         }
       }
     },
+    "Every passage you kept" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada pasaje que guardaste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存したすべての一節"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보관한 모든 구절"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你保存的每段文字"
+          }
+        }
+      }
+    },
     "Every payment you receive, plus refunds, disputes, and subscriptions that need attention. Nothing here charges, refunds, or cancels." : {
       "localizations" : {
         "es" : {
@@ -61744,6 +62276,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "其他所有人 · %lld"
+          }
+        }
+      }
+    },
+    "Everyone you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todas las personas que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のすべての人"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 모든 사람"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的所有人"
           }
         }
       }
@@ -62254,6 +62814,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你需要的一切，都在一处。可以一起读，也可以一次看一个应用。任何内容都能问你的智能体。这是一个演示。"
+          }
+        }
+      }
+    },
+    "Everything you read and save" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todo lo que lees y guardas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読んで保存したものすべて"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽고 저장한 모든 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你阅读和保存的一切"
           }
         }
       }
@@ -64454,6 +65042,34 @@
         }
       }
     },
+    "Finds what you read and kept, highlights included." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca lo que leíste y guardaste, incluidos los destacados."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読んで保存したものを、ハイライトも含めて探します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽고 보관한 것을 하이라이트까지 찾습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "查找你读过并保存的内容，包括高亮。"
+          }
+        }
+      }
+    },
     "Find…" : {
       "localizations" : {
         "es" : {
@@ -64845,6 +65461,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关注 %@"
+          }
+        }
+      }
+    },
+    "Follow %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir a %@ en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ で %1$@ をフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에서 %1$@ 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %2$@ 上关注 %1$@"
           }
         }
       }
@@ -65244,6 +65888,34 @@
         }
       }
     },
+    "Follow someone on any network" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue a alguien en cualquier red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どのネットワークでもフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "어느 네트워크에서든 팔로우하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在任意网络上关注某人"
+          }
+        }
+      }
+    },
     "Follow the incidents" : {
       "localizations" : {
         "es" : {
@@ -65474,6 +66146,34 @@
         }
       }
     },
+    "Following %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 팔로잉"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已关注 %@"
+          }
+        }
+      }
+    },
     "Following %@." : {
       "localizations" : {
         "es" : {
@@ -65644,6 +66344,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在关注动态"
+          }
+        }
+      }
+    },
+    "Following works once you leave the demo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir funciona cuando sales de la demo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローはデモを終了すると使えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우는 데모를 나가면 작동합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示后即可关注。"
           }
         }
       }
@@ -66098,6 +66826,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "免费"
+          }
+        }
+      }
+    },
+    "Free %@–%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Libre %@–%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@–%@ 空き"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@–%@ 비어 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@–%@ 空闲"
+          }
+        }
+      }
+    },
+    "Free after %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Libre después de las %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 以降は空き"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 이후 비어 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 之后空闲"
           }
         }
       }
@@ -70676,6 +71460,34 @@
         }
       }
     },
+    "In your reading" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En tu lectura"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読んだものの中で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽은 글에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你的阅读中"
+          }
+        }
+      }
+    },
     "In your wallet" : {
       "localizations" : {
         "es" : {
@@ -72157,6 +72969,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "它的入口标签会从你的订阅流中消失。你关注的市场会保留，除非你移除它。"
+          }
+        }
+      }
+    },
+    "Its feed lands in Reading" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Su feed llega a Lectura"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フィードはリーディングに届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "피드는 읽기에 들어옵니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其订阅源会进入阅读"
           }
         }
       }
@@ -74408,6 +75248,34 @@
         }
       }
     },
+    "Search your reading" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca en tu lectura"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読んだものを検索"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽은 글 검색"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索你的阅读"
+          }
+        }
+      }
+    },
     "Set" : {
       "localizations" : {
         "es" : {
@@ -75524,6 +76392,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "写下或录制笔记，或对任何内容%@以置顶到这里。"
+          }
+        }
+      }
+    },
+    "Writes a new note from anywhere." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escribe una nota nueva desde cualquier lugar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どこからでも新しいメモを書けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "어디서든 새 메모를 작성합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "随时随地写一条新笔记。"
           }
         }
       }
@@ -78852,6 +79748,34 @@
         }
       }
     },
+    "Logos" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos"
+          }
+        }
+      }
+    },
     "Longest %@ yet — %@ km" : {
       "localizations" : {
         "en" : {
@@ -79303,6 +80227,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "维护"
+          }
+        }
+      }
+    },
+    "Make a Logos account on this phone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Crea una cuenta de Logos en este teléfono"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この iPhone で Logos アカウントを作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰에서 Logos 계정 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在此手机上创建 Logos 账户"
           }
         }
       }
@@ -83066,6 +84018,34 @@
         }
       }
     },
+    "Near you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cerca de ti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "近く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "근처"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "附近"
+          }
+        }
+      }
+    },
     "Needs a device with a Secure Enclave. This one has none." : {
       "localizations" : {
         "es" : {
@@ -85833,6 +86813,34 @@
         }
       }
     },
+    "No highlights yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay destacados"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ハイライトはまだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 하이라이트가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还没有高亮"
+          }
+        }
+      }
+    },
     "No history together yet" : {
       "localizations" : {
         "es" : {
@@ -87043,6 +88051,34 @@
         }
       }
     },
+    "No tokens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin tokens"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークンなし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有代币"
+          }
+        }
+      }
+    },
     "No training wheels — users are protected by proofs alone." : {
       "localizations" : {
         "es" : {
@@ -87263,6 +88299,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "按 Walletbeat 的判断：否"
+          }
+        }
+      }
+    },
+    "Nobody by that name on Bluesky or Farcaster." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nadie con ese nombre en Bluesky ni Farcaster."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bluesky にも Farcaster にもその名前の人はいません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bluesky나 Farcaster에 그 이름의 사용자가 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bluesky 和 Farcaster 上都没有这个名字的人。"
           }
         }
       }
@@ -88551,6 +89615,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未限定为 %@。点按可缩小范围。"
+          }
+        }
+      }
+    },
+    "Not sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No enviado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信されませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보내지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未发送。"
           }
         }
       }
@@ -91733,6 +92825,34 @@
         }
       }
     },
+    "Nothing to you yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún nada para ti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなた宛てはまだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 나에게 온 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还没有给你的内容"
+          }
+        }
+      }
+    },
     "Nothing under %@." : {
       "localizations" : {
         "es" : {
@@ -92149,6 +93269,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你名下的资产 %lld 个月内不会到期"
+          }
+        }
+      }
+    },
+    "Nothing you read matches. Type a site's address to follow it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada de lo que leíste coincide. Escribe la dirección de un sitio para seguirlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読んだものに一致するものはありません。サイトのアドレスを入力してフォローできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽은 글 중 일치하는 것이 없습니다. 사이트 주소를 입력해 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你读过的内容中没有匹配项。输入网站地址即可关注。"
           }
         }
       }
@@ -96017,6 +97165,34 @@
         }
       }
     },
+    "Opens the composer." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre el editor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コンポーザーを開きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "작성기를 엽니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开编辑器。"
+          }
+        }
+      }
+    },
     "Opens the faucet" : {
       "localizations" : {
         "es" : {
@@ -97954,6 +99130,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "部分符合"
+          }
+        }
+      }
+    },
+    "Passages you keep land here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los pasajes que guardas llegan aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存した一節はここに届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보관한 구절이 여기에 들어옵니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你保存的段落会出现在这里"
           }
         }
       }
@@ -100991,6 +102195,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "帖子"
+          }
+        }
+      }
+    },
+    "Posts from the people you follow land here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las publicaciones de quienes sigues llegan aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中の人の投稿はここに届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 사람의 게시물이 여기에 들어옵니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的人的帖子会出现在这里"
           }
         }
       }
@@ -109421,6 +110653,62 @@
         }
       }
     },
+    "Replies, mentions and new followers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Respuestas, menciones y nuevos seguidores"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "返信、メンション、新しいフォロワー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "답글, 멘션, 새 팔로워"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "回复、提及和新关注者"
+          }
+        }
+      }
+    },
+    "Replies, mentions and new followers land here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las respuestas, menciones y nuevos seguidores llegan aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "返信、メンション、新しいフォロワーはここに届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "답글, 멘션, 새 팔로워가 여기에 들어옵니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "回复、提及和新关注者会出现在这里"
+          }
+        }
+      }
+    },
     "Reply" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -113002,6 +114290,34 @@
         }
       }
     },
+    "Search Bluesky and Farcaster by name. People who reply to you show here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca en Bluesky y Farcaster por nombre. Quienes te responden aparecen aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bluesky と Farcaster を名前で検索。あなたに返信した人がここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bluesky와 Farcaster를 이름으로 검색하세요. 나에게 답글을 단 사람이 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按名字搜索 Bluesky 和 Farcaster。回复你的人会显示在这里。"
+          }
+        }
+      }
+    },
     "Search Casberi for ${query}" : {
       "localizations" : {
         "es" : {
@@ -113732,6 +115048,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "发送 %@ %@"
+          }
+        }
+      }
+    },
+    "Send %@ test coins on Logos" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar %@ monedas de prueba en Logos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos でテストコインを %@ 送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos에서 테스트 코인 %@ 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Logos 上发送 %@ 测试币"
           }
         }
       }
@@ -118133,6 +119477,34 @@
         }
       }
     },
+    "Sites you save from" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sitios de los que guardas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存元のサイト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장하는 사이트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你保存内容的网站"
+          }
+        }
+      }
+    },
     "Skill" : {
       "localizations" : {
         "es" : {
@@ -121822,6 +123194,34 @@
         }
       }
     },
+    "Talks to you · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Te habla · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたと話す · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나와 대화 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与你互动 · %@"
+          }
+        }
+      }
+    },
     "Tap any app to add it" : {
       "localizations" : {
         "es" : {
@@ -122184,6 +123584,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "测试币没有价值，测试网可能在不通知的情况下重置。"
+          }
+        }
+      }
+    },
+    "Test coins on Logos are whole numbers." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las monedas de prueba en Logos son números enteros."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos のテストコインは整数です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 테스트 코인은 정수입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 上的测试币为整数。"
           }
         }
       }
@@ -123001,6 +124429,34 @@
         }
       }
     },
+    "That isn't a public LEZ account id." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ese no es un id de cuenta pública de LEZ."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それは公開 LEZ アカウント ID ではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 LEZ 계정 ID가 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这不是公开的 LEZ 账户 ID。"
+          }
+        }
+      }
+    },
     "That isn't an LEZ account id or a node address." : {
       "localizations" : {
         "es" : {
@@ -123769,6 +125225,34 @@
         }
       }
     },
+    "That's this account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Es esta misma cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それはこのアカウントです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这就是此账户。"
+          }
+        }
+      }
+    },
     "That's your Google password. Gmail takes an app password here — tap Get an app password." : {
       "localizations" : {
         "es" : {
@@ -123855,6 +125339,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "比特币减半预计将在 %@ 左右、区块 %@ 发生"
+          }
+        }
+      }
+    },
+    "The Logos testnet was reset, so every account on it starts empty. Your key and the accounts you watch are still yours." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La testnet de Logos se reinició, así que todas sus cuentas empiezan vacías. Tu clave y las cuentas que sigues siguen siendo tuyas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos テストネットがリセットされ、すべてのアカウントが空になりました。鍵とウォッチ中のアカウントはそのままです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 테스트넷이 초기화되어 모든 계정이 비어 있습니다. 키와 지켜보는 계정은 그대로입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 测试网已重置，所有账户都从零开始。你的密钥和关注的账户仍然保留。"
           }
         }
       }
@@ -126219,6 +127731,34 @@
         }
       }
     },
+    "The testnet refused the send." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La testnet rechazó el envío."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テストネットが送金を拒否しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트넷이 송금을 거부했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "测试网拒绝了此次发送。"
+          }
+        }
+      }
+    },
     "The tokens a wallet holds, sized by what each is worth. Nothing priced was found here — dust below the floor is left out." : {
       "localizations" : {
         "es" : {
@@ -126355,6 +127895,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你关注的代币"
+          }
+        }
+      }
+    },
+    "The tokens your accounts hold" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los tokens de tus cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントが保有するトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정이 보유한 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户持有的代币"
           }
         }
       }
@@ -126978,6 +128546,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "没有服务器。"
+          }
+        }
+      }
+    },
+    "There isn't enough on this account for the amount and the fee." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay suficiente en esta cuenta para la cantidad y la comisión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントには金額と手数料に足りる残高がありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정에 금액과 수수료를 낼 잔액이 부족합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此账户余额不足以支付金额和手续费。"
           }
         }
       }
@@ -127818,6 +129414,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此账户没有 CardPointers+"
+          }
+        }
+      }
+    },
+    "This account needs %@ to send that, the fee included." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta cuenta necesita %@ para enviar eso, comisión incluida."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金には手数料込みで %@ 必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보내려면 수수료 포함 %@이(가) 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此账户需要 %@（含手续费）才能发送。"
           }
         }
       }
@@ -128864,6 +130488,62 @@
         }
       }
     },
+    "This phone couldn't sign the send." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este teléfono no pudo firmar el envío."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この iPhone は送金に署名できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰에서 송금에 서명하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此手机无法签署此次发送。"
+          }
+        }
+      }
+    },
+    "This phone has no Logos account to send from." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este teléfono no tiene una cuenta de Logos desde la que enviar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この iPhone には送金元の Logos アカウントがありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰에는 보낼 Logos 계정이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此手机没有可用于发送的 Logos 账户。"
+          }
+        }
+      }
+    },
     "This phone has no signing key." : {
       "localizations" : {
         "es" : {
@@ -128972,6 +130652,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "本机还不是这个 Safe 的所有者。请在你的另一个钱包中添加它的地址。"
+          }
+        }
+      }
+    },
+    "This phone · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este teléfono · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この iPhone · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此手机 · %@"
           }
         }
       }
@@ -129840,6 +131548,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "待办"
+          }
+        }
+      }
+    },
+    "To you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Para ti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなた宛て"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나에게"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "给你的"
           }
         }
       }
@@ -131448,6 +133184,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入几个字母来查找某人，或输入完整的用户名 — 帖子是公开的，所以无需提供密码。"
+          }
+        }
+      }
+    },
+    "Type a site's address to follow it. Sites you save from twice show here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escribe la dirección de un sitio para seguirlo. Los sitios de los que guardas dos veces aparecen aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サイトのアドレスを入力してフォロー。2回以上保存したサイトがここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사이트 주소를 입력해 팔로우하세요. 두 번 저장한 사이트가 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "输入网站地址即可关注。保存过两次的网站会显示在这里。"
           }
         }
       }
@@ -139088,6 +140852,34 @@
         }
       }
     },
+    "What you read and save lands here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que lees y guardas llega aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読んで保存したものはここに届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽고 저장한 것이 여기에 들어옵니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你阅读和保存的内容会出现在这里"
+          }
+        }
+      }
+    },
     "What you send goes straight to the provider." : {
       "localizations" : {
         "es" : {
@@ -142644,6 +144436,34 @@
         }
       }
     },
+    "You saved %lld lately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guardaste %lld hace poco"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近 %lld 件保存しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 %lld개를 저장했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你最近保存了 %lld 条"
+          }
+        }
+      }
+    },
     "You signed a Safe transaction from this phone" : {
       "localizations" : {
         "es" : {
@@ -146017,6 +147837,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的节点"
+          }
+        }
+      }
+    },
+    "Your node stopped" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu nodo se detuvo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードが停止しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드가 멈췄습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的节点已停止"
           }
         }
       }
@@ -153008,6 +154856,34 @@
         }
       }
     },
+    "in %lld min" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en %lld min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 分後"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld분 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 分钟后"
+          }
+        }
+      }
+    },
     "in /%@" : {
       "localizations" : {
         "es" : {
@@ -155530,6 +157406,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无人支付"
+          }
+        }
+      }
+    },
+    "node stopped" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "nodo detenido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノード停止"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드 멈춤"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "节点已停止"
+          }
+        }
+      }
+    },
+    "nodes stopped" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "nodos detenidos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノード停止"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드 멈춤"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "节点已停止"
           }
         }
       }
@@ -161577,6 +163509,34 @@
         }
       }
     },
+    "test coins" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "monedas de prueba"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テストコイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트 코인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "测试币"
+          }
+        }
+      }
+    },
     "the accounts you follow" : {
       "localizations" : {
         "es" : {
@@ -164932,6 +166892,34 @@
         }
       }
     },
+    "Follow a site you keep saving from" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue un sitio del que guardas a menudo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "よく保存するサイトをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자주 저장하는 사이트를 팔로우하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注你常保存内容的网站"
+          }
+        }
+      }
+    },
     "Follow an address, privately" : {
       "localizations" : {
         "es" : {
@@ -165292,6 +167280,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从此账户发送测试 ETH"
+          }
+        }
+      }
+    },
+    "Send test coins from this phone's account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía monedas de prueba desde la cuenta de este teléfono"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この iPhone のアカウントからテストコインを送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰 계정에서 테스트 코인 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从此手机的账户发送测试币"
           }
         }
       }
