@@ -67,39 +67,11 @@ struct ReadingFindSheet: View {
     // MARK: - The field
 
     private var field: some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(.subhead)
-                .foregroundStyle(DS.textSecondary)
-            TextField(mode == .follow ? String(localized: "A site's address")
-                                      : String(localized: "Search your reading"),
-                      text: $query)
-                .dsText(.body17)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(mode == .follow ? .URL : .default)
-                .submitLabel(.search)
-                .onSubmit { remember(query) }
-                .focused($fieldFocused)
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .dsGlyph(.body)
-                        .foregroundStyle(DS.textTertiary)
-                        .frame(minWidth: 44, minHeight: 44)
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Clear"))
-            }
-        }
-        .padding(.leading, DS.Space.s4)
-        .padding(.trailing, DS.Space.s1)
-        .frame(height: 52)
-        .dsGlass(cornerRadius: 26)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s2)
+        DSTraySearchField(placeholder: mode == .follow ? String(localized: "A site's address")
+                                                       : String(localized: "Search your reading"),
+                          text: $query, focus: $fieldFocused,
+                          keyboard: mode == .follow ? .URL : .default,
+                          onSubmit: { remember(query) })
     }
 
     // MARK: - Before you type
@@ -107,14 +79,14 @@ struct ReadingFindSheet: View {
     @ViewBuilder private var before: some View {
         if mode == .follow {
             if !suggestions.isEmpty {
-                head(String(localized: "Sites you save from"))
+                DSTrayHead(String(localized: "Sites you save from"))
                 ForEach(suggestions, id: \.host) { s in
                     siteRow(s.host, line: String(localized: "You saved \(s.count) lately"))
                 }
             }
         }
         if !recents.isEmpty {
-            head(String(localized: "Recent"))
+            DSTrayHead(String(localized: "Recent"))
             ForEach(recents, id: \.self) { recent in
                 Button {
                     query = recent
@@ -156,27 +128,18 @@ struct ReadingFindSheet: View {
     @ViewBuilder private var results: some View {
         let hits = mode == .search ? Array(Retriever.find(trimmed, in: corpus.live).hits.prefix(Self.resultCap)) : []
         if !hits.isEmpty {
-            head(String(localized: "In your reading"))
+            DSTrayHead(String(localized: "In your reading"))
             ForEach(hits.keyed) { row in
                 if let thing = row.live { thingRow(thing) }
             }
         }
         if let site = ReadingRoom.site(in: trimmed) {
-            head(String(localized: "Follow"))
+            DSTrayHead(String(localized: "Follow"))
             siteRow(site, line: String(localized: "Its feed lands in Reading"))
         }
         if hits.isEmpty && ReadingRoom.site(in: trimmed) == nil {
             footnote
         }
-    }
-
-    private func head(_ title: String) -> some View {
-        Text(title)
-            .dsText(.label12)
-            .foregroundStyle(DS.textTertiary)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s1)
     }
 
     // MARK: - Rows

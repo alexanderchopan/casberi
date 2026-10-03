@@ -29,24 +29,24 @@ enum WalletStables {
     /// deliberately IN — it tracks the same unit and the person holding it
     /// means it as dollars — while a governance token of a stablecoin
     /// protocol is not, however closely it is associated.
-    static let symbols: Set<String> = [
-        // US dollar
-        "USDC", "USDC.E", "USDBC", "USDT", "USDT.E", "DAI", "SDAI", "USDS", "SUSDS",
-        "USDE", "SUSDE", "PYUSD", "TUSD", "FDUSD", "LUSD", "SUSD", "CRVUSD",
+    static let symbols: Set<String> = dollarSymbols.union(dollarWrappers).union(otherFiat)
+
+    /// The US-dollar coins: a quantity of one IS a dollar amount, so a move in
+    /// it can be stated in dollars with no rate (prd §1090).
+    static let dollarSymbols: Set<String> = [
+        "USDC", "USDC.E", "USDBC", "USDT", "USDT.E", "DAI", "USDS",
+        "USDE", "PYUSD", "TUSD", "FDUSD", "LUSD", "SUSD", "CRVUSD",
         "GHO", "FRAX", "BUSD", "RLUSD", "USDG", "USDP", "GUSD", "USDD", "USD0",
-        "DOLA", "MIM", "USDL", "AUSD", "USDF", "BUIDL", "USDY",
-        // Euro, sterling and the cards that settle in them
-        "EURE", "EURC", "EURS", "AGEUR", "EURT", "GBPE", "GBPT",
+        "DOLA", "MIM", "USDL", "AUSD", "USDF",
     ]
 
-    /// The US-dollar half of `symbols` — a quantity of one IS a dollar
-    /// amount, so a move in it can be stated in dollars with no rate (prd
-    /// §1090). The euro and sterling coins are not here: they need a rate.
-    static let dollarSymbols: Set<String> = [
-        "USDC", "USDC.E", "USDBC", "USDT", "USDT.E", "DAI", "USDS", "USDE", "PYUSD",
-        "TUSD", "FDUSD", "LUSD", "SUSD", "CRVUSD", "GHO", "FRAX", "BUSD", "RLUSD",
-        "USDG", "USDP", "GUSD", "USDD", "USD0", "DOLA", "USDL", "AUSD", "USDF",
-    ]
+    /// Dollar-tracking, but a unit is not a dollar: a yield-bearing wrapper
+    /// (sDAI is worth more than one DAI) and the tokenised funds.
+    private static let dollarWrappers: Set<String> = ["SDAI", "SUSDS", "SUSDE", "BUIDL", "USDY"]
+
+    /// Euro, sterling and the cards that settle in them — stable, but a rate
+    /// away from dollars.
+    private static let otherFiat: Set<String> = ["EURE", "EURC", "EURS", "AGEUR", "EURT", "GBPE", "GBPT"]
 
     static func isDollar(_ symbol: String) -> Bool {
         dollarSymbols.contains(symbol.trimmingCharacters(in: .whitespaces).uppercased())

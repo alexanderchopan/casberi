@@ -56,43 +56,15 @@ struct SocialFollowSheet: View {
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     private var field: some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(.subhead)
-                .foregroundStyle(DS.textSecondary)
-            TextField(String(localized: "A name or a handle"), text: $query)
-                .dsText(.body17)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .focused($fieldFocused)
-            if searching { DSSpinner(size: .small) }
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .dsGlyph(.body)
-                        .foregroundStyle(DS.textTertiary)
-                        .frame(minWidth: 44, minHeight: 44)
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Clear"))
-            }
-        }
-        .padding(.leading, DS.Space.s4)
-        .padding(.trailing, DS.Space.s1)
-        .frame(height: 52)
-        .dsGlass(cornerRadius: 26)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s2)
+        DSTraySearchField(placeholder: String(localized: "A name or a handle"),
+                          text: $query, focus: $fieldFocused, searching: searching)
     }
 
     @ViewBuilder private var before: some View {
         if near.isEmpty {
             footnote
         } else {
-            head(String(localized: "Near you"))
+            DSTrayHead(String(localized: "Near you"))
             ForEach(near) { person in row(person) }
         }
     }
@@ -102,7 +74,7 @@ struct SocialFollowSheet: View {
             ForEach(["Bluesky", "Farcaster"], id: \.self) { network in
                 let people = found.filter { $0.source == network }
                 if !people.isEmpty {
-                    head(network)
+                    DSTrayHead(network)
                     ForEach(people) { person in row(person) }
                 }
             }
@@ -121,15 +93,6 @@ struct SocialFollowSheet: View {
         return DSFootnote(text)
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s4)
-    }
-
-    private func head(_ title: String) -> some View {
-        Text(title)
-            .dsText(.label12)
-            .foregroundStyle(DS.textTertiary)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s1)
     }
 
     private func row(_ person: Candidate) -> some View {

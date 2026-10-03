@@ -57,36 +57,8 @@ struct WatchAddSheet: View {
     // MARK: - The field, at the bottom on glass
 
     private var field: some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(.subhead)
-                .foregroundStyle(DS.textSecondary)
-            TextField(String(localized: "Name, ticker or address"), text: $query)
-                .dsText(.body17)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .focused($fieldFocused)
-            if searching { DSSpinner(size: .small) }
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .dsGlyph(.body)
-                        .foregroundStyle(DS.textTertiary)
-                        .frame(minWidth: 44, minHeight: 44)
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Clear"))
-            }
-        }
-        .padding(.leading, DS.Space.s4)
-        .padding(.trailing, DS.Space.s1)
-        .frame(height: 52)
-        .dsGlass(cornerRadius: 26)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s2)
+        DSTraySearchField(placeholder: String(localized: "Name, ticker or address"),
+                          text: $query, focus: $fieldFocused, searching: searching)
     }
 
     // MARK: - Before you type
@@ -94,11 +66,11 @@ struct WatchAddSheet: View {
     @ViewBuilder private var suggestions: some View {
         let wallet = fromWallet.filter { !watched.contains(ref(of: $0)) }
         if !wallet.isEmpty {
-            head(String(localized: "From your Wallet"))
+            DSTrayHead(String(localized: "From your Wallet"))
             ForEach(wallet) { token in tokenRow(token) }
         }
         if !mentioned.isEmpty {
-            head(String(localized: "In your feed"))
+            DSTrayHead(String(localized: "In your feed"))
             ForEach(mentioned, id: \.symbol) { item in
                 Button {
                     query = item.symbol
@@ -122,7 +94,7 @@ struct WatchAddSheet: View {
             }
         }
         if !recents.isEmpty {
-            head(String(localized: "Recent"))
+            DSTrayHead(String(localized: "Recent"))
             ForEach(recents, id: \.self) { recent in
                 Button {
                     query = recent
@@ -170,7 +142,7 @@ struct WatchAddSheet: View {
         let byName = Dictionary(TokensScope.everyCompany.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
         let companies = indexHits.compactMap { byName[$0.name] }
         if !companies.isEmpty {
-            head(String(localized: "Behind your apps"))
+            DSTrayHead(String(localized: "Behind your apps"))
             ForEach(companies) { company in
                 let on = company.listing.ticker.map { watchedSymbols.contains($0.uppercased()) } ?? false
                 IndexRow(company: company, apps: company.seats,
@@ -184,7 +156,7 @@ struct WatchAddSheet: View {
         let shownStocks = chain == nil ? stocks : []
         if !shownTokens.isEmpty || chains.count > 1 {
             HStack {
-                head(String(localized: "Tokens"))
+                DSTrayHead(String(localized: "Tokens"))
                 Spacer(minLength: 0)
                 if chains.count > 1 || !stocks.isEmpty {
                     filterMenu(chains)
@@ -194,7 +166,7 @@ struct WatchAddSheet: View {
             ForEach(shownTokens) { token in tokenRow(token) }
         }
         if !shownStocks.isEmpty {
-            head(String(localized: "Stocks"))
+            DSTrayHead(String(localized: "Stocks"))
             ForEach(shownStocks) { stock in stockRow(stock) }
         }
         if DemoMode.isActive || (!searching && tokens.isEmpty && stocks.isEmpty && companies.isEmpty) {
@@ -236,15 +208,6 @@ struct WatchAddSheet: View {
             .foregroundStyle(DS.tint)
             .frame(minHeight: 44)
         }
-    }
-
-    private func head(_ title: String) -> some View {
-        Text(title)
-            .dsText(.label12)
-            .foregroundStyle(DS.textTertiary)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s1)
     }
 
     // MARK: - Rows

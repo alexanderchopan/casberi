@@ -63987,3 +63987,15 @@ It reads the folded room (§1079), so an incident later resolved, a dispute late
 **Private accounts, the request's second half, stay refused** (§988): a `Private/` account's state is encrypted to its owner, and reading it needs the owner's key through a Basecamp module (Field Wallet) or a viewing key LEZ does not publish — on the list of questions for the Logos team.
 
 **Seen** on an iPhone 17 Pro simulator: "Trading" over "5oX8…SfwP · Activity · quiet this week", the unnamed account unchanged. The menu's Name action was not driven on screen (no tap access to the fresh simulator); it is `AccountPage.rowMenu`, the same door Markets' "Move to front" uses.
+
+## §1090a — The wallet makeover's review fixes (user: "yes" to the review's six bugs and the fetch, then "do the duplication cleanups too", 2026-10-03; amends §1090) — BUILT
+
+- **Day moves are kept per wallet** (`HoldingMoves.Note`, keyed by owner): a holdings read replaces the notes of exactly the wallets it answered for and keeps the rest, so a one-wallet read (an approvals pass, a single-wallet refresh) no longer greys the other wallet's tiles; the box merges every fresh note, a token in two wallets weighted by the combined dollars. The defaults key moved to `.v2`.
+- **A holding's alert takes today's price only**: this launch's pulse, else a fresh resolve — never `watchPriceUsd`, the price the day you started watching, which could set a level already crossed.
+- **The alert menu words Markets' own choices** (`PriceAlert.choices` at a unit price), so there is no second list of four to fall out of step.
+- **Under your line but over the app's is "fell below the 2.0 you set"**, never "close to liquidation", which the room would contradict by drawing the borrow safe (§83).
+- **The heat map's strength is the biggest DRAWN move**: a holding folded into "Other" shows no colour and no longer sets the scale. The caption still counts every holding, as the rows under the box list them.
+- **Follow says "Looking up …" through the debounce** for anything shaped like a name or an address, and its suggestion read names its five columns (iOS 26+, §623).
+- **Cleanups**: the four find trays (Markets' Watch, Reading's Follow and Search, Social's Follow, the Wallet's Follow) draw one `DSTraySearchField` and one `DSTrayHead`; the Wallet's heat fill is `WatchHeatBox.fill`; `WalletStables.symbols` is the union of its dollar coins, its dollar wrappers and its other fiat, so `dollarSymbols` cannot drift from it.
+
+**Checked.** `wallet-makeover-selftest.sh` (per-wallet notes, a sold token, a stale wallet, combined weighting; guards for the live price, the derived menu, the copy and the per-wallet note), `wallet-viz`, `wallet-section`, `markets`, `social-toyou`, `reading-room` and `notify` self-tests, ten audits, the build. On a simulator, demo, dark: the Wallet's Follow, Markets' Watch and Social's Follow on the shared field, and Holdings with ETH at full strength.

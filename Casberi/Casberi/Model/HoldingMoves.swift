@@ -18,10 +18,16 @@ import Foundation
 /// The pure half (`merge`, `isFresh`, `tally`) is Foundation-only, compiled
 /// whole by `scripts/wallet-makeover-selftest.sh`.
 enum HoldingMoves {
-    struct Read: Equatable {
+    struct Read: Equatable, Codable {
         let symbol: String
         let usd: Double
         let change: Double
+    }
+
+    /// One wallet's last read: the moves it held, and when.
+    struct Note: Equatable, Codable {
+        let at: Date
+        let reads: [Read]
     }
 
     static let freshFor: TimeInterval = 6 * 3600
@@ -62,44 +68,56 @@ enum HoldingMoves {
     /// plausible amounts, so the box draws as the real one does.
     static let demo: [String: Double] = ["ETH": 0.021, "USDC": 0.0, "DEGEN": -0.064, "SOL": 0.038]
 
-    // MARK: - The store
-
-    private struct Stored: Codable {
-        let at: Date
-        let moves: [String: Double]
+    /// The moves to draw: every wallet's FRESH note merged, so a read of one
+    /// wallet (an approvals pass, a single-wallet refresh) never wipes what
+    /// another wallet's read said, and a token in both is weighted by the
+    /// combined dollars.
+    static func combine(_ notes: [String: Note], now: Date) -> [String: Double] {
+        merge(notes.values.filter { isFresh(at: $0.at, now: now) }.flatMap(\.reads))
     }
 
-    private static let defaultsKey = "wallet.holdingMoves.v1"
-    private static let lock = NSLock()
-    private static var cached: Stored?? = nil
+    /// Replaces the notes of exactly the wallets this read answered for — a
+    /// holding a wallet sold is not still moving — and keeps the rest.
+    static func replacing(_ notes: [String: Note], owners: [String], with reads: [(owner: String, read: Read)],
+                          now: Date) -> [String: Note] {
+        var out = notes
+        for owner in owners {
+            let k = owner.lowercased()
+            out[k] = Note(at: now, reads: reads.filter { $0.owner.lowercased() == k }.map(\.read))
+        }
+        return out
+    }
 
-    private static func loaded() -> Stored? {
+    // MARK: - The store
+
+    private static let defaultsKey = "wallet.holdingMoves.v2"
+    private static let lock = NSLock()
+    private static var cached: [String: Note]? = nil
+
+    private static func loaded() -> [String: Note] {
         if let cached { return cached }
         let stored = UserDefaults.standard.data(forKey: defaultsKey)
-            .flatMap { try? JSONDecoder().decode(Stored.self, from: $0) }
-        cached = .some(stored)
+            .flatMap { try? JSONDecoder().decode([String: Note].self, from: $0) } ?? [:]
+        cached = stored
         return stored
     }
 
-    /// What a holdings read noted. Replaces the last note whole: a holding
-    /// you sold is not still moving.
-    static func note(_ reads: [Read], now: Date = .now) {
-        let moves = merge(reads)
-        guard !moves.isEmpty else { return }
-        let stored = Stored(at: now, moves: moves)
+    /// What a holdings read noted, for the wallets it answered for.
+    static func note(owners: [String], _ reads: [(owner: String, read: Read)], now: Date = .now) {
+        guard !owners.isEmpty else { return }
         lock.lock()
-        cached = .some(stored)
+        let next = replacing(loaded(), owners: owners, with: reads, now: now)
+        cached = next
         lock.unlock()
         // The defaults write happens OUTSIDE the lock (prd §721).
-        if let data = try? JSONEncoder().encode(stored) {
+        if let data = try? JSONEncoder().encode(next) {
             DefaultsWrite.set(data, forKey: defaultsKey)
         }
     }
 
-    /// The moves to draw now, or empty when the last note is stale.
+    /// The moves to draw now; empty when every note is stale.
     static func current(now: Date = .now) -> [String: Double] {
         lock.lock(); defer { lock.unlock() }
-        guard let stored = loaded(), isFresh(at: stored.at, now: now) else { return [:] }
-        return stored.moves
+        return combine(loaded(), now: now)
     }
 }

@@ -50,30 +50,11 @@ struct WalletFollowSheet: View {
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     private var field: some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(.subhead)
-                .foregroundStyle(DS.textSecondary)
-            TextField(String(localized: "An address or a name"), text: $query)
-                .dsText(.body17)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.done)
-                .focused($fieldFocused)
-            if searching { DSSpinner(size: .small) }
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .dsGlyph(.body)
-                        .foregroundStyle(DS.textTertiary)
-                        .frame(minWidth: 44, minHeight: 44)
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Clear"))
-            } else if UIPasteboard.general.hasStrings {
-                // The paste is the common way in: an address is copied, never typed.
+        DSTraySearchField(placeholder: String(localized: "An address or a name"),
+                          text: $query, focus: $fieldFocused, searching: searching,
+                          submitLabel: .done) {
+            // The paste is the common way in: an address is copied, never typed.
+            if UIPasteboard.general.hasStrings {
                 Button {
                     if let s = UIPasteboard.general.string { query = s }
                 } label: {
@@ -86,12 +67,6 @@ struct WalletFollowSheet: View {
                 .accessibilityLabel(Text("Paste"))
             }
         }
-        .padding(.leading, DS.Space.s4)
-        .padding(.trailing, DS.Space.s1)
-        .frame(height: 52)
-        .dsGlass(cornerRadius: 26)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s2)
     }
 
     // MARK: - Before you type
@@ -103,7 +78,7 @@ struct WalletFollowSheet: View {
         if near.isEmpty {
             footnote(Text("Paste an address — 0x, Solana or Bitcoin — or type a name like vitalik.eth. Who you move money with shows here."))
         } else {
-            head(String(localized: "Near your money"))
+            DSTrayHead(String(localized: "Near your money"))
             ForEach(near, id: \.address) { s in
                 row(address: s.address, name: s.name, line: line(for: s))
             }
@@ -139,7 +114,18 @@ struct WalletFollowSheet: View {
             case .missed(let note):
                 footnote(Text(verbatim: note))
             }
-        } else if !searching {
+        } else if NameResolve.followTarget(of: trimmed) != nil || book.looksLikeAddress(trimmed) {
+            // A name or an address being asked about — during the debounce
+            // too, so a valid name never reads as nothing (prd §1090).
+            HStack(spacing: DS.Space.s2) {
+                DSSpinner(size: .mini)
+                Text("Looking up \(trimmed)…")
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4)
+        } else {
             footnote(Text("Not an address or a name yet."))
         }
     }
@@ -161,15 +147,6 @@ struct WalletFollowSheet: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
-    }
-
-    private func head(_ title: String) -> some View {
-        Text(title)
-            .dsText(.label12)
-            .foregroundStyle(DS.textTertiary)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s1)
     }
 
     private func row(address: String, name: String?, line: String,
@@ -236,12 +213,15 @@ struct WalletFollowSheet: View {
 
     private func resolve() async {
         let q = trimmed
+        // Whatever this pass ends on, the spinner is the LAST pass's to set:
+        // a cancelled pass hands it to the one that replaced it.
         guard !q.isEmpty else { preview = nil; previewFor = ""; searching = false; return }
         // A name is asked of the network; the demo reaches nothing (§483).
         if NameResolve.followTarget(of: q) != nil {
             guard !DemoMode.isActive else {
                 previewFor = q
                 preview = .missed(String(localized: "Looking up a name works once you leave the demo."))
+                searching = false
                 return
             }
             try? await Task.sleep(for: .milliseconds(450))
@@ -265,6 +245,12 @@ struct WalletFollowSheet: View {
             $0.source == source && $0.capturedAt >= since
         }, sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         d.fetchLimit = 1500
+        // Only the columns the rule reads (prd §722: every one named). iOS
+        // 26+ only — a predicated partial fetch drops rows on 18.6 (§623).
+        if #available(iOS 26.0, *) {
+            d.propertiesToFetch = [\.source, \.capturedAt, \.counterpartyAddress,
+                                   \.securityFlag, \.transferVenue]
+        }
         // An app in the catalogue is a service by its name ("Coinbase").
         let services = Set(BridgeCatalog.offers.map { $0.name.lowercased() })
         let moves: [WalletFollowSuggest.Move] = ((try? modelContext.fetch(d)) ?? []).compactMap { t in

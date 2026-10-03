@@ -181,9 +181,13 @@ struct HoldingsTreemap: View {
                 let tiles = HoldingsTreemapLayout.layout(
                     holdings.map { (id: $0.id, share: sum > 0 ? $0.usd / sum : 0) },
                     in: CGRect(origin: .zero, size: geo.size), gap: Self.gap, minSide: Self.minSide)
+                // The board's strength is its biggest DRAWN move: a holding
+                // folded into "Other" shows no colour, so it cannot set the
+                // scale the drawn tiles are coloured against (§1081's rule).
+                let widest = tiles.compactMap { move($0.id) }.map(abs).max() ?? 0
                 ZStack(alignment: .topLeading) {
                     ForEach(tiles, id: \.id) { tile in
-                        tileView(tile)
+                        tileView(tile, widest: widest)
                             .frame(width: tile.rect.width, height: tile.rect.height)
                             .offset(x: tile.rect.minX, y: tile.rect.minY)
                     }
@@ -218,12 +222,9 @@ struct HoldingsTreemap: View {
         dayMoves.isEmpty || id == HoldingsTreemapLayout.otherID ? nil : dayMoves[HoldingMoves.key(id)]
     }
 
-    /// The biggest move among the holdings, the full strength of the board.
-    private var widest: Double {
-        holdings.compactMap { move($0.id) }.map(abs).max() ?? 0
-    }
-
-    /// "2 up, 1 down today", Markets' box line (§1081), when any tile moved.
+    /// "2 up, 1 down today", Markets' box line (§1081), when any holding
+    /// moved — over every holding, as the rows under the box list them, so
+    /// the count and the list agree even where a tile folded into "Other".
     private var todayCaption: String? {
         let moves = holdings.compactMap { move($0.id) }
         guard !moves.isEmpty else { return nil }
@@ -239,15 +240,15 @@ struct HoldingsTreemap: View {
     /// A tile's fill: the tint when pressed; else its move's hue at its
     /// strength against the board's biggest move (Markets' rule, §1081); a
     /// flat or unread move keeps the plain fill (§83).
-    private func fill(_ id: String, lit isLit: Bool) -> Color {
+    private func fill(_ id: String, lit isLit: Bool, widest: Double) -> Color {
         if isLit { return DS.tint }
         guard let m = move(id), abs(m) >= 0.0005, widest > 0 else { return DS.fillFaint }
-        let strength = min(1, abs(m) / widest)
-        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.22 + 0.58 * strength)
+        return WatchHeatBox.fill(WatchHeat.Tile(id: id, symbol: id, change: m,
+                                                strength: min(1, abs(m) / widest)))
     }
 
     @ViewBuilder
-    private func tileView(_ tile: HoldingsTreemapLayout.Tile) -> some View {
+    private func tileView(_ tile: HoldingsTreemapLayout.Tile, widest: Double) -> some View {
         let isOther = tile.id == HoldingsTreemapLayout.otherID
         let isLit = lit == tile.id
         let small = min(tile.rect.width, tile.rect.height) < 72
@@ -294,7 +295,7 @@ struct HoldingsTreemap: View {
             .padding(small ? DS.Space.s2 : DS.Space.s3)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(RoundedRectangle(cornerRadius: small ? 12 : 14, style: .continuous)
-                .fill(fill(tile.id, lit: isLit)))
+                .fill(fill(tile.id, lit: isLit, widest: widest)))
             .opacity(lit != nil && !isLit ? 0.35 : 1)
             .contentShape(Rectangle())
         }

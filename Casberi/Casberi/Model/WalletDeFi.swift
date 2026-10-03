@@ -296,8 +296,14 @@ enum WalletDeFi {
                     + String(Int(Date.now.timeIntervalSince1970))
                 guard !existing.contains(ref) else { continue }
                 let chainName = WalletIngest.displayName(forNetwork: pool.network) ?? pool.network
-                let title = String(localized:
-                    "Your \(pool.protocolName) position on \(chainName) is close to liquidation — health factor \(WalletIngest.format(hf))")
+// Under YOUR line but not the app's (prd §1090) is "below the
+                // line you set", never "close to liquidation" — the room still
+                // calls it safe, and two words for one reading disagree (§83).
+                let title = hf < DeFiRisk.floor
+                    ? String(localized:
+                        "Your \(pool.protocolName) position on \(chainName) is close to liquidation — health factor \(WalletIngest.format(hf))")
+                    : String(localized:
+                        "Your \(pool.protocolName) position on \(chainName) fell below the \(WalletIngest.format(riskThreshold)) you set — health factor \(WalletIngest.format(hf))")
                 let thing = Thing(kind: .transaction, title: title,
                                   content: pool.appURL, source: "Wallet",
                                   sourceRef: ref)

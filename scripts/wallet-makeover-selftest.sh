@@ -46,6 +46,14 @@ grep -q 'environment(\\.holdingsDayMoves' "$ROOM" \
   || { echo "✗ the Holdings box no longer hands the treemap its moves"; exit 1; }
 grep -q 'WalletRiskScale.fallLine(' "$ROOM" \
   || { echo "✗ Risk's rows no longer say what a borrow can bear"; exit 1; }
+! awk '/func walletSetHoldingAlert/,/^    }$/' "$ROOM" | grep -q 'watchPriceUsd' \
+  || { echo "✗ a holding's alert reads watchPriceUsd — the price the day you watched, not today's"; exit 1; }
+grep -q 'PriceAlert.choices(ref: "", name: "", price: 1)' "$ROOM" \
+  || { echo "✗ the holding alert menu no longer words Markets' own choices — a second list to drift"; exit 1; }
+grep -q 'fell below the' Casberi/Casberi/Model/WalletDeFi.swift && grep -q 'fell below the' Casberi/Casberi/Model/MorphoDeFi.swift \
+  || { echo "✗ a borrow under your line but over the app's says 'close to liquidation' again"; exit 1; }
+grep -q 'HoldingMoves.note(owners:' "$INGEST" \
+  || { echo "✗ the holdings read no longer notes moves per wallet — one wallet's read wipes another's"; exit 1; }
 grep -q 'needsYouGroup' "$ROOM" \
   || { echo "✗ Coming up no longer leads with Needs you"; exit 1; }
 for f in Casberi/Casberi/Model/WalletDeFi.swift Casberi/Casberi/Model/MorphoDeFi.swift; do
@@ -120,6 +128,26 @@ let merged = HoldingMoves.merge([.init(symbol: "eth", usd: 3000, change: 0.02),
 check(abs((merged["ETH"] ?? 9) - 0.01) < 1e-9, "one token in two places is one dollar-weighted move")
 check(merged["USDC"] == nil, "a holding worth nothing carries no move")
 check(merged["SOL"] == nil, "a non-finite move is dropped")
+// Per wallet: a read of one wallet keeps what another wallet's read said.
+typealias HM = HoldingMoves
+var notes = HM.replacing([:], owners: ["0xA", "0xB"],
+                         with: [(owner: "0xa", read: .init(symbol: "ETH", usd: 1000, change: 0.02)),
+                                (owner: "0xB", read: .init(symbol: "SOL", usd: 500, change: -0.03))],
+                         now: now.addingTimeInterval(-60))
+notes = HM.replacing(notes, owners: ["0xb"],
+                     with: [(owner: "0xb", read: .init(symbol: "SOL", usd: 500, change: 0.01))], now: now)
+var combined = HM.combine(notes, now: now)
+check(combined["ETH"] == 0.02, "one wallet's read keeps the other wallet's moves")
+check(combined["SOL"] == 0.01, "a wallet's new read replaces its own moves")
+notes = HM.replacing(notes, owners: ["0xA"], with: [], now: now)
+check(HM.combine(notes, now: now)["ETH"] == nil, "a wallet that sold its token stops moving it")
+notes["0xold"] = .init(at: now.addingTimeInterval(-8 * 3600), reads: [.init(symbol: "DOGE", usd: 9, change: 0.5)])
+check(HM.combine(notes, now: now)["DOGE"] == nil, "a stale wallet's note is not drawn")
+combined = HM.combine(HM.replacing([:], owners: ["0x1", "0x2"],
+                                   with: [(owner: "0x1", read: .init(symbol: "ETH", usd: 3000, change: 0.02)),
+                                          (owner: "0x2", read: .init(symbol: "ETH", usd: 1000, change: -0.02))],
+                                   now: now), now: now)
+check(abs((combined["ETH"] ?? 9) - 0.01) < 1e-9, "a token in two wallets is weighted by the combined dollars")
 check(HoldingMoves.isFresh(at: now.addingTimeInterval(-3600), now: now), "an hour-old move is fresh")
 check(!HoldingMoves.isFresh(at: now.addingTimeInterval(-7 * 3600), now: now), "a seven-hour-old move is stale")
 check(!HoldingMoves.isFresh(at: now.addingTimeInterval(3600), now: now), "a move from the future is not fresh")

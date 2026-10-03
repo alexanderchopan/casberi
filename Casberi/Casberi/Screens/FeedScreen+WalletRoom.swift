@@ -124,22 +124,38 @@ extension FeedScreen {
         }
     }
 
-    /// Markets' four alert choices (`PriceAlert.choices`), worded relative to
-    /// the price because the menu opens before the price is read.
+    /// Markets' alert choices (`PriceAlert.choices`), worded relative to the
+    /// price because the menu opens before the price is read. Built from the
+    /// choices themselves at a unit price, so a choice added or reordered
+    /// there is worded and set here with no second list to keep in step.
     @ViewBuilder
     func walletHoldingAlertMenu(_ position: WalletPortfolio.Position) -> some View {
         Section(String(localized: "Alert me when \(position.symbol)")) {
-            Button { walletSetHoldingAlert(position, choice: 0) } label: { Text("Rises 10%") }
-            Button { walletSetHoldingAlert(position, choice: 1) } label: { Text("Rises 25%") }
-            Button { walletSetHoldingAlert(position, choice: 2) } label: { Text("Falls 10%") }
-            Button { walletSetHoldingAlert(position, choice: 3) } label: { Text("Moves 10% in a day") }
+            ForEach(PriceAlert.choices(ref: "", name: "", price: 1)) { template in
+                Button { walletSetHoldingAlert(position, template: template) } label: {
+                    Text(Self.relativeAlertLabel(template))
+                }
+            }
+        }
+    }
+
+    /// "Rises 10%", "Falls 10%", "Moves 10% in a day" — a choice made at a
+    /// price of 1, so its target IS its ratio.
+    static func relativeAlertLabel(_ template: PriceAlert) -> String {
+        let pct = Int((abs(template.target - (template.kind == .move ? 0 : 1)) * 100).rounded())
+        switch template.kind {
+        case .above: return String(localized: "Rises \(pct)%")
+        case .below: return String(localized: "Falls \(pct)%")
+        case .move:  return String(localized: "Moves \(pct)% in a day")
         }
     }
 
     /// Watches the token in Markets if it isn't yet — an alert is checked on
-    /// a watched token's price (prd §1081) — then sets the alert there, where
-    /// the Alerts tile lists it and its switch turns it off.
-    func walletSetHoldingAlert(_ position: WalletPortfolio.Position, choice: Int) {
+    /// a watched price (prd §1081) — then sets the alert there, where the
+    /// Alerts tile lists it and its switch turns it off. The level is taken
+    /// from a LIVE price only: the pulse this launch read, else a fresh
+    /// resolve. Never `watchPriceUsd`, the price the day you started watching.
+    func walletSetHoldingAlert(_ position: WalletPortfolio.Position, template: PriceAlert) {
         guard !DemoMode.isActive else {
             chrome.flash(String(localized: "Alerts work once you leave the demo."))
             return
@@ -150,25 +166,27 @@ extension FeedScreen {
         let store = bridges
         Task { @MainActor in
             var thing = r.watchedThing(in: context)
-            var price = thing.flatMap { TokenPulse.shared.pulse(for: $0)?.price ?? $0.watchPriceUsd }
-            if thing == nil {
+            var price = thing.flatMap { TokenPulse.shared.pulse(for: $0)?.price }
+            if thing == nil || price == nil {
                 guard let resolved = await TokenWatch.search(r.address).first(where: { $0.id == r.id }) else {
                     chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to watch."))
                     return
                 }
-                thing = TokenWatch.add(resolved, context: context) ?? r.watchedThing(in: context)
-                TokenWatch.registerBridge(store: store, context: context)
+                if thing == nil {
+                    thing = TokenWatch.add(resolved, context: context) ?? r.watchedThing(in: context)
+                    TokenWatch.registerBridge(store: store, context: context)
+                }
                 price = resolved.priceUsd.flatMap(Double.init)
             }
             guard let thing, thing.isLive, let ref = thing.sourceRef, let price, price > 0 else {
                 chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to watch."))
                 return
             }
-            let choices = PriceAlert.choices(ref: ref, name: position.symbol, price: price)
-            guard choices.indices.contains(choice) else { return }
-            PriceAlertStore.shared.add(choices[choice])
+            let alert = PriceAlert(ref: ref, name: position.symbol, kind: template.kind,
+                                   target: template.kind == .move ? template.target : template.target * price)
+            PriceAlertStore.shared.add(alert)
             DSHaptic.success()
-            chrome.flash(String(localized: "Alert set: \(position.symbol) \(WatchAlertsSection.title(choices[choice]).lowercased())"),
+            chrome.flash(String(localized: "Alert set: \(position.symbol) \(WatchAlertsSection.title(alert).lowercased())"),
                          tone: .success)
         }
     }

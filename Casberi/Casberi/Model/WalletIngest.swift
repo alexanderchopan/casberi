@@ -2718,13 +2718,15 @@ enum WalletIngest {
         var reached = false
         var unreached: [String] = []
         var icons: [(symbol: String, url: String)] = []
-        var moves: [HoldingMoves.Read] = []
+        var moves: [(owner: String, read: HoldingMoves.Read)] = []
+        var answered: [String] = []
         for (i, result) in holdings.enumerated() {
             guard let result else {   // this wallet unreached — Alchemy asks for it (§934), the set stands
                 unreached.append(routed[i].address)
                 continue
             }
             reached = true
+            answered.append(routed[i].address)
             let allowed = routed[i].networks
             for h in result where allowed.contains(h.network) {
                 // The mark this read named, into the book (prd §931) — the
@@ -2733,7 +2735,8 @@ enum WalletIngest {
                 // The day's move, for the Holdings box (prd §1090), keyed by
                 // the same cleaned symbol the tile is.
                 if let change = h.change1d, let price = h.price {
-                    moves.append(.init(symbol: clean(h.symbol), usd: h.amount * price, change: change))
+                    moves.append((owner: routed[i].address,
+                                  read: .init(symbol: clean(h.symbol), usd: h.amount * price, change: change)))
                 }
                 // `clean`, not the raw symbol (fixed 2026-07-21, prd §160):
                 // this arm is the PRIMARY holdings read now, and it was the
@@ -2747,7 +2750,7 @@ enum WalletIngest {
             }
         }
         TokenIconBook.note(icons)
-        HoldingMoves.note(moves)
+        HoldingMoves.note(owners: answered, moves)
         return (candidates, reached, unreached)
     }
 
