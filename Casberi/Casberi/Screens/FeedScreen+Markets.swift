@@ -165,25 +165,28 @@ extension FeedScreen {
 
     private func marketsAlertRow(_ alert: PriceAlert, watched: Thing?) -> some View {
         let price = watched.flatMap { PriceAlertStore.reading(for: $0)?.price }
+        let open = { if let watched, watched.isLive { openThing(watched) } }
         return HStack(spacing: DS.Space.s3) {
-            WatchFace(url: watched.flatMap(marketsLogo), lettered: alert.name,
-                      onWhite: watched.flatMap { StockWatch.symbol(of: $0) } != nil)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(verbatim: alert.name).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text("\(WatchAlertsSection.title(alert))\(WatchAlertsSection.subtitle(alert, price: price).map { " · " + $0 } ?? "")")
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
+            HStack(spacing: DS.Space.s3) {
+                WatchFace(url: watched.flatMap(marketsLogo), lettered: alert.name,
+                          onWhite: watched.flatMap { StockWatch.symbol(of: $0) } != nil)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: alert.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .dsCardLead(Text("Opens its page"), perform: open)
+                    Text("\(WatchAlertsSection.title(alert))\(WatchAlertsSection.subtitle(alert, price: price).map { " · " + $0 } ?? "")")
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: open)
             Toggle(isOn: Binding(get: { alert.on },
                                  set: { PriceAlertStore.shared.set(alert.id, on: $0); DSHaptic.selection() })) {
                 Text(WatchAlertsSection.title(alert))
             }
             .labelsHidden()
         }
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-        .onTapGesture { if let watched, watched.isLive { openThing(watched) } }
         .contextMenu {
             Button(role: .destructive) {
                 PriceAlertStore.shared.remove(alert.id)
