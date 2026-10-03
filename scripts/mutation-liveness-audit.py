@@ -91,10 +91,10 @@ def python_unchecked(code):
     return False
 
 
-def audit():
+def audit(scripts=SCRIPTS):
     findings = []
     checked = 0
-    for path in sorted(SCRIPTS.glob("*-selftest.sh")) + sorted(SCRIPTS.glob("*-audit.sh")):
+    for path in sorted(scripts.glob("*-selftest.sh")) + sorted(scripts.glob("*-audit.sh")):
         raw = path.read_text()
         code = strip_comments(raw)
         if any(APPLIES_PYTHON.search(m.group(0)) for m in MUTATE_FN.finditer(code)):
@@ -125,7 +125,12 @@ def audit():
 
 
 def self_test():
-    """Two fixtures: the vulnerable shape must be caught, the guarded one must not."""
+    """Five fixtures, each audited alone in its own temp directory — never in
+    the real `scripts/`. verify.sh runs this self-test while its parallel
+    verify-mac.sh leg runs it too (it discovers every `*-audit.py`), so a
+    fixture written into the tree was unlinked by one process between the
+    other's glob and read (FileNotFoundError, build 726), and the vulnerable
+    fixture could fail the other process's plain audit."""
     import tempfile, shutil
 
     failures = 0
@@ -166,7 +171,7 @@ PY
 }
 """
     py_checked = py_unchecked.replace("<<'PY'", "<<'PY' || { echo STALE; return 1; }")
-    tmp = pathlib.Path(tempfile.mkdtemp())
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="mutation-liveness-"))
     try:
         cases = [("zz-vulnerable-selftest.sh", vulnerable, True),
                  ("zz-guarded-selftest.sh", guarded, False),
@@ -174,16 +179,14 @@ PY
                  ("zz-pyunchecked-selftest.sh", py_unchecked, True),
                  ("zz-pychecked-selftest.sh", py_checked, False)]
         for name, body, should_fire in cases:
-            target = SCRIPTS / name
-            target.write_text(body)
-            try:
-                findings, _ = audit()
-                fired = any(name in f for f in findings)
-                if fired != should_fire:
-                    print(f"✗ fixture {name}: expected {'a finding' if should_fire else 'no finding'}")
-                    failures += 1
-            finally:
-                target.unlink()
+            case_dir = tmp / name.removesuffix(".sh")
+            case_dir.mkdir()
+            (case_dir / name).write_text(body)
+            findings, _ = audit(case_dir)
+            fired = any(name in f for f in findings)
+            if fired != should_fire:
+                print(f"✗ fixture {name}: expected {'a finding' if should_fire else 'no finding'}")
+                failures += 1
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
