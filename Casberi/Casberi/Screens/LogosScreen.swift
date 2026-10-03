@@ -29,6 +29,9 @@ struct LogosScreen: View {
     @FocusState private var fieldFocused: Bool
     @State private var sheet: AccountPageSheet?
     @State private var weekly: [String: (week: Int, new: Bool)] = [:]
+    /// The account being named (prd §1091), and the name as typed.
+    @State private var namingID: String?
+    @State private var nameDraft = ""
 
     /// The roster row's id for the node. Node refs are `logos:node:<kind>:…`,
     /// so `countWeek`'s `:<id>:` match finds them by it.
@@ -43,6 +46,25 @@ struct LogosScreen: View {
             rows: rows,
             query: field,
             onRemoveRow: unwatch,
+            // NAME AN ACCOUNT (prd §1091, a Logos user: "giving a name to my
+            // LEZ wallets as its about to get real messy"). The address book
+            // is the app's one naming authority — the Wallet's and Frames'
+            // names live there, Solana's base58 included — so a name given
+            // here is the name everywhere the id is drawn. The node row has
+            // no id to name.
+            rowMenu: { id in
+                AnyView(Group {
+                    if id != Self.nodeRowID {
+                        Button {
+                            nameDraft = AddressBook.shared.name(for: id) ?? ""
+                            namingID = id
+                        } label: {
+                            Label(AddressBook.shared.name(for: id) == nil ? "Name" : "Rename",
+                                  systemImage: "pencil")
+                        }
+                    }
+                })
+            },
             teardown: { LogosStore.shared.disconnect() },
             sheet: $sheet,
             act: { addBlock },
@@ -58,6 +80,17 @@ struct LogosScreen: View {
             },
             keySheet: { EmptyView() }
         )
+        .alert("Name this account",
+               isPresented: Binding(get: { namingID != nil }, set: { if !$0 { namingID = nil } })) {
+            TextField("Name (e.g. Trading)", text: $nameDraft)
+            Button("Save") {
+                if let id = namingID { AddressBook.shared.setName(nameDraft, for: id) }
+                namingID = nil
+            }
+            Button("Cancel", role: .cancel) { namingID = nil }
+        } message: {
+            Text("Blank shows the id instead.")
+        }
         .onAppear {
             countWeek()
             if logos.connected { Task { await sync() } }
@@ -97,16 +130,23 @@ struct LogosScreen: View {
             // A network account (prd §1035) says what it is: it never lands
             // a row, so "Activity · 0" would read as a quiet wallet.
             var row = AccountPageShape.Row(
-                id: id, title: LogosWire.short(id),
-                subline: logos.isSystem(id)
+                id: id, title: LogosRoom.name(for: id),
+                subline: Self.withID(id, logos.isSystem(id)
                     ? String(localized: "Network account · moved only by the network")
                     : AccountPageShape.subline(nouns: String(localized: "Activity"),
-                                               weekCount: counted.week),
+                                               weekCount: counted.week)),
                 weekCount: counted.week, hasNew: counted.new,
                 isYou: false, avatarURL: nil)
             row.faceAddress = id
             return row
         }
+    }
+
+    /// A NAMED account keeps its address in sight (prd §1091, "Name and
+    /// Address"): the short id leads its line. An unnamed one already wears
+    /// the id as its title.
+    static func withID(_ id: String, _ line: String) -> String {
+        AddressBook.shared.name(for: id) == nil ? line : "\(LogosWire.short(id)) · \(line)"
     }
 
     /// Your node, when one is watched: its sync state, height, peers,

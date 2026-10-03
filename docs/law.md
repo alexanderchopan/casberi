@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1217 of 1276 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1218 of 1277 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1438,6 +1438,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1087 — Day's box is Box B: the next thing over today's shape
 - §1089 — Frames says what you did, not how it was built: rows titled by who, one word for row and sheet, your own accounts in…
 - §1090 — The Wallet, Markets' way: Follow in the room, Holdings as the day's heat map, one line per move, Needs you leads Comi…
+- §1091 — Logos: name an account, and a named one keeps its address in sight (a Logos user, relayed 2026-10-03: "requesting giv…
 
 ## Dead rulings → what replaced them (generated)
 

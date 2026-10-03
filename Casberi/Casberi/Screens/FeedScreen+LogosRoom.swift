@@ -93,13 +93,15 @@ extension FeedScreen {
             name: String(localized: "All accounts"),
             sub: roster.isEmpty
                 ? String(localized: "Nothing watched on Logos yet")
-                : ListFormatter.localizedString(byJoining: roster.map(LogosWire.short)),
+                : ListFormatter.localizedString(byJoining: roster.map(LogosRoom.name(for:))),
             faces: roster.prefix(2).map { .wallet(address: $0) })
         return [all] + roster.map { id in
             DSAccountSlot(id: id,
-                          name: LogosKey.holds(id) ? String(localized: "This phone · \(LogosWire.short(id))")
-                                                   : LogosWire.short(id),
-                          sub: store.balance(for: id).map { String(localized: "\(LogosWire.amount($0)) test coins") },
+                          name: LogosKey.holds(id) ? String(localized: "This phone · \(LogosRoom.name(for: id))")
+                                                   : LogosRoom.name(for: id),
+                          sub: store.balance(for: id)
+                              .map { String(localized: "\(LogosWire.amount($0)) test coins") }
+                              .map { LogosScreen.withID(id, $0) },
                           faces: [.wallet(address: id)])
         }
     }

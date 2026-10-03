@@ -176,6 +176,13 @@ enum LogosRoom {
         return order.compactMap { merged[$0] }
     }
 
+    /// What an account is called (prd §1091): the name you gave it in the
+    /// address book, or its short id. One read, so the page, the menu and
+    /// the caption cannot call one account two things.
+    static func name(for id: String) -> String {
+        AddressBook.shared.name(for: id) ?? LogosWire.short(id)
+    }
+
     /// The row a watched account's rows carry in their ref:
     /// `logos:lez:<account>:<hash>`.
     static func account(ofRef ref: String?) -> String? {

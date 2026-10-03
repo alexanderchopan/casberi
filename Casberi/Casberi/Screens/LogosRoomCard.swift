@@ -88,7 +88,7 @@ struct LogosRoomFigure: View {
     /// caption so the fixed lead box never grows a line.
     private var caption: String {
         let who = head.accounts.count == 1
-            ? LogosWire.short(head.accounts[0].id)
+            ? LogosRoom.name(for: head.accounts[0].id)
             : String(localized: "\(head.accounts.count) accounts · test coins")
         guard let reset = head.resetDay else { return who }
         let day = reset.formatted(.dateTime.month(.abbreviated).day())
