@@ -500,6 +500,6 @@ extension FeedScreen {
         WalkScope.feed(source: source, tag: filter.tag,
                        narrowed: Pinboard.isPinnedRoom(source)
                            || (roomTakesWalletScope && selectedWallet != nil)
-                           || (SocialRoom.hasRoster(source) && chrome.personScope != nil))
+                           || personScoped)
     }
 }

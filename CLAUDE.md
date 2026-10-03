@@ -142,6 +142,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Room-head self-test (scripts/room-heads-selftest.sh)** → docs/verify.md · prd §298
 - **The social rooms became ONE room (Model/SocialRoom.swift + SocialRoomSource.swift, scripts/social-room-selftest.sh, 2026-08-26)** → docs/hooks/social.md · prd §489
 - **Retriever self-test (scripts/retriever-selftest.sh)** → docs/verify.md · prd §318
+- **One row per object in Work and Reading (`Model/ObjectFold.swift`, `object-fold-selftest.sh`): Work folds only on a per-service object URL, never a dashboard; the keys read `content` off the main actor; the sheet lists what folded. Social's faces are people across networks (`FollowedPeople`, `followed-people-selftest.sh`)** → prd §1079
 - **Ranking sweep (-rankSweep "q1|q2|…")** (`-rankSweep` `-semanticFloor` `-expandDistance`) → docs/verify.md · prd §318
 - **Perf pass (scripts/perf.sh)** (`-Onone`) → docs/verify.md · prd §257
 - **Mac verify (scripts/verify-mac.sh)** → docs/verify.md

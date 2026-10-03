@@ -897,6 +897,9 @@ struct SocialFacesTray: View {
     let accounts: [SocialAccount]
     let source: String
     let scope: String?
+    /// The network mark standing in for a missing picture, per account, where
+    /// the accounts span networks (the Social room's people, prd §1079).
+    var faceSources: [String: String] = [:]
     let onPick: (String) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -917,7 +920,8 @@ struct SocialFacesTray: View {
                                 tint: scope.map { SocialScopeRail.matches($0, account.key) } == true
                                     ? DS.tint : DS.textPrimary,
                                 opens: false) {
-                                RailFace(face: .avatar(url: account.avatarURL, source: source),
+                                RailFace(face: .avatar(url: account.avatarURL,
+                                                       source: faceSources[account.key] ?? source),
                                          size: DS.Face.list)
                             }
                         }

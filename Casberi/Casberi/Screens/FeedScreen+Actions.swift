@@ -40,15 +40,23 @@ extension FeedScreen {
     /// reason: it is a fact about arriving in a room, and recomputing it as rows
     /// stream in would dissolve the rings one by one while you watched.
     private func publishFreshHandles() {
-        guard SocialRoom.hasRoster(source) else {
+        guard SocialRoom.hasRoster(source) || socialPeopleRoom else {
             chrome.freshHandles = []
             chrome.recentHandles = []
             return
         }
+        // The Social room's faces are people across networks (prd §1079): an
+        // author counts as the person their (network, handle) belongs to.
+        let people = socialPeopleRoom ? FollowedPeople.index(socialPeople) : nil
+        func author(_ thing: Thing) -> String? {
+            guard let handle = thing.authorHandle else { return nil }
+            guard let people else { return handle }
+            return people[FollowedPeople.Member(source: thing.source, handle: handle)]
+        }
         // Newest post per author, for the rail's cap (prd §824).
         var newest: [String: Date] = [:]
         for thing in visible {
-            guard let handle = thing.authorHandle else { continue }
+            guard let handle = author(thing) else { continue }
             if newest[handle].map({ thing.capturedAt > $0 }) ?? true {
                 newest[handle] = thing.capturedAt
             }
@@ -59,7 +67,7 @@ extension FeedScreen {
             return
         }
         chrome.freshHandles = Set(visible.compactMap {
-            $0.capturedAt > since ? $0.authorHandle : nil
+            $0.capturedAt > since ? author($0) : nil
         })
     }
 

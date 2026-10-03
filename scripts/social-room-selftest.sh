@@ -108,8 +108,9 @@ present "the thread fold is table-driven, not shape-driven" \
   'SocialRoom\.foldsThreads\(source\)' "$TMP/feed.nc"
 present "the person filter is gated on the roster set" \
   'guard SocialRoom\.hasRoster\(source\), let scope = chrome\.personScope' "$TMP/feed.nc"
+# prd §1079: the merged Social room's people take rings too, off the same gate.
 present "the fresh rings are gated on the same set" \
-  'guard SocialRoom\.hasRoster\(source\) else \{' "$TMP/feed.nc"
+  'guard SocialRoom\.hasRoster\(source\) \|\| socialPeopleRoom else \{' "$TMP/feed.nc"
 # prd §824: the rail's cap ranks by the same landing's recency, off the same gate.
 present "the rail's recency is published beside the fresh rings" \
   'chrome\.recentHandles = newest\.sorted' "$TMP/feed.nc"

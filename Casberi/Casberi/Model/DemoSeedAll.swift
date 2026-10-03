@@ -4000,6 +4000,10 @@ enum DemoSeedAll {
                       ask: String?, ref: String, url: String)] = [
             ("Merged: one onboarding screen instead of four (#412)", "you", 1, nil,
              "gh:demo412", "https://github.com/quillmark/app/pull/412"),
+            // The same PR's opening, three days earlier: Work folds it under
+            // the merge (prd §1079), and the merge's sheet lists it.
+            ("Opened: one onboarding screen instead of four (#412)", "you", 4, nil,
+             "gh:demo412open", "https://github.com/quillmark/app/pull/412"),
             ("sync conflicts between two devices (#414) — Mentioned you · quillmark/app", "you", 1.5,
              "Mentioned", "gh:notif:demo414", "https://github.com/quillmark/app/issues/414"),
             ("paste large tables without freezing (#409) — Assigned to you · quillmark/app", "you", 6,

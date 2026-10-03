@@ -521,8 +521,17 @@ extension FeedScreen {
                 // `threadReplies` rides beside it for `shapedRow` to render
                 // inline. Scoped to `.social` — every other shape's `visible`
                 // passes through untouched.
+                //
+                // The merged Social room folds them too (prd §1079, the gap
+                // §1068 left): the parent ref is exact per network and the
+                // fold keeps a reply with its parent's network.
+                //
+                // Reading folds one article saved in several apps into its
+                // newest save (prd §1079, `objectFolded`).
+                let rows = source == RoomAccounts.readingRoom ? objectFolded(visible) : visible
                 let (roomThings, threadReplies): ([Thing], [String: [Thing]]) =
-                    SocialRoom.foldsThreads(source) ? foldThreadReplies(visible) : (visible, [:])
+                    SocialRoom.foldsThreads(source) || source == RoomAccounts.socialRoom
+                        ? foldThreadReplies(rows) : (rows, [:])
                 // Live-first in a source's own room (2026-07-21): a stream
                 // that's on RIGHT NOW is the one row whose relevance isn't
                 // chronological, so it leads its group. No-op for sources

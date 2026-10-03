@@ -218,6 +218,10 @@ struct ThingSheetView: View {
     /// not raw, because it is a `Thing` held in `@State` and a heal landing
     /// under this open sheet must never leave the row reading a dead model.
     @State private var keptBefore: KeyedThing?
+    /// The other rows about the same object (prd §1079): a PR's earlier
+    /// events, an article's other saves. The merged room folds them under its
+    /// newest row, so this is where they stay reachable. Newest first.
+    @State private var sameObject: [KeyedThing] = []
     /// Upcoming moments this thing's own text names (prd §282). Plain values,
     /// not model references — read once off a live `Thing` and safe to hold.
     @State private var facts: [ScreenshotFacts.Fact] = []
@@ -3386,7 +3390,9 @@ struct ThingSheetView: View {
     private var relatedShelf: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // `factRows` moved under the picture's title (prd §885).
-            keptBeforeRow
+            // The same object's other rows include the earlier copy, so the
+            // one row never says it twice (prd §1079).
+            if sameObject.isEmpty { keptBeforeRow } else { sameObjectRows }
             if !relatedStream.els.isEmpty {
                 Text(LocalizedStringKey(relatedTitle))
                     .dsText(.label12)
@@ -3488,6 +3494,66 @@ struct ThingSheetView: View {
         }
     }
 
+    // MARK: - The same object (prd §1079)
+
+    /// Work's and Reading's rows folded under this one: each a door to that
+    /// row, saying what it said (a PR's events) or where it was kept (an
+    /// article's saves), and when.
+    @ViewBuilder
+    private var sameObjectRows: some View {
+        ForEach(sameObject) { item in
+            if let other = item.live {
+                let reading = ObjectFold.Room(room: RoomAccounts.host(ofSource: other.source)?.room ?? "")
+                    == .reading
+                Button {
+                    walkingToScope = .none
+                    walkingToNote = item
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .accessibilityHidden(true)
+                            .dsGlyph(.caption)
+                            .foregroundStyle(DS.textTertiary)
+                        Text(reading ? other.source : other.title)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                        Spacer(minLength: DS.Space.s2)
+                        Text(other.capturedAt.formatted(.relative(presentation: .named)))
+                            .dsText(.subhead12)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .dsHover()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+            }
+        }
+    }
+
+    /// The rows sharing this one's object key, out of the recent corpus the
+    /// related shelf already fetched.
+    private func sameObjectRows(in all: [Thing]) -> [Thing] {
+        guard thing.isLive,
+              let room = ObjectFold.Room(room: RoomAccounts.host(ofSource: thing.source)?.room ?? ""),
+              let key = ObjectFold.key(room: room, source: thing.source, link: thing.content)
+        else { return [] }
+        return all.filter { other in
+            guard other.isLive, other.id != thing.id,
+                  let otherRoom = ObjectFold.Room(
+                      room: RoomAccounts.host(ofSource: other.source)?.room ?? ""),
+                  otherRoom == room
+            else { return false }
+            return ObjectFold.key(room: room, source: other.source, link: other.content) == key
+        }
+        .sorted { $0.capturedAt > $1.capturedAt }
+        .prefix(8)
+        .map { $0 }
+    }
+
     private func streamRelated() {
         // NO GUESSES UNDER A THING (prd §632, 2026-09-06). The embedding
         // neighbours and the tag-overlap fallback are gone: cosine similarity
@@ -3504,6 +3570,7 @@ struct ThingSheetView: View {
         if let earlier = RelatedThings.keptBefore(thing, in: all) {
             keptBefore = KeyedThing(earlier)
         }
+        sameObject = sameObjectRows(in: all).map { KeyedThing($0) }
 
         guard TokenWatch.isWatchedToken(thing) else { return }
         let mentions = tokenMentions(in: all)

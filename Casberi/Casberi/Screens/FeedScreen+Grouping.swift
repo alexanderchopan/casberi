@@ -347,7 +347,11 @@ extension FeedScreen {
             guard let handle = t.authorHandle, !handle.isEmpty,
                   let parentRef = t.parent?.ref,
                   let parent = bySourceRef[parentRef],
-                  parent.authorHandle == handle
+                  parent.authorHandle == handle,
+                  // One network's thread: the merged Social room hands this
+                  // every network at once (prd §1079), and a handle is only
+                  // a person within its own network.
+                  parent.source == t.source
             else { continue }
             // Walk to the chain's ROOT so a three-deep thread groups under
             // its first post rather than nesting a thread of threads. Capped
@@ -358,7 +362,8 @@ extension FeedScreen {
             while hops < 32,
                   let grandparentRef = root.parent?.ref,
                   let grandparent = bySourceRef[grandparentRef],
-                  grandparent.authorHandle == handle {
+                  grandparent.authorHandle == handle,
+                  grandparent.source == t.source {
                 root = grandparent
                 hops += 1
             }

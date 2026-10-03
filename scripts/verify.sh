@@ -1953,6 +1953,15 @@ harness "Social sheet self-test" "social sheet self-test" "scripts/social-sheet-
 # in `SocialRoom.table`, so the ninth network cannot ship without a room.
 harness "Social room self-test" "social room self-test" "scripts/social-room-selftest.sh" "the social room self-test failed — run scripts/social-room-selftest.sh"
 
+# One row per object in Work and Reading (prd §1079): which links NAME a PR, an
+# issue, an incident or an article, and which are dashboards and messages that
+# must never fold. The fold hides rows, so a wrong key renders as a calm room.
+harness "Object fold self-test" "object fold self-test" "scripts/object-fold-selftest.sh" "the object fold self-test failed — run scripts/object-fold-selftest.sh"
+
+# The Social room's faces, one per person across networks (prd §1079): joined
+# only by the Addresses index, never by a handle or a display name.
+harness "Followed people self-test" "followed people self-test" "scripts/followed-people-selftest.sh" "the followed people self-test failed — run scripts/followed-people-selftest.sh"
+
 # An event's enrichment (`Model/EventDetails.swift`, 2026-08-14) — which link
 # in an invite is the way to JOIN the call, and how a collapsed series says it
 # repeats. UNTESTABLE ANY OTHER WAY: every input is a real invite, and the

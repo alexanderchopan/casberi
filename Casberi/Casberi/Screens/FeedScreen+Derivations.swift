@@ -117,6 +117,8 @@ extension FeedScreen {
     func liveVisible(rawOverride: [Thing]? = nil) -> [Thing] {
         let base = rawOverride.map { Pinboard.isPinnedRoom(source) ? notesOrder($0) : Corpus.surfaced($0, room: source) }
             ?? feedThings
+        // Resolved once, not per row (prd §1079).
+        let people = socialScopeMembers
         return base.filter { thing in
             // The pinned room's membership is decided entirely by the `@Query`
             // above (`pinnedAt != nil`), so there is no source to match against
@@ -134,7 +136,7 @@ extension FeedScreen {
                 && (source != "All" || Corpus.showsInAll(thing))
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletScopeAllows(thing)
-                && personScopeAllows(thing)
+                && personScopeAllows(thing, people: people)
                 && notesScopeAllows(thing)
                 // Privy's display choices (prd §803e): hidden apps, and empty
                 // apps nobody uses unless the person asked to see them.
@@ -285,7 +287,15 @@ extension FeedScreen {
     /// that holds if a room is entered before that clear lands, and an ungated
     /// compare against `authorHandle` would empty every non-social room, where
     /// that field is nil on essentially every row.
-    private func personScopeAllows(_ thing: Thing) -> Bool {
+    ///
+    /// The merged Social room scopes to a PERSON across networks (prd §1079):
+    /// `people` is the picked person's (network, handle) pairs, resolved once
+    /// by the caller.
+    private func personScopeAllows(_ thing: Thing, people: Set<FollowedPeople.Member>?) -> Bool {
+        if let people {
+            guard let handle = thing.authorHandle else { return false }
+            return people.contains(FollowedPeople.Member(source: thing.source, handle: handle))
+        }
         guard SocialRoom.hasRoster(source), let scope = chrome.personScope else { return true }
         return thing.authorHandle == scope
     }

@@ -37,6 +37,9 @@ extension FeedScreen {
                     onPick: { id in
                         withAnimation(DS.Motion.standard) {
                             chrome.mergedScope[room] = (id?.isEmpty ?? true) ? nil : id
+                            // A person is picked from the app's faces; another
+                            // app's row may not hold them (prd §1079).
+                            if room == RoomAccounts.socialRoom { chrome.personScope = nil }
                         }
                     })
     }
@@ -170,13 +173,21 @@ extension FeedScreen {
         }
     }
 
-    /// The Work room: the most urgent thing (the next deadline, else the
-    /// newest), All · Coming up · Watch, the menu, then the list.
+    /// The Work room: the newest thing, All · Coming up · Watch, the menu,
+    /// then the list — one row per PR, issue, ticket, incident, deployment or
+    /// build, standing at its newest event (prd §1079).
+    ///
+    /// **The box is the newest event, not the nearest deadline** (prd §1079,
+    /// user: "people like to see their PRs and that header card update to
+    /// newest thing", amending §1057). Deadlines keep their own tile.
     @ViewBuilder
-    func workRoomSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
+    func workRoomSections(_ allVisible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
+        let visible = objectFolded(allVisible)
         let deadlines = workDeadlines(visible)
         let comingUp = chrome.workScope == .comingUp
-        let cover = heroShown ? nil : (deadlines.first ?? visible.first { $0.isLive })
+        // Coming up leads with the soonest deadline, the view it is.
+        let cover = heroShown ? nil
+            : (comingUp ? deadlines.first : visible.first { $0.isLive })
         if let cover {
             Section { ledeListRow(cover) }
         } else if !heroShown {

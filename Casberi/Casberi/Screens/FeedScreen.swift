@@ -803,6 +803,10 @@ struct FeedScreen: View {
     /// computation lands — the same nothing a head that DECLINES draws.
     @State var heads: RoomHeads?
 
+    /// Work's and Reading's object keys, by row (prd §1079): computed off the
+    /// main actor in `.task(id: objectFoldKey)`, read by `objectFolded`.
+    @State var objectKeys: [UUID: String] = [:]
+
     // MARK: - Body
 
     var body: some View {
@@ -1712,6 +1716,10 @@ struct FeedScreen: View {
             guard rowBudget == nil else { return }
             recomputeHeads()
         }
+        // One row per object in Work and Reading (prd §1079): the keys read
+        // the rows' links, a heavy column, so they are read once per corpus
+        // revision off the main actor, never in a body.
+        .task(id: objectFoldKey) { await recomputeObjectKeys() }
         // The page coat moved UP to the shell (prd §159, 2026-07-21): the crown
         // pour lives in MainSurface's background so it can run behind the chip
         // strip, and painting the opaque themed coat again HERE would slide
