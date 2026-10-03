@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Demo marking audit (prd §864, §919, §946).
+"""Demo marking audit (prd §864, §919, §946, §1083).
 
 WHY THIS EXISTS. Reported by the user: *"i had a user land on demo and not
 realize"* — after the capsule had been restyled four times (§662f blue with a
@@ -8,7 +8,7 @@ a second marking at the head of the All feed (`DemoLead`) and a capsule that
 stood down under it; §919 made the capsule a big blue pill carrying the same
 fact and the same Exit, and §946 deleted the lead as the demo said twice
 (user: "we also have this, so why not just use this"). The first-launch cover
-still spells the word in four falling letter tiles.
+says it in words since §1083.
 
 That shape has four ways to quietly stop being true, and none of them breaks
 a build, moves a pixel on the screen a screenshot sweep opens, or shows up in
@@ -29,11 +29,13 @@ so its `.opacity(` may read only its own entrance (`settled`), and neither
 `DemoLead` nor its flag (`demoLeadVisible`) may come back into the model
 (§723: a feature deleted from the surface is deleted from the model).
 
-THREE · **THE COVER'S WORD COMES FROM THE CATALOG.** `IntroCover.demoLetters`
-derives its letters from `String(localized: "Demo")`, so the Japanese cover
-drops デ and モ. A hardcoded `"demo"` compiles, passes every other check, and
-spells Latin letters across a cover whose every other word is translated — on
-the one screen where the word is the whole message.
+THREE · **THE COVER SAYS "DEMO" IN WORDS, IN ONE LOCALIZED SENTENCE (§1083).**
+§864 spelled the word in four falling letter tiles beside a `Here's a`
+lead-in, and §1028 moved them into its line; twice a person still read the
+cover as "Here's a" and nothing after it. The cover now draws one
+`Text("…demo…")` literal, so the word is on the first frame, translated with
+the sentence around it. A lead-in split from its word, a `verbatim:` word
+that skips the catalog, or the tiles' return all fail this.
 
 FOUR · **THE MARKING ANSWERS THE CAPTURE DOOR, THROUGH ONE DEFINITION.**
 `-hideDemoBanner YES` (2026-09-08) takes the demo's marking out of an App Store
@@ -226,19 +228,14 @@ def audit(root: Path):
                 "screenshots."
             )
 
-    # THREE — the cover's word comes from the catalog.
-    cover = read(COVER)
-    letters = re.search(r"demoLetters\s*:\s*\[String\]\s*\{(.*?)\n    \}", cover, re.S)
-    if letters is None:
+    # THREE — the cover says "demo" in one localized sentence.
+    cover = strip_comments(read(COVER))
+    if not re.search(r'Text\(\s*"[^"\n]*\bdemo\b[^"\n]*"', cover):
         findings.append(
-            f"`demoLetters` is gone from {COVER} — the cover's falling word."
-        )
-    elif 'String(localized: "Demo")' not in letters.group(1):
-        findings.append(
-            "the cover's letter tiles do not come from the catalog — "
-            '`demoLetters` must read `String(localized: "Demo")`, or the '
-            "Japanese cover spells Latin letters while every other word on "
-            "the screen is translated."
+            f"{COVER} draws no `Text(\"…demo…\")` sentence — the first-launch "
+            "cover must say the word in words, in one catalog string, on the "
+            "first frame (§1083: a lead-in waiting on letter tiles read as "
+            "\"Here's a\" and nothing after it, twice)."
         )
 
     return findings
@@ -282,10 +279,7 @@ FIXTURE_COVER = '''
 import SwiftUI
 
 struct IntroCover: View {
-    private static var demoLetters: [String] {
-        String(localized: "Demo").lowercased().map(String.init)
-    }
-    var body: some View { Text("Here's a") }
+    var body: some View { Text("Here's a demo.", comment: "Second line.") }
 }
 '''
 
@@ -391,19 +385,33 @@ def self_test() -> int:
             'UserDefaults.standard.string(forKey: "hideDemoBanner") != nil',
             "a second definition of the capture door was not reported",
         )
-        # 7 · the cover's word is hardcoded Latin.
+        # 7 · the lead-in is split from its word again (the tiles' shape).
         mutate(
             COVER,
-            'String(localized: "Demo").lowercased()',
-            '"demo"',
-            "a hardcoded cover word was not reported",
+            'Text("Here\'s a demo."',
+            'Text("Here\'s a"',
+            "a lead-in without its word was not reported",
+        )
+        # 8 · the word skips the catalog.
+        mutate(
+            COVER,
+            'Text("Here\'s a demo.", comment: "Second line.")',
+            'Text(verbatim: "Here\'s a demo.")',
+            "an untranslated cover sentence was not reported",
+        )
+        # 9 · the sentence survives only in a comment.
+        mutate(
+            COVER,
+            'var body: some View { Text("Here\'s a demo.", comment: "Second line.") }',
+            '// Text("Here\'s a demo.")\n    var body: some View { Text("Here\'s a") }',
+            "a sentence that lives only in a comment was not reported",
         )
 
     if failures:
         for f in failures:
             print(f"self-test FAILED: {f}", file=sys.stderr)
         return 1
-    print("demo marking audit self-test: ok (7 mutations)")
+    print("demo marking audit self-test: ok (9 mutations)")
     return 0
 
 
@@ -414,7 +422,7 @@ def main() -> int:
     if not findings:
         print("demo marking audit: ok (4 checks)")
         return 0
-    print("The demo's marking has drifted (prd §864, §946):\n")
+    print("The demo's marking has drifted (prd §864, §946, §1083):\n")
     for f in findings:
         print(f"  · {f}\n")
     return 1

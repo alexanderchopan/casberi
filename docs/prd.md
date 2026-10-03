@@ -63860,3 +63860,13 @@ It reads the folded room (§1079), so an incident later resolved, a dispute late
 **Deleted with the packs** (the deleted-surface rule): `companyPackSections`, the pack's rows that opened nothing.
 
 **Checked.** `markets-selftest.sh` (the index's split, your apps leading a line, search by name, ticker and app, one letter finding nothing, All merging a company's apps), the §1081 checks, and on a simulator, demo, dark: Work's index with its heat map, "From your apps" and Watch all 8; All with 19 up, 12 down and Watch all 29. **Not seen:** a star tapped from the index, Watch all run, a company's sheet, Search finding a company by its app.
+
+## §1083 — The cover says "Here's a demo." in words (user: "the onboarding says 'Here's a' and doesn't say 'demo' does it? needs to say demo!", then "even if those tiles are there it's not clear and i thought we updated this", 2026-10-02; supersedes §864's letter tiles and §1028) — BUILT
+
+**The second line of the first-launch cover is one static `Text("Here's a demo.")`** at `heading24`, drawn on the first frame like the headline above it. The four amber letter tiles that spelled "demo" are deleted, with the seat that held them, and the heap of app tiles is the only thing that falls.
+
+**Why the tiles went.** §1028 moved them into the lead-in's line and made them fall first, and the cover was still read as "Here's a" and nothing after it. A word made of tiles shaped like the 100 app icons under it reads as more icons, whatever its size or timing; the fix that would make it read is to make it words.
+
+**Deleted from the model (§723)**: `TileDrop.glyph`, `TileDropGlyph`, `TileDropLayer.gravityDrop` (it existed only so the letters' layer could borrow the heap's gravity), `PileBounds.letters`, and the catalog's `Here's a` lead-in. `Here's a demo.` takes its four translations (the same sentences `This is a demo.` carries).
+
+**Checked.** `demo-marking-audit.py` check three now asserts the cover draws one `Text("…demo…")` literal, nine mutations (a lead-in split from its word, a `verbatim:` sentence, a sentence left in a comment).

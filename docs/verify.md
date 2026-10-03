@@ -1021,19 +1021,19 @@ single-chain seat keeps its simpler key and does not get a finding for it.
 
 ## Demo-marking audit (scripts/demo-marking-audit.py, 2026-09-20)
 
-**Why it exists.** A real person landed in the demo and did not realise (user, 2026-09-20). The capsule had been restyled four times by then — the marking was never the wrong colour, it was in the wrong place. §864 moved it into the reading path: the first-launch cover spells the word in four falling letter tiles, and the All feed led with `DemoLead` while the capsule stood down under it. §919 made the capsule a big blue pill with the same fact and the same Exit, and **§946 deleted `DemoLead`** as the demo said twice — one marking, everywhere.
+**Why it exists.** A real person landed in the demo and did not realise (user, 2026-09-20). The capsule had been restyled four times by then — the marking was never the wrong colour, it was in the wrong place. §864 moved it into the reading path: the first-launch cover spelled the word in four falling letter tiles (words since §1083), and the All feed led with `DemoLead` while the capsule stood down under it. §919 made the capsule a big blue pill with the same fact and the same Exit, and **§946 deleted `DemoLead`** as the demo said twice — one marking, everywhere.
 
 That shape has four ways to quietly stop being true, and **none of them breaks a build, moves a pixel on a screen the sweep opens, or shows in a demo census.**
 
 1. **The way out is one implementation.** `DemoMode.exit(` is reached from exactly one place outside `DemoMode` — `DemoLeave.run`. The leave is not one call: fade, delete in one transaction, reset source and tag, land on Accounts (§863). A second copy at a new door would look right and drop one step.
 2. **One marking, and it never stands down.** The pill's `.opacity(` reads only its entrance (`settled`), it never loses its hit testing, and neither `DemoLead` nor `demoLeadVisible` may come back into the model (§723). The history is why: while the lead existed, the pill hid under it on a flag, and the first cut drove that flag from `onAppear` — which in a `List` tracks cell recycling — so the demo showed a fake crown with no marking anywhere for most of a screen. Anything the pill yields to is that failure again.
-3. **The cover's word comes from the catalog.** `IntroCover.demoLetters` reads `String(localized: "Demo")`, so the Japanese cover drops デ and モ. A hardcoded `"demo"` compiles, passes every other check, and spells Latin letters across a cover whose every other word is translated — on the one screen where the word is the whole message.
+3. **The cover says "demo" in words, in one localized sentence (§1083).** The tiles §864 dropped beside a `Here's a` lead-in read, twice, as "Here's a" and nothing after it. The cover must draw one `Text("…demo…")` literal; a lead-in split from its word, a `verbatim:` sentence that skips the catalog, or a sentence left only in a comment fails it.
 
 4. **The marking answers the capture door, through one definition.** `-hideDemoBanner YES` takes the pill out of an App Store still or preview. `DemoCapture.hidesMarking` is the one definition and the shell reads it; reading the raw key anywhere else fails.
 
 **What it deliberately does not check.** That the pill is drawn — that is asserting the diff, which `guards-assert-what-you-built` says not to spend a harness on. The letters' timing against `autoLift` — both are constants in one file, the fall is CoreAnimation, and nothing static can measure a frame (record frames and count them). The pill's own words — §813, in the catalog, where `setup-copy-audit.py` reads them.
 
-Seven mutations, each applied to a temp fixture tree (never the working copy) with a pinned anchor, so a drifted anchor fails the self-test instead of printing a passing line.
+Nine mutations, each applied to a temp fixture tree (never the working copy) with a pinned anchor, so a drifted anchor fails the self-test instead of printing a passing line.
 
 ## Account-detail sheet gate (`scripts/verify-mac.sh` step 2d, 2026-09-21) → prd §872
 

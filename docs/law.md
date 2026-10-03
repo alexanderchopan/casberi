@@ -171,7 +171,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 ### 15. Demo
 - A fresh install pours the furnished demo at once, under a cover with no controls. Any tap or drag lifts it (§620). The demo is marked once: a floating blue pill on every screen, All included (§946, §919).
 - Every demo picture is its own drawn asset (§890). The demo is one person's life in Berlin, and their app is Quillmark, never Casberi (§1026).
-- The cover's word falls first, on the lead-in's line (§1028). The demo's Exit lands on the catalogue (§863).
+- The cover says "Here's a demo." in words; no letter tiles (§1083). The demo's Exit lands on the catalogue (§863).
 - Every surface the app can draw over a populated corpus also draws over the demo (§617).
 
 ### 16. Agents and the composer
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1211 of 1269 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1211 of 1270 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1193,7 +1193,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §862 — §861 fixed the agent room; the same defect was in nine others, and the box was 30pt too tall
 - §862b — Two fixtures that tested the MACHINE, not the code
 - §863 — The demo's Exit lands on Accounts, Connect leads the switcher, and a first run is shown three rows (amended by §1045)
-- §864 — The demo says so where people read: the cover's word falls, the All feed leads with it (amended by §1028; part superseded by §946)
+- §864 — The demo says so where people read: the cover's word falls, the All feed leads with it (amended by §1028; part superseded by §946, §1083)
 - §865 — The keyboard covers the dock; it never lifts it
 - §865a — The §865 fix did nothing, and the measurement says which half a modifier can carry
 - §866 — The feed's days are felt, and the floor draws the mark
@@ -1359,7 +1359,6 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1025 — Addresses gets smarter: four more suggestion rules, a named author, the first transfer, a book anchor, and Shortcuts
 - §1026 — The demo is one person's life, not one subject in every room
 - §1027 — An entry field's placeholder wraps, and its well spans the column
-- §1028 — The cover's word falls FIRST, on the lead-in's line
 - §1029 — A connect LANDS YOU IN THE ROOM, on every account page
 - §1030 — GitHub's next step after a connect is a tray, and watching stands in the room (amended by §1031)
 - §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is
@@ -1432,12 +1431,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1080 — Work's Coming up leads with what needs you, then what is due
 - §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082)
 - §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the…
+- §1083 — The cover says "Here's a demo." in words
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1040→§1050f
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f
 
 ## Renumbered (generated)
 

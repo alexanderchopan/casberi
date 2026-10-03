@@ -669,8 +669,8 @@ step "Dead-closure audit"
 print -P "%F{green}✓ dead-closure audit%f"
 
 # THE DEMO IS MARKED ONCE, CONTINUOUSLY (prd §864, §919, §946). A real person
-# landed in the demo without realising; the cover now spells the word in
-# falling letter tiles and a blue pill carrying the fact and the Exit floats
+# landed in the demo without realising; the cover now says "Here's a demo."
+# in words (§1083) and a blue pill carrying the fact and the Exit floats
 # over every demo screen, All included (the All feed's own `DemoLead` was the
 # demo said twice, and is deleted). Four ways that quietly stops being true,
 # none of which breaks a build, moves a pixel on a screen the sweep opens, or

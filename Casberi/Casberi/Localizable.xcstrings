@@ -68907,31 +68907,31 @@
         }
       }
     },
-    "Here's a" : {
-      "comment" : "Lead-in on the first-launch cover. The word 'demo' follows it on the same line, spelled out in falling letter tiles, so translate only the lead-in.",
+    "Here's a demo." : {
+      "comment" : "Second line on the first-launch cover, under the headline: what follows is a demo, not the person's own things.",
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Esto es una"
+            "value" : "Esto es una demo."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "これは"
+            "value" : "これはデモです。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "이것은"
+            "value" : "이것은 데모입니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "这是一个"
+            "value" : "这是一个演示。"
           }
         }
       }
