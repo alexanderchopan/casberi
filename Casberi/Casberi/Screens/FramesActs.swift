@@ -60,6 +60,49 @@ enum FramesActs {
         UIPasteboard.general.string = address
         chrome.flash(String(localized: "Address copied"))
         openPage(url)
+        watchForDeposit(address: address, chrome: chrome)
+    }
+
+    // MARK: - The top up's return trip (prd §1089)
+
+    private static var depositWatch: Task<Void, Never>?
+
+    /// **THE FAUCET IS A PAGE, SO THE ROOM WAITS FOR WHAT IT SENDS (prd
+    /// §1089).** Top up handed you to a captcha and proof of work and then
+    /// said nothing; whether it had paid was a pull-to-refresh you had to
+    /// think of. This reads the one balance every few seconds for ten
+    /// minutes — `eth_getBalance` on the host `NetworkReach` already declares
+    /// — and says what arrived the moment it does, then reads the room.
+    ///
+    /// **An increase, never a change**: a send from this account in the
+    /// window lowers the balance and must not read as a deposit. A balance
+    /// that does not read is skipped, never a zero (§515a). A second tap
+    /// replaces the watch rather than stacking two.
+    static func watchForDeposit(address: String, chrome: ShellChrome) {
+        depositWatch?.cancel()
+        depositWatch = Task { @MainActor in
+            guard let before = await balance(address) else { return }
+            let until = Date().addingTimeInterval(depositWindow)
+            while !Task.isCancelled, Date() < until {
+                try? await Task.sleep(for: .seconds(depositPoll))
+                guard !Task.isCancelled, let now = await balance(address), now > before else { continue }
+                let arrived = NSDecimalNumber(decimal: (now - before) / FramesMoney.weiPerETH).doubleValue
+                DSHaptic.success()
+                chrome.flash(String(localized: "\(FramesMoney.eth(arrived)) test ETH arrived"), tone: .success)
+                chrome.rain(sources: [FramesIdentity.source])
+                await FramesLiveState.shared.refresh()
+                return
+            }
+        }
+    }
+
+    static let depositWindow: TimeInterval = 10 * 60
+    static let depositPoll: Double = 8
+
+    private static func balance(_ address: String) async -> Decimal? {
+        guard let hex = await FramesRPC.call(method: "eth_getBalance", params: [address, "latest"]) as? String
+        else { return nil }
+        return FramesMoney.decimal(fromHex: hex)
     }
 
     /// Create: **ONE TAP MAKES IT, and there is no screen in between** (§553).
@@ -156,8 +199,8 @@ enum FramesSendPlanSteps {
         }
         return switch frame.mode {
         case 1: String(localized: "Verify")
-        case 2: String(localized: "Sender")
-        case 0: String(localized: "Default")
+        case 2: String(localized: "Send")
+        case 0: String(localized: "Call")
         default: String(localized: "Mode \(String(frame.mode))")
         }
     }

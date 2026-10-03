@@ -334,13 +334,31 @@ struct DevnetPayerChoice {
     let candidates: [(address: String, name: String?)]
     /// Sign the batch as a request for `payer`, and return what to hand them.
     let ask: (_ legs: [DevnetSendLeg], _ atomic: Bool, _ payer: String) async -> DevnetAskResult
+    /// **A PAYER THIS PHONE HOLDS PAYS AT ONCE (prd §1089).** Your own other
+    /// account needs no link: the sheet signs both halves here, so the tile
+    /// says Send rather than Ask to pay.
+    var paysHere: (String) -> Bool = { _ in false }
 }
 
-/// What asking produced: a link to share and when it stops working, or why not.
+/// What asking produced: a link to share and when it stops working, or why not
+/// — or, for a payer on this phone, that it was sent (prd §1089).
 struct DevnetAskResult {
     var link: URL? = nil
     var expires: Date? = nil
     var failure: String? = nil
+    var sent = false
+}
+
+/// **WHICH OF YOUR ACCOUNTS SENDS (prd §1089).** The passkey account was
+/// reachable only by picking it in the room's account menu before opening
+/// Send, so signing with Face ID — one of the three things this chain can do
+/// that an ordinary one cannot — was invisible from the sheet that does it.
+/// Drawn when the phone holds more than one account; picking runs the room's
+/// own account pick, so the sheet and the room never disagree about who sends.
+struct DevnetSenderChoice {
+    let candidates: [(address: String, name: String)]
+    let current: String?
+    let pick: (String) -> Void
 }
 
 /// **ONE THING THE SHEET CAN SEND (prd §728b).** A venue whose accounts hold
@@ -467,6 +485,8 @@ struct DevnetSendSheet: View {
     var planAsset: ((_ destination: String, _ amount: String, _ asset: DevnetSendAsset?) -> [DevnetSendStep])? = nil
     /// Who pays the fee, when somebody else can (prd §728c). Nil draws no row.
     var payerChoice: DevnetPayerChoice? = nil
+    /// Which account sends, when the phone holds more than one (prd §1089).
+    var senderChoice: DevnetSenderChoice? = nil
 
 
     @Environment(\.dismiss) private var dismiss
@@ -941,6 +961,9 @@ struct DevnetSendSheet: View {
                 .padding(.top, DS.Space.s6)
                 .animation(DS.Motion.standard, value: atomic)
 
+                if let senderChoice, askReady == nil, senderChoice.candidates.count > 1 {
+                    senderRow(senderChoice)
+                }
                 atomicRow(stitch)
                 if let payerChoice, askReady == nil, !payerChoice.candidates.isEmpty {
                     payerRow(payerChoice)
@@ -964,6 +987,44 @@ struct DevnetSendSheet: View {
         }
     }
 
+    // MARK: Who sends (prd §1089)
+
+    /// The payer row's chrome and shape, one row above it: a choice about the
+    /// same transaction, both states spelled.
+    private func senderRow(_ choice: DevnetSenderChoice) -> some View {
+        let current = choice.candidates.first { candidate in
+            choice.current.map { candidate.address.caseInsensitiveCompare($0) == .orderedSame } ?? false
+        } ?? choice.candidates[0]
+        return HStack(spacing: DS.Space.s3) {
+            Text(String(localized: "From"))
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+            Spacer(minLength: DS.Space.s2)
+            Menu {
+                ForEach(choice.candidates, id: \.address) { candidate in
+                    Button {
+                        DSHaptic.selection()
+                        choice.pick(candidate.address)
+                    } label: {
+                        Text(candidate.name)
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(current.name)
+                        .dsText(.body17)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .dsGlyph(.caption, weight: .semibold)
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(tint)
+                .contentShape(Rectangle())
+            }
+        }
+        .modifier(DevnetAtomicRowChrome(animatesOn: false))
+    }
+
     // MARK: Who pays (prd §728c)
 
     private func payerName(_ address: String) -> String {
@@ -983,7 +1044,9 @@ struct DevnetSendSheet: View {
                     .foregroundStyle(DS.textPrimary)
                 DSFootnote(prose: payer == nil
                      ? String(localized: "You do, from this account.")
-                     : String(localized: "They sign it too. Nothing sends until they do."))
+                     : payerChoice?.paysHere(payer!) == true
+                        ? String(localized: "Your other account pays. You'll confirm twice.")
+                        : String(localized: "They sign it too. Nothing sends until they do."))
             }
             Spacer(minLength: DS.Space.s2)
             Menu {
@@ -1031,6 +1094,13 @@ struct DevnetSendSheet: View {
                 return
             }
             DSHaptic.success()
+            // Paid on this phone: it went, so the sheet ends the way a send
+            // does (`actAll`), not on a link nobody needs.
+            if result.sent {
+                chrome.rain(sources: [seat])
+                dismiss()
+                return
+            }
             askReady = result
         }
     }
@@ -1290,11 +1360,12 @@ struct DevnetSendSheet: View {
     /// `disabled` is `legs.isEmpty` and NOT `!armedAll`: a busy tile keeps its
     /// fill and spins in the disc, because it is acting rather than refusing.
     private var sendAll: some View {
-        DSActVerb(title: payer == nil
+        let asks = payer.map { !(payerChoice?.paysHere($0) ?? false) } ?? false
+        return DSActVerb(title: !asks
                             ? (total.map { String(localized: "Send \($0)") } ?? String(localized: "Send"))
                             : String(localized: "Ask to pay"),
-                  unit: payer.map(payerName) ?? (total == nil ? nil : (legs.first?.unit ?? unit)),
-                  glyph: payer == nil ? "arrow.up.right" : "paperplane",
+                  unit: asks ? payer.map(payerName) : (total == nil ? nil : (legs.first?.unit ?? unit)),
+                  glyph: asks ? "paperplane" : "arrow.up.right",
                   tint: tint,
                   busy: busy,
                   disabled: legs.isEmpty,

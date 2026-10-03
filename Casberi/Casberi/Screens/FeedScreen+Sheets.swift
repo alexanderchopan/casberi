@@ -476,7 +476,9 @@ extension FeedScreen {
                     candidates: framesSendsFromPasskey ? [] : framesPayerCandidates,
                     ask: { legs, atomic, payer in
                         await askFramesSponsor(legs, atomic: atomic, payer: payer)
-                    }))
+                    },
+                    paysHere: { FramesKey.holds($0) }),
+                senderChoice: framesSenderChoice)
         }
     }
 

@@ -8,10 +8,6 @@ import SwiftData
 extension FeedScreen {
     // MARK: - Sending, from the Frames devnet (prd §553)
 
-    /// **The addresses you watch, and only those** (prd §990, user: "remove
-    /// the suggested addresses data from the devnets"). The 2026-09-01 ruling's measured
-    /// examples filled an empty picker; they are deleted with the rest, and
-    /// the recipient field takes a pasted address as before.
     /// **WHO SENDS (prd §728d)** — the passkey account when the room is scoped
     /// to it on the face rail, this phone's key otherwise. The held line says
     /// which, so the sheet never sends as an account it did not name.
@@ -24,17 +20,40 @@ extension FeedScreen {
         framesSendsFromPasskey ? FramesPasskey.accountAddress() : FramesKey.address()
     }
 
+    /// **YOUR OWN, THEN WHO YOU'VE PAID, THEN WHO YOU WATCH (prd §1089,
+    /// narrowing §990).** The picker opened on a search field over nothing:
+    /// a phone holding one key and watching nobody had no face to tap, and
+    /// the commonest test send — between two of your own accounts — needed a
+    /// paste. §990 deleted SUGGESTED strangers; these are not suggestions but
+    /// your own record: the accounts this phone holds, and the addresses your
+    /// own sends paid, newest first. Never the account sending.
     var framesSendCandidates: [(address: String, name: String?)] {
-        let me = FramesKey.address()
+        let sender = framesSenderAddress
         var seen = Set<String>()
         var out: [(address: String, name: String?)] = []
-        for address in FramesWatch.shared.addresses {
+        func offer(_ address: String, _ name: String?) {
             let key = address.lowercased()
-            guard !seen.contains(key) else { continue }
-            guard me == nil || address.caseInsensitiveCompare(me!) != .orderedSame else { continue }
+            guard !key.isEmpty, !seen.contains(key),
+                  sender.map({ address.caseInsensitiveCompare($0) != .orderedSame }) ?? true
+            else { return }
             seen.insert(key)
-            out.append((address, FramesWatch.shared.name(for: address)))
+            out.append((address, FramesWatch.shared.name(for: address) ?? name))
         }
+        let passkey = FramesPasskey.accountAddress()
+        for address in FramesKey.addresses() { offer(address, String(localized: "Yours")) }
+        if let passkey { offer(passkey, String(localized: "Passkey")) }
+        // Who your own sends paid: the moves read for an account on this phone
+        // whose sender is that account, newest first.
+        let paid = FramesLiveState.shared.accounts
+            .filter { FramesConnections.onPhone($0.address, passkey: passkey) }
+            .flatMap { account in
+                account.moves.filter { $0.sender.caseInsensitiveCompare(account.address) == .orderedSame }
+            }
+            .sorted { $0.blockNumber > $1.blockNumber }
+        for move in paid {
+            for address in move.recipients { offer(address, nil) }
+        }
+        for address in FramesWatch.shared.addresses { offer(address, nil) }
         return out
     }
 
@@ -233,15 +252,38 @@ extension FeedScreen {
         }
     }
 
-    /// **WHO CAN BE ASKED TO PAY (prd §728c)** — the addresses you watch, not
-    /// the measured examples the recipient picker offers: a request goes to a
-    /// person who has to open it and agree, so only somebody you follow makes
-    /// sense to ask. Empty draws no row.
+    /// **WHO CAN BE ASKED TO PAY (prd §728c)** — your other accounts on this
+    /// phone first (prd §1089: they pay at once, no link), then the addresses
+    /// you watch: a request goes to a person who has to open it and agree, so
+    /// only somebody you follow makes sense to ask. Never the passkey account,
+    /// which cannot sign a sponsor's half. Empty draws no row.
     var framesPayerCandidates: [(address: String, name: String?)] {
         let me = FramesKey.address()
-        return FramesWatch.shared.addresses
-            .filter { me == nil || $0.caseInsensitiveCompare(me!) != .orderedSame }
-            .map { ($0, FramesWatch.shared.name(for: $0)) }
+        var seen = Set<String>()
+        var out: [(address: String, name: String?)] = []
+        func offer(_ address: String, _ name: String?) {
+            guard me.map({ address.caseInsensitiveCompare($0) != .orderedSame }) ?? true,
+                  seen.insert(address.lowercased()).inserted else { return }
+            out.append((address, FramesWatch.shared.name(for: address) ?? name))
+        }
+        for address in FramesKey.addresses() { offer(address, String(localized: "Yours")) }
+        for address in FramesWatch.shared.addresses { offer(address, nil) }
+        return out
+    }
+
+    /// **WHICH ACCOUNT SENDS, FROM THE SHEET (prd §1089)** — this phone's keys,
+    /// then its passkey account. The pick is the room's own (`framesPickAccount`),
+    /// so the sheet and the account menu are one choice.
+    var framesSenderChoice: DevnetSenderChoice {
+        var candidates: [(address: String, name: String)] = FramesKey.addresses().map {
+            ($0, FramesWatch.shared.name(for: $0) ?? WalletStore.shortAddress($0))
+        }
+        if let passkey = FramesPasskey.accountAddress() {
+            candidates.append((passkey, String(localized: "Passkey · Face ID")))
+        }
+        return DevnetSenderChoice(candidates: candidates,
+                                  current: framesSenderAddress,
+                                  pick: { framesPickAccount($0) })
     }
 
     /// Sign the batch as a request for `payer`, and hand back the link.
@@ -268,10 +310,28 @@ extension FeedScreen {
         guard let nonce = await FramesSend.currentNonce(for: address) else {
             return DevnetAskResult(failure: String(localized: "Couldn't reach the chain to read this account's nonce."))
         }
-        let deadline = UInt64(Date().timeIntervalSince1970 + FramesSponsor.requestWindow)
+        // **YOUR OWN OTHER ACCOUNT PAYS HERE (prd §1089)**: a send's five
+        // minutes, since nobody has to be reached.
+        let paysHere = FramesKey.holds(payer)
+        let deadline = paysHere
+            ? FramesSend.deadline()
+            : UInt64(Date().timeIntervalSince1970 + FramesSponsor.requestWindow)
         do {
             let request = try await FramesSend.askSponsor(sponsor: sponsor, legs: built, atomic: atomic,
                                                           nonce: nonce, deadline: deadline)
+            if paysHere {
+                // The sponsor's half signs with the PAYER's key, and `FramesKey`
+                // signs with the current account — so the payer is current for
+                // exactly that signature and the sender is restored after,
+                // whatever happens.
+                FramesKey.select(payer)
+                defer { FramesKey.select(address) }
+                let hash = try await FramesSend.payForSponsor(request)
+                FramesLiveState.shared.notePending(hash: hash, legs: built.count,
+                                                   deadline: FramesSend.date(deadline), sender: address)
+                await FramesLiveState.shared.refresh()
+                return DevnetAskResult(sent: true)
+            }
             guard let link = FramesSponsor.link(request) else {
                 return DevnetAskResult(failure: String(localized: "Couldn't make a link for the request."))
             }

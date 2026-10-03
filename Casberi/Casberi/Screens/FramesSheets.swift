@@ -171,15 +171,11 @@ struct FramesMoveSheet: View {
                         + CGFloat(move.rows.count) * 56)
     }
 
-    /// **THE DIRECTION NAMES THE SHEET.** Nil or zero gets the neutral noun:
-    /// a delta that could not be read is not a transaction that moved nothing,
-    /// and calling it "Money out" would be a claim built on a failed read.
-    private var title: String {
-        guard let delta = move.deltaWei, delta != 0 else {
-            return String(localized: "Transaction")
-        }
-        return delta > 0 ? String(localized: "Money in") : String(localized: "Money out")
-    }
+    /// **THE ROW'S OWN WORD NAMES THE SHEET (prd §1089).** It said "Money
+    /// out" under a row saying "Sent" — one transaction, two names.
+    /// `FramesMove.verb` keeps the neutral noun for a delta that could not be
+    /// read, which is not a transaction that moved nothing.
+    private var title: String { move.verb }
 
     // MARK: The head
 
@@ -362,9 +358,7 @@ struct FramesMoveSheet: View {
     @ViewBuilder private var steps: some View {
         if !move.rows.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(move.rows.count == 1 ? String(localized: "1 frame")
-                                          : String(localized: "\(String(move.rows.count)) frames"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                stepsKey
                 FramesSequenceStrip(runs: [move.rows]).frame(height: 20)
                 ForEach(Array(move.rows.enumerated()), id: \.offset) { index, row in
                     Button {
@@ -376,6 +370,36 @@ struct FramesMoveSheet: View {
                     .buttonStyle(RowPress())
                 }
             }
+        }
+    }
+
+    /// **THE CAPTION IS THE STRIP'S KEY (prd §1089).** "5 frames" over a
+    /// grey-and-blue bar left the colours to be guessed. The strip paints a
+    /// VERIFY frame (a check: the expiry, the signature) in `FramesModeStyle`'s
+    /// quiet hue and every other frame in the tint, so the caption counts the
+    /// two in those inks. One kind present draws one entry.
+    @ViewBuilder private var stepsKey: some View {
+        let checks = move.rows.filter { $0.frame.mode == 1 }.count
+        let actions = move.rows.count - checks
+        HStack(spacing: DS.Space.s3) {
+            if checks > 0 {
+                keyEntry(hue: FramesModeStyle.hue(1),
+                         words: checks == 1 ? String(localized: "1 check")
+                                            : String(localized: "\(String(checks)) checks"))
+            }
+            if actions > 0 {
+                keyEntry(hue: FramesModeStyle.hue(2),
+                         words: actions == 1 ? String(localized: "1 action")
+                                             : String(localized: "\(String(actions)) actions"))
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func keyEntry(hue: Color, words: String) -> some View {
+        HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 2).fill(hue).frame(width: 10, height: 10)
+            Text(words).dsText(.label12).foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -439,16 +463,21 @@ struct FramesMoveSheet: View {
                 // `fee(wei:)`, never `feeLine` — that one wears the noun,
                 // and under a label reading "Fee" it renders `0.000595 fee`.
                 // Seen on a device.
+                // With its unit (prd §1089): a bare "0.000599" said nothing
+                // about what it was counted in.
                 if let fee = FramesMoney.fee(wei: move.feeWeiIfSelfPaid) {
-                    DSSpecRow(label: Text("Fee"), value: Text(verbatim: fee))
+                    DSSpecRow(label: Text("Fee"), value: Text("\(fee) test ETH"))
                 }
                 // **WHO SIGNED, WHEN IT EXPIRED, WHETHER IT IS FINAL (prd §728).**
                 if let signers = signedByLine {
                     DSSpecRow(label: Text("Signed by"), value: Text(verbatim: signers))
                 }
+                // **A LANDED SEND SAYS IT MET ITS DEADLINE (prd §1089).** The
+                // clock time of a deadline already behind it was a fact with
+                // no use; how much time was left is the expiry frame's whole
+                // point, said once.
                 if let deadline = move.deadline {
-                    DSSpecRow(label: Text("Deadline"),
-                              value: Text(verbatim: deadline.formatted(date: .omitted, time: .standard)))
+                    DSSpecRow(label: Text("Deadline"), value: Text(deadlineLine(deadline)))
                 }
                 if let final = finality {
                     DSSpecRow(label: Text("Final"),
@@ -464,6 +493,19 @@ struct FramesMoveSheet: View {
                 }
             }
         }
+    }
+
+    /// "Met with 4 min to spare" when the block's time was read; the clock
+    /// time otherwise, because a move with no time cannot say how much was
+    /// left (§515a).
+    private func deadlineLine(_ deadline: Date) -> String {
+        guard let landed = move.timestamp else {
+            return deadline.formatted(date: .omitted, time: .standard)
+        }
+        let spare = max(0, deadline.timeIntervalSince(landed))
+        let words = Duration.seconds(spare).formatted(
+            .units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1))
+        return String(localized: "Met with \(words) to spare")
     }
 
     /// An empty `DSSpecTable` is a zero-height `Grid` that still costs its

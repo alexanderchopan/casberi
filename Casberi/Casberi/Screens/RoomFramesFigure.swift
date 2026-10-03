@@ -48,7 +48,11 @@ struct RoomFramesFigure: View {
     private func columns(height: CGFloat) -> some View {
         let tallest = CGFloat(drawn.map(\.steps.count).max() ?? 1)
         let gap: CGFloat = 3
-        let block = max(4, min(16, (height - gap * (tallest - 1)) / tallest))
+        // **THE BLOCKS FILL THE BOX (prd §1089).** Capped at 16pt, a run of
+        // five-frame transactions stood in the bottom third and left the rest
+        // of the lead empty — air it could honestly fill (§760). 32 keeps a
+        // one-frame column from reading as a slab.
+        let block = max(4, min(32, (height - gap * (tallest - 1)) / tallest))
         return HStack(alignment: .bottom, spacing: DS.Space.s2) {
             ForEach(drawn) { run in
                 let dim = lit != nil && lit != run.id
@@ -90,9 +94,16 @@ struct RoomFramesFigure: View {
                             caption: n == 1 ? String(localized: "frame") : String(localized: "frames"),
                             alarm: Self.troubled(run) ? String(localized: "didn't finish") : nil)
         } else {
+            // **THE GREY IS SAID (prd §1089, amends §952's caption).** A
+            // column is grey when a step failed or rolled back, and nothing
+            // said so until a column was pressed — so the count names how
+            // many, in the alarm slot a pressed column already uses.
+            let troubled = all.filter(Self.troubled).count
             DSFigureReading(number: String(all.count),
                             caption: all.count == 1 ? String(localized: "transaction")
-                                                    : String(localized: "transactions"))
+                                                    : String(localized: "transactions"),
+                            alarm: troubled == 0 ? nil
+                                : String(localized: "\(String(troubled)) didn't finish"))
         }
     }
 }

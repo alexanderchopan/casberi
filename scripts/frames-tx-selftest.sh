@@ -2249,6 +2249,36 @@ let paidForMe = FramesMove(hash: "0xpm", blockNumber: 1, sender: "0xaaaa", payer
                            rows: [], deltaWei: 0, reader: "0xAAAA")
 check("read by the sender, the same transaction IS sponsored", paidForMe.sponsored && !paidForMe.paidForSomeoneElse)
 
+// --- WHAT A ROW SAYS (prd §1089) ---------------------------------------------
+// The title is WHO and the line is the verb, read off the model so a row and
+// its sheet cannot name one transaction twice.
+check("the fee you paid for somebody is named as that, from your side", paidForBob.verb == "Paid their fee")
+check("…and its other side is the sender, not the recipients", paidForBob.counterparties == ["0xaaaa"])
+let mySend = FramesMove(hash: "0xms", blockNumber: 1, sender: "0xaaaa", payer: "0xaaaa", succeeded: true,
+                        rows: [FramesFrameRow(frame: payFrame("0xb"), outcome: nil),
+                               FramesFrameRow(frame: payFrame("0xc"), outcome: nil)],
+                        deltaWei: -3, reader: "0xAAAA")
+check("a send of yours names who it paid, in order", mySend.counterparties == ["0xb", "0xc"])
+check("…and says Sent", mySend.verb == "Sent")
+let theirSend = FramesMove(hash: "0xts", blockNumber: 1, sender: "0xdddd", payer: "0xdddd", succeeded: true,
+                           rows: [FramesFrameRow(frame: payFrame("0xaaaa"), outcome: nil)],
+                           deltaWei: 5, reader: "0xaaaa")
+check("a send to you names who sent it, never you", theirSend.counterparties == ["0xdddd"] && theirSend.verb == "Received")
+check("an unread delta is a Transaction, never a guessed direction",
+      FramesMove(hash: "0xu", blockNumber: 1, sender: "0xa", payer: "0xa", succeeded: true, rows: []).verb == "Transaction")
+check("no flag joined, not all-or-nothing", !mySend.allOrNothing)
+var joined = mySend
+joined.rows[0].frame.flags = 0x4
+check("a joined frame makes it all-or-nothing", joined.allOrNothing)
+check("no signatures read is not a passkey", !mySend.signedWithPasskey)
+var keyed = mySend
+keyed.signatures = [FramesRead.Signature(scheme: 2, signer: nil, signsTransaction: true)]
+check("a P-256 signature is a passkey", keyed.signedWithPasskey)
+keyed.signatures = [FramesRead.Signature(scheme: 1, signer: nil, signsTransaction: true)]
+check("a secp256k1 signature is not", !keyed.signedWithPasskey)
+check("a SENDER frame is named Send, the census's word, never the spec's \"Sender\"",
+      payFrame("0xb").modeName == "Send")
+
 // --- THE SPEC'S OWN STEP NAMES (prd §728e) -----------------------------------
 let namedExpiry = verifyFrame(expiryAddress, data: "0x000000006aa5f05c")
 let namedDeploy = FramesRead.Frame(mode: 0, flags: 0, target: "0x4E59b44847b379578588920ca78fbf26c0b4956c",
@@ -2257,7 +2287,7 @@ check("an expiry verifier frame is named Expiry, not Verify", namedExpiry.stepNa
 check("a DEFAULT frame to the deployment proxy is named Deploy, not Call", namedDeploy.stepName == "Deploy")
 check("a DEFAULT frame to any other contract is not a deploy — this app cannot know it installs anything",
       FramesRead.Frame(mode: 0, flags: 0, target: "0x7d6fa7c366f36046656b019dc9a27f171628cf3f",
-                       executionGas: 1, stateGas: 1, value: "0x0", data: "0x00").stepName == "Default")
+                       executionGas: 1, stateGas: 1, value: "0x0", data: "0x00").stepName == "Call")
 check("an ordinary verify frame keeps its mode's name",
       verifyFrame("0x285dc41e452865032197bd1d44e4a9e1179c994c", data: "0x").stepName == "Verify")
 let namedRuns = FramesFrames.runs([FramesMove(

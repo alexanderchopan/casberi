@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1215 of 1274 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1216 of 1275 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -985,7 +985,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §684 — The devnet Homes are one crown, and four arithmetic bugs under it
 - §685 — The three ethrex devnets take the chain's name
 - §686 — Activity is one chart too: how many, and when
-- §687 — Activity lists transactions, and the "when" follows the list's density (part superseded by §950)
+- §687 — Activity lists transactions, and the "when" follows the list's density (amended by §1089; part superseded by §950)
 - §688 — Holdings, and the tokens nobody had asked the chain for
 - §688b — Holdings on the other two rooms, and the chips nobody budgeted for
 - §690 — The book folds into the Wallet's page; follow lives in the directory; Home is the band, Activity is the chart (amended by §692, §747; part superseded by §1039)
@@ -1289,7 +1289,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §949 — The devnets' Holdings are the Wallet's treemap over test money: the count, never a dollar total, and a pressed tile r…
 - §950 — The devnets' Activity lists read like the Wallet's: moves under the day, no ages, no strips, one plain figure, on the…
 - §951 — The devnets' Permissions wear the Wallet's crown, and a row's line stays only if it differs from row to row
-- §952 — The devnets' own screens read the Wallet's way: Frames draws a column per transaction, UTXOs names each coin's origin…
+- §952 — The devnets' own screens read the Wallet's way: Frames draws a column per transaction, UTXOs names each coin's origin… (amended by §1089)
 - §953 — Every wallet-family Home stands on the Wallet's lines: headers on the tiles' edge, one crown position, no unscoped ca… (part superseded by §1005)
 - §954 — Accounts is one shape in every room: "Yours", one row per account in the rows' column, a line only where it tells row…
 - §955 — The rooms tray's categories stand one pitch apart: no air between sections, and a category grows a line only when its… (amended by §1010)
@@ -1327,7 +1327,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §987 — The voice note plays like a player: a length on the row, a playhead you can tap, three speeds, and the words lit as t…
 - §988 — Logos: watch a public LEZ account, keyless, forward from the moment you watch (amended by §989, §1034, §1035, §1084)
 - §989 — Logos: your own node, read at the address you give it (amended by §1016)
-- §990 — No suggested addresses on the devnets
+- §990 — No suggested addresses on the devnets (amended by §1089)
 - §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016, §1084)
 - §993 — The Reminders room holds its lead when empty, and scopes like Apple's lists (amended by §997)
 - §994 — The Calendar room is a month grid over Today · Week · Month · New (amended by §999)
@@ -1436,6 +1436,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1085 — Reading gets its tiles: All · Highlights · Follow · Search; the box keeps the newest thing
 - §1086 — Social gets its tiles: All · To you · Follow; what is to you leads All
 - §1087 — Day's box is Box B: the next thing over today's shape
+- §1089 — Frames says what you did, not how it was built: rows titled by who, one word for row and sheet, your own accounts in…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -52,13 +52,14 @@ enum FramesRead {
         var data: String?
 
         /// `0` DEFAULT, `1` VERIFY, `2` SENDER. Named rather than numbered
-        /// wherever a person sees it: "mode 2" says nothing and "Sender" says
-        /// what ran.
+        /// wherever a person sees it, and in `RoomFrames.modeName`'s words
+        /// (prd §1089): the spec's "Sender" read as WHO sent on a step that
+        /// pays somebody, and the census beside it already said "Send".
         var modeName: String {
             switch mode {
-            case 0: String(localized: "Default")
+            case 0: String(localized: "Call")
             case 1: String(localized: "Verify")
-            case 2: String(localized: "Sender")
+            case 2: String(localized: "Send")
             default: String(localized: "Mode \(String(mode))")
             }
         }
@@ -565,6 +566,48 @@ struct FramesMove: Identifiable, Equatable, Codable {
 
     /// The transaction's deadline, if it carried an expiry frame.
     var deadline: Date? { rows.lazy.compactMap(\.frame.deadline).first }
+
+    // MARK: What a row says (prd §1089)
+
+    /// **WHAT HAPPENED, in one word — the row's line and the sheet's title**
+    /// (prd §1089). Both said it in their own words ("Sent" over a sheet
+    /// titled "Money out"), so the word lives here once. A token payment is
+    /// named by the token, because its coin delta is only the fee; an
+    /// unreadable delta is "Transaction", never a guessed direction (§515a).
+    var verb: String {
+        if let token = leadToken {
+            return token.raw > 0 ? String(localized: "Received") : String(localized: "Sent")
+        }
+        if paidForSomeoneElse { return String(localized: "Paid their fee") }
+        guard let delta = deltaWei, delta != 0 else { return String(localized: "Transaction") }
+        return delta > 0 ? String(localized: "Received") : String(localized: "Sent")
+    }
+
+    /// **THE OTHER SIDE, from the reader's point of view** (prd §1089): who
+    /// sent it when it came from somebody else, who it paid otherwise. The
+    /// row is titled with this, the Wallet's way — a name, not a direction.
+    /// Without a `reader` (a move cached before that field) the direction of
+    /// the money decides.
+    var counterparties: [String] {
+        let theirs: Bool
+        if let reader {
+            theirs = sender.lowercased() != reader.lowercased()
+        } else if let token = leadToken {
+            theirs = token.raw > 0
+        } else {
+            theirs = (deltaWei ?? 0) > 0
+        }
+        if theirs { return sender.isEmpty ? [] : [sender] }
+        return recipients
+    }
+
+    /// Signed with a passkey (P-256, prd §728d) — one of the things a frame
+    /// transaction can do that an ordinary one cannot. Nil signatures (an
+    /// old cache) is false, never a guess.
+    var signedWithPasskey: Bool { signatures?.contains { $0.scheme == 2 } ?? false }
+
+    /// Some of its frames were joined: they land together or not at all.
+    var allOrNothing: Bool { rows.contains(where: \.joinedToNext) }
 
     /// **THE FIGURE A ROW LEADS WITH.** A token when this address moved one
     /// and the coin moved only the fee (or nothing), because then the fee is

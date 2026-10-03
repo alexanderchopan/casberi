@@ -258,13 +258,17 @@ struct FramesRoomFigure: View {
             let door: (() -> Void)? = accounts.first(where: \.reached).map { account in
                 { DSHaptic.selection(); onOpenAccount?(account) }
             }
+            // **THE CROWN'S OWN BOX, THE WALLET'S (prd §1089).** Both calls
+            // passed `figureSlot` — the box a scope with a reserved headline
+            // row has — while Home reserves none, so the line stopped ~40pt
+            // short and the lead's last third stood empty under the chips.
+            // The template's default is the whole slot.
             if head.series.count > 1 {
                 RoomHomeCrown(samples: head.series,
                               caption: crownCaption,
                               format: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
                               exactFormat: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
                               changeFormat: { String(localized: "\(FramesMoney.eth($0, places: 2)) test ETH") },
-                              box: DSRoomChassis.figureSlot,
                               onOpen: door)
             } else if let held = Self.heldETH(head) {
                 RoomHomeCrown(caption: crownCaption,
@@ -272,7 +276,6 @@ struct FramesRoomFigure: View {
                               exactFormat: { String(localized: "\(FramesMoney.eth($0)) test ETH") },
                               changeFormat: { String(localized: "\(FramesMoney.eth($0, places: 2)) test ETH") },
                               fallbackTotal: held,
-                              box: DSRoomChassis.figureSlot,
                               onOpen: door)
             }
             // **NO LIST ON HOME (user, 2026-09-10: "there should be NO LIST
@@ -653,9 +656,10 @@ struct FramesRoomList: View {
         TimelineView(.periodic(from: item.at, by: 1)) { tick in
             HStack(spacing: DS.Space.s3) {
                 VStack(alignment: .leading, spacing: 2) {
+                    // What is happening, not how it was built (prd §1089).
                     Text(item.legs == 1
-                         ? String(localized: "1 frame")
-                         : String(localized: "\(String(item.legs)) frames"))
+                         ? String(localized: "Sending")
+                         : String(localized: "Sending \(String(item.legs)) payments"))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                     Text(FramesChainWatch.pendingLine(state: item.state, deadline: item.deadline,
                                                       now: tick.date))
@@ -790,32 +794,30 @@ struct FramesMoveRow: View {
         if verdict.isTrouble {
             add(Text(verdict.word).foregroundColor(DS.destructiveInk))
         }
-        // **HOW IT WAS BUILT, as a qualifier rather than the row's name
-        // (prd §687).** A plain transfer says nothing here — this chain
-        // carries both, the faucet pays out as an ordinary type-0x2 transfer,
-        // and "0 frames" over one of those is a count where a noun belongs.
+        // The Frames scope's line: the steps in the order they ran (§952).
         if namesSteps, let run = FramesFrames.runs([move]).first {
             add(Text(run.steps.map(\.modeName).joined(separator: " → "))
                 .foregroundColor(DS.textTertiary))
-        } else if !move.rows.isEmpty, showsLine {
-            add(Text(move.rows.count == 1
-                     ? String(localized: "1 frame")
-                     : String(localized: "\(String(move.rows.count)) frames"))
-                .foregroundColor(DS.textTertiary))
+            return out
         }
-        // One word, not a sentence: the scope is called Sponsors and the sheet
-        // says who and how much.
-        if move.sponsored, showsSponsorship, showsLine, !namesSteps {
-            add(Text(String(localized: "Sponsored")).foregroundColor(DS.textTertiary))
+        guard showsLine else { return out }
+        // **WHAT HAPPENED, THEN WHAT FRAMES MADE POSSIBLE (prd §1089).** The
+        // title is now WHO, so the line carries the verb — and then the three
+        // things this chain can do that an ordinary one cannot: somebody else
+        // paid, a passkey signed, several payments landed together or not at
+        // all. "5 frames" said how it was BUILT; the Frames tile and the
+        // sheet still count them.
+        add(Text(move.verb).foregroundColor(DS.textTertiary))
+        if move.sponsored, showsSponsorship {
+            let who = FramesName.of(move.payer, mine: FramesName.mine, watched: FramesName.watched)
+            add(Text(String(localized: "Sponsored by \(who)")).foregroundColor(DS.textTertiary))
         }
-        // Nil draws nothing rather than "now" — the header read is bounded, so
-        // a move outside the window legitimately has no time (§515a).
-        // **A RELATIVE AGE, LAST (prd §687).** This list draws no day headers
-        // and must not — it is sparse by nature, and `coarsenIfSparse`'s own
-        // ruling is that a ladder of one-row day cards is worse than none. So
-        // the row carries an age that stands alone. Nil draws nothing: the
-        // header read is bounded, so a move outside the window legitimately
-        // has no time (§515a).
+        if move.signedWithPasskey {
+            add(Text(String(localized: "Passkey")).foregroundColor(DS.textTertiary))
+        }
+        if move.allOrNothing {
+            add(Text(String(localized: "All or nothing")).foregroundColor(DS.textTertiary))
+        }
         // No age (prd §950): the day header over the run says when.
         return out
     }
@@ -830,40 +832,29 @@ struct FramesMoveRow: View {
         if verdict.isTrouble {
             return .symbol("exclamationmark.triangle.fill", tint: DS.destructive)
         }
+        // **THE OTHER SIDE'S FACE (prd §1089)**, the Wallet's row: one person
+        // is their face, several are a group, nobody is how it was built.
+        let others = move.counterparties
+        if others.count == 1 { return .face(others[0]) }
+        if others.count > 1 { return .symbol("person.2.fill", tint: DS.tint) }
         return move.rows.isEmpty
             ? .symbol("arrow.left.arrow.right", tint: DS.textSecondary)
             : .symbol("square.stack.3d.up.fill", tint: DS.tint)
     }
 
-    /// **A ROW IN ACTIVITY SAYS WHAT THE TRANSACTION DID (prd §687, user:
-    /// "if this is the activity list, shouldn't it list transactions? they all
-    /// have transactions").**
-    ///
-    /// This said "4 frames" — which is HOW the transaction was built, not what
-    /// it did, and every other room in the family titles its rows with the
-    /// event. It also put a count where three rooms already have a whole
-    /// **Frames scope** for the parts, so the list was spending its most
-    /// valuable line on the one question a chip away answers better.
-    ///
-    /// The frame count is not lost: it moves to `meta`, beside the status and
-    /// the time, where a qualifier belongs.
-    ///
-    /// **An unreadable amount is not a zero (§515a).** A move whose `deltaWei`
-    /// did not read says "Transaction" rather than guessing a direction — the
-    /// nil-is-not-zero rule this room already keeps for the figure column.
+    /// **A ROW IS TITLED WITH WHO (prd §1089, amends §687)** — the Wallet's
+    /// anatomy: a name, the amount, and the verb on the line under it. §687
+    /// moved "4 frames" off the title for being how the transaction was BUILT;
+    /// "Sent" over every row was the next word that separated nothing.
+    /// Several recipients are counted the way the sheet's crossing counts
+    /// them; nobody on the other side falls back to the verb.
     private var titleText: String {
-        // A token payment is named by the token (prd §728): its coin delta is
-        // only the fee, and "Sent" over the fee was true of the wrong thing.
-        if let token = move.leadToken {
-            return token.raw > 0 ? String(localized: "Received") : String(localized: "Sent")
+        let others = move.counterparties
+        if others.count == 1 {
+            return FramesName.leading(others[0], mine: FramesName.mine, watched: FramesName.watched)
         }
-        // The fee is all that left, and it paid for somebody else's send.
-        if move.paidForSomeoneElse { return String(localized: "Paid their fee") }
-        guard let delta = move.deltaWei, delta != 0 else {
-            return String(localized: "Transaction")
-        }
-        return delta > 0 ? String(localized: "Received")
-                         : String(localized: "Sent")
+        if others.count > 1 { return String(localized: "\(String(others.count)) addresses") }
+        return move.verb
     }
 
     var body: some View {
