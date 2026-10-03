@@ -1130,7 +1130,7 @@ private struct TelegramVideoContent: View {
                     if state == .loading {
                         DSSpinner(size: .small)
                     } else {
-                        Button { play() } label: {
+                        Button { playTelegramFile() } label: {
                             Image(systemName: "play.fill")
                                 .dsGlyph(.title, weight: .semibold)
                                 .foregroundStyle(.white)
@@ -1173,7 +1173,7 @@ private struct TelegramVideoContent: View {
         }
     }
 
-    private func play() {
+    private func playTelegramFile() {
         guard !DemoMode.isActive else {
             chrome?.flash(String(localized: "Videos play once you leave the demo."))
             return

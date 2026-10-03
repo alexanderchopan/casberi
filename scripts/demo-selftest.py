@@ -184,7 +184,11 @@ DEMO_GATED_READS = [
     # this whole class. Their seats and their code were deleted on 2026-09-06
     # (§638's third amendment), so the rows go with them; the RULE is unchanged
     # and every surviving per-view read below is still held to it.
-    ("ThingContent", "private func fetch("),
+    # The link card's art and title — moved into `LinkPreviewCard.read` when
+    # the video poster came to share it (prd §1092); the gate moved with it.
+    ("ThingContent", "static func read(url: URL, stored"),
+    # A Telegram video's file, read from the post's page on the press (§1092).
+    ("ThingContent", "private func playTelegramFile("),
     # The wallet's holdings and its transfer history — read from
     # `WalletWatch.liveState`, a per-view read no sweep gate can see. Added
     # after the RUNTIME check caught `api.zerion.io` on its first run, which
@@ -1483,7 +1487,7 @@ def self_test():
         # own lesson, one check over). Re-anchored here on 2026-09-06 when
         # `KalshiWatch`, the original fixture, was deleted with its seat.
         lambda f: f.__setitem__("ThingContent", f["ThingContent"].replace(
-            "if DemoMode.isActive { return }", "if false { return }", 1)),
+            "if DemoMode.isActive { return (nil, nil) }", "if false { return (nil, nil) }", 1)),
         check_j_per_view_reads_gated, True)
 
     ok &= verify_fixture(
