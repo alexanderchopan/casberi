@@ -114,6 +114,38 @@ enum TelegramChannel {
         "https://t.me/\(handle)/\(id)"
     }
 
+    /// The single-post page a VIDEO is read from at play time (prd §1092),
+    /// off the permalink a row stores: `t.me/<channel>/<id>` →
+    /// `t.me/<channel>/<id>?embed=1&mode=tme`. The file inside carries a token
+    /// that expires, so it is never stored; it is read fresh on each press.
+    static func embedURL(postURL: String) -> URL? {
+        guard let url = URL(string: postURL.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.host()?.lowercased() == "t.me" else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count == 2, isValidHandle(parts[0]), Int(parts[1]) != nil else { return nil }
+        return URL(string: "https://t.me/\(parts[0])/\(parts[1])?embed=1&mode=tme")
+    }
+
+    /// The video file in a post page: the first `<video src="…">` served off
+    /// Telegram's own CDN (`telesco.pe`, the photograph rule), entities
+    /// decoded. nil when the page carries none — a video Telegram calls too
+    /// big for its web preview, which only the app can play.
+    static func videoSource(in html: String) -> String? {
+        var cursor = html.startIndex
+        while let tag = html.range(of: "<video", range: cursor..<html.endIndex) {
+            guard let close = html.range(of: ">", range: tag.upperBound..<html.endIndex) else { return nil }
+            let attrs = String(html[tag.upperBound..<close.lowerBound])
+            if let src = attrs.range(of: "src=\""),
+               let end = attrs.range(of: "\"", range: src.upperBound..<attrs.endIndex) {
+                let url = String(attrs[src.upperBound..<end.lowerBound])
+                    .replacingOccurrences(of: "&amp;", with: "&")
+                if url.hasPrefix("https://"), isPhotograph(url) { return url }
+            }
+            cursor = close.upperBound
+        }
+        return nil
+    }
+
     static func ref(handle: String, id: Int) -> String {
         "\(refPrefix)\(handle)/\(id)"
     }

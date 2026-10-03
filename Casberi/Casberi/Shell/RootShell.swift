@@ -809,6 +809,20 @@ struct RootShell: View {
                 UserDefaults.standard.removeObject(forKey: "deeplink")
                 route(url)
             }
+            // `-saveLink "<url>"` keeps a link exactly as a paste would
+            // (`Capture.thing(from:)`, source You) — a headless way to land a
+            // YouTube link for the in-sheet player (prd §1092). Once per URL.
+            if let raw = UserDefaults.standard.string(forKey: "saveLink"), !raw.isEmpty,
+               let thing = Capture.thing(from: raw) {
+                let content = thing.content
+                var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.content == content })
+                d.fetchLimit = 1
+                if ((try? modelContext.fetch(d)) ?? []).isEmpty {
+                    modelContext.insert(thing)
+                    modelContext.saveHonestly()
+                }
+                NSLog("[Casberi] saveLink: %@ (%@)", thing.title, content)
+            }
             // `-openThing "<title prefix>"` opens the newest thing whose title
             // starts with the prefix — the sheet-by-content route for headless
             // sheet checks (a UUID changes every install; a title doesn't).

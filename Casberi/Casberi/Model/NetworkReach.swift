@@ -573,6 +573,12 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "YouTube"),
                  purpose: "Reads a public channel's newest videos.",
                  hosts: ["www.youtube.com"]),
+        // The player (prd §1092): built only when you press play on a YouTube
+        // link's sheet, so it reaches nothing until then, connected or not.
+        Endpoint(service: "YouTube player",
+                 reach: .always,
+                 purpose: "Plays a YouTube video in its sheet when you press play — YouTube's privacy-enhanced player, with no cookies kept. Nothing is asked before the press.",
+                 hosts: ["www.youtube-nocookie.com", "www.youtube.com", "i.ytimg.com", "*.googlevideo.com"]),
         Endpoint(service: "Twitch",
                  reach: .whenConnected(bridge: "Twitch"),
                  purpose: "Reads which of the channels you follow are live. Connects through Twitch's own sign-in.",

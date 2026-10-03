@@ -55043,6 +55043,34 @@
         }
       }
     },
+    "Couldn't reach Telegram to play this." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Telegram para reproducirlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegramに接続できず再生できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에 연결할 수 없어 재생하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Telegram 播放此视频。"
+          }
+        }
+      }
+    },
     "Couldn't reach TikTok — the videos are still saved, so try naming them again later." : {
       "localizations" : {
         "es" : {
@@ -76696,6 +76724,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 GitHub 上关注"
+          }
+        }
+      }
+    },
+    "Watch on YouTube" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ver en YouTube"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "YouTubeで見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "YouTube에서 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 YouTube 上观看"
           }
         }
       }
@@ -102778,6 +102834,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "播放"
+          }
+        }
+      }
+    },
+    "Play video" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reproducir video"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "動画を再生"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "동영상 재생"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "播放视频"
           }
         }
       }
@@ -135790,6 +135874,34 @@
         }
       }
     },
+    "Videos play once you leave the demo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los videos se reproducen al salir de la demo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "動画はデモを終了すると再生できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "동영상은 데모를 나가면 재생됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示后即可播放视频。"
+          }
+        }
+      }
+    },
     "View feed" : {
       "localizations" : {
         "es" : {
@@ -138322,6 +138434,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关注另一个地址"
+          }
+        }
+      }
+    },
+    "Watch in Telegram" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ver en Telegram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegramで見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에서 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Telegram 中观看"
           }
         }
       }
@@ -168604,6 +168744,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "团队"
+          }
+        }
+      }
+    },
+    "Telegram plays this video only in its app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram solo reproduce este video en su app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この動画はTelegramアプリでのみ再生できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 동영상은 Telegram 앱에서만 재생됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此视频只能在 Telegram 应用中播放。"
           }
         }
       }

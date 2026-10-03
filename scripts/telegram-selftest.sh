@@ -455,6 +455,25 @@ check("…and a malformed data-post is skipped rather than filed under a guessed
         "<div class=\"tgme_widget_message\" data-post=\"noslash\">"
         + "<div class=\"tgme_widget_message_text\">x</div></div>", handle: "durov")?.posts.isEmpty == true)
 
+// ---------------------------------------------------------------------------
+// A post's video (prd §1092): read fresh from the post's own embed page at play
+// time, only off Telegram's CDN, never a token stored.
+// ---------------------------------------------------------------------------
+check("a permalink names its embed page",
+      TelegramChannel.embedURL(postURL: "https://t.me/telegram/459")?.absoluteString
+        == "https://t.me/telegram/459?embed=1&mode=tme")
+check("…and the /s/ preview, a bad handle or a missing id names none",
+      TelegramChannel.embedURL(postURL: "https://t.me/s/telegram") == nil
+        && TelegramChannel.embedURL(postURL: "https://t.me/x/1") == nil
+        && TelegramChannel.embedURL(postURL: "https://example.com/telegram/459") == nil)
+check("the first CDN video is the post's file, entities decoded",
+      TelegramChannel.videoSource(in: "<i style=\"x\"></i><video src=\"https://cdn1.telesco.pe/file/a.mp4?token=x&amp;y=1\" class=\"v\">")
+        == "https://cdn1.telesco.pe/file/a.mp4?token=x&y=1")
+check("…a video off any other host is refused",
+      TelegramChannel.videoSource(in: "<video src=\"https://evil.example/a.mp4\">") == nil)
+check("…and a post Telegram calls too big carries none",
+      TelegramChannel.videoSource(in: "<div class=\"message_media_not_supported\">Media is too big</div>") == nil)
+
 print("")
 if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all assertions passed")

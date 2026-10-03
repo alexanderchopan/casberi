@@ -240,6 +240,10 @@ struct ThingContentView: View {
     private enum LinkShape {
         case chart(ThingChart)
         case release, star
+        /// A video that plays in the sheet (prd §1092): a YouTube link, or a
+        /// Telegram channel's own video post.
+        case youtube(id: String, url: URL)
+        case telegramVideo(post: URL)
         case article(door: URL?)
         case card(URL)
         case art(String)
@@ -270,6 +274,15 @@ struct ThingContentView: View {
             return .release
         } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil {
             return .star
+        } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
+                  let id = YouTubeShorts.videoID(in: url.absoluteString) {
+            // Before the article test: a video's page is not its words.
+            return .youtube(id: id, url: url)
+        } else if thing.source == "Telegram", thing.tags.contains("Video"),
+                  let post = URL(string: thing.content),
+                  TelegramChannel.embedURL(postURL: thing.content) != nil {
+            // A channel's own video post: its file plays here (prd §1092).
+            return .telegramVideo(post: post)
         } else if FeedArticleText.hasBody(thing)
                     || FeedArticleText.readableURL(for: thing) != nil {
             return .article(door: Capture.detectURL(
@@ -376,6 +389,14 @@ struct ThingContentView: View {
                 if let door {
                     ArticleDoor(url: door)
                 }
+            case .youtube(let id, let url):
+                // THE VIDEO PLAYS HERE (prd §1092): the poster, then YouTube's
+                // own player once you press play; the way out after it.
+                YouTubeVideoContent(videoID: id, url: url, storedImageURL: thing.previewImageURL)
+            case .telegramVideo(let post):
+                // A channel's video: the poster, then the file itself in
+                // Apple's player, read fresh from the post on the press.
+                TelegramVideoContent(post: post, storedImageURL: thing.previewImageURL)
             case .card(let url):
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
             case .art(let art):
@@ -966,6 +987,15 @@ private struct LinkPreviewCard: View {
     }
 
     private func fetch() async {
+        let read = await Self.read(url: url, stored: storedImageURL)
+        title = read.title
+        image = read.image
+    }
+
+    /// The page's title and art, downsampled for a banner — shared with the
+    /// video poster (prd §1092), so a YouTube link's picture is read exactly
+    /// as its card's always was.
+    static func read(url: URL, stored storedImageURL: String?, maxSide: CGFloat = 280) async -> (title: String?, image: UIImage?) {
         // The demo's bundled art, and its wall (2026-08-12). Two separate
         // problems, one branch: a `sample:` ref is a real `URL` with a scheme
         // `URLSession` can't serve, so it fell through to the scrape below
@@ -978,11 +1008,11 @@ private struct LinkPreviewCard: View {
         #if DEBUG
         if let stored = storedImageURL, stored.hasPrefix("sample:"),
            let bundled = UIImage.demoSample(for: stored) {
-            image = await bundled.dsDownsampled(maxSide: 280)
-            return
+            return (nil, await bundled.dsDownsampled(maxSide: maxSide))
         }
         #endif
-        if DemoMode.isActive { return }
+        if DemoMode.isActive { return (nil, nil) }
+        var image: UIImage?
         // Stored art first: it's the record's own media and one cached CDN
         // request away, where LPMetadataProvider re-scrapes the whole page
         // and often comes back with nothing (music.apple.com especially).
@@ -992,19 +1022,180 @@ private struct LinkPreviewCard: View {
             // The card only ever paints this into a 140pt banner — downsample
             // off-main so a full-resolution CDN image doesn't sit decoded in
             // memory for a fraction of its rendered size.
-            image = await art.dsDownsampled(maxSide: 280)
+            image = await art.dsDownsampled(maxSide: maxSide)
         }
         let provider = LPMetadataProvider()
-        guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return }
-        title = metadata.title
-        guard image == nil, let imageProvider = metadata.imageProvider else { return }
+        guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return (nil, image) }
+        let title = metadata.title
+        guard image == nil, let imageProvider = metadata.imageProvider else { return (title, image) }
         let fetched: UIImage? = await withCheckedContinuation { continuation in
             _ = imageProvider.loadObject(ofClass: UIImage.self) { object, _ in
                 continuation.resume(returning: object as? UIImage)
             }
         }
         if let fetched {
-            image = await fetched.dsDownsampled(maxSide: 280)
+            image = await fetched.dsDownsampled(maxSide: maxSide)
+        }
+        return (title, image)
+    }
+}
+
+/// A YouTube video in its sheet (prd §1092): the poster in a 16:9 well with a
+/// play disc, and YouTube's own player in its place once pressed
+/// (`YouTubeEmbedView`) — nothing reaches YouTube before the press. Then one
+/// door out, "Watch on YouTube", which hands to the YouTube app when it
+/// claims the link. The demo reaches nothing (§483): its press says so.
+private struct YouTubeVideoContent: View {
+    let videoID: String
+    let url: URL
+    let storedImageURL: String?
+    @Environment(ShellChrome.self) private var chrome: ShellChrome?
+    @Environment(\.openURL) private var openURL
+    @State private var poster: UIImage?
+    @State private var playing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack {
+                Color.black
+                if playing {
+                    YouTubeEmbedView(videoID: videoID)
+                } else {
+                    if let poster {
+                        Color.clear.overlay(Image(uiImage: poster).resizable().scaledToFill())
+                    }
+                    Button {
+                        guard !DemoMode.isActive else {
+                            chrome?.flash(String(localized: "Videos play once you leave the demo."))
+                            return
+                        }
+                        DSHaptic.tap()
+                        withAnimation(DS.Motion.standard) { playing = true }
+                    } label: {
+                        Image(systemName: "play.fill")
+                            .dsGlyph(.title, weight: .semibold)
+                            .foregroundStyle(.white)
+                            .frame(width: 64, height: 64)
+                            .dsGlass(cornerRadius: 32)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text("Play video"))
+                }
+            }
+            .aspectRatio(16 / 9, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
+            DSDoorRow(icon: "play.rectangle", label: "Watch on YouTube") {
+                openURL(url)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
+        }
+        .task(id: videoID) {
+            poster = await LinkPreviewCard.read(url: url, stored: storedImageURL, maxSide: 1000).image
+        }
+    }
+}
+
+/// A Telegram channel's video post in its sheet (prd §1092). The channel page
+/// the bridge reads names the video but its file link carries a token that
+/// expires, so nothing is stored: the press reads the post's own embed page
+/// (`t.me`, declared) for a fresh file on Telegram's CDN (`telesco.pe`,
+/// declared) and plays it in Apple's player. A video Telegram calls too big
+/// for its web preview has no file there, and the sheet says only the app
+/// can play it. The demo reaches nothing (§483).
+private struct TelegramVideoContent: View {
+    let post: URL
+    let storedImageURL: String?
+    @Environment(ShellChrome.self) private var chrome: ShellChrome?
+    @Environment(\.openURL) private var openURL
+    @State private var poster: UIImage?
+    @State private var player: AVPlayer?
+    @State private var state: Phase = .idle
+
+    private enum Phase: Equatable { case idle, loading, playing, tooBig, unreachable }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack {
+                Color.black
+                if let player, state == .playing {
+                    VideoPlayer(player: player)
+                } else {
+                    if let poster {
+                        Color.clear.overlay(Image(uiImage: poster).resizable().scaledToFill())
+                    }
+                    if state == .loading {
+                        DSSpinner(size: .small)
+                    } else {
+                        Button { play() } label: {
+                            Image(systemName: "play.fill")
+                                .dsGlyph(.title, weight: .semibold)
+                                .foregroundStyle(.white)
+                                .frame(width: 64, height: 64)
+                                .dsGlass(cornerRadius: 32)
+                                .contentShape(Circle())
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel(Text("Play video"))
+                    }
+                }
+            }
+            .aspectRatio(16 / 9, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
+            if let line = line {
+                Text(line)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+            }
+            DSDoorRow(icon: "paperplane", label: "Watch in Telegram") {
+                openURL(post)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
+        }
+        .task(id: post) {
+            poster = await LinkPreviewCard.read(url: post, stored: storedImageURL, maxSide: 1000).image
+        }
+        .onDisappear { player?.pause() }
+    }
+
+    private var line: String? {
+        switch state {
+        case .tooBig: String(localized: "Telegram plays this video only in its app.")
+        case .unreachable: String(localized: "Couldn't reach Telegram to play this.")
+        default: nil
+        }
+    }
+
+    private func play() {
+        guard !DemoMode.isActive else {
+            chrome?.flash(String(localized: "Videos play once you leave the demo."))
+            return
+        }
+        guard let embed = TelegramChannel.embedURL(postURL: post.absoluteString) else { return }
+        DSHaptic.tap()
+        state = .loading
+        Task { @MainActor in
+            guard let data = await FeedFetch.data(embed, as: "Telegram"),
+                  let html = String(data: data, encoding: .utf8) else {
+                state = .unreachable
+                return
+            }
+            guard let src = TelegramChannel.videoSource(in: html), let url = URL(string: src) else {
+                state = .tooBig
+                return
+            }
+            NetworkLedger.shared.record(url, as: "Telegram")
+            let p = AVPlayer(url: url)
+            player = p
+            withAnimation(DS.Motion.standard) { state = .playing }
+            p.play()
         }
     }
 }

@@ -84,7 +84,7 @@ enum YouTubeShorts {
     // MARK: - The video id
 
     /// The 11-character video id inside a YouTube link, or nil. Handles the
-    /// three shapes a landed row can carry: the feed's own
+    /// shapes a landed row can carry: the feed's own
     /// `watch?v=<id>` (every row this bridge lands), a `youtu.be/<id>` short
     /// link, and `/shorts/<id>` for a row that arrived already knowing.
     static func videoID(in link: String) -> String? {
@@ -99,8 +99,12 @@ enum YouTubeShorts {
         }
         let parts = url.pathComponents.filter { $0 != "/" }
         if host == "youtu.be", let id = parts.first, plausible(id) { return id }
-        if let i = parts.firstIndex(of: "shorts"), parts.count > i + 1,
-           plausible(parts[i + 1]) { return parts[i + 1] }
+        // `/shorts/`, and `/live/` and `/embed/` (prd §1092: a live stream's
+        // link and an embed someone pasted are the same video id).
+        for marker in ["shorts", "live", "embed"] {
+            if let i = parts.firstIndex(of: marker), parts.count > i + 1,
+               plausible(parts[i + 1]) { return parts[i + 1] }
+        }
         return nil
     }
 
