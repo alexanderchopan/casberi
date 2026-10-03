@@ -50,7 +50,7 @@ extension FeedScreen {
 extension FeedScreen {
     /// When a Day row happens: a to-do's due date, else the thing's own time
     /// (an event's start, a mail's arrival).
-    private static func dayWhen(_ thing: Thing) -> Date { thing.dueAt ?? thing.capturedAt }
+    static func dayWhen(_ thing: Thing) -> Date { thing.dueAt ?? thing.capturedAt }
 
     /// THE DAY READS FORWARD (Calendar's agenda, §994): today and the days
     /// ahead, soonest first, then what already happened, newest day first.
@@ -116,7 +116,11 @@ extension FeedScreen {
         let next = visible.filter { $0.isLive && Self.dayWhen($0) >= now }
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
         let cover = heroShown ? nil : (next ?? visible.first { $0.isLive })
-        if let cover {
+        // Box B (prd §1087): the next thing over today's shape, while there
+        // is a next thing and a day to draw; else the cover, as every room.
+        if let cover, cover.id == next?.id, let strip = dayStrip, !strip.isEmpty {
+            Section { dayAheadRow(cover, strip: strip) }
+        } else if let cover {
             Section { ledeListRow(cover) }
         } else if !heroShown {
             Section {
@@ -131,6 +135,14 @@ extension FeedScreen {
                 guard picked.isVerb else { return }
                 if makes.count == 1 { makeInDay(makes[0]) } else { dayMakeOpen = true }
             }
+            // Today's strip, read off the main path's body (§628) and again
+            // every five minutes while the room is open, so now moves.
+            .task(id: visible.count) {
+                while !Task.isCancelled {
+                    loadDayStrip()
+                    try? await Task.sleep(for: .seconds(300))
+                }
+            }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
@@ -139,6 +151,51 @@ extension FeedScreen {
         }
         roomScopeSection
         groupedSections(liftingCover(groups, id: cover?.id), nextEventID: nextEventID)
+    }
+}
+
+extension FeedScreen {
+    /// Today's events onto the strip (prd §1087).
+    func loadDayStrip() {
+        let connected = connectedSeatNames.contains("Calendar")
+        let events = DayStripSource.events(context: modelContext, calendarConnected: connected)
+        let strip = DayStrip.make(events, now: .now, calendar: .current)
+        if strip != dayStrip { dayStrip = strip }
+    }
+
+    /// Box B's row: the cover's tap, press and long press, drawing the next
+    /// thing over today's strip.
+    func dayAheadRow(_ thing: Thing, strip: DayStrip) -> some View {
+        let start = Self.dayWhen(thing)
+        let minutes = Int(start.timeIntervalSinceNow / 60)
+        let when: String = minutes <= 0 ? String(localized: "now")
+            : minutes < 60 ? String(localized: "in \(minutes) min")
+            : start.formatted(date: Calendar.current.isDateInToday(start) ? .omitted : .abbreviated,
+                              time: .shortened)
+        let clock = start.formatted(date: .omitted, time: .shortened)
+        let line = [thing.endAt.map { "\(clock)–\($0.formatted(date: .omitted, time: .shortened))" } ?? clock,
+                    thing.factList.first { $0.action == .map }?.value]
+            .compactMap(\.self).joined(separator: " · ")
+        return Button {
+            openThing(thing)
+        } label: {
+            DayAheadCard(source: thing.source, title: thing.title, line: line, when: when, strip: strip,
+                         selected: DS.isMac && chrome.walkSelected == thing.id.uuidString)
+                .modifier(rowEntrance(0))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .contextMenu {
+            RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
+                        onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) })
+        }
+        .dsHover()
+        .macHoverLift()
+        .id(thing.id.uuidString)
+        .listRowBackground(Color.clear)
+        .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                             bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+        .listRowSeparator(.hidden)
     }
 }
 

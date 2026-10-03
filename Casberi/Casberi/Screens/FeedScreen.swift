@@ -683,6 +683,8 @@ struct FeedScreen: View {
     /// yours, so outside Reading's query; read when Highlights is picked
     /// (prd §1085).
     @State var keptHighlights: [Thing] = []
+    /// Today's shape under Day's next thing (prd §1087). Value types only.
+    @State var dayStrip: DayStrip?
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State var openProject: ProjectRoute?
