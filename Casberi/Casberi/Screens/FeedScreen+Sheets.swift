@@ -82,6 +82,8 @@ extension FeedScreen {
         case watchAdd
         /// Reading's Follow or Search (prd §1085).
         case readingFind(ReadingScope)
+        /// Social's Follow (prd §1086).
+        case socialFollow
         /// A company from Markets' index you don't watch yet (prd §1082).
         case company(CompanyPacks.Company)
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
@@ -110,6 +112,7 @@ extension FeedScreen {
             case .socialFaces: "socialFaces"
             case .watchAdd: "watchAdd"
             case .readingFind(let scope): "readingFind:\(scope.rawValue)"
+            case .socialFollow: "socialFollow"
             case .company(let c): "company:\(c.name)"
             case .deposits: "deposits"
             case .locks: "locks"
@@ -257,6 +260,8 @@ extension FeedScreen {
             socialFacesTray
         case .watchAdd:
             WatchAddSheet()
+        case .socialFollow:
+            SocialFollowSheet()
         case .readingFind(let scope):
             ReadingFindSheet(mode: scope == .search ? .search : .follow) { thing in
                 // The find tray closes before the thing's sheet rises: one

@@ -77,6 +77,9 @@ enum ScopeTileGlyph {
     /// Reading's Highlights (prd §1085): the system's highlighter, the pen a
     /// passage is kept with.
     static let highlights   = "highlighter"
+    /// Social's To you (prd §1086): what is addressed to you — the system's
+    /// one person, never `person.2` (Accounts, a list of people).
+    static let toYou        = "person"
 }
 
 /// The Work room's tiles (prd §1057).
@@ -99,6 +102,19 @@ extension ReadingScope: DSTileScope {
         case .highlights: return ScopeTileGlyph.highlights
         case .follow:     return ScopeTileGlyph.watch
         case .search:     return ScopeTileGlyph.search
+        }
+    }
+}
+
+/// The Social room's tiles (prd §1086). Follow wears Watch's eye, as
+/// Reading's and the Wallet's do: following a person is watching them
+/// privately (§801's "never write through a session").
+extension SocialScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:    return ScopeTileGlyph.all
+        case .toYou:  return ScopeTileGlyph.toYou
+        case .follow: return ScopeTileGlyph.watch
         }
     }
 }

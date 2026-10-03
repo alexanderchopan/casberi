@@ -513,6 +513,8 @@ extension FeedScreen {
                 dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.readingRoom {
                 readingRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+            } else if source == RoomAccounts.socialRoom {
+                socialRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if agentRoomShown {
                 agentRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else {
@@ -523,15 +525,11 @@ extension FeedScreen {
                 // `threadReplies` rides beside it for `shapedRow` to render
                 // inline. Scoped to `.social` — every other shape's `visible`
                 // passes through untouched.
-                //
-                // The merged Social room folds them too (prd §1079, the gap
-                // §1068 left): the parent ref is exact per network and the
-                // fold keeps a reply with its parent's network.
-                // (Reading draws its own sections since prd §1085.)
+                // (The merged Social and Reading rooms draw their own
+                // sections since prd §1086 and §1085.)
                 let rows = visible
                 let (roomThings, threadReplies): ([Thing], [String: [Thing]]) =
-                    SocialRoom.foldsThreads(source) || source == RoomAccounts.socialRoom
-                        ? foldThreadReplies(rows) : (rows, [:])
+                    SocialRoom.foldsThreads(source) ? foldThreadReplies(rows) : (rows, [:])
                 // Live-first in a source's own room (2026-07-21): a stream
                 // that's on RIGHT NOW is the one row whose relevance isn't
                 // chronological, so it leads its group. No-op for sources

@@ -554,6 +554,8 @@ final class ShellChrome {
     var workScope: WorkScope = .all
     /// The Reading room's picked tile (prd §1085).
     var readingScope: ReadingScope = .all
+    /// The Social room's picked tile (prd §1086).
+    var socialScope: SocialScope = .all
 
     /// Start a new conversation with `agent`, from the Agents room's New.
     func beginConversation(with agent: String) {

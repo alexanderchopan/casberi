@@ -62,6 +62,8 @@ ALIASES = {
     # Reading's Follow (prd §1085) follows a site's feed - watching it
     # privately, the same meaning.
     ("ReadingScope", "follow"): "watch",
+    # Social's Follow (prd §1086) watches a person privately: the same meaning.
+    ("SocialScope", "follow"): "watch",
 }
 
 # Symbols the user named as one meaning's own (2026-09-18; the Wallet's

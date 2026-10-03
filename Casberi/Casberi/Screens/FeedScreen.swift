@@ -816,6 +816,7 @@ struct FeedScreen: View {
     /// `-marketsScope` fires once per launch, not once per page build.
     @MainActor static var marketsProbed = false
     @MainActor static var readingProbed = false
+    @MainActor static var socialProbed = false
     #endif
     /// What the Wallet last read you hold, for Markets' "You hold" line.
     @State var held: (byContract: [String: Double], bySymbol: [String: Double]) = ([:], [:])

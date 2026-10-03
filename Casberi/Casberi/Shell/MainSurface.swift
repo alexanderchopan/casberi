@@ -2056,6 +2056,7 @@ struct MainSurface: View {
             chrome.notesFolder = nil
             chrome.workScope = .all
             chrome.readingScope = .all
+            chrome.socialScope = .all
             // And the Tokens room's packs.
             chrome.tokensScope = .watchlist
             chrome.freshHandles = []
