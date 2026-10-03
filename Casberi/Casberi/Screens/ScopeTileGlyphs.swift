@@ -74,6 +74,9 @@ enum ScopeTileGlyph {
     /// in the browser, and Safari's compass is the app's "opens a page" mark
     /// (the reading sheet's Open in Safari).
     static let explorer     = "safari"
+    /// Reading's Highlights (prd §1085): the system's highlighter, the pen a
+    /// passage is kept with.
+    static let highlights   = "highlighter"
 }
 
 /// The Work room's tiles (prd §1057).
@@ -83,6 +86,19 @@ extension WorkScope: DSTileScope {
         case .all:      return ScopeTileGlyph.all
         case .comingUp: return ScopeTileGlyph.comingUp
         case .watch:    return ScopeTileGlyph.watch
+        }
+    }
+}
+
+/// The Reading room's tiles (prd §1085). Follow wears Watch's eye: following
+/// a site's feed is watching it privately, Watch's own meaning.
+extension ReadingScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:        return ScopeTileGlyph.all
+        case .highlights: return ScopeTileGlyph.highlights
+        case .follow:     return ScopeTileGlyph.watch
+        case .search:     return ScopeTileGlyph.search
         }
     }
 }

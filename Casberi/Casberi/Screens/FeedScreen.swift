@@ -679,6 +679,10 @@ struct FeedScreen: View {
     /// Watch was tapped in the Work room with more than one seat that keeps
     /// a watch (prd §1057).
     @State var workWatchOpen = false
+    /// The highlights you kept yourself (`Highlight`, prd §1020): notes of
+    /// yours, so outside Reading's query; read when Highlights is picked
+    /// (prd §1085).
+    @State var keptHighlights: [Thing] = []
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State var openProject: ProjectRoute?
@@ -811,6 +815,7 @@ struct FeedScreen: View {
     #if DEBUG
     /// `-marketsScope` fires once per launch, not once per page build.
     @MainActor static var marketsProbed = false
+    @MainActor static var readingProbed = false
     #endif
     /// What the Wallet last read you hold, for Markets' "You hold" line.
     @State var held: (byContract: [String: Double], bySymbol: [String: Double]) = ([:], [:])

@@ -511,6 +511,8 @@ extension FeedScreen {
                 workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.dayRoom {
                 dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+            } else if source == RoomAccounts.readingRoom {
+                readingRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if agentRoomShown {
                 agentRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else {
@@ -525,10 +527,8 @@ extension FeedScreen {
                 // The merged Social room folds them too (prd §1079, the gap
                 // §1068 left): the parent ref is exact per network and the
                 // fold keeps a reply with its parent's network.
-                //
-                // Reading folds one article saved in several apps into its
-                // newest save (prd §1079, `objectFolded`).
-                let rows = source == RoomAccounts.readingRoom ? objectFolded(visible) : visible
+                // (Reading draws its own sections since prd §1085.)
+                let rows = visible
                 let (roomThings, threadReplies): ([Thing], [String: [Thing]]) =
                     SocialRoom.foldsThreads(source) || source == RoomAccounts.socialRoom
                         ? foldThreadReplies(rows) : (rows, [:])

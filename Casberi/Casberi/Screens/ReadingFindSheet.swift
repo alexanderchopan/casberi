@@ -1,0 +1,316 @@
+import SwiftUI
+import SwiftData
+
+/// READING'S FOLLOW AND SEARCH (prd §1085), Markets' Add carried over: a tray
+/// with the field at the bottom on glass, where the thumb is (prd §752).
+///
+/// **Follow**, before you type: the sites you keep saving from and follow
+/// nothing at (`ReadingRoom.suggestions`) — two saves or more in sixty days.
+/// Typing an address offers that site. Following adds it to RSS, which finds
+/// the site's feed on its next read (`FeedDiscovery`); a site that publishes
+/// none is said so and left unfollowed.
+///
+/// **Search**: what you read first, highlights included (`Retriever.find`,
+/// the composer's Find engine, over the room's own rows), then the site the
+/// query names, to follow. There is no keyless way to search the web for a
+/// feed by name, so a word finds only what you already have (§83).
+///
+/// Optional environment only: on Mac Catalyst a sheet's content is evaluated
+/// where the presenter's `.environment` has not reached (prd §872).
+struct ReadingFindSheet: View {
+    enum Mode { case follow, search }
+
+    let mode: Mode
+    /// Opens a found row in the room's own sheet.
+    var onOpen: ((Thing) -> Void)? = nil
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(ShellChrome.self) private var chrome: ShellChrome?
+    @Environment(BridgeStore.self) private var store: BridgeStore?
+
+    @State private var query = ""
+    @State private var corpus: [Thing] = []
+    @State private var suggestions: [ReadingRoom.Suggestion] = []
+    @State private var followed: Set<String> = []
+    @State private var following: String? = nil
+    @State private var recents: [String] = []
+    @FocusState private var fieldFocused: Bool
+
+    private static let recentsKey = "reading.find.recents"
+    private static let resultCap = 20
+
+    var body: some View {
+        DSTray(title: mode == .follow ? String(localized: "Follow") : String(localized: "Search"),
+               height: 640, detents: [.large]) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    if trimmed.isEmpty { before } else { results }
+                }
+                .padding(.bottom, 96)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom) { field }
+        }
+        .task { load() }
+        .onAppear {
+            fieldFocused = true
+            #if DEBUG
+            // `-readingQuery "<text>"` fills the field (prd §1085): a
+            // simctl-booted simulator draws no keyboard to type with.
+            if let q = UserDefaults.standard.string(forKey: "readingQuery") { query = q }
+            #endif
+        }
+    }
+
+    private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    // MARK: - The field
+
+    private var field: some View {
+        HStack(spacing: DS.Space.s2) {
+            Image(systemName: "magnifyingglass")
+                .dsGlyph(.subhead)
+                .foregroundStyle(DS.textSecondary)
+            TextField(mode == .follow ? String(localized: "A site's address")
+                                      : String(localized: "Search your reading"),
+                      text: $query)
+                .dsText(.body17)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(mode == .follow ? .URL : .default)
+                .submitLabel(.search)
+                .onSubmit { remember(query) }
+                .focused($fieldFocused)
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .dsGlyph(.body)
+                        .foregroundStyle(DS.textTertiary)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text("Clear"))
+            }
+        }
+        .padding(.leading, DS.Space.s4)
+        .padding(.trailing, DS.Space.s1)
+        .frame(height: 52)
+        .dsGlass(cornerRadius: 26)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s2)
+    }
+
+    // MARK: - Before you type
+
+    @ViewBuilder private var before: some View {
+        if mode == .follow {
+            if !suggestions.isEmpty {
+                head(String(localized: "Sites you save from"))
+                ForEach(suggestions, id: \.host) { s in
+                    siteRow(s.host, line: String(localized: "You saved \(s.count) lately"))
+                }
+            }
+        }
+        if !recents.isEmpty {
+            head(String(localized: "Recent"))
+            ForEach(recents, id: \.self) { recent in
+                Button {
+                    query = recent
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .dsGlyph(.subhead).foregroundStyle(DS.textTertiary)
+                            .frame(width: DS.Face.rowCircle)
+                        Text(verbatim: recent).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(minHeight: 48)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .padding(.horizontal, DS.Space.s4)
+            }
+        }
+        if (mode == .search || suggestions.isEmpty) && recents.isEmpty {
+            footnote
+        }
+    }
+
+    private var footnote: some View {
+        let text: Text = if mode == .follow {
+            Text("Type a site's address to follow it. Sites you save from twice show here.")
+        } else if trimmed.isEmpty {
+            Text("Finds what you read and kept, highlights included.")
+        } else {
+            Text("Nothing you read matches. Type a site's address to follow it.")
+        }
+        return DSFootnote(text)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4)
+    }
+
+    // MARK: - As you type
+
+    @ViewBuilder private var results: some View {
+        let hits = mode == .search ? Array(Retriever.find(trimmed, in: corpus.live).hits.prefix(Self.resultCap)) : []
+        if !hits.isEmpty {
+            head(String(localized: "In your reading"))
+            ForEach(hits.keyed) { row in
+                if let thing = row.live { thingRow(thing) }
+            }
+        }
+        if let site = ReadingRoom.site(in: trimmed) {
+            head(String(localized: "Follow"))
+            siteRow(site, line: String(localized: "Its feed lands in Reading"))
+        }
+        if hits.isEmpty && ReadingRoom.site(in: trimmed) == nil {
+            footnote
+        }
+    }
+
+    private func head(_ title: String) -> some View {
+        Text(title)
+            .dsText(.label12)
+            .foregroundStyle(DS.textTertiary)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s1)
+    }
+
+    // MARK: - Rows
+
+    private func thingRow(_ thing: Thing) -> some View {
+        let line = ReadingRoom.isHighlight(source: thing.source, kind: thing.kind.rawValue,
+                                           sourceRef: thing.sourceRef)
+            ? String(localized: "Highlight · \(thing.source)") : thing.source
+        return Button {
+            remember(query)
+            onOpen?(thing)
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: thing.source, size: DS.Face.rowCircle, circular: true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: thing.title).dsText(.body17)
+                        .foregroundStyle(DS.textPrimary).lineLimit(1)
+                    Text(verbatim: line).dsText(.subhead12)
+                        .foregroundStyle(DS.textTertiary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(minHeight: 60)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .padding(.horizontal, DS.Space.s4)
+    }
+
+    private func siteRow(_ host: String, line: String) -> some View {
+        let on = ReadingRoom.covered(host, by: followed)
+        let busy = following == host
+        return HStack(spacing: DS.Space.s3) {
+            WatchFace(url: nil, lettered: host)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: host).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                Text(verbatim: on ? String(localized: "Following") : line)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+            }
+            Spacer(minLength: DS.Space.s2)
+            if busy {
+                DSSpinner(size: .small).frame(minWidth: 44, minHeight: 44)
+            } else {
+                Button {
+                    Task { await follow(host) }
+                } label: {
+                    Image(systemName: on ? "checkmark" : "plus")
+                        .dsGlyph(.title, weight: .regular)
+                        .foregroundStyle(on ? DS.textTertiary : DS.tint)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .disabled(on)
+                .accessibilityLabel(Text(on ? String(localized: "Following \(host)")
+                                            : String(localized: "Follow \(host)")))
+            }
+        }
+        .frame(minHeight: 64)
+        .padding(.horizontal, DS.Space.s4)
+    }
+
+    // MARK: - Following
+
+    /// Adds the site to RSS, reads it once so the feed is found now, and says
+    /// so either way: a site that publishes no feed is taken back out.
+    private func follow(_ host: String) async {
+        guard !DemoMode.isActive else {
+            chrome?.flash(String(localized: "Following works once you leave the demo."))
+            return
+        }
+        let rss = RSSStore.shared
+        let address = "https://\(host)"
+        guard rss.add(address, title: host) else { return }
+        remember(host)
+        following = host
+        _ = await RSSIngest.refresh(context: modelContext, waitForInFlight: true)
+        following = nil
+        let normalized = rss.normalized(address) ?? address
+        if FeedFreshness.noFeedFound(at: normalized),
+           let index = rss.feeds.firstIndex(where: { $0.url.lowercased() == normalized.lowercased() }) {
+            rss.remove(at: IndexSet(integer: index))
+            chrome?.flash(String(localized: "\(host) doesn't publish a feed"), tone: .failure)
+            return
+        }
+        followed.insert(host)
+        chrome?.flash(String(localized: "Following \(host)"), tone: .success)
+        store?.registerConnected(id: "rss", name: "RSS",
+                                 proof: String(localized: "Synced just now"),
+                                 can: ["Reads the feeds you follow."])
+    }
+
+    // MARK: - Reading
+
+    private func load() {
+        recents = UserDefaults.standard.data(forKey: Self.recentsKey)
+            .flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
+        let members = RoomAccounts.roomSources(RoomAccounts.readingRoom)
+        var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { members.contains($0.source) },
+                                       sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.fetchLimit = 1_500
+        let room = ((try? modelContext.fetch(d)) ?? []).filter(\.isLive)
+        let you = NoteSheetSource.keptSource
+        var k = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == you },
+                                       sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        k.fetchLimit = 500
+        let kept = ((try? modelContext.fetch(k)) ?? []).filter { $0.isLive && Highlight.isHighlight($0) }
+        corpus = room + kept
+        // What you already follow: every RSS feed's site, and the sites the
+        // room's feed rows come from (Substack's publications among them).
+        var hosts = Set(RSSStore.shared.feeds.compactMap { ReadingRoom.host(of: $0.url) })
+        for thing in room where thing.source == "RSS" || thing.source == "Substack" {
+            if let h = Self.link(of: thing).flatMap(ReadingRoom.host(of:)) { hosts.insert(h) }
+        }
+        followed = hosts
+        // Saves: a link kept in a saving app, never a feed's own rows.
+        let saves = room.filter { ReadingRoom.saveSources.contains($0.source) }
+            .compactMap { thing in Self.link(of: thing).map { ReadingRoom.Save(url: $0, at: thing.capturedAt) } }
+        suggestions = ReadingRoom.suggestions(saves: saves, followed: hosts, now: .now)
+    }
+
+    /// A row's link: its page, else its content when that is an address.
+    private static func link(of thing: Thing) -> String? {
+        if let page = thing.externalLink, !page.isEmpty { return page }
+        let content = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        return content.hasPrefix("http") ? content : nil
+    }
+
+    private func remember(_ raw: String) {
+        let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return }
+        recents = Array(([q] + recents.filter { $0.caseInsensitiveCompare(q) != .orderedSame }).prefix(5))
+        if let data = try? JSONEncoder().encode(recents) {
+            DefaultsWrite.set(data, forKey: Self.recentsKey)
+        }
+    }
+}

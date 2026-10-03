@@ -59,6 +59,9 @@ ALIASES = {
     # Watch's own meaning ("Follow address" is named among its uses), so
     # Watch's eye, never a second glyph for one meaning.
     ("WalletSection", "follow"): "watch",
+    # Reading's Follow (prd §1085) follows a site's feed - watching it
+    # privately, the same meaning.
+    ("ReadingScope", "follow"): "watch",
 }
 
 # Symbols the user named as one meaning's own (2026-09-18; the Wallet's

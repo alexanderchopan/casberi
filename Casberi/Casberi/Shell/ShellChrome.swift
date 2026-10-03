@@ -552,6 +552,8 @@ final class ShellChrome {
     /// The Work room's standing tile (prd §1057), All or Coming up; cleared
     /// on every source change like `notesScope`.
     var workScope: WorkScope = .all
+    /// The Reading room's picked tile (prd §1085).
+    var readingScope: ReadingScope = .all
 
     /// Start a new conversation with `agent`, from the Agents room's New.
     func beginConversation(with agent: String) {
