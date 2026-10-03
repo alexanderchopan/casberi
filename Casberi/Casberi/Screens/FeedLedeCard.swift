@@ -660,13 +660,7 @@ struct FeedLedeCard: View {
     /// The primitives `WorkStage` reads — `ThingSheetView.workRow`'s own
     /// spelling, so the cover's state word can never differ from the sheet's.
     private var workRow: WorkStage.Row {
-        WorkStage.Row(source: thing.source,
-                      sourceRef: thing.sourceRef,
-                      title: thing.title,
-                      tags: thing.tags,
-                      mark: thing.mark.rawValue,
-                      projectField: thing.authorHandle,
-                      hasPrice: thing.priceValue != nil && thing.priceCurrency != nil)
+        WorkStage.Row(thing)
     }
 
     /// LIFE B: the date tile beside the title — the day at `heading24`, the

@@ -63802,3 +63802,24 @@ Proposed on the "One Wallet improvements" canvas (six phones: the room as built,
 **Demo.** #412's "Opened" event is seeded beside its merge, so Work shows the fold and the merge's sheet lists it.
 
 **Checked.** `object-fold-selftest.sh` and `followed-people-selftest.sh` (new, in `verify.sh`), `social-room-selftest.sh` (the ring gate's guard amended to admit the merged room), `github-rowtag-selftest.sh`, `category-fold-selftest.sh`, CasberiTests (89), and the liveness, row-cost, query-read, template, dead-closure, footnote, lead-body, status-ink, mutation-liveness and harness-exists audits. On a simulator: Work leads with the newest event (a Dodo sale, 5h); scoped to GitHub, #412 stands once with no "Opened" row, and its sheet lists "Opened … 4 days ago"; Social shows one "You", and picking Mia narrows the room and the box to her posts. **Not seen:** Reading's fold (the demo holds no article saved twice), a cross-network person face (the demo's people are on one network each), and a folded thread in the merged room.
+
+## §1080 — Work's Coming up leads with what needs you, then what is due (user, of a separate "What needs you" tile: "wouldn't that be the same thing?", then "ok yes" to folding it into Coming up as the Wallet's "need you now" does, 2026-10-02; amends §1057's Coming up and §1079's box for that tile) — BUILT
+
+**Why not a tile.** Coming up and "needs you" overlap wherever an ask has a date, and two tiles over one set of rows would be the bundle §1049 refuses. They differ only on the asks with no date: a review requested, an issue assigned, a mention, a build that broke, an alarm still firing, a payment that failed. Coming up held only rows with a due date ahead, so none of those reached it. They now lead it.
+
+**What needs you (`Model/WorkAsk.swift`).** Stable signals only, `WorkStage`'s rule (a tag a bridge stamps in English, a state Apple or AWS spells in a ref, never a localized title):
+- GitHub's asks: Review, Assigned, Mentioned (`GitHubFeeds.notificationAsk`).
+- Everything `WorkStage` already calls failed: a failed build, a regression, a triggered incident, a rejection, an invalid build, an open or lost dispute, a failed payout or payment, a deprecation.
+- AWS: an alarm whose ref says ALARM, a pipeline run tagged Failed.
+- Polar and Dodo: an opened dispute, a subscription Failed, PastDue or Unpaid.
+- Never the to-do mark: bridges set it to mean "open", and an open ticket is not an ask (§1025).
+
+It reads the folded room (§1079), so an incident later resolved, a dispute later won or a subscription later recovered has already left. **An ask stands for seven days** from when it landed: nothing tells the app a review was done or a red build was followed by a green one, and calling a month-old row "now" is the §83 fake status.
+
+**The tile.** The box leads with the newest ask, else the soonest deadline. Under the tiles, "Needs you" (a group named by what it is, `dated: false`, §740), newest first, then the deadlines by day, soonest first. A row that is both, like an open dispute with evidence due, stands once, under the asks. Empty: "Nothing needs you, and nothing is due." All is unchanged.
+
+**One spelling.** `WorkStage.Row(thing)` (`Model/WorkStage+Thing.swift`) is now the one builder of the row value, for the cover, the sheet and Coming up, replacing two hand copies, so the state word a row wears and whether it needs you cannot be read from two snapshots.
+
+**Demo.** Sentry's "Resolved: elevated 5xx on the edge" is retitled "Regressed: …". It carried the Regression tag, and `SentryBridge` reads only unresolved issues, so a resolved Sentry row cannot exist.
+
+**Checked.** `work-ask-selftest.sh` (new, in `verify.sh`), `work-stage-selftest.sh`, CasberiTests (103), and the liveness, template, row-cost, query-read, harness-exists, dead-closure, day-divider and status-ink audits. On a simulator with the demo, Coming up leads with the prod-api-5xx alarm, then "Needs you" (the failed quillmark-deploy, the #414 mention, three open disputes, a failed subscription payment, the #409 assignment, the Sentry regression), then Oct 4, Oct 5 and Oct 7. #402's review request, 14 days old, is past the week and is not listed. **Not seen:** the retitled Sentry row (checked before the retitle).

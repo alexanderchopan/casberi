@@ -4105,7 +4105,7 @@ enum DemoSeedAll {
         // drew for Sentry. `SentryBridge` stamps exactly one of Issue /
         // Regression; Vercel, PagerDuty, npm and PyPI have their own.
         let ops: [(String, String, String, Double, [String])] = [
-            ("Resolved: elevated 5xx on the edge", "Sentry", "12 events", 2, ["Regression"]),
+            ("Regressed: elevated 5xx on the edge", "Sentry", "12 events", 2, ["Regression"]),
             ("New issue: nil unwrap in EditorView", "Sentry", "3 events", 6, ["Issue"]),
             ("Deployed quillmark-site to production", "Vercel", "Ready in 24s", 1, ["Deploy"]),
             ("Preview ready for pull/412", "Vercel", "Ready in 19s", 3, ["Deploy"]),

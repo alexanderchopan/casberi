@@ -2821,13 +2821,7 @@ struct ThingSheetView: View {
     /// The primitives `WorkStage` reads. Built once so the reading and the
     /// clause detail below can't be derived from two different snapshots.
     private var workRow: WorkStage.Row {
-        WorkStage.Row(source: thing.source,
-                      sourceRef: thing.sourceRef,
-                      title: thing.title,
-                      tags: thing.tags,
-                      mark: thing.mark.rawValue,
-                      projectField: thing.authorHandle,
-                      hasPrice: thing.priceValue != nil && thing.priceCurrency != nil)
+        WorkStage.Row(thing)
     }
 
     // `walletStage` / `isMoved` / `stageView` retired here in the 2026-08-12

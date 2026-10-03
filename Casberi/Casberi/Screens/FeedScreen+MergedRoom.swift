@@ -156,6 +156,13 @@ extension FeedScreen {
         .sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
     }
 
+    /// What is waiting on the person now, newest first (`WorkAsk`, prd §1080).
+    private func workAsks(_ visible: [Thing]) -> [Thing] {
+        let now = Date.now
+        return visible.filter { $0.isLive && WorkAsk.needsYou(WorkStage.Row($0), at: $0.capturedAt, now: now) }
+            .sorted { $0.capturedAt > $1.capturedAt }
+    }
+
     /// What Watch can follow: the connected seats that keep a watch.
     var workWatches: [WorkWatch] {
         let seats = Set(RoomAccounts.connected(in: RoomAccounts.workRoom, names: connectedSeatNames)
@@ -183,11 +190,15 @@ extension FeedScreen {
     @ViewBuilder
     func workRoomSections(_ allVisible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
         let visible = objectFolded(allVisible)
-        let deadlines = workDeadlines(visible)
         let comingUp = chrome.workScope == .comingUp
-        // Coming up leads with the soonest deadline, the view it is.
+        // What needs you now leads Coming up, then what is due (prd §1080);
+        // a row that is both stands once, under the asks.
+        let asks = comingUp ? workAsks(visible) : []
+        let askIDs = Set(asks.map(\.id))
+        let deadlines = workDeadlines(visible).filter { !askIDs.contains($0.id) }
+        // Coming up leads with what needs you, else the soonest deadline.
         let cover = heroShown ? nil
-            : (comingUp ? deadlines.first : visible.first { $0.isLive })
+            : (comingUp ? (asks.first ?? deadlines.first) : visible.first { $0.isLive })
         if let cover {
             Section { ledeListRow(cover) }
         } else if !heroShown {
@@ -216,14 +227,20 @@ extension FeedScreen {
         }
         roomScopeSection
         if comingUp {
+            let waiting = asks.filter { $0.id != cover?.id }
             let rest = deadlines.filter { $0.id != cover?.id }
-            if rest.isEmpty && cover == nil {
+            if waiting.isEmpty && rest.isEmpty && cover == nil {
                 Section {
-                    DSSkeletonRows(label: Text("No deadlines ahead."))
+                    DSSkeletonRows(label: Text("Nothing needs you, and nothing is due."))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
             } else {
+                // Named by what it is, not by a time (prd §740).
+                if !waiting.isEmpty {
+                    groupedSections([(String(localized: "Needs you"), waiting)],
+                                    nextEventID: nextEventID, dated: false)
+                }
                 // Soonest first: the days in order, each due-ordered.
                 let cal = Self.groupingCalendar
                 let days = Dictionary(grouping: rest) { cal.startOfDay(for: $0.dueAt ?? .now) }

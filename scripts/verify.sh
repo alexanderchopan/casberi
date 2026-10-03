@@ -1958,6 +1958,10 @@ harness "Social room self-test" "social room self-test" "scripts/social-room-sel
 # must never fold. The fold hides rows, so a wrong key renders as a calm room.
 harness "Object fold self-test" "object fold self-test" "scripts/object-fold-selftest.sh" "the object fold self-test failed — run scripts/object-fold-selftest.sh"
 
+# What leads Work's Coming up as "Needs you" (prd §1080): asks and breakages by
+# stable signal per service, never the to-do mark, and a week at most.
+harness "Work ask self-test" "work ask self-test" "scripts/work-ask-selftest.sh" "the work ask self-test failed — run scripts/work-ask-selftest.sh"
+
 # The Social room's faces, one per person across networks (prd §1079): joined
 # only by the Addresses index, never by a handle or a display name.
 harness "Followed people self-test" "followed people self-test" "scripts/followed-people-selftest.sh" "the followed people self-test failed — run scripts/followed-people-selftest.sh"
