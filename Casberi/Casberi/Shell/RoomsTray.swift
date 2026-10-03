@@ -66,6 +66,12 @@ struct RoomsTray: View {
                         Color.black.opacity(0.001).ignoresSafeArea()
                     }
                     .buttonStyle(.plain)
+                    // …and a SWIPE anywhere else closes it too (2026-10-03,
+                    // user: "trays get stuck … not easy to swipe down or
+                    // dismiss"). The drag cancelled the Button's tap, so a
+                    // swipe — the gesture every other tray answers — did
+                    // nothing at all. Messages' menu closes on either.
+                    .highPriorityGesture(DragGesture(minimumDistance: 12).onEnded { _ in close() })
                     .accessibilityLabel(Text("Close rooms"))
                     .transition(.opacity)
                     panel(screen: geo.size)

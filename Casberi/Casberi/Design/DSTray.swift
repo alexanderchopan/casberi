@@ -80,8 +80,24 @@ struct DSTray<Content: View>: View {
     @ScaledMetric(relativeTo: .largeTitle) private var titleLine: CGFloat = 40
 
     /// What the title took BEYOND the one line every caller's arithmetic
-    /// budgeted for. Zero for the ~20 short titles, so nothing moves for them.
-    private var titleOverflow: CGFloat { max(0, titleHeight - titleLine) }
+    /// budgeted for.
+    ///
+    /// **A one-line title is known BEFORE it is measured** (2026-10-03, user:
+    /// "trays get stuck for a second"). Figtree's line box is 1.2× its size,
+    /// so one line of `heading40` draws 48pt against the 40 budgeted above,
+    /// and every tray paid 8pt — but only once `onGeometryChange` reported,
+    /// after the first pass had already presented the sheet at `.height(h)`.
+    /// The detent set then changed to `h + 8` under the opening animation,
+    /// and UIKit re-resolved the sheet mid-present. The rendered line now
+    /// seeds the reading, and a measurement replaces it only when the title
+    /// actually wrapped, so a one-line tray's detent never moves.
+    private var titleOverflow: CGFloat {
+        let size = UIFontMetrics(forTextStyle: .largeTitle)
+            .scaledValue(for: DSTextStyle.heading40.platformSize)
+        let oneLine = UIFont(name: DSFont.extraBold, size: size)?.lineHeight ?? titleLine
+        let drawn = titleHeight > oneLine * 1.5 ? titleHeight : oneLine
+        return max(0, drawn - titleLine)
+    }
 
     var body: some View {
         let tray = VStack(alignment: .leading, spacing: DS.Space.s4) {

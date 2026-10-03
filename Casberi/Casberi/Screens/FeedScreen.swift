@@ -1058,7 +1058,7 @@ struct FeedScreen: View {
         // tile is how an empty one stops being empty, and the generic state
         // told a first-time writer to open the catalog instead.
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
-            && !Pinboard.isPinnedRoom(source) {
+            && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome {
             Group { emptyState }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -1132,7 +1132,8 @@ struct FeedScreen: View {
         // just see a black screen"*. `LiveRoomSources`' own doc names this
         // exact shape — it is why Frames and Logos each have an arm above
         // rather than a flag.
-        } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source) {
+        } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
+                    || walletKeepsChrome {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
@@ -1210,6 +1211,23 @@ struct FeedScreen: View {
             // (prd §979, §980): an empty Pinned or Folders pick keeps them,
             // and Folders keeps its New folder row under them.
             || Pinboard.isPinnedRoom(source)
+            || walletKeepsChrome
+    }
+
+    /// **THE WALLET IS NEVER REPLACED WHILE IT WATCHES AN ADDRESS** (2026-10-03,
+    /// user: "if you add an address to follow that isn't detected it takes you
+    /// to an empty screen that says nothing here yet, but it's not the
+    /// standard wallet page, and you can't navigate out of it").
+    ///
+    /// An address with no activity yet lands no rows, so both empty arms of
+    /// `roomBody` replaced the room — box, tiles and the account menu with
+    /// them, the rail unpublished — and the scope outlived leaving the room,
+    /// so coming back met the same page. §538's dead end, for an address
+    /// rather than a seat. The box and its figures already say "nothing yet"
+    /// in their own slots (`walletScopeIsEmpty`), so the room keeps its
+    /// chrome over an empty list.
+    private var walletKeepsChrome: Bool {
+        source == CategoryFold.walletRoom && !wallet.addresses.isEmpty
     }
 
     /// The day sections of a room that has rows, plus its closing line.

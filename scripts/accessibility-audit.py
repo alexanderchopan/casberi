@@ -175,7 +175,7 @@ KNOWN_EXEMPT = {
     # 52pt row height and every point to its neighbours (`contentShape` inset
     # by half the gap, no layout change), and the category is also reachable
     # from its name, which spans the row's left half.
-    "RoomsTray.swift:304",
+    "RoomsTray.swift:310",
     # An entry here is a statement that the control is genuinely
     # unreachable-by-design or genuinely decorative, with the reason written out.
     #
