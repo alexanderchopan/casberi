@@ -162,7 +162,10 @@ done
 # are the checks that they STAY gone; a `readingScope` with no board to set it
 # is the dead control §83 bans, and a `roomScoped` that narrows nothing is a
 # filter every room pays for and none uses.
-for gone in 'FeedInsight.Leaderboard' 'LeaderboardHero' 'readingScope' 'roomScoped'; do
+# prd §1085 brought the NAME back for a different control: `ReadingScope` is
+# now the room's tiles (All · Highlights · Follow · Search), set by a tile tap,
+# so `readingScope` is no longer evidence of the board and left this list.
+for gone in 'FeedInsight.Leaderboard' 'LeaderboardHero' 'roomScoped'; do
   grep -q "$gone" "$FEED" \
     && { echo "✗ FeedScreen still names $gone — the ranked board and its room"; \
          echo "  scope were deleted together (prd §723)"; exit 1; }
