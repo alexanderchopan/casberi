@@ -18,9 +18,32 @@ enum WalletCash {
         /// address and puts no address verb on it.
         let holderID: String
         let label: String
+        /// When the seat read this balance, for Holdings' stamp (prd §1078).
+        var readAt: Date? = nil
     }
 
     static let holderPrefix = "cash:"
+
+    /// Every stored cash reading, by the place it joins (prd §1078).
+    static func readings() -> [WalletPortfolio.PlaceReading] {
+        held().compactMap { cash in
+            cash.readAt.map { WalletPortfolio.PlaceReading(holderID: cash.holderID, label: cash.label, at: $0) }
+        }
+        .reduce(into: [WalletPortfolio.PlaceReading]()) { out, reading in
+            if !out.contains(where: { $0.holderID == reading.holderID }) { out.append(reading) }
+        }
+    }
+
+    /// Every card balance owed, in words ("$812 owed on Apple Card"), for the
+    /// crown's note. Never counted (prd §1078).
+    static func owed() -> [String] {
+        guard AppleWalletBridge.connected else { return [] }
+        return AppleWalletBridge.owed.sorted(by: { $0.key < $1.key }).compactMap { name, balance in
+            guard balance.value > 0, balance.currency.count == 3 else { return nil }
+            let money = balance.value.formatted(.currency(code: balance.currency))
+            return String(localized: "\(money) owed on \(name)")
+        }
+    }
 
     /// Every cash balance the seats hold right now. Off main: it reads the
     /// Keychain (`WiseAuth.configured`).
@@ -30,7 +53,8 @@ enum WalletCash {
             for balance in WiseState.standing.balances {
                 guard let value = balance.value, value > 0, balance.currency.count == 3 else { continue }
                 out.append(Held(currency: balance.currency, amount: value,
-                                holderID: holderPrefix + "wise", label: "Wise"))
+                                holderID: holderPrefix + "wise", label: "Wise",
+                                readAt: WiseState.standing.lastRead))
             }
         }
         // Bitrefill's balance (prd §1051a): money held to spend on gift cards,
@@ -44,7 +68,8 @@ enum WalletCash {
             for (name, balance) in AppleWalletBridge.cash.sorted(by: { $0.key < $1.key }) {
                 guard balance.value > 0, balance.currency.count == 3 else { continue }
                 out.append(Held(currency: balance.currency, amount: balance.value,
-                                holderID: holderPrefix + "applewallet:" + name, label: name))
+                                holderID: holderPrefix + "applewallet:" + name, label: name,
+                                readAt: AppleWalletBridge.balancesAt))
             }
         }
         return out
@@ -90,6 +115,39 @@ enum WalletCash {
             out[code] = quotedOverUSD.contains(code) ? mid : 1 / mid
         }
         return out
+    }
+
+    /// `rates(for:)`, remembered for ten minutes per code, so a figure that
+    /// asks on every appearance (the Cards tile, prd §1078) asks Kraken once.
+    static func cachedRates(for currencies: Set<String>) async -> [String: Double] {
+        // The demo reaches nothing (§483): its euros convert at a fixed sample
+        // rate, which the figure names as one (`isSampleRate`).
+        if isSampleRate { return demoRates.filter { currencies.contains($0.key) } }
+        return await RateCache.shared.rates(for: currencies)
+    }
+
+    /// True in the demo, where `cachedRates` answers from `demoRates`.
+    static var isSampleRate: Bool { DemoMode.isActive }
+    static let demoRates: [String: Double] = ["EUR": 1.08, "GBP": 1.27]
+
+    private actor RateCache {
+        static let shared = RateCache()
+        private var held: [String: (rate: Double, at: Date)] = [:]
+        private static let life: TimeInterval = 600
+
+        func rates(for currencies: Set<String>) async -> [String: Double] {
+            let now = Date()
+            let stale = currencies.filter { code in
+                guard code != "USD", let hit = held[code] else { return code != "USD" }
+                return now.timeIntervalSince(hit.at) > Self.life
+            }
+            if !stale.isEmpty {
+                for (code, rate) in await WalletCash.rates(for: stale) {
+                    held[code] = (rate, now)
+                }
+            }
+            return held.filter { currencies.contains($0.key) }.mapValues(\.rate)
+        }
     }
 
     /// The cash in dollars, ready for `WalletPortfolio.from(venues:)`. A

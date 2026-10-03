@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1206 of 1264 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1207 of 1265 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -894,7 +894,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §608 — The setup screens had one vocabulary and forty-eight anatomies (part superseded by §639b)
 - §609 — The octopus's blue dot is gone
 - §610 — The Activity figure restated its own headline, the empty state was below the fold, and four scopes were invisible (part superseded by §1038)
-- §611 — Every scope is a chip on every room, and an empty scope says what it would hold (amended by §747, §761, §771)
+- §611 — Every scope is a chip on every room, and an empty scope says what it would hold (amended by §747, §761, §771, §1078)
 - §612 — The verify pass was mostly idle cores, and the answer to "should it take this long?" is no
 - §613 — The connect screens' verb is a component, not a hand-rolled fill (part superseded by §640) [+2 sub-entries]
 - §614 — Shield and View for the Privacy devnet, and why Unshield is deferred (part superseded by §1038)
@@ -1371,15 +1371,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
 - §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048)
-- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re…
+- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078)
 - §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
 - §1043 — `enrichedText` is the sheet's body and never a row's line; provider-authored display copy stays on `summary` and `pos…
 - §1044 — On the phone, a room draws no capsule beside the face: its venues are the tray and a swipe, and its "whose" control s…
 - §1045 — "Start here" leads Apps while nothing is connected
 - §1046 — §1006's items 4 and 7 are declined
 - §1047 — The ask is deleted: the on-device model reads and no longer answers, and the composer keeps Find and the agents you c…
-- §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050, §1051a)
-- §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats
+- §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050, §1051a, §1078)
+- §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats (part superseded by §1078)
 - §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e)
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
 - §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room…
@@ -1427,6 +1427,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1075 — The tile-action sweep
 - §1076 — A Wallet transfer with no address and no token wears the way it moved
 - §1077 — The 2.0 store listing, after the 4.1(a) rejection
+- §1078 — The One Wallet, five changes: your own moves are one row, Holdings dates a stored reading and the total names a card…
 
 ## Dead rulings → what replaced them (generated)
 

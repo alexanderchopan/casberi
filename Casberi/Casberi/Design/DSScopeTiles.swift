@@ -90,6 +90,14 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         let act: (Scope) -> Void
     }
     var hold: Hold? = nil
+    /// **SCOPES THAT CAN HOLD NOTHING HERE (prd §1078, user: "do all the
+    /// changes you suggested").** An app the Wallet's menu picked (a card, an
+    /// exchange) has no positions, no risk and no grants: those belong to
+    /// addresses. Such a tile stays in its place, because the tiles never
+    /// move, and draws dimmed and disabled, because a tile onto a page that
+    /// can never fill for this account is a dead control (§83). The picked
+    /// tile is never inert.
+    var inert: Set<Scope> = []
     let onPick: (Scope) -> Void
 
     /// The verb whose hold just fired. A `Button` still fires on the release
@@ -180,7 +188,8 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     private func tile(_ section: Scope) -> some View {
         let isVerb = verbs.contains(section)
         let isOn = section == active && !isVerb
-        let wants = attention.contains(section)
+        let isInert = inert.contains(section) && !isOn
+        let wants = attention.contains(section) && !isInert
         Button {
             if held == section { held = nil; return }
             guard !isOn else { return }
@@ -200,11 +209,12 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                     .dsText(.dockCaption10)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? Color.white : wants ? DS.attentionInk : isVerb ? DS.tint : DS.textPrimary)
+                    .foregroundStyle(isOn ? Color.white : isInert ? DS.textTertiary : wants ? DS.attentionInk : isVerb ? DS.tint : DS.textPrimary)
             }
-            .foregroundStyle(isOn ? Color.white : isVerb ? DS.tint : DS.textPrimary)
+            .foregroundStyle(isOn ? Color.white : isInert ? DS.textTertiary : isVerb ? DS.tint : DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
-            .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised)) }
+            // A disabled tile swaps its fill (§83), never only its ink.
+            .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised.opacity(isInert ? 0.45 : 1))) }
             // **BECOMING THE PICK IS A CROSSFADE (prd §966).** The fill and the
             // ink ride the template's own clock, so a room whose pick handler
             // forgets `withAnimation` still slides the tint in under the
@@ -213,6 +223,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             .contentShape(shape)
         }
         .buttonStyle(PressSpring())
+        .disabled(isInert)
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.45)
                 .updating($pressing) { down, state, _ in

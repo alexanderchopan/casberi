@@ -152,6 +152,15 @@ final class PrivyHomeStore {
     /// This is a STORED reading beside live ones, which is how §826's crown
     /// once showed Zora's money and none of the person's own. So
     /// `WalletIngest.portfolioRead` never lets it stand ALONE.
+    /// When each shown app's balances were read, the OLDEST of its wallets
+    /// (prd §1078), for Holdings' stamp.
+    var walletReadAt: [(appID: String, app: String, at: Date)] {
+        apps.filter { !hidden.contains(PrivyHomeFeed.ref($0)) }.compactMap { app in
+            let dates = app.wallets.compactMap { balances[PrivyHomeFeed.key($0.address)]?.readAt }
+            return dates.min().map { (app.id, app.name, $0) }
+        }
+    }
+
     var walletHoldings: [(symbol: String, usd: Double, appID: String, app: String)] {
         var out: [(symbol: String, usd: Double, appID: String, app: String)] = []
         for app in apps where !hidden.contains(PrivyHomeFeed.ref(app)) {

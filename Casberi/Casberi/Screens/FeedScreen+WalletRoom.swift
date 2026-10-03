@@ -185,6 +185,7 @@ extension FeedScreen {
                                   visible: [Thing],
                                   upcoming: [Thing],
                                   cards: WalletCards.Reading? = nil,
+                                  inert: Set<WalletSection> = [],
                                   streamTotal: Int) -> some View {
         // Read HERE, in this body, and captured by the crown below: read only
         // inside the crown's closure, the head's arrival never re-drew the box
@@ -198,6 +199,7 @@ extension FeedScreen {
                 active: active,
                 home: .home,
                 attention: chrome.walletSectionAttention,
+                inert: inert,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
                 // everything below and settles it back. A verb acts and never
@@ -572,6 +574,39 @@ extension FeedScreen {
         case .permissions: return WalletPermissionsSource.holders(exposure: walletLive.exposure,
                                                                   acting: walletLive.acting).isEmpty
         }
+    }
+
+    /// **A STORED READING SAYS HOW OLD IT IS (prd §1078).** Privy's apps,
+    /// Wise and Apple Wallet join the total from what their seats last read,
+    /// beside chains read this pass; one line under the tokens names each
+    /// place whose reading is past an hour ("Zora 3h ago, Wise yesterday").
+    @ViewBuilder
+    var walletStaleReadingsSection: some View {
+        if let stale = portfolioShown?.staleReadings(), !stale.isEmpty {
+            let list = ListFormatter.localizedString(
+                byJoining: stale.map { "\($0.label) \(AccountPageShape.ago($0.at))" })
+            Section {
+                DSFootnote(prose: String(localized: "Last read: \(list)"))
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                              bottom: 0, trailing: DSRoomChassis.inset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    /// **THE SCOPES AN APP PICK CANNOT FILL (prd §1078).** Positions, Risk
+    /// and Permissions are an address's readings, and an app pick clears
+    /// them (§1067), so they are inert for every app. Holdings, Coming up and
+    /// Cards are inert only when this app has nothing there: an exchange
+    /// holds money, a card spends, a Safe has a queue. Home never is. On All,
+    /// nothing is inert: an empty scope there explains itself (§611).
+    func walletInertSections(visible: [Thing], upcoming: [Thing]) -> Set<WalletSection> {
+        var out: Set<WalletSection> = [.positions, .risk, .permissions]
+        if walletScopeIsEmpty(.holdings) { out.insert(.holdings) }
+        if upcoming.isEmpty { out.insert(.comingUp) }
+        if !visible.live.contains(where: WalletCards.isSpend) { out.insert(.cards) }
+        return out
     }
 
     /// An empty scope's list: rows with nothing in them (prd §769), at the
@@ -1127,7 +1162,21 @@ extension FeedScreen {
     /// (§769, `walletScopeVisualSection`).
     @ViewBuilder
     func walletComingUpFigure(_ upcoming: [Thing]) -> some View {
-        if let next = upcoming.first(where: \.isLive) {
+        let now = Date.now
+        let live = upcoming.filter(\.isLive)
+        let bills = live.compactMap { thing -> WalletDue.Bill? in
+            guard let due = thing.dueAt else { return nil }
+            // Apple Wallet's dated rows include card renewals and creep; only
+            // its payment rows are bills.
+            if thing.source == AppleWalletBridge.sourceName, !thing.tags.contains("Payment") { return nil }
+            return .init(title: thing.title, source: thing.source,
+                         amount: thing.priceValue, currency: thing.priceCurrency, due: due)
+        }
+        let waiting = live.filter { ($0.dueAt ?? .distantPast) <= now }.count
+        if bills.contains(where: { WalletDue.billSources.contains($0.source) }) || waiting > 0 {
+            WalletDueFigure(bills: bills, waiting: waiting,
+                            dates: live.compactMap(\.dueAt), next: live.first)
+        } else if let next = live.first {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text(next.title)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)
@@ -1257,7 +1306,33 @@ extension FeedScreen {
     /// transfers this folded into "9 transfers" are unfolded: a fold hid the
     /// counterparty and the amount — the two things Activity is read for.
     func walletStreamRows(_ things: [Thing]) -> [FeedRow] {
-        things.prefix(Self.walletPreviewRows).map(FeedRow.single)
+        walletStream(things).rows
+    }
+
+    /// Home's rows with each move between your own accounts drawn once (prd
+    /// §1078, `WalletOwnMoves`): the received leg leaves the list, and the
+    /// sent leg's row carries it in `ownMoves`, keyed by the sent leg's id.
+    func walletStream(_ things: [Thing]) -> (rows: [FeedRow], ownMoves: [UUID: KeyedThing]) {
+        let legs = things.compactMap { thing -> WalletOwnMoves.Leg? in
+            guard let direction = thing.transferDirection,
+                  direction == "sent" || direction == "received" else { return nil }
+            return .init(id: thing.id, sent: direction == "sent",
+                         address: thing.walletAddress, counterparty: thing.counterpartyAddress,
+                         amount: thing.transferAmount, link: thing.externalLink, at: thing.capturedAt)
+        }
+        let pairs = WalletOwnMoves.pairs(legs)
+        guard !pairs.isEmpty else {
+            return (things.prefix(Self.walletPreviewRows).map(FeedRow.single), [:])
+        }
+        let byID = Dictionary(things.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let folded = Set(pairs.map(\.received))
+        var ownMoves: [UUID: KeyedThing] = [:]
+        for pair in pairs {
+            if let received = byID[pair.received] { ownMoves[pair.sent] = KeyedThing(received) }
+        }
+        let rows = things.filter { !folded.contains($0.id) }
+            .prefix(Self.walletPreviewRows).map(FeedRow.single)
+        return (rows, ownMoves)
     }
 
     /// The stream preview's day sections.
@@ -1267,12 +1342,14 @@ extension FeedScreen {
     /// throughout — `live` re-checked inside the content closure, identity off
     /// `FeedRow`'s stored id, never the model.
     @ViewBuilder
-    func walletStreamSections(_ rows: [FeedRow], nextEventID: UUID?) -> some View {
+    func walletStreamSections(_ rows: [FeedRow], ownMoves: [UUID: KeyedThing] = [:],
+                              nextEventID: UUID?) -> some View {
         let groups = walletStreamDays(rows)
         // The same boundary the rest of the feed draws, over `FeedRow`'s own
         // stored dates — dropping it here would have quietly cost this room
         // its "new since" divider.
-        walletDaySections(groups, boundary: boundaryID(in: groups), nextEventID: nextEventID)
+        walletDaySections(groups, boundary: boundaryID(in: groups), ownMoves: ownMoves,
+                          nextEventID: nextEventID)
     }
 
     /// **COMING UP'S LIST (prd §1041): soonest first, each row under the day
@@ -1287,6 +1364,7 @@ extension FeedScreen {
     /// The day sections both lists draw — the stream's and Coming up's.
     @ViewBuilder
     func walletDaySections(_ groups: [(String, [FeedRow])], boundary: String?,
+                           ownMoves: [UUID: KeyedThing] = [:],
                            nextEventID: UUID?) -> some View {
         ForEach(Array(groups.enumerated()), id: \.element.0) { groupIndex, group in
             let (label, dayRows) = group
@@ -1334,7 +1412,9 @@ extension FeedScreen {
                         // (corollary 3): this re-evaluates against the array
                         // it already holds when a heal's delete lands.
                         if let thing = item.live {
-                            if thing.transferDirection == "received" || thing.transferDirection == "sent" {
+                            if let partner = ownMoves[thing.id]?.live {
+                                walletOwnMoveRow(sent: thing, received: partner, index: i)
+                            } else if thing.transferDirection == "received" || thing.transferDirection == "sent" {
                                 walletMoveRow(thing, index: i)
                             } else {
                                 shapedListRow(thing, index: i, nextEventID: nextEventID,
@@ -1348,6 +1428,65 @@ extension FeedScreen {
                 }
             }
         }
+    }
+
+    /// **A MOVE BETWEEN YOUR OWN ACCOUNTS (prd §1078).** One row for both
+    /// legs: "Moved 0.5 ETH", where it went from and to, and the amount with
+    /// no sign and no colour, because the money stayed yours (§83). It opens
+    /// the leg that left.
+    func walletOwnMoveRow(sent: Thing, received: Thing, index: Int) -> some View {
+        let amount = sent.transferAmount ?? ""
+        let money = sent.transferUSD.flatMap { usd -> String? in
+            guard usd.isFinite else { return nil }
+            let text = WalletValue.money(usd)
+            return text.contains(where: { ("1"..."9").contains($0) }) ? text : nil
+        }
+        let route = "\(walletPlaceName(sent)) → \(walletPlaceName(received))"
+        return Button {
+            openThing(sent)
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                WalletMarkView(mark: .symbol("arrow.left.arrow.right", tint: DS.textSecondary),
+                               size: DS.Face.list)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(amount.isEmpty ? String(localized: "Moved") : String(localized: "Moved \(amount)"))
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text(route)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                if let money {
+                    Text(money)
+                        .dsText(.price17).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .modifier(rowEntrance(index))
+        .accessibilityLabel(Text("Moved \(amount), \(route)"))
+        .listRowInsets(EdgeInsets(top: DS.Space.s2,
+                                  leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
+    /// An account's name on a move: the watched address's label, else its
+    /// short form; a folded app's leg names the app.
+    func walletPlaceName(_ thing: Thing) -> String {
+        guard thing.source == "Wallet" else { return BridgeCatalog.seatName(forSource: thing.source) }
+        guard let address = thing.walletAddress else { return thing.source }
+        if let entry = wallet.addresses.first(where: { WalletWatch.sameAddress($0.address, address) }),
+           !entry.label.isEmpty {
+            return entry.label
+        }
+        return WalletStore.shortAddress(address)
     }
 
     /// **ONE MOVE, IN THE WALLET LIST'S ANATOMY (prd §942).** Who it was

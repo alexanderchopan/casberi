@@ -50,6 +50,31 @@ struct WalletPortfolio: Equatable {
     /// Cash a seat holds in a currency Kraken cannot price ("SGD at Wise"),
     /// left OUT of `totalUSD` and named by the crown's note (prd §1048).
     var unpricedCash: [String] = []
+    /// What the total LEAVES OUT on purpose: a card balance owed ("$812 owed
+    /// on Apple Card", prd §1078). Money owed is no holding, so it is never
+    /// subtracted; the crown's note names it beside the total.
+    var owed: [String] = []
+
+    /// A place whose money is a STORED reading, not one read this pass (prd
+    /// §1078): Privy's apps, Wise, Apple Wallet. Holdings names the ones
+    /// older than `staleAfter`, so a dated dollar is never presented as live
+    /// (§83, the crown's own "as of" rule).
+    struct PlaceReading: Equatable {
+        let holderID: String
+        let label: String
+        let at: Date
+    }
+    var placeReadings: [PlaceReading] = []
+    static let staleAfter: TimeInterval = 3600
+
+    /// The stored readings older than `staleAfter` whose place still holds
+    /// money on this page, oldest first.
+    func staleReadings(now: Date = .now) -> [PlaceReading] {
+        let held = Set(positions.flatMap { $0.holders.map(\.address) })
+        return placeReadings
+            .filter { held.contains($0.holderID) && now.timeIntervalSince($0.at) > Self.staleAfter }
+            .sorted { $0.at < $1.at }
+    }
 
     var isEmpty: Bool { positions.isEmpty }
     var tokenCount: Int { positions.count }
@@ -243,8 +268,10 @@ struct WalletPortfolio: Equatable {
             return Position(symbol: position.symbol, usd: usd, route: position.route, holders: holders)
         }
         .sorted { $0.usd > $1.usd }
-        return WalletPortfolio(totalUSD: kept.reduce(0) { $0 + $1.usd }, positions: kept,
-                               walletCount: 0, asOf: asOf)
+        var out = WalletPortfolio(totalUSD: kept.reduce(0) { $0 + $1.usd }, positions: kept,
+                                  walletCount: 0, asOf: asOf)
+        out.placeReadings = placeReadings
+        return out
     }
 
     static func demoFixture(scopeTo address: String? = nil,

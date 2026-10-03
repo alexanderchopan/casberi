@@ -1890,6 +1890,15 @@ enum WalletIngest {
                                              venues: cash + privy,
                                              asOf: asOf)
         portfolio.unpricedCash = unpricedCash
+        // What the total leaves out, and how old each stored place is (prd
+        // §1078). Combined read only, as the cash and Privy themselves are.
+        if address == nil {
+            portfolio.owed = WalletCash.owed()
+            let privyRead = await MainActor.run { PrivyHomeStore.shared.walletReadAt }
+            portfolio.placeReadings = WalletCash.readings()
+                + privyRead.map { .init(holderID: WalletPortfolio.privyHolderPrefix + $0.appID,
+                                        label: $0.app, at: $0.at) }
+        }
 
         // More than one PLACE, not more than one wallet — a single wallet plus
         // a connected exchange is exactly the case this feature exists for.

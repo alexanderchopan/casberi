@@ -131,6 +131,7 @@ enum AppleWalletBridge {
     private static let balanceAtKey = "applewallet.balancesAt"
     private static let dueKey = "applewallet.dues"
     private static let cashKey = "applewallet.cash"
+    private static let owedKey = "applewallet.owed"
 
     static var connected: Bool {
         get { UserDefaults.standard.bool(forKey: connectedKey) }
@@ -168,6 +169,22 @@ enum AppleWalletBridge {
         set {
             guard let data = try? JSONEncoder().encode(newValue) else { return }
             UserDefaults.standard.set(data, forKey: cashKey)
+        }
+    }
+
+    /// What a LIABILITY account owes (Apple Card), as a positive number, keyed
+    /// by account name (prd §1078). Never in the Wallet total: Home's box names
+    /// it beside the total as money the total leaves out.
+    static var owed: [String: CashBalance] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: owedKey),
+                  let value = try? JSONDecoder().decode([String: CashBalance].self, from: data)
+            else { return [:] }
+            return value
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            UserDefaults.standard.set(data, forKey: owedKey)
         }
     }
 
@@ -266,6 +283,7 @@ enum AppleWalletBridge {
         balances = [:]
         dues = [:]
         UserDefaults.standard.removeObject(forKey: cashKey)
+        UserDefaults.standard.removeObject(forKey: owedKey)
         UserDefaults.standard.removeObject(forKey: balanceAtKey)
         let name = sourceName
         let fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == name })
@@ -354,6 +372,7 @@ enum AppleWalletBridge {
         if let at = balancesAt, Date().timeIntervalSince(at) < balanceWindow { return }
         var out: [String: String] = [:]
         var held: [String: CashBalance] = [:]
+        var owing: [String: CashBalance] = [:]
         var due: [String: Double] = [:]
         for account in accounts {
             let query = AccountBalanceQuery(
@@ -366,6 +385,12 @@ enum AppleWalletBridge {
                         value: NSDecimalNumber(decimal: amount.amount).doubleValue,
                         currency: amount.currencyCode)
                 }
+                if case .liability = account, let amount = currentAmount(balance) {
+                    let value = abs(NSDecimalNumber(decimal: amount.amount).doubleValue)
+                    if value > 0 {
+                        owing[account.displayName] = CashBalance(value: value, currency: amount.currencyCode)
+                    }
+                }
             }
             // The one real deadline this source hands over. Never inferred —
             // `AppleWalletRoom`'s rail sorts a payment above any recurring date
@@ -376,7 +401,7 @@ enum AppleWalletBridge {
                 due[account.displayName] = date.timeIntervalSince1970
             }
         }
-        if !out.isEmpty { balances = out; cash = held }
+        if !out.isEmpty { balances = out; cash = held; owed = owing }
         dues = due
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: balanceAtKey)
     }

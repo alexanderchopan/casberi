@@ -3207,6 +3207,23 @@ enum DemoSeedAll {
                 t.transferUSD = m.3
             }
         }
+        // A move between two of the person's own wallets (prd §1078): both
+        // legs land, as they do live, and Home draws them as one row.
+        let everyday = demoWallets[0], savings = demoWallets[1]
+        for (index, sent) in [true, false].enumerated() {
+            let here = sent ? everyday : savings
+            let there = sent ? savings : everyday
+            out.append(row(.transaction, sent ? "Sent 0.5 ETH to \(there.label)" : "Received 0.5 ETH from \(there.label)",
+                           source: "Wallet", ref: "demo:wallet:own:\(index)", days: 1, hour: 15,
+                           content: "Base · \(there.label)") { t in
+                t.walletAddress = here.address
+                t.transferDirection = sent ? "sent" : "received"
+                t.transferAmount = "0.5 ETH"
+                t.transferCounterparty = there.label
+                t.counterpartyAddress = there.address.lowercased()
+                t.transferUSD = 1_590
+            })
+        }
         // An approval, so the wallet room's exposure card has something real.
         // `.transaction` and a REAL `wallet:approval:` ref (2026-08-12).
         // `WalletApprovals` lands an approval as a `.transaction`, and the

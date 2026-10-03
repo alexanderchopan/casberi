@@ -403,6 +403,13 @@ enum RocketMoneyIngest {
                         thing.dueAt = due
                         touched = true
                     }
+                    // The charge as a number (prd §1078), so Coming up can
+                    // add up what is due; the title already says it.
+                    if let value, let thing = stored(ref), thing.priceValue != abs(value) {
+                        thing.priceValue = abs(value)
+                        thing.priceCurrency = LooseJSON.currency(in: record) ?? "USD"
+                        touched = true
+                    }
                     landedHere += 1
                     continue
                 }
@@ -415,6 +422,10 @@ enum RocketMoneyIngest {
                     sourceRef: ref)
                 thing.authorHandle = RocketMoneyLive.source
                 thing.dueAt = due
+                if let value {
+                    thing.priceValue = abs(value)
+                    thing.priceCurrency = LooseJSON.currency(in: record) ?? "USD"
+                }
                 context.insert(thing)
                 existing.insert(ref)
                 indexed.append(thing)

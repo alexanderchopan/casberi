@@ -76,6 +76,11 @@ extension FeedScreen {
         if selectedWallet == nil, let cash = portfolio?.unpricedCash, !cash.isEmpty {
             parts.append(String(localized: "Couldn't price \(cash.joined(separator: ", "))"))
         }
+        // A card balance owed (prd §1078): money the total leaves out on
+        // purpose, named beside it. The combined page only.
+        if selectedWallet == nil, selectedSeat == nil, let owed = portfolio?.owed, !owed.isEmpty {
+            parts.append(owed.joined(separator: ", "))
+        }
         guard !parts.isEmpty else { return nil }
         return String(localized: "\(parts.joined(separator: "; ")) — not in this total")
     }

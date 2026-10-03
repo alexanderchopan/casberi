@@ -295,8 +295,12 @@ extension FeedScreen {
             // raw: a scope remembered from a wallet that has since closed its
             // last position falls back to the feed instead of rendering an
             // empty page that claims to be a section.
+            // An app pick dims the scopes with nothing for that app (prd
+            // §1078), and a remembered one of them resolves to Home.
+            let inert = seatPicked ? walletInertSections(visible: visible, upcoming: upcoming) : []
             let section = WalletSection.resolve(
-                chrome.walletSection, present: walletSectionPublication.sections)
+                chrome.walletSection,
+                present: walletSectionPublication.sections.filter { !inert.contains($0) })
             // The crown's own newest-few (§208, added 2026-08-18) exist for one
             // reason: "the room's transactions used to begin after ten standing
             // cards, so on a busy wallet the one thing a wallet app gets opened
@@ -373,7 +377,8 @@ extension FeedScreen {
             // the page — a fold over every card row is not paid on every scope.
             let cards = section == .cards ? WalletCards.compose(things: visible) : nil
             walletScopeChromeSection(section, visible: visible,
-                                     upcoming: upcoming, cards: cards, streamTotal: all.count)
+                                     upcoming: upcoming, cards: cards, inert: inert,
+                                     streamTotal: all.count)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you
             // hold", and "What it's doing" into Positions and Risk — so the
@@ -395,7 +400,8 @@ extension FeedScreen {
                 // Activity tile is deleted and its list is Home's: the moves
                 // under the feed's day headers (§942), then the door to all of
                 // them. What is still AHEAD is Coming up's, not Home's.
-                walletStreamSections(walletStreamRows(all), nextEventID: nextEventID)
+                let stream = walletStream(all)
+                walletStreamSections(stream.rows, ownMoves: stream.ownMoves, nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
                 // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** The
                 // Follow tile above is the remedy, one tap away (§1039).
@@ -418,6 +424,7 @@ extension FeedScreen {
                     walletSkeletonRowsSection
                 }
                 walletTokenListSection
+                walletStaleReadingsSection
                 // **NFTs FOLD INTO HOLDINGS (prd §1048, user: "nft to holdings
                 // is great").** Cards took their tile; the collections you
                 // picked read under the tokens, and "Choose collections" stays

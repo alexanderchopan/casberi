@@ -82,6 +82,63 @@ enum WalletCards {
         return Reading(all: all, cards: cards)
     }
 
+    /// **THE WINDOW IN DOLLARS (prd §1078, reversing §1048a's "no rate
+    /// between them").** The Wallet's total already turns cash into dollars
+    /// at Kraken's mid price (`WalletCash`), so the Cards tile uses the same
+    /// rate rather than stating "$972.12 in USD, plus another currency". Nil
+    /// when any currency in the window has no rate: then the figure keeps
+    /// `CardSpendRoom`'s own words, and nothing is counted at par.
+    struct InDollars: Equatable {
+        struct Card: Equatable {
+            let seat: String
+            let usd: Double
+            let spends: Int
+            /// The card's own money when it settled in one other currency
+            /// ("€123.20"), so the converted figure never hides what was paid.
+            let native: CardSpendRoom.Currency?
+        }
+        let total: Double
+        /// Most dollars first; ties keep `seats` order.
+        let cards: [Card]
+        /// The non-dollar codes converted, with the rate used (USD per unit).
+        let rates: [(code: String, rate: Double)]
+
+        static func == (a: InDollars, b: InDollars) -> Bool {
+            a.total == b.total && a.cards == b.cards
+                && a.rates.map(\.code) == b.rates.map(\.code)
+                && a.rates.map(\.rate) == b.rates.map(\.rate)
+        }
+    }
+
+    /// Every non-dollar code spent in the window, for the rate request.
+    static func codes(_ reading: Reading) -> Set<String> {
+        Set(reading.all.currencies.map(\.code)).subtracting(["USD"])
+    }
+
+    static func inDollars(_ reading: Reading, rates: [String: Double]) -> InDollars? {
+        func usd(_ room: CardSpendRoom) -> Double? {
+            var sum = 0.0
+            for currency in room.currencies {
+                guard let value = WalletCash.usd(currency.total, currency.code, rates: rates) else { return nil }
+                sum += value
+            }
+            return sum
+        }
+        guard let total = usd(reading.all) else { return nil }
+        var cards: [InDollars.Card] = []
+        for card in reading.cards {
+            guard let value = usd(card.room) else { return nil }
+            let native = card.room.currencies.count == 1 && card.room.lead?.code != "USD"
+                ? card.room.lead : nil
+            cards.append(.init(seat: card.seat, usd: value, spends: card.room.spends, native: native))
+        }
+        let ranked = cards.enumerated()
+            .sorted { ($0.element.usd, -$0.offset) > ($1.element.usd, -$1.offset) }
+            .map(\.element)
+        let used = codes(reading).sorted().compactMap { code in rates[code].map { (code, $0) } }
+        return InDollars(total: total, cards: ranked, rates: used)
+    }
+
     @MainActor
     private static func sighting(_ thing: Thing) -> CardSpendRoom.Sighting {
         CardSpendRoom.Sighting(amount: thing.priceValue,
