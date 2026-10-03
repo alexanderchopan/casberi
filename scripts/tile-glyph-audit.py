@@ -254,6 +254,24 @@ extension NotesScope: DSTileScope {
         }
     }
 }
+
+extension ReadingScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all: return ScopeTileGlyph.all
+        case .follow: return ScopeTileGlyph.watch
+        }
+    }
+}
+
+extension SocialScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all: return ScopeTileGlyph.all
+        case .follow: return ScopeTileGlyph.watch
+        }
+    }
+}
 '''
 
 CLEAN_FOLD = '''import Foundation

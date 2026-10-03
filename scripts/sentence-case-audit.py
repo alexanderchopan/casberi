@@ -231,6 +231,9 @@ KNOWN_PROPER: set[str] = {
     # "Pinned to Notes" name where a note went. It passed as a catalog word
     # while Apple Notes was a seat, and stopped when that seat left.
     "Notes",
+    # The Reading category as a place (prd §1085): "Its feed lands in
+    # Reading" names where a followed site's posts go, as "Kept in Notes" does.
+    "Reading",
     # Protocols, chains and companies with no catalog seat of their own.
     "Morpho", "Uniswap", "Aave", "Spark", "Hyperliquid", "Aerodrome",
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",

@@ -114,6 +114,7 @@ enum HomeComposition {
             // Logos (prd §988). STATE, every one: what happened to a watched
             // LEZ account, never what it is about.
             "Received", "Sent", "Initialized", "Created", "Minted", "Burned",
+            "Printed",                                    // prd §1084: an NFT copy printed
             "Private", "Program",
             // prd §989: a token row's kind, and your node's states.
             "Token", "Node", "Offline", "Synced", "Behind", "Voucher",
