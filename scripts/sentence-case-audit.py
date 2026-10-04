@@ -234,6 +234,9 @@ KNOWN_PROPER: set[str] = {
     # The Reading category as a place (prd §1085): "Its feed lands in
     # Reading" names where a followed site's posts go, as "Kept in Notes" does.
     "Reading",
+    # The Logos team's own product (prd §1095): "Logos Observer" is the name of
+    # the sidecar the person pairs with, as their repo and pairing QR spell it.
+    "Observer",
     # Protocols, chains and companies with no catalog seat of their own.
     "Morpho", "Uniswap", "Aave", "Spark", "Hyperliquid", "Aerodrome",
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",
