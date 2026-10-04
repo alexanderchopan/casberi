@@ -80,9 +80,20 @@ enum NotePreview {
     /// A line's words, without the markers a note writes: a task's box and a
     /// link's brackets.
     static func plain(_ line: String) -> String {
-        readableLinks(NoteChecklist.plain(line)
+        readableLinks(titledLinks(NoteEditing.inlinePlain(NoteChecklist.plain(line)))
             .replacingOccurrences(of: "[[", with: "")
             .replacingOccurrences(of: "]]", with: ""))
+    }
+
+    /// A pasted link the editor titled, `[title](address)` (prd §1100),
+    /// reads as its title.
+    static func titledLinks(_ line: String) -> String {
+        guard line.contains("]("),
+              let rx = try? NSRegularExpression(pattern: #"\[([^\[\]\n]+)\]\((https?://[^\s)]+)\)"#)
+        else { return line }
+        let ns = line as NSString
+        return rx.stringByReplacingMatches(in: line, range: NSRange(location: 0, length: ns.length),
+                                           withTemplate: "$1")
     }
 
     /// A bare address, as the room reads it (prd §1099): its site and the

@@ -185,6 +185,66 @@ check("the scheme and slashes go, the page's last part stays",
           == "Start at en.wikipedia.org › Bauhaus Archive.")
 check("a site with no path is its site", NotePreview.readableLinks("see https://www.apple.com") == "see apple.com")
 
+print("The editor's rules, at the cursor (prd §1100)")
+func E(_ t: String, _ c: Int) -> NoteEditing.Edit { NoteEditing.Edit(text: t, cursor: c) }
+let o2 = NoteChecklist.editorMark, d2 = NoteChecklist.doneEditorMark, b2 = NoteChecklist.bulletMark
+// Return in the MIDDLE of a list, not only at its end.
+let mid = "T\n\(o2)milk\n\(o2)eggs"
+check("Return after the first item starts an item there",
+      NoteEditing.returnKey(mid, cursor: ("T\n\(o2)milk" as NSString).length)
+          == E("T\n\(o2)milk\n\(o2)\n\(o2)eggs", ("T\n\(o2)milk\n\(o2)" as NSString).length))
+check("Return on an empty item in the middle ends it there",
+      NoteEditing.returnKey("a\n\(o2)\nb", cursor: ("a\n\(o2)" as NSString).length) == E("a\n\nb", 2))
+check("Return after a ticked item opens an open one",
+      NoteEditing.returnKey("\(d2)x", cursor: 3) == E("\(d2)x\n\(o2)", 6))
+check("Return after a quote continues the quote",
+      NoteEditing.returnKey("> said", cursor: 6) == E("> said\n> ", 9))
+check("Return after prose is left to the field", NoteEditing.returnKey("hi", cursor: 2) == nil)
+check("a dash opening a middle line becomes a bullet",
+      NoteEditing.space("a\n-\nc", cursor: 3) == E("a\n\(b2)\nc", 4))
+check("the checklist key turns THIS line, not the last",
+      NoteEditing.toggleChecklist("a\nb\nc", cursor: 2).text == "a\n\(o2)b\nc")
+check("and takes the circle back off", NoteEditing.toggleChecklist("a\n\(o2)b", cursor: 4).text == "a\nb")
+check("a bullet becomes an item", NoteEditing.toggleChecklist("\(b2)b", cursor: 2).text == "\(o2)b")
+check("indent adds two spaces at the line's start", NoteEditing.indent("a\nb", cursor: 3, by: 1) == E("a\n  b", 5))
+check("outdent takes them off", NoteEditing.indent("a\n  b", cursor: 5, by: -1) == E("a\nb", 3))
+check("an unindented line cannot outdent", NoteEditing.indent("b", cursor: 0, by: -1) == nil)
+check("Move Down swaps a line with the next", NoteEditing.moveLine("a\nb\nc", cursor: 0, by: 1)?.text == "b\na\nc")
+check("Move Up at the top does nothing", NoteEditing.moveLine("a\nb", cursor: 0, by: -1) == nil)
+
+print("The ticked sink (prd §1100)")
+check("a ticked item drops to the foot of its run",
+      NoteEditing.tick(lines: ["T", "\(o2)a", "\(o2)b", "\(o2)c", "", "x"], at: 1)
+          == ["T", "\(o2)b", "\(o2)c", "\(d2)a", "", "x"])
+check("an unticked item rises above the first ticked one",
+      NoteEditing.tick(lines: ["\(o2)a", "\(d2)b", "\(d2)c"], at: 2) == ["\(o2)a", "\(o2)c", "\(d2)b"])
+check("a kept note's box sinks the same way",
+      NoteChecklist.toggledSinking("T\n- [ ] a\n- [ ] b", ordinal: 0) == "T\n- [ ] b\n- [x] a")
+
+print("Headings, quotes and titled links (prd §1100)")
+check("a heading's mark is not its words", NoteChecklist.plain("# Trip") == "Trip")
+check("a quote's mark is not its words", NoteChecklist.plain("> said") == "said")
+check("a titled link reads as its title",
+      NotePreview.plain("see [Bauhaus Archive](https://example.org/b) today") == "see Bauhaus Archive today")
+
+print("The Aa key (prd §1101)")
+let sel = { (l: Int, n: Int) in NSRange(location: l, length: n) }
+check("bold wraps the selection and keeps it selected",
+      NoteEditing.wrap("a big day", selection: sel(2, 3), in: .bold) == NoteEditing.Edit(text: "a **big** day", cursor: 4, length: 3))
+check("bold again takes it off",
+      NoteEditing.wrap("a **big** day", selection: sel(4, 3), in: .bold) == NoteEditing.Edit(text: "a big day", cursor: 2, length: 3))
+check("with nothing selected the marks wait around the cursor",
+      NoteEditing.wrap("hi ", selection: sel(3, 0), in: .italic) == NoteEditing.Edit(text: "hi __", cursor: 4, length: 0))
+check("a heading turns the line, and turns back",
+      NoteEditing.setLineStyle("a\nb", cursor: 2, to: .heading).text == "a\n# b"
+      && NoteEditing.setLineStyle("a\n# b", cursor: 4, to: .heading).text == "a\nb")
+check("a bullet becomes a quote in one pick",
+      NoteEditing.setLineStyle("\(NoteChecklist.bulletMark)x", cursor: 2, to: .quote).text == "> x")
+check("a numbered list starts at one", NoteEditing.setLineStyle("x", cursor: 0, to: .number).text == "1. x")
+check("the marks never reach a title or a preview",
+      NoteEditing.inlinePlain("a **big** _soft_ ~~old~~ day") == "a big soft old day")
+check("a snake_case word is not italic", NoteEditing.inlinePlain("my_file_name") == "my_file_name")
+
 print("The room's cover reads a note of yours")
 check("the cover draws the list as circles, never the title or a box",
       NotePreview.body(title: "Groceries", content: "Groceries\n- [x] milk\n- [ ] bread\n\nSee you")
@@ -226,6 +286,9 @@ mutate "an edit drops the ticks" "$LIST" 's/return lead \+ \(item\.done \? doneE
 mutate "a bullet keeps as a dot" "$LIST" 's/lead \+ keptBullet \+ words/lead + bulletMark + words/'
 mutate "a numbered list repeats its number" "$LIST" 's/item\.number \+ 1/item.number/'
 mutate "the page ticks the first item, whatever was tapped" "$LIST" 's/if seen == ordinal \{\n                lines\[i\] = lead/if true {\n                lines[i] = lead/'
+mutate "Return mid-list appends at the end" "$LIST" 's/in: NSRange\(location: cursor, length: 0\), with: insert\)/in: NSRange(location: ns.length, length: 0), with: insert)/'
+mutate "a ticked item stays where it was" "$LIST" 's/out\.insert\(item, at: bottom \+ 1\)/out.insert(item, at: index)/'
+mutate "bold never comes off" "$LIST" 's/let out = ns\.replacingCharacters\(in: NSRange\(location: start - ml, length: selection\.length \+ 2 \* ml\),/let out = ns.replacingCharacters(in: NSRange(location: start, length: 0),/'
 mutate "the tasks flag is ignored" "$SHEET" 's/if tasks \|\| takesMarkers, let item/if takesMarkers, let item/'
 
 [[ $fail -eq 0 ]] || { echo "note-checklist-selftest: ✗ mutation check failed"; exit 1; }

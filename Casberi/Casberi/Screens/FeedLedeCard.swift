@@ -822,7 +822,9 @@ struct FeedLedeCard: View {
         guard thing.isLive, Pinboard.isNote(thing) else { return }
         DSHaptic.selection()
         withAnimation(DS.Motion.standard) {
-            thing.content = NoteChecklist.toggled(thing.content, ordinal: ordinal)
+            // The ticked sink (prd §1100): a ticked item drops to the foot
+            // of its run, as the page's tick does.
+            thing.content = NoteChecklist.toggledSinking(thing.content, ordinal: ordinal)
         }
         modelContext.saveHonestly()
     }

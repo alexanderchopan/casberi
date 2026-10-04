@@ -77,9 +77,11 @@ import PhotosUI
 /// keys).** A tap on a note of yours opens it here, not on a reading sheet
 /// whose Edit then opened here: the note stands as its page — the title, the
 /// words, a list's circles you tick — and a tap on the words brings the
-/// keyboard. While nothing has the keyboard the words draw as a page
-/// (`readBody`), so a circle is a key and a link is a link; the long press's
-/// Edit lands typing. A VOICE NOTE opens here too: the player over its words,
+/// keyboard. Since §1100 the words are ONE editor (`NoteEditor`, a
+/// `UITextView`) that reads and writes: a circle is a key, the cursor lands
+/// where you tap, and the list keys act at it; the long press's Edit lands
+/// typing. The page SAVES AS YOU TYPE (`scheduleAutosave`), and a note
+/// changed by hand says when in its date line. A VOICE NOTE opens here too: the player over its words,
 /// which you can correct, and no title line, because its title is its first
 /// words. Pin, Move, Lock, Share and Delete stay the long press's.
 struct NoteCaptureSheet: View {
@@ -96,7 +98,7 @@ struct NoteCaptureSheet: View {
     /// Which line has the keyboard (prd §983): the title, or the words
     /// under it. Two fields over ONE `draft` — see `titleText`.
     @FocusState private var field: NoteField?
-    private enum NoteField: Hashable { case title, body }
+    private enum NoteField: Hashable { case title }
     /// The sheet's own mic (prd §971), never the composer's.
     @State private var voice = VoiceCapture()
     /// Stop was pressed and the recording is being kept (prd §972): the
@@ -123,11 +125,16 @@ struct NoteCaptureSheet: View {
     /// keyboard rises until a tap on the words asks for one. Read once, on
     /// appear, from `chrome.noteFocusOnOpen`.
     @State private var openedToRead = false
-    /// The page has been asked for the keyboard (prd §1099). Focus cannot
-    /// reach a field that is not drawn yet, so a tap on the read page first
-    /// draws the fields, then focuses on the next pass (`write(_:)`); the
-    /// keyboard going away draws the page again.
-    @State private var typing = false
+    /// The editor's handle (prd §1100): the capsule's tools act at its
+    /// cursor, and its ticks are kept as they are made.
+    @State private var editor = NoteEditorController()
+    /// AUTOSAVE (prd §1100): the pending save, a beat after typing stops.
+    @State private var autosave: Task<Void, Never>?
+    /// The note this page made by autosaving a new one: on close it is
+    /// reported as kept (the toast), or — emptied — taken back out.
+    @State private var createdHere = false
+    /// When the note was last changed by hand, as it opened (the date line).
+    @State private var openedEditedAt: Date?
     /// The words as the page opened on them (prd §1099). A kept note is
     /// written back only when its words moved from these: opening and
     /// closing writes nothing, so a recording's full read or a sync landing
@@ -181,33 +188,25 @@ struct NoteCaptureSheet: View {
     /// The keyboard to the line being written: the title on a blank page,
     /// else the words.
     private func focusWords() {
-        field = draft.isEmpty && !isVoiceNote ? .title : .body
+        if draft.isEmpty && !isVoiceNote { field = .title } else { editor.focus() }
     }
 
     /// The page is a voice note's (prd §1099): the player over its words, and
     /// no title line — a voice note's title is its first words.
     private var isVoiceNote: Bool { editing.map { $0.isLive && $0.kind == .voice } ?? false }
 
-    /// The words draw as a page, not fields (prd §1099): a kept note while
-    /// nothing has the keyboard. A new note is always being written.
-    private var showsReadBody: Bool { editing != nil && !typing && field == nil && !isRecording }
-
-    /// A tap on the read page: draw the fields, then give one the keyboard.
-    private func write(_ target: NoteField) {
-        typing = true
-        Task { @MainActor in
-            // A frame for the fields to be drawn, measured enough; a yield
-            // alone can run before the swap lands.
-            try? await Task.sleep(for: .milliseconds(50))
-            field = target
-        }
-    }
-
     /// "28 September 2026 at 9:14 PM" — when the note was written, over the
-    /// page, as Apple Notes dates it (prd §983). An edit keeps its own day.
+    /// page, as Apple Notes dates it (prd §983). An edit keeps its own day;
+    /// a note changed by hand since says when, as it opened (prd §1100):
+    /// "September 28 · Edited 2 minutes ago".
     private var dateLine: String {
-        let edited = editing.flatMap { $0.isLive ? $0.capturedAt : nil }
-        return (edited ?? openedAt).formatted(date: .long, time: .shortened)
+        let written = editing.flatMap { $0.isLive ? $0.capturedAt : nil }
+        if let written, let edited = openedEditedAt, !createdHere {
+            let day = written.formatted(.dateTime.month(.wide).day())
+            let ago = edited.formatted(.relative(presentation: .named))
+            return String(localized: "\(day) · Edited \(ago)")
+        }
+        return (written ?? openedAt).formatted(date: .long, time: .shortened)
     }
     @State private var openedAt = Date.now
     private var isRecording: Bool { voice.phase == .recording }
@@ -320,16 +319,15 @@ struct NoteCaptureSheet: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        // The keyboard went away: the page draws as a page again (prd §1099).
-        .onChange(of: field) { _, now in
-            if now == nil { typing = false }
-        }
         // Return inside a list continues it; Return on an empty item ends it.
+        // The editor answers its own keys at the cursor (`NoteEditing`); this
+        // is the `-noteType` hook's door, which appends to the draft.
         .onChange(of: draft) { old, new in
             // A dash on the title line stays a dash: bullets are the words'.
             let inWords = isVoiceNote || new.contains("\n")
             if let next = NoteChecklist.continued(old: old, new: new)
                 ?? (inWords ? NoteChecklist.bulleted(old: old, new: new) : nil) { draft = next }
+            scheduleAutosave()
         }
         .sheet(isPresented: $linkPickerOpen) {
             NoteLinkPicker { title in insertLink(title) }
@@ -371,6 +369,8 @@ struct NoteCaptureSheet: View {
             chrome.noteVoiceOnOpen = false
             // The Edit disc (prd §981): open ON the note, consumed on read so
             // the next New arrives empty.
+            // A tick is kept as it is made (§1099), whatever closes the page.
+            editor.onTick = { if let editing { saveEdit(editing, quiet: true) } }
             let focusOnOpen = chrome.noteFocusOnOpen
             chrome.noteFocusOnOpen = true
             if let id = chrome.noteToEdit {
@@ -378,6 +378,7 @@ struct NoteCaptureSheet: View {
                 if let note = Self.note(id, in: modelContext) {
                     editing = note
                     openedToRead = !focusOnOpen
+                    openedEditedAt = NoteEdits.edited(note)
                     // A kept list opens as circles (prd §982).
                     draft = NoteChecklist.editable(note.content)
                     openedDraft = draft
@@ -432,11 +433,9 @@ struct NoteCaptureSheet: View {
                 // Opened from its row (prd §1099): the page, read; the
                 // keyboard waits for a tap on the words.
             } else if editing != nil {
-                // The long press's Edit lands typing: the fields first (focus
-                // cannot reach a field not drawn), and the thing sheet is
-                // still leaving when this lands — a field focused under a
+                // The long press's Edit lands typing. The thing sheet is
+                // still leaving when this lands, and a field focused under a
                 // presented sheet raises no keyboard.
-                typing = true
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(450))
                     focusWords()
@@ -511,29 +510,23 @@ struct NoteCaptureSheet: View {
                     NoteVoicePlayer(thing: editing)
                         .padding(.horizontal, -DS.Space.s4)
                 }
-                if showsReadBody {
-                    readBody
-                } else {
-                    if !isVoiceNote {
-                        TextField(String(localized: "Title"), text: titleText)
-                            .dsText(.heading34)
-                            .foregroundStyle(DS.textPrimary)
-                            .tint(DS.tint)
-                            .focused($field, equals: .title)
-                            .textFieldStyle(.plain)
-                            .submitLabel(.next)
-                            // Return on the title goes to the words, as in Notes.
-                            .onSubmit { field = .body }
-                    }
-                    TextField(String(localized: "Note"), text: isVoiceNote ? $draft : bodyText, axis: .vertical)
-                        .dsText(.reading17)
+                if !isVoiceNote {
+                    TextField(String(localized: "Title"), text: titleText)
+                        .dsText(.heading34)
                         .foregroundStyle(DS.textPrimary)
                         .tint(DS.tint)
-                        .focused($field, equals: .body)
+                        .focused($field, equals: .title)
                         .textFieldStyle(.plain)
-                        .submitLabel(.return)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .submitLabel(.next)
+                        // Return on the title goes to the words, as in Notes.
+                        .onSubmit { editor.focus() }
                 }
+                // THE WORDS (prd §1100): one editor that reads and writes.
+                NoteEditor(text: isVoiceNote ? $draft : bodyText,
+                           placeholder: String(localized: "Note"),
+                           controller: editor,
+                           onLinkTrigger: { linkPickerOpen = true })
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, DSRoomChassis.leadInset)
             .padding(.top, DS.Space.s4)
@@ -542,144 +535,11 @@ struct NoteCaptureSheet: View {
         .scrollDismissesKeyboard(.interactively)
     }
 
-    /// THE PAGE, READ (prd §1099): the note as it stands — the title, then
-    /// each line of the words, an item as a circle you tick. A tap anywhere
-    /// on the words gives them the keyboard; a tap on the title, the title.
-    /// The same rungs the fields draw at, so the page does not jump when the
-    /// keyboard comes.
-    private var readBody: some View {
-        let parts = Self.split(draft)
-        let words = isVoiceNote ? draft : parts.body
-        var ordinal = -1
-        let lines: [(id: Int, text: String, item: Int?)] = words.components(separatedBy: "\n")
-            .enumerated().map { i, line in
-                let trimmed = line.drop(while: { $0 == " " })
-                if trimmed.hasPrefix(NoteChecklist.editorMark) || trimmed.hasPrefix(NoteChecklist.doneEditorMark) {
-                    ordinal += 1
-                    return (i, line, ordinal)
-                }
-                return (i, line, nil)
-            }
-        return VStack(alignment: .leading, spacing: DS.Space.s4) {
-            if !isVoiceNote {
-                Text(verbatim: parts.title.isEmpty ? String(localized: "Title") : parts.title)
-                    .dsText(.heading34)
-                    .foregroundStyle(parts.title.isEmpty ? DS.textTertiary : DS.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture { write(.title) }
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityHint(Text("Edit the title"))
-            }
-            // THE PAGE'S RHYTHM (prd §1099): one line of words is its own
-            // `Text`, so the gap between two is the rung's own leading
-            // (`lineSpacing`) — 27pt a line, as the field draws them, where
-            // `s1` stood them 24pt apart and the page read packed. An item
-            // takes a little more, its circle being a key.
-            VStack(alignment: .leading, spacing: DSTextStyle.reading17.lineSpacing) {
-                if words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("Note")
-                        .dsText(.reading17)
-                        .foregroundStyle(DS.textTertiary)
-                } else {
-                    ForEach(lines, id: \.id) { line in
-                        if let item = line.item {
-                            readItem(line.text, ordinal: item)
-                                .padding(.vertical, DS.Space.s1)
-                        } else if let words = NoteChecklist.bullet(line.text) {
-                            readMarked("\u{2022}", words, indent: line.text.prefix(while: { $0 == " " }).count)
-                        } else if let item = NoteChecklist.numbered(line.text) {
-                            readMarked("\(item.number).", item.text,
-                                       indent: line.text.prefix(while: { $0 == " " }).count)
-                        } else if line.text.trimmingCharacters(in: .whitespaces).isEmpty {
-                            Color.clear.frame(height: DS.Space.s2)
-                        } else {
-                            Text(ProseLinks.rendered(line.text))
-                                .dsText(.reading17)
-                                .foregroundStyle(DS.textPrimary)
-                                .tint(DS.tint)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
-            .contentShape(Rectangle())
-            .onTapGesture { write(.body) }
-            // One stop for VoiceOver, the circles surviving as its actions.
-            .dsTapCard()
-            .accessibilityHint(Text("Edit the note"))
-        }
-    }
-
-    /// A bullet or a numbered line on the read page (prd §1099): the mark in
-    /// the column a circle takes, the words hanging beside it, so a wrapped
-    /// line starts under its words and not under its dot.
-    private func readMarked(_ mark: String, _ words: String, indent: Int) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(verbatim: mark)
-                .dsText(.reading17)
-                .foregroundStyle(DS.textSecondary)
-                .monospacedDigit()
-                .frame(minWidth: 22, alignment: .center)
-            Text(ProseLinks.rendered(words))
-                .dsText(.reading17)
-                .foregroundStyle(DS.textPrimary)
-                .tint(DS.tint)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.leading, CGFloat(min(indent, 8)) * 4)
-    }
-
-    /// One item on the read page: the circle is a key that ticks it (the one
-    /// write a kept note always took, §982), the words beside it. A ticked
-    /// item fades, as Apple Notes fades it.
-    private func readItem(_ line: String, ordinal: Int) -> some View {
-        let trimmed = line.drop(while: { $0 == " " })
-        let done = trimmed.hasPrefix(NoteChecklist.doneEditorMark)
-        let text = String(trimmed.dropFirst(NoteChecklist.editorMark.count))
-        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Button {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) {
-                    if isVoiceNote {
-                        draft = NoteChecklist.toggledEditor(draft, ordinal: ordinal)
-                    } else {
-                        bodyText.wrappedValue = NoteChecklist.toggledEditor(bodyText.wrappedValue,
-                                                                            ordinal: ordinal)
-                    }
-                }
-                // A tick is kept as it is made, as the box's is: the page
-                // closing by any path must not be what saves it.
-                if let editing { saveEdit(editing, quiet: true) }
-            } label: {
-                Image(systemName: done ? "checkmark.circle.fill" : "circle")
-                    .dsSymbolSwap(done)
-                    .dsGlyph(.body, weight: .regular)
-                    .foregroundStyle(done ? DS.tint : DS.textSecondary)
-                    // The circle stands in the words' column at their size,
-                    // as the field's `○` did, so the page does not jump when
-                    // the keyboard comes; the hand gets 44pt around it.
-                    .frame(width: 22, height: 22)
-                    .dsTapTarget(Circle())
-                    .padding(-11)
-            }
-            .buttonStyle(PressSpring())
-            .accessibilityLabel(Text(verbatim: text))
-            .accessibilityValue(done ? Text("Done") : Text("Not done"))
-            Text(ProseLinks.rendered(text))
-                .dsText(.reading17)
-                .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                .strikethrough(done, color: DS.textTertiary)
-                .tint(DS.tint)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
     /// The bar (prd §983): four tools on a capsule and the wide key.
     private var toolBar: some View {
         HStack(spacing: DS.Space.s2) {
             HStack(spacing: 0) {
+                formatKey
                 checklistDisc
                 photoDisc
                 linkKey
@@ -753,6 +613,37 @@ struct NoteCaptureSheet: View {
         .accessibilityLabel(Text("Attach"))
     }
 
+    /// THE AA KEY (prd §1101, user: "so like user who doesn't know markdown
+    /// can make text bold"): the styles Apple Notes' Aa offers, written as the
+    /// note's markdown so nobody has to know it — a heading, bold, italic,
+    /// strikethrough over the selection (or the next words typed), and the
+    /// line as a bulleted or numbered list or a quote. Picking a style the
+    /// line already has turns it back to plain words.
+    private var formatKey: some View {
+        Menu {
+            Section {
+                Button { editor.lineStyle(.heading) } label: { Label("Heading", systemImage: "textformat.size") }
+                Button { editor.lineStyle(.body) } label: { Label("Body", systemImage: "text.alignleft") }
+            }
+            Section {
+                Button { editor.format(.bold) } label: { Label("Bold", systemImage: "bold") }
+                Button { editor.format(.italic) } label: { Label("Italic", systemImage: "italic") }
+                Button { editor.format(.strike) } label: { Label("Strikethrough", systemImage: "strikethrough") }
+            }
+            Section {
+                Button { editor.lineStyle(.bullet) } label: { Label("Bulleted list", systemImage: "list.bullet") }
+                Button { editor.lineStyle(.number) } label: { Label("Numbered list", systemImage: "list.number") }
+                Button { editor.lineStyle(.quote) } label: { Label("Quote", systemImage: "text.quote") }
+            }
+        } label: {
+            barGlyph("textformat", live: toolsLive)
+        }
+        .menuStyle(.button)
+        .buttonStyle(PressSpring())
+        .disabled(!toolsLive)
+        .accessibilityLabel(Text("Format"))
+    }
+
     /// LINK SOMETHING (prd §982), its own key since §983.
     private var linkKey: some View {
         Button {
@@ -782,40 +673,20 @@ struct NoteCaptureSheet: View {
     /// or stops being one — its glyph in the tint while the line being
     /// written is an item. It acts on the words under the title (§983).
     private var checklistDisc: some View {
-        let words = isVoiceNote ? draft : Self.split(draft).body
-        let lit = NoteChecklist.endsInItem(words)
-        return Button {
-            DSHaptic.selection()
-            if isVoiceNote { draft = NoteChecklist.toggleLastLine(words) }
-            else { bodyText.wrappedValue = NoteChecklist.toggleLastLine(words) }
-            write(.body)
+        Button {
+            editor.toggleChecklist()
         } label: {
-            barGlyph("checklist", lit: lit, live: toolsLive)
+            barGlyph("checklist", live: toolsLive)
         }
         .buttonStyle(PressSpring())
         .disabled(!toolsLive)
         .accessibilityLabel(Text("Checklist"))
-        .accessibilityAddTraits(lit ? [.isSelected] : [])
     }
 
-    /// A picked link, written where the words end: `[[title]]`, with a space
-    /// before it when the words need one — the title line on a blank page.
+    /// A picked link, written at the editor's cursor (prd §1100) — over the
+    /// `[[` that asked for it, when one did.
     private func insertLink(_ title: String) {
-        let link = "[[\(title)]]"
-        let parts = Self.split(draft)
-        if parts.title.isEmpty && parts.body.isEmpty {
-            titleText.wrappedValue = link
-            write(.body)
-            return
-        }
-        let words = parts.body
-        if words.isEmpty || words.hasSuffix(" ") || words.hasSuffix("\n")
-            || words.hasSuffix(NoteChecklist.editorMark) {
-            bodyText.wrappedValue = words + link
-        } else {
-            bodyText.wrappedValue = words + " " + link
-        }
-        write(.body)
+        editor.insertLink(title)
     }
 
     /// The picked picture, pinned to the lead's height and clipped — never
@@ -895,6 +766,7 @@ struct NoteCaptureSheet: View {
     /// at once. The permission asks arrive here, in context.
     private func startRecording() {
         field = nil
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         let capture = voice
         Task { @MainActor in
             await capture.start()
@@ -989,12 +861,33 @@ struct NoteCaptureSheet: View {
         // Pulled down mid-recording: the recording is kept, as typed words
         // are — dismiss keeps (§969).
         if isRecording { stopAndKeep(); return }
+        autosave?.cancel()
         defer { onClose() }
         if let editing {
+            if createdHere {
+                // A note this page autosaved into being (prd §1100): emptied,
+                // it is taken back out — nothing was kept; else it lands now,
+                // with the toast a kept note gets.
+                guard hasContent else {
+                    if editing.isLive { modelContext.delete(editing); modelContext.saveHonestly() }
+                    SpotlightIndex.remove(ids: [editing.id])
+                    return
+                }
+                saveEdit(editing, quiet: true)
+                onLand(editing)
+                return
+            }
             saveEdit(editing)
             return
         }
-        guard let thing = keptThing() else { return }
+        guard let thing = makeNote() else { return }
+        onLand(thing)
+    }
+
+    /// A new note, kept: the words and the picture, filed in the open folder,
+    /// its links named. Nil when there is nothing to keep.
+    private func makeNote() -> Thing? {
+        guard let thing = keptThing() else { return nil }
         thing.previewImageData = picture?.bytes
         thing.folder = filingFolder
         // What the note links (prd §982), so the thing it names shows it
@@ -1003,7 +896,28 @@ struct NoteCaptureSheet: View {
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        onLand(thing)
+        return thing
+    }
+
+    /// SAVE AS YOU TYPE (prd §1100): a beat after the words stop moving, a
+    /// kept note takes them (quietly — the toast is for closing), and a new
+    /// note with something in it is made, so a page the system closes — a
+    /// call, a crash, the app killed — has lost nothing. Never while
+    /// recording: a voice note is kept by Stop.
+    private func scheduleAutosave() {
+        autosave?.cancel()
+        autosave = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled, !isRecording, !stopping else { return }
+            if let editing {
+                saveEdit(editing, quiet: true)
+            } else if hasDraft, let made = makeNote() {
+                editing = made
+                createdHere = true
+                openedDraft = draft
+                editPictureRead = true
+            }
+        }
     }
 
     /// Write the sheet onto the note it opened on (prd §981): the words the
@@ -1048,6 +962,7 @@ struct NoteCaptureSheet: View {
             note.previewImageData = bytes
             StoredPixels.forget(note.id)
         }
+        if wordsMoved && !createdHere { NoteEdits.stamp(note) }
         modelContext.saveHonestly()
         openedDraft = draft
         SpotlightIndex.index([note])
@@ -1106,10 +1021,11 @@ extension NoteCaptureSheet {
     static func titled(_ title: String, body: String) -> String {
         var out = title
         let opening = body.components(separatedBy: "\n").first ?? ""
-        if NoteChecklist.task(opening) != nil || NoteChecklist.bullet(opening) != nil {
+        if NoteChecklist.task(opening) != nil || NoteChecklist.bullet(opening) != nil
+            || opening.hasPrefix(NoteEditing.headingMark) || opening.hasPrefix(NoteEditing.quoteMark) {
             out = IngestSupport.titleLine(NoteChecklist.plain(opening))
         }
-        return out.replacingOccurrences(of: "[[", with: "")
+        return NoteEditing.inlinePlain(out).replacingOccurrences(of: "[[", with: "")
             .replacingOccurrences(of: "]]", with: "")
     }
 }
@@ -1198,3 +1114,25 @@ struct NoteSheetHooks: ViewModifier {
     }
 }
 
+
+/// WHEN A NOTE WAS LAST CHANGED BY HAND (prd §1100), for the page's date
+/// line. A fact on the note (`ThingFact.Action.edited`, its value ISO 8601)
+/// rather than a new `Thing` property, which would be a CloudKit schema ship
+/// of its own; it syncs with the note, and no surface draws it as a row.
+enum NoteEdits {
+    static let label = "Edited"
+
+    static func edited(_ thing: Thing) -> Date? {
+        guard thing.isLive else { return nil }
+        return thing.factList.first { $0.action == .edited }
+            .flatMap { ISO8601DateFormatter().date(from: $0.value) }
+    }
+
+    @MainActor
+    static func stamp(_ thing: Thing, at date: Date = .now) {
+        guard thing.isLive else { return }
+        var facts = thing.factList.filter { $0.action != .edited }
+        facts.append(ThingFact(label, ISO8601DateFormatter().string(from: date), .edited))
+        thing.facts = facts.map(\.encoded)
+    }
+}

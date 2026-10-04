@@ -566,6 +566,10 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// words, `value` the reminder's identifier and its time
         /// (`NoteReminders`). Drawn at the item, never as a fact row.
         case reminder
+        /// When a note of yours was last changed by hand (prd §1100): `value`
+        /// ISO 8601, read by the note page's date line (`NoteEdits`), never
+        /// drawn as a fact row.
+        case edited
     }
 
     var id: String { "\(label)\u{1F}\(value)" }

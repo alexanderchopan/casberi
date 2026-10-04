@@ -116,6 +116,11 @@ enum NoteChecklist {
     static func plain(_ line: String) -> String {
         if let t = task(line) { return t.text }
         if let words = bullet(line) { return words.trimmingCharacters(in: .whitespaces) }
+        // A heading's or a quote's mark is markdown's, not its words (§1100).
+        let opened = line.trimmingCharacters(in: .whitespaces)
+        for mark in ["# ", "> "] where opened.hasPrefix(mark) {
+            return String(opened.dropFirst(mark.count)).trimmingCharacters(in: .whitespaces)
+        }
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         if trimmed.hasPrefix(editorMark) || trimmed.hasPrefix(doneEditorMark) {
             return String(trimmed.dropFirst(editorMark.count)).trimmingCharacters(in: .whitespaces)
@@ -252,5 +257,313 @@ enum NoteChecklist {
             return kept.joined(separator: "\n")
         }
         return new + editorMark
+    }
+}
+
+/// THE EDITOR'S LIST RULES, AT THE CURSOR (prd §1100). `NoteChecklist`'s
+/// writing half acts on the LAST line, because a SwiftUI `TextField` never
+/// says where its cursor is; the note's editor is a `UITextView` now, so each
+/// rule here takes the text and the cursor (a UTF-16 offset, as UIKit counts)
+/// and answers the text and the cursor after. Foundation-only, compiled whole
+/// by `note-checklist-selftest.sh` with the rest of this file.
+///
+/// The field's spellings are `NoteChecklist`'s: `○ `/`◉ ` items, `• `
+/// bullets, `N. ` numbers, and markdown's `> ` quote and `# ` heading, which
+/// are kept as typed.
+enum NoteEditing {
+    struct Edit: Equatable {
+        var text: String
+        var cursor: Int
+        /// The selection's length after the edit (a wrapped selection stays
+        /// selected), 0 for a bare cursor.
+        var length: Int = 0
+    }
+
+    // MARK: - Formatting, for someone who never types markdown (prd §1101)
+
+    /// The inline marks the Aa key writes: markdown's, so the note reads the
+    /// same in Obsidian, a share and the agent.
+    enum Inline: String, CaseIterable {
+        case bold = "**", italic = "_", strike = "~~"
+    }
+
+    /// The line styles the Aa key sets.
+    enum LineStyle: CaseIterable {
+        case body, heading, bullet, number, quote
+        var mark: String {
+            switch self {
+            case .body: return ""
+            case .heading: return NoteEditing.headingMark
+            case .bullet: return NoteChecklist.bulletMark
+            case .number: return "1. "
+            case .quote: return NoteEditing.quoteMark
+            }
+        }
+    }
+
+    /// Bold, italic or strikethrough over the selection — or off, when the
+    /// selection already sits inside that mark. With nothing selected the
+    /// marks go in around the cursor, which stands between them, so what you
+    /// type next is in that style.
+    static func wrap(_ text: String, selection: NSRange, in style: Inline) -> Edit {
+        let ns = text as NSString
+        let m = style.rawValue
+        let ml = (m as NSString).length
+        let start = selection.location, end = selection.location + selection.length
+        // Already wrapped: the marks stand right outside the selection.
+        if start >= ml, end + ml <= ns.length,
+           ns.substring(with: NSRange(location: start - ml, length: ml)) == m,
+           ns.substring(with: NSRange(location: end, length: ml)) == m {
+            let inner = ns.substring(with: selection)
+            let out = ns.replacingCharacters(in: NSRange(location: start - ml, length: selection.length + 2 * ml),
+                                             with: inner)
+            return Edit(text: out, cursor: start - ml, length: selection.length)
+        }
+        // The selection holds its own marks: take them off.
+        let inner = ns.substring(with: selection)
+        if selection.length > 2 * ml, inner.hasPrefix(m), inner.hasSuffix(m) {
+            let bare = String(inner.dropFirst(m.count).dropLast(m.count))
+            let out = ns.replacingCharacters(in: selection, with: bare)
+            return Edit(text: out, cursor: start, length: (bare as NSString).length)
+        }
+        let out = ns.replacingCharacters(in: selection, with: m + inner + m)
+        return Edit(text: out, cursor: start + ml, length: selection.length)
+    }
+
+    /// The line at the cursor takes a style: its mark (heading, bullet,
+    /// number, quote — or an item's circle) is replaced by the new one, and
+    /// the style it already has turns back to plain words.
+    static func setLineStyle(_ text: String, cursor: Int, to style: LineStyle) -> Edit {
+        let range = lineRange(text, at: cursor)
+        let current = (text as NSString).substring(with: range).trimmingCharacters(in: .newlines)
+        let lead = current.prefix(while: { $0 == " " })
+        let body = String(current.dropFirst(lead.count))
+        var old = ""
+        if body.hasPrefix(headingMark) { old = headingMark }
+        else if let found = mark(of: current) { old = found.mark }
+        let same = (style == .number && NoteChecklist.numbered(body) != nil) || (!old.isEmpty && old == style.mark)
+        let new = same ? "" : style.mark
+        let start = range.location + lead.count
+        let oldLength = (old as NSString).length
+        let out = (text as NSString).replacingCharacters(in: NSRange(location: start, length: oldLength), with: new)
+        let delta = (new as NSString).length - oldLength
+        return Edit(text: out, cursor: max(start, cursor + delta))
+    }
+
+    /// The inline marks' runs in a text, for drawing: each run's whole range
+    /// (marks included) and its words' range, by style. A mark is only a mark
+    /// around words — `**` alone, or `_` inside a word, is a character.
+    static func inlineRuns(_ text: String) -> [(style: Inline, whole: NSRange, words: NSRange)] {
+        let patterns: [(Inline, String)] = [
+            (.bold, #"\*\*(?=\S)(.+?)(?<=\S)\*\*"#),
+            (.strike, #"~~(?=\S)(.+?)(?<=\S)~~"#),
+            (.italic, #"(?<![\w_])_(?=\S)(.+?)(?<=\S)_(?![\w_])"#),
+        ]
+        let full = NSRange(location: 0, length: (text as NSString).length)
+        var out: [(Inline, NSRange, NSRange)] = []
+        for (style, pattern) in patterns {
+            guard let rx = try? NSRegularExpression(pattern: pattern) else { continue }
+            for m in rx.matches(in: text, range: full) { out.append((style, m.range, m.range(at: 1))) }
+        }
+        return out
+    }
+
+    /// A line's words without the Aa key's inline marks — the title a note
+    /// makes and the room's preview never read `**`.
+    static func inlinePlain(_ line: String) -> String {
+        var out = line
+        for run in inlineRuns(line).sorted(by: { $0.whole.location > $1.whole.location }) {
+            let ns = out as NSString
+            guard run.whole.upperBound <= ns.length else { continue }
+            out = ns.replacingCharacters(in: run.whole, with: (line as NSString).substring(with: run.words))
+        }
+        return out
+    }
+
+    static let quoteMark = "> "
+    static let headingMark = "# "
+
+    /// The line holding a UTF-16 offset: its range in the text.
+    static func lineRange(_ text: String, at offset: Int) -> NSRange {
+        let ns = text as NSString
+        let safe = max(0, min(offset, ns.length))
+        return ns.lineRange(for: NSRange(location: safe, length: 0))
+    }
+
+    /// A line's own words, without its line break.
+    private static func line(_ text: String, _ range: NSRange) -> String {
+        (text as NSString).substring(with: range).trimmingCharacters(in: .newlines)
+    }
+
+    /// A line's lead (its spaces) and the list mark after it, or nil.
+    static func mark(of line: String) -> (lead: String, mark: String)? {
+        let lead = String(line.prefix(while: { $0 == " " }))
+        let body = line.dropFirst(lead.count)
+        for m in [NoteChecklist.editorMark, NoteChecklist.doneEditorMark, NoteChecklist.bulletMark, quoteMark]
+            where body.hasPrefix(m) { return (lead, m) }
+        if let n = NoteChecklist.numbered(String(body)) { return (lead, "\(n.number). ") }
+        return nil
+    }
+
+    /// Return at the cursor. Inside a list line with words, the next line
+    /// takes the next mark (an open item, a bullet, the next number, a
+    /// quote); on a line that is only its mark, the mark goes and the list
+    /// ends — Apple Notes' rule. Nil: let the newline through as typed.
+    static func returnKey(_ text: String, cursor: Int) -> Edit? {
+        let range = lineRange(text, at: cursor)
+        let current = line(text, range)
+        guard let (lead, mark) = mark(of: current) else { return nil }
+        let words = current.dropFirst(lead.count + mark.count).trimmingCharacters(in: .whitespaces)
+        let ns = text as NSString
+        if words.isEmpty {
+            // End the list: the line keeps its lead only.
+            let lineEnd = range.location + (current as NSString).length
+            let cleared = ns.replacingCharacters(in: NSRange(location: range.location,
+                                                             length: lineEnd - range.location),
+                                                 with: "")
+            return Edit(text: cleared, cursor: range.location)
+        }
+        var next = mark
+        if mark == NoteChecklist.doneEditorMark { next = NoteChecklist.editorMark }
+        if let n = NoteChecklist.numbered(String(current.dropFirst(lead.count))) { next = "\(n.number + 1). " }
+        let insert = "\n" + lead + next
+        let out = ns.replacingCharacters(in: NSRange(location: cursor, length: 0), with: insert)
+        return Edit(text: out, cursor: cursor + (insert as NSString).length)
+    }
+
+    /// A space typed at the cursor: `- ` or `* ` opening a line becomes a
+    /// bullet. Nil: let the space through.
+    static func space(_ text: String, cursor: Int) -> Edit? {
+        let range = lineRange(text, at: cursor)
+        let before = (text as NSString).substring(with: NSRange(location: range.location,
+                                                                length: cursor - range.location))
+        let lead = before.prefix(while: { $0 == " " })
+        let body = before.dropFirst(lead.count)
+        guard body == "-" || body == "*" else { return nil }
+        let out = (text as NSString).replacingCharacters(
+            in: NSRange(location: range.location + lead.count, length: 1),
+            with: NoteChecklist.bulletMark)
+        return Edit(text: out, cursor: cursor + (NoteChecklist.bulletMark as NSString).length - 1)
+    }
+
+    /// The checklist key at the cursor: the line becomes an item, or stops
+    /// being one (a bullet becomes an item too).
+    static func toggleChecklist(_ text: String, cursor: Int) -> Edit {
+        let range = lineRange(text, at: cursor)
+        let current = line(text, range)
+        let ns = text as NSString
+        let lead = current.prefix(while: { $0 == " " })
+        let start = range.location + lead.count
+        if let found = mark(of: current) {
+            let markLength = (found.mark as NSString).length
+            let isItem = found.mark == NoteChecklist.editorMark || found.mark == NoteChecklist.doneEditorMark
+            let replacement = isItem ? "" : NoteChecklist.editorMark
+            let out = ns.replacingCharacters(in: NSRange(location: start, length: markLength), with: replacement)
+            let delta = (replacement as NSString).length - markLength
+            return Edit(text: out, cursor: max(start, cursor + delta))
+        }
+        let out = ns.replacingCharacters(in: NSRange(location: start, length: 0), with: NoteChecklist.editorMark)
+        return Edit(text: out, cursor: cursor + (NoteChecklist.editorMark as NSString).length)
+    }
+
+    /// Indent (+1) or outdent (−1) the line at the cursor by two spaces.
+    static func indent(_ text: String, cursor: Int, by step: Int) -> Edit? {
+        let range = lineRange(text, at: cursor)
+        let current = line(text, range)
+        let ns = text as NSString
+        if step > 0 {
+            guard current.prefix(while: { $0 == " " }).count < 8 else { return nil }
+            return Edit(text: ns.replacingCharacters(in: NSRange(location: range.location, length: 0), with: "  "),
+                        cursor: cursor + 2)
+        }
+        let spaces = min(2, current.prefix(while: { $0 == " " }).count)
+        guard spaces > 0 else { return nil }
+        return Edit(text: ns.replacingCharacters(in: NSRange(location: range.location, length: spaces), with: ""),
+                    cursor: max(range.location, cursor - spaces))
+    }
+
+    /// Move the line at the cursor up (−1) or down (+1), past its neighbour.
+    static func moveLine(_ text: String, cursor: Int, by step: Int) -> Edit? {
+        var lines = text.components(separatedBy: "\n")
+        let index = lineIndex(text, at: cursor)
+        let target = index + step
+        guard lines.indices.contains(index), lines.indices.contains(target) else { return nil }
+        let column = cursor - offset(ofLine: index, in: lines)
+        lines.swapAt(index, target)
+        let out = lines.joined(separator: "\n")
+        return Edit(text: out, cursor: offset(ofLine: target, in: lines) + column)
+    }
+
+    /// The tick on an item at a line (by index): flip it, then the TICKED
+    /// SINK — a ticked item moves to the foot of its run of items, and an
+    /// unticked one rises to stand above the run's first ticked item (Apple
+    /// Notes' "sort checked items"). Works in either spelling: the field's
+    /// circles or a kept note's boxes.
+    static func tick(lines: [String], at index: Int) -> [String] {
+        guard lines.indices.contains(index), let done = isDone(lines[index]) else { return lines }
+        var out = lines
+        out[index] = flipped(lines[index])
+        // The run of items around it.
+        var top = index, bottom = index
+        while top > 0, isDone(out[top - 1]) != nil { top -= 1 }
+        while bottom < out.count - 1, isDone(out[bottom + 1]) != nil { bottom += 1 }
+        let item = out.remove(at: index)
+        bottom -= 1
+        if !done {
+            // Now ticked: the foot of the run.
+            out.insert(item, at: bottom + 1)
+        } else {
+            // Now open: above the first ticked item in the run.
+            var at = top
+            while at <= bottom, isDone(out[at]) == false { at += 1 }
+            out.insert(item, at: at)
+        }
+        return out
+    }
+
+    /// nil when a line is no item; else whether it is ticked.
+    static func isDone(_ line: String) -> Bool? {
+        let body = line.drop(while: { $0 == " " })
+        if body.hasPrefix(NoteChecklist.editorMark) { return false }
+        if body.hasPrefix(NoteChecklist.doneEditorMark) { return true }
+        return NoteChecklist.task(line)?.done
+    }
+
+    private static func flipped(_ line: String) -> String {
+        let lead = String(line.prefix(while: { $0 == " " }))
+        let body = line.dropFirst(lead.count)
+        if body.hasPrefix(NoteChecklist.editorMark) {
+            return lead + NoteChecklist.doneEditorMark + body.dropFirst(NoteChecklist.editorMark.count)
+        }
+        if body.hasPrefix(NoteChecklist.doneEditorMark) {
+            return lead + NoteChecklist.editorMark + body.dropFirst(NoteChecklist.doneEditorMark.count)
+        }
+        return NoteChecklist.toggled(line, ordinal: 0)
+    }
+
+    /// The index of the line holding a UTF-16 offset.
+    static func lineIndex(_ text: String, at offset: Int) -> Int {
+        let ns = text as NSString
+        let safe = max(0, min(offset, ns.length))
+        return ns.substring(to: safe).components(separatedBy: "\n").count - 1
+    }
+
+    private static func offset(ofLine index: Int, in lines: [String]) -> Int {
+        lines.prefix(index).reduce(0) { $0 + ($1 as NSString).length + 1 }
+    }
+}
+
+extension NoteChecklist {
+    /// A kept note's `ordinal`-th task ticked or unticked, then sunk to the
+    /// foot of its run (or raised above the run's first ticked item) — the
+    /// box's tick (prd §1100), the same rule the editor's tick keeps.
+    static func toggledSinking(_ text: String, ordinal: Int) -> String {
+        let lines = text.components(separatedBy: "\n")
+        var seen = 0
+        for i in lines.indices where task(lines[i]) != nil {
+            if seen == ordinal { return NoteEditing.tick(lines: lines, at: i).joined(separator: "\n") }
+            seen += 1
+        }
+        return text
     }
 }
