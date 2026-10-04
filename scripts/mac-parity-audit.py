@@ -64,6 +64,12 @@ ENTITLEMENT_DIRS = [
 # conscious "no automated screenshot of this screen exists", with the reason.
 # Adding one is a ruling; a NEW host must be swept or land here.
 KNOWN_UNSWEPT = {
+    "room": (
+        "lands in a room by its category (`casberi://room/<category | Your "
+        "notes>`, the Category widget's door, 2026-10-04) — the same rooms "
+        "`-openRoom` reaches and the demo census composes, so a link shot "
+        "would photograph a room the sweep already covers."
+    ),
     "note": (
         "raises the note sheet (prd §982's Quick Note door), the same layer "
         "`-openNote YES` raises in the sweep; a link shot would photograph "
