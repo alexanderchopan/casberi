@@ -45685,6 +45685,34 @@
         }
       }
     },
+    "Blend network status" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Estado de la red Blend"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Blendネットワークの状態"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Blend 네트워크 상태"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Blend 网络状态"
+          }
+        }
+      }
+    },
     "Block" : {
       "localizations" : {
         "es" : {
@@ -47906,6 +47934,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Casberi 只能看到你选择过的照片，因此新的屏幕截图不会自动同步过来。"
+          }
+        }
+      }
+    },
+    "Casberi can't control your node. Your network can see that you're reaching it, but not what it reports." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi no puede controlar tu nodo. Tu red puede ver que te conectas a él, pero no lo que informa."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberiはあなたのノードを操作できません。ネットワーク上では接続していることは見えますが、ノードの報告内容は見えません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi는 노드를 제어할 수 없습니다. 네트워크에서는 노드에 접속하는 것은 보이지만, 노드가 보고하는 내용은 보이지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 无法控制你的节点。你的网络能看到你在连接它，但看不到它报告的内容。"
           }
         }
       }
@@ -55347,6 +55403,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接 Logos 测试网——请检查网络连接。"
+          }
+        }
+      }
+    },
+    "Couldn't reach the Observer. Check that this device is on the same network." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con el Observer. Comprueba que este dispositivo esté en la misma red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observerに接続できませんでした。このデバイスが同じネットワークにあるか確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer에 연결할 수 없습니다. 이 기기가 같은 네트워크에 있는지 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接到 Observer。请确认此设备在同一网络中。"
           }
         }
       }
@@ -72828,6 +72912,34 @@
         }
       }
     },
+    "It can read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puede leer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取れる内容"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽을 수 있는 항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可读取"
+          }
+        }
+      }
+    },
     "It can't be recovered." : {
       "localizations" : {
         "es" : {
@@ -75128,6 +75240,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "类型"
+          }
+        }
+      }
+    },
+    "Logos Observer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Observer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Observer"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Observer"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Observer"
           }
         }
       }
@@ -99858,6 +99998,62 @@
         }
       }
     },
+    "Pair with %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Emparejar con %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@とペアリング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@와(과) 페어링"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与 %@ 配对"
+          }
+        }
+      }
+    },
+    "Paired with %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Emparejado con %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@とペアリングしました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@와(과) 페어링했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已与 %@ 配对。"
+          }
+        }
+      }
+    },
     "Paired — the app can ask this phone to sign" : {
       "localizations" : {
         "es" : {
@@ -101983,6 +102179,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "看看 vitalik.eth"
+          }
+        }
+      }
+    },
+    "Peer count" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Número de pares"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ピア数"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "피어 수"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "对等节点数"
           }
         }
       }
@@ -112798,6 +113022,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "撤销除了 Gas 费外是免费的。从最上面开始。"
+          }
+        }
+      }
+    },
+    "Rewards waiting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recompensas pendientes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取り待ちの報酬"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대기 중인 보상"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "待领取的奖励"
           }
         }
       }
@@ -124029,6 +124281,34 @@
         }
       }
     },
+    "Sync and block height" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sincronización y altura de bloque"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "同期状態とブロック高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "동기화 및 블록 높이"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "同步状态和区块高度"
+          }
+        }
+      }
+    },
     "Sync turned itself off after two launches that didn't finish connecting. Nothing was lost — it's all on %@." : {
       "localizations" : {
         "es" : {
@@ -125853,6 +126133,62 @@
         }
       }
     },
+    "That pairing code expired. Make a new one on the Observer." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ese código de emparejamiento caducó. Crea uno nuevo en el Observer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このペアリングコードは期限切れです。Observerで新しいコードを作成してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 페어링 코드는 만료되었습니다. Observer에서 새 코드를 만드세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该配对码已过期。请在 Observer 上生成新的配对码。"
+          }
+        }
+      }
+    },
+    "That pairing code was already used. Make a new one on the Observer." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ese código de emparejamiento ya se usó. Crea uno nuevo en el Observer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このペアリングコードは使用済みです。Observerで新しいコードを作成してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 페어링 코드는 이미 사용되었습니다. Observer에서 새 코드를 만드세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该配对码已被使用。请在 Observer 上生成新的配对码。"
+          }
+        }
+      }
+    },
     "That payment request couldn't be read." : {
       "localizations" : {
         "es" : {
@@ -126455,6 +126791,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Logos 测试网已重置，所有账户都从零开始。你的密钥和关注的账户仍然保留。"
+          }
+        }
+      }
+    },
+    "The Observer at that address isn't the one in the QR, so nothing was sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El Observer en esa dirección no es el del código QR, así que no se envió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのアドレスのObserverはQRコードのものと一致しないため、何も送信していません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "해당 주소의 Observer가 QR 코드의 Observer와 달라 아무것도 보내지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该地址上的 Observer 与二维码中的不一致，因此未发送任何内容。"
+          }
+        }
+      }
+    },
+    "The Observer refused to pair (%@)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El Observer rechazó el emparejamiento (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observerがペアリングを拒否しました（%@）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer가 페어링을 거부했습니다(%@)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer 拒绝配对（%@）。"
+          }
+        }
+      }
+    },
+    "The Observer's answer didn't make sense. Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La respuesta del Observer no tenía sentido. Inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observerの応答を解釈できませんでした。もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer의 응답을 이해할 수 없습니다. 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法理解 Observer 的响应。请重试。"
           }
         }
       }
@@ -131828,6 +132248,34 @@
         }
       }
     },
+    "This phone's clock and your Observer's disagree, so it refused the read." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El reloj de este teléfono y el de tu Observer no coinciden, así que rechazó la lectura."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この電話とObserverの時計が合っていないため、読み取りが拒否されました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰과 Observer의 시계가 맞지 않아 읽기가 거부되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此手机与 Observer 的时钟不一致，因此读取被拒绝。"
+          }
+        }
+      }
+    },
     "This phone's key isn't set up on the Safe yet. Finish it from your other wallet first." : {
       "localizations" : {
         "es" : {
@@ -132384,6 +132832,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "只有三样会到达：新问题、回归缺陷、升级事项。绝不会有事件、堆栈跟踪，或遇到问题的那个人。"
+          }
+        }
+      }
+    },
+    "Through %@ · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A través de %@ · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@経由 · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 경유 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 %@ · %@"
           }
         }
       }
@@ -142978,6 +143454,34 @@
         }
       }
     },
+    "Whether it's mining" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Si está minando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マイニング中かどうか"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채굴 중인지 여부"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "是否在挖矿"
+          }
+        }
+      }
+    },
     "Which accounts" : {
       "localizations" : {
         "es" : {
@@ -147486,6 +147990,90 @@
         }
       }
     },
+    "Your Observer refused the read (%@)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu Observer rechazó la lectura (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observerが読み取りを拒否しました（%@）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer가 읽기를 거부했습니다(%@)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Observer 拒绝了读取（%@）。"
+          }
+        }
+      }
+    },
+    "Your Observer removed this device. Pair it again to keep reading your node." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu Observer quitó este dispositivo. Vuelve a emparejarlo para seguir leyendo tu nodo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observerがこのデバイスを削除しました。ノードの読み取りを続けるには、もう一度ペアリングしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer에서 이 기기를 제거했습니다. 노드를 계속 읽으려면 다시 페어링하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Observer 已移除此设备。请重新配对以继续读取你的节点。"
+          }
+        }
+      }
+    },
+    "Your Observer's identity changed. Pair it again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La identidad de tu Observer cambió. Vuelve a emparejarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observerの識別情報が変わりました。もう一度ペアリングしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer의 식별 정보가 바뀌었습니다. 다시 페어링하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Observer 身份已变更。请重新配对。"
+          }
+        }
+      }
+    },
     "Your OpenRouter credits are running low — %@ left of %@" : {
       "localizations" : {
         "en" : {
@@ -149105,6 +149693,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你为这个地址设置的名称会伴随它的每一笔转账。留空则会清除该名称。"
+          }
+        }
+      }
+    },
+    "Your network can see that you're reaching your node, but not what it reports." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu red puede ver que te conectas a tu nodo, pero no lo que informa."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ネットワーク上ではノードに接続していることは見えますが、ノードの報告内容は見えません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "네트워크에서는 노드에 접속하는 것은 보이지만, 노드가 보고하는 내용은 보이지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的网络能看到你在连接你的节点，但看不到它报告的内容。"
           }
         }
       }
