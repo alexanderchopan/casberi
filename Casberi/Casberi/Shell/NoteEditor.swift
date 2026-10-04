@@ -584,8 +584,16 @@ struct NoteEditorStyle {
 
     /// The same face slanted 12°, Figtree having no italic of its own.
     func slanted(_ base: UIFont) -> UIFont {
+        #if targetEnvironment(macCatalyst)
+        // `withMatrix` is unavailable on Mac Catalyst (verify's Catalyst
+        // compile, 2026-10-04): the Mac asks for the italic trait, and keeps
+        // the upright face when Figtree has none to give.
+        let italic = base.fontDescriptor.withSymbolicTraits(.traitItalic) ?? base.fontDescriptor
+        return UIFont(descriptor: italic, size: base.pointSize)
+        #else
         let slant = CGAffineTransform(a: 1, b: 0, c: tan(12 * .pi / 180), d: 1, tx: 0, ty: 0)
         return UIFont(descriptor: base.fontDescriptor.withMatrix(slant), size: base.pointSize)
+        #endif
     }
 
     func paragraph(headIndent: CGFloat = 0) -> NSParagraphStyle {

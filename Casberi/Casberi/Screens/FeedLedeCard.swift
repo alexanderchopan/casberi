@@ -643,7 +643,7 @@ struct FeedLedeCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             ForEach(Array(rungs.enumerated()), id: \.offset) { _, rung in
                 if case .cast(let roll) = rung {
-                    DSLeadCast(roll: roll, source: thing.source, rows: 2)
+                    DSLeadCast(roll: roll, source: thing.source, rows: fit.castRows)
                 }
             }
             Text(words)

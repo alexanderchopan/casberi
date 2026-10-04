@@ -337,7 +337,15 @@ struct WalletBalanceHeadline: View {
                 // the line in the top tenth of the box, which is the "solid
                 // slab" 2026-07-21 measured, at every height. The line alone
                 // now takes the box's height for its own range.
-                TokenChartPlot(chart: chart, accent: accent, height: chartHeight, pulses: false,
+                // **THE LINE TAKES WHAT IS LEFT, AT MOST `chartHeight` (prd
+                // §1102, user: "also wallet sparkline").** `chartHeight` is a
+                // budget counted for the caption and the total alone, so a
+                // crown that also said "Couldn't price HyperEVM, Monad — not in
+                // this total" ran its line out through the slot's clip. Read
+                // the height the stack actually leaves, after every line above
+                // and the chips below have theirs (`layoutPriority(-1)`).
+                GeometryReader { geo in
+                TokenChartPlot(chart: chart, accent: accent, height: geo.size.height, pulses: false,
                                lineWidth: 2.6, fillOpacity: 0, endpointDot: true,
                                marks: marks,
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
@@ -350,6 +358,9 @@ struct WalletBalanceHeadline: View {
                                // chart's own scrub, at the headline's dose.
                                cursorIndex: scrubIndex,
                                onScrub: { scrubIndex = $0 })
+                }
+                .frame(minHeight: 0, maxHeight: chartHeight)
+                .layoutPriority(-1)
                     .mask(alignment: .leading) {
                         GeometryReader { geo in
                             Rectangle().frame(width: geo.size.width * drawn)
