@@ -69,7 +69,14 @@ enum DSRoomChassis {
     /// a height instead does not shrink or clip — it leaves a band of dead air
     /// at the bottom of a top-aligned box, which is the silent failure to look
     /// for when reading any screenshot of this change.
-    static let visualSlot: CGFloat = 300
+    ///
+    /// **300 → 220 (prd §1102, user: "i hate when there is empty space in it
+    /// b/c it is a waste of the screen").** Measured over 77 text leads in the
+    /// demo: the median used 168pt of the box and 72 left air. At 220 the
+    /// average air halves (108 → 52pt), the 22 taller leads step down the fit
+    /// ladder as it already does, and every room's tiles stand ~80pt higher,
+    /// at one y. Sheets do not follow: they take `sheetArtHeight`.
+    static let visualSlot: CGFloat = 220
 
     /// **THE HEIGHT OF EVERY ROOM'S LEAD (prd §760, user: "you know how wallet
     /// and devnets use a template that is slot at the top? i'd like all rooms
@@ -91,6 +98,12 @@ enum DSRoomChassis {
     /// spelling. (The demo pill's share left it in §1005: the room reserves
     /// the pill's band above its title now, so the well keeps all of itself.)
     @MainActor static var leadBox: CGFloat { leadHeight - 2 * DS.Space.s4 }
+
+    /// **A SHEET'S PICTURE WELL, APART FROM THE ROOM BOX (prd §1102).** The
+    /// sheets borrowed `leadHeight` for their art; the room box shrank so a
+    /// room wastes less screen, and a sheet is where a thing is seen at size,
+    /// so the sheets keep the height they had.
+    static let sheetArtHeight: CGFloat = 316
 
     // **THE THREE GAPS WERE TIGHTENED ONE RUNG (prd §495, user: "should we
     // move the silouhette rail and the toggle rail higher on both vibenet and
@@ -189,7 +202,10 @@ enum DSRoomChassis {
     /// the words under a picture start where a pictureless lead's body starts.
     /// A lead that IS a picture (the anniversary photo, a live stream) fills
     /// the whole well instead and takes no part of this.
-    static let leadArtHeight: CGFloat = 120
+    ///
+    /// **120 → 88 with the box (prd §1102):** the eyebrow and two lines still
+    /// fit under it in the 204pt box.
+    static let leadArtHeight: CGFloat = 88
 
     // MARK: - The fused rail (prd §547, 2026-09-01)
 

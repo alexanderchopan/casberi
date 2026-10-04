@@ -61,7 +61,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - On the phone, a room's "whose" picker sits under its lead, in the rows' column: GitHub and Pinterest use the Wallet's menu, social rooms a row of faces (§959). A social room's capsule never shows sibling networks (§956).
 
 ### 4. Rooms: lead, tiles, empty
-- Every room's lead is one box, `leadHeight` (320pt), the Wallet's, in one position: above the first day header, in every room and in All (§906). Every cover holds that box, and leftover air is accepted (§904).
+- Every room's lead is one box, `leadHeight` (236pt, measured over the demo's leads, §1102), in one position: above the first day header, in every room and in All (§906), with the tiles at one y under it in every room that has them (§1102). Every cover holds that box (§904); nothing inside it is a fixed height, and a head that overruns drops whole blocks, never half a line (§1102). Sheets keep their own picture height and draw a cover whole (§1102).
 - The box fills by a ladder of three tiers, large/mid/regular, picked by fit and never by string length (§905a; large rung per §1006).
 - The lead has no count foot, and day headers show no counts (§914).
 - Every room opens on a lead, with no exception for a shape. A room's tiles never depend on its head (`standaloneLead`) (§911).
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1231 of 1290 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1232 of 1291 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1066,7 +1066,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §757 — The wallet family's rows stand on nothing, and Home reserves no box (amended by §760; part superseded by §758)
 - §758 — A room head draws no plate either (amended by §763)
 - §759 — The elevated card has one caller left
-- §760 — Every room's lead is the wallet head's height, and a head that runs long draws fewer rows and counts them
+- §760 — Every room's lead is the wallet head's height, and a head that runs long draws fewer rows and counts them (amended by §1102)
 - §761 — Home is a scope that can be empty, and it says what it would hold
 - §762 — Glyphs take a rung, and every text rung is named for its size
 - §763 — The room's lead stands in the rows' column, ends at one gap, draws its rows as feed rows, and every room has one
@@ -1241,8 +1241,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §901b — The landing is the thing's ARRIVAL, never its date: the cycle was live and almost never fired
 - §902 — The All feed's Apple pass: one row head, one-line titles, no ages, no counts, no source in the line, the day alone (part superseded by §1017)
 - §903 — A fold's lead is the bare mark: the stacked plate is deleted
-- §904 — Every cover holds the box: one lead height in every room and the All feed
-- §905 — The ladder grows: a thin cover fills the box with larger words, a larger lede and a second row of faces (amended by §905a; part superseded by §1006)
+- §904 — Every cover holds the box: one lead height in every room and the All feed (amended by §1102)
+- §905 — The ladder grows: a thin cover fills the box with larger words, a larger lede and a second row of faces (amended by §905a, §1102; part superseded by §1006)
 - §905a — Three tiers, not two: the shelf grows even when the words cannot (part superseded by §1006)
 - §906 — One box, one position: every room's lead is the wallet's box at the wallet's height (amended by §938)
 - §907 — The face pass, batch one: Media A, Social C, Reading A
@@ -1452,6 +1452,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list… (amended by §1100)
 - §1100 — Writing a note: one editor at the cursor, save as you type, headings and quotes, ticked items sink, lines move and in…
 - §1101 — The Aa key: formatting for someone who never types markdown
+- §1102 — One smaller box: every room's lead is 236pt, every room's tiles stand at one y, and a sheet shows its picture whole
 
 ## Dead rulings → what replaced them (generated)
 

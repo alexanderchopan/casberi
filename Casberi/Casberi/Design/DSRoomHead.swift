@@ -173,11 +173,13 @@ extension DSRoomChassis {
             // of the row, the tiles `contentGap` under it, both at the rows'
             // inset — `DSRoomScopeChrome.content`'s own arithmetic, so the
             // tiles land at one height in every scoped room.
-            VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
+            // (prd §1102: `s2` above and `leadGap` under, the cover row's own,
+            // so the tiles stand at one y in every room — measured 14pt apart.)
+            VStack(alignment: .leading, spacing: DSRoomChassis.leadGap) {
                 well
                 if let scopes { scopes }
             }
-            .dsRoomHeadPlacement(top: scopes == nil ? DS.Space.s2 : 0)
+            .dsRoomHeadPlacement()
         }
 
         private var well: some View {
@@ -190,14 +192,16 @@ extension DSRoomChassis {
                         LineText(line: notes[index])
                             .padding(.top, DSRoomChassis.headNoteGap)
                     }
-                    content
+                    HeadBlocks(content: content)
                     if !footnotes.isEmpty {
-                        VStack(alignment: .leading, spacing: DSRoomChassis.headFootnoteGap) {
-                            ForEach(footnotes.indices, id: \.self) { index in
-                                LineText(line: footnotes[index])
+                        HeadFootnotes {
+                            VStack(alignment: .leading, spacing: DSRoomChassis.headFootnoteGap) {
+                                ForEach(footnotes.indices, id: \.self) { index in
+                                    LineText(line: footnotes[index])
+                                }
                             }
+                            .padding(.top, DSRoomChassis.headBlockGap)
                         }
-                        .padding(.top, DSRoomChassis.headBlockGap)
                     }
                     Spacer(minLength: 0)
                 }
@@ -290,6 +294,14 @@ extension DSRoomChassis {
                 content.environment(\.dsHeadRowLimit, 2)
                 content.environment(\.dsHeadRowLimit, 1)
                 content.environment(\.dsHeadRowLimit, 0)
+                // **THEN WHOLE BLOCKS, FROM THE BOTTOM (prd §1102).** A head
+                // whose rows were all gone still overran the box and was cut
+                // mid-line (Privacy Pools: seven pieces in a 204pt box). The
+                // footnotes go first, then the last block, and so on.
+                content.environment(\.dsHeadRowLimit, 0).environment(\.dsHeadBlockLimit, 3)
+                content.environment(\.dsHeadRowLimit, 0).environment(\.dsHeadBlockLimit, 2)
+                content.environment(\.dsHeadRowLimit, 0).environment(\.dsHeadBlockLimit, 1)
+                content.environment(\.dsHeadRowLimit, 0).environment(\.dsHeadBlockLimit, 0)
             }
             .frame(maxWidth: .infinity, minHeight: height, maxHeight: height,
                    alignment: .topLeading)
@@ -710,6 +722,31 @@ private struct DSHeadRowLimitKey: EnvironmentKey {
     static let defaultValue: Int? = nil
 }
 
+private struct DSHeadBlockLimitKey: EnvironmentKey {
+    static let defaultValue: Int? = nil
+}
+
+/// A head's blocks, the first `dsHeadBlockLimit` of them (prd §1102). The
+/// subviews are the head's own `DSRoomChassis.Block`s, in order.
+private struct HeadBlocks<Content: View>: View {
+    let content: Content
+    @Environment(\.dsHeadBlockLimit) private var limit
+    var body: some View {
+        Group(subviews: content) { blocks in
+            ForEach(blocks.prefix(limit ?? blocks.count)) { $0 }
+        }
+    }
+}
+
+/// A head's footnotes, gone once any block has had to go (prd §1102).
+private struct HeadFootnotes<Content: View>: View {
+    @ViewBuilder let content: Content
+    @Environment(\.dsHeadBlockLimit) private var limit
+    var body: some View {
+        if limit == nil { content }
+    }
+}
+
 /// A room head drawn INSIDE another room's box (prd §1048d: a folded app's
 /// head in the Wallet's box when the menu picks it). The host already draws
 /// the well and its placement, so the head draws neither, or it is a box in a
@@ -729,6 +766,13 @@ extension EnvironmentValues {
     var dsHeadRowLimit: Int? {
         get { self[DSHeadRowLimitKey.self] }
         set { self[DSHeadRowLimitKey.self] = newValue }
+    }
+
+    /// How many of a head's blocks draw, nil all, and the footnotes only at
+    /// nil. Set only by `DSRoomChassis.LeadFit`'s last spellings (prd §1102).
+    var dsHeadBlockLimit: Int? {
+        get { self[DSHeadBlockLimitKey.self] }
+        set { self[DSHeadBlockLimitKey.self] = newValue }
     }
 }
 

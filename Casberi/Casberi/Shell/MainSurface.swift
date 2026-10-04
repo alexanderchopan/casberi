@@ -2154,6 +2154,15 @@ struct MainSurface: View {
             // already standing in the Wallet still narrows it.
             chrome.pickSeat(fold.seat, in: fold.room)
             target = fold.room
+        } else if case let seat = BridgeCatalog.seatName(forSource: label),
+                  seat != label, LiveRoomSources.all.contains(seat) {
+            // **A LIVE ROOM BY ANOTHER NAME (prd §1102, user: "that page that
+            // says frames is connected is wrong").** "Frames" titled itself
+            // "Hegotá Frames" through the catalog, but every check that draws
+            // the room compares the raw source, so it missed them all and drew
+            // the generic "is connected" page with no box and no tiles. A live
+            // room lands no rows, so its seat name IS its source.
+            target = seat
         } else {
             target = label
         }

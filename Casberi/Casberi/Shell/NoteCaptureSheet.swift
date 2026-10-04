@@ -700,7 +700,7 @@ struct NoteCaptureSheet: View {
             pictureDialogOpen = true
         } label: {
             Color.clear
-                .frame(height: DSRoomChassis.leadHeight)
+                .frame(height: DSRoomChassis.sheetArtHeight)
                 .frame(maxWidth: .infinity)
                 .overlay {
                     Image(uiImage: picture.image)

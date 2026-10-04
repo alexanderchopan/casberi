@@ -56,14 +56,15 @@ struct MediaSheetHead: View {
 
     // MARK: - The art
 
-    /// A video is 16:9; a cover and show art are square, and fill the well.
+    /// A video is 16:9; a cover and show art are square, drawn WHOLE at the
+    /// column's width (prd §1102, user: "they should be able to" see the
+    /// whole image). It borrowed the room box and cropped the square to it.
     private var aspect: CGFloat {
-        thing.source == "YouTube" || thing.source == "Twitch"
-            ? 9.0 / 16.0 : DSRoomChassis.leadHeight / 360
+        thing.source == "YouTube" || thing.source == "Twitch" ? 9.0 / 16.0 : 1
     }
 
     @ViewBuilder private var art: some View {
-        SheetPictureFrame(aspect: aspect, cap: DSRoomChassis.leadHeight) {
+        SheetPictureFrame(aspect: aspect, cap: SheetPicture.tallest) {
             Color.clear
                 .overlay {
                     if thing.previewImageData != nil {

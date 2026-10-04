@@ -583,8 +583,10 @@ extension FeedScreen {
             .dsRoomHeadBlock()
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: DSRoomChassis.contentGap,
+            // The cover row's own insets (`ledeListRow`), so an empty room's
+            // tiles stand where a full room's do (prd §1102).
+            .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                      bottom: DSRoomChassis.leadGap,
                                       trailing: DSRoomChassis.inset))
     }
 
@@ -644,13 +646,13 @@ extension FeedScreen {
                 AgentChatThread(source: agentSource)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.contentGap,
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.leadGap,
                                               trailing: DSRoomChassis.inset))
             }
         } else if let coverThing {
             Section {
-                ledeListRow(coverThing, top: 0, bottom: DSRoomChassis.contentGap)
+                ledeListRow(coverThing)
             }
         } else if agentRoomShown, visible.isEmpty {
             // AN EMPTY ROOM STILL HOLDS THE LEAD SLOT (user, 2026-09-20: "the
@@ -747,9 +749,9 @@ extension FeedScreen {
         let leadHeld = cover != nil || (tiles != nil && listEmpty)
         if let cover {
             Section {
-                ledeListRow(cover,
-                            top: tiles == nil ? DS.Space.s2 : 0,
-                            bottom: tiles == nil ? DSRoomChassis.leadGap : DSRoomChassis.contentGap)
+                // One y for the tiles in every room (prd §1102): the cover row
+                // keeps its own insets whether tiles follow or not.
+                ledeListRow(cover)
             }
         } else if tiles != nil, listEmpty {
             Section {

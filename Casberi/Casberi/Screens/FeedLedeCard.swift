@@ -243,7 +243,7 @@ struct FeedLedeCard: View {
                     case .cast:            castBlock(rungs, fit: fit)
                     case .dateTile:        dateTileBlock
                     case .stateWord:       stateWordBlock(extra.stateWord ?? "", fit: fit)
-                    case .prose:           proseBlock(extra.prose)
+                    case .prose:           proseBlock(extra.prose, fit: fit)
                     // Drawn by `mediaWell`, never here — see `liveBody`.
                     case .mediaArt:        EmptyView()
                     case .words:           titleBlock(underArt: false, fit: fit)
@@ -590,11 +590,13 @@ struct FeedLedeCard: View {
 
     // MARK: - The faces the face pass ruled (prd §907)
 
-    /// READING A's picture height. The box is 284 on a phone; under the art
-    /// go a two-line title (56), its gap (14), the source line (17) and the
-    /// foot (~25) — 112 — so the picture takes the rest and a 16:9 page
-    /// picture (190 at a phone's width) is cropped by a tenth, never a third.
-    static let tallArtHeight: CGFloat = 170
+    /// READING A's picture height: the box less what stands under the art —
+    /// a two-line title at the large rung (~68), its gap (14), the source
+    /// line (17) and the block's air. **Derived from the box since prd
+    /// §1102:** it was a fixed 170 counted for the 284pt box, and when the box
+    /// became 204 the title under it was cut in half (user: "there is
+    /// clipping"). 100 at today's box.
+    static let tallArtHeight: CGFloat = DSRoomChassis.leadHeight - 136
 
     /// READING A: the title under the picture, two lines, then where it is
     /// from — source, the feed's name, the age — in one quiet line.
@@ -742,20 +744,20 @@ struct FeedLedeCard: View {
     /// lines as prose at `body17`, as many as the box holds under the eyebrow
     /// and above the foot. The body is `NoteSheetSource.body(for:)` — the
     /// sheet's own words, never a model's (§645) — read once in `liveBody`.
-    private func proseBlock(_ prose: String) -> some View {
+    private func proseBlock(_ prose: String, fit: Fit) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(words)
                 .dsText(.heading17)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
             if Pinboard.isNote(thing), NoteChecklist.progress(thing.content) != nil {
-                tickableProse(prose)
+                tickableProse(prose, fit: fit)
             } else {
                 Text(verbatim: prose)
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(Self.proseLines)
+                    .lineLimit(Self.proseLines(fit))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -769,8 +771,8 @@ struct FeedLedeCard: View {
     /// list whose first item became the title shows one item fewer, so the
     /// ordinal is offset by what the box does not show.
     @ViewBuilder
-    private func tickableProse(_ prose: String) -> some View {
-        let lines = Array(prose.components(separatedBy: "\n").prefix(Self.proseLines))
+    private func tickableProse(_ prose: String, fit: Fit) -> some View {
+        let lines = Array(prose.components(separatedBy: "\n").prefix(Self.proseLines(fit)))
         let shownItems = prose.components(separatedBy: "\n").filter(Self.isItemLine).count
         let offset = max(0, (NoteChecklist.progress(thing.content)?.total ?? 0) - shownItems)
         // The rung's own leading between lines (prd §1099), as the prose
@@ -829,10 +831,12 @@ struct FeedLedeCard: View {
         modelContext.saveHonestly()
     }
 
-    /// The box is 284 on a phone: the eyebrow and its gap (~46), the title
-    /// (24) and its gap (10), the foot (~25) leave ~179, and a `body17` line
-    /// is 25 — seven lines, none clipped.
-    private static let proseLines = 7
+    /// **THE PROSE TAKES THE LADDER (prd §1102).** It was a fixed seven,
+    /// counted for the 284pt box; at 204 the seventh line was cut in half,
+    /// because a fixed count is the one thing `ViewThatFits` cannot step down.
+    /// Now it follows the fit's statement lines, capped at the seven it had,
+    /// so the ladder takes lines away until the note fits.
+    private static func proseLines(_ fit: Fit) -> Int { min(7, fit.statementLines) }
 
     /// MEDIA A, AMENDED (prd §915): **words never sit on art.** The picture
     /// fills the TOP of the well edge to edge and the words stand under it on

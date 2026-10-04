@@ -1990,7 +1990,7 @@ struct ThingSheetView: View {
         if let opened = openedLock {
             if let picture = opened.picture, let image = UIImage(data: picture) {
                 Color.clear
-                    .frame(height: DSRoomChassis.leadHeight)
+                    .frame(height: DSRoomChassis.sheetArtHeight)
                     .frame(maxWidth: .infinity)
                     .overlay { Image(uiImage: image).resizable().scaledToFill() }
                     .clipped()

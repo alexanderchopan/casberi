@@ -580,7 +580,7 @@ struct NoteEntryPhoto: View {
                 // that guard exists to stop.
                 // The lead's well, as an article's picture (prd §893).
                 PhotoWell(thing: thing, size: nil)
-                    .frame(height: DSRoomChassis.leadHeight)
+                    .frame(height: DSRoomChassis.sheetArtHeight)
                     .frame(maxWidth: .infinity)
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget,

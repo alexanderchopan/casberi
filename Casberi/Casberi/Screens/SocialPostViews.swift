@@ -99,7 +99,7 @@ struct SocialPostContent: View {
                 }
         } else if images.count == 1 {
             // One picture fills the lead's well, as an article's does (§884).
-            SocialPhoto(urlString: images[0], height: DSRoomChassis.leadHeight,
+            SocialPhoto(urlString: images[0], height: DSRoomChassis.sheetArtHeight,
                         cornerRadius: DS.Radius.widget)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else if images.count > 1 {

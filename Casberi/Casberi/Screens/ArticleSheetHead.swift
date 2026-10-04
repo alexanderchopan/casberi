@@ -51,7 +51,7 @@ struct ArticleSheetHead: View {
         VStack(alignment: .leading, spacing: 0) {
             if Self.hasArt(thing) {
                 art
-                    .frame(height: DSRoomChassis.leadHeight)
+                    .frame(height: DSRoomChassis.sheetArtHeight)
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s6)
@@ -100,7 +100,7 @@ struct ArticleSheetHead: View {
             GeometryReader { geo in
                 RemoteArt(urlString: url,
                           width: geo.size.width,
-                          height: DSRoomChassis.leadHeight,
+                          height: DSRoomChassis.sheetArtHeight,
                           cornerRadius: 0)
             }
         }

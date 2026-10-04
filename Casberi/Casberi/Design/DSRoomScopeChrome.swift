@@ -94,7 +94,13 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// the same frame, padding and gap before the tiles.
     @ViewBuilder
     private var content: some View {
-        VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
+        // **AT EVERY OTHER ROOM'S Y (prd §1102, user: "ALL buttons move up to
+        // the same position").** Measured: the wallet family's box stood 10pt
+        // above every other room's and its tiles 14pt above, because a room's
+        // cover row sits `s2` down and keeps `leadGap` under it
+        // (`ledeListRow`), while this row started at 0 with `contentGap`.
+        // The same two numbers here, so the tiles land at one y everywhere.
+        VStack(alignment: .leading, spacing: DSRoomChassis.leadGap) {
             lead
             // **THE TILES, THEN THE MENU, ON EVERY PAGE (prd §1039).** Home
             // drew Actions and the Overview rows under these until the merge;
@@ -107,6 +113,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
             }
             .padding(.horizontal, DSRoomChassis.inset)
         }
+        .padding(.top, DS.Space.s2)
     }
 
     /// The crown on Home, the section's figure off it — one fixed box either
