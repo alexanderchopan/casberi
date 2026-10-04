@@ -1825,16 +1825,25 @@ private struct FileVideoContent: View {
         }
     }
 
+    /// Resolves, and while the file is still coming down from iCloud waits
+    /// for it and resolves again, so the player takes the poster's place in
+    /// the open sheet — the line's "it'll play once the file is here" is a
+    /// promise this loop keeps. Closing the sheet cancels the wait.
     private func resolve() async {
-        switch await FilesIngest.media(for: ref) {
-        case .ready(let resolved):
-            handle?.release()
-            handle = resolved
-            player = AVPlayer(url: resolved.url)
-            status = .ready
-        case .notDownloaded: status = .notDownloaded
-        case .missing: status = .missing
-        case .unreachable: status = .unreachable
+        while !Task.isCancelled {
+            switch await FilesIngest.media(for: ref) {
+            case .ready(let resolved):
+                handle?.release()
+                handle = resolved
+                player = AVPlayer(url: resolved.url)
+                status = .ready
+                return
+            case .notDownloaded:
+                status = .notDownloaded
+                guard await FilesIngest.waitForDownload(of: ref) else { return }
+            case .missing: status = .missing; return
+            case .unreachable: status = .unreachable; return
+            }
         }
     }
 }
@@ -1908,18 +1917,26 @@ private struct FileAudioContent: View {
         }
     }
 
+    /// Waits out an iCloud download and resolves again, as the video
+    /// sibling does — the transport appears in the open sheet when the bytes
+    /// land, and closing the sheet cancels the wait.
     private func resolve() async {
-        switch await FilesIngest.media(for: ref) {
-        case .ready(let resolved):
-            // A `.task(id:)` re-run releases the previous window rather than
-            // leaking it — nested scopes are refcounted, so an unbalanced
-            // start is a real leak and not a no-op.
-            handle?.release()
-            handle = resolved
-            status = .ready
-        case .notDownloaded: status = .notDownloaded
-        case .missing: status = .missing
-        case .unreachable: status = .unreachable
+        while !Task.isCancelled {
+            switch await FilesIngest.media(for: ref) {
+            case .ready(let resolved):
+                // A `.task(id:)` re-run releases the previous window rather than
+                // leaking it — nested scopes are refcounted, so an unbalanced
+                // start is a real leak and not a no-op.
+                handle?.release()
+                handle = resolved
+                status = .ready
+                return
+            case .notDownloaded:
+                status = .notDownloaded
+                guard await FilesIngest.waitForDownload(of: ref) else { return }
+            case .missing: status = .missing; return
+            case .unreachable: status = .unreachable; return
+            }
         }
     }
 }

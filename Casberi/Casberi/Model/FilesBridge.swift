@@ -491,6 +491,14 @@ enum FilesIngest {
             defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
             guard let files = walk(folder) else { return .some(nil) }
             guard let match = files.first(where: { $0.ref == ref }) else { return .some(nil) }
+            // An evicted iCloud file is ASKED FOR here, not just reported
+            // (2026-10-04). The heal pass is the only other place that asks,
+            // and it selects images and videos needing a picture — so an
+            // `.m4a` was never requested by anything, and the sheet's "it'll
+            // play once the file is here" waited on a download nobody started.
+            if !match.isDownloaded {
+                try? FileManager.default.startDownloadingUbiquitousItem(at: match.url)
+            }
             return .some((match.url, match.isDownloaded))
         }.value
 
@@ -498,6 +506,43 @@ enum FilesIngest {
         guard let match = outer else { return .missing }
         guard match.downloaded else { return .notDownloaded }
         return .ready(FilesMediaHandle(url: match.url, folder: folder))
+    }
+
+    /// Waits for a file `media(for:)` reported `.notDownloaded` to arrive:
+    /// true once its bytes are on this device, false if the walk lost it or
+    /// the caller's task was cancelled (the sheet closed).
+    ///
+    /// ONE walk finds the file, then only that file's download status is read
+    /// — never a whole-folder walk per tick, which on a folder of thousands
+    /// is the cost the heal pass bounds. The cached resource values are
+    /// dropped before each read, or the first answer is served forever.
+    @MainActor
+    static func waitForDownload(of ref: String) async -> Bool {
+        guard let folder = FilesStore.shared.folderURL() else { return false }
+        let url: URL? = await Task.detached(priority: .utility) { () -> URL? in
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            return walk(folder)?.first(where: { $0.ref == ref })?.url
+        }.value
+        guard let url else { return false }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(1.5))
+            if Task.isCancelled { return false }
+            let here: Bool? = await Task.detached(priority: .utility) { () -> Bool? in
+                let scoped = folder.startAccessingSecurityScopedResource()
+                defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+                var fresh = url
+                fresh.removeAllCachedResourceValues()
+                guard let values = try? fresh.resourceValues(
+                    forKeys: [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey])
+                else { return nil }
+                let status = values.ubiquitousItemDownloadingStatus
+                return values.isUbiquitousItem != true || status == .current || status == .downloaded
+            }.value
+            guard let here else { return false }
+            if here { return true }
+        }
+        return false
     }
 
     /// A filename the person never typed — a camera/screenshot naming
