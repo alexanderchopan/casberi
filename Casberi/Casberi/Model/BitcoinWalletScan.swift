@@ -188,6 +188,12 @@ extension BitcoinBridge {
                         }
                         index += walkWidth
                     }
+                    // A walk cut short by an unreachable host still OWNS the
+                    // whole window past the last used index — derived, no
+                    // request — so a send's change in it is never read as paid out.
+                    for i in 0...(highest + BitcoinHD.gapLimit) {
+                        if let address = derive(i) { owned.insert(norm(address)); positions[address] = i }
+                    }
                 } else {
                     // Ask what holds coins and the next few past the last used; the
                     // rest of the window is derived (no request) so change sent to
