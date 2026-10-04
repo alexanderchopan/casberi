@@ -1463,6 +1463,34 @@
         }
       }
     },
+    "All notes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todas las notas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべてのメモ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 메모"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部备忘录"
+          }
+        }
+      }
+    },
     "All of %@" : {
       "localizations" : {
         "es" : {
@@ -1939,6 +1967,62 @@
         }
       }
     },
+    "Edit the note" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Editar la nota"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メモを編集"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메모 편집"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "编辑备忘录"
+          }
+        }
+      }
+    },
+    "Edit the title" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Editar el título"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "タイトルを編集"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "제목 편집"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "编辑标题"
+          }
+        }
+      }
+    },
     "Every app, A to Z" : {
       "localizations" : {
         "es" : {
@@ -2051,6 +2135,34 @@
         }
       }
     },
+    "Find a note" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buscar una nota"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メモを探す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메모 찾기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "查找备忘录"
+          }
+        }
+      }
+    },
     "Find something to watch" : {
       "localizations" : {
         "es" : {
@@ -2103,6 +2215,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "查找你读过的内容"
+          }
+        }
+      }
+    },
+    "Finds what you wrote, said and pinned." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encuentra lo que escribiste, dijiste y fijaste."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "書いたこと、話したこと、ピンしたものを探します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "쓰고, 말하고, 고정한 것을 찾습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "查找你写下、说过和置顶的内容。"
           }
         }
       }
@@ -3027,6 +3167,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "还没有提醒。"
+          }
+        }
+      }
+    },
+    "No note matches." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna nota coincide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一致するメモはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일치하는 메모가 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有匹配的备忘录。"
           }
         }
       }
@@ -75776,6 +75944,34 @@
         }
       }
     },
+    "Nothing recorded yet. Hold New to record." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay grabaciones. Mantén pulsado Nuevo para grabar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ録音はありません。「新規」を長押しして録音します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 녹음이 없습니다. 새로 만들기를 길게 눌러 녹음하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚无录音。按住“新建”即可录音。"
+          }
+        }
+      }
+    },
     "Nothing with %@ yet." : {
       "localizations" : {
         "es" : {
@@ -75800,6 +75996,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "还没有与 %@ 相关的内容。"
+          }
+        }
+      }
+    },
+    "Nothing written yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay nada escrito."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ何も書かれていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 작성한 내용이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未写下任何内容。"
           }
         }
       }
@@ -76024,6 +76248,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已置顶到笔记"
+          }
+        }
+      }
+    },
+    "Pinned · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fijado · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ピン留め · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "고정됨 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已置顶 · %@"
           }
         }
       }
@@ -76444,6 +76696,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "退出演示后即可搜索。"
+          }
+        }
+      }
+    },
+    "Search your notes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca en tus notas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メモを検索"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메모 검색"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索你的备忘录"
           }
         }
       }
@@ -77424,6 +77704,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "涨或跌，每天最多一次"
+          }
+        }
+      }
+    },
+    "Voice notes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Notas de voz"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ボイスメモ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "음성 메모"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "语音备忘录"
           }
         }
       }

@@ -154,9 +154,9 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 
 ### 13. Notes and voice
 - Notes is a room in You, reached through one always-drawn door. Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
-- Tiles: All · Folders · Pinned · New, A–Z (§995 over §980). A thing sits in at most one folder. A folder opens in place (§980).
+- Tiles: All · Folders · New · Search (§1099 over §995, §980). The title row's pill picks All notes · Notes · Voice notes (§1099). A thing sits in at most one folder. A folder opens in place (§980).
 - Pinned leads All, and the rest stand under "Notes" (§985). The long press holds five actions: Pin, Move, Lock, Share, Delete (§983).
-- A written note of yours is a page with Share · Lock · Edit at its foot and no dial. Writing is a page: title over words, four tools on a glass capsule over the keyboard (§983). Edit reopens the note sheet (§981).
+- A note of yours is ONE page: a tap opens it read, its items tick, a tap on the words types; a voice note's page is its player over its words (§1099, superseding §983's three keys). Writing is title over words, four tools on a glass capsule over the keyboard (§983). A dash makes a bullet, Return continues it (§1099). A list in the box ticks in place (§1099).
 - Deleting asks for confirmation, then archives on this device for 30 days in Recently deleted (§985).
 - "Voice" is not a source, seat or room. Every voice note is yours, with its audio only in `Thing.audio` (§972). Dictation is Apple's keyboard mic (§971). The voice player shows length, playhead, three speeds and lit words (§987).
 - A note holds at most one picture. A sketch is that picture (§974, §1023). A lock seals the words (§982).
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1227 of 1286 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1228 of 1287 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1305,7 +1305,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §966 — Becoming the pick is a crossfade, in the template
 - §967 — What this app reaches and what it reached are ONE pushed screen, filtered by the dock's categories
 - §968 — Robinhood is read on Alchemy beside Zerion, and a DEX-only token is priced off a pool deep enough to sell into
-- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (part superseded by §972, §975, §981, §995)
+- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (part superseded by §972, §975, §981, §995, §1099)
 - §970 — A note can be spoken: the sheet's wide key carries the one verb, and holding New lands speaking (part superseded by §971)
 - §971 — Dictation is Apple's, and the note sheet's mic KEEPS A VOICE NOTE (amended by §972, §987)
 - §972 — "Voice" is retired as a source and a room, and the voice note is kept whole (part superseded by §980)
@@ -1320,18 +1320,18 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §980 — Notes gets folders, and the Folders tile comes back with them (part superseded by §995)
 - §981 — A note of yours edits, and its sheet drops "That day"
 - §982 — The note takes Apple Notes' five missing pieces: a checklist you tick, a scan, a link to anything you keep, a Quick N… (part superseded by §1023)
-- §983 — Notes, toward Apple: the room previews, the long press holds five, a note of yours is a page with three keys, and wri… (amended by §985)
+- §983 — Notes, toward Apple: the room previews, the long press holds five, a note of yours is a page with three keys, and wri… (amended by §985; part superseded by §1099)
 - §984 — Notes, end to end: six defects the flow walked into
 - §985 — The rest of the Notes room stands under "Notes", and a deleted note waits thirty days in Recently deleted
 - §986 — New folder starts where the folders do
-- §987 — The voice note plays like a player: a length on the row, a playhead you can tap, three speeds, and the words lit as t…
+- §987 — The voice note plays like a player: a length on the row, a playhead you can tap, three speeds, and the words lit as t… (amended by §1099)
 - §988 — Logos: watch a public LEZ account, keyless, forward from the moment you watch (amended by §989, §1034, §1035, §1084)
 - §989 — Logos: your own node, read at the address you give it (amended by §1016)
 - §990 — No suggested addresses on the devnets (amended by §1089)
 - §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016, §1084)
 - §993 — The Reminders room holds its lead when empty, and scopes like Apple's lists (amended by §997)
 - §994 — The Calendar room is a month grid over Today · Week · Month · New (amended by §999)
-- §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039, §1050d)
+- §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039, §1050d; part superseded by §1099)
 - §997 — The Reminders room drops Scheduled, and its tiles never rise
 - §998 — A connected Calendar or Reminders keeps its room with nothing in it (amended by §1036)
 - §999 — The Calendar room's tiles read in time, and its month title stands at the day dividers' size (part superseded by §1006)
@@ -1448,6 +1448,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1096 — Solana, past §86: a cursor, v1 transactions, SPL grants, a measured venue table, and `.sol` names back
 - §1097 — A Bitcoin wallet, not an address: watch an xpub, and the facts only a wallet can state — dust, reuse, a send that waits
 - §1098 — Lightning, over Nostr Wallet Connect: a seat any Lightning wallet fills, refused if it can pay
+- §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list…
 
 ## Dead rulings → what replaced them (generated)
 

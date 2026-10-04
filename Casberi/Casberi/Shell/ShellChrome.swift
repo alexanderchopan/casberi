@@ -467,6 +467,11 @@ final class ShellChrome {
     /// while a folder is open is filed in it.
     var notesFolder: String? = nil
 
+    /// Which kind the Notes room's pill picked (prd §1099): the notes you
+    /// wrote, the ones you spoke, or nil for everything. Cleared on every
+    /// source change with the tiles. New made under Voice notes records.
+    var notesKind: NotesKind? = nil
+
     /// Which of the Tokens room's tiles is standing — the Watchlist, or one
     /// catalogue category's company pack (`CompanyPacks`). Cleared on every
     /// source change.
@@ -490,9 +495,14 @@ final class ShellChrome {
     /// consumed on read by the sheet like `noteVoiceOnOpen`, so the next New
     /// arrives empty.
     var noteToEdit: UUID? = nil
-    func editNote(_ id: UUID) {
+    /// Whether that note opens TYPING (the long press's Edit) or READ (a
+    /// row's tap, prd §1099: the note is its page, and the keyboard waits
+    /// for a tap on the words). Consumed on read, back to typing.
+    var noteFocusOnOpen = true
+    func editNote(_ id: UUID, typing: Bool = true) {
         noteVoiceOnOpen = false
         noteToEdit = id
+        noteFocusOnOpen = typing
         newNote += 1
     }
 

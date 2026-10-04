@@ -46,6 +46,8 @@ import SwiftUI
 /// what a post is drifts (§396a).
 struct FeedLedeCard: View {
     let thing: Thing
+    /// The tick on a list in the Notes box (prd §1099) is a write.
+    @Environment(\.modelContext) private var modelContext
     /// The Mac keyboard walk's selection. Taken as a parameter rather than
     /// drawn behind the row (`selectionWash`) because this card paints its own
     /// opaque surface — a wash underneath it would be invisible. Only ever
@@ -746,13 +748,83 @@ struct FeedLedeCard: View {
                 .dsText(.heading17)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
-            Text(verbatim: prose)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .multilineTextAlignment(.leading)
-                .lineLimit(Self.proseLines)
-                .fixedSize(horizontal: false, vertical: true)
+            if Pinboard.isNote(thing), NoteChecklist.progress(thing.content) != nil {
+                tickableProse(prose)
+            } else {
+                Text(verbatim: prose)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(Self.proseLines)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+    }
+
+    /// A LIST IN THE BOX TICKS (prd §1099): a note of yours whose words hold
+    /// a checklist draws each item with a circle you tick right here — the
+    /// one write a kept note always took (§982), now one tap from the room.
+    /// The rest of the box still opens the note's page. `prose` is
+    /// `NotePreview.body`: the lines under the title, items as `○ `/`◉ `; a
+    /// list whose first item became the title shows one item fewer, so the
+    /// ordinal is offset by what the box does not show.
+    @ViewBuilder
+    private func tickableProse(_ prose: String) -> some View {
+        let lines = Array(prose.components(separatedBy: "\n").prefix(Self.proseLines))
+        let shownItems = prose.components(separatedBy: "\n").filter(Self.isItemLine).count
+        let offset = max(0, (NoteChecklist.progress(thing.content)?.total ?? 0) - shownItems)
+        // The rung's own leading between lines (prd §1099), as the prose
+        // beside it draws them.
+        VStack(alignment: .leading, spacing: DSTextStyle.body17.lineSpacing) {
+            ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                if Self.isItemLine(line) {
+                    let ordinal = offset + lines[..<index].filter(Self.isItemLine).count
+                    let done = line.hasPrefix(NoteChecklist.doneEditorMark)
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Button {
+                            tick(ordinal)
+                        } label: {
+                            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                                .dsSymbolSwap(done)
+                                .dsGlyph(.body, weight: .regular)
+                                .foregroundStyle(done ? DS.tint : DS.textSecondary)
+                                .frame(width: 22, height: 22)
+                                // 44pt for the hand, 22 in the line.
+                                .dsTapTarget(Circle())
+                                .padding(-11)
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel(Text(verbatim: String(line.dropFirst(NoteChecklist.editorMark.count))))
+                        .accessibilityValue(done ? Text("Done") : Text("Not done"))
+                        Text(verbatim: String(line.dropFirst(NoteChecklist.editorMark.count)))
+                            .dsText(.body17)
+                            .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
+                            .strikethrough(done, color: DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                } else {
+                    Text(verbatim: line)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    private static func isItemLine(_ line: String) -> Bool {
+        line.hasPrefix(NoteChecklist.editorMark) || line.hasPrefix(NoteChecklist.doneEditorMark)
+    }
+
+    /// Flip one item on the note and keep it: only the character inside its
+    /// brackets changes (`NoteChecklist.toggled`).
+    private func tick(_ ordinal: Int) {
+        guard thing.isLive, Pinboard.isNote(thing) else { return }
+        DSHaptic.selection()
+        withAnimation(DS.Motion.standard) {
+            thing.content = NoteChecklist.toggled(thing.content, ordinal: ordinal)
+        }
+        modelContext.saveHonestly()
     }
 
     /// The box is 284 on a phone: the eyebrow and its gap (~46), the title

@@ -299,18 +299,20 @@ extension FeedScreen {
         // its own.
         if Pinboard.isPinnedRoom(source) {
             switch chrome.notesScope {
-            case .pinned:
-                // `DS.secondaryGesture`, not a literal (prd §607): pinning
-                // lives in a `contextMenu`, which is a right-click under a
-                // pointer, so the Mac was told to perform a gesture it does
-                // not have.
-                return String(localized: "Nothing pinned. \(DS.secondaryGesture) anything to pin it.")
             case .folders:
                 return chrome.notesFolder == nil
                     ? String(localized: "\(DS.secondaryGesture) anything in All to move it into a folder.")
                     : String(localized: "\(DS.secondaryGesture) anything in All to move it here.")
-            case .all, .new:
-                return String(localized: "Write or record a note, or \(DS.secondaryGesture) anything to pin it here.")
+            case .all, .new, .search:
+                // A pick in the pill (prd §1099) says which kind is missing.
+                // `DS.secondaryGesture`, not a literal (prd §607): pinning
+                // lives in a `contextMenu`, a right-click under a pointer.
+                switch chrome.notesKind {
+                case .written: return String(localized: "Nothing written yet.")
+                case .voice:   return String(localized: "Nothing recorded yet. Hold New to record.")
+                case nil:
+                    return String(localized: "Write or record a note, or \(DS.secondaryGesture) anything to pin it here.")
+                }
             }
         }
         // A merged room narrowed to one app names the app, not the room.

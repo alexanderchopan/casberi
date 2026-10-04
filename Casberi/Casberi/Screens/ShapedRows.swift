@@ -782,15 +782,13 @@ struct BandRow: View {
     /// not name the network, so those rows keep the name.
     /// What a note of yours says under its title (prd §983).
     private var previewLine: Text? {
+        // A voice note's line leads with its length, then the words after
+        // its title (prd §987, §1099): "0:42 · then the courtyards".
         let words = NotePreview.line(title: thing.title, content: thing.content,
                                      isVoice: thing.kind == .voice,
                                      isLocked: NoteLock.isLocked(thing),
-                                     from: Highlight.originTitle(of: thing))
-        // A voice note's line carries its length after its kind (prd §987):
-        // "Voice note · 0:42".
-        if let words, let voiceLength {
-            return Text(verbatim: "\(words) · \(voiceLength)")
-        }
+                                     from: Highlight.originTitle(of: thing),
+                                     length: voiceLength)
         return words.map { Text(verbatim: $0) }
     }
 

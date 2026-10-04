@@ -136,13 +136,54 @@ func pv(_ t: String, _ c: String, voice: Bool = false, locked: Bool = false) -> 
     NotePreview.line(title: t, content: c, isVoice: voice, isLocked: locked)
 }
 check("a locked note says only that", pv("Locked note", "", locked: true) == "Locked")
-check("a voice note says it is one", pv("Idea", "the idea", voice: true) == "Voice note")
+// A voice note's line (prd §1099): its length, then the words past its
+// title — "Voice note" only when it has neither.
+func pvv(_ t: String, _ c: String, _ len: String?) -> String? {
+    NotePreview.line(title: t, content: c, isVoice: true, isLocked: false, length: len)
+}
+check("a voice note with no length and nothing past its title says it is one",
+      pvv("the idea", "the idea", nil) == "Voice note")
+check("a voice note leads with its length", pvv("the idea", "the idea", "0:42") == "0:42")
+check("a cut title has nothing under it but the length",
+      pvv(String(repeating: "a", count: 80) + "…", String(repeating: "a", count: 95), "1:05") == "1:05")
+check("a corrected transcript reads its next line",
+      pvv("Shop", "Shop\noat milk", "0:11") == "0:11 · oat milk")
 check("a list says how far and what is next",
       pv("Groceries", "Groceries\n- [x] milk\n- [ ] bread\n- [ ] eggs") == "1 of 3 done · bread")
 check("a finished list says it is done", pv("G", "- [x] a\n- [x] b") == "2 of 2 done")
 check("the title is never printed twice", pv("Trip", "Trip\nPack the charger") == "Pack the charger")
 check("a one-line note has no second line", pv("Just this", "Just this") == nil)
 check("a link reads as its thing", pv("Plan", "Plan\nFor [[Book club]] Friday") == "For Book club Friday")
+
+print("Bullets and numbers (prd §1099)")
+let b = NoteChecklist.bulletMark
+check("a dash and a space at a line's start become a bullet",
+      NoteChecklist.bulleted(old: "Trip\n-", new: "Trip\n- ") == "Trip\n\(b)")
+check("a star does too", NoteChecklist.bulleted(old: "Trip\n*", new: "Trip\n* ") == "Trip\n\(b)")
+check("a dash inside words is left alone", NoteChecklist.bulleted(old: "a -", new: "a - ") == nil)
+check("Return after a bullet starts the next",
+      NoteChecklist.continued(old: "\(b)milk", new: "\(b)milk\n") == "\(b)milk\n\(b)")
+check("Return on an empty bullet ends the list",
+      NoteChecklist.continued(old: "\(b)milk\n\(b)", new: "\(b)milk\n\(b)\n") == "\(b)milk\n")
+check("Return after a numbered line takes the next number",
+      NoteChecklist.continued(old: "1. call", new: "1. call\n") == "1. call\n2. ")
+check("kept, a bullet is markdown's dash", NoteChecklist.stored("T\n\(b)milk\n\(b)") == "T\n- milk")
+check("and opens as a bullet again", NoteChecklist.editable("T\n- milk") == "T\n\(b)milk")
+check("a task is never a bullet", NoteChecklist.bullet("- [ ] milk") == nil)
+check("a bullet's first line names the note without its dot", NoteChecklist.plain("- milk") == "milk")
+check("the cover keeps a bullet's dot",
+      NotePreview.body(title: "T", content: "T\n- milk") == "\(b)milk")
+
+print("The page's tick (prd §1099)")
+check("the page ticks the second item and nothing else",
+      NoteChecklist.toggledEditor("T\n\(o)a\nx\n\(o)b", ordinal: 1) == "T\n\(o)a\nx\n\(d)b")
+check("and unticks it", NoteChecklist.toggledEditor("\(d)b", ordinal: 0) == "\(o)b")
+
+print("A bare address reads as its site (prd §1099)")
+check("the scheme and slashes go, the page's last part stays",
+      NotePreview.readableLinks("Start at https://en.wikipedia.org/wiki/Bauhaus_Archive.")
+          == "Start at en.wikipedia.org › Bauhaus Archive.")
+check("a site with no path is its site", NotePreview.readableLinks("see https://www.apple.com") == "see apple.com")
 
 print("The room's cover reads a note of yours")
 check("the cover draws the list as circles, never the title or a box",
@@ -182,6 +223,9 @@ mutate "kept circles stay circles" "$LIST" 's/lead \+ \(done \? doneMark : openM
 mutate "Return on an empty item starts another" "$LIST" 's/if words\.isEmpty \{/if false {/'
 mutate "items are never numbered past the first" "$SHEET" 's/ordinal \+= 1\n/\n/'
 mutate "an edit drops the ticks" "$LIST" 's/return lead \+ \(item\.done \? doneEditorMark : editorMark\)/return lead + editorMark/'
+mutate "a bullet keeps as a dot" "$LIST" 's/lead \+ keptBullet \+ words/lead + bulletMark + words/'
+mutate "a numbered list repeats its number" "$LIST" 's/item\.number \+ 1/item.number/'
+mutate "the page ticks the first item, whatever was tapped" "$LIST" 's/if seen == ordinal \{\n                lines\[i\] = lead/if true {\n                lines[i] = lead/'
 mutate "the tasks flag is ignored" "$SHEET" 's/if tasks \|\| takesMarkers, let item/if takesMarkers, let item/'
 
 [[ $fail -eq 0 ]] || { echo "note-checklist-selftest: ✗ mutation check failed"; exit 1; }

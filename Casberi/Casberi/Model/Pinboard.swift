@@ -115,12 +115,16 @@ enum Pinboard {
     }
 }
 
-/// The Notes room's tiles (prd §969, §972, §980): All · Pinned · Folders ·
-/// New. All is
-/// lit by default and first, as in every room; New is LAST and never lights —
-/// it is a verb in the row, drawn in tint, and it raises the note sheet (the
-/// user weighed New first and All first: "notes should be default", and the
-/// default is whichever tile is lit, not whichever is first).
+/// The Notes room's tiles (prd §969, §972, §980, §1099): All · Folders ·
+/// New · Search. All is lit by default and first, as in every room; New and
+/// Search are VERBS — they never light, and they stand last, A–Z among
+/// themselves (§995, §1039). New raises the note page; Search raises the find
+/// tray over your notes.
+///
+/// **Pinned left the row (prd §1099).** §983 put Pinned at the head of All
+/// under its own name, so the tile showed a list All already led with — the
+/// slot went to Search, the one verb a notes app is for that this room did
+/// not have (Reading, Social and Markets got theirs in §1081–§1086).
 ///
 /// **Folders is back, with folders behind it (prd §980).** §972 deleted the
 /// tile because §969 drew it before the feature: it lit and showed the same
@@ -131,16 +135,16 @@ enum Pinboard {
 /// Foundation-only, like every scope enum, so a harness can compile it
 /// whole; the glyphs are `ScopeTileGlyphs.swift`'s.
 enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, pinned, folders, new
+    case all, folders, new, search
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
         case .all:     return String(localized: "All")
-        case .pinned:  return String(localized: "Pinned")
         case .folders: return String(localized: "Folders")
         case .new:     return String(localized: "New")
+        case .search:  return String(localized: "Search")
         }
     }
 
@@ -148,12 +152,52 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .all:     return String(localized: "Your notes and everything you pinned")
-        case .pinned:  return String(localized: "What you pinned")
         case .folders: return String(localized: "What you filed")
         case .new:     return String(localized: "Write or record a note")
+        case .search:  return String(localized: "Find a note")
         }
     }
 
-    /// The tiles that SCOPE the list; New is a verb and never stands.
-    var isVerb: Bool { self == .new }
+    /// The tiles that SCOPE the list; New and Search are verbs and never
+    /// stand.
+    var isVerb: Bool { self == .new || self == .search }
+}
+
+/// WHICH NOTES THE ROOM SHOWS, picked from the title row's pill (prd §1099):
+/// the notes you wrote, or the ones you spoke. Apple ships Voice Memos beside
+/// Notes as its own app, and the pill is where every room picks between the
+/// apps in it (§1066) — so the room's two kinds stand there, and a folder,
+/// which is a way to look at your notes rather than an app, keeps its tile.
+///
+/// nil is everything — both kinds and every pin. A pick narrows to notes of
+/// yours of that kind; a pinned row from a seat is in neither.
+enum NotesKind: String, CaseIterable, Identifiable, Hashable, Sendable {
+    case written, voice
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .written: return String(localized: "Notes")
+        case .voice:   return String(localized: "Voice notes")
+        }
+    }
+
+    /// The mark the pill draws for it — the row's own (`ThingKind.symbol`).
+    var symbol: String {
+        switch self {
+        case .written: return "note.text"
+        case .voice:   return "waveform"
+        }
+    }
+
+    /// Whether a thing of this kind, from this source, stands under the pick.
+    static func allows(_ pick: NotesKind?, source: String, kind: String) -> Bool {
+        guard let pick else { return true }
+        guard source == "You" else { return false }
+        switch pick {
+        case .written: return kind == "note"
+        case .voice:   return kind == "voice"
+        }
+    }
 }

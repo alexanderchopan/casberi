@@ -24,6 +24,9 @@ struct DSScopeMenu: View {
     /// rail's square-or-circle carried and a menu of names would otherwise
     /// drop. Off in the wallet family, whose `sub` is a tooltip.
     var subtitles: Bool = false
+    /// The pill's word while everything shows: "Accounts" (§1066), or the
+    /// room's own when what it picks between are not accounts (Notes, §1099).
+    var allLabel: String = String(localized: "Accounts")
     let onPick: (String?) -> Void
     @State private var open = false
     /// A row tapped, applied once the list has closed.
@@ -90,7 +93,9 @@ struct DSScopeMenu: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 Group {
-                    if !slot.id.isEmpty, let face = slot.faces.first {
+                    if !slot.id.isEmpty, let symbol = slot.symbol {
+                        BridgeIcon(name: "", size: Self.faceSize, circular: true, symbol: symbol)
+                    } else if !slot.id.isEmpty, let face = slot.faces.first {
                         MenuFace(face: face)
                     } else {
                         Color.clear
@@ -136,7 +141,7 @@ struct DSScopeMenu: View {
     /// caption rather than a control.
     private var pillLabel: some View {
         HStack(spacing: DS.Space.s1) {
-            Text(showing.id.isEmpty ? String(localized: "Accounts") : showing.name)
+            Text(showing.id.isEmpty ? allLabel : showing.name)
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)

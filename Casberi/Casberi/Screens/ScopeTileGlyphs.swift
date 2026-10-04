@@ -57,7 +57,6 @@ enum ScopeTileGlyph {
     /// Apple's compose, was refused by the user for an agent's Chat tile
     /// (2026-09-19) and is not re-proposed here either.)
     /// Folders is the bare `folder`, back with folders behind it (prd §980).
-    static let pinned       = "pin"
     static let folders      = "folder"
     static let new          = "plus"
     /// The Frames room's three VERB tiles (prd §1039) — the glyphs their rows
@@ -136,9 +135,9 @@ extension NotesScope: DSTileScope {
     var glyph: String {
         switch self {
         case .all:     return ScopeTileGlyph.all
-        case .pinned:  return ScopeTileGlyph.pinned
         case .folders: return ScopeTileGlyph.folders
         case .new:     return ScopeTileGlyph.new
+        case .search:  return ScopeTileGlyph.search
         }
     }
 }

@@ -40,6 +40,8 @@ extension FeedScreen {
     var titleAccountsPill: some View {
         if mergedMenuDraws {
             mergedAccountsPill
+        } else if Pinboard.isPinnedRoom(source) {
+            notesKindPill
         } else if let rail = chrome.accountRail, rail.slots.count > 1,
                   rail.source == source || source == RoomAccounts.testnetsRoom {
             let showing = rail.slots.first { $0.isShowing(rail.scope) } ?? rail.slots[0]

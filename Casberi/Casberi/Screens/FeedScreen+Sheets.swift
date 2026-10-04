@@ -82,6 +82,8 @@ extension FeedScreen {
         case watchAdd
         /// Reading's Follow or Search (prd §1085).
         case readingFind(ReadingScope)
+        /// The Notes room's Search (prd §1099).
+        case notesSearch
         /// Social's Follow (prd §1086).
         case socialFollow
         /// The Wallet's Follow (prd §1090).
@@ -114,6 +116,7 @@ extension FeedScreen {
             case .socialFaces: "socialFaces"
             case .watchAdd: "watchAdd"
             case .readingFind(let scope): "readingFind:\(scope.rawValue)"
+            case .notesSearch: "notesSearch"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
             case .company(let c): "company:\(c.name)"
@@ -271,6 +274,16 @@ extension FeedScreen {
             ReadingFindSheet(mode: scope == .search ? .search : .follow) { thing in
                 // The find tray closes before the thing's sheet rises: one
                 // sheet at a time, never one raised from inside another (§872).
+                feedSheet = nil
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    openThing(thing)
+                }
+            }
+        case .notesSearch:
+            NotesSearchSheet { thing in
+                // One sheet at a time (§872): the tray closes, then the
+                // note's page rises.
                 feedSheet = nil
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(450))
@@ -535,9 +548,23 @@ extension FeedScreen {
     /// exists (iPhone, an iPad mini in portrait, Slide Over), and the sheet
     /// path below is then exactly the one this app has always taken.
     func openThing(_ thing: Thing) {
+        // A NOTE OF YOURS IS ITS PAGE (prd §1099): it opens where it is
+        // written, read until a tap on the words, never on a reading sheet
+        // whose Edit then opened the page. A locked note keeps the sheet's
+        // Face ID door (§982), and a highlight its "from <the page> ›" (§1020).
+        if Self.opensAsPage(thing) {
+            chrome.editNote(thing.id, typing: false)
+            return
+        }
         let walk = rowWalk
         guard !detail.present(thing, walk: walk) else { return }
         feedSheet = .thing(thing, walk: walk)
+    }
+
+    /// Whether a tap opens this thing on the note page (prd §1099).
+    static func opensAsPage(_ thing: Thing) -> Bool {
+        thing.isLive && Pinboard.isNote(thing)
+            && !NoteLock.isLocked(thing) && !Highlight.isHighlight(thing)
     }
 
     /// The scope a row tap carries (prd §645 pass 3) — the room and the kind

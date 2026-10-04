@@ -818,6 +818,7 @@ struct FeedScreen: View {
     /// `-marketsScope` fires once per launch, not once per page build.
     @MainActor static var marketsProbed = false
     @MainActor static var readingProbed = false
+    @MainActor static var notesProbed = false
     @MainActor static var socialProbed = false
     @MainActor static var walletFollowProbed = false
     #endif

@@ -29,6 +29,48 @@ enum NoteChecklist {
     static let doneEditorMark = "\u{25C9} "
     static let openMark = "- [ ] "
     static let doneMark = "- [x] "
+    /// A bullet in the field (prd §1099): `- ` or `* ` typed at the start of
+    /// a line becomes `• `, as Apple Notes turns a dash into a list. The note
+    /// keeps it as markdown's `- `.
+    static let bulletMark = "\u{2022} "
+    static let keptBullet = "- "
+
+    // MARK: - Bullets and numbers (prd §1099)
+
+    /// A line's bullet words, or nil when it is not a bullet — in either
+    /// spelling (`• ` in the field, `- ` / `* ` kept), never a task.
+    static func bullet(_ line: String) -> String? {
+        let trimmed = line.drop(while: { $0 == " " })
+        guard task(line) == nil else { return nil }
+        for mark in [bulletMark, "- ", "* "] where trimmed.hasPrefix(mark) {
+            return String(trimmed.dropFirst(mark.count))
+        }
+        return nil
+    }
+
+    /// A numbered line's number and words ("2. eggs" → 2, "eggs"), or nil.
+    static func numbered(_ line: String) -> (number: Int, text: String)? {
+        let trimmed = line.drop(while: { $0 == " " })
+        let digits = trimmed.prefix(while: \.isNumber)
+        guard !digits.isEmpty, digits.count <= 3, let n = Int(digits) else { return nil }
+        let rest = trimmed.dropFirst(digits.count)
+        guard rest.hasPrefix(". ") else { return nil }
+        return (n, String(rest.dropFirst(2)))
+    }
+
+    /// The space after a dash, typed at the start of the LAST line (where the
+    /// writing happens — a `TextField` does not say where its cursor is):
+    /// `- ` or `* ` becomes `• `. Nil when nothing changes.
+    static func bulleted(old: String, new: String) -> String? {
+        guard new.count == old.count + 1, new.hasPrefix(old), new.hasSuffix(" ") else { return nil }
+        var lines = new.components(separatedBy: "\n")
+        let last = lines[lines.count - 1]
+        let lead = last.prefix(while: { $0 == " " })
+        let body = last.dropFirst(lead.count)
+        guard body == "- " || body == "* " else { return nil }
+        lines[lines.count - 1] = lead + bulletMark
+        return lines.joined(separator: "\n")
+    }
 
     // MARK: - Reading a kept note
 
@@ -73,6 +115,7 @@ enum NoteChecklist {
     /// item makes, so a row never reads "- [ ] milk".
     static func plain(_ line: String) -> String {
         if let t = task(line) { return t.text }
+        if let words = bullet(line) { return words.trimmingCharacters(in: .whitespaces) }
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         if trimmed.hasPrefix(editorMark) || trimmed.hasPrefix(doneEditorMark) {
             return String(trimmed.dropFirst(editorMark.count)).trimmingCharacters(in: .whitespaces)
@@ -89,6 +132,12 @@ enum NoteChecklist {
         draft.components(separatedBy: "\n").compactMap { line -> String? in
             let lead = line.prefix(while: { $0 == " " })
             let body = line.dropFirst(lead.count)
+            // A bullet keeps as markdown's dash (prd §1099); an empty one is
+            // dropped, like an empty item.
+            if body.hasPrefix(bulletMark) || body == "\u{2022}" {
+                let words = body.dropFirst(1).trimmingCharacters(in: .whitespaces)
+                return words.isEmpty ? nil : lead + keptBullet + words
+            }
             let done: Bool
             if body.hasPrefix(editorMark) || body == "\u{25CB}" { done = false }
             else if body.hasPrefix(doneEditorMark) || body == "\u{25C9}" { done = true }
@@ -104,6 +153,9 @@ enum NoteChecklist {
     /// while it is changed and keeps its ticks when it is kept again.
     static func editable(_ text: String) -> String {
         text.components(separatedBy: "\n").map { line in
+            if let words = bullet(line) {
+                return line.prefix(while: { $0 == " " }) + bulletMark + words
+            }
             guard let item = task(line) else { return line }
             let lead = line.prefix(while: { $0 == " " })
             return lead + (item.done ? doneEditorMark : editorMark) + item.text
@@ -130,6 +182,28 @@ enum NoteChecklist {
         return draft + "\n" + editorMark
     }
 
+    /// The page's tick (prd §1099): a note opened on its page draws its items
+    /// as circles you tick before you type, and the tick flips the
+    /// `ordinal`-th item of the DRAFT (counted from 0) between `○ ` and `◉ `,
+    /// every other character left where it was. The draft is kept the way
+    /// every edit is (`stored`), so the tick lands as `- [x]`.
+    static func toggledEditor(_ draft: String, ordinal: Int) -> String {
+        var lines = draft.components(separatedBy: "\n")
+        var seen = 0
+        for i in lines.indices {
+            let lead = lines[i].prefix(while: { $0 == " " })
+            let body = lines[i].dropFirst(lead.count)
+            let open = body.hasPrefix(editorMark)
+            guard open || body.hasPrefix(doneEditorMark) else { continue }
+            if seen == ordinal {
+                lines[i] = lead + (open ? doneEditorMark : editorMark) + body.dropFirst(editorMark.count)
+                return lines.joined(separator: "\n")
+            }
+            seen += 1
+        }
+        return draft
+    }
+
     /// Whether the last line is an item — the key's lit state.
     static func endsInItem(_ draft: String) -> Bool {
         let last = draft.components(separatedBy: "\n").last ?? ""
@@ -144,6 +218,30 @@ enum NoteChecklist {
     static func continued(old: String, new: String) -> String? {
         guard new.count == old.count + 1, new.hasSuffix("\n"), new.hasPrefix(old) else { return nil }
         let lines = old.components(separatedBy: "\n")
+        // A bullet or a numbered line continues the same way (prd §1099):
+        // the next line takes the next mark, and Return on an empty one ends
+        // the list.
+        if let last = lines.last {
+            let lead = String(last.prefix(while: { $0 == " " }))
+            let body = last.dropFirst(lead.count)
+            var nextMark: String?
+            var words: String?
+            if body.hasPrefix(bulletMark) {
+                nextMark = bulletMark
+                words = String(body.dropFirst(bulletMark.count))
+            } else if let item = numbered(last) {
+                nextMark = "\(item.number + 1). "
+                words = item.text
+            }
+            if let nextMark, let words {
+                if words.trimmingCharacters(in: .whitespaces).isEmpty {
+                    var kept = lines
+                    kept[kept.count - 1] = ""
+                    return kept.joined(separator: "\n")
+                }
+                return new + lead + nextMark
+            }
+        }
         guard let last = lines.last,
               last.hasPrefix(editorMark) || last.hasPrefix(doneEditorMark) else { return nil }
         let words = last.dropFirst(editorMark.count).trimmingCharacters(in: .whitespaces)

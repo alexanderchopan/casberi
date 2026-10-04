@@ -1391,6 +1391,19 @@ private struct ChatBubbles: View {
 /// `FilesIngest.audio(for:)`). Everything below the transport — the decoded
 /// envelope, the transport itself, the session category — is the same for
 /// both, which is why this took a parameter rather than a second copy.
+/// A voice note's player on its own page (prd §1099): the play key, the
+/// waveform you tap to seek, the clock and the speed — the transcript is the
+/// page's words under it, which you can change, so the player draws none.
+struct NoteVoicePlayer: View {
+    let thing: Thing
+    var body: some View {
+        if thing.isLive {
+            VoiceContent(transcript: "", sourceRef: thing.sourceRef,
+                         audio: thing.audio, noteID: thing.id)
+        }
+    }
+}
+
 private struct VoiceContent: View {
     let transcript: String
     var sourceRef: String? = nil

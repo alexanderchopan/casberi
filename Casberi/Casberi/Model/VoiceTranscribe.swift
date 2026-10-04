@@ -109,6 +109,11 @@ enum VoiceTranscribe {
 @MainActor
 enum VoiceHeal {
 
+    /// The tag a voice note carries once its words were corrected by hand on
+    /// its page (prd §1099). A tag, because it syncs with the note and no
+    /// surface draws tags.
+    static let handEditedTag = "voice-edited"
+
     struct Outcome { var lengths = 0, timed = 0, rewritten = 0 }
 
     /// Your voice notes. `audio` is NOT read here: it is external storage,
@@ -194,6 +199,9 @@ enum VoiceHeal {
     /// `VoiceTimeline.replaces` says when (never for fewer than half as many
     /// words). The title follows only when it was made from the old words.
     static func rewrite(_ thing: Thing, with words: String) -> Bool {
+        // Words you corrected on the note's page (prd §1099) are yours: the
+        // recognizer never writes over them, on this device or another.
+        guard !thing.tags.contains(handEditedTag) else { return false }
         let old = thing.content
         guard VoiceTimeline.replaces(old, with: words) else { return false }
         let new = words.trimmingCharacters(in: .whitespacesAndNewlines)

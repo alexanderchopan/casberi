@@ -45,7 +45,7 @@ guard() {  # name, pattern, file
 echo "Drift guards"
 guard "Thing carries its folder"                    'var folder: String\? = nil'                "$THING"
 guard "CD_folder is in the checked-in schema"       'CD_folder +STRING'                         "$CKDB"
-guard "the tile row has a Folders case"             'case all, pinned, folders, new'            "$PINBOARD"
+guard "the tile row has a Folders case"             'case all, folders, new, search'            "$PINBOARD"
 guard "the Folders tile wears the folder glyph"     'case \.folders: return ScopeTileGlyph\.folders' "$GLYPHS"
 guard "the room scopes on the open folder"          'NoteFolderName\.key\(filed\) == NoteFolderName\.key\(open\)' "$FEED"
 guard "the folder list reads the store and the rows" 'NoteFolderStore\.shared\.list\(with: filed\)' "$FEED"

@@ -40,6 +40,19 @@ struct RootShell: View {
             || deepLinkPerson != nil || safeAsk != nil || !onboarded
     }
     @State private var deepLinkThing: Thing?
+    /// Open a thing by one of the shell's own doors — Spotlight,
+    /// `casberi://thing/<id>`, the pane handing one back, `-openThing`. A
+    /// NOTE OF YOURS opens on its page (prd §1099), as a row's tap does; the
+    /// rest in the shell's sheet. Decided once, here, so a note whose lock
+    /// comes off inside the sheet is not pulled out from under it.
+    private func openFromShell(_ thing: Thing?) {
+        guard let thing else { return }
+        if FeedScreen.opensAsPage(thing) {
+            chrome.editNote(thing.id, typing: false)
+        } else {
+            deepLinkThing = thing
+        }
+    }
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
     /// A paired app's ask (prd §913) — the first waiting one, mounted here
@@ -251,7 +264,7 @@ struct RootShell: View {
         }
         // The note sheet's two triggers (prd §969) — ONE modifier, because this
         // chain is at the type-checker's edge and two more tipped it over.
-        .modifier(NoteSheetHooks(noteOpen: $noteOpen, newNote: chrome.newNote))
+        .modifier(NoteSheetHooks(noteOpen: $noteOpen, newNote: chrome.newNote, chrome: chrome))
         .onChange(of: composerOpen) { _, open in
             if open {
                 OnDeviceModel.resetConversation()
@@ -866,7 +879,7 @@ struct RootShell: View {
                             return
                         }
                         let inPane = sceneState.detail.present(hit)
-                        if !inPane { deepLinkThing = hit }
+                        if !inPane { openFromShell(hit) }
                         NSLog("[Casberi] openThing: %@ (%@)", hit.title,
                               inPane ? "pane" : "sheet")
                     }
@@ -878,7 +891,7 @@ struct RootShell: View {
                         return
                     }
                     let inPane = sceneState.detail.present(match)
-                    if !inPane { deepLinkThing = match }
+                    if !inPane { openFromShell(match) }
                     NSLog("[Casberi] openThing: %@ (%@)", match.title,
                           inPane ? "pane" : "sheet")
                 }
@@ -1653,7 +1666,7 @@ struct RootShell: View {
             if let thing = all.first {
                 sceneState.route.path = []   // land on the record, not a stale store push
                 sceneState.filter.source = "All"
-                deepLinkThing = thing
+                openFromShell(thing)
             }
         }
         // Mac window resize (2026-07-28): the detail pane hands off a thing
@@ -1661,7 +1674,7 @@ struct RootShell: View {
         // `PadDetailSelection.displaced`.
         .onChange(of: sceneState.detail.displaced) { _, thing in
             guard let thing else { return }
-            deepLinkThing = thing
+            openFromShell(thing)
             sceneState.detail.displaced = nil
         }
         .sheet(item: $deepLinkThing) { thing in
@@ -2572,13 +2585,13 @@ struct RootShell: View {
             sceneState.filter.source = "All"
             let part = url.pathComponents.filter { $0 != "/" }.first
             if part == "latest" {
-                deepLinkThing = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                openFromShell((try? modelContext.fetch(FetchDescriptor<Thing>(
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-                )))?.first
+                )))?.first)
             } else if let part, let uuid = UUID(uuidString: part) {
-                deepLinkThing = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                openFromShell((try? modelContext.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.id == uuid }
-                )))?.first
+                )))?.first)
             }
         // casberi://frames/sponsor?r=<request> — somebody asked this phone to
         // pay for a Frames transaction (prd §728c). Lands in the Frames room

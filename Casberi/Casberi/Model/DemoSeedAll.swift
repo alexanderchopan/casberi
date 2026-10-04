@@ -4775,10 +4775,21 @@ enum DemoSeedAll {
             }
         }
         out += (0..<3).map { i in
-            // A voice note is a note of yours, under `You` (prd §972).
-            row(.voice, ["Idea for the onboarding", "Shopping list", "Note to self — call Nils"][i],
-                source: "You", ref: "demo:voice:\(i)", days: Double(1 + i * 4), hour: 8,
-                content: "0:2\(i) · transcribed on device")
+            // A voice note is a note of yours, under `You` (prd §972), titled
+            // by its first words and timed by its span, as a recording is
+            // (prd §987) — its words ARE its page since prd §1099, so a
+            // placeholder line ("transcribed on device") would be a status
+            // the demo made up.
+            let words = [
+                "Idea for the onboarding: open on the demo instead of the empty room, then let the first pin teach the long press.",
+                "Shopping list. Oat milk, lemons, the good coffee, and something for Sunday lunch.",
+                "Note to self, call Nils about the Lisbon flat before Friday.",
+            ][i]
+            return row(.voice, IngestSupport.titleLine(words),
+                       source: "You", ref: "demo:voice:\(i)", days: Double(1 + i * 4), hour: 8,
+                       content: words) { t in
+                t.endAt = t.capturedAt.addingTimeInterval(Double([24, 11, 6][i]))
+            }
         }
         return out
     }

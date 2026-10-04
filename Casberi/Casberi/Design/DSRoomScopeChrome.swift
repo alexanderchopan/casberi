@@ -178,6 +178,9 @@ struct DSAccountSlot: Identifiable, Equatable {
     /// The picker's section for this slot, nil for none. A devnet splits "On
     /// this phone" from "Watching"; a room that sets none draws a flat menu.
     var group: String? = nil
+    /// A glyph drawn on the note's mark in place of a face (prd §1099): the
+    /// Notes room's two kinds, which are not apps with a brand.
+    var symbol: String? = nil
 }
 
 extension DSAccountSlot {
