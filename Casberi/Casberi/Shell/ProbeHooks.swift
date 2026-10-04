@@ -3979,8 +3979,15 @@ enum ProbeHooks {
         // `-solNameProbe <name.sol>` resolves a Solana name through SNS and
         // NSLogs the address (or the honest miss) — the fastest check that the
         // resolver still answers, without touching the corpus.
+        // A bare address asks the reverse instead: its primary `.sol`,
+        // forward-verified (`SNS.primaryName`).
         Hook(key: "solNameProbe") { spec, _ in
-            Task {
+            Task { @MainActor in
+                if SNS.isAddress(spec) {
+                    let name = await SNS.primaryName(for: spec)
+                    NSLog("SOL name probe: %@ <- %@", spec, name ?? "NO PRIMARY NAME")
+                    return
+                }
                 let address = await SNS.resolve(spec)
                 NSLog("SOL name probe: %@ -> %@", spec, address ?? "UNRESOLVED")
             }
@@ -4154,22 +4161,41 @@ enum ProbeHooks {
         Hook(key: "solActivityProbe") { address, _ in
             Task { @MainActor in
                 let key = IngestSupport.alchemyKey
-                guard let moves = await SolanaActivity.moves(address: address, key: key) else {
+                // From scratch, never from the stored cursor: the cursor would
+                // hide the very window this probe exists to show. The cursor's
+                // own read is logged after, as a count.
+                guard let read = await SolanaActivity.moves(address: address, key: key, since: nil) else {
                     NSLog("SOL activity probe: FAILED — RPC unreachable")
                     return
                 }
+                let moves = read.moves
+                let cursor = SolanaActivity.cursor(for: address)
+                NSLog("SOL activity probe: newest=%@ cursor=%@", read.newest ?? "none", cursor ?? "none")
+                if let cursor {
+                    let since = await SolanaActivity.moves(address: address, key: key, since: cursor)
+                    NSLog("SOL activity probe: since cursor → %@",
+                          since.map { "\($0.moves.count) move(s), newest=\($0.newest ?? "none")" } ?? "FAILED")
+                }
                 let price = await SolanaActivity.solPrice(key: key)
                 let held = await WalletIngest.heldPricedContracts(addresses: [address])
-                let symbols = await SolanaActivity.symbols(for: moves.flatMap { $0.legs.map(\.mint) })
+                let grants = moves.flatMap(\.grants)
+                let symbols = await SolanaActivity.symbols(
+                    for: moves.flatMap { $0.legs.map(\.mint) + $0.grants.compactMap(\.mint) })
+                let standing = grants.isEmpty ? [] : await SolanaActivity.standing(grants, key: key)
                 NSLog("SOL activity probe: %d move(s) with legs (SOL $%@, held %@)",
                       moves.count, price.map { String(format: "%.2f", $0) } ?? "?",
                       held.map { "\($0.count)" } ?? "UNREAD")
                 for m in moves {
                     let news = SolanaActivity.isNews(m, heldPriced: held, solPrice: price)
                     let title = SolanaActivity.title(for: m, symbols: symbols)
-                    NSLog("  %@ signed=%@ legs=%d → %@",
+                    NSLog("  %@ signed=%@ legs=%d grants=%d venue=%@ → %@",
                           news ? "NEWS " : "drop ", m.signed ? "Y" : "n", m.legs.count,
-                          news ? (title ?? "UNNAMEABLE (dropped)") : "—")
+                          m.grants.count, m.venue ?? "-",
+                          news ? (title ?? (m.legs.isEmpty ? "(no transfer)" : "UNNAMEABLE (dropped)")) : "—")
+                    for g in m.grants {
+                        let live = standing.map { $0.contains(g.tokenAccount + ":" + g.delegate) ? "STANDING" : "spent/revoked" } ?? "UNREAD"
+                        NSLog("    grant %@ → %@", live, SolanaActivity.grantTitle(g, symbols: symbols))
+                    }
                 }
             }
         },

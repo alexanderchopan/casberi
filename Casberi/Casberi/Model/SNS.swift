@@ -1,8 +1,8 @@
 import Foundation
 
 /// Solana Name Service resolution (2026-07-16) — `ENS`'s sibling, pointed at
-/// Solana. `toly.sol` resolves through Bonfida's public SNS proxy: the same
-/// shape as every other read the app makes — public data, no key, no account,
+/// Solana. `toly.sol` resolves through web3.bio (Bonfida's proxy until it went
+/// dark, see `resolve`): the same shape as every other read the app makes — public data, no key, no account,
 /// nothing about the person leaves the device but the (public) name they're
 /// looking up.
 ///
@@ -36,20 +36,34 @@ enum SNS {
     }
 
     /// Resolves `toly.sol` to its Solana address, or nil (not a `.sol` name, no
-    /// record, or the resolver was unreachable). The proxy takes the domain
-    /// WITHOUT its `.sol` suffix and answers `{"s":"ok","result":"<address>"}`.
+    /// record, or the resolver was unreachable).
+    ///
+    /// **Through web3.bio since 2026-10-03.** Bonfida's public proxy
+    /// (`sns-sdk-proxy.bonfida.workers.dev`), which this read used from
+    /// 2026-07-16, answers every path with a Cloudflare 404 / `error code: 1042`
+    /// — measured on `/resolve/toly`, `/resolve/bonfida` and the reverse
+    /// routes — so every `.sol` name the app was asked for silently resolved
+    /// to nothing. web3.bio already answers ENS here and serves SNS in the same
+    /// shape (`toly.sol` → `86xC…2MMY`, measured), so the fix adds no provider:
+    /// it removes one.
+    @MainActor
     static func resolve(_ raw: String) async -> String? {
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard looksLikeName(name) else { return nil }
-        let domain = String(name.dropLast(4))
-        guard !domain.isEmpty, !domain.contains("."),   // subdomains aren't served by /resolve
-              let encoded = domain.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let root = await IngestSupport.getJSON(
-                "https://sns-sdk-proxy.bonfida.workers.dev/resolve/\(encoded)") as? [String: Any],
-              (root["s"] as? String) == "ok",
-              let address = root["result"] as? String,
-              isAddress(address)
+        guard looksLikeName(name), name.count > 4,
+              let address = await Web3Bio.resolve(name), isAddress(address)
         else { return nil }
         return address
+    }
+
+    /// The `.sol` name an address chose as its primary, or nil — forward-
+    /// verified (prd §599): the name must resolve back to this exact address
+    /// before it is believed, the bar every other reverse name here meets.
+    @MainActor
+    static func primaryName(for address: String) async -> String? {
+        guard isAddress(address) else { return nil }
+        for record in await Web3Bio.names(for: address) where record.platform == .sns {
+            if await Web3Bio.verified(record, is: address) { return record.identity }
+        }
+        return nil
     }
 }

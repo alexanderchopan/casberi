@@ -86,6 +86,12 @@ guard "WalletApprovals still stamps the approval/permit2 namespaces" "$APPROVALS
   'wallet:\\\(e\.viaPermit2 \? "permit2" : "approval"\):'
 guard "both namespaces are still the ones the mark tests" "$TMP/mark.nc" \
   '"wallet:approval:", "wallet:permit2:"'
+# The Solana arm's grant (an SPL delegate, prd §1096): stamped by WalletIngest,
+# tested by the mark. Either half renamed alone and the grant goes quiet.
+guard "the Solana arm stamps the sol-approval namespace" "$INGEST" \
+  '"wallet:sol-approval:'
+guard "the mark tests the sol-approval namespace" "$TMP/mark.nc" \
+  '"wallet:sol-approval:"'
 
 # The stamp this ruling added, at BOTH sites. Landing gives new mints their
 # glyph; the heal gives it to rows already in the store. Losing either leaves

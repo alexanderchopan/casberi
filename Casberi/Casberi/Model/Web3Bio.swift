@@ -169,10 +169,19 @@ enum Web3Bio {
                       displayName: display, avatar: avatar, bio: bio, links: links)
     }
 
-    /// The records that name THIS address — the first half of §599. The
-    /// comparison folds case because EIP-55 spells one address two ways.
+    /// The records that name THIS address — the first half of §599. A hex
+    /// comparison folds case because EIP-55 spells one address two ways; a
+    /// base58 one (Solana) never does, because there the case IS the address.
     static func names(_ records: [Record], ownedBy address: String) -> [Record] {
-        records.filter { $0.address.caseInsensitiveCompare(address) == .orderedSame }
+        guard ENS.isHexAddress(address) else { return records.filter { $0.address == address } }
+        return records.filter { $0.address.caseInsensitiveCompare(address) == .orderedSame }
+    }
+
+    /// The cache's spelling of a query: names and hex fold case, a bare
+    /// base58 address keeps it.
+    static func cacheKey(_ query: String) -> String {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return ENS.isHexAddress(q) || q.contains(".") ? q.lowercased() : q
     }
 
     /// A forward answer: the address of the record whose identity IS the
@@ -220,7 +229,7 @@ enum Web3Bio {
     @MainActor
     static func lookup(_ query: String) async -> Outcome {
         guard !DemoMode.isActive else { return .unreadable }
-        let key = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let key = cacheKey(query)
         if let cached = cache[key] { return cached }
         guard let url = url(for: query) else { return .unreadable }
         let (json, status) = await IngestSupport.getJSONStatus(url.absoluteString)

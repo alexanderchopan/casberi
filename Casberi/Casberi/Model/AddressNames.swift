@@ -81,7 +81,18 @@ final class AddressNames {
         }
     }
 
-    private static func key(for address: String) -> String { address.lowercased() }
+    /// Hex folds case (EIP-55); base58 keeps it, because there it is the address.
+    private static func key(for address: String) -> String {
+        ENS.isHexAddress(address) ? address.lowercased() : address
+    }
+
+    /// The addresses a reverse name can be asked for: hex (ENS, WNS, GNS and
+    /// web3.bio's links) and Solana (its primary `.sol`). A Bitcoin address is
+    /// base58 too, and has no name service here.
+    static func canName(_ address: String) -> Bool {
+        ENS.isHexAddress(address)
+            || (SNS.isAddress(address) && !BitcoinAddress.isAddress(address))
+    }
 
     /// The names known for this address, or nil when it has never been asked.
     /// An empty array is a real answer.
@@ -103,9 +114,9 @@ final class AddressNames {
 
     /// Asks for one address unless it was asked recently. Safe to call from
     /// `onAppear` on every row: it returns immediately for anything already
-    /// known, in flight, or not a hex address.
+    /// known, in flight, or not an address a name service answers for.
     func fill(_ address: String) async {
-        guard !DemoMode.isActive, ENS.isHexAddress(address) else { return }
+        guard !DemoMode.isActive, Self.canName(address) else { return }
         let key = Self.key(for: address)
         guard !asking.contains(key) else { return }
         if let existing = records[key], !isStale(existing) { return }
@@ -126,7 +137,7 @@ final class AddressNames {
             guard spent < Self.perPassBudget else { return }
             let key = Self.key(for: address)
             if let existing = records[key], !isStale(existing) { continue }
-            guard ENS.isHexAddress(address) else { continue }
+            guard Self.canName(address) else { continue }
             await fill(address)
             spent += 1
         }

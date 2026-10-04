@@ -126,6 +126,12 @@ enum NameResolve {
     static var worldAppLabel: String { String(localized: "World App") }
 
     static func primaryNames(for hexAddress: String) async -> [PrimaryName] {
+        // A Solana address has one registry to ask: its primary `.sol`
+        // (forward-verified inside `SNS.primaryName`, §599's bar).
+        if SNS.isAddress(hexAddress), !BitcoinAddress.isAddress(hexAddress) {
+            guard let sol = await SNS.primaryName(for: hexAddress) else { return [] }
+            return [PrimaryName(label: String(localized: "SNS"), name: sol)]
+        }
         guard ENS.isHexAddress(hexAddress) else { return [] }
         var out: [PrimaryName] = []
         if let ens = await ENS.reverseName(for: hexAddress),

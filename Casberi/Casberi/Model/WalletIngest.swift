@@ -1260,17 +1260,26 @@ enum WalletIngest {
         let solPrice = await SolanaActivity.solPrice(key: key)
         // Two at a time — the same courtesy the EVM fan-out shows a free-tier
         // key, and each wallet is already only two requests.
+        // Each wallet reads forward from its cursor — the newest signature its
+        // last landed pass saw — so a busy stretch between two refreshes can't
+        // push its own moves out of a ten-signature window.
+        let cursors = Dictionary(addresses.map { ($0, SolanaActivity.cursor(for: $0)) },
+                                 uniquingKeysWith: { a, _ in a })
         let results = await IngestSupport.boundedGather(addresses, maxConcurrent: 2) { address in
-            (address, await SolanaActivity.moves(address: address, key: key))
+            (address, await SolanaActivity.moves(address: address, key: key,
+                                                 since: cursors[address] ?? nil))
         }
 
         var reached = false
         var fresh: [(address: String, move: SolanaActivity.Move)] = []
         var seen = Set<String>()
-        for (address, moves) in results {
-            guard let moves else { continue }   // nil = unreachable, not empty
+        // The cursor each wallet may advance to once its moves have landed.
+        var advance: [String: String] = [:]
+        for (address, read) in results {
+            guard let read else { continue }   // nil = unreachable, not empty
             reached = true
-            for move in moves {
+            if let newest = read.newest { advance[address] = newest }
+            for move in read.moves {
                 let ref = "wallet:sol:\(move.signature)"
                 // One signature can name two watched wallets — land it once.
                 guard !existing.contains(ref), seen.insert(ref).inserted,
@@ -1279,15 +1288,39 @@ enum WalletIngest {
                 fresh.append((address, move))
             }
         }
-        guard !fresh.isEmpty else { return (0, reached) }
+        guard !fresh.isEmpty else {
+            for (address, signature) in advance { SolanaActivity.advance(address, to: signature) }
+            return (0, reached)
+        }
+
+        // The grants among the fresh moves that still stand — one batched
+        // read, only when a pass found any. nil (unreachable) holds those
+        // wallets' cursors so the next pass asks again.
+        let allGrants = fresh.flatMap { $0.move.grants }
+        let standing = allGrants.isEmpty ? [] : await SolanaActivity.standing(allGrants, key: key)
 
         // ONE naming call for the whole pass, not one per move.
-        let symbols = await SolanaActivity.symbols(for: fresh.flatMap { $0.move.legs.map(\.mint) })
+        let symbols = await SolanaActivity.symbols(
+            for: fresh.flatMap { $0.move.legs.map(\.mint) + $0.move.grants.compactMap(\.mint) })
         var landed: [Thing] = []
         for (address, move) in fresh {
+            for grant in move.grants {
+                guard let standing else { advance[address] = nil; break }
+                let ref = "wallet:sol-approval:\(move.signature):\(grant.tokenAccount)"
+                guard !existing.contains(ref),
+                      standing.contains(grant.tokenAccount + ":" + grant.delegate) else { continue }
+                landed.append(solanaGrantThing(grant, move: move, owner: address, ref: ref,
+                                               explorer: solanaChain.explorer, symbols: symbols))
+            }
+            // An approval alone moved nothing, so it has no transfer story.
+            guard !move.legs.isEmpty else { continue }
             // No story means a leg we couldn't name — dropped rather than
-            // printed as a raw mint. See `SolanaActivity.story`.
-            guard let story = SolanaActivity.story(for: move, symbols: symbols) else { continue }
+            // printed as a raw mint. See `SolanaActivity.story`. The wallet's
+            // cursor holds where it was, so the next pass asks again.
+            guard let story = SolanaActivity.story(for: move, symbols: symbols) else {
+                advance[address] = nil
+                continue
+            }
             let thing = Thing(
                 kind: .transaction,
                 title: story.title,
@@ -1311,8 +1344,40 @@ enum WalletIngest {
             context.insert(thing)
             SpotlightIndex.index([thing])
         }
-        if !landed.isEmpty { context.saveHonestly() }
+        // A save that failed leaves the cursors where they were: the next
+        // pass re-reads the window, and the refs dedupe whatever did persist.
+        let saved = landed.isEmpty || context.saveHonestly()
+        if saved {
+            for (address, signature) in advance { SolanaActivity.advance(address, to: signature) }
+        }
         return (landed.count, reached)
+    }
+
+    /// A standing SPL delegate as a row — the Solana twin of an approval
+    /// thing (`WalletApprovals`), under its own `wallet:sol-approval:`
+    /// namespace: it wears the grant's mark and notifies as one
+    /// (`WalletActionMark.approvalRefPrefixes`), but `WalletPrepare` — which
+    /// reads EVM allowances and prepares an EVM revoke — never claims it. The
+    /// door is the transaction on Solscan, the same as every Solana row.
+    @MainActor
+    private static func solanaGrantThing(_ grant: SolanaActivity.Grant, move: SolanaActivity.Move,
+                                         owner: String, ref: String, explorer: String,
+                                         symbols: [String: String]) -> Thing {
+        let thing = Thing(
+            kind: .transaction,
+            title: SolanaActivity.grantTitle(grant, symbols: symbols),
+            content: explorer + move.signature,
+            source: "Wallet",
+            capturedAt: move.when,
+            sourceRef: ref)
+        thing.walletAddress = owner
+        thing.counterpartyAddress = grant.delegate
+        // The block's own time, so "Granted <month>" is the real age (§253).
+        thing.grantedAt = move.when
+        if let symbol = grant.mint.flatMap({ symbols[$0] }) {
+            WalletSafety.flagSpoofedSymbol(thing, symbols: [symbol])
+        }
+        return thing
     }
 
     /// One (address, chain, direction) job's transfers, in the Alchemy

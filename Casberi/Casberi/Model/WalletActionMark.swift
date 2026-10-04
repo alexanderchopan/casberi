@@ -83,7 +83,9 @@ enum WalletActionMark {
     /// prefix test left behind matches nothing, the room does not break, it
     /// goes QUIET, and every grant silently goes back to wearing the exchange
     /// arrow (§311's failure exactly).
-    static let approvalRefPrefixes = ["wallet:approval:", "wallet:permit2:"]
+    /// `wallet:sol-approval:` is an SPL delegate (`SolanaActivity.Grant`) —
+    /// the same event on Solana, landed by the Solana arm.
+    static let approvalRefPrefixes = ["wallet:approval:", "wallet:permit2:", "wallet:sol-approval:"]
 
     static func isApprovalRef(_ ref: String?) -> Bool {
         guard let ref else { return false }

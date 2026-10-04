@@ -258,7 +258,7 @@ enum NetworkReach {
                  // fallback. Avatars it returns live on third-party image
                  // hosts, loaded the way ENS avatars always were.
                  hosts: ["api.web3.bio", "api.ensideas.com", "metadata.ens.domains", "app.ens.domains",
-                         "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag",
+                         "lite-api.jup.ag",
                          "usernames.worldcoin.org",
                          "static.usernames.app-backend.toolsforhumanity.com"]),
         Endpoint(service: "Wallet DeFi & Safe",

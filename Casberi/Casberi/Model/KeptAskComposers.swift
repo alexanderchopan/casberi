@@ -337,6 +337,7 @@ enum KeptAskComposers {
     private static func isApproval(_ t: Thing) -> Bool {
         let ref = t.sourceRef ?? ""
         return ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:")
+            || ref.hasPrefix("wallet:sol-approval:")
     }
 
     /// A wallet label safe for the AllocBar segment grammar — its `,` and `|`

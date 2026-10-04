@@ -240,7 +240,10 @@ enum NotifySweep {
         if ref.hasPrefix("logos:node:offline:") { return .nodeDown }
 
         // — Wallet: something gained the power to move funds.
-        if ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:") {
+        //   `wallet:sol-approval:` is the same grant on Solana (an SPL
+        //   delegate, `SolanaActivity.Grant`).
+        if ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:")
+            || ref.hasPrefix("wallet:sol-approval:") {
             return .approvalGranted
         }
         // — Safe: a pending transaction is specifically waiting on the

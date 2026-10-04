@@ -342,6 +342,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-gnosisPayProbe` — Gnosis Pay (2026-07-26, prd §222) → docs/hooks/wallet.md · prd §222
 - `-metamaskCardProbe` — MetaMask Card, the THIRD seat on Gnosis Pay's shape (prd §857/§857b, 2026-09-20) → docs/hooks/wallet.md · prd §857 · §857b · §222 · §860 · §83
 - `-solNameProbe` `-solActivityProbe` — Wallet/Solana (2026-07-16, prd §85/§86) → docs/hooks/wallet.md · prd §85
+- **Solana reads forward from a cursor, takes v1 transactions (`maxSupportedTransactionVersion: 1`; 0 dropped 18% of mainnet), lands SPL delegates as `wallet:sol-approval:` grants (still standing, never `WalletPrepare`'s), and resolves `.sol` through web3.bio (Bonfida's proxy is dead) (prd §1096)** → prd §1096
 - **Wei / Gwei names, and the router the six copies became** (`-weiNameProbe`) → docs/hooks/wallet.md · prd §597
 - `-addressesProbe YES` `-addressesForget YES` — the Addresses index rebuilt over the stores and the link ledger (prd §916 step 2, `Model/ContactIndex.swift` pure + `ContactIndexSources.swift`) → docs/hooks/wallet.md · prd §916
 - **Addresses suggests from profile links, bios, book provenance and mail senders; a name you gave names the post's author; the receipt says the first transfer; a named book address anchors poisoning; `ThingsWithContactIntent` (prd §1025).** `-addressesProbe fill` reads web3.bio `/profile` first. Never "Waiting on you" from the to-do mark: bridges set it to mean "open" → prd §1025
