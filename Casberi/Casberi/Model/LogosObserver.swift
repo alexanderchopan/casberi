@@ -117,6 +117,27 @@ final class LogosObserver {
         String(UIDevice.current.name.prefix(80))
     }
 
+    // MARK: - Recognising one
+
+    /// Whether the address someone typed is a Logos Observer rather than a
+    /// node: its unauthenticated `/health` names the service. An Observer
+    /// answers only a paired device, so watching its address as a node would
+    /// read "Not answering" forever (a Logos tester did exactly that,
+    /// 2026-10-04). The probe sends nothing but the path, so it trusts any
+    /// certificate; pairing is still pinned.
+    static func answersAsObserver(_ base: String) async -> Bool {
+        guard let comps = URLComponents(string: base), let host = comps.host else { return false }
+        var https = URLComponents()
+        https.scheme = "https"
+        https.host = host
+        https.port = comps.port ?? LogosObserverWire.defaultPort
+        https.path = "/health"
+        guard let url = https.url else { return false }
+        let result = await PinnedSession(pin: nil).send(URLRequest(url: url))
+        guard case .answered(200, let json) = result else { return false }
+        return (json as? [String: Any])?["service"] as? String == "logos-observer"
+    }
+
     // MARK: - Reading
 
     /// One reading of the node through the Observer. nil when the Observer
@@ -228,14 +249,15 @@ final class LogosObserver {
 /// One TLS 1.3 connection that trusts exactly one key: the Observer's, named
 /// by the SPKI pin its QR carried. No CA is consulted, and a certificate
 /// whose key differs is refused before a byte of the request is sent — so the
-/// bootstrap secret only ever reaches the Observer the QR came from.
+/// bootstrap secret only ever reaches the Observer the QR came from. A nil pin
+/// is the `/health` probe alone, which carries no secret and no credential.
 final class PinnedSession: NSObject, URLSessionDelegate, @unchecked Sendable {
     enum Result { case answered(Int, Any?), pinMismatch, failed }
 
-    private let pin: String
+    private let pin: String?
     private var mismatched = false
 
-    init(pin: String) { self.pin = pin }
+    init(pin: String?) { self.pin = pin }
 
     func send(_ request: URLRequest) async -> Result {
         NetworkLedger.shared.record(request, as: "Logos")
@@ -261,6 +283,7 @@ final class PinnedSession: NSObject, URLSessionDelegate, @unchecked Sendable {
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
               let trust = challenge.protectionSpace.serverTrust
         else { return (.performDefaultHandling, nil) }
+        guard let pin else { return (.useCredential, URLCredential(trust: trust)) }
         guard let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
               let leaf = chain.first,
               let key = SecCertificateCopyKey(leaf),

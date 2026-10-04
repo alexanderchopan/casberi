@@ -214,7 +214,34 @@ struct LogosScreen: View {
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading the testnet…"),
                                  proof: lastResult)
+            if !LogosObserver.shared.serves(logos.node) { observerCard }
         }
+    }
+
+    /// How to read your node safely (prd §1095): through the Logos Observer,
+    /// paired by its QR. Typing the Observer's address does not pair it — a
+    /// tester did, and the room said "Not answering" — so the page says how.
+    private var observerCard: some View {
+        BridgeSetupCard(steps: Self.observerSteps, startingAt: 2, numbered: false) {
+            DSSlabButton(title: String(localized: "Get Logos Observer"),
+                         detail: "github.com/0xterricola/logos-observer",
+                         systemImage: "arrow.up.right", url: Self.observerRepo)
+        }
+        .padding(.top, DS.Space.s2)
+    }
+
+    private static let observerRepo = URL(string: "https://github.com/0xterricola/logos-observer")
+
+    private static var observerSteps: [String] {
+        #if targetEnvironment(macCatalyst)
+        [String(localized: "Run it beside your node."),
+         String(localized: "Run v2_pair_cli.py for a pairing link."),
+         String(localized: "Paste the link in the field above.")]
+        #else
+        [String(localized: "Run it beside your node."),
+         String(localized: "Run v2_pair_cli.py for a pairing QR."),
+         String(localized: "Scan the QR with the Camera app.")]
+        #endif
     }
 
     /// On a Mac running Basecamp the node answers at its default, so the
@@ -228,6 +255,8 @@ struct LogosScreen: View {
     }
 
     private static let malformed = String(localized: "That isn't an LEZ account id or a node address.")
+    private static let observerWatched = String(localized: "Your node's address is a Logos Observer. Remove it and pair with its QR, as below.")
+    private static let observerAddress = String(localized: "That's a Logos Observer. Pair it with its QR, as below.")
     /// Sixty-four hex characters that are not a point on the curve: no LEZ
     /// key or id, and the one measured case was a chat address (prd §1034).
     private static let notKey = String(localized: "That isn't an LEZ account or key. It may be a Logos chat address.")
@@ -271,7 +300,22 @@ struct LogosScreen: View {
                 field = ""
                 return
             }
-            logos.useNode(base)
+            // An Observer's address is not a node's: it answers only a device
+            // paired by its QR, so it is never watched as one.
+            let typed = field
+            field = ""
+            fieldFocused = false
+            Task {
+                if await LogosObserver.answersAsObserver(base) {
+                    lastResult = .failed(Self.observerAddress)
+                    field = typed
+                    return
+                }
+                logos.useNode(base)
+                DSHaptic.tap()
+                await sync()
+            }
+            return
         case .account(let id):
             guard logos.add(id) == .added else {
                 lastResult = .says(String(localized: "Already watching that account."))
@@ -341,6 +385,13 @@ struct LogosScreen: View {
                 lastResult = .failed(String(localized: "Couldn't reach the Logos testnet — check your connection."))
             }
             if let notice = LogosObserver.shared.notice { lastResult = .failed(notice) }
+            // A node address that never answers may be an Observer watched as
+            // a node (the 2026-10-04 tester): say so rather than "Not answering".
+            if let base = logos.node, !LogosObserver.shared.serves(base),
+               logos.nodeSnapshot?.reachable == false,
+               await LogosObserver.answersAsObserver(base) {
+                lastResult = .failed(Self.observerWatched)
+            }
             countWeek()
         } while syncPending && logos.connected
     }

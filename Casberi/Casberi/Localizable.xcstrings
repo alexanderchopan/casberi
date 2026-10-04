@@ -69260,6 +69260,34 @@
         }
       }
     },
+    "Get Logos Observer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Obtener Logos Observer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Observerを入手"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Observer 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "获取 Logos Observer"
+          }
+        }
+      }
+    },
     "Get a key from the agent's own console. It stays in %@'s Keychain and goes only to that provider." : {
       "localizations" : {
         "es" : {
@@ -102603,6 +102631,34 @@
         }
       }
     },
+    "Paste the link in the field above." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pega el enlace en el campo de arriba."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "上のフィールドにリンクを貼り付けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "위 입력란에 링크를 붙여 넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将链接粘贴到上方的输入框。"
+          }
+        }
+      }
+    },
     "Paste the statement itself" : {
       "localizations" : {
         "es" : {
@@ -114404,6 +114460,90 @@
         }
       }
     },
+    "Run it beside your node." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ejecútalo junto a tu nodo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードと同じマシンで実行します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드와 같은 곳에서 실행하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你的节点旁运行它。"
+          }
+        }
+      }
+    },
+    "Run v2_pair_cli.py for a pairing QR." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ejecuta v2_pair_cli.py para obtener un QR de emparejamiento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "v2_pair_cli.pyを実行してペアリング用QRを表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "v2_pair_cli.py를 실행해 페어링 QR을 받으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "运行 v2_pair_cli.py 获取配对二维码。"
+          }
+        }
+      }
+    },
+    "Run v2_pair_cli.py for a pairing link." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ejecuta v2_pair_cli.py para obtener un enlace de emparejamiento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "v2_pair_cli.pyを実行してペアリング用リンクを表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "v2_pair_cli.py를 실행해 페어링 링크를 받으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "运行 v2_pair_cli.py 获取配对链接。"
+          }
+        }
+      }
+    },
     "Running" : {
       "localizations" : {
         "es" : {
@@ -116128,6 +116268,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "扫描文稿"
+          }
+        }
+      }
+    },
+    "Scan the QR with the Camera app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escanea el QR con la app Cámara."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カメラAppでQRコードを読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "카메라 앱으로 QR을 스캔하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用相机 App 扫描二维码。"
           }
         }
       }
@@ -127333,6 +127501,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "刚才是示例数据。现在换成你自己的东西。"
+          }
+        }
+      }
+    },
+    "That's a Logos Observer. Pair it with its QR, as below." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Eso es un Logos Observer. Emparéjalo con su QR, como se indica abajo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これはLogos Observerです。下の手順でQRコードを使ってペアリングしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Observer입니다. 아래 안내대로 QR로 페어링하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是一个 Logos Observer。请按下方步骤用其二维码配对。"
           }
         }
       }
@@ -150813,6 +151009,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的节点已停止"
+          }
+        }
+      }
+    },
+    "Your node's address is a Logos Observer. Remove it and pair with its QR, as below." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La dirección de tu nodo es un Logos Observer. Quítala y empareja con su QR, como se indica abajo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードのアドレスはLogos Observerです。削除して、下の手順でQRコードを使ってペアリングしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드 주소가 Logos Observer입니다. 삭제하고 아래 안내대로 QR로 페어링하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的节点地址是一个 Logos Observer。请将其移除，并按下方步骤用其二维码配对。"
           }
         }
       }
