@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1220 of 1279 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1221 of 1280 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1344,7 +1344,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1009 — While the tray is up the face is the octopus, photo or not
 - §1010 — The tray's sections put the name above the marks, five to a line from the name's edge (amended by §1011)
 - §1012 — The tray's You doors are a labelled row across the top, and every mark is 28pt (amended by §1013, §1050g)
-- §1013 — The tray is one grid: headers above, every button the face's size, and a Recent line (amended by §1014, §1015, §1016a, §1050l; part superseded by §1050j)
+- §1013 — The tray is one grid: headers above, every button the face's size, and a Recent line (amended by §1014, §1015, §1016a, §1050l, §1093; part superseded by §1050j)
 - §1014 — The tray is solid black, its doors the room head's charcoal, and its first column is the face's axis
 - §1015 — The tray searches in place, pins the You row, and a hold is Manage account (part superseded by §1033)
 - §1016 — Logos: a Rewards tile, mining read off your node, and the app's first own symbol
@@ -1441,6 +1441,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1090a — The wallet makeover's review fixes
 - §1091 — Logos: name an account, and a named one keeps its address in sight (a Logos user, relayed 2026-10-03: "requesting giv…
 - §1092 — Videos play in the sheet: a YouTube link in YouTube's privacy-enhanced player, a Telegram channel's video in Apple's…
+- §1093 — The face button outgrew the faces under it: 56 at rest, 48 folded
 
 ## Dead rulings → what replaced them (generated)
 

@@ -117,9 +117,11 @@ grep -q 'static func agentSeat' "$DOCK" \
 # THE FOLD IS CONTINUOUS (2026-09-05): the strip's mark size is READ off
 # DSDock's fold form rather than mirrored as a literal, so the chips and the
 # bar cannot be different sizes at any point of the travel.
-grep -q 'iconSize: CGFloat { DSDock.agentSize(fold: fold) }' "$TMP/chips.nc" \
-  || { echo "✗ SourceChips.iconSize no longer reads DSDock.agentSize(fold:) — the strip's"; \
-       echo "  marks and the agent bar beside them can drift apart mid-fold."; fail=1; }
+# The seat OUTGREW the chip (prd §1093): it stands at the chip's frame so a
+# 46pt face scrolling under it never matches it; the chips read `chipMark`.
+grep -q 'iconSize: CGFloat { DSDock.chipMark(fold: fold) }' "$TMP/chips.nc" \
+  || { echo "✗ SourceChips.iconSize no longer reads DSDock.chipMark(fold:) — the strip's"; \
+       echo "  marks can jump mid-fold, or have grown to the seat's size (prd §1093)."; fail=1; }
 grep -q 'static func agentSize(fold: CGFloat)' "$DOCK" \
   || { echo "✗ DSDock.agentSize lost its fold form — the continuous fold has no metric."; fail=1; }
 grep -q 'DSDock.agentSize(fold: chrome.fold)' "$TMP/doors.nc" \
@@ -290,9 +292,18 @@ grep -q 'visualEffect { content, proxy in' "$TMP/chips.nc" \
 grep -q 'ChipPeekModifier' "$TMP/chips.nc" \
   && { echo "✗ the chip peek is back (prd §836) — a long-press preview of a room the"; \
        echo "  person was about to open anyway."; fail=1; }
-grep -q 'minimized ? 40 : 46' "$DOCK" \
-  || { echo "✗ DSDock.agentSize no longer matches SourceChips.iconSize (46 at rest, 40"; \
-       echo "  folded) — the bar and the chip marks beside it are different sizes."; fail=1; }
+grep -q 'static func chipMark(minimized: Bool) -> CGFloat { minimized ? 40 : 46 }' "$DOCK" \
+  || { echo "✗ DSDock.chipMark is no longer 46 at rest, 40 folded — the strip's marks"; \
+       echo "  and DS.Face.seat have drifted apart."; fail=1; }
+# prd §1093: the seat stands at the chip's FRAME, larger than any 46pt face
+# that scrolls under it, so its centre still lands on the row's.
+grep -q 'static func agentSize(minimized: Bool) -> CGFloat { minimized ? 48 : 56 }' "$DOCK" \
+  || { echo "✗ DSDock.agentSize is no longer 56 at rest, 48 folded — the seat is back to a"; \
+       echo "  face's size and disappears over one (prd §1093)."; fail=1; }
+grep -q 'static func chipFrame(minimized: Bool) -> CGFloat { minimized ? 48 : 56 }' "$DOCK" \
+  || { echo "✗ DSDock.chipFrame moved — re-derive agentSize, which stands at it (prd §1093)."; fail=1; }
+grep -q 'AvatarDoor(mark: lit, size: size \* DSDock.faceShare)' Casberi/Casberi/Shell/TopDoors.swift \
+  || { echo "✗ the face inside the seat no longer grows with its disc (prd §1093)."; fail=1; }
 
 # --- 3. the bar stands in the LEADING corner --------------------------------
 grep -q 'VStack(alignment: .leading, spacing: DS.Space.s2)' "$TMP/root.nc" \

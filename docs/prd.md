@@ -64015,3 +64015,11 @@ It reads the folded room (§1079), so an incident later resolved, a dispute late
 **Hook:** `-saveLink "<url>"` keeps a link as a paste would, once per URL (DEBUG), so a sheet can be opened with `-openThing`.
 
 **Checked.** `youtube-player-selftest.sh` (new, in `verify.sh`: seventeen link shapes, both arms before the article arm, the press gate, the demo gate, the nocookie host, the non-persistent store, the receipt, the registry), `telegram-selftest.sh` (five new assertions on the embed page and the video file), `network-reach-audit.sh`, the reading-draw, readable-body and feed-reading self-tests, nine audits, iOS and Catalyst builds. On a simulator, not the demo: a saved YouTube link played in its sheet; a followed @telegram's "Signed Gifts" video played in Apple's player; neither opened Safari. **Not seen:** a Telegram video too big for the preview, the Mac, a device.
+
+## §1093 — The face button outgrew the faces under it: 56 at rest, 48 folded (users, relayed 2026-10-04: "the fab is too small and disappears when it is over a social icon that is the same size"; amends §591d's "the bar's mark is the same size as a chip's" and §1013's "the tray has two sizes" for the dock's seat only) — BUILT
+
+**Before:** the dock's seat (`DockDoors` → `AvatarChip`) was a 46pt glass disc with a 32pt face, centred on the row icons' column (`DSDock.clusterInset`). A 46pt face (`DS.Face.seat`: the face shelves, the tray's buttons) or a row lead scrolling under it sat in the same circle, and translucent glass over a mark its own size has no edge to read by.
+
+**Now:** `DSDock.agentSize` is 56 at rest and 48 folded, the chip's FRAME (`chipFrame`), so the seat's centre still lands on the row's and the phone's scope capsule (`DSScopeDock`, 56pt) is the seat's own height. The face inside grows with the disc (`DSDock.faceShare`, 32 in 46: 39pt at rest). Everything measured off the seat follows: the capsule's leading edge, the pushed screens' clearance (`seatClearance`, +10pt), the fold's centring. The iPad/Mac rail's chips and its own face keep 46 → 40 as `DSDock.chipMark`; `DS.Face.seat` stays 46.
+
+**Checked.** `dock-selftest.sh` pins both sizes, the chip frame they stand on and the face's share. **Not seen:** the simulator or a device; the session had no Xcode.

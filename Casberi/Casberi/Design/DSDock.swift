@@ -40,13 +40,31 @@ enum DSDock {
     /// 46→40 on scroll and a bar that did not would grow relatively larger
     /// exactly when the row got tighter.
     ///
-    /// Mirrors `SourceChips.iconSize`, which cannot be read from here (that
-    /// value is private to a view in another module-level file); the dock
-    /// self-test pins the two together.
-    static func agentSize(minimized: Bool) -> CGFloat { minimized ? 40 : 46 }
+    /// **THE SEAT OUTGREW THE CHIP (prd §1093, 2026-10-04, user feedback:
+    /// "the fab is too small and disappears when it is over a social icon
+    /// that is the same size").** The seat is centred on the row icons'
+    /// column (`clusterInset`), so every row lead and every 46pt face
+    /// scrolls through the same circle the seat draws, and a translucent
+    /// glass disc the size of the face under it has no edge to read by. It
+    /// now stands at the chip's FRAME, 56 → 48 on the fold, so its centre
+    /// still lands on the row's (`agentBottomInset`) and the scope capsule
+    /// beside it (`DSScopeDock`) is the seat's own height. The rail's chip
+    /// marks keep 46 → 40 as `chipMark`.
+    static func agentSize(minimized: Bool) -> CGFloat { minimized ? 48 : 56 }
     static func agentSize(fold: CGFloat) -> CGFloat {
         lerp(agentSize(minimized: false), agentSize(minimized: true), fold)
     }
+
+    /// A strip chip's mark — the size the seat was until §1093, and still
+    /// `DS.Face.seat` at rest. Read by `SourceChips.iconSize`.
+    static func chipMark(minimized: Bool) -> CGFloat { minimized ? 40 : 46 }
+    static func chipMark(fold: CGFloat) -> CGFloat {
+        lerp(chipMark(minimized: false), chipMark(minimized: true), fold)
+    }
+
+    /// The face's share of the disc it stands in: 32 in 46, the rail's seat
+    /// unchanged, and the dock's seat grows its face with its glass (§1093).
+    static let faceShare: CGFloat = 32.0 / 46.0
 
     /// **THE LEADING SEAT HOLDS ONE DOOR — YOUR FACE (2026-09-11, prd §700).**
     /// §697 seated two marks here, the face and the catalogue grid, and the
@@ -185,8 +203,9 @@ enum DSDock {
     }
 
     static func agentBottomInset(minimized: Bool) -> CGFloat {
-        // Centre on centre, not edge on edge: the bar's mark and the chip's
-        // mark are the same size now, but the chip's FRAME is larger (it
+        // Centre on centre, not edge on edge: the seat has stood at the
+        // chip's FRAME since §1093, but the formula keeps the fold honest if
+        // either ever moves again. Before that, the chip's FRAME was larger (it
         // carries the ring's room), so bottom-aligning still leaves the bar
         // half the difference too low — and that difference changes with the
         // fold.

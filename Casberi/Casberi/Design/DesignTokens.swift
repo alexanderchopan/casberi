@@ -684,8 +684,9 @@ enum DS {
         /// The face's own seat — the dock's face button at rest — and every
         /// button in the rooms tray, which stands at the face's size so the
         /// tray has two sizes and nothing between (prd §1013). It equals
-        /// `DSDock.agentSize(minimized: false)`, which `dock-selftest.sh` pins
-        /// as a literal beside the chips' size.
+        /// `DSDock.chipMark(minimized: false)`, which `dock-selftest.sh` pins
+        /// as a literal. The dock's own seat stands larger since prd §1093
+        /// (`DSDock.agentSize`), so a 46pt face under it never matches it.
         static let seat: CGFloat = 46
         /// A sheet whose whole SUBJECT is the identity — the address card
         /// (prd §435, 2026-08-21). One rung above `shelf` because a shelf face

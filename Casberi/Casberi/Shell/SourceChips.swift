@@ -121,7 +121,7 @@ struct SourceChips: View {
     /// this strip is read off `DSDock`'s fold form, so the chips and the bar
     /// beside them cannot be different sizes at any point of the travel.
     private var fold: CGFloat { axis == .horizontal ? chrome.fold : 0 }
-    private var iconSize: CGFloat { DSDock.agentSize(fold: fold) }
+    private var iconSize: CGFloat { DSDock.chipMark(fold: fold) }
     private var chipSize: CGFloat { DSDock.chipFrame(fold: fold) }
     /// The category TILE (prd §662, 2026-09-09): a glyph over its word in a
     /// FIXED width, the way a tab bar item is. Fixed so every category is the

@@ -31,10 +31,9 @@ struct AvatarChip: View {
     /// (`DockDoors`), which stands on `RootShell`'s layer with nothing beside
     /// it to merge with — and a preview.
     var doorUnion: DSGlassUnion? = nil
-    /// The mark's drawn size. 46 everywhere it floats; the dock's leading
-    /// seat folds it 46→40 with the chips beside it (prd §697), which a fixed
-    /// frame could not do — a door standing at 46 in a row of 40s reads as a
-    /// slightly grown one, the near-miss `DSDock.agentSize` exists to prevent.
+    /// The disc's drawn size. 46 in the rail beside its chips; the dock's
+    /// leading seat stands at `DSDock.agentSize`, 56 folding to 48 (prd
+    /// §1093), and the face inside grows with it (`DSDock.faceShare`).
     var size: CGFloat = 46
     /// Set on a pushed screen, and the seat becomes the BACK door (prd §767).
     /// §752 put every back control in the content or the bottom band, and the
@@ -69,7 +68,7 @@ struct AvatarChip: View {
                         .modifier(DoorBounce(trigger: avatarBounce))
                         .transition(.opacity)
                 } else {
-                    AvatarDoor(mark: lit)
+                    AvatarDoor(mark: lit, size: size * DSDock.faceShare)
                         .modifier(DoorBounce(trigger: avatarBounce))
                         .modifier(DoorSpin(trigger: refreshSpin, tension: pullTension))
                 }
@@ -179,6 +178,9 @@ private struct DoorBounce: ViewModifier {
 struct AvatarDoor: View {
     /// The tray is up (`AvatarChip.lit`): draw the mark, not the face.
     var mark: Bool = false
+    /// The face's drawn size: 32 in the rail's 46 disc, more in the dock's
+    /// larger seat (prd §1093).
+    var size: CGFloat = 32
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -187,10 +189,10 @@ struct AvatarDoor: View {
             : .scale(scale: 0.6).combined(with: .opacity)
         ZStack {
             if mark {
-                CasberiMark(size: 32).frame(width: 32, height: 32)
+                CasberiMark(size: size).frame(width: size, height: size)
                     .transition(swap)
             } else {
-                YouFace(size: 32).transition(swap)
+                YouFace(size: size).transition(swap)
             }
         }
         .animation(DS.Motion.standard, value: mark)
