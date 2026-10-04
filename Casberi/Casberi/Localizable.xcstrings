@@ -1547,6 +1547,34 @@
         }
       }
     },
+    "Asking your wallet what this connection can do…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preguntando a tu billetera qué puede hacer esta conexión…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このコネクションで何ができるかウォレットに確認しています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 연결로 무엇을 할 수 있는지 지갑에 확인하는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在询问你的钱包此连接能做什么…"
+          }
+        }
+      }
+    },
     "Attachments" : {
       "localizations" : {
         "es" : {
@@ -1599,6 +1627,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的应用背后"
+          }
+        }
+      }
+    },
+    "Bitcoin wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Billetera de Bitcoin"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ビットコインウォレット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비트코인 지갑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "比特币钱包"
           }
         }
       }
@@ -1687,6 +1743,62 @@
         }
       }
     },
+    "Couldn't reach the relay in that connection — check your connection." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar el relay de esa conexión — revisa tu conexión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのコネクションのリレーに接続できませんでした — 接続を確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "해당 연결의 릴레이에 연결할 수 없습니다 — 연결 상태를 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接到该连接中的中继 — 请检查你的网络。"
+          }
+        }
+      }
+    },
+    "Couldn't reach your wallet's relay — check your connection." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar el relay de tu billetera — revisa tu conexión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットのリレーに接続できませんでした — 接続を確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑의 릴레이에 연결할 수 없습니다 — 연결 상태를 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接到你钱包的中继 — 请检查你的网络。"
+          }
+        }
+      }
+    },
     "Couldn’t save the reminder" : {
       "localizations" : {
         "es" : {
@@ -1767,6 +1879,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "删除提醒"
+          }
+        }
+      }
+    },
+    "Dust" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Polvo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ダスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "더스트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "粉尘"
+          }
+        }
+      }
+    },
+    "Dust." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Polvo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ダスト。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "더스트."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "粉尘。"
           }
         }
       }
@@ -2303,6 +2471,34 @@
         }
       }
     },
+    "Lightning" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lightning"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lightning"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lightning"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lightning"
+          }
+        }
+      }
+    },
     "Mail that came with a file" : {
       "localizations" : {
         "es" : {
@@ -2327,6 +2523,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "带有文件的邮件"
+          }
+        }
+      }
+    },
+    "Make a connection" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Crear una conexión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コネクションを作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "연결 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "创建连接"
           }
         }
       }
@@ -2663,6 +2887,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "单日变动 %lld%%"
+          }
+        }
+      }
+    },
+    "Multisig wallets aren't read yet. Paste one of its addresses instead." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las billeteras multifirma aún no se leen. Pega una de sus direcciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マルチシグウォレットはまだ読み取れません。代わりにそのアドレスの一つを貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "멀티시그 지갑은 아직 읽을 수 없습니다. 대신 주소 하나를 붙여 넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "暂不支持读取多签钱包。请改为粘贴它的一个地址。"
           }
         }
       }
@@ -75580,6 +75832,34 @@
         }
       }
     },
+    "One address took %@ payments — each is linked to the others" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una dirección recibió %@ pagos — cada uno queda vinculado a los demás"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1つのアドレスが%@件の支払いを受けました — それぞれが互いに結びつきます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한 주소가 %@건의 결제를 받았습니다 — 각각이 서로 연결됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一个地址收到了 %@ 笔付款 — 每一笔都与其他付款相关联"
+          }
+        }
+      }
+    },
     "Open something you watch to set an alert." : {
       "localizations" : {
         "es" : {
@@ -75632,6 +75912,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "排序：%@"
+          }
+        }
+      }
+    },
+    "Paid over Lightning" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pagado por Lightning"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lightningで支払い"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lightning으로 결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Lightning 支付"
+          }
+        }
+      }
+    },
+    "Paste the connection string that starts nostr+walletconnect://." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pega la cadena de conexión que empieza por nostr+walletconnect://."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "nostr+walletconnect:// で始まる接続文字列を貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "nostr+walletconnect://로 시작하는 연결 문자열을 붙여 넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "粘贴以 nostr+walletconnect:// 开头的连接字符串。"
           }
         }
       }
@@ -75744,6 +76080,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "本周访问过"
+          }
+        }
+      }
+    },
+    "Reading your wallet…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tu billetera…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットを読み込んでいます…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑을 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的钱包…"
+          }
+        }
+      }
+    },
+    "Received over Lightning" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibido por Lightning"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lightningで受け取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lightning으로 받음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Lightning 收到"
           }
         }
       }
@@ -76252,6 +76644,34 @@
         }
       }
     },
+    "Spending it with your other coins links them together. It's safest left where it is." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gastarlo junto con tus otras monedas las vincula entre sí. Lo más seguro es dejarlo donde está."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "他のコインと一緒に使うと、それらが結びつけられます。そのままにしておくのが最も安全です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 코인과 함께 쓰면 서로 연결됩니다. 그대로 두는 것이 가장 안전합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "和你的其他币一起花掉会把它们关联起来。最安全的做法是放着不动。"
+          }
+        }
+      }
+    },
     "Spent with %@" : {
       "localizations" : {
         "es" : {
@@ -76420,6 +76840,90 @@
         }
       }
     },
+    "That connection can pay. Make one with only Read balance and Read transactions." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa conexión puede pagar. Crea una solo con Leer saldo y Leer transacciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのコネクションは支払いができます。「残高の読み取り」と「取引の読み取り」だけのものを作成してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 연결은 결제할 수 있습니다. 잔액 읽기와 거래 읽기만 허용된 연결을 만드세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该连接可以付款。请创建一个仅有“读取余额”和“读取交易”权限的连接。"
+          }
+        }
+      }
+    },
+    "That connection can't read a balance or payments. Allow Read balance and Read transactions." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa conexión no puede leer un saldo ni pagos. Permite Leer saldo y Leer transacciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのコネクションは残高も支払いも読み取れません。「残高の読み取り」と「取引の読み取り」を許可してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 연결은 잔액이나 결제를 읽을 수 없습니다. 잔액 읽기와 거래 읽기를 허용하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该连接无法读取余额或付款。请允许“读取余额”和“读取交易”。"
+          }
+        }
+      }
+    },
+    "That connection is missing its relay or secret. Copy the whole string." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A esa conexión le falta el relay o el secreto. Copia la cadena completa."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのコネクションにはリレーかシークレットがありません。文字列全体をコピーしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 연결에는 릴레이나 시크릿이 없습니다. 문자열 전체를 복사하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该连接缺少中继或密钥。请复制完整的字符串。"
+          }
+        }
+      }
+    },
     "That isn't an LEZ account or key. It may be a Logos chat address." : {
       "localizations" : {
         "es" : {
@@ -76448,6 +76952,34 @@
         }
       }
     },
+    "That's a private key, and it can spend. Paste the public one, starting xpub, ypub or zpub." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa es una clave privada y puede gastar. Pega la pública, que empieza por xpub, ypub o zpub."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それは秘密鍵で、送金ができてしまいます。xpub、ypub、zpub で始まる公開鍵を貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이것은 개인 키이며 지출할 수 있습니다. xpub, ypub 또는 zpub로 시작하는 공개 키를 붙여 넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是私钥，可以花费资金。请粘贴以 xpub、ypub 或 zpub 开头的公钥。"
+          }
+        }
+      }
+    },
     "That's a public key. Watching its account, %@." : {
       "localizations" : {
         "es" : {
@@ -76472,6 +77004,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这是公钥。正在关注其账户 %@。"
+          }
+        }
+      }
+    },
+    "That's a testnet key. Only mainnet Bitcoin is read." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa es una clave de testnet. Solo se lee Bitcoin de mainnet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それはテストネットの鍵です。読み取るのはメインネットのビットコインだけです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트넷 키입니다. 메인넷 비트코인만 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是测试网密钥。只读取主网比特币。"
           }
         }
       }
@@ -76588,6 +77148,34 @@
         }
       }
     },
+    "This address took %@ payments — each is linked to the others" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta dirección recibió %@ pagos — cada uno queda vinculado a los demás"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアドレスは%@件の支払いを受けました — それぞれが互いに結びつきます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 주소는 %@건의 결제를 받았습니다 — 각각이 서로 연결됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此地址收到了 %@ 笔付款 — 每一笔都与其他付款相关联"
+          }
+        }
+      }
+    },
     "This node doesn't report mining." : {
       "localizations" : {
         "es" : {
@@ -76640,6 +77228,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此转账"
+          }
+        }
+      }
+    },
+    "This wallet hasn't moved since %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta billetera no se ha movido desde %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このウォレットは%@から動いていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 지갑은 %@ 이후로 움직이지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此钱包自 %@ 以来没有变动"
+          }
+        }
+      }
+    },
+    "Through %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A través de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@経由"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 경유"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "经由 %@"
           }
         }
       }
@@ -148192,6 +148836,90 @@
         }
       }
     },
+    "Your send confirmed in block %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu envío se confirmó en el bloque %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金はブロック%@で承認されました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낸 거래가 블록 %@에서 확인되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的转出已在区块 %@ 中确认"
+          }
+        }
+      }
+    },
+    "Your send is still waiting — it paid %@ sat/vB, enough for the next hour" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu envío sigue esperando — pagó %@ sat/vB, suficiente para la próxima hora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金はまだ待機中です — %@ sat/vB を支払っており、次の1時間には十分です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낸 거래가 아직 대기 중입니다 — %@ sat/vB를 지불해 다음 한 시간에는 충분합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的转出仍在等待 — 支付了 %@ sat/vB，足够进入下一小时"
+          }
+        }
+      }
+    },
+    "Your send is waiting — it paid %@ sat/vB, and the next hour needs %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu envío está esperando — pagó %@ sat/vB y la próxima hora necesita %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金は待機中です — %@ sat/vB を支払いましたが、次の1時間には%@が必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낸 거래가 대기 중입니다 — %@ sat/vB를 지불했고, 다음 한 시간에는 %@가 필요합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的转出正在等待 — 支付了 %@ sat/vB，下一小时需要 %@"
+          }
+        }
+      }
+    },
     "Your Sources" : {
       "localizations" : {
         "es" : {
@@ -150772,6 +151500,62 @@
         }
       }
     },
+    "Your waiting send left the mempool — it was replaced or dropped" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu envío en espera salió de la mempool — fue reemplazado o descartado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "待機中の送金がメンプールから消えました — 置き換えられたか破棄されました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대기 중이던 거래가 멤풀에서 사라졌습니다 — 교체되었거나 폐기되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你等待中的转出已离开内存池 — 已被替换或丢弃"
+          }
+        }
+      }
+    },
+    "Your wallet answered in a way that couldn't be read." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu billetera respondió de una forma que no se pudo leer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットの応答を読み取れませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 읽을 수 없는 방식으로 응답했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包返回了无法读取的内容。"
+          }
+        }
+      }
+    },
     "Your wallet approved but shared no address — paste it instead." : {
       "localizations" : {
         "es" : {
@@ -150796,6 +151580,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的钱包已批准，但未提供地址 — 请改为粘贴地址。"
+          }
+        }
+      }
+    },
+    "Your wallet didn't allow that. Give the connection Read balance and Read transactions." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu billetera no lo permitió. Da a la conexión Leer saldo y Leer transacciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが許可しませんでした。コネクションに「残高の読み取り」と「取引の読み取り」を与えてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 허용하지 않았습니다. 연결에 잔액 읽기와 거래 읽기 권한을 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包不允许此操作。请为该连接授予“读取余额”和“读取交易”。"
+          }
+        }
+      }
+    },
+    "Your wallet didn't say what this connection can do, so it wasn't kept." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu billetera no dijo qué puede hacer esta conexión, así que no se guardó."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットがこのコネクションで何ができるかを示さなかったため、保存しませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 이 연결로 무엇을 할 수 있는지 알려 주지 않아 저장하지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包没有说明此连接能做什么，因此没有保存。"
           }
         }
       }
@@ -150880,6 +151720,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的钱包现在委托给一个未知合约（%@） — 如果不是你本人操作，这是钓鱼攻击"
+          }
+        }
+      }
+    },
+    "Your wallet said no (%@)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu billetera dijo que no (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが拒否しました（%@）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 거절했습니다(%@)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包拒绝了（%@）。"
+          }
+        }
+      }
+    },
+    "Your wallet said: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu billetera dijo: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットからの応答: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑의 응답: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包说：%@"
           }
         }
       }
