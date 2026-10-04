@@ -235,6 +235,9 @@ enum DemoSeedAll {
                               // Splits (prd §820) — the real seat's ref
                               // shapes, so the same teardown reasoning.
                               "splits:account:demo", "splits:tx:demo",
+                              // Lightning (prd §1098) — the real seat's
+                              // `lightning:` ref family, same reasoning.
+                              "lightning:demo",
                               // Peer/Privacy Pools rows carry the REAL
                               // bridges' own ref prefixes (2026-08-10, so
                               // their room heads' ref-shape matching
@@ -3781,6 +3784,25 @@ enum DemoSeedAll {
             }
         }
 
+        // Lightning (prd §1098). Three settled payments as the seat lands them:
+        // titled by memo, or by direction when there is none, with the amount
+        // in sats in the trailing slot.
+        let lightning: [(String, String, String, Double, Double)] = [
+            ("Coffee for Ana", "21,000 sats", "received", 18.9, 0.2),
+            ("Paid over Lightning", "4,200 sats", "sent", 3.8, 2),
+            ("Podcast boost", "1,000 sats", "sent", 0.9, 6),
+        ]
+        out += lightning.enumerated().map { i, x in
+            row(.transaction, x.0, source: "Lightning", ref: "lightning:demo:\(i)",
+                days: x.4, hour: 11, content: "lightning:demo\(i)") { t in
+                t.transferDirection = x.2
+                t.transferAmount = x.1
+                t.transferVenue = String(localized: "Lightning")
+                t.priceValue = x.3
+                t.priceCurrency = "USD"
+            }
+        }
+
         // Privy (prd §803g) — the apps that made a wallet, dated when each was
         // made, and what moved in two of them. The room's own head reads
         // `PrivyHomeStore`, which a demo never fills, so what the demo shows of
@@ -5468,6 +5490,8 @@ enum DemoSeedAll {
         ("Wise", "£1,240 · €310", "Reads your balances and transfers."),
         // Splits (prd §820): what `SplitsWatch.proof` composes — never a total.
         ("Splits", "Northwind Labs · 2 accounts", "Reads your team's accounts and payments."),
+        // Lightning (prd §1098): what `LightningWatch` composes.
+        ("Lightning", "Connected", "Reads your Lightning balance and payments."),
         // Privy (prd §803g) — the room states what it holds and how many apps
         // made a wallet, which is what its own page says.
         ("Privy", "$412 · 6 apps", "Reads which apps made you a wallet."),
