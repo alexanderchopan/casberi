@@ -10,7 +10,7 @@ import SwiftUI
 /// about two thirds of the screen wide, scrolling when the list is longer
 /// than the card. Since §1061 a row is a name and a run of round icons:
 /// You's four doors (Home, Notes, Addresses, Settings) lead, then each
-/// category in the person's Dock order (§1050j) — its own disc, its three
+/// category in the person's Dock order (§1050j) — its own disc, its two
 /// most-opened apps, "+N". No grabber, no detents and no search
 /// (§1015's field is deleted with the full-width sheet it led): a list this
 /// short is read, not searched. Glass on the floating layer is the design
@@ -31,18 +31,25 @@ struct RoomsTray: View {
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// A row's round icons: the category's own and its apps', one size.
-    static let icon: CGFloat = DS.Face.row
+    /// A row's round icons: the category's own and its apps', one size —
+    /// the touch floor since prd §1094 (users: "the menu buttons are super
+    /// duper small"; they were `DS.Face.row`, 30). Not the face button's 56:
+    /// five discs at 56 are wider than the card, and the face stands
+    /// beside the card, so a disc its size would read as a second one.
+    static let icon: CGFloat = DS.Face.tray
     static let iconGap: CGFloat = 6
-    /// How many apps a row shows before its "+N".
-    static let appsShown = 3
+    /// How many apps a row shows before its "+N" — two since §1094, so the
+    /// category's own disc keeps its seat at 44 and the name keeps its room.
+    static let appsShown = 2
     static let rowHeight: CGFloat = 52
     /// The card's corner: Messages' menu, a continuous corner.
     static let radius: CGFloat = 32
-    /// How much of the screen the card may take: two thirds across, capped,
-    /// and three quarters down before it scrolls.
-    static let widthShare: CGFloat = 0.73
-    static let maxWidth: CGFloat = 300
+    /// How much of the screen the card may take: 320 wide (§1094: four
+    /// 44pt discs and a name like "Testnets"), which is most of a 375pt
+    /// phone and four fifths of a 402pt one, and three quarters down before
+    /// it scrolls.
+    static let widthShare: CGFloat = 0.86
+    static let maxWidth: CGFloat = 320
     static let heightShare: CGFloat = 0.72
     /// The stagger between one row's arrival and the next.
     static let dealStep: Double = 0.02
@@ -266,8 +273,8 @@ struct RoomsTray: View {
     /// A category's row (prd §1061, user: "what if the icon for the category
     /// is the first icon where the apps are now … that way if you touch that
     /// icon you go to the room"): its name, then a run of round icons — the
-    /// category's own glyph on a plain disc first, then the three apps you
-    /// open most, then "+N" for the rest, so nobody reads three apps as all
+    /// category's own glyph on a plain disc first, then the two apps you (three
+    /// until §1094) open most, then "+N" for the rest, so nobody reads two as all
     /// there is. The name, the category's disc and the "+N" land in the
     /// category's room on All; an app lands in the room scoped to it. The
     /// standing category fills its glyph; a broken app inside wears the
@@ -304,6 +311,7 @@ struct RoomsTray: View {
                               bounces: lit)
                 }
                 .buttonStyle(PressSpring())
+                .dsTapTarget()
                 .contentShape(Rectangle().inset(by: -Self.iconGap / 2))
                 .accessibilityLabel(Text("All of \(category)"))
                 ForEach(shown, id: \.name) { app in
@@ -313,6 +321,7 @@ struct RoomsTray: View {
                         BridgeIcon(name: app.mark, size: Self.icon, circular: true)
                     }
                     .buttonStyle(PressSpring())
+                    .dsTapTarget()
                     .contentShape(Rectangle().inset(by: -Self.iconGap / 2))
                     .accessibilityLabel(Text(app.name))
                 }
@@ -321,7 +330,7 @@ struct RoomsTray: View {
                         pickCategory(category)
                     } label: {
                         Text(verbatim: "+\(more)")
-                            .dsText(.label12)
+                            .dsText(.body17)
                             .foregroundStyle(DS.textSecondary)
                             .frame(width: Self.icon, height: Self.icon)
                             .background(Circle().fill(DS.surfaceRaised))
@@ -399,7 +408,7 @@ struct RoomsTray: View {
             .fill(fill)
             .overlay(
                 Image(systemName: glyph)
-                    .dsGlyph(.subhead, weight: .medium)
+                    .dsGlyph(.title, weight: .medium)
                     .foregroundStyle(ink)
                     .symbolEffect(.bounce.up, value: bounces ? bounceTick : 0)
             )

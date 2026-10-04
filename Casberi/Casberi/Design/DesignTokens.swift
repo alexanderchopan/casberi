@@ -694,6 +694,10 @@ enum DS {
         /// name under it; a face that leads a profile at the same size as a
         /// face in a row of five reads as a list that lost its list.
         static let profile: CGFloat = 76
+        /// The rooms tray's discs (prd §1094): the touch floor, because each
+        /// is its own door and a row holds four. Between `row` and `seat`,
+        /// and smaller than the face button above them (§1093).
+        static let tray: CGFloat = Hit.min
     }
 
     /// The touch-target floor, as a token so a control can't drift under it

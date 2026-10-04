@@ -64023,3 +64023,13 @@ It reads the folded room (§1079), so an incident later resolved, a dispute late
 **Now:** `DSDock.agentSize` is 56 at rest and 48 folded, the chip's FRAME (`chipFrame`), so the seat's centre still lands on the row's and the phone's scope capsule (`DSScopeDock`, 56pt) is the seat's own height. The face inside grows with the disc (`DSDock.faceShare`, 32 in 46: 39pt at rest). Everything measured off the seat follows: the capsule's leading edge, the pushed screens' clearance (`seatClearance`, +10pt), the fold's centring. The iPad/Mac rail's chips and its own face keep 46 → 40 as `DSDock.chipMark`; `DS.Face.seat` stays 46.
 
 **Checked.** `dock-selftest.sh` pins both sizes, the chip frame they stand on and the face's share. **Not seen:** the simulator or a device; the session had no Xcode.
+
+## §1094 — The tray's discs stand at the touch floor: 44pt, two apps a row, a 320pt card (users, relayed 2026-10-04: "the menu buttons are super duper small"; the user chose option 2 of five mockups — "i think option 2 looks better than option 1"; amends §1061's three apps and §1071's 30 for the tray) — BUILT
+
+**Before:** a row was a name and up to five 30pt discs (`DS.Face.row`): the category, its three most-opened apps, "+N", in a card 73% of the screen, capped at 300. 30 is under the 44pt floor (`DS.Hit.min`), and the accessibility audit carried the app disc as an exemption.
+
+**Weighed, on a canvas of five phones:** the face button's 56 (five discs come to 304pt, wider than the card, and a disc the face's size beside the face is the §1093 complaint again); 44 with the name above its discs (the tray scrolls on a 17 Pro); 44 with no category disc (the user: a name in plain type does not say "tap here", the disc does); 44 with two apps and a wider card — chosen.
+
+**Now:** every disc is `DS.Face.tray` (= `DS.Hit.min`, 44), glyphs on the `title` rung, "+N" at `body17`. A row shows the category's disc, two apps, "+N". The card is 86% of the screen, capped at 320, so a 375pt phone and a 402pt one both get 320 and "Testnets" fits beside four discs. The disc buttons wear `dsTapTarget()` and the audit's exemption is deleted. The You row's four doors are 44 too.
+
+**Checked.** `accessibility-audit.py` (clean, no exemption), `face-ramp-audit.py`, `design-ramp-audit.py`, `ds-template-audit.py`, `dock-selftest.sh`. **Not seen:** a build, the simulator or a device; the session had no Xcode.
