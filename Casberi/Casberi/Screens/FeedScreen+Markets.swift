@@ -40,6 +40,11 @@ extension FeedScreen {
             }
             .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
                    maxHeight: DSRoomChassis.leadBox, alignment: .topLeading)
+            // **IN THE WELL, AT EVERY ROOM'S HEIGHT (prd §1102, user: "the
+            // markets card is not the same height as all the other screens").**
+            // §1081 drew the map on nothing at the bare `leadBox`, 32pt short
+            // of every other lead; it takes the head's well now.
+            .dsRoomHeadBlock()
             .listRowBackground(Color.clear)
             .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                  bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
@@ -232,6 +237,7 @@ extension FeedScreen {
                     }
                     .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
                            maxHeight: DSRoomChassis.leadBox, alignment: .topLeading)
+                    .dsRoomHeadBlock()   // the well, as the watchlist's (prd §1102)
                     .listRowBackground(Color.clear)
                     .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                          bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
