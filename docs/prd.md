@@ -64033,3 +64033,9 @@ It reads the folded room (§1079), so an incident later resolved, a dispute late
 **Now:** every disc is `DS.Face.tray` (= `DS.Hit.min`, 44), glyphs on the `title` rung, "+N" at `body17`. A row shows the category's disc, two apps, "+N". The card is 86% of the screen, capped at 320, so a 375pt phone and a 402pt one both get 320 and "Testnets" fits beside four discs. The disc buttons wear `dsTapTarget()` and the audit's exemption is deleted. The You row's four doors are 44 too.
 
 **Checked.** `accessibility-audit.py` (clean, no exemption), `face-ramp-audit.py`, `design-ramp-audit.py`, `ds-template-audit.py`, `dock-selftest.sh`. **Not seen:** a build, the simulator or a device; the session had no Xcode.
+
+## §1094a — The tray's rows are 60pt (user: "mock up what it would look like if we created some space between the rows so it doesn't look so cramped", then "ok do it" over 52, 60, 64 and 68 on the canvas; amends §1094) — BUILT
+
+At 52 a row left 8pt between one row's 44pt discs and the next. `RoomsTray.rowHeight` is 60: 16pt between them, and ten rows before the card scrolls on a 17 Pro (64 held nine, 68 scrolled at nine). A smaller phone scrolls at any of the four, as it did at 52.
+
+**Checked.** The canvas mockups; `accessibility-audit.py`, `law-digest.py --check`, `prd-index-audit.py`. **Not seen:** a build, the simulator or a device.

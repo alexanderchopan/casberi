@@ -41,7 +41,10 @@ struct RoomsTray: View {
     /// How many apps a row shows before its "+N" — two since §1094, so the
     /// category's own disc keeps its seat at 44 and the name keeps its room.
     static let appsShown = 2
-    static let rowHeight: CGFloat = 52
+    /// 60 since prd §1094a (user: "create some space between the rows so it
+    /// doesn't look so cramped"): 16pt between a row's 44pt discs and the
+    /// next, and ten rows before the card scrolls on a 17 Pro.
+    static let rowHeight: CGFloat = 60
     /// The card's corner: Messages' menu, a continuous corner.
     static let radius: CGFloat = 32
     /// How much of the screen the card may take: 320 wide (§1094: four
