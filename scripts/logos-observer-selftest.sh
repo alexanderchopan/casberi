@@ -1,0 +1,184 @@
+#!/bin/zsh
+# Casberi Logos Observer self-test — the SHIPPED v2 client logic (2026-10-03):
+#
+#   Casberi/Casberi/Model/LogosObserverWire.swift
+#     — offer(_:)                    (the pairing QR)
+#     — pin(p256Point:) / matches    (the SPKI pin, from the key iOS hands us)
+#     — canonical / signature / headers (the per-request HMAC)
+#     — pairing(_:requested:)        (the activation response)
+#     — refusal(status:json:)        (which 401 drops the key)
+#     — status(_:) / snapshot(_:)    (omitted vs null, node down is a 200)
+#
+# The vectors under scripts/fixtures/logos-observer/ are the Observer's OWN
+# (github.com/0xterricola/logos-observer, vectors/), copied unmodified: the
+# HMAC vector, the sample certificate and its pin, and the sample QR. Every
+# failure here looks the same from the phone — each request answered
+# `401 bad_signature`, or a pairing that never trusts its Observer:
+#
+#   • the nonce signed as hex instead of base64url;
+#   • the request-target normalised (`%2F` decoded) before signing;
+#   • the pin taken over the bare point instead of the DER SPKI;
+#   • a failed section (`null`) read as "not granted", or as zero;
+#   • any 401 dropping the key, so a skewed clock unpairs the phone.
+#
+# Pure, local, deterministic — no network, no simulator. Exit non-zero on failure.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+WIRE="Casberi/Casberi/Model/LogosObserverWire.swift"
+NODE="Casberi/Casberi/Model/LogosWire.swift"
+FIX="scripts/fixtures/logos-observer"
+for f in "$WIRE" "$NODE" "$FIX/v2-hmac.json" "$FIX/v2-qr.json" "$FIX/v2-spki.json" "$FIX/v2-sample-cert.pem"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
+done
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+cat > "$TMP/main.swift" <<'SWIFT'
+import Foundation
+import Security
+
+var failures = 0
+func check(_ ok: Bool, _ what: String) {
+    if ok { print("  ✓ \(what)") } else { print("  ✗ \(what)"); failures += 1 }
+}
+let fix = CommandLine.arguments[1]
+func json(_ name: String) -> [String: Any] {
+    try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: "\(fix)/\(name)"))) as! [String: Any]
+}
+func parse(_ s: String) -> Any? { try? JSONSerialization.jsonObject(with: Data(s.utf8), options: [.fragmentsAllowed]) }
+typealias W = LogosObserverWire
+
+print("HMAC vector")
+let h = json("v2-hmac.json")
+let key = Data(hexString: h["hmac_key_hex"] as! String)
+let nonce = Data(hexString: h["nonce_hex"] as! String)
+let canon = W.canonical(method: h["method"] as! String, target: h["request_target"] as! String,
+                        timestamp: Int(h["timestamp"] as! String)!, nonce: W.base64urlEncode(nonce),
+                        deviceID: h["device_id"] as! String, body: Data())
+check(canon == h["canonical"] as! String, "canonical string matches the Observer's byte for byte")
+check(W.signature(key: key, canonical: canon) == h["signature_base64url"] as! String, "signature matches")
+check(W.base64urlDecode(h["hmac_key_base64url"] as! String) == key, "base64url key decodes to the hex key")
+let hdr = W.headers(key: key, deviceID: h["device_id"] as! String, method: "GET",
+                    target: h["request_target"] as! String,
+                    now: Date(timeIntervalSince1970: TimeInterval(Int(h["timestamp"] as! String)!)), nonce: nonce)
+check(hdr["X-Observer-Signature"] == h["signature_base64url"] as? String, "headers() carries the same signature")
+check(hdr["X-Observer-Nonce"] == h["nonce_base64url"] as? String, "the nonce header is base64url")
+check(hdr["X-Observer-Timestamp"] == h["timestamp"] as? String && hdr["X-Observer-Device"] == h["device_id"] as? String,
+      "timestamp and device headers")
+let decoded = W.canonical(method: "GET", target: "/v2/status?detail=mining/rewards&limit=10",
+                          timestamp: 1791068453, nonce: W.base64urlEncode(nonce), deviceID: "d_test_casberi_01", body: Data())
+check(W.signature(key: key, canonical: decoded) != h["signature_base64url"] as! String,
+      "a normalised target (%2F decoded) does NOT verify")
+
+print("SPKI pin vector")
+let s = json("v2-spki.json")
+let pem = try! String(contentsOfFile: "\(fix)/v2-sample-cert.pem", encoding: .utf8)
+let b64 = pem.split(separator: "\n").filter { !$0.hasPrefix("-----") }.joined()
+let cert = SecCertificateCreateWithData(nil, Data(base64Encoded: b64)! as CFData)!
+let secKey = SecCertificateCopyKey(cert)!
+let point = SecKeyCopyExternalRepresentation(secKey, nil)! as Data
+check(point.count == 65 && point.first == 0x04, "Security hands back a 65-byte uncompressed P-256 point")
+check(W.pin(p256Point: point) == s["expected_pin"] as? String, "pin from the key iOS gives us matches the Observer's")
+check(W.matches(pin: s["expected_pin"] as! String, p256Point: point), "matches() accepts the right key")
+var other = point; other[64] ^= 0x01
+check(!W.matches(pin: s["expected_pin"] as! String, p256Point: other), "matches() refuses a key one bit off")
+check(W.pin(spki: point) != s["expected_pin"] as? String, "hashing the bare point (no SPKI prefix) does NOT match")
+check(W.pin(p256Point: point.dropFirst()) == nil, "a 64-byte point is not pinned")
+
+print("QR vector")
+let q = json("v2-qr.json")
+let qrText = q["qr"] as! String
+let offer = W.offer(qrText)
+check(offer != nil, "the sample QR parses")
+if let o = offer {
+    check(o.host == "192.168.1.20" && o.port == 8081, "host and port")
+    check(o.pin == q["pin"] as? String, "pin")
+    check(o.secret == q["bootstrap_secret"] as? String, "secret")
+    check(o.name == q["display_name"] as? String, "name")
+    check(o.scopes == q["scopes"] as? [String], "scopes, in order")
+    check(o.bonjour == "Logos Observer._logos-observer._tcp", "Bonjour name, percent-decoded")
+    check(o.expires == Date(timeIntervalSince1970: TimeInterval(q["expires_at"] as! Int)), "expiry")
+    check(!o.isExpired(at: Date(timeIntervalSince1970: 1791068752)) && o.isExpired(at: Date(timeIntervalSince1970: 1791068753)),
+          "expires at exp, not after")
+    check(o.baseURL == "https://192.168.1.20:8081", "base URL")
+}
+check(qrText.count == q["length"] as! Int, "QR length as stated (\(qrText.count))")
+check(W.offer(qrText.replacingOccurrences(of: "v=2", with: "v=1")) == nil, "a v1 QR is refused")
+check(W.offer(qrText.replacingOccurrences(of: "rewards.status.read", with: "rewards.claim")) == nil,
+      "a QR offering a control scope is refused")
+check(W.offer(qrText.replacingOccurrences(of: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8", with: "AAEC")) == nil,
+      "a short secret is refused")
+check(W.offer(qrText.replacingOccurrences(of: "sha256/", with: "sha1/")) == nil, "a non-sha256 pin is refused")
+check(W.offer(qrText + "&v=3") == nil, "a repeated key is refused")
+check(W.offer(qrText.replacingOccurrences(of: "logos-observer://", with: "https://")) == nil, "another scheme is refused")
+check(W.splitHostPort("[fe80::1]:9000").map { "\($0.0)|\($0.1)" } == "fe80::1|9000", "IPv6 host in brackets")
+check(W.splitHostPort("observer.local").map { $0.1 } == 8081, "a bare host takes the v2 default port")
+
+print("Pairing response")
+let req = W.readScopes
+let good = parse(#"{"device_id":"d_1","hmac_key":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8","granted_scopes":["node.status.read","mining.status.read"]}"#)
+check(W.pairing(good, requested: req)?.granted == ["node.status.read", "mining.status.read"], "granted scopes are the truth")
+check(W.pairing(good, requested: req)?.key == key, "the key decodes to 32 bytes")
+check(W.pairing(parse(#"{"device_id":"d_1","hmac_key":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8","granted_scopes":["mining.control"]}"#), requested: req) == nil,
+      "a granted control scope is refused")
+check(W.pairing(parse(#"{"device_id":"d_1","hmac_key":"AAEC","granted_scopes":["node.status.read"]}"#), requested: req) == nil,
+      "a short key is refused")
+let body = String(data: W.pairBody(secret: "S", deviceName: "Phone", scopes: ["node.status.read"]), encoding: .utf8)!
+check(body == #"{"device_name":"Phone","scopes":["node.status.read"],"secret":"S"}"#, "pair body: secret, device_name, scopes")
+
+print("Refusals")
+check(W.refusal(status: 401, json: parse(#"{"error":"revoked"}"#))?.dropsCredential == true, "revoked drops the key")
+for code in ["clock_skew", "bad_signature", "replay"] {
+    check(W.refusal(status: 401, json: parse("{\"error\":\"\(code)\"}"))?.dropsCredential == false, "\(code) keeps the key")
+}
+check(W.refusal(status: 403, json: parse(#"{"error":"scope"}"#)) == .scope, "403 scope")
+check(W.refusal(status: 401, json: nil) == .other && W.refusal(status: 401, json: nil)?.dropsCredential == false,
+      "an unreadable 401 keeps the key")
+check(W.refusal(status: 200, json: nil) == nil && W.refusal(status: 404, json: nil) == nil, "200 and 404 are not refusals")
+
+print("Status")
+let tip = String(repeating: "4d", count: 32)
+let full = parse("""
+{"v":2,"observed_at":"2026-10-03T14:02:11Z",
+ "node":{"reachable":true,"phase":"Following","height":184220,"tip":"\(tip)"},
+ "network":{"peers":12},
+ "mining":{"is_mining":true,"rewards_enabled":true,"auto_claim":false},
+ "rewards":{"claimable_tickets":3,"slots_until_expiry":412,"vouchers":2,"total_claimable":"15.000000"}}
+""")
+let st = W.status(full)!
+check(st.node.value?.height == 184220 && st.node.value?.tip?.count == 64, "node section")
+check(st.peers == .value(12) && st.mining.value?.isMining == true, "network and mining")
+check(st.rewards.value?.claimable == Decimal(string: "15"), "claimable is a decimal string, read exactly")
+check(st.observedAt == Date(timeIntervalSince1970: 1791036131), "observed_at")
+let snap = W.snapshot(st)
+check(snap.synced && snap.peers == 12 && snap.mining == true && snap.miningPays == true
+      && snap.tickets == 3 && snap.vouchers == 2, "maps onto the direct read's NodeSnapshot")
+
+let partial = W.status(parse(#"{"v":2,"node":{"reachable":true,"phase":"Following","height":5,"tip":null},"mining":null}"#))!
+check(partial.peers == .notGranted && partial.rewards == .notGranted, "an omitted section is not granted")
+check(partial.mining == .failed, "a null section is a failed read")
+check(W.snapshot(partial).mining == nil && W.snapshot(partial).peers == nil, "neither becomes false or zero")
+
+let down = W.status(parse(#"{"v":2,"node":{"reachable":false,"phase":null,"height":null,"tip":null},"network":null,"mining":null,"rewards":null}"#))!
+check(down.node.value?.reachable == false, "node down is a reading, not an error")
+check(W.snapshot(down) == .unreachable, "node down maps to unreachable")
+check(W.status(parse(#"{"v":1,"node":{"reachable":true}}"#)) == nil, "a v1 body is refused")
+
+print(failures == 0 ? "✓ all Observer checks" : "✗ \(failures) failure(s)")
+exit(failures == 0 ? 0 : 1)
+
+extension Data {
+    init(hexString: String) {
+        var d = Data(); var i = hexString.startIndex
+        while i < hexString.endIndex {
+            let j = hexString.index(i, offsetBy: 2); d.append(UInt8(hexString[i..<j], radix: 16)!); i = j
+        }
+        self = d
+    }
+}
+SWIFT
+
+xcrun swiftc -O -o "$TMP/run" "$WIRE" "$NODE" "$TMP/main.swift" 2>"$TMP/err" || { cat "$TMP/err"; echo "✗ compile failed"; exit 1; }
+"$TMP/run" "$FIX"

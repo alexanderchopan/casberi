@@ -1,0 +1,16 @@
+{
+  "bootstrap_secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "description": "Logos Observer v2 pairing QR interoperability vector",
+  "display_name": "Observer",
+  "expires_at": 1791068753,
+  "host": "192.168.1.20:8081",
+  "length": 291,
+  "pin": "sha256/b5b_xWoDK7EJ11lQXxjG0-VqRbq6LqcNFrMf7pYBC8o",
+  "qr": "logos-observer://pair?v=2&exp=1791068753&h=192.168.1.20:8081&b=Logos%20Observer._logos-observer._tcp&pin=sha256/b5b_xWoDK7EJ11lQXxjG0-VqRbq6LqcNFrMf7pYBC8o&s=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8&n=Observer&sc=node.status.read,network.status.read,mining.status.read,rewards.status.read",
+  "scopes": [
+    "node.status.read",
+    "network.status.read",
+    "mining.status.read",
+    "rewards.status.read"
+  ]
+}

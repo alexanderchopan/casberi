@@ -1,0 +1,254 @@
+<title>Logos Observer Spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column, tables and code scroll in their own boxes */
+:root {
+  --bg: #f7f8f7; --fg: #1b2420; --muted: #5d6a64; --line: #dde3e0;
+  --panel: #eef2f0; --accent: #0f6b5c; --warn: #9a5b00;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121715; --fg: #e3e9e6; --muted: #98a6a0; --line: #2a3430;
+  --panel: #1a211e; --accent: #5cc4ae; --warn: #e0a24a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121715; --fg: #e3e9e6; --muted: #98a6a0; --line: #2a3430;
+  --panel: #1a211e; --accent: #5cc4ae; --warn: #e0a24a; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 16px/1.6 var(--sans); padding-inline: 16px; padding-block: 40px 80px }
+main { max-width: 720px; margin: 0 auto; display: grid; gap: 8px }
+h1 { font-size: 2rem; line-height: 1.2; margin: 0; font-weight: 600; text-wrap: balance }
+h2 { font-size: 1.25rem; margin: 36px 0 4px; font-weight: 600; text-wrap: balance }
+h3 { font-size: 1rem; margin: 20px 0 0; font-weight: 600 }
+p, ul, ol { margin: 0 0 8px } li { margin-bottom: 4px }
+.meta { color: var(--muted); font-size: .9rem; display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 12px }
+.status { color: var(--accent); font-weight: 500 }
+code { font: .88em var(--mono); background: var(--panel); padding: 1px 4px; border-radius: 4px }
+pre { font: .85rem/1.55 var(--mono); background: var(--panel); padding: 14px 16px; border-radius: 8px; overflow-x: auto; margin: 4px 0 12px }
+pre code { background: none; padding: 0 }
+.tbl { overflow-x: auto; margin: 4px 0 12px }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 520px }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line) }
+th { font-weight: 600; color: var(--muted); font-size: .82rem; letter-spacing: .02em }
+td:first-child { white-space: nowrap }
+.must { color: var(--accent); font-weight: 600 }
+.note { border-left: 3px solid var(--warn); padding: 4px 0 4px 14px; margin: 8px 0 12px }
+a { color: var(--accent) }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+</style>
+
+<main>
+<h1>Logos Observer v2: a read-only window onto your node</h1>
+<div class="meta"><span class="status">Frozen for implementation</span><span>Logos × Casberi</span><span>3 October 2026</span><span>Contract v2</span></div>
+
+<p>Casberi is an iOS and Mac app that shows a person their own Logos node: whether it's in sync, its peers, whether it's mining, and what rewards are waiting. The <strong>Observer</strong> runs next to the node and answers a paired device's reads, and nothing else.</p>
+<p>In short: TLS handles the secure channel, an HMAC identifies the paired device, scopes define what it may read, and the Observer stays a strict read-only boundary around the node API.</p>
+
+<h2>Requirements</h2>
+<p><span class="must">Must</span> marks a requirement. <em>Should</em> marks a recommendation.</p>
+<ol>
+  <li>The raw node API stays on <code>127.0.0.1:8080</code> and is never exposed to the LAN.</li>
+  <li>The Observer <span class="must">must</span> serve only the routes in <a href="#routes">Routes</a>. Nothing proxies an arbitrary path, and every other method or path returns <code>404</code>.</li>
+  <li>All traffic <span class="must">must</span> use TLS 1.3 to an Observer identity the device pinned at pairing.</li>
+  <li>Every request after pairing <span class="must">must</span> carry an HMAC signature with a timestamp and a fresh nonce. Nonces are kept across restarts.</li>
+  <li>A device can read only the scopes it was granted.</li>
+  <li>The person <span class="must">must</span> be able to see and revoke every paired device from the Observer.</li>
+</ol>
+
+<h2 id="scopes">Scopes</h2>
+<h3>Read scopes (v2)</h3>
+<div class="tbl"><table>
+  <thead><tr><th>Scope</th><th>Node routes it covers</th><th>Casberi requests</th></tr></thead>
+  <tbody>
+    <tr><td><code>node.status.read</code></td><td><code>GET /cryptarchia/info</code>: phase, height, tip</td><td>Yes</td></tr>
+    <tr><td><code>network.status.read</code></td><td><code>GET /network/info</code>: peer count</td><td>Yes</td></tr>
+    <tr><td><code>mining.status.read</code></td><td><code>GET /pow/status</code></td><td>Yes</td></tr>
+    <tr><td><code>rewards.status.read</code></td><td><code>GET /pow/rewards/claimable</code>, <code>GET /leader/claim/vouchers?tip=</code></td><td>Yes</td></tr>
+    <tr><td><code>blend.status.read</code></td><td>Reserved until Logos names the underlying node data</td><td>No. Reserved.</td></tr>
+  </tbody>
+</table></div>
+
+<h3>Control scopes (reserved, not in v2)</h3>
+<p><code>mining.control</code>, <code>rewards.claim</code>, <code>node.control</code></p>
+<ul>
+  <li>Control is a separate privilege class. It needs its own explicit consent and has its own routes.</li>
+  <li>The Observer <span class="must">must not</span> grant read and control scopes in the same pairing. A compromised read-only dashboard can't inherit control.</li>
+  <li>Casberi will never request a control scope.</li>
+</ul>
+
+<h2 id="routes">Routes</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Route</th><th>Auth</th><th>Returns</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST /v2/pair</code></td><td>Bootstrap secret</td><td>Activates a pairing. See <a href="#pairing">Pairing</a>.</td></tr>
+    <tr><td><code>GET /v2/status</code></td><td>HMAC</td><td>Every granted section in one response. Casberi reads this route only.</td></tr>
+    <tr><td><code>GET /v2/network</code></td><td>HMAC + scope</td><td>The <code>network</code> section alone</td></tr>
+    <tr><td><code>GET /v2/blend</code></td><td>HMAC + scope</td><td>The <code>blend</code> section alone</td></tr>
+    <tr><td><code>GET /v2/mining</code></td><td>HMAC + scope</td><td>The <code>mining</code> section alone</td></tr>
+    <tr><td><code>GET /v2/rewards</code></td><td>HMAC + scope</td><td>The <code>rewards</code> section alone</td></tr>
+    <tr><td><code>DELETE /v2/device</code></td><td>HMAC</td><td>The device revokes itself (Casberi's "Forget node").</td></tr>
+  </tbody>
+</table></div>
+<p>With one combined route, the network sees one request per refresh instead of five, and every figure shares one timestamp.</p>
+
+<h3>Status response</h3>
+<pre><code>{
+  "v": 2,
+  "observed_at": "2026-10-03T14:02:11Z",
+  "node":    { "reachable": true, "phase": "Following", "height": 184220, "tip": "4d2f9a1c7e0b83f5a6d1c94e2b7f08a3c5e6d19b4f2a7c0e8d3b61f5a9c2e47d" },
+  "network": { "peers": 12 },
+  "mining":  { "is_mining": true, "rewards_enabled": true, "auto_claim": false },
+  "rewards": { "claimable_tickets": 3, "slots_until_expiry": 412,
+               "vouchers": 2, "total_claimable": "15.000000" }
+}</code></pre>
+<ul>
+  <li><strong>A section that isn't granted is left out. A section whose read failed is <code>null</code>.</strong> A failed read is never <code>0</code>, so the phone can say "unknown" instead of "not mining".</li>
+  <li><strong>A node that's down is still a <code>200</code>,</strong> in exactly the shape below. That tells "your node stopped" apart from "the Observer is unreachable".</li>
+  <li><strong>Amounts are decimal strings.</strong></li>
+  <li>Voucher commitments and nullifiers never leave the Observer. Only the count does.</li>
+  <li>The Observer <em>should</em> cache a reading for 10 seconds, so two devices don't double the load on the node.</li>
+</ul>
+
+<h3>Node down</h3>
+<pre><code>{
+  "v": 2,
+  "observed_at": "2026-10-03T14:02:11Z",
+  "node":    { "reachable": false, "phase": null, "height": null, "tip": null },
+  "network": null,
+  "mining":  null,
+  "rewards": null
+}</code></pre>
+<p>Every granted section is present. The node section keeps its keys with <code>null</code> values, and the other sections are <code>null</code>. <code>tip</code> is the node's full block id, or <code>null</code>. It's never abbreviated on the wire.</p>
+
+<h2>Transport</h2>
+<ul>
+  <li>TLS 1.3 only, with a self-signed <strong>ECDSA P-256</strong> certificate the Observer generates on first run and keeps. Apple's TLS stack doesn't accept Ed25519 server certificates, so Ed25519 would make the Observer unreachable from iOS.</li>
+  <li>The pin is the SHA-256 of the DER-encoded SubjectPublicKeyInfo, written <code>sha256/&lt;base64url&gt;</code>. It survives a certificate renewal that keeps the key. A new key means every device pairs again.</li>
+  <li>The device accepts no certificate whose key doesn't match the pin. No CA is involved.</li>
+  <li>The Observer <em>should</em> advertise over Bonjour as <code>_logos-observer._tcp</code>, so a device can find it after its address changes. The pin makes that safe.</li>
+  <li>The default port is <strong>8081</strong>, and it is configurable.</li>
+</ul>
+
+<h2 id="pairing">Pairing</h2>
+<h3>1. The QR</h3>
+<pre><code>logos-observer://pair?v=2
+  &amp;exp=1791068753
+  &amp;h=192.168.1.20:8081
+  &amp;b=Logos%20Observer._logos-observer._tcp
+  &amp;pin=sha256/&lt;base64url&gt;
+  &amp;s=&lt;base64url 32-byte bootstrap secret&gt;
+  &amp;n=&lt;Observer display name&gt;
+  &amp;sc=node.status.read,network.status.read,mining.status.read,rewards.status.read</code></pre>
+<ul>
+  <li>Valid for <strong>5 minutes</strong> and <strong>one successful pairing</strong>. Voided after 5 failed attempts.</li>
+  <li>Shown only on the Observer's own screen or terminal, never served over the network.</li>
+  <li>Keep it under about 300 characters, so it scans from across a desk.</li>
+  <li>The device's HMAC key is never in the QR. A photo of a used QR is worth nothing.</li>
+</ul>
+
+<h3>2. Consent, on the device</h3>
+<p>Before sending anything, Casberi shows:</p>
+<ul>
+  <li>the Observer's name and address</li>
+  <li>each offered scope, in plain words</li>
+  <li>Approve and Cancel</li>
+</ul>
+<p>The person can untick a scope. The approved subset goes in the activation request.</p>
+
+<h3>3. Activation</h3>
+<pre><code>POST /v2/pair
+{ "secret": "&lt;from QR&gt;", "device_name": "Alex's iPhone",
+  "scopes": ["node.status.read", "network.status.read",
+             "mining.status.read", "rewards.status.read"] }
+
+200
+{ "device_id": "d_7Kq2…", "hmac_key": "&lt;base64url 32 bytes&gt;",
+  "granted_scopes": ["node.status.read", "network.status.read",
+                     "mining.status.read", "rewards.status.read"] }</code></pre>
+<ul>
+  <li>The device treats <code>granted_scopes</code> as the truth, and Casberi draws only those sections.</li>
+  <li>Casberi stores <code>hmac_key</code> in the iOS Keychain as a device-only item. It doesn't sync to iCloud or restore to another phone.</li>
+  <li>The Observer <span class="must">must</span> then show "Paired: <em>device name</em>". Whoever scans first gets the pairing, and this is how the person notices if it wasn't them.</li>
+</ul>
+
+<h2>Signed requests</h2>
+<pre><code>GET /v2/status
+X-Observer-Device:    d_7Kq2…
+X-Observer-Timestamp: 1791068453
+X-Observer-Nonce:     &lt;base64url 16 random bytes&gt;
+X-Observer-Signature: &lt;base64url HMAC-SHA256(hmac_key, canonical)&gt;
+
+canonical =
+  "LOGOS-OBSERVER-V2" \n
+  METHOD \n
+  request-target \n
+  timestamp \n
+  nonce \n
+  device_id \n
+  hex(SHA-256(body))       // empty body: SHA-256 of ""</code></pre>
+<ul>
+  <li><strong><code>request-target</code> is the exact bytes sent on the request line,</strong> in origin form: the path, then <code>?</code> and the query only if there is one. Query order and percent-encoding are kept as sent, with no normalisation. There's no trailing <code>?</code> when the query is empty, and never a fragment.</li>
+  <li>Allowed clock skew: ±120 seconds. Nonces are kept for 5 minutes and survive a restart.</li>
+  <li>The Observer checks the device, then the time, then the signature, then the scope, then consumes the nonce, and only then reads the node.</li>
+</ul>
+
+<h3>Errors</h3>
+<div class="tbl"><table>
+  <thead><tr><th>Response</th><th>Meaning</th><th>Casberi does</th></tr></thead>
+  <tbody>
+    <tr><td><code>401 revoked</code></td><td>Device revoked or unknown</td><td>Drops the key and shows "Pair again"</td></tr>
+    <tr><td><code>401 clock_skew</code></td><td>Timestamp outside the window</td><td>Says the clocks disagree. Keeps the key.</td></tr>
+    <tr><td><code>401 bad_signature</code></td><td>Signature didn't verify</td><td>Keeps the key and reports the error</td></tr>
+    <tr><td><code>401 replay</code></td><td>Nonce already used</td><td>Retries once with a new nonce</td></tr>
+    <tr><td><code>403 scope</code></td><td>Scope not granted</td><td>Stops asking for that section</td></tr>
+    <tr><td>No connection</td><td>Observer unreachable</td><td>Says so. Keeps the key and the last reading, stamped with its time.</td></tr>
+  </tbody>
+</table></div>
+<p>The body is <code>{"error": "&lt;code&gt;"}</code>. Only <code>revoked</code> ever clears a credential.</p>
+
+<h2>Managing devices</h2>
+<p>For each paired device, the Observer shows:</p>
+<ul>
+  <li>its name and when it paired</li>
+  <li>its granted scopes</li>
+  <li>when it was last seen, and from which address</li>
+  <li>a Revoke button</li>
+</ul>
+<p>Credentials don't expire while they're in use. A device unused for 90 days <em>should</em> be revoked.</p>
+
+<h2>What the network can still see</h2>
+<p>Someone on the LAN sees the Observer's address and port, when requests happen, and how big they are. Paths, headers and responses are inside TLS. Casberi's setup copy will say the same: what your node reports is private, but your network can see that you're reaching it.</p>
+
+<h2>Threats</h2>
+<div class="tbl"><table>
+  <thead><tr><th>If someone…</th><th>What stops them</th></tr></thead>
+  <tbody>
+    <tr><td>photographs the QR</td><td>5 minutes and single use, the consent step, and the "Paired:" confirmation</td></tr>
+    <tr><td>sniffs the LAN</td><td>TLS 1.3. Only metadata is visible.</td></tr>
+    <tr><td>impersonates the Observer</td><td>The SPKI pin from the QR</td></tr>
+    <tr><td>replays a request</td><td>Timestamp window and stored nonces, kept across restarts</td></tr>
+    <tr><td>steals the phone</td><td>Device-only key, revocable from the Observer, read scopes only</td></tr>
+    <tr><td>compromises the dashboard</td><td>Read scopes only. Control is a separate class that's never granted alongside them.</td></tr>
+    <tr><td>controls the Observer's machine</td><td>Out of scope: they already have the node.</td></tr>
+  </tbody>
+</table></div>
+<div class="note">Basecamp's module capability policy is fail-open. If the Observer runs as a module, its own allowlist is the only boundary. v2 calls the node's HTTP API and no other module.</div>
+
+<h2>Migration</h2>
+<ol>
+  <li>Logos keeps v1 running while v2 is built.</li>
+  <li>Logos adds the TLS identity, the v2 QR with its pin, plain HTTPS JSON in place of v1's encrypted envelope, device name and last seen, and machine-readable scopes. HMAC and persistent replay protection stay.</li>
+  <li>Casberi builds the pairing consent screen and the v2 client. Casberi builds against v2 only, never v1.</li>
+  <li>Logos runs v1's adversarial and replay tests against v2.</li>
+  <li>Casberi pairs with a real node.</li>
+  <li>v1 retires once the two interoperate.</li>
+</ol>
+
+<h3>What Casberi needs from Logos to start</h3>
+<ul>
+  <li><strong>An HMAC test vector:</strong> key, request, canonical string, expected signature.</li>
+  <li><strong>A pin test vector:</strong> a sample certificate and its <code>sha256/…</code> pin.</li>
+  <li><strong>A sample QR string.</strong></li>
+  <li><strong>The reference Observer, runnable on a Mac,</strong> so Casberi's tests can pair against it.</li>
+</ul>
+</main>

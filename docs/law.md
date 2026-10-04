@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1223 of 1282 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1224 of 1283 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1444,6 +1444,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1093 — The face button outgrew the faces under it: 56 at rest, 48 folded
 - §1094 — The tray's discs stand at the touch floor: 44pt, two apps a row, a 320pt card (amended by §1094a)
 - §1094a — The tray's rows are 60pt
+- §1095 — Your node, read through its Logos Observer: pinned TLS 1.3, a signed request, read scopes only
 
 ## Dead rulings → what replaced them (generated)
 

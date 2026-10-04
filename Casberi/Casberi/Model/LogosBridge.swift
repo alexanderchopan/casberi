@@ -490,7 +490,17 @@ enum LogosIngest {
     @MainActor
     static func readNode(_ base: String, context: ModelContext) async -> Int {
         let store = LogosStore.shared
-        let snap = await nodeReading(base)
+        // Through the paired Observer when there is one (2026-10-03): the same
+        // reading, fetched over pinned TLS with a signed request. nil is a
+        // refusal (a skewed clock, a lost replay race) — no reading, no rows,
+        // never a "stopped" row for a node that is fine.
+        let snap: LogosWire.NodeSnapshot
+        if LogosObserver.shared.serves(base) {
+            guard let read = await LogosObserver.shared.reading() else { return 0 }
+            snap = read
+        } else {
+            snap = await nodeReading(base)
+        }
         // The address changed while this read was in flight: drop it.
         guard store.node == base else { return 0 }
         let events = LogosWire.nodeEvents(old: store.nodeSnapshot, new: snap)

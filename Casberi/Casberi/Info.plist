@@ -41,6 +41,14 @@
 				<string>casberi</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.casberi.app.logos-observer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>logos-observer</string>
+			</array>
+		</dict>
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>

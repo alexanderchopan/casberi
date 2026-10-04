@@ -1,0 +1,17 @@
+{
+  "protocol": "LOGOS-OBSERVER-V2",
+  "description": "Logos Observer v2 HMAC-SHA256 interoperability vector",
+  "hmac_key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "hmac_key_base64url": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "device_id": "d_test_casberi_01",
+  "method": "GET",
+  "request_target": "/v2/status?detail=mining%2Frewards&limit=10",
+  "timestamp": "1791068453",
+  "nonce_hex": "000102030405060708090a0b0c0d0e0f",
+  "nonce_base64url": "AAECAwQFBgcICQoLDA0ODw",
+  "body_utf8": "",
+  "body_sha256_hex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "canonical": "LOGOS-OBSERVER-V2\nGET\n/v2/status?detail=mining%2Frewards&limit=10\n1791068453\nAAECAwQFBgcICQoLDA0ODw\nd_test_casberi_01\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "signature_base64url": "rplPGwTT6VYdBJS9-H15Bp2Aw5A1BmdMQdh0GsFQlpo",
+  "signature_hex": "ae994f1b04d3e9561d0494bdf87d79069d80c3903506674c41d8741ac150969a"
+}

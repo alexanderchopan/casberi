@@ -1,0 +1,9 @@
+{
+  "certificate": "v2-sample-cert.pem",
+  "curve": "P-256",
+  "description": "Logos Observer v2 SPKI pin interoperability vector",
+  "expected_pin": "sha256/b5b_xWoDK7EJ11lQXxjG0-VqRbq6LqcNFrMf7pYBC8o",
+  "key_type": "ECDSA",
+  "pin_encoding": "sha256/<RFC4648 base64url without padding>",
+  "spki_hash": "SHA-256"
+}

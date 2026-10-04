@@ -2491,6 +2491,16 @@ struct RootShell: View {
     /// registers one document type (`.opml`, Info.plist), so a file URL here
     /// is always that.
     private func route(_ url: URL) {
+        // A Logos Observer's pairing QR, scanned by the system camera
+        // (2026-10-03): land on the Logos page, which raises the consent tray.
+        // Nothing is sent until the person taps Pair there.
+        if url.scheme?.lowercased() == "logos-observer" {
+            guard let offer = LogosObserverWire.offer(url.absoluteString) else { return }
+            LogosObserver.shared.pendingOffer = offer
+            sceneState.route.path = []
+            sceneState.route.openSetup(forOffer: "Logos")
+            return
+        }
         // A deep link lands you AT a destination, not back in a store the route
         // singleton still holds from an earlier visit. apps/settings re-set it
         // below.

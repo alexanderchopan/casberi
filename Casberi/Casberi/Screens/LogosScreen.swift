@@ -32,6 +32,10 @@ struct LogosScreen: View {
     /// The account being named (prd §1091), and the name as typed.
     @State private var namingID: String?
     @State private var nameDraft = ""
+    /// A Logos Observer pairing waiting for consent (2026-10-03): pasted into
+    /// the field, or handed in by the system camera as a link.
+    @State private var pairOffer: PairOffer?
+    private struct PairOffer: Identifiable { let id = UUID(); let offer: LogosObserverWire.Offer }
 
     /// The roster row's id for the node. Node refs are `logos:node:<kind>:…`,
     /// so `countWeek`'s `:<id>:` match finds them by it.
@@ -65,7 +69,10 @@ struct LogosScreen: View {
                     }
                 })
             },
-            teardown: { LogosStore.shared.disconnect() },
+            teardown: {
+                LogosStore.shared.disconnect()
+                Task { await LogosObserver.shared.forget() }
+            },
             sheet: $sheet,
             act: { addBlock },
             more: {
@@ -91,11 +98,19 @@ struct LogosScreen: View {
         } message: {
             Text("Blank shows the id instead.")
         }
+        .sheet(item: $pairOffer) { box in
+            LogosObserverPairTray(offer: box.offer) {
+                lastResult = .says(String(localized: "Paired with \(box.offer.name)."))
+                Task { await sync() }
+            }
+        }
         .onAppear {
             countWeek()
+            takePendingOffer()
             if logos.connected { Task { await sync() } }
         }
         .onChange(of: logos.accounts) { _, _ in countWeek() }
+        .onChange(of: LogosObserver.shared.pendingOffer) { _, _ in takePendingOffer() }
     }
 
     /// The page's one sentence: the exposure while a network node is set;
@@ -103,6 +118,9 @@ struct LogosScreen: View {
     /// §1035) — the only thing that explains an empty account; the devnets'
     /// test-coin line otherwise.
     private var sentence: String {
+        if LogosObserver.shared.serves(logos.node) {
+            return String(localized: "Your network can see that you're reaching your node, but not what it reports.")
+        }
         if let node = logos.node, !LogosWire.isLoopback(node) {
             return String(localized: "A node reached over a network answers anyone on it, writes included.")
         }
@@ -156,7 +174,9 @@ struct LogosScreen: View {
         let counted = weekly[Self.nodeRowID] ?? (week: 0, new: false)
         return [AccountPageShape.Row(
             id: Self.nodeRowID, title: String(localized: "Your node"),
-            subline: LogosWire.nodeLine(logos.nodeSnapshot),
+            subline: LogosObserver.shared.paired.map {
+                String(localized: "Through \($0.name) · \(LogosWire.nodeLine(logos.nodeSnapshot))")
+            } ?? LogosWire.nodeLine(logos.nodeSnapshot),
             weekCount: counted.week, hasNew: counted.new,
             isYou: false, avatarURL: nil)]
     }
@@ -177,11 +197,13 @@ struct LogosScreen: View {
                         actionLabel: String(localized: "Watch"),
                         keyboard: .URL,
                         focus: $fieldFocused,
-                        isArmed: LogosWire.arms(LogosWire.entry(field)),
+                        isArmed: LogosWire.arms(LogosWire.entry(field))
+                            || LogosObserverWire.offer(field) != nil,
                         // The paste FILLS the field, as on every devnet page;
                         // the armed verb then does what it does for typing.
                         paste: { pasted in
                             field = pasted
+                            if LogosObserverWire.offer(pasted) != nil { return }
                             switch LogosWire.entry(pasted) {
                             case .invalid: lastResult = .failed(Self.malformed)
                             case .notKey:  lastResult = .failed(Self.notKey)
@@ -213,6 +235,14 @@ struct LogosScreen: View {
     // MARK: - Actions
 
     private func watch() {
+        // An Observer's pairing link (2026-10-03) is not an account or an
+        // address: it opens the consent tray, and nothing is sent until Pair.
+        if let offer = LogosObserverWire.offer(field) {
+            field = ""
+            fieldFocused = false
+            pairOffer = PairOffer(offer: offer)
+            return
+        }
         var note: String?
         switch LogosWire.entry(field) {
         case .invalid:
@@ -260,6 +290,9 @@ struct LogosScreen: View {
 
     private func unwatch(_ id: String) {
         if id == Self.nodeRowID {
+            if LogosObserver.shared.serves(logos.node) {
+                Task { await LogosObserver.shared.forget() }
+            }
             logos.useNode(nil)
             FollowPrune.remove(source: "Logos", context: modelContext) {
                 $0.sourceRef?.hasPrefix("logos:node:") == true
@@ -307,7 +340,16 @@ struct LogosScreen: View {
             } else {
                 lastResult = .failed(String(localized: "Couldn't reach the Logos testnet — check your connection."))
             }
+            if let notice = LogosObserver.shared.notice { lastResult = .failed(notice) }
             countWeek()
         } while syncPending && logos.connected
+    }
+
+    /// An offer handed in by link waits on `LogosObserver` until this page
+    /// can raise its consent tray.
+    private func takePendingOffer() {
+        guard let offer = LogosObserver.shared.pendingOffer else { return }
+        LogosObserver.shared.pendingOffer = nil
+        pairOffer = PairOffer(offer: offer)
     }
 }
