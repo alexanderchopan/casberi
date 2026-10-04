@@ -11,14 +11,15 @@ import ActivityKit
 /// computes anything, none reaches the network, and none can (see
 /// `WidgetPayload`).
 ///
-/// One widget since the ask retired (2026-10-01): the wallet, drawing the line the
-/// balance card draws. The Today widget (§877) went with the ask. Plus two
-/// Control Center buttons (capture and a Quick Note) and the Live Activities
-/// below.
+/// Two widgets: the wallet, drawing the line the balance card draws, and a
+/// category you pick (2026-10-04; Notes by default). The Today widget (§877)
+/// went with the ask (2026-10-01). Plus two Control Center buttons (capture and
+/// a Quick Note) and the Live Activities below.
 @main
 struct CasberiWidgets: WidgetBundle {
     var body: some Widget {
         WalletWidget()
+        CategoryWidget()
         ComposeControl()
         // A QUICK NOTE from anywhere (prd §982): Control Center, the Lock
         // Screen and the Action button, onto the note sheet.

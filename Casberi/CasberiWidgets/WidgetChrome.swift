@@ -23,12 +23,33 @@ enum WidgetChrome {
     /// A change's direction, the app's `DS.confirm` / `DS.destructive` on a dark
     /// ground (`#30d158`, `#ff453a`), spelled once so no tile picks its own
     /// green or red (prd §782). A flat change takes neither (§83).
-    static let gain = Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255)
-    static let loss = recording
+    ///
+    /// They are WORDS on the tile, so they take the app's status INKS (prd
+    /// §1004): the hue in dark, the darker ink on the white ground in light
+    /// (`DS.confirmInk` / `destructiveInk`, `#1f7936` / `#c62e25`).
+    static let gain = adaptive(dark: (48, 209, 88), light: (31, 121, 54))
+    static let loss = adaptive(dark: (255, 69, 58), light: (198, 46, 37))
+
+    /// A tile's header: Casberi pink (user, 2026-10-04: "we don't use blue").
+    /// `DS.brandInk`'s two registers (`#b8306b` light, `#f5458f` dark), spelled
+    /// here because `Design/` is app-side: the mark's hue one notch softer, so
+    /// it reads as type on either ground.
+    static let header = adaptive(dark: (245, 69, 143), light: (184, 48, 107))
+
+    static func adaptive(dark: (Int, Int, Int), light: (Int, Int, Int)) -> Color {
+        func ui(_ c: (Int, Int, Int)) -> UIColor {
+            UIColor(red: CGFloat(c.0) / 255, green: CGFloat(c.1) / 255,
+                    blue: CGFloat(c.2) / 255, alpha: 1)
+        }
+        return Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? ui(dark) : ui(light)
+        })
+    }
 
     /// The app accent, carried across the app group by `ThemeStore` (falls back
     /// to Casberi blue before the app has ever written it — the same
-    /// `ThemeStore.accentHex` that `DS.tint` draws).
+    /// `ThemeStore.accentHex` that `DS.tint` draws). The Live Activities' only;
+    /// the Home Screen tiles are black and white with a pink header.
     static var accent: Color {
         let hex = UserDefaults(suiteName: SharedStore.appGroup)?
             .string(forKey: "theme.tint.hex") ?? "#1673e6"
@@ -40,59 +61,31 @@ enum WidgetChrome {
     }
 }
 
-/// The widget's own field (2026-08-06, generalized to every tile 2026-08-14).
-/// It was a hardcoded `.black`, which is wrong in two of the three rendering
-/// modes the system asks for and was never looked at again after it shipped.
+/// Every tile's ground: white in light mode, black in dark (user, 2026-10-04:
+/// "black and white", "we don't use blue"). It replaced a black slab with the
+/// accent's pour over it.
 ///
 /// `.accented` (the lock screen, StandBy) and `.vibrant` (a tinted Home Screen,
-/// and the glass appearances iOS 26 added on top of it) both mean "the system
-/// will provide the backing and re-render your content for legibility over it".
-/// A widget that paints its own opaque slab there fights that treatment and
-/// wins — which is how a tinted Home Screen ends up with one black tile on it.
-/// So those modes get nothing, deliberately, and the system's material shows.
-///
-/// `.fullColor` keeps a dark ground, and gains the app's own crown pour — the
-/// one atmospheric move the shell makes (§159), in the person's own chosen
-/// accent, which the app already writes across the app group. The widget is the
-/// app's face on a Home Screen; wearing the app's signature field costs one
-/// gradient and makes the tile recognizably ours rather than a black rectangle
-/// with text on it.
-///
-/// **UNVERIFIED in `.vibrant`.** Neither the simulator nor any build check can
-/// show a tinted Home Screen, so the `.fullColor` path is the only one that has
-/// been seen. It fails safe: the modes that now get nothing were getting an
-/// opaque slab the system had already told us not to draw, so the worst case is
-/// the system's own backing instead of ours.
+/// and iOS 26's glass appearances) mean "the system provides the backing and
+/// re-renders your content over it". A tile that paints its own opaque slab
+/// there fights that and wins, which is how a tinted Home Screen ends up with
+/// one black tile on it — so those modes get nothing, and the system's
+/// material shows. **UNVERIFIED in `.vibrant`**: neither the simulator nor any
+/// check can show a tinted Home Screen.
 struct WidgetField: View {
     @Environment(\.widgetRenderingMode) private var mode
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        // Read once, not per gradient stop — three UserDefaults lookups and
-        // three Scanner passes to draw one field is silly in a ~30MB extension.
-        let accent = WidgetChrome.accent
-        switch mode {
-        case .fullColor:
-            ZStack(alignment: .top) {
-                Color.black
-                // Half the shell's own dose: a widget is a fraction of the
-                // height the crown pour was tuned against, so the same alphas
-                // would read as a wash over the whole tile rather than a field
-                // at the top of one.
-                LinearGradient(stops: [
-                    .init(color: accent.opacity(0.16), location: 0),
-                    .init(color: accent.opacity(0.05), location: 0.5),
-                    .init(color: accent.opacity(0), location: 1),
-                ], startPoint: .top, endPoint: .bottom)
-            }
-        default:
-            // Nothing. See the type's own note — the system owns the backing in
-            // `.accented` and `.vibrant`, and anything painted here overrides it.
+        if mode == .fullColor {
+            scheme == .dark ? Color.black : Color.white
+        } else {
             Color.clear
         }
     }
 }
 
-/// A tile's own name, in the app's accent, above its content.
+/// A tile's own name, in Casberi pink, above its content.
 ///
 /// Sentence case and no letter-spacing, like every other header in the product
 /// (2026-07-08 ruling, no exceptions). It exists because a Home Screen holding
@@ -105,7 +98,7 @@ struct WidgetLabel: View {
     var body: some View {
         Text(text)
             .dsText(.widgetEyebrow11)
-            .foregroundStyle(WidgetChrome.accent)
+            .foregroundStyle(WidgetChrome.header)
             .lineLimit(1)
             .widgetAccentable()
     }
@@ -162,15 +155,15 @@ struct WidgetFlowLanes: View {
     var showsFigures = true
 
     var body: some View {
-        // In wears the tile's accent and Out stays neutral ink: which side is
-        // which is the label's job, not a categorical hue's (prd §782).
+        // In is full ink and Out a third of it: which side is which is the
+        // label's job, not a categorical hue's (prd §782).
         VStack(alignment: .leading, spacing: 5) {
             lane(weight: band.inWeight, usd: band.inUSD,
                  label: String(localized: "In"),
-                 fill: AnyShapeStyle(WidgetChrome.accent))
+                 fill: AnyShapeStyle(Color.primary))
             lane(weight: band.outWeight, usd: band.outUSD,
                  label: String(localized: "Out"),
-                 fill: AnyShapeStyle(Color.white.opacity(0.32)))
+                 fill: AnyShapeStyle(Color.primary.opacity(0.32)))
         }
     }
 
@@ -179,7 +172,7 @@ struct WidgetFlowLanes: View {
         HStack(spacing: 7) {
             Text(label)
                 .dsText(.widgetSubline11)
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.secondary)
                 .frame(width: 24, alignment: .leading)
             GeometryReader { geo in
                 // `weight > 0` and not `>= 0`: see the type's own note — a zero
@@ -195,7 +188,7 @@ struct WidgetFlowLanes: View {
             if showsFigures {
                 Text(usd.map { MoneyFormat.compactUSD($0) } ?? WidgetMask.figure)
                     .dsText(.widgetSubline11)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .lineLimit(1)
             }

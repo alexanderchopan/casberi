@@ -2558,6 +2558,25 @@ struct RootShell: View {
                 sceneState.route.openCasberiSettings()
             }
             #endif
+        // casberi://room/<category | Your notes> — the Category widget's
+        // door (2026-10-04): the room a tray pick lands in. On a cold launch
+        // a category's apps are not listed yet and the first ask lands
+        // nowhere — or, before the surface mounts, is never seen, since the
+        // same value set again is no change. So it asks again, cleared first,
+        // twice at most, unless you have moved since.
+        case "room":
+            guard let room = url.pathComponents.filter({ $0 != "/" }).first else { return }
+            chrome.sourceRequest = room
+            let before = sceneState.filter.source
+            Task { @MainActor in
+                for wait in [2.0, 3.0] {
+                    try? await Task.sleep(for: .seconds(wait))
+                    guard sceneState.filter.source == before else { return }
+                    chrome.sourceRequest = nil
+                    try? await Task.sleep(for: .milliseconds(50))
+                    chrome.sourceRequest = room
+                }
+            }
         // casberi://note — a new note (prd §982), the Quick Note's door by
         // link: the New tile's own raise, wherever the shell stands.
         case "note":

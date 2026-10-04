@@ -2,7 +2,8 @@ import Foundation
 import SwiftData
 import WidgetKit
 
-/// Fills the app group the wallet widget reads from (2026-08-14, prd §382).
+/// Fills the app group the widgets read from (2026-08-14, prd §382): the
+/// wallet's line and flow, and the Category widget's shelves (2026-10-04).
 ///
 /// Everything here already existed as a reading the app computes on every
 /// foreground anyway — the wallet series the balance card draws, the week's
@@ -44,6 +45,11 @@ enum WidgetPublish {
 
         if stale { WidgetCenter.shared.reloadTimelines(ofKind: WidgetWallet.kind) }
 
+        if WidgetPayload.write(shelves(things: things, context: context), key: WidgetShelves.key,
+                               stampKey: WidgetShelves.stampKey, defaults: group) {
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetShelves.kind)
+        }
+
         sweepRetired(group)
     }
 
@@ -72,6 +78,58 @@ enum WidgetPublish {
             .appendingPathComponent(retiredImageFolder, isDirectory: true),
            FileManager.default.fileExists(atPath: dir.path) {
             try? FileManager.default.removeItem(at: dir)
+        }
+    }
+
+    /// The Category widget's shelves (2026-10-04): Notes first, always, then
+    /// every catalog category with something in it, in the tray's order.
+    ///
+    /// Notes reads its own fetch — the room's `pinnedAt != nil || source ==
+    /// "You"` — because a note from March is still the newest note, and the
+    /// newest-600 slice of a busy corpus has long since dropped it. The
+    /// categories read the slice, where their newest rows always are.
+    ///
+    /// Hide wallet balances (§374) takes the money categories off the Home
+    /// Screen whole: a row's title is where a transfer says how much.
+    static func shelves(things: [Thing], context: ModelContext) -> [WidgetShelf] {
+        var d = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.pinnedAt != nil || $0.source == "You" },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.fetchLimit = 400
+        let notes = ((try? context.fetch(d)) ?? []).live
+            .filter(Pinboard.inRoom)
+            .sorted { Pinboard.stamp($0) > Pinboard.stamp($1) }
+        var out = [WidgetShelf(room: Pinboard.room, name: String(localized: "Notes"),
+                               glyph: "note.text", rows: rows(notes, stamp: Pinboard.stamp))]
+
+        let money: Set<String> = ["Wallet", "Markets", "Testnets"]
+        let hidden = BalancePrivacy.shared.hidden
+        var byCategory: [String: [Thing]] = [:]
+        for thing in things {
+            guard let category = BridgeCatalog.category(forSource: thing.source) else { continue }
+            if byCategory[category, default: []].count < WidgetShelves.rowCap {
+                byCategory[category, default: []].append(thing)
+            }
+        }
+        for category in BridgeCatalog.categories.map(\.name) {
+            guard !(hidden && money.contains(category)),
+                  let members = byCategory[category], !members.isEmpty else { continue }
+            out.append(WidgetShelf(room: category, name: category,
+                                   glyph: CategoryFold.glyph(for: category),
+                                   rows: rows(members, stamp: \.capturedAt)))
+        }
+        return out
+    }
+
+    private static func rows(_ things: [Thing], stamp: (Thing) -> Date) -> [WidgetShelf.Row] {
+        things.prefix(WidgetShelves.rowCap).map { thing in
+            let words = thing.title.split(whereSeparator: \.isNewline)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+            return WidgetShelf.Row(id: thing.id.uuidString,
+                                   title: String((words.isEmpty ? thing.source : words).prefix(140)),
+                                   source: thing.source, at: stamp(thing))
         }
     }
 
@@ -160,6 +218,11 @@ enum WidgetPublish {
                   age * 3600 > WidgetWallet.stampAfter ? "YES" : "no")
         } else {
             NSLog("[Casberi] widgetWallet| none — no watched wallet, or fewer than two aligned samples")
+        }
+
+        for shelf in WidgetShelves.published(defaults: group) {
+            NSLog("[Casberi] widgetShelf| %@ (%@) rows=%d newest=%@", shelf.name, shelf.room,
+                  shelf.rows.count, shelf.rows.first?.title ?? "none")
         }
 
         // The week's flow. `none` is the HEALTHY answer for most weeks — the

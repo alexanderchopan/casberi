@@ -407,9 +407,9 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-stockWatch` — resolves each query on Stocktwits' keyless symbol search and watches the top match in Markets (the Stocktwits seat is retired, its takes dropped) → docs/hooks/bridges.md
 - **Markets is ONE app (prd §1000): the Tokens seat renamed, Stocktwits' watched stocks moved in by `SourceRename.sweepStockWatches` (takes deleted, seat retired), and every catalogue category is a company pack (`CompanyPacks`) — Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted, never a valuation**
 
-Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://thing/<id>`, `casberi://person/<Bluesky|Farcaster>/<handle>`, `casberi://frames/sponsor?r=` (a payment request, prd §728c).
+Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://room/<category | Your notes>` (the Category widget's door), `casberi://thing/<id>`, `casberi://person/<Bluesky|Farcaster>/<handle>`, `casberi://frames/sponsor?r=` (a payment request, prd §728c).
 
-- **The widget is Wallet (prd §877; Today went with the ask, 2026-10-01).** `WidgetPublish` clears the retired tiles' payloads from the app group. → docs/hooks/system.md · prd §382 · §877
+- **Two widgets: Wallet, and Category (2026-10-04) — you pick a category, Notes by default; `WidgetPublish.shelves` publishes Notes plus every category with rows (money categories withheld under Hide balances), the picker lists what was published, black/white with a pink header (user: "we don't use blue"). `-widgetProbe YES` logs `widgetShelf|`.** The Today widget went with the ask (prd §877, 2026-10-01). `WidgetPublish` clears the retired tiles' payloads from the app group. → docs/hooks/system.md · prd §382 · §877
 
 ## SwiftUI/UIKit gotchas already paid for
 

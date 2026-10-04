@@ -327,3 +327,52 @@ enum WidgetWallet {
                            freshness: freshness, now: now, defaults: defaults)
     }
 }
+
+// MARK: - The category shelf
+
+/// One category's newest things, for the Category widget (2026-10-04): you
+/// pick a category when you add the tile (Notes by default), and it shows
+/// that category's newest rows.
+///
+/// The app publishes one shelf per category that has anything in it, plus
+/// Notes always, in the tray's order. The widget's picker lists exactly these,
+/// so it can never offer a category the app has never written.
+///
+/// A row is not a READING: "the newest note" stays true until a newer one
+/// lands. So the window is a week, not a day and a half, and past it the tile
+/// asks you to open the app rather than listing what was newest a week ago.
+struct WidgetShelf: Codable, Equatable {
+    /// The room the tile opens (`casberi://room/<room>`): a catalog category's
+    /// own name, or `Pinboard.room` for Notes.
+    let room: String
+    /// The word the tile draws ("Notes", "Work").
+    let name: String
+    let glyph: String
+    let rows: [Row]
+
+    struct Row: Codable, Equatable {
+        /// `Thing.id`, for `casberi://thing/<id>`.
+        let id: String
+        let title: String
+        let source: String
+        let at: Date
+    }
+}
+
+enum WidgetShelves {
+    static let kind = "casberi.category"
+    static let key = "widget.shelves"
+    static let stampKey = "widget.shelvesAt"
+    static let freshness: TimeInterval = 7 * 24 * 3600
+    /// The large family's six rows; the smaller ones take a prefix.
+    static let rowCap = 6
+    /// Notes' room name, spelled here because `Pinboard` is app-side.
+    static let notesRoom = "Your notes"
+
+    static func published(now: Date = .now,
+                          defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> [WidgetShelf] {
+        WidgetPayload.read([WidgetShelf].self, key: key, stampKey: stampKey,
+                           freshness: freshness, now: now, defaults: defaults) ?? []
+    }
+}

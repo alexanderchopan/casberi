@@ -90,8 +90,6 @@ struct WalletWidgetView: View {
     let entry: WalletEntry
     @Environment(\.widgetFamily) private var family
 
-    private var accent: Color { WidgetChrome.accent }
-
     var body: some View {
         Group {
             if let line = entry.line {
@@ -128,7 +126,7 @@ struct WalletWidgetView: View {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text(figure)
                                 .dsText(.widgetFigure24)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                             if let change = changeText {
@@ -143,7 +141,7 @@ struct WalletWidgetView: View {
                                                         after: WidgetWallet.stampAfter) {
                             Text(stamp)
                                 .dsText(.widgetSubline11)
-                                .foregroundStyle(.white.opacity(0.5))
+                                .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
                         Spacer(minLength: 4)
@@ -152,12 +150,12 @@ struct WalletWidgetView: View {
                             if family == .systemMedium, let note = pricedNote(flow) {
                                 Text(note)
                                     .dsText(.widgetSubline11)
-                                    .foregroundStyle(.white.opacity(0.45))
+                                    .foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
                         }
                         WidgetSpark(normalized: line.normalizedPoints)
-                            .stroke(accent, style: StrokeStyle(lineWidth: 2, lineCap: .round,
+                            .stroke(Color.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round,
                                                                lineJoin: .round))
                             .frame(height: flowHeight(family))
                     }
@@ -190,8 +188,8 @@ struct WalletWidgetView: View {
     /// Flat gets no colour, which is the §83 corollary in ink: a change that
     /// rounds to zero has no direction, so it may not be painted as a gain.
     private var changeInk: Color {
-        guard let pct = entry.line?.changePct else { return .white.opacity(0.6) }
-        if MoneyFormat.isFlatPercent(pct) { return .white.opacity(0.6) }
+        guard let pct = entry.line?.changePct else { return .secondary }
+        if MoneyFormat.isFlatPercent(pct) { return .secondary }
         return pct > 0 ? WidgetChrome.gain : WidgetChrome.loss
     }
 
@@ -221,7 +219,7 @@ struct WalletWidgetView: View {
             WidgetLabel(text: String(localized: "Wallet"))
             Text("Follow an address in Casberi")
                 .dsText(.widgetSubline12)
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.secondary)
                 .lineLimit(3)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
