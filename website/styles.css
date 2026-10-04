@@ -2107,3 +2107,6 @@ body { overflow-x: clip; }
 .next-item .soon { font-size: 14px; font-weight: 700; color: #f5458f; }
 .next-item p { margin: 8px 0 0; font-size: 16px; line-height: 1.4; color: #A1A1A6; }
 @media (max-width: 760px) { .next-row { grid-template-columns: 1fr; } }
+
+/* The Wallet page shows its reel under the hero (2026-10-03). */
+.w-reel { margin: 40px auto 0; }
