@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1225 of 1284 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1227 of 1286 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1446,6 +1446,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1094a — The tray's rows are 60pt
 - §1095 — Your node, read through its Logos Observer: pinned TLS 1.3, a signed request, read scopes only
 - §1096 — Solana, past §86: a cursor, v1 transactions, SPL grants, a measured venue table, and `.sol` names back
+- §1097 — A Bitcoin wallet, not an address: watch an xpub, and the facts only a wallet can state — dust, reuse, a send that waits
+- §1098 — Lightning, over Nostr Wallet Connect: a seat any Lightning wallet fills, refused if it can pay
 
 ## Dead rulings → what replaced them (generated)
 

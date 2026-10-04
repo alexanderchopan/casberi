@@ -148,6 +148,75 @@ enum BitcoinAddress {
         return (Int(version), program)
     }
 
+    // MARK: - Encoding (the HD wallet arm, prd §1097)
+
+    /// Raw bytes → base58, leading zero bytes kept as leading `1`s — the
+    /// inverse of `base58Decode`, for the addresses `BitcoinHD` derives.
+    private static func base58Encode(_ bytes: [UInt8]) -> String {
+        var digits: [Int] = []
+        for byte in bytes {
+            var carry = Int(byte)
+            for i in 0..<digits.count {
+                carry += digits[i] << 8
+                digits[i] = carry % 58
+                carry /= 58
+            }
+            while carry > 0 {
+                digits.append(carry % 58)
+                carry /= 58
+            }
+        }
+        let zeros = bytes.prefix { $0 == 0 }.count
+        return String(repeating: "1", count: zeros)
+            + String(digits.reversed().map { base58Alphabet[$0] })
+    }
+
+    /// `payload` plus its double-SHA256 checksum, in base58 — a legacy or
+    /// P2SH address from a version byte and a 20-byte hash.
+    static func base58Check(_ payload: [UInt8]) -> String {
+        let round2 = SHA256.hash(data: Data(SHA256.hash(data: Data(payload))))
+        return base58Encode(payload + Array(round2.prefix(4)))
+    }
+
+    /// Any Base58Check string's payload, checksum verified, whatever its
+    /// length — an extended key is 78 bytes where an address is 21.
+    static func base58CheckDecode(_ s: String) -> [UInt8]? {
+        guard let decoded = base58Decode(s), decoded.count > 4 else { return nil }
+        let payload = Array(decoded.dropLast(4))
+        let round2 = SHA256.hash(data: Data(SHA256.hash(data: Data(payload))))
+        guard Array(round2.prefix(4)) == Array(decoded.suffix(4)) else { return nil }
+        return payload
+    }
+
+    /// A mainnet SegWit address — bech32 for witness v0, bech32m for v1+
+    /// (BIP350), the same rule `segwitProgram` verifies.
+    static func segwitAddress(version: Int, program: [UInt8]) -> String? {
+        guard (0...16).contains(version),
+              let five = convertBitsPadded(program) else { return nil }
+        let data = [UInt8(version)] + five
+        let const: UInt32 = version == 0 ? 1 : 0x2bc830a3
+        let mod = polymod(hrpExpand("bc") + data + [0, 0, 0, 0, 0, 0]) ^ const
+        let checksum = (0..<6).map { UInt8((mod >> (5 * (5 - UInt32($0)))) & 31) }
+        return "bc1" + String((data + checksum).map { charset[Int($0)] })
+    }
+
+    /// 8-bit bytes → 5-bit groups, padding the last group with zeros — the
+    /// encoding direction, where padding is required rather than refused.
+    private static func convertBitsPadded(_ data: [UInt8]) -> [UInt8]? {
+        var acc = 0, bits = 0
+        var out: [UInt8] = []
+        for value in data {
+            acc = ((acc << 8) | Int(value)) & 0xfff
+            bits += 8
+            while bits >= 5 {
+                bits -= 5
+                out.append(UInt8((acc >> bits) & 31))
+            }
+        }
+        if bits > 0 { out.append(UInt8((acc << (5 - bits)) & 31)) }
+        return out
+    }
+
     // MARK: - Public surface
 
     /// True for a mainnet Bitcoin address of any of the four kinds below,
@@ -155,6 +224,14 @@ enum BitcoinAddress {
     /// on `SNS.isAddress` alone now checks FIRST.
     static func isAddress(_ address: String) -> Bool {
         base58CheckPayload(address) != nil || segwitProgram(address) != nil
+    }
+
+    /// An address, or a whole wallet's public key (`BitcoinHD`, prd §1097) —
+    /// the gate for the paths that READ Bitcoin (the watch, the ingest, the
+    /// balance). `isAddress` stays the gate for the paths that need one
+    /// address: an explorer link, a script kind, a lookalike check.
+    static func isWatchable(_ s: String) -> Bool {
+        isAddress(s) || BitcoinHD.isWallet(s)
     }
 
     /// What kind of address this is — free (no network call: the chain

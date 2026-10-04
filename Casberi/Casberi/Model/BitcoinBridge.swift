@@ -82,10 +82,13 @@ enum BitcoinBridge {
         let fundedSats: Int
         let spentSats: Int
         let txCount: Int
+        /// Outputs this address has received — the times it was paid, change
+        /// sent back to it included. The reuse fact's count (prd §1097).
+        let receipts: Int
         var balanceSats: Int { fundedSats - spentSats }
     }
 
-    private static func addressStats(_ address: String) async -> Stats? {
+    static func addressStats(_ address: String) async -> Stats? {
         for host in hosts {
             guard let root = await IngestSupport.getJSON("\(host)/address/\(address)") as? [String: Any],
                   let chain = root["chain_stats"] as? [String: Any],
@@ -97,8 +100,10 @@ enum BitcoinBridge {
             let mFunded = (mempool?["funded_txo_sum"] as? Int) ?? 0
             let mSpent = (mempool?["spent_txo_sum"] as? Int) ?? 0
             let mCount = (mempool?["tx_count"] as? Int) ?? 0
+            let receipts = ((chain["funded_txo_count"] as? Int) ?? 0)
+                + ((mempool?["funded_txo_count"] as? Int) ?? 0)
             return Stats(fundedSats: funded + mFunded, spentSats: spent + mSpent,
-                        txCount: txCount + mCount)
+                        txCount: txCount + mCount, receipts: receipts)
         }
         return nil
     }
@@ -109,14 +114,19 @@ enum BitcoinBridge {
     /// "token" object behind it. nil only when NEITHER the price nor any
     /// address could be read — a single unreachable address among several
     /// still counts the rest, matching every other multi-address fold here.
+    /// A watched wallet (prd §1097) counts every address its key owns.
+    @MainActor
     static func balanceUSD(addresses: [String]) async -> Double? {
         guard !addresses.isEmpty, let price = await priceUSD() else { return nil }
         var totalSats = 0
         var reachedAny = false
         for address in addresses {
-            guard let stats = await addressStats(address) else { continue }
+            let sats = BitcoinHD.isWallet(address)
+                ? await walletBalanceSats(address)
+                : await addressStats(address)?.balanceSats
+            guard let sats else { continue }
             reachedAny = true
-            totalSats += stats.balanceSats
+            totalSats += sats
         }
         guard reachedAny else { return nil }
         return Double(totalSats) / 100_000_000 * price
@@ -158,20 +168,25 @@ enum BitcoinBridge {
         var added = 0
         var reachedAny = false
 
-        for address in addresses {
-            guard let txs = await fetchTxs(address) else { continue }
+        for watched in addresses {
+            guard let unit = await readUnit(watched, transactions: true) else { continue }
             reachedAny = true
             var landed: [Thing] = []
             var freshlyPending: [String] = []
+            var unconfirmedSends: [[String: Any]] = []
 
-            for tx in txs {
-                guard let txid = tx["txid"] as? String else { continue }
-                let ref = activityRef(address: address, txid: txid)
-                guard !existing.contains(ref), let net = netSats(tx: tx, address: address),
-                      net != 0
+            for tx in unit.txs {
+                guard let txid = tx["txid"] as? String,
+                      let net = netSats(tx: tx, owned: unit.owned), net != 0,
+                      // A move between the entry's own addresses is not a
+                      // payment — every input and every output is its own.
+                      !isInternal(tx, owned: unit.owned)
                 else { continue }
                 let status = tx["status"] as? [String: Any]
                 let confirmed = (status?["confirmed"] as? Bool) ?? false
+                if !confirmed && net < 0 { unconfirmedSends.append(tx) }
+                let ref = activityRef(key: unit.key, txid: txid)
+                guard !existing.contains(ref) else { continue }
                 let blockHeight = status?["block_height"] as? Int
                 let when: Date = (status?["block_time"] as? Double)
                     .map { Date(timeIntervalSince1970: $0) } ?? .now
@@ -183,14 +198,18 @@ enum BitcoinBridge {
                 let thing = Thing(kind: .transaction, title: title,
                                   content: explorer + txid, source: "Wallet",
                                   capturedAt: when, sourceRef: ref)
-                thing.walletAddress = address
+                thing.walletAddress = unit.watched
                 thing.transferDirection = received ? "received" : "sent"
                 thing.transferAmount = amount
                 // The other side (prd §912): who funded a receive, where a send
                 // went — so the sheet's Who row and the address-book verbs
                 // reach a Bitcoin row as they do an EVM one. Same walk as
-                // `netSats`, same `sameAddress` rule.
-                thing.counterpartyAddress = counterparty(tx: tx, address: address, received: received)
+                // `netSats`, same owned set, so a wallet's change is never it.
+                thing.counterpartyAddress = counterparty(tx: tx, owned: unit.owned, received: received)
+                // Dust (prd §1097): a receipt this small costs more to spend than
+                // it holds, and spending it beside your other coins links them —
+                // the reason it is sent. Named on the sheet, never hidden.
+                if received && net <= dustSats { thing.tags = [dustTag] }
                 // The block as provenance (2026-07-27). A block is a NAMED
                 // moment on Bitcoin — numbered, ~10 minutes wide, permanent —
                 // in a way it simply isn't on a 2-second Base chain, where a
@@ -227,55 +246,73 @@ enum BitcoinBridge {
                 guard context.saveHonestly() else { continue }
                 added += landed.count
             }
-            if !freshlyPending.isEmpty { addPending(address: address, txids: freshlyPending) }
+            if !freshlyPending.isEmpty { addPending(watched: unit.watched, txids: freshlyPending) }
+            noteWaiting(unit, sends: unconfirmedSends)
 
-            // The UTXO set — ONE fetch serving both the standing vintage and
+            // The UTXO set — ONE read serving both the standing vintage and
             // the one-shot consolidation nudge. Skipped entirely in the
             // steady state: the pile of pieces can only change when a
             // transaction moves, so it's re-read when something landed this
             // pass, when nothing is cached yet, or while the nudge is still
             // unanswered. A quiet address costs zero requests here.
             let needsUTXOs = !landed.isEmpty
-                || vintage(for: address) == nil
-                || !existing.contains(consolidationRef(address))
-            let utxoSet = needsUTXOs ? await utxos(address) : nil
-            if let utxoSet { cacheVintage(address: address, utxos: utxoSet) }
-            if let stats = await addressStats(address) {
-                UserDefaults.standard.set(stats.balanceSats,
-                                          forKey: "bitcoin.balance.\(address.lowercased())")
-            }
+                || vintage(for: watched) == nil
+                || !existing.contains(consolidationRef(unit.key))
+            let utxoSet = needsUTXOs ? await utxos(of: unit.funded) : nil
+            if let utxoSet { cacheVintage(watched: watched, utxos: utxoSet) }
+            UserDefaults.standard.set(unit.balanceSats, forKey: balanceKey(watched))
 
-            added += await landInsights(context: context, address: address,
-                                        txs: txs, utxos: utxoSet, existing: existing)
+            added += await landInsights(context: context, unit: unit,
+                                        utxos: utxoSet, existing: existing)
         }
 
         added += await settlePending(context: context, tip: tip)
+        added += await reconcileWaiting(context: context)
         added += await landHalving(context: context, tip: tip)
         return reachedAny ? added : nil
     }
 
-    /// One vout/vin walk: the net satoshi change to `address` in this
+    /// One vout/vin walk: the net satoshi change to the entry in this
     /// transaction — positive received, negative sent (spend amount plus
     /// the fee, the same net-effect-on-balance reading a bank statement
-    /// gives). Zero for a pure self-consolidation (every input and output
-    /// belongs to the same address) — nothing to report, so the caller skips
-    /// it, matching how a same-asset self-route is dropped on the EVM side.
-    private static func netSats(tx: [String: Any], address: String) -> Int? {
+    /// gives). Counted against EVERY address the entry owns (prd §1097), so
+    /// a wallet's change comes back to it instead of reading as spent.
+    static func netSats(tx: [String: Any], owned: Set<String>) -> Int? {
         guard let vin = tx["vin"] as? [[String: Any]],
               let vout = tx["vout"] as? [[String: Any]] else { return nil }
         var net = 0
         for out in vout {
-            guard sameAddress((out["scriptpubkey_address"] as? String) ?? "", address),
+            guard owned.contains(norm((out["scriptpubkey_address"] as? String) ?? "")),
                   let value = out["value"] as? Int else { continue }
             net += value
         }
         for input in vin {
             guard let prevout = input["prevout"] as? [String: Any],
-                  sameAddress((prevout["scriptpubkey_address"] as? String) ?? "", address),
+                  owned.contains(norm((prevout["scriptpubkey_address"] as? String) ?? "")),
                   let value = prevout["value"] as? Int else { continue }
             net -= value
         }
         return net
+    }
+
+    /// Every input and every output is the entry's own: a consolidation or a
+    /// move between its addresses, which pays only a fee and pays nobody.
+    static func isInternal(_ tx: [String: Any], owned: Set<String>) -> Bool {
+        let vin = (tx["vin"] as? [[String: Any]]) ?? []
+        let vout = (tx["vout"] as? [[String: Any]]) ?? []
+        guard !vin.isEmpty, !vout.isEmpty else { return false }
+        let insOwned = vin.allSatisfy { input in
+            let prevout = input["prevout"] as? [String: Any]
+            return owned.contains(norm((prevout?["scriptpubkey_address"] as? String) ?? ""))
+        }
+        // An OP_RETURN output carries no address and pays nobody.
+        let outsOwned = vout.allSatisfy { out in
+            guard let address = out["scriptpubkey_address"] as? String else {
+                return (out["scriptpubkey_type"] as? String) == "op_return"
+            }
+            return owned.contains(norm(address))
+        }
+        return insOwned && outsOwned
     }
 
     /// The other side of a transaction, off the same vin/vout walk (prd §912):
@@ -283,20 +320,20 @@ enum BitcoinBridge {
     /// send, the largest output that is not ours (where it went — an output
     /// back to us is change, and skipped). nil for a coinbase receive (no
     /// prevout) or a transaction whose other side is only ourselves.
-    private static func counterparty(tx: [String: Any], address: String, received: Bool) -> String? {
+    static func counterparty(tx: [String: Any], owned: Set<String>, received: Bool) -> String? {
         var best: (address: String, value: Int)?
         if received {
             for input in (tx["vin"] as? [[String: Any]]) ?? [] {
                 guard let prevout = input["prevout"] as? [String: Any],
                       let other = prevout["scriptpubkey_address"] as? String, !other.isEmpty,
-                      !sameAddress(other, address),
+                      !owned.contains(norm(other)),
                       let value = prevout["value"] as? Int else { continue }
                 if best == nil || value > best!.value { best = (other, value) }
             }
         } else {
             for out in (tx["vout"] as? [[String: Any]]) ?? [] {
                 guard let other = out["scriptpubkey_address"] as? String, !other.isEmpty,
-                      !sameAddress(other, address),
+                      !owned.contains(norm(other)),
                       let value = out["value"] as? Int else { continue }
                 if best == nil || value > best!.value { best = (other, value) }
             }
@@ -308,15 +345,32 @@ enum BitcoinBridge {
     /// legacy/P2SH base58 is case-SENSITIVE (the same asymmetry `WalletStore`
     /// already keeps for EVM-vs-Solana). Esplora always answers a bech32
     /// address lowercased regardless of how it was watched.
-    private static func sameAddress(_ a: String, _ b: String) -> Bool {
-        guard !a.isEmpty else { return false }
-        if a.lowercased().hasPrefix("bc1") { return a.lowercased() == b.lowercased() }
-        return a == b
+    static func norm(_ address: String) -> String {
+        let lower = address.lowercased()
+        return lower.hasPrefix("bc1") ? lower : address
     }
 
-    private static func activityRef(address: String, txid: String) -> String {
-        "bitcoin:\(address.lowercased()):\(txid)"
+    /// The name a watched entry goes by in refs and defaults keys: an address
+    /// lowercased (every key §226 wrote), a wallet's key by its fingerprint —
+    /// an extended key is 100+ characters where no address passes 74, so the
+    /// length decides without parsing (this is read per row per render).
+    static func unitKey(_ watched: String) -> String {
+        watched.count > 90 ? BitcoinHD.fingerprint(watched) : watched.lowercased()
     }
+
+    private static func activityRef(key: String, txid: String) -> String {
+        "bitcoin:\(key):\(txid)"
+    }
+
+    static func balanceKey(_ watched: String) -> String {
+        "bitcoin.balance.\(unitKey(watched))"
+    }
+
+    /// At or under this, a receipt is dust (prd §1097) — the ceiling dusting
+    /// sends sit under (546 sats is the legacy relay floor, 294 SegWit's), and
+    /// far below what any payment worth the fee to send is.
+    static let dustSats = 1_000
+    static let dustTag = "Dust"
 
     /// Below this, an amount reads in SATS instead of BTC (2026-07-27).
     ///
@@ -363,8 +417,8 @@ enum BitcoinBridge {
 
     // MARK: - Confirmation watchlist (item 2 — settlement as news)
 
-    private static func pendingKey(_ address: String) -> String {
-        "bitcoin.pending.\(address.lowercased())"
+    private static func pendingKey(_ watched: String) -> String {
+        "bitcoin.pending.\(unitKey(watched))"
     }
 
     /// Is this landed transfer still on the confirmation watchlist? Read by the
@@ -383,8 +437,8 @@ enum BitcoinBridge {
         return pending.contains { !$0.isEmpty && ref.hasSuffix($0) }
     }
 
-    private static func addPending(address: String, txids: [String]) {
-        let key = pendingKey(address)
+    private static func addPending(watched: String, txids: [String]) {
+        let key = pendingKey(watched)
         var known = Set((UserDefaults.standard.array(forKey: key) as? [String]) ?? [])
         known.formUnion(txids)
         UserDefaults.standard.set(Array(known), forKey: key)
@@ -416,7 +470,7 @@ enum BitcoinBridge {
                     stillPending.append(txid)
                     continue
                 }
-                let ref = "bitcoin:settled:\(address.lowercased()):\(txid)"
+                let ref = "bitcoin:settled:\(unitKey(address)):\(txid)"
                 guard !IngestSupport.hasSourceRef(context, source: "Wallet", ref: ref) else { continue }
                 let thing = Thing(kind: .transaction,
                                   title: String(localized: "Your Bitcoin transfer settled (\(settledConfirmations)+ confirmations)"),
@@ -545,8 +599,8 @@ enum BitcoinBridge {
 
     // MARK: - Coin vintage (the oldest unspent piece)
 
-    private static func vintageKey(_ address: String) -> String {
-        "bitcoin.vintage.\(address.lowercased())"
+    private static func vintageKey(_ watched: String) -> String {
+        "bitcoin.vintage.\(unitKey(watched))"
     }
 
     /// The date of the OLDEST unspent piece of this address's balance, or nil
@@ -572,12 +626,12 @@ enum BitcoinBridge {
     /// The cached balance in sats, for the address card's own line — written
     /// by the same sweep that writes the vintage so the two always agree.
     static func cachedBalanceSats(for address: String) -> Int? {
-        let key = "bitcoin.balance.\(address.lowercased())"
+        let key = balanceKey(address)
         guard UserDefaults.standard.object(forKey: key) != nil else { return nil }
         return UserDefaults.standard.integer(forKey: key)
     }
 
-    private static func cacheVintage(address: String, utxos: [[String: Any]]) {
+    private static func cacheVintage(watched: String, utxos: [[String: Any]]) {
         let times = utxos.compactMap { utxo -> Double? in
             guard let status = utxo["status"] as? [String: Any],
                   (status["confirmed"] as? Bool) == true,
@@ -585,7 +639,7 @@ enum BitcoinBridge {
             return t
         }
         guard let oldest = times.min() else { return }
-        UserDefaults.standard.set(oldest, forKey: vintageKey(address))
+        UserDefaults.standard.set(oldest, forKey: vintageKey(watched))
     }
 
     // MARK: - One-shot insights (the consolidation nudge and dormancy note)
@@ -595,43 +649,52 @@ enum BitcoinBridge {
     /// fact worth stating once, not a live status worth restating every
     /// refresh. `txs` is the same recent page the caller already fetched for
     /// activity — the dormancy read is free.
-    private static func consolidationRef(_ address: String) -> String {
-        "bitcoin:utxo:\(address.lowercased())"
+    private static func consolidationRef(_ key: String) -> String {
+        "bitcoin:utxo:\(key)"
     }
 
+    /// How many receipts at one address make reuse worth saying (prd §1097):
+    /// twice can be a refund; three times is an address being handed out.
+    static let reuseReceipts = 3
+
     @MainActor
-    private static func landInsights(context: ModelContext, address: String,
-                                     txs: [[String: Any]],
+    private static func landInsights(context: ModelContext, unit: BitcoinUnit,
                                      utxos: [[String: Any]]?,
                                      existing: Set<String>) async -> Int {
         var added = 0
+        func land(_ title: String, ref: String) {
+            let thing = Thing(kind: .transaction, title: title, content: explorer,
+                              source: "Wallet", capturedAt: .now, sourceRef: ref)
+            thing.walletAddress = unit.watched
+            context.insert(thing)
+            SpotlightIndex.index([thing])
+            if context.saveHonestly() { added += 1 }
+        }
 
         // Dormancy: the newest tx in the page IS the most recent activity —
-        // Esplora returns newest-first regardless of total history size.
-        let dormantRef = "bitcoin:dormant:\(address.lowercased())"
+        // Esplora returns newest-first regardless of total history size, and a
+        // wallet's merged page is sorted the same way.
+        let dormantRef = "bitcoin:dormant:\(unit.key)"
         if !existing.contains(dormantRef),
-           let newest = txs.first,
+           let newest = unit.txs.first,
            let status = newest["status"] as? [String: Any],
            (status["confirmed"] as? Bool) == true,
            let blockTime = status["block_time"] as? Double {
             let last = Date(timeIntervalSince1970: blockTime)
             let days = Date.now.timeIntervalSince(last) / 86400
             if days >= 180 {
-                let thing = Thing(
-                    kind: .transaction,
-                    title: String(localized: "This address hasn't moved since \(last.formatted(.dateTime.month(.wide).year()))"),
-                    content: explorer, source: "Wallet", capturedAt: .now, sourceRef: dormantRef)
-                thing.walletAddress = address
-                context.insert(thing)
-                SpotlightIndex.index([thing])
-                if context.saveHonestly() { added += 1 }
+                let month = last.formatted(.dateTime.month(.wide).year())
+                land(unit.isWallet
+                        ? String(localized: "This wallet hasn't moved since \(month)")
+                        : String(localized: "This address hasn't moved since \(month)"),
+                     ref: dormantRef)
             }
         }
 
         // Consolidation: only when the UTXO read actually succeeded (a busy
         // address's own /utxo call 400s past 500 pieces — see the header) and
         // the fragmentation is real enough to be worth a nudge.
-        let consolidateRef = consolidationRef(address)
+        let consolidateRef = consolidationRef(unit.key)
         if !existing.contains(consolidateRef),
            let utxos, utxos.count >= 15,
            let rate = await feeRateSatPerVByte(), let price = await priceUSD() {
@@ -644,37 +707,193 @@ enum BitcoinBridge {
             let estimatedVBytes = 43 + utxos.count * 68
             let feeSats = Double(estimatedVBytes) * rate
             let feeUSD = feeSats / 100_000_000 * price
-            let thing = Thing(
-                kind: .transaction,
-                title: String(localized: "Your bitcoin balance sits in \(utxos.count) pieces — consolidating costs about \(PriceFormat.string(feeUSD, currency: "USD") ?? String(format: "$%.2f", feeUSD)) today"),
-                content: explorer, source: "Wallet", capturedAt: .now, sourceRef: consolidateRef)
-            thing.walletAddress = address
-            context.insert(thing)
-            SpotlightIndex.index([thing])
-            if context.saveHonestly() { added += 1 }
+            land(String(localized: "Your bitcoin balance sits in \(utxos.count) pieces — consolidating costs about \(PriceFormat.string(feeUSD, currency: "USD") ?? String(format: "$%.2f", feeUSD)) today"),
+                 ref: consolidateRef)
+        }
+
+        // Reuse (prd §1097): every payment to one address is linked to every
+        // other payment to it, in public, forever. A standing fact, so the row
+        // is RECONCILED as the count climbs (the halving's shape), never
+        // re-landed and never stated with a count that has gone stale.
+        let reuseRef = "bitcoin:reuse:\(unit.key)"
+        if unit.mostReceipts >= reuseReceipts {
+            let n = unit.mostReceipts.formatted(.number.grouping(.automatic))
+            // Short enough that the row's one line holds the count; the seam's
+            // second half is the row's line under it (`TitleSeam`).
+            let title = unit.isWallet
+                ? String(localized: "One address took \(n) payments — each is linked to the others")
+                : String(localized: "This address took \(n) payments — each is linked to the others")
+            if existing.contains(reuseRef) {
+                if let row = try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.sourceRef == reuseRef })).first, row.title != title {
+                    row.title = title
+                    context.saveHonestly()
+                }
+            } else {
+                land(title, ref: reuseRef)
+            }
         }
 
         return added
     }
 
+    // MARK: - A send that waits (prd §1097)
+
+    /// An unconfirmed send, as first seen: when, and the fee rate it paid.
+    struct Waiting: Codable {
+        var firstSeen: Date
+        var rate: Double
+        /// Passes on which every host answered "no such transaction".
+        var misses = 0
+    }
+
+    /// How long a send waits before it is worth a row — longer than the ten
+    /// minutes a block takes on average, short enough to still be news.
+    private static let waitingAfter: TimeInterval = 3600
+
+    private static func waitingKey(_ watched: String) -> String {
+        "bitcoin.waiting.\(unitKey(watched))"
+    }
+
+    static func loadWaiting(_ watched: String) -> [String: Waiting] {
+        guard let data = UserDefaults.standard.data(forKey: waitingKey(watched)),
+              let list = try? JSONDecoder().decode([String: Waiting].self, from: data)
+        else { return [:] }
+        return list
+    }
+
+    private static func saveWaiting(_ list: [String: Waiting], _ watched: String) {
+        if list.isEmpty {
+            UserDefaults.standard.removeObject(forKey: waitingKey(watched))
+        } else if let data = try? JSONEncoder().encode(list) {
+            UserDefaults.standard.set(data, forKey: waitingKey(watched))
+        }
+    }
+
+    /// Starts the clock on every unconfirmed send this pass saw. The rate is
+    /// the transaction's own: its fee over its virtual size (weight / 4).
+    private static func noteWaiting(_ unit: BitcoinUnit, sends: [[String: Any]]) {
+        var list = loadWaiting(unit.watched)
+        let before = list.count
+        for tx in sends {
+            guard let txid = tx["txid"] as? String, list[txid] == nil,
+                  let fee = tx["fee"] as? Int, let weight = tx["weight"] as? Int, weight > 0
+            else { continue }
+            list[txid] = Waiting(firstSeen: .now, rate: Double(fee) / (Double(weight) / 4))
+        }
+        if list.count != before { saveWaiting(list, unit.watched) }
+    }
+
+    /// "Your send is waiting — it paid 3 sat/vB, and the next hour needs 12."
+    /// Both numbers are facts at the moment of writing, and the row is
+    /// reconciled every pass, so neither goes stale.
+    static func waitingTitle(paid: Double, need: Double) -> String {
+        let style = FloatingPointFormatStyle<Double>.number.precision(.fractionLength(0...1))
+        let p = paid.formatted(style), n = need.formatted(style)
+        return paid < need
+            ? String(localized: "Your send is waiting — it paid \(p) sat/vB, and the next hour needs \(n)")
+            : String(localized: "Your send is still waiting — it paid \(p) sat/vB, enough for the next hour")
+    }
+
+    /// Walks every watched entry's waiting sends: lands a row for one that has
+    /// waited an hour on a fee below what the next hour takes, keeps that row
+    /// true each pass, and closes it when the send confirms or leaves the
+    /// mempool. Nothing is advised: raising the fee is the wallet's act.
+    @MainActor
+    private static func reconcileWaiting(context: ModelContext) async -> Int {
+        var added = 0
+        var hourRate: Double??   // asked once, and only when a send has waited long enough
+        for entry in WalletStore.shared.addresses {
+            var list = loadWaiting(entry.address)
+            guard !list.isEmpty else { continue }
+            let key = unitKey(entry.address)
+            for (txid, w) in list {
+                let ref = "bitcoin:waiting:\(key):\(txid)"
+                let row = try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.sourceRef == ref })).first
+                func retitle(_ title: String) {
+                    guard let row, row.title != title else { return }
+                    row.title = title
+                    context.saveHonestly()
+                }
+                switch await txState(txid) {
+                case .unreachable:
+                    continue
+                case .confirmed(let height):
+                    retitle(String(localized: "Your send confirmed in block \(height.formatted(.number.grouping(.automatic)))"))
+                    list[txid] = nil
+                case .gone:
+                    var missed = w
+                    missed.misses += 1
+                    if missed.misses >= 3 {
+                        retitle(String(localized: "Your waiting send left the mempool — it was replaced or dropped"))
+                        list[txid] = nil
+                    } else {
+                        list[txid] = missed
+                    }
+                case .pending:
+                    if w.misses > 0 { list[txid]?.misses = 0 }
+                    guard Date.now.timeIntervalSince(w.firstSeen) >= waitingAfter else { continue }
+                    if hourRate == nil { hourRate = .some(await feeRateSatPerVByte()) }
+                    guard let need = hourRate ?? nil else { continue }
+                    let title = waitingTitle(paid: w.rate, need: need)
+                    if row != nil { retitle(title); continue }
+                    guard w.rate < need else { continue }
+                    let thing = Thing(kind: .transaction, title: title, content: explorer + txid,
+                                      source: "Wallet", capturedAt: .now, sourceRef: ref)
+                    thing.walletAddress = entry.address
+                    context.insert(thing)
+                    SpotlightIndex.index([thing])
+                    if context.saveHonestly() { added += 1 }
+                }
+            }
+            saveWaiting(list, entry.address)
+        }
+        return added
+    }
+
     // MARK: - Wallet unwatch cleanup
 
-    /// Wallet unwatch takes this seat's pending-confirmation list with it —
-    /// mirrors every sibling bridge's `clearState`. The landed things and
+    /// Wallet unwatch takes this seat's live watch state with it — the
+    /// pending-confirmation list, the waiting sends and a wallet's scan —
+    /// mirroring every sibling bridge's `clearState`. The landed things and
     /// their one-shot insight refs stay (they're history, like every other
-    /// bridge's landed activity); only the live watch state resets.
+    /// bridge's landed activity).
     static func clearState(address: String) {
         UserDefaults.standard.removeObject(forKey: pendingKey(address))
+        UserDefaults.standard.removeObject(forKey: waitingKey(address))
+        if BitcoinHD.isWallet(address) { clearScan(BitcoinHD.fingerprint(address)) }
     }
 
     // MARK: - Esplora reads (mempool.space first, blockstream.info second)
 
-    private static func fetchTxs(_ address: String) async -> [[String: Any]]? {
+    static func fetchTxs(_ address: String) async -> [[String: Any]]? {
         for host in hosts {
-            if let arr = await IngestSupport.getJSON("\(host)/address/\(address)/txs")
+            if let arr = await bounded({ await IngestSupport.getJSON("\(host)/address/\(address)/txs") })
                 as? [[String: Any]] { return arr }
         }
         return nil
+    }
+
+    /// How long one host gets to finish a page before the next host is asked.
+    /// MEASURED 2026-10-03: mempool.space trickled a busy address's `/txs`
+    /// for over two minutes — never idle, so the session's 15-second idle
+    /// timeout never fired — while blockstream.info answered the same page in
+    /// 0.1s. A wall clock, not an idle clock, is what moves on.
+    private static let hostDeadline: Duration = .seconds(20)
+
+    /// `read`, or nil once `hostDeadline` passes.
+    static func bounded(_ read: @escaping @Sendable () async -> Any?) async -> Any? {
+        await withTaskGroup(of: (Bool, Any?).self) { group in
+            group.addTask { (true, await read()) }
+            group.addTask {
+                try? await Task.sleep(for: hostDeadline)
+                return (false, nil)
+            }
+            let first = await group.next() ?? (false, nil)
+            group.cancelAll()
+            return first.0 ? first.1 : nil
+        }
     }
 
     private static func txStatus(_ txid: String) async -> (confirmed: Bool, height: Int?)? {
@@ -687,9 +906,38 @@ enum BitcoinBridge {
         return nil
     }
 
+    enum TxState { case pending, confirmed(Int), gone, unreachable }
+
+    /// A transaction's state, telling "no such transaction" (every host
+    /// answered, none knows it — replaced or dropped) apart from "could not
+    /// ask" (some host never answered), which `txStatus` cannot.
+    private static func txState(_ txid: String) async -> TxState {
+        var allSaidMissing = true
+        for host in hosts {
+            let (json, code) = await IngestSupport.getJSONStatus("\(host)/tx/\(txid)/status")
+            if code == 200, let root = json as? [String: Any], let confirmed = root["confirmed"] as? Bool {
+                if confirmed, let height = root["block_height"] as? Int { return .confirmed(height) }
+                return .pending
+            }
+            if code != 404 && code != 400 { allSaidMissing = false }
+        }
+        return allSaidMissing ? .gone : .unreachable
+    }
+
+    /// Every piece across the entry's funded addresses; nil if any one could
+    /// not be read, so a partial pile is never counted as the whole.
+    private static func utxos(of addresses: [String]) async -> [[String: Any]]? {
+        var all: [[String: Any]] = []
+        for address in addresses {
+            guard let page = await utxos(address) else { return nil }
+            all += page
+        }
+        return all
+    }
+
     private static func utxos(_ address: String) async -> [[String: Any]]? {
         for host in hosts {
-            if let arr = await IngestSupport.getJSON("\(host)/address/\(address)/utxo")
+            if let arr = await bounded({ await IngestSupport.getJSON("\(host)/address/\(address)/utxo") })
                 as? [[String: Any]] { return arr }
         }
         return nil
@@ -740,18 +988,44 @@ enum BitcoinBridge {
     /// landed things, pending confirmations, and the two insights' verdicts.
     @MainActor
     static func probe(context: ModelContext, address: String) async -> Int? {
-        guard BitcoinAddress.isAddress(address) else {
-            NSLog("[Casberi] bitcoinProbe: not a valid Bitcoin address")
+        if let refusal = BitcoinHD.refusal(address) {
+            NSLog("[Casberi] bitcoinProbe: refused — %@", refusal)
             return nil
         }
-        let kind = BitcoinAddress.scriptKind(address) ?? "?"
-        let stats = await addressStats(address)
+        guard BitcoinAddress.isWatchable(address) else {
+            NSLog("[Casberi] bitcoinProbe: not a valid Bitcoin address or wallet key")
+            return nil
+        }
         let price = await priceUSD()
-        NSLog("[Casberi] bitcoinProbe: %@ (%@) — %@ txs, balance %@ sats, BTC $%@",
-              address, kind,
-              stats.map { String($0.txCount) } ?? "UNREAD",
-              stats.map { String($0.balanceSats) } ?? "UNREAD",
-              price.map { String(format: "%.2f", $0) } ?? "UNREAD")
+        if let wallet = BitcoinHD.parse(address) {
+            // A wallet (prd §1097): what the walk found, then the same sweep.
+            let unit = await readUnit(address, transactions: false)
+            let state = loadScan(BitcoinHD.fingerprint(address))
+            NSLog("[Casberi] bitcoinWallet: %@ — scripts %@ (%@), branches %@, owned %d, used %d, balance %@ sats, most receipts %d, BTC $%@",
+                  BitcoinHD.fingerprint(address),
+                  (wallet.scriptKnown ? wallet.scripts : state.scripts ?? []).map(\.rawValue).joined(separator: ","),
+                  wallet.scriptKnown ? "named" : "probed",
+                  wallet.branches.map { $0.map(String.init).joined(separator: "/") }.joined(separator: " "),
+                  unit?.owned.count ?? -1,
+                  state.seen.values.filter { $0.txCount > 0 }.count,
+                  unit.map { String($0.balanceSats) } ?? "UNREAD",
+                  unit?.mostReceipts ?? -1,
+                  price.map { String(format: "%.2f", $0) } ?? "UNREAD")
+            if let first = wallet.scripts.first,
+               let a = BitcoinHD.address(wallet, script: state.scripts?.first ?? first,
+                                         branch: wallet.branches.first ?? [0], index: 0) {
+                NSLog("[Casberi] bitcoinWallet: first receive %@", a)
+            }
+        } else {
+            let kind = BitcoinAddress.scriptKind(address) ?? "?"
+            let stats = await addressStats(address)
+            NSLog("[Casberi] bitcoinProbe: %@ (%@) — %@ txs, balance %@ sats, %@ receipts, BTC $%@",
+                  address, kind,
+                  stats.map { String($0.txCount) } ?? "UNREAD",
+                  stats.map { String($0.balanceSats) } ?? "UNREAD",
+                  stats.map { String($0.receipts) } ?? "UNREAD",
+                  price.map { String(format: "%.2f", $0) } ?? "UNREAD")
+        }
         // The halving math, logged EVERY run whether or not the row is
         // inside its horizon — otherwise this branch is unverifiable until
         // 2028 and the arithmetic would ship unchecked. Pair with
@@ -773,8 +1047,8 @@ enum BitcoinBridge {
             context: context, addresses: [address],
             existing: IngestSupport.existingSourceRefs(context, source: "Wallet"))
         let pending = (UserDefaults.standard.array(forKey: pendingKey(address)) as? [String]) ?? []
-        NSLog("[Casberi] bitcoinProbe: %@ landed; %d pending confirmation",
-              n.map(String.init) ?? "FAILED", pending.count)
+        NSLog("[Casberi] bitcoinProbe: %@ landed; %d pending confirmation; %d sends waiting",
+              n.map(String.init) ?? "FAILED", pending.count, loadWaiting(address).count)
         NSLog("[Casberi] bitcoinVintage: %@ · balance %@",
               vintage(for: address).map {
                   $0.formatted(.dateTime.month(.wide).year())

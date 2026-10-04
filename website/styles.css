@@ -269,6 +269,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-bitrefill { background: #002b28; }
 .ai-wise { background: #9fe870; }
 .ai-splits { background: #000000; }   /* their icon's own field */
+.ai-lightning { background: #f7931a; }   /* Bitcoin's orange — no product owns the seat (prd §1098) */
 /* Privacy.com's mark is a dark CIRCLE on transparency — not the full-bleed
    square artwork .tilefull assumes (Slack/PostHog above), so its four corners
    let the page through and the tile reads unfilled beside its neighbours.

@@ -128,6 +128,12 @@ enum MoneyCommentary: Equatable {
     /// facts this app does not have. A one-line change in `BitcoinBridge` to
     /// stamp the count it already reads would make both drawable; until then the
     /// honest card names the bar and promises the notice.
+    /// A Bitcoin receipt too small to be a payment (prd §1097). The fact, and
+    /// the one thing it is for: spent beside your other coins, it links them.
+    static let dust = MoneyCommentary.note(
+        headline: String(localized: "Dust."),
+        subline: String(localized: "Spending it with your other coins links them together. It's safest left where it is."))
+
     static func settling(need: Int) -> MoneyCommentary {
         .note(headline: String(localized: "Still settling."),
               subline: String(localized: "You'll be told when it reaches \(need) confirmations."))

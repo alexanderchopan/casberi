@@ -216,6 +216,7 @@ enum BridgeGlyph {
         case "wise":      return "arrow.left.arrow.right.circle"
         // The mark's own idea — a field of dots — without drawing the mark.
         case "splits":    return "circle.hexagongrid"
+        case "lightning": return "bolt.fill"
         // The three finance seats of §780b/§780c. Acorns invests spare change,
         // Rocket Money watches what repeats, NerdWallet is reading — so the
         // glyphs say growth, recurrence and an article, not three wallets.

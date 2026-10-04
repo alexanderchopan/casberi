@@ -971,7 +971,7 @@ final class AddressBook {
     /// address is public data and a bad one simply never resolves to anything.
     func looksLikeAddress(_ token: String) -> Bool {
         ENS.isHexAddress(token) || SNS.isAddress(token)
-            || BitcoinAddress.isAddress(token)
+            || BitcoinAddress.isWatchable(token)
             || NameResolve.looksLikeName(token)
     }
 

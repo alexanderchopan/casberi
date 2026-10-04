@@ -28,6 +28,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// PROPOSAL whose status moves after it lands, and its screen checks the
     /// key's scopes before keeping it. See `SplitsAuth`.
     case splits   = "Splits"
+    /// Lightning (2026-10-03, prd §1098) — any Lightning wallet, over the
+    /// Nostr Wallet Connect string it hands out. Its sweep is its own (the
+    /// reads are relay requests, not HTTPS), and its screen checks the
+    /// connection cannot pay before keeping it. See `LightningAuth`.
+    case lightning = "Lightning"
     case posthog  = "PostHog"
     case stripe   = "Stripe"
     /// Polar (2026-08-30) — a developer-first Merchant of Record, Stripe's
@@ -82,6 +87,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "privacy"
         case .wise:     "wise"
         case .splits:   "splits"
+        case .lightning: "lightning"
         case .posthog:  "posthog"
         case .stripe:   "stripe"
         case .polar:    "polar"
@@ -130,6 +136,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .wise:      URL(string: "https://wise.com/settings/")
         // The API-keys page itself: the step below only has to name the scope.
         case .splits:    URL(string: "https://app.splits.org/settings/team/api-keys/")
+        // No door: the connection is made inside whichever wallet holds the
+        // money, and there is no one page to send anybody to.
+        case .lightning: nil
         case .posthog:   URL(string: "https://us.posthog.com/settings/user-api-keys")
         case .stripe:    URL(string: "https://dashboard.stripe.com/apikeys")
         // Polar's own redirect helper — resolves to the signed-in org's
@@ -224,6 +233,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             String(localized: "Get your API key")
         case .wise:      String(localized: "Get your API token")
         case .splits:    String(localized: "Get your API key")
+        case .lightning: String(localized: "Make a connection")
         case .aws:
             // "IAM" dropped to fit the 26-char door-label budget — the address
             // beneath (console.aws.amazon.com) already says where this leads.
@@ -286,6 +296,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // save (`SplitsShape.isReadOnly`), so saying so first saves a trip.
         case .splits: [
             "Create a key with the Read scope only"]
+        // The permissions are the whole step: a connection that can pay is
+        // refused on save, so saying so first saves a trip.
+        case .lightning: [
+            "In your wallet, add a Nostr Wallet Connect app",
+            "Allow only Read balance and Read transactions"]
         // The three scopes are NOT named here — the checklist directly beneath
         // this step is the list, the same fix Stripe took the day before
         // (§220, "a step that was already on screen twice"; audit 2026-07-31).
@@ -397,6 +412,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "API key"
         case .wise:     "API token"
         case .splits:   "sk_…"
+        case .lightning: "nostr+walletconnect://…"
         case .posthog:  "phx_…"
         case .stripe:   "rk_live_…"
         // No confirmed prefix from Polar's docs — Organization Access
@@ -456,6 +472,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "API key"
         case .wise:     "API token"
         case .splits:   "API key"
+        case .lightning: "connection"
         case .posthog:  "personal API key"
         case .stripe:   "restricted key"
         case .polar:    "organization access token"
@@ -487,6 +504,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "purchases"
         case .wise:     "transfers"
         case .splits:   "transactions"
+        case .lightning: "payments"
         case .posthog:  "updates"
         case .stripe:   "updates"
         case .polar:    "updates"
@@ -657,6 +675,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // contacts must not inherit the old one's.
         case .splits:
             SplitsState.clear()
+        // A fresh connection may be a different wallet.
+        case .lightning:
+            LightningState.clear()
         // Cleared on BOTH callers — a fresh token may belong to a different
         // account with a different budget, and the stale bucket must not
         // suppress a real crossing on the new one.
@@ -1063,6 +1084,9 @@ enum TokenIngest {
         // Splits owns its pass for Wise's reason: a proposal's status moves
         // after it lands, and the balances are a state written beside it.
         if bridge == .splits { return await SplitsIngest.refresh(context: context) }
+        // Lightning owns its pass: its reads are Nostr relay requests, and the
+        // balance is a state written beside the rows.
+        if bridge == .lightning { return await LightningIngest.refresh(context: context) }
         guard let token = TokenVault.get(bridge.tokenKey), !running.contains(bridge) else {
             return running.contains(bridge) ? 0 : nil
         }
@@ -1171,6 +1195,7 @@ enum TokenIngest {
         case .aws:      ownSweepUnreachable(.aws)
         case .wise:     ownSweepUnreachable(.wise)
         case .splits:   ownSweepUnreachable(.splits)
+        case .lightning: ownSweepUnreachable(.lightning)
         case .jira:     await jira(token)
         }
     }

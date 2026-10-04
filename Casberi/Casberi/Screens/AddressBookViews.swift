@@ -95,7 +95,9 @@ extension AddressBook.Entry {
         // (2026-07-27). `kind.label` stays nil for a Bitcoin address (there's
         // no `eth_getCode` to ask), so the two never collide.
         if let label = kind.label { parts.append(label) }
-        else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
+        else if let script = BitcoinAddress.scriptKind(address) ?? BitcoinHD.kindWord(address) {
+            parts.append(script)
+        }
         if let provenance { parts.append(provenance) }
         guard parts.isEmpty else { return parts.joined(separator: " · ") }
         // Nothing else to say. An auto-named row's own NAME is this string, so
@@ -1636,7 +1638,7 @@ struct AddressCard: View {
     /// has never synced says nothing rather than guessing.
     @ViewBuilder
     private var bitcoinVintageLine: some View {
-        if BitcoinAddress.isAddress(current.address),
+        if BitcoinAddress.isWatchable(current.address),
            let sats = BitcoinBridge.cachedBalanceSats(for: current.address), sats > 0 {
             // A BTC balance is a balance (prd §374). The vintage beside it is
             // not — "oldest piece from March 2017" says when, not how much,
@@ -1717,6 +1719,7 @@ struct AddressCard: View {
             parts.append(isWorldApp ? String(localized: "World App wallet")
                          : current.kind.label
                          ?? BitcoinAddress.scriptKind(current.address)
+                         ?? BitcoinHD.kindWord(current.address)
                          ?? String(localized: "Wallet"))
         }
         // A person whose accounts are listed as BLOCKS below says nothing

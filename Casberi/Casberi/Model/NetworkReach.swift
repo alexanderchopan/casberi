@@ -500,6 +500,13 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "splits"),
                  purpose: "Reads your team's accounts, their balances, your transactions and your contacts — with an API key you create yourself, which must have the Read scope only. Nothing here can propose, sign or send a transaction.",
                  hosts: ["api.splits.org"]),
+        // Lightning (2026-10-03, prd §1098) — the relay is whichever one the
+        // person's own connection string names, so it can only be prose here;
+        // `NostrRelay` records it under this service as it opens the socket.
+        Endpoint(service: "Lightning",
+                 reach: .whenConnected(bridge: "lightning"),
+                 purpose: "Reads your Lightning wallet's balance and payments through the Nostr relay your connection names, encrypted to your wallet, with a connection you make yourself that can only read. A connection that can pay is refused. Bitcoin's price comes from the same place the Wallet's does.",
+                 hosts: ["the relay your connection names"]),
         // Host is user-configurable (Sentry's EU region answers on
         // de.sentry.io, and self-hosted installs exist) — PostHog's shape
         // exactly: the default cloud host is what's disclosed, and a host the

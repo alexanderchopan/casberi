@@ -341,6 +341,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - Privacy Pools (2026-07-21, prd §162) — 0xBow's compliant-privacy pools, the second seat → docs/hooks/wallet.md · prd §162
 - `-gnosisPayProbe` — Gnosis Pay (2026-07-26, prd §222) → docs/hooks/wallet.md · prd §222
 - `-metamaskCardProbe` — MetaMask Card, the THIRD seat on Gnosis Pay's shape (prd §857/§857b, 2026-09-20) → docs/hooks/wallet.md · prd §857 · §857b · §222 · §860 · §83
+- `-bitcoinProbe <address | xpub/zpub/descriptor>` — one Bitcoin address or a whole WALLET (prd §1097): the gap-limit walk, change counted home, dust tagged, reuse reconciled, a waiting send stamped; a pasted `xprv` is refused and never stored. A host gets 20s of wall clock per page (mempool.space trickles busy addresses) → prd §1097 · §226 · §227
+- `-lightningConnect "<nostr+walletconnect://…>"|forget` — the Lightning seat (prd §1098): Nostr Wallet Connect, kept only if the connection cannot pay (`get_info`, else the kind-13194 info event), NIP-04, settled payments only, balance into the total as BTC; redacted from the probe log → prd §1098
 - `-solNameProbe` `-solActivityProbe` — Wallet/Solana (2026-07-16, prd §85/§86) → docs/hooks/wallet.md · prd §85
 - **Solana reads forward from a cursor, takes v1 transactions (`maxSupportedTransactionVersion: 1`; 0 dropped 18% of mainnet), lands SPL delegates as `wallet:sol-approval:` grants (still standing, never `WalletPrepare`'s), and resolves `.sol` through web3.bio (Bonfida's proxy is dead) (prd §1096)** → prd §1096
 - **Wei / Gwei names, and the router the six copies became** (`-weiNameProbe`) → docs/hooks/wallet.md · prd §597

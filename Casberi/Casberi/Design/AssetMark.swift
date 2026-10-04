@@ -167,7 +167,7 @@ enum BrandMark {
     /// and Lido's mark is a different thing from Ethereum's.
     private static let alias: [String: String] = [
         "usdbc": "usdc", "usdce": "usdc", "usdte": "usdt",
-        "cbbtc": "wbtc", "btc": "wbtc",
+        "cbbtc": "wbtc", "btc": "wbtc", "sats": "wbtc",
         "wsol": "sol", "msol": "sol", "jitosol": "sol",
         "pol": "matic",
         // A protocol's token and the protocol share one mark — `HYPE` is

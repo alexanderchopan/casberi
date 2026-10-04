@@ -224,6 +224,8 @@ enum RoomAccounts {
              holder: nil, group: safes, mark: "Safe"),
         Seat(name: "Privy", source: PrivyHomeFeed.source,
              holder: WalletPortfolio.privyHolderPrefix, group: appWallets, mark: "Privy"),
+        Seat(name: "Lightning", source: LightningIngest.source,
+             holder: WalletCash.holderPrefix + "lightning", group: appWallets, mark: "Lightning"),
         Seat(name: ExchangeBridge.Venue.coinbase.display, source: nil,
              holder: ExchangeBridge.Venue.coinbase.rawValue, group: exchanges, mark: "Coinbase"),
         Seat(name: ExchangeBridge.Venue.kraken.display, source: nil,

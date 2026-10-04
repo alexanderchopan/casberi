@@ -171,6 +171,9 @@ enum BridgeRouter {
         /// Splits checks the key's SCOPES before keeping it (a Write key is
         /// refused), so the save is more than the generic paste — Wise's reason.
         case splits
+        /// Lightning asks the wallet what the connection may DO before keeping
+        /// it (one that can pay is refused) — Splits' reason (prd §1098).
+        case lightning
         /// npm and PyPI share one screen and one ingest, parameterised by
         /// registry — the `.exchange(venue)` shape. They are watch lists, so
         /// they must not ride `.token` (they have no token at all) and must
@@ -364,6 +367,7 @@ enum BridgeRouter {
             case .aws:             TokenBridge.aws.bridgeID
             case .wise:            TokenBridge.wise.bridgeID
             case .splits:          TokenBridge.splits.bridgeID
+            case .lightning:       TokenBridge.lightning.bridgeID
             // The registry's own raw value IS the seat id ("npm", "pypi"), so
             // the Row and this can't drift apart — `.exchange`'s rule.
             case .packages(let r): r.bridgeID
@@ -483,12 +487,13 @@ enum BridgeRouter {
         Row(offer: "AWS", id: "aws", destination: .aws),
         Row(offer: "Wise", id: "wise", destination: .wise),
         Row(offer: "Splits", id: "splits", destination: .splits),
+        Row(offer: "Lightning", id: "lightning", destination: .lightning),
         Row(offer: "npm",  id: "npm",  destination: .packages(.npm)),
         Row(offer: "PyPI", id: "pypi", destination: .packages(.pypi)),
     ] + TokenBridge.allCases.filter {
         $0 != .posthog && $0 != .stripe && $0 != .polar && $0 != .sentry
             && $0 != .appStoreConnect && $0 != .aws
-            && $0 != .wise && $0 != .splits
+            && $0 != .wise && $0 != .splits && $0 != .lightning
     }.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
     }
@@ -671,6 +676,7 @@ struct BridgeDestinationView: View {
         case .aws:             AWSScreen()
         case .wise:            WiseScreen()
         case .splits:          SplitsScreen()
+        case .lightning:       LightningScreen()
         case .packages(let r): PackageWatchScreen(registry: r)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .nftCollection(let wallet, let collection, let name):

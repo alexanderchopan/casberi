@@ -64,6 +64,13 @@ enum WalletCash {
             out.append(Held(currency: balance.currency, amount: balance.amount,
                             holderID: holderPrefix + "bitrefill", label: "Bitrefill"))
         }
+        // A Lightning wallet's balance (prd §1098), in bitcoin, priced by
+        // `rates` off the same source the on-chain balance uses.
+        if LightningAuth.configured, let sats = LightningState.balanceSats, sats > 0 {
+            out.append(Held(currency: "BTC", amount: Double(sats) / 100_000_000,
+                            holderID: holderPrefix + "lightning", label: "Lightning",
+                            readAt: LightningState.readAt))
+        }
         if AppleWalletBridge.connected {
             for (name, balance) in AppleWalletBridge.cash.sorted(by: { $0.key < $1.key }) {
                 guard balance.value > 0, balance.currency.count == 3 else { continue }
@@ -94,15 +101,19 @@ enum WalletCash {
     /// Kraken's mid price for each priceable code, as USD per unit (a USDXXX
     /// quote is inverted).
     static func rates(for currencies: Set<String>) async -> [String: Double] {
+        // Bitcoin (a Lightning balance, prd §1098) is priced where the
+        // on-chain balance is, never by Kraken's fiat pairs.
+        var bitcoin: [String: Double] = [:]
+        if currencies.contains("BTC"), let price = await BitcoinBridge.priceUSD() { bitcoin["BTC"] = price }
         let wanted = currencies.filter { quotedOverUSD.contains($0) || quotedUnderUSD.contains($0) }
-        guard !wanted.isEmpty else { return [:] }
+        guard !wanted.isEmpty else { return bitcoin }
         let pairs = wanted.sorted()
             .map { quotedOverUSD.contains($0) ? $0 + "USD" : "USD" + $0 }
             .joined(separator: ",")
         guard let url = URL(string: "https://api.kraken.com/0/public/Ticker?pair=\(pairs)"),
               let root = await IngestSupport.getJSON(url) as? [String: Any],
               let result = root["result"] as? [String: Any]
-        else { return [:] }
+        else { return bitcoin }
         var out: [String: Double] = [:]
         for code in wanted {
             // Kraken answers under its own names (ZEURZUSD, ZUSDZCAD, AUDUSD),
@@ -114,7 +125,7 @@ enum WalletCash {
             let mid = (ask + bid) / 2
             out[code] = quotedOverUSD.contains(code) ? mid : 1 / mid
         }
-        return out
+        return out.merging(bitcoin) { a, _ in a }
     }
 
     /// `rates(for:)`, remembered for ten minutes per code, so a figure that

@@ -243,6 +243,11 @@ enum BridgeCatalog {
         // moved, proposals included while they wait on signatures.
         Offer(name: "Splits",      tagline: "Your team's accounts and payments", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 18)),
+        // Lightning (prd §1098, 2026-10-03) — any Lightning wallet over Nostr
+        // Wallet Connect: the balance into the total, settled payments as
+        // rows, and a connection that can pay refused on save.
+        Offer(name: "Lightning",   tagline: "Your Lightning wallet, read-only", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 10, 3)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which was where things you

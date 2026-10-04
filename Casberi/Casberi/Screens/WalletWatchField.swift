@@ -237,7 +237,9 @@ struct WalletWatchField: View {
         if known != nil { parts.append(String(localized: "already in your book")) }
         if worldAppName != nil { parts.append(NameResolve.worldAppLabel) }
         if let label = known?.kind.label { parts.append(label) }
-        else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
+        else if let script = BitcoinAddress.scriptKind(address) ?? BitcoinHD.kindWord(address) {
+            parts.append(script)
+        }
         return parts.isEmpty
             ? String(localized: "New address")
             : parts.joined(separator: " · ")

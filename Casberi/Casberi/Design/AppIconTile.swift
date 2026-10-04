@@ -260,6 +260,9 @@ extension DS {
         // ever bundled.
         case "wise":                return Color.fixed("#9fe870")
         case "splits":              return Color.fixed("#000000")   // their icon's black field (icon-sampled)
+        // Bitcoin's own orange — no product owns the seat (prd §1098), so the
+        // money's colour is the honest ground; `TokenHue` uses the same.
+        case "lightning":           return Color.fixed("#f7931a")
         case "coinbase":            return Color.fixed("#0052ff")   // their official brand blue
         case "kraken":              return Color.fixed("#773bf5")   // their mascot's purple (icon-sampled)
         case "binance":             return Color.fixed("#0b0e11")   // their near-black app-icon field

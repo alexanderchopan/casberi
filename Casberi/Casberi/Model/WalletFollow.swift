@@ -55,6 +55,13 @@ enum WalletFollow {
             return .found(Target(address: address, label: input,
                                  chain: family == .sns ? "solana-mainnet" : nil))
         }
+        // A Bitcoin wallet's key (prd §1097) follows like an address; a private
+        // key, a multisig or a testnet key says why it can't, instead of nothing.
+        if let refusal = BitcoinHD.refusal(input) { return .missed(refusal) }
+        if BitcoinHD.isWallet(input) {
+            let key = input.trimmingCharacters(in: .whitespacesAndNewlines)
+            return .found(Target(address: key, label: String(localized: "Bitcoin wallet"), chain: nil))
+        }
         guard book.looksLikeAddress(input) else { return nil }
         // A legacy/P2SH Bitcoin address is base58-shaped too, the band Solana
         // pubkeys occupy — check the checksum-verified kind FIRST, or a pasted

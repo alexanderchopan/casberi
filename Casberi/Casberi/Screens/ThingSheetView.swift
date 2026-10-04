@@ -1692,9 +1692,12 @@ struct ThingSheetView: View {
     /// spaces ("Apple Music", "iCloud Mail"), so the eyebrow's door needs
     /// this before handing it to `casberi://feed/source/…`.
     /// The word under a money head's name (prd §887): "Card" for a card spend,
-    /// else the kind's own tag.
+    /// "Dust" for a Bitcoin receipt too small to be a payment (§1097), else the
+    /// kind's own tag.
     private var moneyKindWord: String {
-        thing.tags.contains("Card") ? String(localized: "Card") : thing.kind.typeTag
+        if thing.tags.contains("Card") { return String(localized: "Card") }
+        if thing.tags.contains(BitcoinBridge.dustTag) { return String(localized: "Dust") }
+        return thing.kind.typeTag
     }
 
     /// When a moment is (prd §892): an event's start, a reminder's due.

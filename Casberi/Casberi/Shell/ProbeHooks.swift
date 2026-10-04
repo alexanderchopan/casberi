@@ -23,6 +23,8 @@ enum ProbeHooks {
     /// flag lands here. Add the flag in the same commit as the probe.
     private static let secretArgKeys: Set<String> = [
         "-byokKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
+        // A Nostr Wallet Connect string carries its client secret (prd §1098).
+        "-lightningConnect",
         // Safe's API key — a JWT over our own developer account's quota
         // (prd §789). Not a person's credential, and redacted anyway for
         // `-wcProjectID`'s reason: anything credential-shaped stays out of
@@ -2903,7 +2905,7 @@ enum ProbeHooks {
         Hook(key: "walletAddress") { spec, context in
             let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
             guard let address = parts.first else { return }   // "" crashed on parts[0]
-            if !BitcoinAddress.isAddress(address),
+            if !BitcoinAddress.isWatchable(address),
                SNS.isAddress(address) || SNS.looksLikeName(address) {
                 WalletChainStore.shared.ensureEnabled("solana-mainnet")
             }
@@ -3965,12 +3967,35 @@ enum ProbeHooks {
             BitcoinBridge.halvingHorizonOverrideDays = Int(spec)
             NSLog("[Casberi] bitcoinHalvingHorizon: %@ days", spec)
         },
-        // `-bitcoinProbe <address>` runs the Bitcoin sweep for one address
+        // `-bitcoinProbe <address | xpub/zpub/descriptor>` runs the Bitcoin
+        // sweep for one address or one wallet (prd §1097)
         // directly (bypassing the watch list) and NSLogs balance, tx count,
         // landed things, pending confirmations, and the two one-shot
         // insights' verdicts. Pair with `-walletAddress <a BTC address>` to
         // also exercise the watched-wallet path (holdings fold, per-wallet
         // card) rather than just the sweep itself.
+        // `-lightningConnect "<nostr+walletconnect://…>"|forget` (prd §1098)
+        // runs the account page's own check — keep it only if it cannot pay —
+        // then one sync, and NSLogs the outcome, the balance and the landed
+        // count. Never logs the string: it is the credential.
+        Hook(key: "lightningConnect") { spec, context in
+            Task { @MainActor in
+                if spec == "forget" {
+                    LightningAuth.clear()
+                    NSLog("[Casberi] lightning| forgotten")
+                    return
+                }
+                let outcome = await LightningAuth.connect(spec)
+                NSLog("[Casberi] lightning| connect: %@", outcome == .kept ? "kept"
+                      : (LightningAuth.sentence(outcome) ?? "?"))
+                guard outcome == .kept else { return }
+                let added = await LightningIngest.refresh(context: context)
+                NSLog("[Casberi] lightning| balance %@ sats · %@ landed · %@",
+                      LightningState.balanceSats.map(String.init) ?? "UNREAD",
+                      added.map(String.init) ?? "FAILED",
+                      LightningIngest.lastPassFailure ?? "no failure")
+            }
+        },
         Hook(key: "bitcoinProbe") { address, context in
             Task { @MainActor in
                 _ = await BitcoinBridge.probe(context: context, address: address)

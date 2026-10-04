@@ -52,7 +52,9 @@ enum MoneyReceiptSource {
         f.partyLabel = thing.counterpartyAddress
             .flatMap { WalletIngest.knownLabel(for: $0) } ?? thing.transferCounterparty
         f.network = WalletIngest.chainName(forContent: thing.content)
-        if MoneyReceipt.split(thing.transferAmount).unit == "BTC" {
+        // By the explorer, never the unit: a receipt under 0.01 BTC is written
+        // in sats (§227), and reading "BTC" off the amount missed every one.
+        if thing.content.hasPrefix(BitcoinBridge.explorer) {
             f.settling = BitcoinBridge.isSettling(address: thing.walletAddress,
                                                   ref: thing.sourceRef)
         }
@@ -114,9 +116,13 @@ enum MoneyReceiptSource {
         if let swap = SwapStage(thing) {
             return MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount)
         }
-        if MoneyReceipt.split(thing.transferAmount).unit == "BTC",
+        if thing.content.hasPrefix(BitcoinBridge.explorer),
            BitcoinBridge.isSettling(address: thing.walletAddress, ref: thing.sourceRef) {
             return MoneyCommentary.settling(need: BitcoinBridge.settledConfirmations)
+        }
+        if thing.tags.contains(BitcoinBridge.dustTag),
+           thing.content.hasPrefix(BitcoinBridge.explorer) {
+            return MoneyCommentary.dust
         }
         guard let cp = thing.counterpartyAddress, !cp.isEmpty else { return nil }
         let party = WalletIngest.knownLabel(for: cp)

@@ -356,7 +356,7 @@ enum WalletIngest {
         // a legacy/P2SH address (base58, the same 25–34-char band Solana
         // pubkeys occupy) would fall into `SNS.isAddress`'s shape-only test
         // below and get routed to Solana's networks by mistake.
-        guard !BitcoinAddress.isAddress(address) else { return [] }
+        guard !BitcoinAddress.isWatchable(address) else { return [] }
         let wantsSolana = SNS.isAddress(address)
         return chains.filter { ($0.kind == .solana) == wantsSolana }.map(\.network)
     }
@@ -1204,7 +1204,7 @@ enum WalletIngest {
     static func resolvedAddresses(_ raw: [String]) async -> [String] {
         var out: [String] = []
         for a in raw {
-            if ENS.isHexAddress(a) || BitcoinAddress.isAddress(a) || SNS.isAddress(a) { out.append(a) }
+            if ENS.isHexAddress(a) || BitcoinAddress.isWatchable(a) || SNS.isAddress(a) { out.append(a) }
             else if let resolved = await NameResolve.resolve(a) {
                 out.append(resolved)
                 // Every resolution feeds the store's cache (2026-07-20) — the
@@ -1231,9 +1231,10 @@ enum WalletIngest {
         addresses.filter { SNS.isAddress($0) && !BitcoinAddress.isAddress($0) }
     }
 
-    /// The Bitcoin addresses among a resolved set — `BitcoinBridge`'s input.
+    /// The Bitcoin addresses and wallet keys (prd §1097) among a resolved
+    /// set — `BitcoinBridge`'s input.
     private static func bitcoinOnly(_ addresses: [String]) -> [String] {
-        addresses.filter { BitcoinAddress.isAddress($0) }
+        addresses.filter { BitcoinAddress.isWatchable($0) }
     }
 
     /// Lands the Solana half of a pass (prd §86) — the non-EVM ingest. Sits
@@ -2185,7 +2186,7 @@ enum WalletIngest {
         // own read, folded in here so the per-wallet card (and, through
         // `topHoldingsByWallet`, the combined "What you hold" merge) counts
         // it exactly like every other family's holding.
-        if BitcoinAddress.isAddress(address) {
+        if BitcoinAddress.isWatchable(address) {
             guard let usd = await BitcoinBridge.balanceUSD(addresses: [address]) else { return .unreachable }
             guard usd >= holdingFloor else { return .empty }
             let bySymbol = ["BTC": usd]
