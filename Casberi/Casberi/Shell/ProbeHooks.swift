@@ -74,6 +74,12 @@ enum ProbeHooks {
         // A Duolingo `jwt_token`: the whole credential, and a bearer for the
         // account (prd §776). `-duolingoProbe` takes no value and is not here.
         "-duolingoSession",
+        // `<provider>:<address>:<app password>` — a mail account's IMAP
+        // password and the person's address. It was printed verbatim by
+        // `probeArgs:` until the Apple-receipt measurement gave this hook its
+        // first real-inbox use; the value has no verifiable prefix, so all
+        // of it is redacted.
+        "-mailBridge",
     ]
 
     /// `-byokKey venice:vk-abc` → `-byokKey venice:‹redacted›`, but
@@ -161,6 +167,174 @@ enum ProbeHooks {
         let added = await SpotifyIngest.refresh(context: context)
         NSLog("[Casberi] spotify| recently played: %@ new",
               added.map(String.init) ?? "FAILED")
+    }
+
+    /// `-appleReceiptProbe` — the measurement behind one question: can Apple's
+    /// receipt mails name the app behind a charge the Wallet reads as "Apple"?
+    ///
+    ///   • `YES` reads the mail ALREADY LANDED (the newest 20 of each inbox,
+    ///     which is all ingest ever fetches — old receipts are not in it).
+    ///   • `fetch` or `fetch:<mailbox>` asks each connected mail account for
+    ///     the newest 300 mails whose From names Apple (`EXAMINE`, read-only,
+    ///     `INBOX` unless a mailbox is named — Gmail's archive is
+    ///     `[Gmail]/All Mail`), decodes them exactly as ingest would, and
+    ///     lands NOTHING.
+    ///   • `-appleReceiptShape <n>` adds the content-free layout of the first
+    ///     `n` mails the reader refused (`AppleReceipts.skeleton`), which is
+    ///     how an unread format gets described without logging the mail.
+    ///
+    /// The log never carries a subject, an address, an order id or a card's
+    /// digits: a class of subject, counts, and — for a line the reader fully
+    /// recognised — the app's name and its price.
+    @MainActor
+    private static func appleReceiptReport(spec: String, context: ModelContext) async {
+        struct Seen {
+            var date: Date?
+            var subject: String
+            var sender: String?
+            var text: String?
+            /// The fetch mode's extra columns, already formatted.
+            var extra: String
+        }
+        let day = DateFormatter()
+        day.locale = Locale(identifier: "en_US_POSIX")
+        day.dateFormat = "yyyy-MM-dd"
+        func money(_ amount: Double, _ mark: String) -> String { mark + String(format: "%.2f", amount) }
+
+        var seen: [Seen] = []
+        let fetching = spec.lowercased().hasPrefix("fetch")
+        if fetching {
+            let mailbox = spec.firstIndex(of: ":").map { String(spec[spec.index(after: $0)...]) } ?? "INBOX"
+            var connected = 0
+            for provider in MailProvider.allCases where provider.connected {
+                guard let password = TokenVault.get(provider.passwordKey) else { continue }
+                connected += 1
+                var uids = Set<String>()
+                for domain in AppleReceipts.senderDomains.sorted() {
+                    do {
+                        let mails = try await IMAPClient.probeSearch(
+                            host: provider.host, user: provider.address, password: password,
+                            mailbox: mailbox, from: domain, limit: 300)
+                        for mail in mails where uids.insert(mail.message.uid).inserted {
+                            let auth = (mail.authenticationResults ?? "").lowercased()
+                            var dkim = auth.isEmpty ? "none" : (auth.contains("dkim=pass") ? "other" : "no-pass")
+                            if auth.contains("dkim=pass") {
+                                for key in ["header.i=@", "header.d="] {
+                                    guard let r = auth.range(of: key) else { continue }
+                                    let host = auth[r.upperBound...].prefix { $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" }
+                                    if AppleReceipts.isAppleSender("x@" + String(host)) { dkim = "pass" }
+                                }
+                            }
+                            seen.append(Seen(
+                                date: mail.message.date, subject: mail.message.subject,
+                                sender: mail.message.fromAddress, text: mail.message.body,
+                                extra: " | plain:\(mail.hasPlainPart ? "y" : "n") | cut:\(mail.cut ? "y" : "n")"
+                                    + " | chars:\(mail.message.body?.count ?? 0) | dkim:\(dkim)"))
+                        }
+                    } catch {
+                        NSLog("appleReceipt| %@ search FAILED in the mailbox asked for: %@",
+                              provider.rawValue, String(describing: error))
+                    }
+                }
+            }
+            if connected == 0 { NSLog("appleReceipt| fetch: no mail account is connected (see -mailBridge)") }
+        } else {
+            let members = MailSubscriptionsReading.sources
+            let d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { members.contains($0.source) },
+                                           sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            for thing in ((try? context.fetch(d)) ?? []).live {
+                seen.append(Seen(date: thing.capturedAt, subject: thing.title,
+                                 sender: thing.authorEmail, text: thing.content, extra: ""))
+            }
+        }
+
+        // The exact sender gate, here as in the reader: the server's FROM
+        // search is a substring, and a landed mail is anybody's.
+        let scanned = seen.count
+        seen = seen.filter { AppleReceipts.isAppleSender($0.sender) }
+        var receipts: [AppleReceipts.Receipt] = []
+        var apps = Set<String>()
+        var parsed = 0
+        var shapesLeft = UserDefaults.standard.string(forKey: "appleReceiptShape").map { Int($0) ?? 3 } ?? 0
+        for (index, mail) in seen.enumerated() {
+            let text = mail.text ?? ""
+            let shape = AppleReceipts.shape(subject: mail.subject)
+            let receipt = AppleReceipts.receipt(sender: mail.sender, subject: mail.subject,
+                                                text: text, date: mail.date ?? .distantPast)
+            let lines = receipt?.lines ?? []
+            let skeleton = AppleReceipts.skeleton(text).joined(separator: "\n")
+            let hasApp = !lines.isEmpty || skeleton.range(of: "(^|\\n)app\\b", options: .regularExpression) != nil
+            let hasPrice = !lines.isEmpty || skeleton.contains("<price>")
+            let hasRenews = lines.contains { $0.renews != nil }
+                || skeleton.contains("renews") || skeleton.contains("renewal")
+            NSLog("appleReceipt| %@ | subject-shape:%@ | lines:%d | fields:app %@, price %@, renews %@%@",
+                  mail.date.map(day.string(from:)) ?? "undated", shape.rawValue, lines.count,
+                  hasApp ? "y" : "n", hasPrice ? "y" : "n", hasRenews ? "y" : "n", mail.extra)
+            if let receipt, mail.date != nil {
+                parsed += 1
+                receipts.append(receipt)
+                for line in lines {
+                    apps.insert(line.app)
+                    NSLog("appleReceiptLine| %@ | %@ | %@ | %@",
+                          mail.date.map(day.string(from:)) ?? "undated", line.app, line.item ?? "-",
+                          money(line.amount, line.symbol))
+                }
+            } else if shapesLeft > 0 {
+                shapesLeft -= 1
+                for row in AppleReceipts.skeleton(text) {
+                    NSLog("appleReceiptShape| %d | %@", index, row)
+                }
+            }
+        }
+
+        // The answer: what the Wallet reads as Apple, against what was read.
+        let wallet = SubscriptionsReading.sources
+        let wd = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { wallet.contains($0.source) },
+                                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        let things = ((try? context.fetch(wd)) ?? []).live
+        let found = SubscriptionsSource.found(from: things, now: .now)
+        let items = Subscriptions.compose(found: found, bills: SubscriptionsSource.bills(from: things, now: .now),
+                                          manual: SubscriptionStore.shared.all, now: .now)
+        func word(_ m: AppleReceipts.Match) -> String {
+            switch m {
+            case .app(let name): return name
+            case .ambiguous:     return "ambiguous"
+            case .none:          return "-"
+            }
+        }
+        var subscriptions = 0, subscriptionsMatched = 0
+        for item in items where AppleReceipts.isAppleBilling(merchant: item.name) {
+            guard let amount = item.amount else { continue }
+            subscriptions += 1
+            // The charge the match is dated by: the newest one seen.
+            let last = found.filter { Subscriptions.key($0.series.merchant) == item.id }
+                .map(\.series.last.date).max()
+            let match = last.map {
+                AppleReceipts.match(amount: amount, currency: item.currency, at: $0, in: receipts)
+            } ?? .none
+            if case .app = match { subscriptionsMatched += 1 }
+            NSLog("appleReceiptMatch| %@ | %@", money(amount, item.currency + " "), word(match))
+        }
+        // Every App Store subscription shares the one merchant, so several of
+        // them are ONE series to the Wallet (or none, when their dates do not
+        // hold a cadence). The charges themselves are the finer count.
+        var charges = 0, chargesMatched = 0, chargesAmbiguous = 0
+        for thing in things where thing.kind == .transaction {
+            guard let merchant = thing.transferCounterparty, AppleReceipts.isAppleBilling(merchant: merchant),
+                  let amount = thing.priceValue, let currency = thing.priceCurrency,
+                  !thing.tags.contains("Refund") else { continue }
+            charges += 1
+            let match = AppleReceipts.match(amount: abs(amount), currency: currency,
+                                            at: thing.capturedAt, in: receipts)
+            if case .app = match { chargesMatched += 1 }
+            if match == .ambiguous { chargesAmbiguous += 1 }
+            NSLog("appleReceiptCharge| %@ | %@ | %@", day.string(from: thing.capturedAt),
+                  money(abs(amount), currency + " "), word(match))
+        }
+        NSLog("appleReceiptProbe: mode=%@ scanned=%d apple-sender=%d parsed=%d unparsed=%d apps=%d",
+              fetching ? "fetch" : "landed", scanned, seen.count, parsed, seen.count - parsed, apps.count)
+        NSLog("appleReceiptProbe: apple subscriptions=%d matched=%d | apple charges=%d matched=%d ambiguous=%d",
+              subscriptions, subscriptionsMatched, charges, chargesMatched, chargesAmbiguous)
     }
 
     static func runAll(context: ModelContext) {
@@ -5825,6 +5999,12 @@ enum ProbeHooks {
                 let n = await MailIngest.refresh(provider, context: context)
                 NSLog("Mail probe (%@): %@ new", provider.rawValue, n.map(String.init) ?? "FAILED")
             }
+        },
+        // `-appleReceiptProbe YES|fetch[:<mailbox>]` — CAN Apple's receipt
+        // mails name the app behind an "Apple" charge? A measurement; see
+        // `appleReceiptReport` and `Model/AppleReceipts.swift`.
+        Hook(key: "appleReceiptProbe") { spec, context in
+            Task { @MainActor in await appleReceiptReport(spec: spec, context: context) }
         },
         // `-mailHealProbe <icloud|gmail>` runs the delete-sync reconcile
         // headlessly against the ALREADY-connected provider (no credential

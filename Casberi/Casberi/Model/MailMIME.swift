@@ -203,6 +203,15 @@ enum MailMIME {
         return (id, unsubscribe)
     }
 
+    #if DEBUG
+    /// One top-level header by name, for `-appleReceiptProbe fetch` (the
+    /// receiving server's `Authentication-Results`, which ingest does not keep).
+    static func probeHeader(_ name: String, from raw: Data) -> String? {
+        guard let (headers, _) = splitHeaderBody(raw) else { return nil }
+        return headerValue(name, in: headers)
+    }
+    #endif
+
     // MARK: - Header parsing
 
     /// Unfolds RFC 822 header continuation lines (a value wrapped onto the

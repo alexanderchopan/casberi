@@ -2472,6 +2472,11 @@ harness "Billers pure-logic self-test" "billers" "scripts/billers-selftest.sh" "
 # Every failure is an ordinary-looking list: a newsletter twice, an http door,
 # "Every day" off one gap, the cleanup question answered upside down.
 harness "Mail subscriptions pure-logic self-test" "mail subscriptions" "scripts/mail-subscriptions-selftest.sh" "the mail subscriptions self-test failed — run scripts/mail-subscriptions-selftest.sh"
+# Apple's receipt mails, read strictly (Model/AppleReceipts.swift) — a MEASUREMENT reader
+# with SYNTHETIC fixtures: proves it fails closed (a non-Apple sender, a lookalike domain,
+# a half-recognised body, a charge matched weeks away or to one of two apps), and that
+# nothing but the probe calls it. It does not prove the real format is handled.
+harness "Apple receipts fail-closed self-test" "apple receipts" "scripts/apple-receipts-selftest.sh" "the Apple receipts self-test failed — run scripts/apple-receipts-selftest.sh"
 
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure

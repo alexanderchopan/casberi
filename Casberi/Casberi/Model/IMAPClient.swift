@@ -177,6 +177,54 @@ enum IMAPClient {
         return PresenceResult(uidValidity: conn.uidValidity, present: present,
                               exists: conn.messageCount)
     }
+
+    #if DEBUG
+    /// One mail as `-appleReceiptProbe fetch` reads it: the message exactly as
+    /// ingest would have decoded it, plus what ingest does not keep.
+    struct ProbeMail {
+        let message: Message
+        /// How many raw bytes came back, and whether that hit `bodyByteCap`.
+        let rawBytes: Int
+        let cut: Bool
+        /// Whether the bytes fetched declare a `text/plain` part at all.
+        let hasPlainPart: Bool
+        /// The receiving server's `Authentication-Results`, when present.
+        let authenticationResults: String?
+    }
+
+    /// MEASUREMENT ONLY (DEBUG): the newest `limit` mails in `mailbox` whose
+    /// From contains `from`, read with the SAME byte cap and decoder ingest
+    /// uses, so the probe measures what ingest would have had. `EXAMINE`, not
+    /// `SELECT`: the mailbox is opened read-only, and nothing is landed. The
+    /// server's FROM search is a substring match; the caller applies the exact
+    /// sender gate.
+    static func probeSearch(host: String, user: String, password: String,
+                            mailbox: String, from: String, limit: Int) async throws -> [ProbeMail] {
+        let conn = try await Session.open(host: host)
+        defer { conn.close() }
+        try await conn.greeting()
+        try await conn.login(user: user, password: password)
+        try await conn.examine(mailbox)
+        let uids = Array(try await conn.uidSearch(from: from).suffix(limit))
+        guard !uids.isEmpty else { return [] }
+        let parsed = try await conn.fetchEnvelopes(uids: uids).compactMap(EnvelopeParser.parse)
+        let raws = try await conn.fetchBodies(uids: parsed.map(\.uid), maxBytes: bodyByteCap)
+        return parsed.map { m in
+            let raw = raws[m.uid]
+            let message = Message(uid: m.uid, subject: m.subject, from: m.from,
+                                  fromAddress: m.fromAddress, date: m.date,
+                                  body: raw.flatMap(MailMIME.plainText),
+                                  to: [], cc: [], messageID: nil, inReplyTo: nil)
+            let head = raw.map { String(decoding: $0, as: UTF8.self).lowercased() } ?? ""
+            return ProbeMail(message: message, rawBytes: raw?.count ?? 0,
+                             cut: (raw?.count ?? 0) >= bodyByteCap,
+                             hasPlainPart: head.contains("content-type: text/plain"),
+                             authenticationResults: raw.flatMap {
+                                 MailMIME.probeHeader("Authentication-Results", from: $0)
+                             })
+        }
+    }
+    #endif
 }
 
 // MARK: - The connection (NWConnection + async request/response)
@@ -265,6 +313,52 @@ private final class Session {
         }
         return total
     }
+
+    #if DEBUG
+    /// `EXAMINE` — SELECT's read-only twin (RFC 3501 §6.3.2), for the probe.
+    func examine(_ mailbox: String) async throws {
+        let t = nextTag()
+        send(line: "\(t) EXAMINE \(quote(mailbox))")
+        guard try await readUntilTagged(t).ok else { throw IMAPClient.IMAPError.select }
+    }
+
+    /// `UID SEARCH FROM "<text>"` — ascending UIDs, so the newest are last.
+    func uidSearch(from: String) async throws -> [String] {
+        let t = nextTag()
+        send(line: "\(t) UID SEARCH FROM \(quote(from))")
+        let resp = try await readUntilTagged(t)
+        guard resp.ok else { throw IMAPClient.IMAPError.fetch }
+        var out: [String] = []
+        for line in resp.lines where line.hasPrefix("* SEARCH") {
+            out += line.split(separator: " ").dropFirst(2).map(String.init).filter { Int($0) != nil }
+        }
+        return out.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }
+    }
+
+    /// `UID FETCH <uids> (UID ENVELOPE)`, stitched as `fetchEnvelopes(from:to:)`.
+    func fetchEnvelopes(uids: [String]) async throws -> [String] {
+        var out: [String] = []
+        var i = 0
+        while i < uids.count {
+            let chunk = Array(uids[i..<min(i + 40, uids.count)])
+            let t = nextTag()
+            send(line: "\(t) UID FETCH \(chunk.joined(separator: ",")) (UID ENVELOPE)")
+            let resp = try await readUntilTagged(t)
+            var current = ""
+            for line in resp.lines {
+                if line.hasPrefix("* ") && line.contains(" FETCH ") {
+                    if !current.isEmpty { out.append(current) }
+                    current = line
+                } else if !current.isEmpty {
+                    current += " " + line
+                }
+            }
+            if !current.isEmpty { out.append(current) }
+            i += 40
+        }
+        return out
+    }
+    #endif
 
     /// `UID FETCH <set> (UID)` — the server answers only for UIDs it still
     /// has; an expunged one is simply missing from the response, not an
