@@ -59,7 +59,7 @@ enum SocialThread {
     /// The sources that carry an author, a thread, and a network wash — the
     /// UI keys its social treatment (author eyebrow, Open-thread verb, thread
     /// section) off this, never off a hardcoded name.
-    static let sources: Set<String> = ["Bluesky", "Farcaster", "Nostr"]
+    static let sources: Set<String> = ["Bluesky", "Farcaster"]
     static func isSocial(_ source: String) -> Bool { sources.contains(source) }
 
     /// Sources that earn a CONTEXT LABEL ("Mentions you", a channel name) in
@@ -108,18 +108,9 @@ enum SocialThread {
 
     /// A handle without Bluesky's ".bsky.social" tail — the name the person
     /// knows. Farcaster handles have no tail, so they pass through unchanged.
-    /// A raw 64-hex Nostr pubkey (what `Thing.authorHandle`/`SocialCard.
-    /// handle` store for that source, since a display name isn't always
-    /// available) becomes a short npub instead — the one choke point every
-    /// quote/parent/reply render already calls, so making it hex-aware here
-    /// fixes every one of those views at once.
     static func shortHandle(_ handle: String) -> String {
         if handle.hasSuffix(".bsky.social") {
             return String(handle.dropLast(".bsky.social".count))
-        }
-        if handle.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil,
-           let npub = NostrBech32.hexToNpub(handle) {
-            return NostrBech32.shortNpub(npub)
         }
         return handle
     }
@@ -155,12 +146,6 @@ enum SocialThread {
             guard ref.hasPrefix("bsky:") else { return [] }
             return await BlueskyIngest.replies(uri: String(ref.dropFirst("bsky:".count)),
                                                limit: replyCap)
-        case "Nostr":
-            // No handle needed — an `#e`-tag filter finds a note's replies by
-            // its own id alone, unlike Farcaster's fid-keyed lookup.
-            guard ref.hasPrefix("nostr:") else { return [] }
-            return await NostrIngest.replies(eventID: String(ref.dropFirst("nostr:".count)),
-                                             limit: replyCap)
         default:
             return []
         }
@@ -178,7 +163,6 @@ enum SocialThread {
         switch thing.source {
         case "Farcaster": return await FarcasterIngest.engagement(for: thing)
         case "Bluesky":   return await BlueskyIngest.engagement(for: thing)
-        case "Nostr":     return await NostrIngest.engagement(for: thing)
         default:          return nil
         }
     }
@@ -195,14 +179,9 @@ enum SocialThread {
     static func contextLabel(for thing: Thing) -> String? {
         guard hasContext(thing.source) else { return nil }
         if let channel = thing.channelName, !channel.isEmpty {
-            // Farcaster channels ARE "/design" to the person, a followed
-            // Nostr hashtag is "#design", and a Bluesky feed is a proper
-            // name ("Science") that wears neither mark.
-            switch thing.source {
-            case "Farcaster": return "/\(channel)"
-            case "Nostr":     return "#\(channel)"
-            default:          return channel
-            }
+            // Farcaster channels ARE "/design" to the person, and a Bluesky
+            // feed is a proper name ("Science") that wears no mark.
+            return thing.source == "Farcaster" ? "/\(channel)" : channel
         }
         switch thing.socialContext {
         case "liked":   return String(localized: "Liked")
@@ -219,9 +198,8 @@ enum SocialThread {
     }
 
     /// The word a network uses for an amplified post — one shared marker
-    /// ("recast") on the thing, spoken in each network's own noun. Nostr
-    /// calls it a repost too (NIP-18), so Farcaster is the exception here,
-    /// not the rule.
+    /// ("recast") on the thing, spoken in each network's own noun. Farcaster
+    /// is the exception here, not the rule.
     static func recastWord(_ source: String) -> String {
         source == "Farcaster" ? String(localized: "Recast") : String(localized: "Reposted")
     }
@@ -243,11 +221,9 @@ enum SocialThread {
     static func contextPhrase(for thing: Thing) -> String? {
         guard hasContext(thing.source) else { return nil }
         if let channel = thing.channelName, !channel.isEmpty {
-            switch thing.source {
-            case "Farcaster": return String(localized: "in /\(channel)")
-            case "Nostr":     return String(localized: "in #\(channel)")
-            default:          return String(localized: "in \(channel)")
-            }
+            return thing.source == "Farcaster"
+                ? String(localized: "in /\(channel)")
+                : String(localized: "in \(channel)")
         }
         switch thing.socialContext {
         case "liked":   return String(localized: "you liked this")
@@ -292,10 +268,6 @@ struct SocialProfile: Identifiable, Hashable {
 enum SocialPeople {
 
     /// The OTHER social network — what "are they over here too?" searches.
-    /// Restricted to the two networks with a real user-search API: Nostr has
-    /// no reliable global search (see `NostrIngest`'s own doc comment), so
-    /// "find them on Nostr" would have nothing to search with — asking FROM
-    /// a Nostr profile, or searching FOR one, both correctly find nothing.
     static func otherSource(_ source: String) -> String? {
         let searchable: Set<String> = ["Bluesky", "Farcaster"]
         guard searchable.contains(source) else { return nil }
@@ -314,10 +286,6 @@ enum SocialPeople {
             return BlueskyStore.shared.accounts.contains {
                 $0.handle == BlueskyStore.normalize(handle)
             }
-        case "Nostr":
-            return NostrStore.shared.accounts.contains {
-                $0.pubkeyHex == handle || $0.input == NostrStore.normalize(handle)
-            }
         default: return false
         }
     }
@@ -335,8 +303,6 @@ enum SocialPeople {
             return FarcasterStore.shared.add(profile.handle)
         case "Bluesky":
             return BlueskyStore.shared.add(profile.handle)
-        case "Nostr":
-            return NostrStore.shared.add(profile.handle)
         default: return false
         }
     }
@@ -348,7 +314,6 @@ enum SocialPeople {
         switch source {
         case "Farcaster": return FarcasterStore.normalize(handle)
         case "Bluesky":   return BlueskyStore.normalize(handle)
-        case "Nostr":     return NostrStore.normalize(handle)
         default:          return handle
         }
     }
@@ -361,8 +326,6 @@ enum SocialPeople {
         switch source {
         case "Farcaster": return Set(FarcasterStore.shared.accounts.map(\.username))
         case "Bluesky":   return Set(BlueskyStore.shared.accounts.map(\.handle))
-        case "Nostr":
-            return Set(NostrStore.shared.accounts.map { $0.pubkeyHex.isEmpty ? $0.input : $0.pubkeyHex })
         default:          return []
         }
     }
@@ -380,11 +343,6 @@ enum SocialPeople {
             return FarcasterStore.shared.add(contentsOf: people.map { ($0.handle, $0.fid) })
         case "Bluesky":
             return BlueskyStore.shared.add(contentsOf: people.map(\.handle))
-        case "Nostr":
-            // A Nostr `Hit.handle` from the follow-graph read is always a
-            // raw hex pubkey (the contact list's own "p" tags carry
-            // nothing else), so every one resolves with no further lookup.
-            return NostrStore.shared.add(contentsOf: people.map(\.handle))
         default: return 0
         }
     }
@@ -396,7 +354,6 @@ enum SocialPeople {
         switch source {
         case "Farcaster": _ = await FarcasterIngest.refresh(context: context)
         case "Bluesky":   _ = await BlueskyIngest.refresh(context: context)
-        case "Nostr":     _ = await NostrIngest.refresh(context: context)
         default: break
         }
     }
@@ -418,11 +375,6 @@ enum SocialPeople {
                   let p = await FarcasterIngest.profile(fid: fid) else { return nil }
             return SocialProfile(source: source, handle: n, displayName: p.displayName,
                                  bio: p.bio, avatarURL: p.avatarURL, fid: fid)
-        case "Nostr":
-            guard let hex = await NostrIngest.pubkeyHex(for: NostrStore.normalize(handle)),
-                  let p = await NostrIngest.profile(pubkeyHex: hex) else { return nil }
-            return SocialProfile(source: source, handle: hex, displayName: p.displayName,
-                                 bio: p.bio, avatarURL: p.avatarURL)
         default: return nil
         }
     }
@@ -605,7 +557,7 @@ enum SocialTopics {
     ///
     /// `handle` is matched against `authorHandle`, which is what every one of
     /// these bridges stores: a username on Farcaster, a handle on Bluesky,
-    /// the resolved pubkey hex on Nostr, and the FEED'S OWN NAME on a feed
+    /// and the FEED'S OWN NAME on a feed
     /// follow (`FeedFollowBridges` sets it so several followed feeds stay
     /// distinguishable) — which is why the caller resolves the display name
     /// rather than passing the URL that was typed.

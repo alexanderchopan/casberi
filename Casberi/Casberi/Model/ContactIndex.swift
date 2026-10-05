@@ -22,7 +22,7 @@ struct Identity: Hashable, Codable {
     enum Kind: String, Codable, CaseIterable {
         case contact, email, github, wallet
         case ens, basename, linea, farcaster, lens
-        case bluesky, nostr, worldApp, feed
+        case bluesky, worldApp, feed
         /// A merchant that charges you on a schedule (prd §1106) — LAST, so a
         /// biller never leads a contact a card or an address also names.
         case biller
@@ -46,7 +46,6 @@ struct Identity: Hashable, Codable {
             case .github:    return "gh:"
             case .farcaster: return "fc:"
             case .bluesky:   return "bsky:"
-            case .nostr:     return "nostr:"
             case .worldApp:  return "world:"
             case .feed:      return "feed:"
             case .biller:    return "biller:"
@@ -90,6 +89,9 @@ struct Identity: Hashable, Codable {
             return Identity(kind: kind, key: key)
         }
         if key.hasPrefix("0x"), key.count == 42 { return Identity(kind: .wallet, key: key) }
+        // A key with a prefix no kind claims is a deleted kind's (a link or a
+        // saved name from the Nostr seat), never a World App username.
+        guard !key.contains(":") else { return nil }
         if let named = Kind.classify(primaryName: key) { return Identity(kind: named, key: key) }
         return nil
     }
@@ -103,7 +105,7 @@ struct Identity: Hashable, Codable {
         case .wallet:                    return "…" + body.suffix(4)
         case .farcaster, .bluesky:       return "@" + body
         case .email, .github, .contact,
-             .nostr, .worldApp, .feed, .biller,
+             .worldApp, .feed, .biller,
              .ens, .basename, .linea, .lens: return body
         }
     }
@@ -400,7 +402,6 @@ enum ContactIndex {
             switch source {
             case "Farcaster": out.append(Identity.key(.farcaster, h))
             case "Bluesky":   out.append(Identity.key(.bluesky, h))
-            case "Nostr":     out.append(Identity.key(.nostr, h))
             case "GitHub" where !isNotification: out.append(Identity.key(.github, h))
             // A `where` on a multi-pattern case binds to its LAST pattern
             // only — the harness caught "Gmail" matching a bare display

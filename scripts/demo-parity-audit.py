@@ -250,7 +250,6 @@ KNOWN_DEMO_REF_OK = {
     # prune paths. Nothing these gates control is DRAWN from stored state.
     "Bluesky": "replies/heal are network reads; the demo reaches nothing",
     "Farcaster": "replies/heal are network reads; the demo reaches nothing",
-    "Nostr": "replies are a network read; the demo reaches nothing",
     # `hf:paper:` appears in exactly one place: `HuggingFaceScreen`'s
     # `togglePapers(false)`, which PRUNES followed papers. A prune, not a
     # render — and demo teardown already removes these rows by their own

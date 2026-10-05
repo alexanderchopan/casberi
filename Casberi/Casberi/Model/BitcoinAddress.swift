@@ -17,15 +17,12 @@ import CryptoKit
 /// Covers the four address kinds actually in use today (mainnet only — this
 /// app names no other network): Base58Check legacy (version 0x00, "1…") and
 /// P2SH (version 0x05, "3…"), and bech32/bech32m native SegWit (BIP173,
-/// witness v0, "bc1q…") and Taproot (BIP350, witness v1, "bc1p…"). The
-/// bech32 core (polymod/hrpExpand/convertBits) is NOT shared with
-/// `NostrBech32` even though the algorithm is identical — that file encodes
-/// a bare 32-byte payload with a fixed hrp and a fixed (bech32-only)
-/// checksum; a Bitcoin address carries a witness VERSION as its first data
-/// byte, which selects between two different checksum constants (BIP350),
-/// so the payload shape and the verification rule both differ. Same
-/// reasoning `SNS.swift` already gives for not folding into `ENS`: different
-/// resolvers, different pipelines downstream, stay separable by shape.
+/// witness v0, "bc1q…") and Taproot (BIP350, witness v1, "bc1p…"). A
+/// Bitcoin address carries a witness VERSION as its first data byte, which
+/// selects between two different checksum constants (BIP350). The bech32
+/// core lives here, unshared, for the reasoning `SNS.swift` already gives
+/// for not folding into `ENS`: different resolvers, different pipelines
+/// downstream, stay separable by shape.
 ///
 /// Checksum verification MEASURED against a live address 2026-07-27
 /// (`bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`, confirmed via
@@ -97,7 +94,7 @@ enum BitcoinAddress {
 
     /// 5-bit groups → 8-bit bytes, `pad: false` so a malformed trailing
     /// group (non-zero padding, or too many leftover bits) fails rather than
-    /// fabricating a spurious byte — same rule `NostrBech32.convertBits` uses.
+    /// fabricating a spurious byte.
     private static func convertBits(_ data: [UInt8], from: Int, to: Int) -> [UInt8]? {
         var acc = 0, bits = 0
         var out: [UInt8] = []

@@ -371,9 +371,8 @@ enum IngestSupport {
 
     /// `service` names the caller for the receipts screen, and is needed
     /// only where the HOST comes from the person's own input — their own
-    /// self-hosted PostHog, the domain in a
-    /// Nostr name. Every other caller leaves it nil and is matched against
-    /// `NetworkReach` by host, which is the stronger check. See
+    /// self-hosted PostHog. Every other caller leaves it nil and is matched
+    /// against `NetworkReach` by host, which is the stronger check. See
     /// `NetworkLedger.Entry.service`.
     static func getJSON(_ url: String, auth: String? = nil,
                         headers: [String: String] = [:],

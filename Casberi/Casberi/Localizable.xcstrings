@@ -68556,34 +68556,6 @@
         }
       }
     },
-    "Following the hashtag…" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Siguiendo el hashtag…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ハッシュタグをフォロー中…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해시태그 팔로우 중…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在关注该话题标签…"
-          }
-        }
-      }
-    },
     "Following the news" : {
       "localizations" : {
         "es" : {
@@ -92551,34 +92523,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "暂无"
-          }
-        }
-      }
-    },
-    "Nostr" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Nostr"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Nostr"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Nostr"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Nostr"
           }
         }
       }
@@ -160038,34 +159982,6 @@
         }
       }
     },
-    "hashtag" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "hashtag"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ハッシュタグ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해시태그"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "话题标签"
-          }
-        }
-      }
-    },
     "height" : {
       "localizations" : {
         "es" : {
@@ -160398,34 +160314,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone"
-          }
-        }
-      }
-    },
-    "in #%@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "en #%@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "#%@で"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "#%@에서"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在#%@"
           }
         }
       }
@@ -163826,34 +163714,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "npm"
-          }
-        }
-      }
-    },
-    "npub, hex, name@domain, or #hashtag" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "npub, hex, name@domain o #hashtag"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "npub、hex、name@domain、または #hashtag"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "npub, hex, name@domain 또는 #hashtag"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "npub、hex、name@domain 或 #hashtag"
           }
         }
       }

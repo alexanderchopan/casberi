@@ -172,9 +172,9 @@ struct DockFolderRow<Faces: View>: View {
     ///
     /// The capsule drew the faces alone once the folder stopped opening on
     /// arrival (2026-09-06): a pill of avatars over a dock whose lit tile said
-    /// `Social`, which names the category and never the room. Farcaster,
-    /// Bluesky and Nostr are one tile, so nothing on the screen said which of
-    /// the three you were reading. The venues lead in this capsule by §753, and
+    /// `Social`, which names the category and never the room. Farcaster and
+    /// Bluesky are one tile, so nothing on the screen said which of the two
+    /// you were reading. The venues lead in this capsule by §753, and
     /// they lead whether or not the folder is up — one seat when it is shut,
     /// the category's when it is open.
     var lead: String? = nil

@@ -154,6 +154,8 @@ enum Corpus {
         // someone else's catalogue and nobody would use them; Cursor went
         // with them.
         "Deals", "Shopify", "Cursor",
+        // Nostr the same way (2026-10-05, user: "remove nostr").
+        "Nostr",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now

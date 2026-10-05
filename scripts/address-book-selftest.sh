@@ -293,7 +293,7 @@ grep -q 'store.rename(watch.id, to: name)' "$TMP/views-bare.swift" \
 grep -q 'HandleBridge(rawValue: pair.source)?.removeName(' "$TMP/unfollow-bare.swift" \
   || { echo "✗ the unfollow no longer routes through HandleBridge.removeName — it would edit a list and leave the posts in the feed forever (§286/§511)"; exit 1; }
 grep -q 'SocialTopics.pruneAuthor' "$TMP/unfollow-bare.swift" \
-  && { echo "✗ the unfollow prunes the corpus itself — removeName resolves Nostr's pubkey first and reads the remaining topics, and a second copy would drop one of those (§511)"; exit 1; }
+  && { echo "✗ the unfollow prunes the corpus itself — removeName reads the remaining topics, and a second copy would drop them (§511)"; exit 1; }
 # THE LEDGER STAYS CLOSED (§498). A pack of forty must never write forty entries.
 grep -qE 'setName\(|\.remove\(' "$TMP/people-bare.swift" \
   && { echo "✗ the ephemeral half writes the book — a starter pack would put forty entries in somebody's ledger and sync them (§498/§511)"; exit 1; }

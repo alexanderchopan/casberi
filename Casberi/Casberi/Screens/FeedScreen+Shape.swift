@@ -16,8 +16,8 @@ extension FeedScreen {
         // ASKED OF `SocialRoom`, NOT OF `Shape` (2026-08-26, prd §489). The
         // rail and the accounts behind it must answer for the same set or the
         // rail draws faces the room cannot filter to — which is exactly what a
-        // `Shape`-only answer would have produced the moment Nostr joined
-        // `.social` while `SocialRoomSource.accounts` still had two cases.
+        // `Shape`-only answer would have produced the moment a network joined
+        // `.social` while `SocialRoomSource.accounts` lacked its case.
         // One registry, two readers.
         SocialRoom.hasRoster(source)
     }
@@ -138,17 +138,7 @@ extension FeedScreen {
                  "Muse": self = .chat
             // Posts read as posts in their own room (2026-07-13) — split from
             // .chat: a saved conversation is a snippet row, a post is a card.
-            // NOSTR JOINED 2026-08-26 (prd §489) — two years of this room
-            // being a room for two of the three networks that land into it.
-            // It had no case here at all, so its rows fell to `.plain`'s
-            // generic band: no faces above the room, no post cards, no thread
-            // folding, no person filter. All of it was already built and
-            // already knew about Nostr — `PostCard.author` branches on its hex
-            // pubkey to shorten it for display, `SocialThreadCard` does the
-            // same, `SocialThread.replies` reads its threads, and
-            // `NostrStore.socialAccounts` was drawn on the setup screen. One
-            // switch statement never learned the name.
-            case "Farcaster", "Bluesky", "Nostr": self = .social
+            case "Farcaster", "Bluesky": self = .social
             // X, 2026-08-06 — the same ruling as the line above, arriving two
             // years of somebody's writing late. The room had NO case here at
             // all, so it fell to `.plain` and drew a `BandRow` per row: an

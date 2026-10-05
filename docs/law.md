@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1244 of 1303 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1245 of 1304 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -767,7 +767,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §485 — The Railgun room stops talking over itself, and two money rooms become ledgers
 - §486 — The 0xBow room becomes three scopes, and the gap in the bar gets a name (part superseded by §763)
 - §487 — The CardPointers room had no shape, so the head said everything and the rows said nothing
-- §489 — Eight social rooms were eight different rooms, and one switch statement was why
+- §489 — Eight social rooms were eight different rooms, and one switch statement was why (amended by §1109)
 - §490 — Permissions gets the reading a dollar ranking cannot make
 - §491 — The vibenet room gets Wallet's chassis, and one file owns the geometry (part superseded by §1038)
 - §492 — A letter glyph is wrong exactly where the real bridge draws an image
@@ -1254,7 +1254,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §913 — More signer capabilities without a wallet that holds funds: a paired Safe app, a Secure Enclave owner, Safe statement…
 - §914 — The lead's count foot is deleted; the cast cover's sentence takes the fit's rung; the eyebrow never repeats the cast'…
 - §915 — The Apple polish pass: say every fact once, one scale of hierarchy, one title seam, words under art, the list just en…
-- §916 — Addresses: the unified contacts list comes back as a room that learns, and web3.bio is the resolver behind ENS (amended by §933, §1025) [+1 sub-entries]
+- §916 — Addresses: the unified contacts list comes back as a room that learns, and web3.bio is the resolver behind ENS (amended by §933, §1025, §1109) [+1 sub-entries]
 - §917 — A mark packs, a word tiles: the wallet's holdings and the source mix are circle packs (part superseded by §939)
 - §918 — Addresses gets smarter: the row's line is the corpus's own word, Recent is alive, search resolves what you paste, eve…
 - §919 — The demo's mark is a blue pill that floats, and nothing on the page moves for it (amended by §1005)
@@ -1427,7 +1427,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1076 — A Wallet transfer with no address and no token wears the way it moved
 - §1077 — The 2.0 store listing, after the 4.1(a) rejection
 - §1078 — The One Wallet, five changes: your own moves are one row, Holdings dates a stored reading and the total names a card… (amended by §1105)
-- §1079 — Work and Reading show one row per object, Work's box is its newest event, and Social gets its threads and faces back (amended by §1080)
+- §1079 — Work and Reading show one row per object, Work's box is its newest event, and Social gets its threads and faces back (amended by §1080, §1109)
 - §1080 — Work's Coming up leads with what needs you, then what is due
 - §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082)
 - §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the…
@@ -1465,6 +1465,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a)
 - §1107a — Security's checkup is the six counts alone, and the two fakes get their own glyphs
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
+- §1109 — The Nostr seat is removed; Lightning keeps the relay client
 
 ## Dead rulings → what replaced them (generated)
 

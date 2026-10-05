@@ -65,10 +65,6 @@ enum ContactIndexSources {
             out.append(.init(Identity.make(.bluesky, account.handle),
                              name: account.displayName, avatar: account.avatarURL))
         }
-        for account in NostrStore.shared.accounts where !account.pubkeyHex.isEmpty {
-            out.append(.init(Identity.make(.nostr, account.pubkeyHex),
-                             name: account.displayName, avatar: account.avatarURL))
-        }
 
         // Apple contacts: things of kind `.contact`. The card's own name is
         // TYPED — it is the person's book — and a card with a company and no
@@ -227,7 +223,7 @@ enum ContactIndexSources {
                 authorHandle: thing.authorHandle, walletAddress: nil,
                 counterpartyAddress: thing.counterpartyAddress, authorEmail: thing.authorEmail,
                 isNotification: notification, merchant: BillersSource.merchant(of: thing))
-            let social = ["Farcaster", "Bluesky", "Nostr"].contains(thing.source)
+            let social = ["Farcaster", "Bluesky"].contains(thing.source)
             if !withKeys.isEmpty {
                 rows.append(.init(keys: withKeys, title: thing.title, at: thing.capturedAt,
                                   acted: !social || thing.quote != nil))
@@ -318,9 +314,6 @@ enum ContactIndexSources {
         }
         for a in BlueskyStore.shared.accounts where a.mine {
             out.insert(Identity.make(.bluesky, a.handle).key)
-        }
-        for a in NostrStore.shared.accounts where a.mine && !a.pubkeyHex.isEmpty {
-            out.insert(Identity.make(.nostr, a.pubkeyHex).key)
         }
         return out
     }

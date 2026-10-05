@@ -141,6 +141,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Figure self-test (scripts/agent-panel-selftest.sh) — the answer dial's floor and the one money formatter; the chip peek and its per-room figures are deleted (prd §836)** → docs/verify.md · prd §334 · §836
 - **Room-head self-test (scripts/room-heads-selftest.sh)** → docs/verify.md · prd §298
 - **The social rooms became ONE room (Model/SocialRoom.swift + SocialRoomSource.swift, scripts/social-room-selftest.sh, 2026-08-26)** → docs/hooks/social.md · prd §489
+- **The Nostr seat is removed (prd §1109): Social's live networks are Farcaster and Bluesky; `SourceRename.sweepRetiredSeats` drops its rows and `nostr.` defaults; `NostrRelay` stays for Lightning only** → prd §1109
 - **Retriever self-test (scripts/retriever-selftest.sh)** → docs/verify.md · prd §318
 - **One row per object in Work and Reading (`Model/ObjectFold.swift`, `object-fold-selftest.sh`): Work folds only on a per-service object URL, never a dashboard; the keys read `content` off the main actor; the sheet lists what folded. Social's faces are people across networks (`FollowedPeople`, `followed-people-selftest.sh`)** → prd §1079
 - **Work's Coming up leads with "Needs you" (`Model/WorkAsk.swift`, `work-ask-selftest.sh`): asks and breakages by stable signal, never the to-do mark, a week at most; `WorkStage.Row(thing)` is the one row builder** → prd §1080

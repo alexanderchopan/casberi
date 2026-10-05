@@ -196,7 +196,7 @@ struct AddressesSection: View {
               let b = Self.party(forKey: next.b) else { return }
         // The model's sentence, on the phone, from public words only (§916
         // section 3): the names and the handles, never a number or a mailbox.
-        // Names and human handles only — a Nostr key or a hex address is
+        // Names and human handles only — a hex address is
         // noise to a language model (measured: it called one "a random
         // string"), and a mailbox is not public. Only a YES is drawn: a
         // model's doubt is not a fact the row can stand on (§632).
@@ -587,10 +587,8 @@ struct AddressesSection: View {
     /// card ref, never the name itself), at most three. Nil draws one line.
     static func line(of contact: Contact) -> String? {
         if let thing = contact.lastThing, !thing.isEmpty { return thing }
-        // A Nostr key is 64 hex characters nobody reads; the mark already
-        // says Nostr, so the line leaves it out.
         let labels = contact.identities
-            .filter { $0.kind != .contact && $0.kind != .nostr
+            .filter { $0.kind != .contact
                    && fold($0.label) != fold(contact.name) && fold($0.body) != fold(contact.name) }
             .map(\.label)
         return labels.isEmpty ? nil : labels.prefix(3).joined(separator: " · ")
@@ -800,7 +798,7 @@ private struct SamePersonSheet: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text("Same person?").dsText(.heading24).foregroundStyle(DS.textPrimary)
                 // Each side says WHERE it is ("Nils on Bluesky and Nils on
-                // Nostr"): two bare names were the same word twice.
+                // Farcaster"): two bare names were the same word twice.
                 Text("\(whereA) and \(whereB)")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -848,7 +846,7 @@ extension Contact {
             case .wallet, .ens, .basename, .linea, .lens, .worldApp: category = "Wallet"
             // A biller files where the app it bills for lives (prd §1106a).
             case .biller: category = BillersSource.category(ofMerchant: identity.body)
-            case .farcaster, .bluesky, .nostr:                      category = "Social"
+            case .farcaster, .bluesky:                              category = "Social"
             case .github:                                            category = "Work"
             case .contact, .email:                                   category = "Life"
             case .feed:                                              category = "Reading"
@@ -1023,9 +1021,6 @@ struct ContactSheet: View {
             case .bluesky:
                 guard let a = BlueskyStore.shared.accounts.first(where: { $0.handle.lowercased() == body }) else { return nil }
                 return ("Bluesky", a.handle)
-            case .nostr:
-                guard let a = NostrStore.shared.accounts.first(where: { $0.pubkeyHex.lowercased() == body }) else { return nil }
-                return ("Nostr", a.input)
             default:
                 return nil
             }
@@ -1427,8 +1422,6 @@ struct ContactSheet: View {
                 take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Farcaster" }))
             case .bluesky:
                 take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Bluesky" }))
-            case .nostr:
-                take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Nostr" }))
             case .github:
                 take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "GitHub" }))
             case .biller:
@@ -1529,13 +1522,8 @@ struct ContactSheet: View {
             let entry = AddressBook.shared.entry(for: identity.body)
                 ?? AddressBook.Entry(address: identity.body, name: contact.name, addedAt: .now)
             return { pushed = .address(entry) }
-        case .farcaster, .bluesky, .nostr:
-            let source: String
-            switch identity.kind {
-            case .farcaster: source = "Farcaster"
-            case .bluesky:   source = "Bluesky"
-            default:         source = "Nostr"
-            }
+        case .farcaster, .bluesky:
+            let source = identity.kind == .farcaster ? "Farcaster" : "Bluesky"
             let profile = SocialProfile(source: source, handle: identity.body,
                                         displayName: nil, bio: nil, avatarURL: contact.avatar)
             return { pushed = .profile(profile) }
@@ -1566,7 +1554,6 @@ struct ContactSheet: View {
         case .farcaster: return String(localized: "Farcaster")
         case .lens:      return String(localized: "Lens")
         case .bluesky:   return String(localized: "Bluesky")
-        case .nostr:     return String(localized: "Nostr")
         case .worldApp:  return String(localized: "World App")
         case .feed:      return String(localized: "Feed")
         case .biller:    return String(localized: "Billing")
@@ -1588,7 +1575,6 @@ struct ContactSheet: View {
         case .farcaster: return "Farcaster"
         case .lens:      return "Lens"
         case .bluesky:   return "Bluesky"
-        case .nostr:     return "Nostr"
         case .worldApp:  return "World App"
         case .feed:      return "RSS"
         case .biller:    return "Apple Wallet"

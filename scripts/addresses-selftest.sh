@@ -58,6 +58,7 @@ check(Identity.parse(key: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")?.kind ==
 check(Identity.parse(key: "jesse.base.eth")?.kind == .basename, "a basename parses by shape")
 check(Identity.parse(key: "nonsense") == nil || Identity.parse(key: "nonsense")?.kind == .worldApp,
       "a bare word is at most a World App name")
+check(Identity.parse(key: "nostr:a1b2c3") == nil, "a deleted kind's key parses as nothing, never a World App name")
 check(Identity.make(.wallet, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045").label == "…6045", "a wallet's label is its tail")
 check(Identity.make(.farcaster, "jesse").label == "@jesse", "a handle's label wears the @")
 check(Identity.Kind.classify(primaryName: "@vitalik") == .farcaster, "classify: @ is Farcaster")

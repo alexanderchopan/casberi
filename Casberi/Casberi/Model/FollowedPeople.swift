@@ -3,7 +3,7 @@ import Foundation
 /// THE PEOPLE YOU FOLLOW, ACROSS NETWORKS, FOR THE SOCIAL ROOM'S FACE ROW
 /// (prd §1079, the gap §1068 left).
 ///
-/// The face row (§959) belonged to Farcaster's, Bluesky's and Nostr's own
+/// The face row (§959) belonged to Farcaster's and Bluesky's own
 /// rooms, and when the networks folded into one Social room it went with
 /// them: nothing could pick a person any more. Brought back as one row over
 /// all three, and a person you follow on two networks is ONE face, because
@@ -13,7 +13,7 @@ import Foundation
 /// they post from.
 ///
 /// A handle is only a person within its own network ("alice" on Farcaster
-/// and "alice" on Nostr are strangers until a link says otherwise), so a
+/// and "alice" on Bluesky are strangers until a link says otherwise), so a
 /// member is always a (network, handle) pair, and an account with no contact
 /// is a person of its own.
 ///
@@ -34,8 +34,7 @@ enum FollowedPeople {
         let title: String
         let subtitle: String
         let avatarURL: String?
-        /// Its `Identity` key in the Addresses index (`fc:…`, `bsky:…`,
-        /// `nostr:…`).
+        /// Its `Identity` key in the Addresses index (`fc:…`, `bsky:…`).
         let identity: String
         /// Marked as the person's own (`mine`). Their own accounts are one
         /// face on every network: they said so, which is the one link no

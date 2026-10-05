@@ -36,7 +36,6 @@ enum ContactSuggest {
         switch service {
         case "farcaster", "warpcast": return Identity.make(.farcaster, handle)
         case "bluesky":               return Identity.make(.bluesky, handle)
-        case "nostr":                 return Identity.make(.nostr, handle)
         case "github":                return Identity.make(.github, handle)
         default:                      return nil
         }

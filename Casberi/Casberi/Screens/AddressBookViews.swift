@@ -1292,8 +1292,8 @@ struct AddressCard: View {
     /// problem.
     ///
     /// The value is monospaced like an address for the same reason an address
-    /// is: these are identifiers to be compared character by character (a
-    /// Nostr pubkey most of all), not names to be read. Each carries its own
+    /// is: these are identifiers to be compared character by character, not
+    /// names to be read. Each carries its own
     /// copy verb, because copying "their Farcaster handle" is a different act
     /// from copying "their Bluesky handle" and one pill could only ever do one
     /// of them.
@@ -1458,7 +1458,7 @@ struct AddressCard: View {
     /// and these read as categories — a chain, a person, a place.
     static func reachGlyph(for label: String) -> String {
         switch label {
-        case "Bluesky", "Farcaster", "Nostr", "Twitch": return "at"
+        case "Bluesky", "Farcaster", "Twitch": return "at"
         case "Contacts": return "person.crop.circle"
         default:         return "cube"
         }

@@ -426,21 +426,6 @@ enum BridgeRefresh {
                 _ = await FarcasterIngest.heal(context: context)
             }
         }
-        if NostrStore.shared.connected {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await NostrIngest.refresh(context: context)
-                SocialTopics.reconcile(source: "Nostr",
-                    watchedHandles: NostrStore.shared.accounts.map(\.pubkeyHex),
-                    topics: NostrStore.shared.hashtags.map(\.tag), context: context)
-            }
-            // Delete-sync: own network round trip and its own hourly
-            // throttle, same shape as Farcaster/Bluesky's heals above.
-            let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s2)
-                _ = await NostrIngest.heal(context: context)
-            }
-        }
         if PinterestStore.shared.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)

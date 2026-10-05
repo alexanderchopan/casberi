@@ -205,7 +205,7 @@ enum RoomAccounts {
     private static let work = catalogSeats(workRoom)
 
     /// Social's (prd §1068): X, Instagram, TikTok, Snapchat, Telegram,
-    /// Farcaster, Bluesky and Nostr.
+    /// Farcaster and Bluesky.
     private static let social = catalogSeats(socialRoom)
 
     /// The testnets (prd §1050): test money, never in the Wallet's menu or

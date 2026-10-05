@@ -562,15 +562,6 @@ enum NetworkReach {
                  hosts: ["api.farcaster.xyz", "client.farcaster.xyz", "snap.farcaster.xyz",
                          "api.warpcast.com", "media.firefly.land", "imagedelivery.net",
                          "wrpcd.net"]),
-        // Nostr's own hosts are WebSocket relays, so no `https://` literal
-        // exists for the audit to find and this entry — like WalletConnect's
-        // above — is hand-written. The NIP-05 check is the person-named half:
-        // verifying `you@example.com` asks example.com, a domain that arrives
-        // in someone's profile, so it can only ever be prose here.
-        Endpoint(service: "Nostr",
-                 reach: .whenConnected(bridge: "Nostr"),
-                 purpose: "Reads the public notes, profiles and follows of the accounts you follow, straight from two public relays. Checking a name like you@example.com asks that domain's own public file. No account, no key, nothing signed.",
-                 hosts: ["nos.lol", "relay.damus.io", "the domain in a name you check"]),
         Endpoint(service: "Pinterest",
                  reach: .whenConnected(bridge: "Pinterest"),
                  purpose: "Reads the public pins of your profile and of the boards and people you follow. A pin.it share link is opened once to find the board it names.",

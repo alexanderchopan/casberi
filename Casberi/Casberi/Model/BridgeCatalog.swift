@@ -584,15 +584,8 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 8, 23)),
         Offer(name: "Bluesky",     tagline: "Any account — posts, feeds, likes",             group: "Network",   connectable: true,
               needsSetup: true),
-        // Network, beside Farcaster/Bluesky (2026-07-27): a third open,
-        // keyless protocol — public relays serve reads with no account and
-        // no key. Connects by npub, raw hex pubkey, or a NIP-05 identifier
-        // ("name@domain.com") instead of a username, since Nostr has no
-        // global directory to search.
-        Offer(name: "Nostr",       tagline: "Any account, as it posts",               group: "Network",   connectable: true,
-              needsSetup: true, added: day(2026, 7, 27)),
         // Network, beside the open protocols — and the opposite of them
-        // (2026-07-31, prd §245). Farcaster/Bluesky/Nostr connect with a name
+        // (2026-07-31, prd §245). Farcaster/Bluesky connect with a name
         // because their posts are public; Instagram has no keyless read at
         // all, so it connects by IMPORT, the ChatGPT grade. The summary states
         // the split the export itself has rather than letting "your saves"
@@ -1081,7 +1074,7 @@ enum BridgeSetupMode {
 
     /// A handle, an address, a feed URL — public reads, no key.
     static let noAccountSeats: Set<String> = ["Wallet", "Markets", "YouTube",
-        "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
+        "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky",
         "Telegram", "Hugging Face", "Radicle",
         "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames",
         "ETH Validators", "NerdWallet", "Logos",

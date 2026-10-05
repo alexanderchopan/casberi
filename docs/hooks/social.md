@@ -1,4 +1,6 @@
-# Social networks — Farcaster, Bluesky, Nostr, Telegram
+# Social networks — Farcaster, Bluesky, Telegram
+
+The Nostr seat was removed on 2026-10-05 (prd §1109); its entries below are history.
 
 Moved out of `CLAUDE.md` on 2026-09-05 so the always-loaded file stays a rule sheet.
 Every entry below is **verbatim** as it was written — nothing was summarised, shortened or dropped.

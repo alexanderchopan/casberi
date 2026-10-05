@@ -38,7 +38,6 @@ enum SocialRoomSource {
         switch source {
         case "Farcaster": return FarcasterStore.shared.socialAccounts
         case "Bluesky":   return BlueskyStore.shared.socialAccounts
-        case "Nostr":     return NostrStore.shared.socialAccounts
         default:          return []
         }
     }
@@ -95,10 +94,8 @@ enum SocialRoomSource {
     /// itself, drifting the first time somebody fixes one.
     ///
     /// Empty-string handles exist (an unmigrated Farcaster row), so the source
-    /// name is the fallback. A Nostr `authorHandle` is the raw hex pubkey — the
-    /// stable matching key, not a display string (see `NostrIngest.land`) — so
-    /// it alone routes through `shortHandle`; Farcaster and Bluesky store a real
-    /// handle and are returned as they are.
+    /// name is the fallback. Farcaster and Bluesky store a real handle, so it
+    /// is returned as it is.
     ///
     /// **A name you gave wins (prd §1025).** When the Addresses index holds a
     /// contact for the author whose name YOU gave it — their card, a save, a
@@ -109,7 +106,7 @@ enum SocialRoomSource {
     static func author(of thing: Thing) -> String {
         guard let handle = thing.authorHandle, !handle.isEmpty else { return thing.source }
         if let contact = ContactIndexSources.contact(for: thing), contact.named { return contact.name }
-        return thing.source == "Nostr" ? SocialThread.shortHandle(handle) : handle
+        return handle
     }
 
     /// The words themselves — `postText` is the FULL post; `title` is only ever

@@ -165,13 +165,11 @@ struct BandRow: View {
         // the word that differentiates is "Liked", "/design", "Mentions you",
         // not the handle a second time. A post with no such reason (an account
         // you watch simply posted) falls through to the handle rule, unchanged.
-        case "Bluesky", "Farcaster", "Nostr":
+        case "Bluesky", "Farcaster":
             if let why = SocialThread.contextLabel(for: thing) { return why }
-            switch thing.source {
-            case "Bluesky":   return BlueskyStore.shared.rowLabel(for: thing.authorHandle)
-            case "Farcaster": return FarcasterStore.shared.rowLabel(for: thing.authorHandle)
-            default:          return NostrStore.shared.rowLabel(for: thing.authorHandle)
-            }
+            return thing.source == "Bluesky"
+                ? BlueskyStore.shared.rowLabel(for: thing.authorHandle)
+                : FarcasterStore.shared.rowLabel(for: thing.authorHandle)
         // Slack carries a context label too (every landed thing IS a mention,
         // so this always resolves) but stays out of the `isSocial` set above —
         // no watched-account roster to fall back to, no thread reader, no
@@ -359,12 +357,11 @@ struct BandRow: View {
     /// publisher-mark sources below, so adding a network can't leave the two
     /// disagreeing about whether that network's rows have an identity leader.
     ///
-    /// NOSTR, STOCKTWITS AND GITHUB JOINED IN 2026-08-12, and their absence
-    /// was the same bug three times: each of those bridges stamps
-    /// `authorAvatarURL` on every row it lands — `NostrIngest` from the
-    /// relay's kind:0 profile, `StocktwitsBridge` from the poster, `GitHubFeeds`
-    /// from the event's own actor — and this set is the ONLY thing that lets
-    /// the leading slot draw it. So three rooms fetched a face, stored it, and
+    /// STOCKTWITS AND GITHUB JOINED IN 2026-08-12, and their absence was the
+    /// same bug twice: each of those bridges stamps `authorAvatarURL` on every
+    /// row it lands — `StocktwitsBridge` from the poster, `GitHubFeeds` from
+    /// the event's own actor — and this set is the ONLY thing that lets the
+    /// leading slot draw it. So two rooms fetched a face, stored it, and
     /// rendered the app glyph instead, which is the doc note right above:
     /// "the avatar is never redundant — it's who posted."
     ///
@@ -375,7 +372,7 @@ struct BandRow: View {
     /// "both" pattern — the streamer's face leads, the frame rides after the
     /// title — rather than a swap.
     static let faceSources: Set<String> = [
-        "Bluesky", "Farcaster", "Nostr", "Stocktwits", "GitHub", "Twitch",
+        "Bluesky", "Farcaster", "Stocktwits", "GitHub", "Twitch",
     ]
     /// The sources whose leading slot is a publisher's MARK — a logo, so a
     /// squircle, not a circle.
@@ -2225,7 +2222,7 @@ struct PostCard: View {
 
     /// Who the post is by — `SocialRoomSource.author(of:)`, which is where the
     /// three copies of this became one (prd §756). The empty-handle fallback
-    /// and the Nostr hex split live there.
+    /// lives there.
     private var author: String { SocialRoomSource.author(of: thing) }
 
     /// The words themselves (2026-07-27, the room's own catch-up with the
