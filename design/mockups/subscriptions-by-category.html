@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subscriptions by category</title>
+<style>
+/* GEOMETRY from the source: WalletSubscriptionRow is DSFeedRow (46 lead in a 60 head),
+   the group name heading20 primary, Add is a DSDoorRow; SubscriptionSheet is heading24 name,
+   price40, facts body17, doors DSDoorRow, one DSFootnote. Nothing new is drawn but door rows. */
+:root{color-scheme:light dark;
+  --ground:#f2f1f5;--ink:#15141a;--ink2:#56535f;--sheet:#fff;--raised:#f8f8f8;--faint:#00000008;--faint2:#00000012;
+  --text:#000;--text2:#3c3c43d6;--text3:#3c3c43bd;--tint:#007aff;--attention:#c26a00;--attentionHue:#ff9500;
+  --brandInk:#c2338f;--track:#3c3c4347;--phoneShadow:0 24px 70px #00000029;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--sheet:#111113;--raised:#1a1a1c;--faint:#ffffff0a;--faint2:#ffffff1a;
+  --text:#fff;--text2:#ebebf599;--text3:#ebebf57e;--tint:#0a84ff;--attention:#ff9f0a;--attentionHue:#ff9f0a;--brandInk:#f062b8;--track:#ebebf547;--phoneShadow:0 24px 70px #00000080}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--sheet:#111113;--raised:#1a1a1c;--faint:#ffffff0a;--faint2:#ffffff1a;
+  --text:#fff;--text2:#ebebf599;--text3:#ebebf57e;--tint:#0a84ff;--attention:#ff9f0a;--attentionHue:#ff9f0a;--brandInk:#f062b8;--track:#ebebf547;--phoneShadow:0 24px 70px #00000080}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header,section{max-width:1280px;margin:0 auto}
+header{margin-bottom:28px}
+h1{font:700 28px/34px var(--rounded)}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:760px;margin-top:6px}
+.note{border-left:3px solid var(--attentionHue);padding:10px 14px;background:var(--sheet);border-radius:0 10px 10px 0;margin-top:14px;font-size:14px;line-height:21px;color:var(--ink2);max-width:760px}
+.note b{color:var(--ink)}
+.stage{display:flex;gap:32px;flex-wrap:wrap;margin-top:20px}
+figure{width:390px;max-width:100%}
+figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:14px 6px 0}
+figcaption b{color:var(--ink)}
+.phone{background:var(--sheet);color:var(--text);border-radius:44px;box-shadow:var(--phoneShadow);height:800px;overflow:hidden;position:relative;padding:58px 0 40px}
+.room{padding:0 15px}
+svg.g{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* the list, scrolled */
+.fade{position:absolute;left:0;right:0;top:0;height:70px;background:linear-gradient(var(--sheet),transparent);z-index:2}
+.day{font:700 24px/29px var(--rounded);color:var(--brandInk);margin:14px 12px 2px}
+.grp{font:700 20px/25px var(--rounded);margin:24px 0 4px 16px}
+.row{display:flex;gap:12px;align-items:center;min-height:60px;padding:0 4px;margin:4px 0;border-radius:14px}
+.row.tap{background:var(--faint2)}
+.lead{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font:700 17px var(--rounded);color:#fff;flex:none}
+.body{flex:1;min-width:0}
+.top{display:flex;align-items:baseline;gap:8px}
+.t{font-size:17px;line-height:22px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m{font:600 17px/22px var(--rounded)}
+.l{font-size:12px;line-height:16px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doorrow{display:flex;align-items:center;gap:12px;height:56px;padding:0 4px;color:var(--tint);font-size:17px}
+.doorrow svg.g{width:46px}
+
+/* the sheet */
+.dim{position:absolute;inset:0;background:var(--ground)}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:36px;background:var(--sheet);border-radius:34px 34px 44px 44px;padding:10px 20px}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--track);margin:0 auto 18px}
+.sh-top{display:flex;align-items:center;gap:12px}
+.sh-top .lead{width:40px;height:40px;font-size:15px}
+.sh-top h3{font:700 24px/29px var(--rounded)}
+.amt{font:700 40px/46px var(--rounded);margin-top:16px}
+.amt small{font:400 17px -apple-system,sans-serif;color:var(--text2);margin-left:6px}
+.facts{margin-top:14px}
+.fact{display:flex;justify-content:space-between;padding:8px 0;font-size:17px;line-height:22px}
+.fact span:last-child{color:var(--text2)}
+.doors{margin-top:10px}
+.door{display:flex;align-items:center;gap:12px;padding:12px 0;font-size:17px;color:var(--tint)}
+.door .sp{flex:1}
+.door.new{position:relative}
+.door.new::before{content:"New";position:absolute;left:-74px;top:14px;font:600 11px/16px var(--rounded);color:var(--attention);background:var(--faint2);padding:1px 7px;border-radius:9999px}
+.fn{font-size:13px;line-height:18px;color:var(--text3);margin-top:10px}
+.marker{outline:2px dashed var(--attentionHue);outline-offset:4px;border-radius:10px}
+table.src{border-collapse:collapse;margin-top:16px;font-size:14px;line-height:20px;max-width:980px;width:100%}
+table.src td,table.src th{text-align:left;padding:9px 10px;vertical-align:top}
+table.src th{font-weight:600;color:var(--ink2)}
+table.src tr:nth-child(even) td{background:var(--sheet)}
+
+.tot{font:700 34px/41px var(--rounded);margin:2px 16px 0}
+.tot small{font:400 17px -apple-system,sans-serif;color:var(--text2);margin-left:6px}
+.cap{font-size:12px;line-height:16px;color:var(--text2);margin:2px 16px 10px}
+.map{position:relative;height:200px;margin:0 4px 6px}
+.tl{position:absolute;border-radius:12px;background:var(--faint2);display:flex;flex-direction:column;justify-content:space-between;padding:9px 10px;color:var(--text)}
+.tl.lit{background:var(--tint);color:#fff}
+.map.pressed .tl:not(.lit){opacity:.45}
+.tl svg.g{width:22px;height:22px}
+.tl .pc{font:600 15px/18px var(--rounded)}
+.tl .nm{font-size:12px;line-height:15px;opacity:.75}
+</style>
+<svg width="0" height="0" style="position:absolute"><symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol></svg>
+<header>
+  <h1>Subscriptions by category</h1>
+  <p class="desc">This lives inside the Subscriptions group of Coming up, below the calendar, so you reach it by scrolling. The group opens with its monthly total and a map of where that money goes, then the rows. The map is the Holdings treemap reused, with categories in place of tokens: true-area tiles, grey, lit blue when pressed.</p>
+  <div class="note"><b>The map is a filter, not a picture.</b> Pressing a category narrows the rows under it to that category, and the total reads that category. Pressing again clears it. That's why it sits above the rows rather than below them: what it controls is right under your thumb.</div>
+</header>
+<section><div class="stage">
+<figure><div class="phone"><div class="fade"></div><div class="room">
+  <div class="grp" style="margin-top:6px">Subscriptions</div>
+  <div class="tot">$84.45<small>a month</small></div><div class="cap">Across 7 subscriptions</div>
+  <div class="map"><div class="tl" style="left:calc(0.00% );top:0px;width:calc(43.47% - 4px);height:200px"><span></span><div><div class="pc">42%</div><div class="nm">Other</div></div></div><div class="tl" style="left:calc(43.47% );top:0px;width:calc(38.92% - 4px);height:124px"><svg class="g" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 10l3 2-3 2M13 15h3"/></svg><div><div class="pc">24%</div><div class="nm">Agents</div></div></div><div class="tl" style="left:calc(43.47% );top:128px;width:calc(38.92% - 4px);height:72px"><svg class="g" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10.5 9v6l4.5-3z"/></svg><div><div class="pc">14%</div><div class="nm">Media</div></div></div><div class="tl" style="left:calc(82.39% );top:0px;width:calc(18.75% - 4px);height:118px"><svg class="g" viewBox="0 0 24 24"><path d="M5 6h14v9H5zM3 18h18"/></svg><div><div class="pc">12%</div><div class="nm">Work</div></div></div><div class="tl" style="left:calc(82.39% );top:122px;width:calc(18.75% - 4px);height:78px"><svg class="g" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M9 14.5c1.6 1.4 4.4 1.4 6 0M9.5 10h0M14.5 10h0"/></svg><div><div class="pc">8%</div><div class="nm">Life</div></div></div></div><div class="row"><div class="lead" style="background:#d97757">C</div><div class="body"><div class="top"><div class="t">Claude</div><div class="m">$20.00</div></div><div class="l">Renews Oct 9 · Apple Card</div></div></div><div class="row"><div class="lead" style="background:#e50914">N</div><div class="body"><div class="top"><div class="t">Netflix</div><div class="m">$15.49</div></div><div class="l">Renews Oct 19 · Apple Card</div></div></div><div class="row"><div class="lead" style="background:#8e8e93"></div><div class="body"><div class="top"><div class="t">Apple</div><div class="m">$14.99</div></div><div class="l">Renews Oct 22 · Apple Card</div></div></div><div class="row"><div class="lead" style="background:#1db954">S</div><div class="body"><div class="top"><div class="t">Spotify</div><div class="m">$11.99</div></div><div class="l">Renews Oct 14 · Visa ·· 4412</div></div></div><div class="row"><div class="lead" style="background:#444">N</div><div class="body"><div class="top"><div class="t">Notion</div><div class="m">$10.00</div></div><div class="l">Renews Oct 30 · Visa ·· 4412</div></div></div><div class="row"><div class="lead" style="background:#58cc02">D</div><div class="body"><div class="top"><div class="t">Duolingo</div><div class="m">$6.99</div></div><div class="l">$83.99 yearly · Renews Mar 3 · Visa ·· 4412</div></div></div><div class="row"><div class="lead" style="background:#5856d6">Q</div><div class="body"><div class="top"><div class="t">Quillmark Pro</div><div class="m">$4.99</div></div><div class="l">Renews Oct 28 · Apple Card</div></div></div><div class="doorrow"><svg class="g"><use href="#plus"/></svg>Add a subscription</div></div></div>
+<figcaption><b>At rest.</b> Each tile is a category's share of the monthly total and wears that category's glyph. Anything the catalogue doesn't know (Netflix, Apple, Quillmark) goes into <i>Other</i>, never into Wallet.</figcaption></figure>
+<figure><div class="phone"><div class="fade"></div><div class="room">
+  <div class="grp" style="margin-top:6px">Subscriptions</div>
+  <div class="tot">$20.00<small>a month</small></div><div class="cap">Agents · 1 subscription</div>
+  <div class="map pressed"><div class="tl" style="left:calc(0.00% );top:0px;width:calc(43.47% - 4px);height:200px"><span></span><div><div class="pc">42%</div><div class="nm">Other</div></div></div><div class="tl lit" style="left:calc(43.47% );top:0px;width:calc(38.92% - 4px);height:124px"><svg class="g" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 10l3 2-3 2M13 15h3"/></svg><div><div class="pc">24%</div><div class="nm">Agents</div></div></div><div class="tl" style="left:calc(43.47% );top:128px;width:calc(38.92% - 4px);height:72px"><svg class="g" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10.5 9v6l4.5-3z"/></svg><div><div class="pc">14%</div><div class="nm">Media</div></div></div><div class="tl" style="left:calc(82.39% );top:0px;width:calc(18.75% - 4px);height:118px"><svg class="g" viewBox="0 0 24 24"><path d="M5 6h14v9H5zM3 18h18"/></svg><div><div class="pc">12%</div><div class="nm">Work</div></div></div><div class="tl" style="left:calc(82.39% );top:122px;width:calc(18.75% - 4px);height:78px"><svg class="g" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M9 14.5c1.6 1.4 4.4 1.4 6 0M9.5 10h0M14.5 10h0"/></svg><div><div class="pc">8%</div><div class="nm">Life</div></div></div></div><div class="row"><div class="lead" style="background:#d97757">C</div><div class="body"><div class="top"><div class="t">Claude</div><div class="m">$20.00</div></div><div class="l">Renews Oct 9 · Apple Card</div></div></div></div></div>
+<figcaption><b>Agents pressed.</b> The tile lights up, the rest dim, the total reads Agents, and the list shows only Claude.</figcaption></figure>
+</div>
+<div class="note"><b>Where it gets thin.</b> A category comes from matching the merchant to an app in the catalogue (<code>BillersSource.category(ofMerchant:)</code>). Anything billed through the App Store reads "Apple" and can't be placed. If most of someone's money is in Other, the map is one big grey tile and says nothing. We should count that on real data first. If Other is more than about half, hold the map until there's a better way to match.</div>
+</section>

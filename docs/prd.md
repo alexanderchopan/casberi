@@ -64328,3 +64328,17 @@ The money direction (§1105) needs the address book to know who bills you, not o
 **Seen** on a private iPhone 17 Pro simulator, light, DEBUG demo (four demo lists seeded with both headers): the tray's five doors, Apps with Added 95, Settings, the Wallet's Home led by Needs you, its Subscriptions tile ($77.98 a month, six plans, Add first), Day's All and Subscriptions tiles, and Uber Eats' sheet. **Not seen:** a real inbox's lists, the Mac, dark theme, a device.
 
 **Parked, not built.** Adding a mailing list to Addresses; a "What you pay" row on an app's page that opens its subscription in the Wallet; one list of every subscription with a filter.
+
+## §1112 — The Wallet's Subscriptions tile maps where the money goes: categories by monthly cost, a press filters the list (user, 2026-10-05: "what you didn't show me is a way to see subscriptions by category, perhaps below subscriptiosn or somehwere we have a heatmap of categories by spend?", then "i like your mockup idea fo rthe subscriptions section in wallet", "yes start on the wallet", "i want them shipped togetehr"; amends §1111 item 4's list; mockup `design/mockups/subscriptions-by-category.html`) — BUILT
+
+**Why.** Casberi is a subscription manager at its core, and a list sorted by price says what each plan costs but not where the money goes. The catalogue already knows which category an app belongs to (§1106a), so the Wallet can say it without asking the person anything.
+
+1. **A map between Add and the rows** (`SubscriptionsSummary` in `Screens/FeedScreen+Subscriptions.swift`): the Holdings treemap's layout (§939: true area, squarified, the tail folded) with categories in place of tokens. Tiles are grey, wear the category's glyph (`CategoryFold.glyph(for:)`), its share and its name. No total of its own: the tile's box already states "$X a month" (§1111).
+2. **A press filters.** The pressed tile lights in the tint, the rest quiet, a line under the map names that part ("Agents · $20.00 a month · 1 subscription") and the rows narrow to it; a second press clears it. A pick stands only over the set it was made on (`SubscriptionsPick.over`).
+3. **Unknown merchants are Other, never Wallet.** A merchant the catalogue does not know files under Wallet in Addresses (§1106a); on this map that fallback and the layout's folded tail are ONE Other tile, glyphless, and a pressed Other lists both (`Model/SubscriptionCategories.swift`, Foundation-only).
+4. **Honesty (§83).** Only a plan with a monthly cost counts, in dollars at the last read's rates (the box's own rule); one with no cadence stays in the list and out of the map. A map of fewer than two tiles is not drawn.
+5. **Measured, not assumed.** The demo's map is Other 46%, Work 28%, Agents 26%: Other leads even there, because App Store billing reads "Apple" and many merchants are not catalogue apps. `subscriptionsMap|` logs each category's share on a real phone (shares only under Hide balances), so the Other share can be read before the map is made bigger than it is.
+
+**Guards.** `scripts/subscription-categories-selftest.sh` (in verify.sh): fallback → Other, one Other after the fold, monthly only, the two-tile floor, a pick's sum; five mutations. `-subscriptionsCategory "<Category>"|Other` presses a tile headlessly.
+
+**Not built.** An "Open <app>" row on a subscription's sheet for an app you connected; prices on Apps rows (ruled out by §1111 item 2).

@@ -27058,6 +27058,62 @@
         }
       }
     },
+    "%@ · %@ a month · %lld subscriptions" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@ al mes · %3$lld suscripciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@/月 · %3$lld件のサブスクリプション"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@/월 · 구독 %3$lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@/月 · %3$lld 项订阅"
+          }
+        }
+      }
+    },
+    "%@ · %@ a month · 1 subscription" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@ al mes · 1 suscripción"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@/月 · 1件のサブスクリプション"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@/월 · 구독 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@/月 · 1 项订阅"
+          }
+        }
+      }
+    },
     "%lld subscriptions" : {
       "localizations" : {
         "es" : {

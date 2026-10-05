@@ -2452,6 +2452,13 @@ harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selfte
 # $20.29 for a $20 plan, one plan counted twice, a euro plan counted at par.
 harness "Subscriptions pure-logic self-test" "subscriptions" "scripts/subscriptions-selftest.sh" "the subscriptions self-test failed — run scripts/subscriptions-selftest.sh"
 
+# Subscriptions by category, the tile's map (prd §1112): which category each
+# subscription's monthly cost lands in, and what a pressed tile reads. Every
+# failure is an ordinary-looking map: a "Wallet" tile for merchants the
+# catalogue does not know, two Other tiles side by side, a bill with no
+# cadence counted, a one-tile map drawn, a pressed Other that forgets the tail.
+harness "Subscription categories pure-logic self-test" "subscription categories" "scripts/subscription-categories-selftest.sh" "the subscription-categories self-test failed — run scripts/subscription-categories-selftest.sh"
+
 # Billers in the address book (prd §1106): every merchant that charges on a
 # schedule, the moving bills a subscription refuses included. Every failure is
 # an ordinary-looking address book: the power bill missing, a coffee shop filed

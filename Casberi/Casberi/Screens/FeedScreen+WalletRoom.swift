@@ -191,6 +191,7 @@ extension FeedScreen {
                 .task(id: walletSubscriptionsKey) {
                     await SubscriptionsReading.shared.refresh(modelContext)
                     subscriptionsProbe()
+                    subscriptionsCategoryProbe()
                 }
         // **THE EMPTY STATE IS IN THE SLOT (prd §611).** A tile onto a page
         // with nothing draws what would fill it, empty.

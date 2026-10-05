@@ -815,6 +815,12 @@ struct FeedScreen: View {
     @State var objectKeys: [UUID: String] = [:]
     /// Markets' span (prd §1081): the box and the rows' moves, 1D · 1W · 1M.
     @State var watchSpan: WatchRanges.Span = .day
+    /// The Subscriptions tile's pressed category, keyed on the set of
+    /// subscriptions it was pressed over, so a different set clears it.
+    @State var subscriptionsPick: SubscriptionsPick?
+    /// The map's width, measured off the map's own row, which it is
+    /// laid out in (its fold depends on it, and so does what Other holds).
+    @State var subscriptionsMapWidth: CGFloat = 0
     #if DEBUG
     /// `-marketsScope` fires once per launch, not once per page build.
     @MainActor static var marketsProbed = false
@@ -823,6 +829,7 @@ struct FeedScreen: View {
     @MainActor static var socialProbed = false
     @MainActor static var walletFollowProbed = false
     @MainActor static var subscriptionsProbed = false
+    @MainActor static var subscriptionsCategoryProbed = false
     #endif
     /// What the Wallet last read you hold, for Markets' "You hold" line.
     @State var held: (byContract: [String: Double], bySymbol: [String: Double]) = ([:], [:])
