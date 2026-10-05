@@ -115,9 +115,9 @@ def main():
         folder = getattr(a, key)
         if not folder:
             continue
-        files = sorted(os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith(".png"))
+        files = sorted(os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith((".png", ".jpg", ".jpeg")))
         if not files:
-            raise SystemExit(f"✗ no PNGs in {folder}")
+            raise SystemExit(f"✗ no PNG or JPEG screenshots in {folder}")
         plan.append((display, files))
         old = len(shots(asc, have[display]["id"])) if display in have else 0
         print(f"→ {display}: delete {old}, upload {len(files)}: " + ", ".join(os.path.basename(f) for f in files))
