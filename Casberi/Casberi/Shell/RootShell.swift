@@ -216,6 +216,22 @@ struct RootShell: View {
                 if let s = DayScope(rawValue: raw), !s.isVerb { chrome.dayScope = s }
             }
         }
+        // `-serviceDoor "plan:<plan name>" | "list:<list id>"` takes a service
+        // door from wherever the launch stands (`ShellChrome.open`), the walk
+        // a tap on "Subscription in Wallet", "What you pay" or a plan's
+        // "Writes …" row makes: the other room, its Subscriptions tile, the
+        // sheet. A capture has no tap.
+        if let raw = UserDefaults.standard.string(forKey: "serviceDoor"), !raw.isEmpty {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(8))
+                NSLog("[Casberi] serviceDoor: %@", raw)
+                if raw.hasPrefix("plan:") {
+                    chrome.open(.plan(Subscriptions.key(String(raw.dropFirst(5)))))
+                } else if raw.hasPrefix("list:") {
+                    chrome.open(.list(String(raw.dropFirst(5))))
+                }
+            }
+        }
         // `-roomScope "<room>|seat:<Name>"` picks an app in a merged room's
         // menu at launch, as `-walletScope` does for the Wallet, so the room
         // sweep can capture every app pick with no tap.

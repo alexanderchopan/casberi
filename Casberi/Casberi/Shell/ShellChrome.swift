@@ -986,6 +986,53 @@ final class ShellChrome {
     /// the arrival a connect made and on no visit after.
     var connectLanding: String?
 
+    /// **A door from one of a service's pages to another** (`ServiceLinks`):
+    /// a paid plan's sheet lives in the Wallet and a mailing list's in Day,
+    /// and a screen holds one `.sheet`, so a row that opens the OTHER page
+    /// cannot raise it where it stands. It asks here; the request lands in
+    /// the other room's Subscriptions tile, and that room raises the sheet
+    /// once it is the active page and its reading holds the id
+    /// (`FeedScreen.landServiceDoor`), then clears this.
+    ///
+    /// Stamped, because a request for a room that is not there (every Wallet
+    /// app disconnected since the reading) would otherwise wait and fire on
+    /// some later visit: a door answers in `serviceDoorLife` or not at all.
+    struct ServiceDoor: Equatable {
+        enum Target: Equatable { case plan(String), list(String) }
+        let target: Target
+        let at: Date
+    }
+    var serviceDoor: ServiceDoor?
+    static let serviceDoorLife: TimeInterval = 8
+
+    /// Take a service door: the caller has already closed its own sheet, so
+    /// this waits out that dismissal, then lands in the room and its tile,
+    /// on All (a pick made earlier would hide the row the sheet stands on).
+    func open(_ target: ServiceDoor.Target) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            serviceDoor = ServiceDoor(target: target, at: .now)
+            switch target {
+            case .plan:
+                walletScope = nil
+                walletSection = .subscriptions
+                sourceRequest = CategoryFold.walletRoom
+            case .list:
+                mergedScope[RoomAccounts.dayRoom] = nil
+                dayScope = .subscriptions
+                sourceRequest = RoomAccounts.dayRoom
+            }
+        }
+    }
+
+    /// Land in a connected app's feed from a sheet that has just closed.
+    func openApp(_ source: String) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            sourceRequest = source
+        }
+    }
+
     // MARK: - The keyboard walk (Mac, 2026-07-31)
 
     /// The rows the ACTIVE feed page is showing, as ids only — the list half

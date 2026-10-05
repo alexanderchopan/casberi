@@ -2458,6 +2458,10 @@ harness "Subscriptions pure-logic self-test" "subscriptions" "scripts/subscripti
 # catalogue does not know, two Other tiles side by side, a bill with no
 # cadence counted, a one-tile map drawn, a pressed Other that forgets the tail.
 harness "Subscription categories pure-logic self-test" "subscription categories" "scripts/subscription-categories-selftest.sh" "the subscription-categories self-test failed — run scripts/subscription-categories-selftest.sh"
+# One identity per service (prd §1113): a plan is an app by name, a mailing list a
+# service's by its sender's registrable domain only. Every failure is a wrong door:
+# "Apple Store" opening Apple Music, a display name trusted, a lookalike domain let in.
+harness "Service identity pure-logic self-test" "service identity" "scripts/service-identity-selftest.sh" "the service identity self-test failed — run scripts/service-identity-selftest.sh"
 
 # Billers in the address book (prd §1106): every merchant that charges on a
 # schedule, the moving bills a subscription refuses included. Every failure is

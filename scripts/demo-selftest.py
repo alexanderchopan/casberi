@@ -1190,7 +1190,8 @@ LITERAL_HEAD = r'"([^"\\]*)'
 
 # Literal namespaces that are never a `Thing.sourceRef`: bundled sample art
 # (`RemoteImageLoader` resolves that scheme in DEBUG) and permalinks.
-NON_REF_LITERALS = ("http", "sample:", "obsidian://", "casberi:")
+# `mailto:` is a list's unsubscribe address (prd §1111), a door and never a ref.
+NON_REF_LITERALS = ("http", "sample:", "obsidian://", "casberi:", "mailto:")
 
 # Argument labels and properties that hold a namespaced string which is not a
 # ref. Matched against the 40 characters before the literal.

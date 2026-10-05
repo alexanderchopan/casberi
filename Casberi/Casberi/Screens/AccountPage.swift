@@ -258,6 +258,12 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             }
         }
         .task(id: source) { await readCounts() }
+        // Whether this app has a plan in the Wallet, for "What you pay"
+        // (read here, never in a body, prd §628).
+        .task(id: seat == nil) {
+            guard seat != nil else { return }
+            await ServiceLinks.shared.refresh(modelContext, seats: store.bridges.map(\.name), mail: false)
+        }
         // A typed query is a new list, so it gets a new first screenful (prd
         // §710) — otherwise a window opened to 300 rows stays open once the
         // query clears, which is the bound gone by the back door. Guarded on
@@ -407,6 +413,20 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                            opens: true,
                            action: openRoom)
         }
+        // WHAT YOU PAY — the door to this app's plan in the Wallet, drawn only
+        // when a plan is this app's by `ServiceIdentity`'s rule and the
+        // Wallet's reading still holds it (prd §83). It names where the
+        // figure lives and states none: what an app costs is the Wallet's
+        // (prd §1111, §1106a). Gated on the SEAT as well as `state`: the plan
+        // is a fact about an app you added, true while its key needs fixing.
+        if seat != nil || state.connected, let planID = ServiceLinks.shared.byOffer[name]?.planID,
+           SubscriptionsReading.shared.items.contains(where: { $0.id == planID }) {
+            AccountFactRow(glyph: SubscriptionWords.planGlyph,
+                           title: String(localized: "What you pay"),
+                           fact: String(localized: "In Wallet"),
+                           opens: true,
+                           action: { openPlan(planID) })
+        }
         if keyed, state.connected {
             AccountFactRow(glyph: "key",
                            title: String(localized: "Your key"),
@@ -439,6 +459,15 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         route.closeConnectForm()
         route.path = []
         chrome.sourceRequest = source
+    }
+
+    /// `enterRoom`'s three writes, then the service door: the Wallet's
+    /// Subscriptions tile, and this app's plan raised over it.
+    private func openPlan(_ id: String) {
+        sheet = nil
+        route.closeConnectForm()
+        route.path = []
+        chrome.open(.plan(id))
     }
 
     /// NOTES IS AN ENTRY ROW (prd §708) — the disc, then the note itself in

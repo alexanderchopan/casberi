@@ -2691,7 +2691,12 @@ enum DemoSeedAll {
              "https://weeklyfold.example/leave",
              [("Issue 112: what the merge changed", 1), ("Issue 111: the quiet launch", 8),
               ("Issue 110: small teams, big tools", 15), ("Issue 109: on defaults", 22)]),
-            ("Linear", "changelog@linear.example", "changelog.linear.example",
+            // Linear's own domain, not `.example`: the one demo list that is
+            // a plan you pay for AND an app you added, and `ServiceIdentity`
+            // joins a list to a service by its sender's domain alone. The
+            // way out stays on `.example`, so a tap in the demo writes to
+            // nobody.
+            ("Linear", "changelog@linear.app", "changelog.linear.app",
              "mailto:unsubscribe@linear.example",
              [("Changelog: faster triage", 3), ("Changelog: project updates", 17),
               ("Changelog: cycles, reworked", 31)]),

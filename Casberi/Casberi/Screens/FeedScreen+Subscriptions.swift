@@ -294,9 +294,7 @@ struct WalletSubscriptionRow: View {
 
     var body: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        DSFeedRow(name: item.name, line: Self.line(item, mask: mask)) {
-            SubscriptionFace(name: item.name)
-        } trailing: {
+        SubscriptionRow(name: item.name, line: Self.line(item, mask: mask)) {
             if let monthly = item.monthly {
                 Text(verbatim: mask ?? CardSpendRoom.money(monthly, code: item.currency))
                     .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)

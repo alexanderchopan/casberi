@@ -72,8 +72,8 @@ check(MailSubscriptions.cadenceWords(7) == "About weekly", "7 days reads About w
 check(MailSubscriptions.cadenceWords(1) == "Every day", "1 day reads Every day")
 check(MailSubscriptions.cadenceWords(30) == "About monthly", "30 days reads About monthly")
 check(MailSubscriptions.cadenceWords(nil) == nil, "no cadence, no words")
-check(MailSubscriptions.rateWords(7) == "1 a week", "weekly is 1 a week")
-check(MailSubscriptions.rateWords(30) == "1 a month", "monthly is 1 a month")
+check(MailSubscriptions.rateWords(7) == "1 mail a week", "weekly is 1 mail a week")
+check(MailSubscriptions.rateWords(30) == "1 mail a month", "monthly is 1 mail a month")
 
 // COMPOSE: one row per key, the newest name, the newest door, loudest first.
 let mails = [

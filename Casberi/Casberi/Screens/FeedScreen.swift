@@ -508,6 +508,54 @@ struct FeedScreen: View {
         feedSheet = .githubWatch
     }
 
+    /// **A SERVICE DOOR LANDS HERE** (`ShellChrome.serviceDoor`): a plan's
+    /// sheet in the Wallet, a list's in Day, asked for from the service's
+    /// other page. Keyed on `isActive` for `landGitHubWatch`'s reason (the
+    /// pager mounts neighbours). The room reads its own tile's reading first
+    /// when the id is not in it yet, and a door whose destination is gone, or
+    /// that outlived `serviceDoorLife`, is dropped unanswered (prd §83).
+    private var serviceDoorKey: String {
+        guard let door = chrome.serviceDoor else { return "" }
+        return "\(source)|\(isActive)|\(door.at.timeIntervalSince1970)"
+    }
+    private func landServiceDoor() async {
+        guard isActive, let door = chrome.serviceDoor else { return }
+        guard Date.now.timeIntervalSince(door.at) < ShellChrome.serviceDoorLife else {
+            chrome.serviceDoor = nil
+            return
+        }
+        let route: FeedSheetRoute
+        switch door.target {
+        case .plan(let id):
+            guard source == CategoryFold.walletRoom else { return }
+            if !SubscriptionsReading.shared.items.contains(where: { $0.id == id }) {
+                await SubscriptionsReading.shared.refresh(modelContext)
+            }
+            guard SubscriptionsReading.shared.items.contains(where: { $0.id == id }) else {
+                chrome.serviceDoor = nil
+                return
+            }
+            route = .subscription(id)
+        case .list(let id):
+            guard source == RoomAccounts.dayRoom else { return }
+            if !MailSubscriptionsReading.shared.items.contains(where: { $0.id == id }) {
+                MailSubscriptionsReading.shared.refresh(modelContext)
+            }
+            guard MailSubscriptionsReading.shared.items.contains(where: { $0.id == id }) else {
+                chrome.serviceDoor = nil
+                return
+            }
+            route = .mailSubscription(id)
+        }
+        // The room's card lands first, or the sheet's rise is refused. The
+        // door is cleared AFTER the beat: clearing changes this task's own
+        // key, which would cancel it mid-sleep.
+        try? await Task.sleep(for: .milliseconds(700))
+        guard !Task.isCancelled else { return }
+        if feedSheet == nil { feedSheet = route }
+        chrome.serviceDoor = nil
+    }
+
     @State var confirming: (Verb, Thing)?
     /// The note a long press asked to delete, waiting on its confirmation.
     @State var deletingNote: Thing?
@@ -829,6 +877,7 @@ struct FeedScreen: View {
     @MainActor static var socialProbed = false
     @MainActor static var walletFollowProbed = false
     @MainActor static var subscriptionsProbed = false
+    @MainActor static var mailSubscriptionProbed = false
     @MainActor static var subscriptionsCategoryProbed = false
     #endif
     /// What the Wallet last read you hold, for Markets' "You hold" line.
@@ -1919,6 +1968,7 @@ struct FeedScreen: View {
         // A method, not an inline closure: this chain sits at the type-checker's
         // limit, and the inline form tipped it over.
         .task(id: githubLandingKey) { await landGitHubWatch() }
+        .task(id: serviceDoorKey) { await landServiceDoor() }
         .sheet(item: $roomShare) { input in
             ShareTray(room: input)
         }

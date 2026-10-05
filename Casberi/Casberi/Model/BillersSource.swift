@@ -60,13 +60,10 @@ enum BillersSource {
     /// ("Netflix.com", "CLAUDE.AI") — never by `contains`, which files "Apple
     /// Store" under Apple Music.
     nonisolated static func category(ofMerchant raw: String) -> String {
-        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        var candidates = [name]
-        if let dot = name.lastIndex(of: "."),
-           name[name.index(after: dot)...].allSatisfy(\.isLetter) {
-            candidates.append(String(name[..<dot]))
-        }
-        for candidate in candidates {
+        // The name's forms are `ServiceIdentity`'s, the one rule for "the
+        // same service", so Addresses and the doors between a plan, its app
+        // and its mail cannot disagree.
+        for candidate in ServiceIdentity.names(raw) {
             if let category = categoryByOfferName[candidate] { return category }
         }
         return fallbackCategory

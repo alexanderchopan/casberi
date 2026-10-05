@@ -5,11 +5,17 @@ import SwiftData
 /// and the door to the provider's own billing page. Casberi cancels nothing
 /// and changes no plan (acts-by-seat are declined); a hand-added one can be
 /// removed from the list, which is the only write here.
+///
+/// It composes `SubscriptionPage`, the anatomy Day's `MailSubscriptionSheet`
+/// composes too, and its first doors are this service's other pages when it
+/// has them (`ServiceLinks`): the app's feed, and the list that mails you.
 struct SubscriptionSheet: View {
     let id: String
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
+    @Environment(ShellChrome.self) private var chrome
     @State private var confirmingRemove = false
 
     private var item: Subscriptions.Item? {
@@ -20,82 +26,95 @@ struct SubscriptionSheet: View {
         ScrollView {
             if let item {
                 content(item)
-                    .padding(DS.Space.s4)
             }
         }
-        // Solid, as every reading sheet is (no see-through sheets).
-        .dsInk()
-        .dsReadSheet()
+        // Solid, and as tall as its page (no see-through sheets, prd §886).
+        .subscriptionSheet()
+        // The other pages this service has, read once the sheet is up (§628).
+        .task(id: id) {
+            await ServiceLinks.shared.refresh(modelContext, seats: store.bridges.map(\.name))
+        }
+        .confirmationDialog(Text("Remove \(item?.name ?? "")?"), isPresented: $confirmingRemove,
+                            titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                if let manualID = item?.manualID { SubscriptionStore.shared.remove(manualID) }
+                dismiss()
+            }
+        } message: {
+            Text("Only what you added goes. A charge a card shows stays.")
+        }
     }
 
     private func money(_ amount: Double, _ code: String, _ mask: String?) -> String {
         mask ?? CardSpendRoom.money(amount, code: code)
     }
 
-    @ViewBuilder
     private func content(_ item: Subscriptions.Item) -> some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            HStack(spacing: DS.Space.s3) {
-                SubscriptionFace(name: item.name, size: DS.Face.rowCircle)
-                Text(verbatim: item.name)
-                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                if let amount = item.amount {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(verbatim: money(amount, item.currency, mask))
-                            .dsText(.price40).monospacedDigit().foregroundStyle(DS.textPrimary)
-                        if let cadence = cadenceWord(item) {
-                            Text(cadence).dsText(.body17).foregroundStyle(DS.textSecondary)
-                        }
-                    }
-                }
-                if let was = item.was {
-                    Text("Up from \(money(was, item.currency, mask))")
-                        .dsText(.heading17).foregroundStyle(DS.attentionInk)
-                }
-            }
-            VStack(spacing: 0) {
-                if let next = item.next {
-                    fact(item.cadenceDays == nil ? String(localized: "Next charge") : String(localized: "Renews"),
-                         next.formatted(.dateTime.month(.wide).day().year()))
-                }
-                if let monthly = item.monthly, item.isYearly {
-                    fact(String(localized: "A month"), money(monthly, item.currency, mask))
-                }
-                if let pays = item.paysWith { fact(String(localized: "Pays with"), pays) }
-                if let since = item.since {
-                    fact(String(localized: "Since"), since.formatted(.dateTime.month(.wide).year()))
-                }
-                if let paid = item.paid {
-                    fact(String(localized: "Paid so far"), money(paid, item.currency, mask))
-                }
-                fact(String(localized: "Found in"),
-                     ListFormatter.localizedString(byJoining: item.foundIn.map(foundName)))
-            }
-            VStack(spacing: 0) {
-                if let site = item.site, let url = URL(string: "https://\(site)") {
-                    DSDoorRow(icon: "arrow.up.right", title: Text("Manage on \(site)")) { openURL(url) }
-                }
-                if let manualID = item.manualID {
-                    DSDoorRow(icon: "trash", title: Text("Stop tracking"), role: .destructive) {
-                        confirmingRemove = true
-                    }
-                    .confirmationDialog(Text("Remove \(item.name)?"), isPresented: $confirmingRemove,
-                                        titleVisibility: .visible) {
-                        Button("Remove", role: .destructive) {
-                            SubscriptionStore.shared.remove(manualID)
-                            dismiss()
-                        }
-                    } message: {
-                        Text("Only what you added goes. A charge a card shows stays.")
-                    }
-                }
-            }
-            DSFootnote(Text("Casberi can't cancel or change a plan."))
+        return SubscriptionPage(name: item.name,
+                                statement: statement(item, mask: mask),
+                                facts: facts(item, mask: mask),
+                                doors: doors(item))
+    }
+
+    private func statement(_ item: Subscriptions.Item, mask: String?) -> SubscriptionStatement? {
+        guard let amount = item.amount else { return nil }
+        return SubscriptionStatement(figure: money(amount, item.currency, mask),
+                                     word: cadenceWord(item),
+                                     note: item.was.map { Text("Up from \(money($0, item.currency, mask))") })
+    }
+
+    /// When · since · so far · who · found in — the order Day's sheet keeps.
+    private func facts(_ item: Subscriptions.Item, mask: String?) -> [SubscriptionFact] {
+        var out: [SubscriptionFact] = []
+        if let next = item.next {
+            out.append(.init(item.cadenceDays == nil ? String(localized: "Next charge") : String(localized: "Renews"),
+                             next.formatted(.dateTime.month(.wide).day().year())))
         }
+        if let monthly = item.monthly, item.isYearly {
+            out.append(.init(String(localized: "A month"), money(monthly, item.currency, mask)))
+        }
+        if let since = item.since {
+            out.append(.init(String(localized: "Since"), since.formatted(.dateTime.month(.wide).year())))
+        }
+        if let paid = item.paid {
+            out.append(.init(String(localized: "Paid so far"), money(paid, item.currency, mask)))
+        }
+        if let pays = item.paysWith { out.append(.init(String(localized: "Pays with"), pays)) }
+        out.append(.init(String(localized: "Found in"),
+                         ListFormatter.localizedString(byJoining: item.foundIn.map(foundName))))
+        return out
+    }
+
+    /// This service's other pages, then the way out, then the one write.
+    /// Each is drawn only while its destination exists (prd §83).
+    private func doors(_ item: Subscriptions.Item) -> [SubscriptionDoor] {
+        var out: [SubscriptionDoor] = []
+        let link = ServiceLinks.shared.byPlan[item.id]
+        if let app = link?.app {
+            out.append(.init(id: "app", icon: SubscriptionWords.appGlyph, title: Text("Open \(app)")) {
+                dismiss()
+                chrome.openApp(app)
+            })
+        }
+        if let listID = link?.listID,
+           let list = MailSubscriptionsReading.shared.items.first(where: { $0.id == listID }) {
+            out.append(.init(id: "list", icon: SubscriptionWords.listGlyph,
+                             title: Text(verbatim: MailSubscriptions.writesWords(list.cadenceDays))) {
+                dismiss()
+                chrome.open(.list(listID))
+            })
+        }
+        if let site = item.site, let url = URL(string: "https://\(site)") {
+            out.append(.init(id: "manage", icon: SubscriptionWords.wayOutGlyph,
+                             title: Text("Manage on \(site)")) { openURL(url) })
+        }
+        if item.manualID != nil {
+            out.append(.init(id: "stop", icon: "trash", title: Text("Stop tracking"), role: .destructive) {
+                confirmingRemove = true
+            })
+        }
+        return out
     }
 
     private func cadenceWord(_ item: Subscriptions.Item) -> String? {
@@ -109,17 +128,6 @@ struct SubscriptionSheet: View {
     /// "You" reads as what it is in a list of places.
     private func foundName(_ source: String) -> String {
         source == Subscriptions.byYou ? String(localized: "Added by you") : source
-    }
-
-    private func fact(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text(verbatim: label).dsText(.body17).foregroundStyle(DS.textPrimary)
-            Spacer(minLength: DS.Space.s2)
-            Text(verbatim: value).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .multilineTextAlignment(.trailing)
-        }
-        .padding(.vertical, DS.Space.s2)
-        .accessibilityElement(children: .combine)
     }
 }
 

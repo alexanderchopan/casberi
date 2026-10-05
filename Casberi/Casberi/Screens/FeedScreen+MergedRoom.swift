@@ -199,11 +199,30 @@ extension FeedScreen {
         .dsRoomHeadBlock()
         .task(id: chrome.refreshPulse) {
             MailSubscriptionsReading.shared.refresh(modelContext)
+            mailSubscriptionProbe()
         }
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                   bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+    }
+
+    /// `-mailSubscriptionSheet <name>` — raise one mailing list's sheet by
+    /// its name once the tile has read (DEBUG; NSLogs
+    /// `mailSubscriptionSheet:`), as `-subscriptionsSheet` does for a plan,
+    /// because a `simctl`-launched capture has no tap.
+    func mailSubscriptionProbe() {
+        #if DEBUG
+        guard !Self.mailSubscriptionProbed,
+              let raw = UserDefaults.standard.string(forKey: "mailSubscriptionSheet"), !raw.isEmpty else { return }
+        Self.mailSubscriptionProbed = true
+        let items = MailSubscriptionsReading.shared.items
+        NSLog("[Casberi] mailSubscriptionSheet: %@ (%d lists: %@)", raw, items.count,
+              items.map(\.name).joined(separator: ", "))
+        if let item = items.first(where: { $0.name.localizedCaseInsensitiveCompare(raw) == .orderedSame }) {
+            feedSheet = .mailSubscription(item.id)
+        }
+        #endif
     }
 
     /// The list: every list that writes to you, the loudest first, each

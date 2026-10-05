@@ -147,13 +147,38 @@ enum MailSubscriptions {
         }
     }
 
+    /// The same cadence as a sentence about the sender, for a door to the
+    /// list from another page ("Writes about weekly"). Whole sentences, never
+    /// a verb glued to `cadenceWords`: a language orders them its own way.
+    /// Under three mails there is no cadence, and the door says only that
+    /// it writes.
+    static func writesWords(_ days: Double?) -> String {
+        guard let days else { return String(localized: "Writes to you") }
+        switch days {
+        case ..<1.5:  return String(localized: "Writes every day")
+        case ..<4.5:  return String(localized: "Writes several a week")
+        case ..<10:   return String(localized: "Writes about weekly")
+        case ..<21:   return String(localized: "Writes every two weeks")
+        case ..<45:   return String(localized: "Writes about monthly")
+        default:      return String(localized: "Writes now and then")
+        }
+    }
+
     /// The sheet's big figure: how many a week, or a month when fewer.
     static func rateWords(_ days: Double?) -> String? {
+        rate(days).map { "\($0.count) \($0.word)" }
+    }
+
+    /// The sheet's statement in two parts, the figure and the word on its
+    /// baseline, as the Wallet's "$10.00 a month": "2" · "mails a month".
+    static func rate(_ days: Double?) -> (count: Int, word: String)? {
         guard let days, days > 0 else { return nil }
         let perWeek = 7 / days
         if perWeek >= 1 {
-            return String(localized: "\(Int(perWeek.rounded())) a week")
+            let n = Int(perWeek.rounded())
+            return (n, n == 1 ? String(localized: "mail a week") : String(localized: "mails a week"))
         }
-        return String(localized: "\(max(1, Int((30 / days).rounded()))) a month")
+        let n = max(1, Int((30 / days).rounded()))
+        return (n, n == 1 ? String(localized: "mail a month") : String(localized: "mails a month"))
     }
 }
