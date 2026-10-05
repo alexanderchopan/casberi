@@ -47,6 +47,7 @@ struct AddressesSection: View {
     @State private var resolved: Resolved?
     @State private var resolvedWithYou: [ContactSheet.WithYouRow] = []
     @Environment(ShellChrome.self) private var chrome
+    @Environment(HomeRoute.self) private var route
     @Environment(BridgeStore.self) private var bridges
     /// The one "Same person?" the list may draw (section 3): the newest live
     /// suggestion whose two ends are both here, with the model's sentence
@@ -605,9 +606,23 @@ struct AddressesSection: View {
         return latest?.timeIntervalSinceReferenceDate
     }
 
+    /// A biller that is a subscription opens the Wallet's sheet for it, the
+    /// one page about what it charges (prd §1114); a moving bill, which the
+    /// Subscriptions tile does not list, keeps its own page here, and so does
+    /// everyone else.
+    private func open(_ contact: Contact) {
+        if contact.lead.kind == .biller,
+           let biller = BillersSource.byKey[contact.lead.key], biller.subscription {
+            route.path = []
+            chrome.open(.plan(biller.id))
+        } else {
+            opened = contact
+        }
+    }
+
     private func row(_ contact: Contact, matched: String? = nil) -> some View {
         Button {
-            opened = contact
+            open(contact)
         } label: {
             HStack(spacing: DS.Space.s3) {
                 ContactFace(contact: contact, size: DS.Face.list)

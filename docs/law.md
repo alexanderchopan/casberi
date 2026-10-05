@@ -220,7 +220,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1247 of 1308 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1248 of 1309 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1458,7 +1458,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1103c — Under an app header, the person a thing is by wears a small face before its title
 - §1104 — An old install is told a newer one is out, and every older TestFlight build expires on ship
 - §1105 — The Wallet's Cards tile becomes Subscriptions, Coming up and Subscriptions share one calendar box, and Follow is Watch (amended by §1106b, §1107, §1111, §1113)
-- §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a)
+- §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a, §1114)
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
 - §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111)
@@ -1469,6 +1469,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113)
 - §1112 — The Wallet's Subscriptions tile maps where the money goes: categories by monthly cost, a press filters the list
 - §1113 — One identity per service: a plan, its app and its mailing list open each other, and both Subscriptions tiles are one…
+- §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
 
 ## Dead rulings → what replaced them (generated)
 
