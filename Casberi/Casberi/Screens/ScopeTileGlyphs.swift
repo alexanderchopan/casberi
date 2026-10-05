@@ -15,12 +15,10 @@ enum ScopeTileGlyph {
     static let holdings    = "chart.pie"
     static let accounts    = "person.2"
     static let permissions = "key"
-    static let positions   = "building.columns"
-    /// The Wallet's Subscriptions tile (prd §1105): a charge that comes round
-    /// again. No tile or dock seat wears it; a row lead for Rocket Money or
-    /// Uniswap falls back to it, which is a seat's mark and not a scope's.
-    static let subscriptions = "arrow.triangle.2.circlepath"
-    static let risk        = "shield"
+    /// The Wallet's Security tile (prd §1107): approvals, delegations, Safe
+    /// signatures and the transfers made to fool you. It took Permissions'
+    /// and Risk's tiles; neither of their glyphs (`key`, `shield`) is its own.
+    static let security    = "lock.shield"
     static let frames      = "square.stack.3d.down.right"
     /// Privy's Apps — "every app that made you a wallet" (user, 2026-09-19:
     /// *"on the privy screen, you're using the same icon for apps that we use
@@ -165,18 +163,15 @@ extension AgentRoomScope: DSTileScope {
     }
 }
 
-/// The Wallet's verb is Watch since prd §1105 and wears its own name's glyph.
+/// The Wallet's four (prd §1107). Watch is not a tile any more: it is the
+/// first row of the Accounts pill's list.
 extension WalletSection: DSTileScope {
     var glyph: String {
         switch self {
-        case .home:        return ScopeTileGlyph.home
-        case .holdings:    return ScopeTileGlyph.holdings
-        case .comingUp:    return ScopeTileGlyph.comingUp
-        case .positions:   return ScopeTileGlyph.positions
-        case .subscriptions: return ScopeTileGlyph.subscriptions
-        case .risk:        return ScopeTileGlyph.risk
-        case .permissions: return ScopeTileGlyph.permissions
-        case .watch:       return ScopeTileGlyph.watch
+        case .home:     return ScopeTileGlyph.home
+        case .holdings: return ScopeTileGlyph.holdings
+        case .comingUp: return ScopeTileGlyph.comingUp
+        case .security: return ScopeTileGlyph.security
         }
     }
 }

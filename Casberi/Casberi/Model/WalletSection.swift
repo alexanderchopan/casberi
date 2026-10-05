@@ -1,115 +1,61 @@
 import Foundation
 
-/// The wallet room's SCOPE — which of its six readings is on screen
-/// (prd §483, 2026-08-26).
+/// The wallet room's SCOPE — which of its four readings is on screen (prd
+/// §483, cut to four by §1107).
 ///
-/// **Why this exists.** The room ran to ~2,900pt of standing cards before the
-/// first ordinary transaction row, on a wallet that has everything — about
-/// three and a half screens. Eight of its thirteen blocks were standing state
-/// (things true today and true yesterday), only two were events, and one of
-/// those two was the three-row patch added on 2026-08-18 *because* the feed was
-/// too far down. Every card was individually justified; the arrangement was the
-/// problem.
+/// **FOUR TILES, ONE ROW (prd §1107, user: "i would challenge you perhaps to
+/// give me a wallet that has 4 tiles").** The room had eight — Home · Coming
+/// up · Holdings · Permissions · Positions · Risk · Subscriptions · Watch — and
+/// each was a MODE: a tap swapped the box and the list, so you saw one reading
+/// at a time and had to remember which tile held what. The eight fold into
+/// four by what they are about, and nothing that mattered is dropped:
 ///
-/// **This is a REGROUPING, not a redraw.** Five of the six scopes are the
-/// room's own `walletGroupHeader` groups — "What you hold" / "What it's doing" /
-/// "Who can reach it" / "Coming up", shipped 2026-08-20 (§475) — renamed to
-/// short nouns (user ruling: *"we can't really have the sections we what you
-/// hold etc b/c they are too long"*) and split twice, so the mapping from card
-/// to scope is IDENTITY. No card is dropped and none is duplicated, which is
-/// what makes content loss structurally impossible rather than merely unlikely.
+///   • **Coming up** takes Subscriptions. The two already drew one calendar
+///     (§1105); a subscription is something coming up again. The list is
+///     Needs you, the dated rows under their days, then every subscription.
+///   • **Holdings** takes Positions, and the loan risk with it: tokens first
+///     (the biggest few, the rest one row away), then Positions, each loan
+///     saying how far it can fall (Risk's own sentence, §1090).
+///   • **Security** takes Permissions and what Risk called "Worth a look":
+///     Safe signatures, delegations, approvals, and the three kinds of
+///     flagged transfer — address poisoning, fake tokens, fake transfers. A
+///     liquidation is not a security fact; it is a position's, so it went to
+///     Holdings (user: "it's a security feature").
+///   • **Watch** stops being a tile: watching a wallet is the first row of
+///     the Accounts pill's list, where the accounts it adds will stand.
 ///
-/// The two splits, and why each is a split rather than a rename:
-///   • `nfts` left "What you hold" — the only scope whose content is pictures —
-///     and went back into Holdings when Cards took its tile (prd §1048).
-///   • "What it's doing" becomes `positions` (money deployed) and `risk` (money
-///     that could move against you). One word could not carry both honestly:
-///     an approval you granted on purpose is not a hazard, and a health factor
-///     is not a holding.
+/// **ORDER is events → state → conditional**, the reason §483 gave: a scope
+/// that can be empty sits at the tail, so the strip's head is the same on
+/// every wallet. The tiles DRAW A–Z after Home (`DSScopeTiles.alphabetical`,
+/// §995); this order is the publication's, and the self-test pins it.
 ///
-/// **ORDER is events → state → hazards, and the last part is structural rather
-/// than taste.** `risk` and `permissions` are CONDITIONAL — most wallets have
-/// no leverage and some have no live approval — so they sit at the end. A
-/// conditional scope in the middle makes every scope after it shift the day it
-/// appears or disappears, and a control that reflows under you is one you stop
-/// trusting. At the end its absence changes nothing, and `risk` carries an
-/// attention dot, so position was never how you find it.
-///
-/// **`home` leads and is the default** for the reason this whole direction
-/// was chosen: every other room in this app opens on its feed, and making
-/// Wallet the exception again is what put its transactions three screens down
-/// in the first place.
-///
-/// **HOME'S LIST IS THE ACTIVITY, AND THE ACTIVITY AND ACCOUNTS TILES ARE
-/// DELETED (prd §1039, 2026-10-01, user approving the merge mockup).** The
-/// room takes every other room's anatomy — box, tiles, the account menu, a
-/// list — so what moved (and what is ahead, under its own date) is Home's
-/// list, the account menu under the tiles picks the account, and the
-/// Overview rows and the Actions block are gone. Following an address is the
-/// LAST tile, `watch`, a verb that never lights (GitHub's Watch, prd §1031).
-///
-/// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610).** Until
-/// 2026-09-05 `present(…)` dropped a scope the wallet had nothing for, so a
-/// wallet with no leverage never saw a Risk chip and one with no approvals
-/// never learned that Permissions existed — the strip taught the room's
-/// vocabulary only to the wallets that already spoke it. Now the strip is the
-/// same seven chips on every wallet, and a scope with nothing in it says what
-/// it would hold (`emptyHeadline`/`emptyBody`). That is the obligation which
-/// keeps this on the right side of §83: a chip onto nothing is a dead control,
-/// a chip onto a sentence teaching the scope is the room explaining itself.
+/// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611).** A scope with nothing in it
+/// draws its empty state, which teaches what it would hold.
 ///
 /// Foundation-only by design: `scripts/wallet-section-selftest.sh` compiles it
-/// WHOLE and unmodified. Every failure this catches renders as a perfectly
-/// ordinary room — a scope that never appears, a remembered scope that silently
-/// resolves to the wrong one, or a strip whose order changes between opens.
+/// WHOLE and unmodified.
 enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case home
+    /// What you hold — tokens, then Positions (prd §1107).
     case holdings
-    /// What's AHEAD — every row with a future `dueAt`, soonest first (prd
-    /// §1041, user: "its own tile"). Home is only what happened.
+    /// What's AHEAD — every row with a future `dueAt`, what waits on you, and
+    /// every subscription (prd §1041, §1107).
     case comingUp
-    case positions
-    /// What repeats, what it costs and when it renews (prd §1105, which took
-    /// the Cards tile's place: a card's spends are on Home, and the account
-    /// menu narrows the room to any one card).
-    case subscriptions
-    case risk
-    case permissions
-    /// The room's VERB (prd §1039): watch another address. Never a scope —
-    /// it is never in `order`, never resolved to, and never lights. It rides
-    /// this enum as Watch rides `WorkScope` (prd §1031, §1057), because a verb
-    /// tile is drawn by the same grid as the scopes. It read Follow until prd
-    /// §1105, which gave it Work's word.
-    case watch
+    /// Who can act for you, and what is trying to fool you (prd §1107).
+    case security
 
     var id: String { rawValue }
 
-    /// The strip's order. `allCases` already declares it, but the order is a
-    /// RULING (see the type's doc) rather than an accident of declaration, so
-    /// it is stated where a reader looking for it will find it and where a
-    /// self-test can assert it.
-    static let order: [WalletSection] = [
-        .home, .holdings, .comingUp, .positions, .subscriptions, .risk, .permissions,
-    ]
+    /// The publication's order. `allCases` already declares it, but the order
+    /// is a RULING (see the type's doc), stated where a self-test can assert it.
+    static let order: [WalletSection] = [.home, .holdings, .comingUp, .security]
 
-    /// The verbs, drawn after the scopes (`DSScopeTiles.alphabetical`) on
-    /// every page — watching is the room's act, not one account's (§774).
-    static let verbs: [WalletSection] = [.watch]
-
-    /// A verb acts instead of scoping, and never lights.
-    var isVerb: Bool { self == .watch }
-
-    /// Which scopes can be EMPTY.
-    ///
-    /// **It no longer gates `present()` (prd §611)** — every scope is drawn
-    /// always — and it is kept, with its family name, for the two jobs it
-    /// still does: it fixes the ORDER (the scopes that can be empty sit at the
-    /// tail, so the strip's head is the same chips on every wallet), and it is
-    /// what obliges a scope to carry an `emptyBody`.
+    /// Which scopes can be EMPTY. They sit at the tail, and each must carry an
+    /// `emptyBody`.
     var isConditional: Bool {
         switch self {
-        case .home, .holdings, .watch: return false
-        case .comingUp, .positions, .subscriptions, .risk, .permissions: return true
+        case .home, .holdings: return false
+        case .comingUp, .security: return true
         }
     }
 
@@ -119,123 +65,69 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
 
     var label: String {
         switch self {
-        case .home:        return String(localized: "Home")
-        case .holdings:    return String(localized: "Holdings")
+        case .home:     return String(localized: "Home")
+        case .holdings: return String(localized: "Holdings")
         // The app's own word for what's ahead (the feed's "Coming up" group).
-        case .comingUp:    return String(localized: "Coming up")
-        case .positions:   return String(localized: "Positions")
-        case .subscriptions: return String(localized: "Subscriptions")
-        case .risk:        return String(localized: "Risk")
-        case .permissions: return String(localized: "Permissions")
-        // One word (prd §1039), and Work's (§1031, prd §1105).
-        case .watch:       return String(localized: "Watch")
+        case .comingUp: return String(localized: "Coming up")
+        // The word wallets use for approvals and scams (user, over "Safety").
+        case .security: return String(localized: "Security")
         }
     }
 
-    /// What a scope holds, for the accessibility label and the tooltip — the
-    /// short nouns are learnable but not self-explaining, and "Permissions" in
-    /// particular must not read as an app-settings screen when what sits behind
-    /// it is ranked by the dollars somebody can take right now (§292).
+    /// What a scope holds, for the accessibility label and the tooltip.
     var summary: String {
         switch self {
-        case .home:        return String(localized: "The line, and what moved")
-        case .holdings:    return String(localized: "What your money is made of")
-        case .comingUp:    return String(localized: "What's ahead, soonest first")
-        case .positions:   return String(localized: "Money you've deployed")
-        case .subscriptions: return String(localized: "What repeats, and what it costs")
-        case .risk:        return String(localized: "Positions that could move against you")
-        case .permissions: return String(localized: "What you've granted reach to")
-        case .watch:       return String(localized: "Watch an address, privately")
+        case .home:     return String(localized: "The line, and what moved")
+        case .holdings: return String(localized: "Your tokens, and money you've deployed")
+        case .comingUp: return String(localized: "What's ahead, what waits on you, and what repeats")
+        case .security: return String(localized: "Who can act for you, and what's trying to fool you")
         }
     }
 
-    /// Which scopes the strip offers: **every one, on every wallet (prd
-    /// §611).** The five Bools this used to take are gone rather than ignored —
-    /// an unused `risk:` at the call site is an invitation to re-gate on it by
-    /// accident — and the same five readings now decide whether a scope draws
-    /// its figure or its empty state (`FeedScreen.walletScopeIsEmpty`).
+    /// Which scopes the strip offers: **every one, on every wallet (prd §611).**
     static func present() -> [WalletSection] { order }
 
-    /// **THE SHORT STATE, drawn where the scope's headline would go (prd
-    /// §611).** Nil for `home`, which is never empty: the crown is its content.
+    /// **THE SHORT STATE, drawn where the scope's headline would go (prd §611).**
     var emptyHeadline: String? {
         switch self {
-        // **HOME HAS WORDS SINCE prd §761** (user: "re empty wallet head pls
-        // fix"). It returned nil on the premise that the room always has a
-        // crown, and the crown's own gate disproves it: no total, no line, no
-        // warning, no composition and no recent row draws NOTHING — which the
-        // reserved 300pt box rendered as a card of black, and §757's collapse
-        // rendered as a room that opens on `Actions` and never says why.
-        case .home:        return String(localized: "No balance yet")
-        case .holdings:    return String(localized: "Nothing held")
-        case .comingUp:    return String(localized: "Nothing ahead")
-        case .positions:   return String(localized: "Nothing deployed")
-        case .subscriptions: return String(localized: "No subscriptions")
-        case .risk:        return String(localized: "Nothing at risk")
-        case .permissions: return String(localized: "No grants")
-        // A verb has no empty state: it is never on screen as a page.
-        case .watch:       return nil
+        // Home has words since prd §761: no total, no line and no recent row
+        // drew nothing at all.
+        case .home:     return String(localized: "No balance yet")
+        case .holdings: return String(localized: "Nothing held")
+        case .comingUp: return String(localized: "Nothing ahead")
+        case .security: return String(localized: "Nothing to review")
         }
     }
 
-    /// **THE CLAUSE THE HEADLINE AND THE DRAWING CANNOT SAY (prd §799,
-    /// 2026-09-17).** §769 redrew `DSEmptyState` as a skeleton with the
-    /// short state over it, so this is VoiceOver's value and nothing else.
-    /// It was two sentences until the sweep counted them: the second
-    /// restated `emptyHeadline` and the first restated `summary`, 782 words
-    /// over six rooms, heard by one reader and seen by none. What is left
-    /// is the qualifier neither of those carries — the bound on the read,
-    /// the dust floor, the spam filter.
-    ///
-    /// No subject (the face rail above already says which wallets are scoped),
-    /// no door (every verb lives on the card that draws it), and nothing that
-    /// states a chain-wide fact and can go stale.
+    /// **THE CLAUSE THE HEADLINE AND THE DRAWING CANNOT SAY (prd §799).**
+    /// VoiceOver's value: what the scope holds, with the bound on the read.
     var emptyBody: String? {
         switch self {
         case .home:
-            // Two sentences in this property's own register: what the scope
-            // holds, then why this wallet has none. It may not say WHY it is
-            // missing (§83): `total` is nil both before the holdings read lands
-            // and when nothing priced was found, and nothing here can tell
-            // those apart — so it says what was found, which is true either way
-            // and is `holdings`' own phrasing one scope over.
+            // What was found, never why nothing was (§83): `total` is nil both
+            // before the read lands and when nothing priced was found.
             return String(localized: "What these accounts are worth, and the line it traces.")
         case .holdings:
-            return String(localized: "Tokens sized by worth. Dust below the floor is left out.")
+            return String(localized: "Tokens sized by worth, then money lent, pooled or held as a perp. Dust below the floor is left out.")
         case .comingUp:
-            return String(localized: "Unlocks, expiries and grants with a date still to come.")
-        case .positions:
-            return String(localized: "Money lent, pooled, or held as a perp.")
-        case .subscriptions:
-            return String(localized: "A charge that repeats on a card you connected, or one you add.")
-        case .risk:
-            return String(localized: "A position a price move could liquidate, and how close it stands.")
-        case .permissions:
-            return String(localized: "A token approval, a Safe module, a delegate.")
-        case .watch:
-            return nil
+            return String(localized: "Bills, unlocks and grants with a date still to come, and the subscriptions that renew.")
+        case .security:
+            return String(localized: "A Safe signature, a delegate, a token approval, or a transfer made to fool you.")
         }
     }
 
     /// Resolve the scope actually shown from the one the person last picked.
     ///
-    /// **Falls back to `.home`, never to "the first present scope."** An
-    /// unreachable branch that quietly picks `holdings` is how a room starts
-    /// opening somewhere nobody chose. A remembered scope whose content has
-    /// since gone — or one the room no longer has, like the deleted Activity
-    /// and Accounts (prd §1039) — resolves to Home rather than to an empty
-    /// page claiming to be a section. A verb is never a page.
+    /// **Falls back to `.home`, never to "the first present scope."** A
+    /// remembered scope the room no longer has — Positions, Risk, Permissions
+    /// and Subscriptions since §1107 — resolves to Home rather than to an
+    /// empty page claiming to be a section.
     static func resolve(_ wanted: WalletSection?, present: [WalletSection]) -> WalletSection {
-        guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }
+        guard let wanted, present.contains(wanted) else { return .home }
         return wanted
     }
 
-    /// Whether the strip is worth drawing at all.
-    ///
-    /// One scope is not a control, it is a label — the §83 dead-control ban, in
-    /// the room where the control's whole job is to say there is more than one
-    /// place to be. Since §611 `present()` is the full order whenever there is
-    /// a room at all, so this is true for every wallet and stays as the rule
-    /// the shell gates on rather than a case it expects to meet.
+    /// Whether the strip is worth drawing at all: one scope is a label, not a
+    /// control (§83).
     static func shows(present: [WalletSection]) -> Bool { present.count > 1 }
 }

@@ -403,32 +403,30 @@ extension FeedScreen {
                 let stream = walletStream(all)
                 walletStreamSections(stream.rows, ownMoves: stream.ownMoves, nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
-                // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** The
-                // Watch tile above is the remedy, one tap away (§1039).
+                // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Watch a
+                // wallet, at the head of the Accounts pill's list, is the
+                // remedy, one tap away (§1107).
                 if all.isEmpty {
                     walletSkeletonRowsSection
                 }
             case .comingUp:
-                // **WHAT'S AHEAD, SOONEST FIRST (prd §1041).** The next
-                // World ID grant, an unlock, an expiry — every row with a
-                // future `dueAt`, under the day it falls due.
+                // **WHAT'S AHEAD, WHAT WAITS ON YOU, WHAT REPEATS (prd §1041,
+                // §1107).** Needs you, then every row with a future `dueAt`
+                // under the day it falls due, then every subscription with
+                // Add at its foot — Subscriptions' tile, folded in.
                 walletComingUpSections(upcoming, nextEventID: nextEventID)
-                if upcoming.isEmpty {
-                    walletSkeletonRowsSection
-                }
-            case .watch:
-                // A verb is never a page — `resolve` never lands here.
-                EmptyView()
+                walletSubscriptionsSections
             case .holdings:
-                if portfolio?.isEmpty ?? true {
+                if portfolio?.isEmpty ?? true, !hasLendingCard, walletLive.uniswap.isEmpty,
+                   walletLive.hyperliquid.positions.isEmpty {
                     walletSkeletonRowsSection
                 }
+                // **TOKENS, THEN POSITIONS (prd §1107, user: "tokens then
+                // positions").** Positions' tile folded in, the loan risk with
+                // it; NFTs still read under them (prd §1048).
                 walletTokenListSection
                 walletStaleReadingsSection
-                // **NFTs FOLD INTO HOLDINGS (prd §1048, user: "nft to holdings
-                // is great").** Cards took their tile; the collections you
-                // picked read under the tokens, and "Choose collections" stays
-                // the door while none are picked.
+                walletPositionsSections
                 // An app the menu picked holds no collections (prd §1048b).
                 if !seatPicked {
                     if nftShelfEntry == nil {
@@ -436,45 +434,15 @@ extension FeedScreen {
                     }
                     walletNFTListSection
                 }
-            case .positions:
-                if walletScopeIsEmpty(.positions) { walletSkeletonRowsSection }
-                walletDeFiSection
-                walletLiquiditySection
-                walletPerpsSection
-            case .subscriptions:
-                // **WHAT REPEATS, MOST EXPENSIVE FIRST (prd §1105).** Add
-                // leads, for anything no card or bill reading can see; the
-                // box above says when each renews.
-                walletSubscriptionsSections
-            case .risk:
-                // **WHAT COULD CLOSE, THEN WHAT LOOKS WRONG (prd §947).** The
-                // Worth-a-look door and Positions' Lending and Perps cards,
-                // repeated here, are gone: the leveraged positions are the
-                // bars' legend, and the flagged transfers are rows.
-                if walletLive.warnings.isEmpty, walletRiskEntries == nil,
-                   WalletRiskScaleSource.entries(aave: walletLive.positions,
-                                                 morpho: walletLive.morpho,
-                                                 hyperliquid: walletLive.hyperliquid).isEmpty {
+            case .security:
+                // **WHO CAN ACT FOR YOU, THEN WHAT IS TRYING TO FOOL YOU (prd
+                // §947, §1107).** Signatures, Delegations, Approvals, then
+                // Address poisoning, Fake tokens, Fake transfers — the box's
+                // six cells, in the box's order.
+                if walletScopeIsEmpty(.security) {
                     walletSkeletonRowsSection
                 }
-                walletLeveragedSection
-                walletWorthALookSection
-            case .permissions:
-                // THE ACTING HALF FIRST, THEN THE GRANTS (prd §514). The
-                // drawing above ranks by reach, unbounded first, and these
-                // ARE the unbounded ones — a delegate listed under the capped
-                // token grants would contradict the card a centimetre above
-                // it. It is also the half that had no list at all.
-                if walletScopeIsEmpty(.permissions), walletLive.exposure.isEmpty,
-                   walletSignatureWarnings.isEmpty,
-                   !walletLive.acting.contains(where: { $0.modulesUnreadable }) {
-                    walletSkeletonRowsSection
-                }
-                // Signatures first (prd §947): what is waiting on you, then
-                // what acts as you, then what can spend for you.
-                walletSignaturesSection
-                walletActingSection
-                walletApprovalsSection
+                walletSecuritySections
             }
         case .tokens:
             // The Watchlist, or a catalogue category's company pack

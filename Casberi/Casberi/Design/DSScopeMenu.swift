@@ -27,10 +27,25 @@ struct DSScopeMenu: View {
     /// The pill's word while everything shows: "Accounts" (§1066), or the
     /// room's own when what it picks between are not accounts (Notes, §1099).
     var allLabel: String = String(localized: "Accounts")
+    /// **AN ACT AT THE HEAD OF THE LIST (prd §1107)**: the Wallet's "Watch a
+    /// wallet". First, never last, because the list can run long (user: "it
+    /// shouldn't go at the bottom b/c someone may have tons of things there
+    /// already"), and set apart from the accounts by the tint it acts in.
+    var action: Action? = nil
     let onPick: (String?) -> Void
     @State private var open = false
     /// A row tapped, applied once the list has closed.
     @State private var pending: String?
+    /// The act tapped, run once the list has closed — the same reason as
+    /// `pending`: what it raises must not rise from under a closing popover.
+    @State private var pendingAction = false
+
+    /// An act the list leads with: its word, its glyph, what it does.
+    struct Action {
+        let title: String
+        let symbol: String
+        let run: () -> Void
+    }
 
     var body: some View {
         Button {
@@ -50,7 +65,20 @@ struct DSScopeMenu: View {
                 .presentationCompactAdaptation(.popover)
         }
         .onChange(of: open) { _, isOpen in
-            guard !isOpen, let id = pending else { return }
+            guard !isOpen else { return }
+            if pendingAction {
+                pendingAction = false
+                // A sheet asked for while the popover is still leaving never
+                // rises (measured: the list closed, no tray). Run the act once
+                // it has gone — the app's one-presentation-at-a-time wait.
+                let act = action
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    act?.run()
+                }
+                return
+            }
+            guard let id = pending else { return }
             pending = nil
             #if DEBUG
             NSLog("[Casberi] accountsPill: picked \(id.isEmpty ? "all" : id)")
@@ -69,6 +97,7 @@ struct DSScopeMenu: View {
     private var list: some View {
         ScrollView {
             VStack(spacing: 0) {
+                if let action { actionRow(action) }
                 ForEach(ordered) { slot in row(slot) }
             }
             .padding(.vertical, DS.Space.s2)
@@ -127,6 +156,33 @@ struct DSScopeMenu: View {
         }
         .buttonStyle(RowPress())
         .accessibilityAddTraits(picked ? .isSelected : [])
+    }
+
+    /// The act's row: the row's anatomy, its glyph in the face column and its
+    /// word in the tint, then the room's spacing before the accounts start.
+    private func actionRow(_ action: Action) -> some View {
+        Button {
+            DSHaptic.selection()
+            pendingAction = true
+            open = false
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: action.symbol)
+                    .dsGlyph(.subhead, weight: .semibold)
+                    .foregroundStyle(DS.tint)
+                    .frame(width: Self.faceSize, height: Self.faceSize)
+                Text(action.title)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.tint)
+                    .lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .frame(minHeight: DS.Hit.min)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .padding(.bottom, DS.Space.s2)
     }
 
     static let listWidth: CGFloat = 260

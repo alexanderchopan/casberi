@@ -42,10 +42,14 @@ extension FeedScreen {
             mergedAccountsPill
         } else if Pinboard.isPinnedRoom(source) {
             notesKindPill
-        } else if let rail = chrome.accountRail, rail.slots.count > 1,
-                  rail.source == source || source == RoomAccounts.testnetsRoom {
-            let showing = rail.slots.first { $0.isShowing(rail.scope) } ?? rail.slots[0]
-            DSScopeMenu(slots: rail.slots, showing: showing, onPick: rail.onPick)
+        } else if let rail = chrome.accountRail, rail.slots.count > 1 || rail.action != nil,
+                  rail.source == source || source == RoomAccounts.testnetsRoom,
+                  let first = rail.slots.first {
+            // A rail with an act draws even over one account (prd §1107): the
+            // act is how the second one gets here.
+            let showing = rail.slots.first { $0.isShowing(rail.scope) } ?? first
+            DSScopeMenu(slots: rail.slots, showing: showing, action: rail.action,
+                        onPick: rail.onPick)
         }
     }
 

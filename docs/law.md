@@ -66,7 +66,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The lead has no count foot, and day headers show no counts (§914).
 - Every room opens on a lead, with no exception for a shape. A room's tiles never depend on its head (`standaloneLead`) (§911).
 - Kind tiles show when a pick would change the list (§822). Tiles keep their glyphs (§938).
-- Tiles read A–Z, with All/Home first and the verbs (New, Watch, Follow, Create · Send · Top up, Explorer) last, A–Z among themselves (§995, §1039). The Wallet's are Home · Coming up · Holdings · NFTs · Permissions · Positions · Risk · Follow (§1041). Spans of time keep their given order (`readsInTime`) (§999).
+- Tiles read A–Z, with All/Home first and the verbs (New, Watch, Follow, Create · Send · Top up, Explorer) last, A–Z among themselves (§995, §1039). The Wallet's are Home · Coming up · Holdings · Security, one row, no verb (§1107). Spans of time keep their given order (`readsInTime`) (§999).
 - Tiles never rise: when nothing is open, the lead holds its empty well over the tiles (§979, §997).
 - Every empty state draws a skeleton of what would fill it (`.room`/`.list`). A door appears only where it is the remedy (§771).
 - Every connected seat keeps a room, empty or not. The exceptions are `LiveRoomSources.landsNothing`: Apple Intelligence, ETH Validators and the four exchanges (§1036).
@@ -129,7 +129,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - A transfer with no timestamp is read off its block, and dropped if the block can't be read, never dated now (§790).
 - Holdings is a true-area treemap: the total alone, grey tiles showing mark and share, the tail as Other, blue when pressed (§939). A tile's mark is 0.3 of its shorter side, 16–56pt (§957).
 - The Wallet has no Accounts or Activity tile: the menu under the tiles picks the account, and Home's list is only what happened, one row per move in time, with no in/out blocks (§942, §1039). What's ahead is its own tile, Coming up, soonest first (§1041). The connections reading is deleted with its model (§1041).
-- The Wallet's tiles are Home · Cards · Coming up · Holdings · Permissions · Positions · Risk · Follow. Cards is every card's spends (`WalletCards`), counted per currency and never summed; NFTs read as rows under Holdings, and their drawing is deleted (§1048a).
+- The Wallet's tiles are Home · Coming up · Holdings · Security (§1107). Coming up carries the subscriptions: their renewals on its calendar, their monthly cost on its line, and a Subscriptions group last in its list, with Add at its foot. Holdings is Tokens (each worth 5% of the whole, five at most, the rest one "N more tokens" row opening every token), then Positions (lending closest to liquidation first, a borrow saying how far it can fall), then NFTs (§1048a, §1107). Security's box is a checkup: what needs you, else what to review, else "All clear", over six counts (Signatures · Delegations · Approvals over Address poisoning · Fake tokens · Fake transfers), each a door to its section; amber only for what waits on you, has no limit, or is trying to fool you (§1107). Watch a wallet is the Accounts pill's first row, never a tile (§1107).
 - The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b). An app that had a room head draws it in the box when picked (Safe's queue and co-signers, Privacy Pools' errands, a card's spending), inside the box's own well (§1048d).
 - The rooms tray is the doors row and one entry per category (glyph and word, primary ink), which opens its room. A merged category draws no app marks; an unmerged one keeps its marks, each landing in that app's room, until it merges, keyed on `RoomAccounts.mergedRooms` (§1050e, §1050f, §1048c).
 - A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Coming up leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under "Now" (§1048c). Rocket Money's next charges (a future record date) and Peer's settling sales (due at the escrow's 6.5h deadline, removed when the outcome lands) are dated items there (§1048f).
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1241 of 1300 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1242 of 1301 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1369,8 +1369,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
-- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084, §1090, §1105)
-- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078, §1090, §1105)
+- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084, §1090, §1105, §1107)
+- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078, §1090, §1105, §1107)
 - §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
 - §1043 — `enrichedText` is the sheet's body and never a row's line; provider-authored display copy stays on `summary` and `pos…
 - §1044 — On the phone, a room draws no capsule beside the face: its venues are the tray and a swipe, and its "whose" control s…
@@ -1437,7 +1437,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1086 — Social gets its tiles: All · To you · Follow; what is to you leads All
 - §1087 — Day's box is Box B: the next thing over today's shape
 - §1089 — Frames says what you did, not how it was built: rows titled by who, one word for row and sheet, your own accounts in…
-- §1090 — The Wallet, Markets' way: Follow in the room, Holdings as the day's heat map, one line per move, Needs you leads Comi… (amended by §1090a)
+- §1090 — The Wallet, Markets' way: Follow in the room, Holdings as the day's heat map, one line per move, Needs you leads Comi… (amended by §1090a, §1107)
 - §1090a — The wallet makeover's review fixes
 - §1091 — Logos: name an account, and a named one keeps its address in sight (a Logos user, relayed 2026-10-03: "requesting giv…
 - §1092 — Videos play in the sheet: a YouTube link in YouTube's privacy-enhanced player, a Telegram channel's video in Apple's…
@@ -1458,10 +1458,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1103b — Under an app header a picture rides the right as a thumbnail, and the item's words start under the app's name
 - §1103c — Under an app header, the person a thing is by wears a small face before its title
 - §1104 — An old install is told a newer one is out, and every older TestFlight build expires on ship
-- §1105 — The Wallet's Cards tile becomes Subscriptions, Coming up and Subscriptions share one calendar box, and Follow is Watch (amended by §1106b)
+- §1105 — The Wallet's Cards tile becomes Subscriptions, Coming up and Subscriptions share one calendar box, and Follow is Watch (amended by §1106b, §1107)
 - §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a)
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
+- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -22,7 +22,6 @@ cd "$(dirname "$0")/.."
 
 SRC="Casberi/Casberi/Model/WalletPermissions.swift"
 MAP="Casberi/Casberi/Model/WalletPermissionsSource.swift"
-CARD="Casberi/Casberi/Screens/WalletPermissionsCard.swift"
 FIGURE="Casberi/Casberi/Screens/RoomPermissionsFigure.swift"
 # FeedScreen is split across files (prd §718). Every check reads the room as ONE
 # text, so a guard can neither fail nor pass because its code moved next door.
@@ -310,8 +309,12 @@ mutate "a grant is offered to the acting list as well as to the approvals list" 
 # ── drift guards: the wiring the compiled arithmetic cannot prove ────────────
 strip() { sed -E 's://.*::' "$1" | sed -E '/^[[:space:]]*\/\/\//d'; }
 
-grep -q 'case .permissions: walletPermissionsSection' "$FEED" \
-  || fail "the Permissions scope no longer leads with this card"
+# **PERMISSIONS IS SECURITY'S UPPER HALF SINCE prd §1107**: its lists stand
+# in Security, and the ringed-faces card that led them is deleted (user: "i
+# HATE the image we have there"); the checkup's counts lead instead.
+grep -q 'walletActingSection' "$FEED" && grep -q 'walletApprovalsSection' "$FEED" \
+  && grep -q 'case .security:' "$FEED" && grep -q 'walletSecuritySections' "$FEED" \
+  || fail "Security no longer lists what acts as you and what can spend for you (prd §1107)"
 
 # The scope's EMPTY flag must be the section's OWN gate, computed from the same
 # source with the same arguments — §483's rule, whose failure was a chip that
@@ -336,12 +339,12 @@ grep -q 'case .permissions: walletPermissionsSection' "$FEED" \
 FEED_BARE="$(mktemp -t wallet-perm-feed)"
 strip "$FEED" > "$FEED_BARE"
 
-grep -q 'case .permissions: return WalletPermissionsSource.holders(exposure: walletLive.exposure,' "$FEED_BARE" \
-  || fail "the Permissions empty flag has drifted from the section's render gate"
-grep -q 'acting: walletLive.acting).isEmpty' "$FEED_BARE" \
-  || fail "the Permissions empty flag no longer reads the section's own acting list"
-grep -q 'if !holders.isEmpty {' "$FEED_BARE" \
-  || fail "the section's render gate is no longer !holders.isEmpty"
+# Since prd §1107 the gate is Security's: its emptiness is the checkup's own
+# counts, and the delegations count is the acting list's own split.
+grep -q 'case .security:        return walletSecurityCounts.isEmpty' "$FEED_BARE" \
+  || fail "Security's empty flag has drifted from the checkup's counts"
+grep -q 'delegations: WalletPermissions.actingHolders(holders).count' "$FEED_BARE" \
+  || fail "the checkup's delegations no longer count the acting list's own holders"
 
 # The acting-parties read must stay IN the live state, not on the card: a chain
 # read hung off a row's `.task` fires on every scroll that remounts it.
@@ -350,9 +353,6 @@ grep -q 'async let actingRead = WalletActingParties.read(addresses: resolved)' "
 grep -q 'acting: await actingRead' "$STATE" \
   || fail "the acting-parties read is no longer published into WalletLiveState"
 
-# Bare on the page, like every other scope's lead (§483).
-strip "$CARD" | grep -q 'dsWidgetSurface' \
-  && fail "the Permissions lead is on a card again (§483: we don't do cards)"
 
 # An operator grant must never carry a figure — §292 prices no NFT.
 grep -q 'usd: grant.forAll ? nil : grant.usd' "$MAP" \
@@ -388,12 +388,16 @@ grep -q 'walletActingSection' "$FEED" \
 # match is no longer the room's rows. Take the block that draws the acting list.
 # The empty scope's skeleton gate (prd §769/§771) sits between the case and the
 # lists, so the window is wide enough to reach past it.
-order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 8 '^            case .permissions:$' \
+# Since prd §1107 the lists stand in Security's `walletSecuritySections`:
+# signatures, then the acting list, then the approvals.
+order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 4 'var walletSecuritySections: some View {' \
         | grep -B 1 -A 1 'walletActingSection' | head -3)
+print -r -- "$order" | sed -n '1p' | grep -q 'walletSignaturesSection' \
+  || fail "signatures no longer lead Security's rows (prd §947, §1107)"
 print -r -- "$order" | sed -n '2p' | grep -q 'walletActingSection' \
-  || fail "the acting list no longer leads the Permissions scope's rows"
+  || fail "the acting list no longer follows the signatures in Security"
 print -r -- "$order" | sed -n '3p' | grep -q 'walletApprovalsSection' \
-  || fail "the approvals list no longer follows it in the Permissions scope"
+  || fail "the approvals list no longer follows it in Security"
 
 # A LIST, NOT A CONTROL (§112/§293): nothing here signs, revokes or opens.
 # A delegate is undone from the wallet app that set it, so a chevron here
@@ -446,22 +450,11 @@ strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 3 'first(where: { $0.isLive &&
 # Since prd §924 the figure CONTAINS its keys (each a button VoiceOver can
 # reach, labelled with its holder) and still speaks the ordered sentence as
 # the container's own label — `.contain` beside `spoken`, never one alone.
-{ grep -q 'accessibilityElement(children: .combine)' "$CARD" ||
-  grep -q 'accessibilityElement(children: .combine)' "$FIGURE" ||
+{ grep -q 'accessibilityElement(children: .combine)' "$FIGURE" ||
   { grep -q 'accessibilityElement(children: .contain)' "$FIGURE" &&
     grep -q 'RoomPermissions.spoken(kinds, lead: lead)' "$FIGURE"; }; } \
   || fail "the card stopped speaking as one ordered sentence"
 
-# THE SLOT IS COUNTS, NEVER NAMES (prd §546, user: "we can't just repeat the
-# list", then "do the counts"). The rung rows used to carry a name subline,
-# which on a sparse wallet made the slot the acting list restated word for
-# word — the drawing and the list under it saying the same two facts twice.
-# The names' one home is the two lists below; the slot's reading is the
-# AGGREGATE, which a per-actor list structurally does not have. Read from a
-# COMMENT-STRIPPED copy: the card documents this rule by naming what it must
-# not do.
-strip "$CARD" | grep -qE '\.names|rung\.names' \
-  && fail "the slot names a holder again — that is the list restated (§546)"
 # ...and the numerals must stay at figure size: the count IS the drawing now,
 # so demoting it back to a row-sized stat is the old list wearing a new doc.
 # §692 both moved this onto `RoomPermissionsFigure` AND shrank the token to
@@ -474,14 +467,12 @@ strip "$CARD" | grep -qE '\.names|rung\.names' \
 # the number (`DSFigureReading`) — a third spelling of "drawn, not said".
 # Since prd §944 (Wallet) and §951 (the devnets) the crown is the number over
 # one MARK PER HOLDER — the fourth spelling, and both crowns must carry it.
-{ grep -qE 'dsText\(\.price(40|17)\)' "$CARD" ||
-  grep -qE 'dsText\(\.price(40|17)\)' "$FIGURE" ||
+{ grep -qE 'dsText\(\.price(40|17)\)' "$FIGURE" ||
   { grep -q 'systemName: "key.fill"' "$FIGURE" &&
     grep -q 'ForEach(0..<shown' "$FIGURE"; } ||
   { grep -q 'DSBarList(bars:' "$FIGURE" &&
     grep -q 'share: Double(kind.count)' "$FIGURE"; } ||
-  { grep -q 'DSFigureReading(number:' "$CARD" && grep -q 'AssetMark(name: holder.name' "$CARD" &&
-    grep -q 'DSFigureReading(number:' "$FIGURE" && grep -q 'WalletMarkView(mark: holder.mark' "$FIGURE"; }; } \
-  || fail "the slot's counts are no longer drawn as figures (§546, keys since §924, bars since §936, holders since §944/§951)"
+  { grep -q 'DSFigureReading(number:' "$FIGURE" && grep -q 'WalletMarkView(mark: holder.mark' "$FIGURE"; }; } \
+  || fail "the devnets' slot counts are no longer drawn as figures (§546, keys since §924, bars since §936, holders since §951; the Wallet's card went with §1107)"
 
-print "  ok   18 mutations, 25 drift guards"
+print "  ok   18 mutations, 22 drift guards"

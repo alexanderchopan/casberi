@@ -1,10 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// THE WALLET'S SUBSCRIPTIONS TILE (prd §1105): the box says what they cost
-/// a month and when each renews over the next five weeks; the list is every
-/// one, most expensive first, under an Add row for anything no card, account
-/// or bill reading can see.
+/// THE WALLET'S SUBSCRIPTIONS (prd §1105), a group of Coming up since §1107:
+/// each renewal stands on Coming up's calendar and their monthly cost rides
+/// its line; the list ends with every one, most expensive first, then an Add
+/// row for anything no card, account or bill reading can see.
 extension FeedScreen {
 
     /// The seats a scoped room reads subscriptions from: every one on All
@@ -21,30 +21,10 @@ extension FeedScreen {
         return "\(chrome.refreshPulse):\(SubscriptionStore.shared.entries.count):\(stamp)"
     }
 
-    @ViewBuilder
-    var walletSubscriptionsFigure: some View {
-        let reading = SubscriptionsReading.shared
-        let items = reading.items(in: walletSubscriptionSources)
-        Group {
-            if !items.isEmpty {
-                WalletSubscriptionsFigure(items: items, total: reading.total(of: items))
-                    .modifier(rowEntrance(2))
-            } else if reading.read {
-                WalletScopeEmptyFigure(section: .subscriptions)
-            } else {
-                Color.clear
-            }
-        }
-        .task(id: walletSubscriptionsKey) {
-            await reading.refresh(modelContext)
-            subscriptionsProbe()
-        }
-    }
-
     /// `-subscriptionsSheet add|<name>` — raise the add tray, or one
     /// subscription's sheet by name, once the tile has read (DEBUG; NSLogs
     /// `subscriptionsSheet:`), because a `simctl`-launched capture has no tap.
-    private func subscriptionsProbe() {
+    func subscriptionsProbe() {
         #if DEBUG
         guard !Self.subscriptionsProbed,
               let raw = UserDefaults.standard.string(forKey: "subscriptionsSheet"), !raw.isEmpty else { return }
@@ -60,17 +40,24 @@ extension FeedScreen {
         #endif
     }
 
+    /// **SUBSCRIPTIONS, THE LAST GROUP OF COMING UP (prd §1107).** Every
+    /// one, most expensive first, under the group's name in the day headers'
+    /// ramp (primary, §740: only a day wears the brand hue), then Add for
+    /// anything no card, account or bill reading can see. Add stands even
+    /// with none, because it is how the first one gets here.
     @ViewBuilder
     var walletSubscriptionsSections: some View {
         let items = SubscriptionsReading.shared.items(in: walletSubscriptionSources)
         Section {
-            DSDoorRow(icon: "plus", label: "Add a subscription") {
-                feedSheet = .subscriptionAdd
-            }
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
-                                      bottom: 0, trailing: DSRoomChassis.rowInset))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+            Text(Self.subscriptionsGroup)
+                .dsText(.heading20)
+                .foregroundStyle(DS.textPrimary)
+                .padding(.leading, DS.Space.s4)
+                .padding(.top, DS.Space.s6)
+                .padding(.bottom, DS.Space.s1)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             ForEach(items) { item in
                 Button {
                     feedSheet = .subscription(item.id)
@@ -85,48 +72,17 @@ extension FeedScreen {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
-        }
-        if items.isEmpty, SubscriptionsReading.shared.read {
-            walletSkeletonRowsSection
+            DSDoorRow(icon: "plus", label: "Add a subscription") {
+                feedSheet = .subscriptionAdd
+            }
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                      bottom: 0, trailing: DSRoomChassis.rowInset))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
     }
-}
 
-/// The box: what the subscriptions cost a month, then the five weeks.
-struct WalletSubscriptionsFigure: View {
-    let items: [Subscriptions.Item]
-    let total: Subscriptions.Total
-
-    var body: some View {
-        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text("\(mask ?? CardSpendRoom.money(total.monthly, code: "USD")) a month")
-                .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Text(line(mask: mask))
-                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-            Spacer(minLength: DS.Space.s1)
-            WalletCalendar(marks: items.compactMap { item in
-                item.next.map { .init(id: item.id, day: $0, face: item.name, attention: item.was != nil) }
-            })
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
-    }
-
-    private func line(mask: String?) -> String {
-        var parts = [items.count == 1 ? String(localized: "1 subscription")
-                                      : String(localized: "\(items.count) subscriptions")]
-        if total.counted > 0 {
-            parts.append(String(localized: "\(mask ?? CardSpendRoom.money(total.yearly, code: "USD")) a year"))
-        }
-        if !total.uncounted.isEmpty {
-            parts.append(String(localized: "not counted: \(ListFormatter.localizedString(byJoining: total.uncounted))"))
-        }
-        return parts.joined(separator: " · ")
-    }
+    static var subscriptionsGroup: String { String(localized: "Subscriptions") }
 }
 
 /// One subscription in the list: its face, its name, what it costs a month,

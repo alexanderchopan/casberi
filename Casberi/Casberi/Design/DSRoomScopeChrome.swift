@@ -50,6 +50,8 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     let accounts: [DSAccountSlot]
     let scope: String?
     let onPickAccount: (String?) -> Void
+    /// An act the Accounts pill's list leads with (prd §1107).
+    var accountAction: DSScopeMenu.Action? = nil
 
     @ViewBuilder let crown: (DSAccountSlot) -> Crown
     /// The section's own drawing, off Home. Drawn HERE, in the box the crown
@@ -76,7 +78,8 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
 
     private func publish() {
         let rail = ShellChrome.AccountRail(source: source, slots: accounts,
-                                           scope: scope, onPick: onPickAccount)
+                                           scope: scope, onPick: onPickAccount,
+                                           action: accountAction)
         if chrome.accountRail != rail { chrome.accountRail = rail }
     }
 

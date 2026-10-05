@@ -115,19 +115,15 @@ enum WalletRiskScale {
                      headroom: headroom, atRisk: proximity < riskProximity)
     }
 
-    /// What a lending position can bear, in words (prd §1090). `market` is
-    /// Morpho's "collateral / loan"; anything else (Aave's basket) speaks of
-    /// collateral and debt. Nil for a perp (it already states its distance)
-    /// and for a position already at the edge.
-    static func fallLine(_ entry: Entry) -> String? {
+    /// What a lending position can bear, short enough to ride a Positions row
+    /// (prd §1090's sentence, cut down by §1107): "can fall 24%", the price
+    /// move against its debt that its health factor allows, rounded down. Nil
+    /// for a perp, which states its own distance, and at the edge, where there
+    /// is nothing left to fall.
+    static func shortFall(_ entry: Entry) -> String? {
         guard !entry.id.hasPrefix("hl:"), entry.headroom > 0 else { return nil }
         let pct = max(1, Int((entry.headroom * 100).rounded(.down)))
-        let parts = entry.label.components(separatedBy: " · ")
-        let pair = parts.count > 1 ? parts[1].components(separatedBy: " / ") : []
-        if pair.count == 2, !pair[0].isEmpty, !pair[1].isEmpty {
-            return String(localized: "\(pair[0]) can fall \(pct)% against \(pair[1])")
-        }
-        return String(localized: "Collateral can fall \(pct)% against your debt")
+        return String(localized: "can fall \(pct)%")
     }
 
     /// The strip itself — worst first — or nil when there is nothing to

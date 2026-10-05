@@ -35,7 +35,7 @@ grep -q 'WalletFollow.resolve(' "$SHEET" \
 grep -q 'WalletFollow.resolve(' Casberi/Casberi/Screens/WalletWatchField.swift \
   || { echo "✗ the account page's field no longer resolves through WalletFollow"; exit 1; }
 grep -q 'feedSheet = .walletFollow' "$ROOM" \
-  || { echo "✗ the Wallet's Follow tile no longer raises the tray in the room"; exit 1; }
+  || { echo "✗ Watch a wallet no longer raises the tray in the room"; exit 1; }
 grep -q 'percent_1d' "$ZERION" \
   || { echo "✗ Zerion's day change is no longer read"; exit 1; }
 grep -q 'HoldingMoves.note(' "$INGEST" \
@@ -44,8 +44,8 @@ grep -q 'holdingsDayMoves' "$TREEMAP" \
   || { echo "✗ the treemap no longer reads the day's moves"; exit 1; }
 grep -q 'environment(\\.holdingsDayMoves' "$ROOM" \
   || { echo "✗ the Holdings box no longer hands the treemap its moves"; exit 1; }
-grep -q 'WalletRiskScale.fallLine(' "$ROOM" \
-  || { echo "✗ Risk's rows no longer say what a borrow can bear"; exit 1; }
+grep -q 'WalletRiskScale.shortFall' "$ROOM" \
+  || { echo "✗ a borrow's Positions row no longer says what it can bear (prd §1107)"; exit 1; }
 ! awk '/func walletSetHoldingAlert/,/^    }$/' "$ROOM" | grep -q 'watchPriceUsd' \
   || { echo "✗ a holding's alert reads watchPriceUsd — the price the day you watched, not today's"; exit 1; }
 grep -q 'PriceAlert.choices(ref: "", name: "", price: 1)' "$ROOM" \
@@ -157,15 +157,17 @@ check(t.up == 1 && t.down == 1, "a move that rounds to zero is neither up nor do
 // ── What a borrow can bear ───────────────────────────────────────────
 typealias R = WalletRiskScale
 let morpho = R.lendingEntry(id: "morpho:x", label: "Morpho · wstETH / WETH", hf: 1.32, riskFloor: 1.5)!
-check(R.fallLine(morpho) == "wstETH can fall 24% against WETH",
-      "a Morpho market speaks of its pair, rounded down: \(R.fallLine(morpho) ?? "nil")")
+// Positions' rows carry it short since prd §1107: one line has room for the
+// distance, so the pair's names are left to the row's title.
+check(R.shortFall(morpho) == "can fall 24%",
+      "a borrow says how far it can fall, rounded down: \(R.shortFall(morpho) ?? "nil")")
 let aave = R.lendingEntry(id: "aave:x", label: "Aave", hf: 2.4, riskFloor: 1.5)!
-check(R.fallLine(aave) == "Collateral can fall 58% against your debt",
-      "a basket speaks of collateral and debt: \(R.fallLine(aave) ?? "nil")")
+check(R.shortFall(aave) == "can fall 58%",
+      "a basket says the same, from its health: \(R.shortFall(aave) ?? "nil")")
 let perp = R.perpEntry(id: "hl:a:ETH", label: "ETH long", proximity: 0.34, riskProximity: 0.15)!
-check(R.fallLine(perp) == nil, "a perp states its own distance")
+check(R.shortFall(perp) == nil, "a perp states its own distance")
 let edge = R.lendingEntry(id: "aave:y", label: "Aave", hf: 0.9, riskFloor: 1.5)!
-check(R.fallLine(edge) == nil, "a position at the edge can bear nothing to state")
+check(R.shortFall(edge) == nil, "a position at the edge can bear nothing to state")
 
 if failures > 0 { print("\(failures) failure(s)"); exit(1) }
 print("✓ wallet makeover self-test")

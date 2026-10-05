@@ -537,13 +537,14 @@ struct FeedScreen: View {
     /// read off `SafeBridge.pendingSnapshot()` in `loadWalletLive`, never in a
     /// body (§628), and read by Coming up.
     @State var walletSafePending: Set<String> = []
-    /// A card the risk strip asked to be walked to (prd §417), consumed and
+    /// A section the Security checkup asked to be walked to (prd §1107; the
+    /// risk strip's dots, §417, until §1107 retired the strip), consumed and
     /// cleared by `listCore`.
     ///
     /// Routed through state rather than by threading the `ScrollViewProxy` down
-    /// into `walletRiskSection`: the proxy lives at `feedList` and the strip is
-    /// five call layers below it, so passing it would mean a signature change
-    /// on `shapedSections` and every room's builder — for one tap in one room.
+    /// into the box: the proxy lives at `feedList` and the figure is five call
+    /// layers below it, so passing it would mean a signature change on
+    /// `shapedSections` and every room's builder — for one tap in one room.
     @State var cardScrollTarget: String?
     /// The combined portfolio behind the treemap (2026-07-21, prd §155) — one
     /// derivation the balance headline, the concentration line, and the

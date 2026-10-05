@@ -1,15 +1,18 @@
 import SwiftUI
 
-/// Coming up's box (prd §1078, §1105): what the next thirty days' bills add
-/// up to, how many things wait on you, then the five weeks ahead as a
-/// calendar, each thing on its day. `WalletDue` holds the arithmetic and the
-/// words; `WalletCalendar` is the drawing the Subscriptions box shares, so the
-/// two tiles' boxes read the same way.
+/// Coming up's box (prd §1078, §1105, §1107): what the next thirty days'
+/// bills add up to, how many things wait on you, what the subscriptions cost
+/// a month, then the five weeks ahead as a calendar, each thing and each
+/// renewal on its day. `WalletDue` holds the arithmetic and the words.
 struct WalletDueFigure: View {
     let bills: [WalletDue.Bill]
     let waiting: Int
     /// Every live row Coming up holds, soonest first.
     let upcoming: [Thing]
+    /// Every subscription in scope (prd §1107): each renewal is a face on
+    /// its day, and what they cost a month rides the line.
+    var subscriptions: [Subscriptions.Item] = []
+    var monthly: Subscriptions.Total? = nil
 
     @State private var rates: [String: Double] = [:]
 
@@ -28,10 +31,18 @@ struct WalletDueFigure: View {
                 Text(next.title)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
+            } else if let monthly {
+                // Only subscriptions ahead: what they cost is the statement.
+                Text("\(mask ?? CardSpendRoom.money(monthly.monthly, code: "USD")) a month")
+                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             line(reading: reading, next: next)
             Spacer(minLength: DS.Space.s1)
-            WalletCalendar(marks: Self.marks(upcoming))
+            WalletCalendar(marks: Self.marks(upcoming) + subscriptions.compactMap { item in
+                item.next.map { .init(id: item.id, day: $0, face: item.name, attention: item.was != nil) }
+            })
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .combine)
@@ -64,6 +75,14 @@ struct WalletDueFigure: View {
         // the box has one line for it, so it rides this one.
         if let uncounted = WalletDue.uncountedLine(reading.uncounted) {
             text = text + Text(verbatim: " · \(uncounted)").foregroundStyle(DS.textTertiary)
+        }
+        // What the subscriptions cost a month (prd §1107), unless the
+        // statement above already says it.
+        if let monthly, monthly.counted > 0, reading.hasFigure || next != nil {
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            text = text + Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+                + Text("\(mask ?? CardSpendRoom.money(monthly.monthly, code: "USD")) a month")
+                    .foregroundStyle(DS.textTertiary)
         }
         return text.dsText(.subhead12).lineLimit(1)
     }

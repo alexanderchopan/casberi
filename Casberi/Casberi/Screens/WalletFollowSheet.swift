@@ -78,7 +78,8 @@ struct WalletFollowSheet: View {
         if near.isEmpty {
             footnote(Text("Paste an address — 0x, Solana or Bitcoin — or type a name like vitalik.eth. Who you move money with shows here."))
         } else {
-            DSTrayHead(String(localized: "Near your money"))
+            // No heading over them (user: "get rid of 'near your money' that
+            // is so weird"): each row's line already says why it is here.
             ForEach(near, id: \.address) { s in
                 row(address: s.address, name: s.name, line: line(for: s))
             }

@@ -47,7 +47,6 @@ enum DSSkeleton {
             case ScopeTileGlyph.activity:    self = .bars
             case ScopeTileGlyph.holdings:    self = .treemap
             case ScopeTileGlyph.accounts:    self = .graph
-            case ScopeTileGlyph.positions:   self = .strip
             case ScopeTileGlyph.permissions: self = .holders
             case ScopeTileGlyph.frames:      self = .steps
             default:                         self = .ranked

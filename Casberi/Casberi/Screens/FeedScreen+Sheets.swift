@@ -31,8 +31,6 @@ extension FeedScreen {
         /// re-reads mid-presentation would renumber itself while being looked
         /// at. Value-typed all the way down, so no `Thing` and no liveness
         /// question here.
-        case deposits(WalletComposition)
-        case locks(WalletComposition)
         /// A web page in the in-app Safari sheet (prd §653) — a faucet page
         /// raised from a room's Top up, which sits inside this List's rows and
         /// cannot present its own sheet.
@@ -88,6 +86,7 @@ extension FeedScreen {
         case socialFollow
         /// The Wallet's Follow (prd §1090), the Watch tile since prd §1105.
         case walletFollow
+        case walletTokens
         /// One subscription, by its key (prd §1105).
         case subscription(String)
         /// Add a subscription by hand (prd §1105).
@@ -123,11 +122,10 @@ extension FeedScreen {
             case .notesSearch: "notesSearch"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
+            case .walletTokens: "walletTokens"
             case .subscription(let id): "subscription:\(id)"
             case .subscriptionAdd: "subscriptionAdd"
             case .company(let c): "company:\(c.name)"
-            case .deposits: "deposits"
-            case .locks: "locks"
             case .web(let url): "web:\(url.absoluteString)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
@@ -276,6 +274,19 @@ extension FeedScreen {
             SocialFollowSheet()
         case .walletFollow:
             WalletFollowSheet()
+        case .walletTokens:
+            // Every token Holdings folded (prd §1107). A pick closes the tray
+            // first, then opens the token: one sheet at a time (§872).
+            if let portfolio = portfolioShown {
+                WalletTokensSheet(positions: portfolio.positions, total: portfolio.totalUSD,
+                                  moves: walletHoldingMoves) { position in
+                    feedSheet = nil
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(450))
+                        walletOpenToken(position)
+                    }
+                }
+            }
         case .subscription(let id):
             SubscriptionSheet(id: id)
         case .subscriptionAdd:
@@ -330,10 +341,6 @@ extension FeedScreen {
                 // and Positions' now, so it enumerates those groups itself.
                 onWalkToApprovals: nil,
                 onWalkToLending: nil)
-        case .deposits(let composition):
-            WalletDepositsTray(composition: composition)
-        case .locks(let composition):
-            WalletLocksTray(composition: composition)
         case .framesMove(let move, let owner):
             FramesMoveSheet(move: move, owner: owner) { index in
                 // Frame-to-frame through the ONE sheet: replacing the route

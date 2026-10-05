@@ -372,9 +372,13 @@ final class ShellChrome {
         /// rail carries the room's handler rather than the shell learning five
         /// key paths.
         let onPick: (String?) -> Void
+        /// An act the pill's list leads with (prd §1107: the Wallet's "Watch
+        /// a wallet"). Compared by its word: the closure has no identity.
+        var action: DSScopeMenu.Action? = nil
 
         static func == (a: AccountRail, b: AccountRail) -> Bool {
             a.source == b.source && a.slots == b.slots && a.scope == b.scope
+                && a.action?.title == b.action?.title
         }
     }
 
