@@ -54,14 +54,15 @@ check(Identity.key(.github, "Torvalds") == "gh:torvalds", "a GitHub login folds 
 check(Identity.key(.email, "Jesse@Example.com") == "mail:jesse@example.com", "an email folds case")
 check(Identity.key(.contact, "contact:ABC-123") == "contact:abc-123", "a contact key keeps its prefix once")
 check(Identity.parse(key: "bsky:jesse")?.kind == .bluesky, "a key parses back to its kind")
-check(Identity.parse(key: "fc:jesse") == nil, "a retired Farcaster key parses to nobody, never a World App name (prd §1109)")
+check(Identity.parse(key: "fc:jesse") == nil, "a retired Farcaster key parses to nobody, never a World App name (prd §1110)")
 check(Identity.parse(key: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")?.kind == .wallet, "a bare address parses as a wallet")
 check(Identity.parse(key: "jesse.base.eth")?.kind == .basename, "a basename parses by shape")
 check(Identity.parse(key: "nonsense") == nil || Identity.parse(key: "nonsense")?.kind == .worldApp,
       "a bare word is at most a World App name")
+check(Identity.parse(key: "nostr:a1b2c3") == nil, "a deleted kind's key parses as nothing, never a World App name")
 check(Identity.make(.wallet, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045").label == "…6045", "a wallet's label is its tail")
 check(Identity.make(.bluesky, "jesse").label == "@jesse", "a handle's label wears the @")
-check(Identity.Kind.classify(primaryName: "@vitalik") == nil, "classify: an @ name is a retired Farcaster handle and names nobody (prd §1109)")
+check(Identity.Kind.classify(primaryName: "@vitalik") == nil, "classify: an @ name is a retired Farcaster handle and names nobody (prd §1110)")
 check(Identity.Kind.classify(primaryName: "jesse.base.eth") == .basename, "classify: .base.eth")
 check(Identity.Kind.classify(primaryName: "x.linea.eth") == .linea, "classify: .linea.eth")
 check(Identity.Kind.classify(primaryName: "vitalik.lens") == .lens, "classify: .lens")
@@ -202,7 +203,7 @@ func keys(source: String, kind: String = "link", ref: String? = nil, handle: Str
 check(keys(source: "Wallet", counterparty: A.uppercased().replacingOccurrences(of: "0X", with: "0x")) == [A],
       "a transfer resolves its counterparty, case folded")
 check(keys(source: "Bluesky", handle: "jesse") == ["bsky:jesse"], "a post resolves its author")
-check(keys(source: "Farcaster", handle: "jesse") == [], "a retired Farcaster row resolves nobody (prd §1109)")
+check(keys(source: "Farcaster", handle: "jesse") == [], "a retired Farcaster row resolves nobody (prd §1110)")
 check(keys(source: "GitHub", handle: "torvalds") == ["gh:torvalds"], "a GitHub event resolves its actor")
 check(keys(source: "GitHub", handle: "tokio-rs", notif: true) == [], "a GitHub NOTIFICATION resolves nobody — its handle is the repo owner")
 check(keys(source: "Gmail", handle: "jesse@example.com") == ["mail:jesse@example.com"], "a mail row resolves its sender address")
@@ -273,7 +274,7 @@ check(firstPick != nil && firstPick!.suggests, "the list is offered one live sug
 sl = sl.declining(firstPick!.a, firstPick!.b)
 check(ContactSuggest.next(in: sl, known: { _ in true })?.pairKey != firstPick!.pairKey, "a declined one is never offered again")
 check(ContactSuggest.next(in: sl, known: { _ in false }) == nil, "a suggestion whose ends are not in the index is not offered")
-check(ContactSuggest.suggested(cards: [], seeds: [ContactIndex.Seed(Identity.make(.nostr, "a"), name: "Al"),
+check(ContactSuggest.suggested(cards: [], seeds: [ContactIndex.Seed(Identity.make(.github, "a"), name: "Al"),
                                                   ContactIndex.Seed(Identity.make(.bluesky, "b"), name: "Al")]).isEmpty,
       "a two-letter name is too short to suggest on")
 
@@ -283,7 +284,7 @@ check(bioIDs.map(\.key) == ["gh:jessepollak", "bsky:jesse.xyz", "bsky:uma.bsky.s
       "a bio's LINKS name handles, case folded and trailing punctuation dropped: \(bioIDs.map(\.key))")
 check(!bioIDs.contains { $0.key.hasSuffix("plain") }, "a bare @handle in a bio names nothing — it could be any network")
 check(ContactSuggest.handles(inBio: "farcaster.xyz/jesse warpcast.com/jesse").isEmpty,
-      "a Farcaster link names nobody since the seat was retired (prd §1109)")
+      "a Farcaster link names nobody since the seat was retired (prd §1110)")
 let walletJ = ContactIndex.Seed(Identity.make(.wallet, A), name: "Jesse", typed: true)
 let ghPollak = ContactIndex.Seed(Identity.make(.github, "jessepollak"), name: "Jesse Pollak")
 let claimedLinks = ContactSuggest.claimed(
@@ -447,7 +448,7 @@ mutate "a name match becomes a verified edge" "$SUGGEST" \
   '            out.append(ContactLink(a, b, tier: .verified, source: source, at: at))'
 mutate "a card line for a service with no roster becomes an edge" "$SUGGEST" \
   '        default:                      return nil' \
-  '        default:                      return Identity.make(.nostr, handle)'
+  '        default:                      return Identity.make(.bluesky, handle)'
 mutate "a declined suggestion is offered again" "$SUGGEST" \
   '            .filter { $0.suggests && ((known($0.a) && known($0.b))' \
   '            .filter { $0.tier == .suggested && ((known($0.a) && known($0.b))'

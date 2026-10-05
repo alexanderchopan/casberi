@@ -192,7 +192,7 @@ grep -q 'WorldID.verifiedUntilSeconds(from: returned) ?? WorldID.unreadableSecon
 
 # 2. ABSENCE DRAWS NOTHING. The card switches all four cases and the two
 #    silent ones must stay silent. (The person room's line went with the
-#    Farcaster seat's verified addresses, prd §1109.)
+#    Farcaster seat's verified addresses, prd §1110.)
 grep -q 'case .absent, .unknown:' "$TMP/card.stripped" \
   || { echo "✗ the address card no longer answers .absent/.unknown together — absence must draw nothing"; exit 1; }
 grep -A 1 'case .absent, .unknown:' "$TMP/card.stripped" | grep -q 'EmptyView()' \
@@ -209,10 +209,10 @@ fi
 callers=$(grep -rn "WorldIDSource.shared" --include="*.swift" Casberi/Casberi | grep -v "Model/WorldIDSource.swift" | wc -l | tr -d ' ')
 # Eight since prd §918: the Addresses card reads the wallets on its OWN open
 # (`.task`, bounded to three), which is exactly the rule — a card opening
-# buys the read. Six since §1109 took the person room's two. A seventh caller
+# buys the read. Six since §1110 took the person room's two. A seventh caller
 # is a row scrolling past until proven otherwise.
 [[ "$callers" -le 6 ]] \
-  || { echo "✗ $callers callers of WorldIDSource — a read is bought by opening a card or a room, never by a row scrolling past (AddressNames' rule; 6 since §1109)"; exit 1; }
+  || { echo "✗ $callers callers of WorldIDSource — a read is bought by opening a card or a room, never by a row scrolling past (AddressNames' rule; 6 since §1110)"; exit 1; }
 
 # 4. THE HOST IS DISCLOSED, and under its own service. It is a `g.alchemy.com`
 #    subdomain, so the receipts screen would file it under the Wallet bridge —

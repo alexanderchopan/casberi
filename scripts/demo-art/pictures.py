@@ -231,9 +231,6 @@ pic("bsky-2", "scene_home", (800, 600), "Photo on 'Sanded the walnut shelf. Six 
 pic("bsky-4a", "scene_home", (800, 600), "Photo on 'Notes from a quiet week.': an open notebook and pen on a table")
 pic("bsky-4b", "scene_out", (800, 600), "Second photo on 'Notes from a quiet week.': an empty park path in the rain")
 pic("bsky-link-0", "cover", (800, 420), "Link card image for the article 'The quiet case for local-first software' — editorial illustration: a laptop holding its own data, calm, no words")
-pic("nostr-0", "scene_out", (800, 600), "Photo on 'Relays are just people who agreed to keep talking.': radio masts on a hill at dusk")
-pic("nostr-2a", "scene_out", (800, 600), "Photo on 'A quiet week on the relays, which is the good kind.': a calm lake at dawn, mist")
-pic("nostr-2b", "scene_home", (800, 600), "Second photo on that note: a mug and a paperback on a windowsill")
 
 # ── Work (DemoSeedAll.work) ───────────────────────────────────────────────
 pic("trello-0", "scene_home", (640, 360), "Trello card cover for 'Kitchen · Order the tiles': green glazed tiles fanned out")

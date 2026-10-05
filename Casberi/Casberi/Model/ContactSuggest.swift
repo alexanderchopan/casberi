@@ -35,7 +35,6 @@ enum ContactSuggest {
         guard !handle.isEmpty else { return nil }
         switch service {
         case "bluesky":               return Identity.make(.bluesky, handle)
-        case "nostr":                 return Identity.make(.nostr, handle)
         case "github":                return Identity.make(.github, handle)
         default:                      return nil
         }
@@ -81,7 +80,7 @@ enum ContactSuggest {
         for card in cards {
             for seed in byName[fold(card.name)] ?? [] { add(card.key, seed.identity.key, "corpus.name") }
         }
-        // Two seats share a display name (a Bluesky and a Nostr "Uma").
+        // Two seats share a display name (a Bluesky and a GitHub "Uma").
         for (_, group) in byName where group.count > 1 {
             let keys = group.map(\.identity.key).sorted()
             for i in keys.indices { for j in keys.indices where j > i { add(keys[i], keys[j], "corpus.name") } }

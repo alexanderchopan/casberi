@@ -242,7 +242,7 @@ def self_test():
     mutate(os.path.join(SCREENS, "StripeScreen.swift"), "mode: .pasteKey", "mode: .signIn", "A")
     mutate(CATALOG, '"Dropbox", "Slack"', '"Slack"', "A")
     mutate(CATALOG, '"Dropbox", "Slack"', '"Dropbox", "Slack", "Stripe"', "B")
-    mutate(CATALOG, '"Pinterest", "Bluesky", "Nostr"', '"Pinterest", "Nostr"', "C")
+    mutate(CATALOG, '"Pinterest", "Bluesky",', '"Pinterest",', "C")
     mutate(CATALOG, '"Dropbox", "Slack"', '"Dropbox", "Slack", "Nobody"', "D")
     mutate(os.path.join(SCREENS, "StripeScreen.swift"), 'name: "Stripe"', 'name: "Photos"', "E")
     # F, both ways: a seat no screen and no sweep names, and an expression

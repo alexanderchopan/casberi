@@ -321,46 +321,6 @@ def x_photo_1(p):
     p.add(steam(p, cx, 390, 150, col="#fff4dc", op=.55, wide=10, seed=8))
 
 
-def nostr_2b(p):
-    """Blue hour and rain: a mustard mug and a tented paperback on a green-painted sill, lamp-lit."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#1d2e4f", "#2f4a73", "#476891")))
-    lights = [(x, y, r, c, o) for (x, y, r, c, o) in
-              [(120, 330, 10, "#ffcf7a", .6), (180, 300, 7, "#ffcf7a", .5), (600, 280, 9, "#ffd899", .55),
-               (660, 320, 12, "#ffb865", .5), (380, 360, 6, "#fff0c2", .5), (720, 250, 6, "#ffcf7a", .4),
-               (260, 360, 14, "#ff9d5c", .35), (520, 350, 8, "#ffe2a3", .45)]]
-    p.add(p.soft(R(0, 300, w, 120, "#16223a", opacity=.8), 10))
-    p.add(bokeh(p, lights, 4))
-    rnd = random.Random(31)
-    rain = []
-    for _ in range(46):
-        x = rnd.uniform(0, w)
-        y = rnd.uniform(0, 380)
-        ln = rnd.uniform(14, 40)
-        rain.append(L(x, y, x - ln * .12, y + ln, "#cfe0ff", 1.2, opacity=rnd.uniform(.15, .4)))
-    p.add("".join(rain))
-    for _ in range(18):
-        p.add(C(rnd.uniform(0, w), rnd.uniform(0, 380), rnd.uniform(2, 4.5), "#dfeaff", opacity=.28))
-    p.add(window_panes(0, 0, w, 400, "#243a2f", 22, cols=2, rows=1))
-    # sill
-    p.add(PL([(0, 400), (w, 400), (w, 470), (0, 470)], p.lg("#3f5e4b", "#2e4838")))
-    p.add(R(0, 470, w, 130, p.lg("#2b4435", "#1c2e24")))
-    p.add(p.soft(E(140, 460, 360, 90, "#ffb76b", opacity=.35), 40))
-    # paperback tented
-    bx, by = 250, 440
-    p.add(p.soft(PL([(bx - 150, by + 8), (bx + 150, by + 8), (bx + 170, by + 22), (bx - 140, by + 24)], "#0c150f"), 6, .6))
-    p.add(PL([(bx - 150, by + 10), (bx - 4, by - 70), (bx + 4, by - 70), (bx + 150, by + 10)], "#efe3c8"))
-    p.add(PL([(bx - 156, by + 6), (bx, by - 80), (bx, by - 66), (bx - 144, by + 12)], p.lg("#c85a3a", "#8e3524", x2=1, y2=0)))
-    p.add(PL([(bx + 156, by + 6), (bx, by - 80), (bx, by - 66), (bx + 144, by + 12)], p.lg("#7a2c1e", "#5a1f15", x2=1, y2=0)))
-    p.add(PL([(bx - 110, by - 14), (bx - 50, by - 48), (bx - 44, by - 40), (bx - 104, by - 6)], "#f2c46b", opacity=.8))
-    # mustard mug
-    p.add(p.soft(E(560, 452, 90, 16, "#0c150f", opacity=.7), 8))
-    p.add(cup_side(p, 555, 450, 124, 128, "#d9a53a", liquid=p.rg("#6b4127", "#3d2415"), handle="left", persp=.16,
-                   rim_light="#ffd58a"))
-    p.add(p.soft(R(496, 340, 10, 100, "#ffe0a0", opacity=.5), 4))
-    p.add(steam(p, 555, 300, 120, col="#ffe7c2", op=.3, seed=6))
-
-
 def ig_save_0(p):
     """A café interior: bottle-green wall, cup shelves, three pendant lamps, white marble counter."""
     w, h = p.w, p.h
@@ -410,7 +370,7 @@ def ig_save_0(p):
 
 
 DRAW = {
-    "x-photo-1": x_photo_1, "nostr-2b": nostr_2b, "ig-save-0": ig_save_0,
+    "x-photo-1": x_photo_1, "ig-save-0": ig_save_0,
 }
 
 

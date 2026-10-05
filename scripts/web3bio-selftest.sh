@@ -83,7 +83,7 @@ func prow(_ platform: String, _ identity: String, _ address: String,
 
 // The measured vitalik array: four records, three of which carry OTHER
 // addresses than the ENS one. The Farcaster row is dropped at parse since the
-// seat was retired (prd §1109), so three are read.
+// seat was retired (prd §1110), so three are read.
 let V = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
 let vitalik: [Any] = [
     row("ens", "vitalik.eth", V, avatar: "https://euc.li/vitalik.eth"),
@@ -95,7 +95,7 @@ let vitalik: [Any] = [
 
 // ── Pure: parse ─────────────────────────────────────────────────────────
 if case .records(let rs) = Web3Bio.parse(vitalik, status: 200) {
-    check(rs.count == 3, "three name records parsed — the Farcaster row is dropped (prd §1109)")
+    check(rs.count == 3, "three name records parsed — the Farcaster row is dropped (prd §1110)")
     check(rs.first?.platform == .ens && rs.first?.identity == "vitalik.eth", "the ENS row parsed")
     check(rs[1].platform == .basenames, "a basenames row is .basenames")
     check(rs[2].platform == .lens, "a lens row is .lens")
@@ -118,7 +118,7 @@ check(Web3Bio.parse([row("solana", "abc", "abc")], status: 200) == .records([]),
       "the solana placeholder row is not a name")
 check(Web3Bio.record(row("myspace", "tom", V)) == nil, "an unknown platform is dropped")
 check(Web3Bio.record(row("farcaster", "vitalik.eth", V)) == nil,
-      "a Farcaster record is dropped — the seat is retired (prd §1109)")
+      "a Farcaster record is dropped — the seat is retired (prd §1110)")
 check(Web3Bio.record(row("ens", "x.eth", V, display: "Vitalik Buterin"))?.displayName == "Vitalik Buterin",
       "displayName kept")
 check(Web3Bio.record(row("ENS", "vitalik.eth", "0xD8DA6BF26964AF9D7EED9E03E53415D37AA96045"))?.address == V,

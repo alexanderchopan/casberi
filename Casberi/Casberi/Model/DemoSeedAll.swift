@@ -173,7 +173,7 @@ enum DemoSeedAll {
                               // can find them — and so teardown needs it or
                               // they outlive the demo. `fc:demo:` stays for
                               // the casts a demo poured before the Farcaster
-                              // seat was retired (prd §1109).
+                              // seat was retired (prd §1110).
                               "fc:demo:", "bsky:demo:",
                               "import:receipt:", "cloudflare:cert:demo",
                               // The agent rooms' demo conversations (2026-09-20)
@@ -840,22 +840,6 @@ enum DemoSeedAll {
         // a dev install watches real people through the same stores.
         let bskyDemo = Set(demoBluesky.map(\.handle))
         BlueskyStore.shared.accounts.removeAll { bskyDemo.contains($0.handle) }
-        // Nostr, the third social roster — seeded since 2026-08-12 and never
-        // unwound until 2026-08-17, so three watched accounts survived every
-        // demo exit. Worse than a stray row: `nostr.accounts` is a REQUIRED
-        // floor in the `-floorProbe` registry, so the leak sat inside a
-        // control something already checks the presence of, and presence was
-        // all it checked.
-        //
-        // Keyed on the PUBKEY, not the handle. Bluesky matches on what the
-        // person typed because that is what its store holds, but a
-        // Nostr `Account.input` is normalized on the way in (an npub, a hex
-        // key or a NIP-05 identifier all land differently), so a handle match
-        // is a guess about that normalization. `pubkeyHex` is set from
-        // `demoNostr` verbatim two functions up, which makes it the one field
-        // both halves are certain to agree on.
-        let nostrDemo = Set(demoNostr.map(\.pubkey))
-        NostrStore.shared.accounts.removeAll { nostrDemo.contains($0.pubkeyHex) }
 
         // `clear` REMOVES the version stamp, which is right for the dev verb
         // it was written for (`-demoSeed clear`, where the next launch should
@@ -1650,19 +1634,6 @@ enum DemoSeedAll {
         ("Stripe", .wallet), ("Bitrefill", .wallet),
         ("Uniswap", .contract), ("Peer", .contract),
         ("Gnosis Pay", .safe),
-    ]
-
-    /// Nostr's watched accounts. Same three people as the rows above — one
-    /// cast across the whole demo reads as a life; a fresh set per room reads
-    /// as filler. The pubkeys are 64 hex characters because that is what the
-    /// field holds; they resolve to nothing, and nothing asks them to.
-    static let demoNostr: [(handle: String, name: String, bio: String, pubkey: String)] = [
-        ("you", "You", "Making a small thing carefully.",
-         String(repeating: "a1b2c3d4", count: 8)),
-        ("uma", "Uma", "Product design. Book club organiser.",
-         String(repeating: "b2c3d4e5", count: 8)),
-        ("nils", "Nils", "Woodwork and slow software.",
-         String(repeating: "c3d4e5f6", count: 8)),
     ]
 
     static let demoBluesky: [(handle: String, name: String, bio: String)] = [
@@ -2933,49 +2904,6 @@ enum DemoSeedAll {
             t.summary = "Why software that keeps your data on your own machine "
                 + "ends up feeling faster, calmer and more yours."
         })
-        // Three voices, not one (2026-08-12). Every Nostr row was authored by
-        // "you", so the room read as a private notebook where the other two
-        // social rooms read as networks — and `NostrStore.accounts`, which the
-        // face rail and the roster both walk, was never seeded at all, so the
-        // rail could not draw whatever the rows said.
-        let nostr: [(text: String, handle: String, days: Double)] = [
-            ("Relays are just people who agreed to keep talking.", "you", 3),
-            ("Signed, not hosted. That is the whole idea.", "uma", 12),
-            ("A quiet week on the relays, which is the good kind.", "nils", 21),
-        ]
-        out += nostr.enumerated().map { i, n in
-            row(.chat, n.text, source: "Nostr",
-                ref: "demo:nostr:\(i)", days: n.days, hour: 20,
-                content: "nostr:note1demo\(i)") { t in
-                t.postText = n.text
-                t.authorHandle = n.handle
-                t.authorAvatarURL = avatarArt(n.handle)
-                // The same five fields Bluesky was missing (2026-08-17), for
-                // the same reason: `NostrIngest` stamps `channelName` (the
-                // note's hashtag), both picture fields, `quote` and `parent`,
-                // and this room had none of them — so it read plainer than
-                // Bluesky beside it while sharing its renderer. Sparse, per
-                // Bluesky's ruling above.
-                t.channelName = ["design", "bitcoin", "reading"][i % 3]
-                t.likeCount = 14 - i * 3
-                if i == 1 {
-                    t.parent = SocialCard(handle: "you",
-                                          text: "Relays are just people who agreed to keep talking.",
-                                          avatarURL: avatarArt("you"))
-                }
-                if i == 2 {
-                    t.quote = SocialCard(handle: "uma",
-                                         text: "Signed, not hosted. That is the whole idea.",
-                                         avatarURL: avatarArt("uma"))
-                    // Both picture paths, Bluesky's lesson again:
-                    // `PostCard` draws one from `previewImageURL` and only
-                    // reaches `PostImageGrid` at two or more.
-                    t.previewImageURL = art("nostr-2a")
-                    t.imageURLs = [art("nostr-2a"), art("nostr-2b")]
-                }
-                if i == 0 { t.previewImageURL = art("nostr-0") }
-            }
-        }
         return out
     }
 
@@ -5212,23 +5140,6 @@ enum DemoSeedAll {
             }
         }
 
-        // Nostr's roster, which nothing seeded until 2026-08-12 — the third
-        // social room had rows and no accounts, so its face rail and its
-        // roster were empty while the other two were full. `pubkeyHex` is
-        // filled because an account with an empty one reads as "still
-        // resolving" forever, which is a spinner, not a demo.
-        if NostrStore.shared.accounts.isEmpty {
-            NostrStore.shared.accounts = demoNostr.map {
-                var a = NostrStore.Account(input: $0.handle)
-                a.pubkeyHex = $0.pubkey
-                a.displayName = $0.name
-                a.bio = $0.bio
-                a.avatarURL = avatarArt($0.handle)
-                a.mine = $0.handle == "you"
-                return a
-            }
-        }
-
         // 7 · The address book — the counterparties the transfers above name,
         // so the wallet's people have faces. See `seedAddressBook`.
         seedAddressBook()
@@ -5341,7 +5252,6 @@ enum DemoSeedAll {
         ("Pinterest", "Synced 1h ago", "Reads your pins."),
         ("iCloud Mail", "Synced 8m ago", "Reads your mail."),
         ("Bluesky", "1 account", "Follows accounts, no sign-in."),
-        ("Nostr", "1 relay", "Reads the relays you name."),
         // GeckoTerminal, Open Food Facts, Circle x402, Kalshi, Polymarket,
         // 1Claw and OpenSea were seats here until 2026-09-06 (prd §638 and
         // its second amendment) — the Markets category is deleted, and a

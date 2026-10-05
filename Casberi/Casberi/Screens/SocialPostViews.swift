@@ -10,7 +10,7 @@ import SwiftData
 /// The words themselves are the sheet's HERO (ThingSheetView draws `postText`
 /// in the title slot — a post is prose, and prose is the point). What's left is
 /// everything around them: the pictures, the post it quotes, and how it landed.
-/// Source-neutral throughout — Bluesky and Nostr answer the same shapes, so
+/// Source-neutral throughout — any social bridge answers the same shapes, so
 /// nothing here learns a network's name.
 struct SocialPostContent: View {
     let thing: Thing
@@ -314,7 +314,7 @@ struct SocialPostThread: View {
                 // walker only ever opened over Bluesky cards, so
                 // the unconditional button was correct by accident; a notice
                 // now lands X cards in it, and `SocialProfileCard` says in its
-                // own doc that it opens "only for Bluesky/Nostr people" —
+                // own doc that it opens "only for Bluesky people" —
                 // its `bridge` is nil for X, so Watch, the switches and the
                 // follow row all render dead. No dead controls (§83).
                 if SocialThread.isSocial(source) {
@@ -512,7 +512,7 @@ struct SocialProfileCard: View {
 
     /// The bridge behind this profile's source — nil for a source that isn't
     /// a name-only handle bridge (shouldn't happen; the card only ever opens
-    /// for Bluesky/Nostr people).
+    /// for Bluesky people).
     private var bridge: HandleBridge? { HandleBridge(rawValue: profile.source) }
 
     /// This person's Likes/Mentions switches, read straight off the

@@ -22,7 +22,7 @@ struct FollowImportTarget: Identifiable, Equatable {
 /// no rank we didn't compute (Bluesky serves most-recently-followed first).
 /// The field filters what's here; it never searches the network.
 struct FollowImportSheet: View {
-    /// "Bluesky" / "Nostr" — the sheet never learns more than the name.
+    /// "Bluesky" — the sheet never learns more than the name.
     let source: String
     /// Whose graph to read.
     let handle: String

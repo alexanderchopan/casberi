@@ -556,15 +556,6 @@ enum NetworkReach {
                  purpose: "Reads the public posts, replies, and profiles of the accounts and feeds you follow, plus their images. No sign-in — public AT Protocol data.",
                  hosts: ["public.api.bsky.app", "api.bsky.app", "bsky.app", "cdn.bsky.app",
                          "video.bsky.app"]),
-        // Nostr's own hosts are WebSocket relays, so no `https://` literal
-        // exists for the audit to find and this entry — like WalletConnect's
-        // above — is hand-written. The NIP-05 check is the person-named half:
-        // verifying `you@example.com` asks example.com, a domain that arrives
-        // in someone's profile, so it can only ever be prose here.
-        Endpoint(service: "Nostr",
-                 reach: .whenConnected(bridge: "Nostr"),
-                 purpose: "Reads the public notes, profiles and follows of the accounts you follow, straight from two public relays. Checking a name like you@example.com asks that domain's own public file. No account, no key, nothing signed.",
-                 hosts: ["nos.lol", "relay.damus.io", "the domain in a name you check"]),
         Endpoint(service: "Pinterest",
                  reach: .whenConnected(bridge: "Pinterest"),
                  purpose: "Reads the public pins of your profile and of the boards and people you follow. A pin.it share link is opened once to find the board it names.",

@@ -54,13 +54,13 @@ func to(_ r: SocialToYou.Row) -> Bool { SocialToYou.isToYou(r, myHandles: me) }
 
 // ── To you ───────────────────────────────────────────────────────────
 check(to(row("Bluesky", "reply")), "a reply to you is to you")
-check(to(row("Nostr", "follow")), "a new follower is to you")
+check(to(row("Bluesky", "follow")), "a new follower is to you")
 check(to(row("Instagram", "follow", ref: "ig-live:notif:1")), "an Instagram follow is to you")
 check(to(row("Bluesky", "mention", text: "nice one @alex.bsky.social!")), "a mention of your handle is to you")
-check(to(row("Nostr", "mention", text: "cc @Alex")), "a mention matches without case")
+check(to(row("Bluesky", "mention", text: "cc @Alex")), "a mention matches without case")
 check(!to(row("Bluesky", "mention", text: "thanks @maya.bsky.social")), "a mention of someone else is not")
-check(!to(row("Nostr", "liked")), "what someone you follow liked is not")
-check(!to(row("Nostr", "recast")), "what someone you follow recast is not")
+check(!to(row("Bluesky", "liked")), "what someone you follow liked is not")
+check(!to(row("Bluesky", "recast")), "what someone you follow recast is not")
 check(!to(row("Bluesky")), "a post by someone you follow is not")
 check(to(row("TikTok", ref: "tiktok:live:notif:3", title: "rui liked your video")), "a TikTok notice is to you")
 check(to(row("Instagram", ref: "ig-live:notif:2", title: "lena liked your photo.")), "an Instagram notice is to you")
@@ -74,11 +74,11 @@ check(!SocialToYou.isToYou(row("Bluesky", "mention", text: "@"), myHandles: [""]
 let rows: [(row: SocialToYou.Row, at: Date)] = [
     (row("Bluesky"), ago(0.1)),
     (row("Bluesky", "reply"), ago(0.5)),
-    (row("Nostr", "follow"), ago(1)),
+    (row("Bluesky", "follow"), ago(1)),
     (row("Bluesky", "reply"), ago(2)),
     (row("Bluesky", "reply"), ago(3)),
-    (row("Nostr", "reply"), ago(9)),
-    (row("Nostr", "reply"), now.addingTimeInterval(3_600)),
+    (row("Bluesky", "reply"), ago(9)),
+    (row("Bluesky", "reply"), now.addingTimeInterval(3_600)),
 ]
 let lead = SocialToYou.leading(rows, myHandles: me, now: now)
 check(lead == [1, 2, 3], "the week's three newest rows to you lead, newest first")

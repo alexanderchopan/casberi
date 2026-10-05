@@ -29,7 +29,7 @@ KNOWN_NON_REACH=(
   etherscan.io basescan.org arbiscan.io optimistic.etherscan.io
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
   hyperevmscan.io monadscan.com worldscan.org explorer.arc.io explore.tempo.xyz
-  gnosisscan.io njump.me
+  gnosisscan.io
   # Linea's explorer (2026-09-20) — the permalink a MetaMask Card spend row
   # opens in the PERSON's browser, exactly like `gnosisscan.io` above for the
   # Gnosis Pay row. The seat's own two RPC hosts (`rpc.linea.build`,

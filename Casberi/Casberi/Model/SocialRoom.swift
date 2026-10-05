@@ -84,7 +84,6 @@ enum SocialRoom {
     /// the sheet while nobody remembered the room.
     static let table: [String: Facts] = [
         "Bluesky":   Facts(foldsThreads: true,  hasRoster: true),
-        "Nostr":     Facts(foldsThreads: true,  hasRoster: true),
         "X":         Facts(foldsThreads: true,  hasRoster: false, leadsWithNewest: true),
         "Instagram": Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true),
         "Telegram":  Facts(foldsThreads: false, hasRoster: false),
@@ -97,7 +96,7 @@ enum SocialRoom {
     /// Whether this source draws the social room's rows at all.
     ///
     /// Snapchat is in the table and answers FALSE here on purpose: its room is
-    /// memories and saved chats, it holds no post in the sense the other seven
+    /// memories and saved chats, it holds no post in the sense the other six
     /// do, and its rows are already the excerpt/grid split §247 gave it. It is
     /// listed so the catalog guard can see it decided rather than forgotten.
     static func drawsPosts(_ source: String) -> Bool {
@@ -209,11 +208,11 @@ enum SocialRoom {
 
         switch row.source {
 
-        // THE TWO LIVE NETWORKS. Their posts land as `.chat` by kind (see
-        // `BlueskyIngest`/`NostrIngest`), so — unlike every
+        // THE LIVE NETWORK. Its posts land as `.chat` by kind (see
+        // `BlueskyIngest`), so — unlike every
         // room below — a `.chat` here is the post itself and must NOT take the
         // transcript branch.
-        case "Bluesky", "Nostr":
+        case "Bluesky":
             // A FOLLOWER IS A PERSON, not an article somebody shared
             // (2026-08-12). `SocialInbound.landFollower` lands a follow as a
             // `.link`, and the link branch below would read it as a shared

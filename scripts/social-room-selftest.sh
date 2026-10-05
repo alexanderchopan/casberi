@@ -129,9 +129,9 @@ present "the room's roster reads the one dispatch" \
 present "the rail above it reads the same one" \
   'SocialRoomSource\.accounts\(for: filter\.source\)' "$TMP/shell.nc"
 absent "FeedScreen reaches a network store directly again" \
-  '(Farcaster|Bluesky|Nostr)Store\.shared\.socialAccounts' "$TMP/feed.nc"
+  '(Farcaster|Bluesky)Store\.shared\.socialAccounts' "$TMP/feed.nc"
 absent "MainSurface reaches a network store directly again" \
-  '(Farcaster|Bluesky|Nostr)Store\.shared\.socialAccounts' "$TMP/shell.nc"
+  '(Farcaster|Bluesky)Store\.shared\.socialAccounts' "$TMP/shell.nc"
 present "the dispatch refuses a source with no roster rather than guessing" \
   'guard SocialRoom\.hasRoster\(source\) else \{ return \[\] \}' "$SOURCE"
 
@@ -149,9 +149,9 @@ present "the photo-tile tests stay in the view layer" \
 absent "a grid test moved into the rules half" \
   'PhotoTile' "$TMP/room.nc"
 
-# --- the two rooms that had no case at all ----------------------------------
-present "Nostr resolves to the social room" \
-  'case "Bluesky", "Nostr": self = \.social' "$TMP/feed.nc"
+# --- the rooms that once had no case at all ---------------------------------
+present "the live network resolves to the social room" \
+  'case "Bluesky": self = \.social' "$TMP/feed.nc"
 present "TikTok resolves to a room of its own" \
   'case "TikTok":              self = \.tiktok' "$TMP/feed.nc"
 # A single-account social room leaned on an activity grid, and Telegram on a
@@ -253,20 +253,20 @@ func cast(_ source: String, context: String? = nil) -> Row {
 }
 
 print("The table")
-check("the two live networks have a roster",
-      ["Bluesky", "Nostr"].allSatisfy(SocialRoom.hasRoster))
-check("…and nothing else does — Farcaster's seat is retired (prd §1109)",
-      ["X", "Instagram", "Telegram", "TikTok", "Snapchat", "Farcaster"].allSatisfy { !SocialRoom.hasRoster($0) })
+check("the live network has a roster",
+      ["Bluesky"].allSatisfy(SocialRoom.hasRoster))
+check("…and nothing else does — Nostr's and Farcaster's seats are retired (prd §1109, §1110)",
+      ["X", "Instagram", "Telegram", "TikTok", "Snapchat", "Nostr", "Farcaster"].allSatisfy { !SocialRoom.hasRoster($0) })
 check("a source outside the table has no roster", !SocialRoom.hasRoster("Wallet"))
 check("threads fold only where a parent can be named exactly",
-      ["Bluesky", "Nostr", "X"].allSatisfy(SocialRoom.foldsThreads)
+      ["Bluesky", "X"].allSatisfy(SocialRoom.foldsThreads)
         && ["Instagram", "Telegram", "TikTok", "Snapchat"].allSatisfy { !SocialRoom.foldsThreads($0) })
 check("Snapchat is in the table so the catalog guard sees it decided",
       SocialRoom.facts(for: "Snapchat") != nil)
 check("…and draws no posts, which is what being decided means here",
       !SocialRoom.drawsPosts("Snapchat"))
-check("the other six draw posts",
-      ["Bluesky", "Nostr", "X", "Instagram", "Telegram", "TikTok"]
+check("the other five draw posts",
+      ["Bluesky", "X", "Instagram", "Telegram", "TikTok"]
         .allSatisfy(SocialRoom.drawsPosts))
 check("an unknown source draws no posts", !SocialRoom.drawsPosts("Kalshi"))
 check("…and its rows fall back to the band rather than trapping",
@@ -301,8 +301,8 @@ check("a notice with a newline keeps the two-line shape",
       SocialRoom.rowSentence(words: "mia liked\nyour post", author: "mia") == nil)
 
 print("")
-print("The two live networks — and NOSTR IS ONE OF THEM")
-for net in ["Bluesky", "Nostr"] {
+print("The live network")
+for net in ["Bluesky"] {
     check("\(net): a cast is a post card", kind(cast(net)) == .post(whole: false))
     check("\(net): a cast with self-replies folds into a thread",
           kind(cast(net), replies: true) == .thread(whole: false))
@@ -317,10 +317,10 @@ for net in ["Bluesky", "Nostr"] {
     check("\(net): a follower landed as a link is not one either",
           kind(Row(source: net, kind: "link", socialContext: "follow")) == .band)
 }
-// The point of the whole pass, stated as one assertion: the third network is
-// not a special case, it is the same room.
-check("Nostr's rows are byte-identical to Bluesky's, row for row",
-      [cast("Nostr"), Row(source: "Nostr", kind: "link"), cast("Nostr", context: "follow")]
+// The point of the whole pass, stated as one assertion: a network is not a
+// special case, it is the same room.
+check("Farcaster's rows are byte-identical to Bluesky's, row for row",
+      [cast("Farcaster"), Row(source: "Farcaster", kind: "link"), cast("Farcaster", context: "follow")]
         .map { kind($0) }
       == [cast("Bluesky"), Row(source: "Bluesky", kind: "link"), cast("Bluesky", context: "follow")]
         .map { kind($0) })
@@ -421,8 +421,8 @@ check("a Telegram channel picture stands alone",
                                  hasPreviewImage: true)))
 check("an X post still does",
       SocialRoom.standsAlone(Row(source: "X", kind: "note")))
-check("a Nostr post does now",
-      SocialRoom.standsAlone(cast("Nostr")))
+check("a Farcaster post does",
+      SocialRoom.standsAlone(cast("Farcaster")))
 // A deliberate change: `.social` used to return true for EVERY row, so a
 // shared article and a follow notification each got a card of their own.
 check("a shared article no longer takes a card of its own",
@@ -435,7 +435,7 @@ check("nor a TikTok reading row",
 print("")
 print("The day header's noun")
 check("nothing is not posts", !SocialRoom.groupIsPosts([]))
-check("a day of casts is posts", SocialRoom.groupIsPosts([cast("Nostr"), cast("Nostr")]))
+check("a day of casts is posts", SocialRoom.groupIsPosts([cast("Bluesky"), cast("Bluesky")]))
 // X's rule (§396a) generalised. One article among twelve casts makes "13 posts"
 // a claim about the article too.
 check("one shared article in the group is not posts",
@@ -500,11 +500,11 @@ PY
 echo ""
 echo "Mutations"
 
-# THE BUG THIS PASS EXISTS FOR, put back: Nostr drops out of the live-network
+# THE BUG THIS PASS EXISTS FOR, put back: the live network drops out of its
 # case and every one of its rows falls to the band.
-mutate "Nostr falls out of the social room again" \
-  'case "Bluesky", "Nostr":' \
-  'case "Bluesky":'
+mutate "Bluesky falls out of the social room" \
+  'case "Bluesky":' \
+  'case "Bluesky (gone)":'
 
 # §915: a longer name reads as the name ("samantha" names sam), so the
 # eyebrow drops a name the sentence never said.

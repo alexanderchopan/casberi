@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// One foreground refresh for every connected polling bridge (RSS, Bluesky,
-/// Nostr, and each connected token bridge). RootShell fires it on
+/// Pinterest, and each connected token bridge). RootShell fires it on
 /// scenePhase → .active; screens can reuse it (e.g. pull-to-refresh) instead of
 /// repeating the guard-then-Task shape per bridge. Each bridge refreshes
 /// independently, fire-and-forget, on the main actor.
@@ -411,21 +411,6 @@ enum BridgeRefresh {
             let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await BlueskyIngest.heal(context: context)
-            }
-        }
-        if NostrStore.shared.connected {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await NostrIngest.refresh(context: context)
-                SocialTopics.reconcile(source: "Nostr",
-                    watchedHandles: NostrStore.shared.accounts.map(\.pubkeyHex),
-                    topics: NostrStore.shared.hashtags.map(\.tag), context: context)
-            }
-            // Delete-sync: own network round trip and its own hourly
-            // throttle, same shape as Farcaster/Bluesky's heals above.
-            let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s2)
-                _ = await NostrIngest.heal(context: context)
             }
         }
         if PinterestStore.shared.connected {

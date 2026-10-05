@@ -63,7 +63,7 @@ grep -qE 'ForEach\((posts|merged)' "$STRIPPED" \
 # The SORT runs in `load()`, never in the body. Sorting is n log n
 # stored-property reads on live models, and a sheet drag evaluates the body per
 # offset change. (The memoised merge of posts and onchain moves went with the
-# Farcaster seat, prd §1109; the room is the posts alone, sorted once.)
+# Farcaster seat, prd §1110; the room is the posts alone, sorted once.)
 grep -qE 'RowWindow.slice\([^)]*sorted' "$STRIPPED" \
   && { echo "✗ the body sorts the room for itself — sort once in load()"; exit 1; }
 # The opener must be a TAP. `.onAppear` growth is a runaway (the feed's

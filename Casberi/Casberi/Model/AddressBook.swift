@@ -78,7 +78,7 @@ final class AddressBook {
         /// `AddressBook.entry(for:)` answers nil for one, which is what keeps
         /// every write door (rename, note) correctly shut.
         case contact
-        /// A social profile you watch — Bluesky, Farcaster, Nostr, Twitch
+        /// A social profile you watch — Bluesky, Farcaster, Twitch
         /// (prd §498). Ephemeral like `.contact`, for the same reason: a
         /// handle is not an address, and `SocialRoomSource` already holds the
         /// watch list this reads.
@@ -255,7 +255,7 @@ final class AddressBook {
         /// Display strings rather than structured pairs, deliberately: nothing
         /// computes over them — they are read, and the source that built them
         /// is the only thing that knows how to spell a handle for its own
-        /// network (a Nostr pubkey is not a Bluesky handle). Ephemeral rows
+        /// network (a Farcaster username is not a Bluesky handle). Ephemeral rows
         /// only, so this is nil on every persisted entry and the sync mirror
         /// never carries a handle. Optional for the Codable reason `groups`
         /// documents.

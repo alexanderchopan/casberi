@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// The rows every bridge setup screen shares — RSS, Bluesky, Nostr, the
+/// The rows every bridge setup screen shares — RSS, Bluesky, Pinterest, the
 /// token bridges, ChatGPT. One field row, one pair of proof rows, one
 /// recent-things section; the screens differ only in their words.
 

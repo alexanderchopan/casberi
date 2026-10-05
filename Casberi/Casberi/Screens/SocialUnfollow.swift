@@ -34,9 +34,8 @@ enum SocialUnfollow {
     ///
     /// **The prune is `HandleBridge.removeName`, never a copy of it.** That is
     /// §286's path — "if you unfollow something it shouldn't show in your
-    /// corpus" — and it carries three things a second implementation would get
-    /// subtly wrong: Nostr's identity is resolved to its pubkey BEFORE the
-    /// store mutates, the remaining topics are read so a post explained by a
+    /// corpus" — and it carries two things a second implementation would get
+    /// subtly wrong: the remaining topics are read so a post explained by a
     /// channel you still follow survives, and `SocialTopics.pruneAuthor` keeps
     /// the `socialContext` exemption that stops a liked stranger's post being
     /// taken as collateral.

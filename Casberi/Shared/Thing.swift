@@ -154,7 +154,9 @@ enum Corpus {
         // someone else's catalogue and nobody would use them; Cursor went
         // with them.
         "Deals", "Shopify", "Cursor",
-        // Farcaster the same way (prd §1109, user: "remove farcaster").
+        // Nostr the same way (2026-10-05, user: "remove nostr").
+        "Nostr",
+        // Farcaster the same way (prd §1110, user: "remove farcaster").
         "Farcaster",
     ]
 

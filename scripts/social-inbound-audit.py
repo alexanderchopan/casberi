@@ -24,7 +24,7 @@ Nothing failed to compile, nothing rendered wrong, and no other check here
 could see it: two correct-looking filters, four files apart from the read they
 silently emptied. That distance is the whole reason this exists.
 
-**(1) Retired with the Farcaster seat (prd §1109).** It held
+**(1) Retired with the Farcaster seat (prd §1110).** It held
 `FarcasterIngest.swift`'s `topLevelOnly` flag to a gate on `mine`; the file
 is deleted, so there is nothing left for it to read.
 

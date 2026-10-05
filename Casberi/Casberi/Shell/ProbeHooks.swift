@@ -1964,7 +1964,7 @@ enum ProbeHooks {
                       feed?.name ?? "NONE", n.map(String.init) ?? "FAILED")
             }
         },
-        // `-followsProbe "<Bluesky|Nostr>:<handle>"` reads that account's
+        // `-followsProbe "Bluesky:<handle>"` reads that account's
         // follow graph and reports what came back (2026-07-16, prd 87) — the
         // read behind the "Who they follow" picker, headless. It WATCHES
         // NOBODY: the graph is a read, and the taps that watch are the
@@ -1974,7 +1974,7 @@ enum ProbeHooks {
         Hook(key: "followsProbe") { spec, _ in
             let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
             guard parts.count == 2 else {
-                NSLog("followsProbe: expected \"<Bluesky|Nostr>:<handle>\", got %@", spec)
+                NSLog("followsProbe: expected \"Bluesky:<handle>\", got %@", spec)
                 return
             }
             Task { @MainActor in
@@ -2104,7 +2104,7 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-socialProbe <Bluesky|Nostr>` reports what the enrichment
+        // `-socialProbe Bluesky` reports what the enrichment
         // actually landed across that source's corpus (2026-07-16) — how many
         // posts carry their full text, pictures, a quote, a parent, a context
         // marker — so the batch verifies headlessly instead of by eye. Also
@@ -2208,79 +2208,6 @@ enum ProbeHooks {
                 let replies = await BlueskyIngest.replies(uri: uri)
                 NSLog("Bluesky replies probe: %d replies%@", replies.count,
                       replies.first.map { " — @\($0.handle): \(String($0.text.prefix(60)))" } ?? "")
-            }
-        },
-        // `-nostrPubkey <npub|hex|name@domain[,...]>` connects Nostr headlessly
-        // (appends, so a comma-separated list watches several — dedupes, safe
-        // to re-fire).
-        Hook(key: "nostrPubkey") { spec, context in
-            for n in spec.split(separator: ",") { NostrStore.shared.add(String(n)) }
-            Task { @MainActor in
-                let n = await NostrIngest.refresh(context: context)
-                NSLog("Nostr probe: %@ new things", n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-nostrHashtag <tag[,tag]>` follows Nostr hashtags headlessly (no
-        // resolve step, unlike a Farcaster channel — a hashtag is just
-        // itself) and syncs.
-        Hook(key: "nostrHashtag") { tags, context in
-            Task { @MainActor in
-                var followed = 0
-                for t in tags.split(separator: ",") {
-                    if NostrIngest.followHashtag(String(t)) != nil { followed += 1 }
-                }
-                let n = await NostrIngest.refresh(context: context)
-                NSLog("Nostr hashtag probe: %d followed, %@ new things",
-                      followed, n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-nostrLikes <npub|hex|name@domain>` watches an account's
-        // REACTIONS (adding the account if new) and syncs — reacted-to notes
-        // land as things.
-        Hook(key: "nostrLikes") { name, context in
-            let n = NostrStore.normalize(name)
-            NostrStore.shared.add(n)
-            NostrStore.shared.setLikes(true, for: n)
-            Task { @MainActor in
-                let added = await NostrIngest.refresh(context: context)
-                // Resurfaced beside landed on purpose — see the Farcaster
-                // likes probe's own comment: a reaction to a note the corpus
-                // already holds lands NOTHING new, so "0 new things" is what
-                // a working pass says when the whole job was a resurface.
-                NSLog("Nostr likes probe: %@ new things, %d resurfaced",
-                      added.map(String.init) ?? "FAILED", NostrIngest.resurfaced)
-            }
-        },
-        // `-nostrMentions <npub|hex|name@domain>` watches MENTIONS of an
-        // account (`#p` tag) and syncs.
-        Hook(key: "nostrMentions") { name, context in
-            let n = NostrStore.normalize(name)
-            NostrStore.shared.add(n)
-            NostrStore.shared.setMentions(true, for: n)
-            Task { @MainActor in
-                let added = await NostrIngest.refresh(context: context)
-                NSLog("Nostr mentions probe: %@ new things",
-                      added.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-nostrHealProbe YES` runs the delete-sync reconcile headlessly
-        // over already-watched accounts and NSLogs how many stale notes it
-        // removed. `force: true` bypasses heal's own hourly throttle.
-        Hook(key: "nostrHealProbe") { _, context in
-            Task { @MainActor in
-                let n = await NostrIngest.heal(context: context, force: true)
-                NSLog("Nostr heal probe: %d removed", n)
-            }
-        },
-        // `-nostrReplies <0xeventid>` fetches a note's thread by its raw
-        // event id (a Nostr thing's sourceRef is "nostr:<event-id>"; no
-        // author needed, unlike Farcaster's fid-keyed lookup) and NSLogs the
-        // count + first line, headless.
-        Hook(key: "nostrReplies") { eventID, _ in
-            Task { @MainActor in
-                let replies = await NostrIngest.replies(eventID: eventID)
-                NSLog("Nostr replies probe: %d replies%@", replies.count,
-                      replies.first.map { " — @\(SocialThread.shortHandle($0.handle)): \(String($0.text.prefix(60)))" } ?? "")
             }
         },
         // `-sentryHost <host>` — the host to read against (declare it BEFORE
@@ -3914,8 +3841,6 @@ enum ProbeHooks {
                          WalletStore.shared.addresses.count, 2, true))
             rows.append(("bluesky.accounts", "Bluesky's face rail",
                          BlueskyStore.shared.accounts.count, 2, true))
-            rows.append(("nostr.accounts", "Nostr's face rail",
-                         NostrStore.shared.accounts.count, 2, true))
             rows.append(("addressbook.entries", "the address book's filter field",
                          AddressBook.shared.all.count, 9, false))
             // A sparkline needs two points to be a line at all. The pulse

@@ -4,7 +4,7 @@ import SwiftData
 /// The person room (item 2 of the 2026-07-27 social enrichment pass) —
 /// everything Casberi holds about ONE person in one chronology: their own
 /// posts. The onchain half — a Farcaster account's verified addresses and
-/// their wallet's moves — went with the Farcaster seat (prd §1109).
+/// their wallet's moves — went with the Farcaster seat (prd §1110).
 ///
 /// The quick-glance `SocialProfileCard` tray keeps every entry point it
 /// already has (a post's face, a reply, `casberi://person/…`) — this is the

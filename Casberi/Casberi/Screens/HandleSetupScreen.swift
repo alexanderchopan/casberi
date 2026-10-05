@@ -3,14 +3,13 @@ import SwiftData
 
 /// The name-only bridges — connect by a public name alone (no password, no
 /// token, nothing stored but the name), so their screens are the same shape.
-/// Two families ride this one enum: the people bridges (Bluesky, Nostr,
+/// Two families ride this one enum: the people bridges (Bluesky,
 /// Pinterest), and the feed-follow bridges (Substack, YouTube, Podcasts,
 /// Telegram), whose per-bridge words and URL rules live in `FeedFollowKind`.
 /// This enum carries the words that differ, the way TokenBridge does for the
 /// paste-a-token screens; the feed cases delegate to their kind.
 enum HandleBridge: String {
     case bluesky   = "Bluesky"
-    case nostr     = "Nostr"
     case pinterest = "Pinterest"
     case substack  = "Substack"
     case youtube   = "YouTube"
@@ -33,7 +32,6 @@ enum HandleBridge: String {
     var bridgeID: String {
         switch self {
         case .bluesky:   "bsky"
-        case .nostr:     "nostr"
         case .pinterest: "pinterest"
         default:         feedKind?.bridgeID ?? ""
         }
@@ -44,7 +42,6 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "handle"
         case .pinterest: "username"
-        case .nostr:     "npub"
         default:         feedKind?.nameNoun ?? "name"
         }
     }
@@ -53,7 +50,6 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "you"
         case .pinterest: "yourname"
-        case .nostr:     "npub1… or name@domain"
         default:         feedKind?.placeholder ?? ""
         }
     }
@@ -112,8 +108,6 @@ enum HandleBridge: String {
     var names: [String] {
         switch self {
         case .bluesky:   return BlueskyStore.shared.handles
-        case .nostr:
-            return NostrStore.shared.accounts.map { $0.pubkeyHex.isEmpty ? $0.input : $0.pubkeyHex }
         case .pinterest: return PinterestStore.shared.follows
         default:         return feedKind?.store.inputs ?? []
         }
@@ -125,8 +119,6 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:
             name.hasSuffix(".bsky.social") ? String(name.dropLast(".bsky.social".count)) : name
-        case .nostr:
-            SocialThread.shortHandle(name)
         case .pinterest:
             PinterestStore.shared.display(name)
         default:
@@ -157,7 +149,6 @@ enum HandleBridge: String {
     func addName(_ raw: String) {
         switch self {
         case .bluesky:   BlueskyStore.shared.add(raw)
-        case .nostr:     NostrStore.shared.add(raw)
         case .pinterest: PinterestStore.shared.add(raw)
         default:         feedKind?.store.add(FeedFollowEntry(input: raw))
         }
@@ -168,10 +159,6 @@ enum HandleBridge: String {
     /// This used to only edit the store's own list, so an account or feed you
     /// removed went on filling the feed forever with no way to clear it short
     /// of Delete everything.
-    ///
-    /// The identity is resolved BEFORE the store mutates — Nostr's rows are
-    /// keyed on the resolved pubkey hex while `remove` accepts either that or
-    /// what was typed, so reading it afterwards would find nothing to match.
     @MainActor
     func removeName(_ name: String, context: ModelContext) {
         // `rawValue` IS the source name on every case here.
@@ -183,12 +170,6 @@ enum HandleBridge: String {
         case .bluesky:
             remainingTopics = BlueskyStore.shared.feeds.map(\.name)
             BlueskyStore.shared.remove(name)
-        case .nostr:
-            handle = NostrStore.shared.accounts.first {
-                $0.input == name || $0.pubkeyHex == name
-            }?.pubkeyHex ?? name
-            remainingTopics = NostrStore.shared.hashtags.map(\.tag)
-            NostrStore.shared.remove(name)
         case .pinterest:
             // Rows carry the follow they came through (prd §819), so the
             // follow IS the handle `pruneAuthor` matches.
@@ -213,7 +194,6 @@ enum HandleBridge: String {
     var noun: String {
         switch self {
         case .bluesky:   "posts"
-        case .nostr:     "notes"
         case .pinterest: "pins"
         default:         feedKind?.noun ?? "things"
         }
@@ -238,8 +218,6 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:
             "A few letters to find someone, or the full handle."
-        case .nostr:
-            "An npub, a raw hex pubkey, or name@domain — Nostr has no directory to search."
         case .pinterest:
             "Your username first; then a board or profile link follows it."
         default:
@@ -250,7 +228,6 @@ enum HandleBridge: String {
     var recentHeader: String {
         switch self {
         case .bluesky:   "Posts"
-        case .nostr:     "Notes"
         case .pinterest: "Pins"
         default:         feedKind?.recentHeader ?? "Recent"
         }
@@ -259,18 +236,17 @@ enum HandleBridge: String {
     var canLine: String {
         switch self {
         case .bluesky:   "Reads public posts — accounts, feeds, mentions."
-        case .nostr:     "Reads public notes — accounts, hashtags, reactions."
         case .pinterest: "Reads public pins — yours, and the boards you follow."
         default:         feedKind?.canLine ?? ""
         }
     }
 
-    /// The social bridges (Bluesky, Nostr) whose account rows
+    /// The social bridge (Bluesky) whose account rows
     /// carry a face, a bio, and watch toggles — the rich shared row. Others
     /// show the plain name row.
     var isRichSocial: Bool {
         switch self {
-        case .bluesky, .nostr: true
+        case .bluesky: true
         default: false
         }
     }
@@ -282,7 +258,6 @@ enum HandleBridge: String {
     var socialAccounts: [SocialAccount] {
         switch self {
         case .bluesky:   BlueskyStore.shared.socialAccounts
-        case .nostr:     NostrStore.shared.socialAccounts
         default:         []
         }
     }
@@ -291,13 +266,6 @@ enum HandleBridge: String {
     /// offer (Bluesky has no keyless likes), so the call is always safe.
     func setWatch(_ kind: SocialWatch.Kind, _ on: Bool, for name: String) {
         switch self {
-        case .nostr:
-            switch kind {
-            case .likes:    NostrStore.shared.setLikes(on, for: name)
-            case .mentions: NostrStore.shared.setMentions(on, for: name)
-            case .recasts:  break   // NIP-18 reposts aren't read yet
-            case .mine:     break   // no inbound reads on Nostr yet
-            }
         case .bluesky:
             switch kind {
             case .recasts:  BlueskyStore.shared.setRecasts(on, for: name)
@@ -322,7 +290,6 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:
             "Mine — this account is yours: who liked your posts, who replied, and who started following."
-        case .nostr:     nil
         default:         nil
         }
     }
@@ -331,14 +298,13 @@ enum HandleBridge: String {
     /// multi bridges, the first watched account stands in.
     var currentName: String { names.first ?? "" }
 
-    /// Connected at all — for Bluesky a followed FEED (2026-07-16), and for
-    /// Nostr a followed hashtag, still counts with no account at all: it
+    /// Connected at all — for Bluesky a followed FEED (2026-07-16) still
+    /// counts with no account at all: it
     /// syncs, it can disconnect. Everywhere else the account list is the whole
     /// story.
     var isConnected: Bool {
         switch self {
         case .bluesky:   BlueskyStore.shared.connected
-        case .nostr:     NostrStore.shared.connected
         default:         !names.isEmpty
         }
     }
@@ -349,8 +315,6 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:
             if name.isEmpty { BlueskyStore.shared.removeAll() } else { BlueskyStore.shared.add(name) }
-        case .nostr:
-            if name.isEmpty { NostrStore.shared.removeAll() } else { NostrStore.shared.add(name) }
         case .pinterest:
             if name.isEmpty { PinterestStore.shared.removeAll() } else { PinterestStore.shared.add(name) }
         default:
@@ -363,7 +327,6 @@ enum HandleBridge: String {
     func normalize(_ raw: String) -> String {
         switch self {
         case .bluesky:   BlueskyStore.normalize(raw)
-        case .nostr:     NostrStore.normalize(raw)
         case .pinterest: PinterestStore.normalize(raw)
         default:         feedKind?.normalize(raw) ?? raw
         }
@@ -373,7 +336,6 @@ enum HandleBridge: String {
     func refresh(context: ModelContext) async -> Int? {
         switch self {
         case .bluesky:   return await BlueskyIngest.refresh(context: context)
-        case .nostr:     return await NostrIngest.refresh(context: context)
         case .pinterest: return await PinterestIngest.refresh(context: context)
         default:
             guard let feedKind else { return nil }
@@ -387,7 +349,7 @@ enum HandleBridge: String {
 ///
 /// ON THE ACCOUNT PAGE since prd §639 (2026-09-06). §184's roster shelf of
 /// faces, the square-marked topic ledger and the "See in feed" hint are gone:
-/// watched people, channels, feeds and hashtags are ROWS under "Watching · N"
+/// watched people, channels and feeds are ROWS under "Watching · N"
 /// on `AccountPage`, active this week first, one removal verb ("Remove"), and
 /// the Activity row is the way to the room. What this file keeps is what is
 /// the bridge's own: the omnibox and its search, the follow verbs, the
@@ -409,8 +371,8 @@ struct HandleSetupScreen: View {
     /// The page's one presentation (`AccountPage.sheet`): the reach sheet, or
     /// a profile raised from a roster row.
     @State private var sheet: AccountPageSheet?
-    /// The roster as the chassis draws it — people, channels, feeds and
-    /// hashtags with this week's count and the new-since-you-looked ring.
+    /// The roster as the chassis draws it — people, channels and feeds
+    /// with this week's count and the new-since-you-looked ring.
     /// Read on appearance and after every add, remove and sync (a fetch
     /// belongs in `.task`, never in a body — prd §628).
     @State private var rows: [AccountPageShape.Row] = []
@@ -423,7 +385,7 @@ struct HandleSetupScreen: View {
     /// merged with `hits` for display (a feed has no typeable name, so the
     /// search IS the entry gesture, 2026-07-16).
     @State private var feedHits: [BlueskyStore.Feed] = []
-    /// A chip toggled (or hashtag followed) while a sync is in flight —
+    /// A chip toggled (or feed followed) while a sync is in flight —
     /// the finished sync runs once more instead of silently dropping it.
     @State private var resyncQueued = false
 
@@ -522,10 +484,8 @@ struct HandleSetupScreen: View {
     // MARK: - The roster (prd §639)
 
     /// A topic row's id carries its kind, so one remove verb can route to
-    /// the right store: `feed:`, `hashtag:`; a bare id is a person or a
-    /// followed name.
+    /// the right store: `feed:`; a bare id is a person or a followed name.
     private static let feedPrefix = "feed:"
-    private static let hashtagPrefix = "hashtag:"
 
     /// Every watched thing as a row, with this week's count and the ring.
     /// ONE fetch — the source's things from the last seven days — grouped by
@@ -587,9 +547,9 @@ struct HandleSetupScreen: View {
                     avatarURL: bridge == .pinterest ? PinterestStore.shared.meta[name]?.cover : nil))
             }
         }
-        // Topics — feeds, hashtags — are rows of the same roster now (§639
-        // folds §184's two ledgers into one list), told apart by their
-        // subline's noun rather than a second section.
+        // Topics — feeds — are rows of the same roster now (§639 folds
+        // §184's two ledgers into one list), told apart by their subline's
+        // noun rather than a second section.
         if bridge == .bluesky {
             for feed in BlueskyStore.shared.feeds {
                 let f = fact([feed.name], in: byChannel)
@@ -597,15 +557,6 @@ struct HandleSetupScreen: View {
                     id: Self.feedPrefix + feed.uri, title: feed.name,
                     subline: AccountPageShape.subline(nouns: String(localized: "feed"), weekCount: f.week),
                     weekCount: f.week, hasNew: f.new, isYou: false, avatarURL: feed.imageURL))
-            }
-        }
-        if bridge == .nostr {
-            for hashtag in NostrStore.shared.hashtags {
-                let f = fact([hashtag.tag], in: byChannel)
-                out.append(AccountPageShape.Row(
-                    id: Self.hashtagPrefix + hashtag.tag, title: "#\(hashtag.tag)",
-                    subline: AccountPageShape.subline(nouns: String(localized: "hashtag"), weekCount: f.week),
-                    weekCount: f.week, hasNew: f.new, isYou: false, avatarURL: nil))
             }
         }
         rows = out
@@ -622,14 +573,6 @@ struct HandleSetupScreen: View {
             BlueskyStore.shared.removeFeed(uri)
             SocialTopics.pruneTopic(source: "Bluesky", channel: name,
                                     watchedHandles: BlueskyStore.shared.handles,
-                                    context: modelContext)
-        } else if id.hasPrefix(Self.hashtagPrefix) {
-            let tag = String(id.dropFirst(Self.hashtagPrefix.count))
-            NostrStore.shared.removeHashtag(tag)
-            // Nostr keys `authorHandle` on the pubkey hex, so the watched
-            // set is the resolved keys (prd §286).
-            SocialTopics.pruneTopic(source: "Nostr", channel: tag,
-                                    watchedHandles: NostrStore.shared.accounts.map(\.pubkeyHex),
                                     context: modelContext)
         } else {
             bridge.removeName(id, context: modelContext)
@@ -650,9 +593,8 @@ struct HandleSetupScreen: View {
 
     // MARK: - The omnibox (prd §184)
 
-    /// One field for both jobs: search-as-you-type for people (and, on
-    /// Bluesky, feeds), or — on Nostr, with a leading "#" — follow a hashtag
-    /// by name. Replaces the old separate name/channel/feed fields.
+    /// One field: search-as-you-type for people (and, on Bluesky, feeds).
+    /// Replaces the old separate name/channel/feed fields.
     @ViewBuilder private var omniBlock: some View {
         // The slab, its hits, its status (prd §190). The `omniNote` sentence
         // under the field is gone with §639 — the header's intro says it
@@ -783,7 +725,6 @@ struct HandleSetupScreen: View {
             return AccountPageShape.findPlaceholder(bridge.findNoun)
         }
         if bridge == .bluesky { return String(localized: "Handle, or search a feed") }
-        if bridge == .nostr { return String(localized: "npub, hex, name@domain, or #hashtag") }
         if bridge == .pinterest, bridge.isConnected {
             return String(localized: "A board or profile link")
         }
@@ -825,7 +766,6 @@ struct HandleSetupScreen: View {
     }
 
     private var omniHits: [OmniHit] {
-        if bridge == .nostr, query.hasPrefix("#") { return [] }
         return hits.map(OmniHit.person) + feedHits.map(OmniHit.feed)
     }
 
@@ -838,25 +778,17 @@ struct HandleSetupScreen: View {
     /// there now — including this property, which no call site can speak for
     /// since the verb is composed here across four branches.
     private var omniButtonLabel: String {
-        if bridge == .nostr, query.hasPrefix("#") { return "Follow" }
         if bridge == .pinterest { return bridge.isConnected ? "Follow" : "Connect" }
         if bridge.supportsMultiple { return "Add" }
         return bridge.currentName.isEmpty ? "Connect" : "Update"
     }
 
     private var omniSyncingLine: String {
-        if bridge == .nostr, query.hasPrefix("#") {
-            return String(localized: "Following the hashtag…")
-        }
-        return String(localized: "Fetching \(bridge.noun)…")
+        String(localized: "Fetching \(bridge.noun)…")
     }
 
     private func omniSubmit() {
-        if bridge == .nostr, query.hasPrefix("#") {
-            followHashtag()
-        } else {
-            connect()
-        }
+        connect()
     }
 
     private func connect() {
@@ -913,22 +845,8 @@ struct HandleSetupScreen: View {
         Task { await sync() }
     }
 
-    /// A leading "#" follows a Nostr hashtag instead of watching a person —
-    /// no resolve step needed (a hashtag is just itself), so this only ever
-    /// normalizes and adds.
-    private func followHashtag() {
-        let raw = query.hasPrefix("#") ? String(query.dropFirst()) : query
-        let tag = NostrStore.normalizeHashtag(raw)
-        guard !tag.isEmpty else { return }
-        NostrIngest.followHashtag(tag)
-        readRows()
-        query = ""
-        DSHaptic.tap()
-        Task { await sync() }
-    }
-
     private func sync() async {
-        // A tap mid-sync (a hashtag follow, a feed pick) queues one more pass
+        // A tap mid-sync (a feed pick) queues one more pass
         // instead of silently fetching nothing — the running sync took its
         // account snapshot before the change.
         guard !syncing else { resyncQueued = true; return }

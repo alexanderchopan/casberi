@@ -1958,115 +1958,6 @@ def bsky_4b(p):
     return S.html()
 
 
-def radio_mast(x, yb, h, col, sw=1.4):
-    """A tall narrow guyed lattice mast."""
-    wd = max(3, h * 0.03)
-    out = [line(x - wd, yb, x - wd * 0.6, yb - h, col, sw), line(x + wd, yb, x + wd * 0.6, yb - h, col, sw)]
-    k = int(h / (wd * 2.4))
-    for i in range(k):
-        y0, y1 = yb - h * i / k, yb - h * (i + 1) / k
-        out.append(line(x - wd, y0, x + wd, y1, col, sw * 0.6))
-        out.append(line(x - wd, y0, x + wd, y0, col, sw * 0.6))
-    for t, spread in ((0.45, 0.55), (0.8, 0.9)):
-        y = yb - h * t
-        for sgn in (-1, 1):
-            out.append(line(x, y, x + sgn * h * spread * 0.6, yb + 6, col, 0.7, opacity=0.8))
-    return "".join(out)
-
-
-def nostr_0(p):
-    """Radio masts on a hilltop at dusk, their red lights just visible."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("nostr-0")
-    S(sky(S, [(0, "#151c42"), (0.4, "#3f3f78"), (0.7, "#b0607a"), (0.88, "#ec8a5a"), (1, "#f6b672")], 0, 470))
-    for _ in range(60):
-        S(circ(rng.uniform(0, w), rng.uniform(0, 200), rng.uniform(0.5, 1.4), "#ffffff", opacity=round(rng.uniform(0.2, 0.8), 2)))
-    S(path("M660 90 a26 26 0 1 0 22 40 a20 20 0 1 1 -22 -40 Z", "#fdf1d6"))
-    S(ridge(S, rng, 430, 18, "#6a4a72", freq=1.6))
-    S(ridge(S, rng, 470, 14, "#4a3558", freq=2.2))
-    # the hill
-    S(path(f"M-10 600 L-10 430 C120 400 240 330 380 320 C520 310 640 370 810 420 L810 600 Z", "#1c1830"))
-    for x, h_, blink in ((330, 280, 3), (430, 220, 2), (520, 150, 2)):
-        yb = 322 + abs(x - 380) * 0.18
-        S(radio_mast(x, yb, h_, "#141226", 1.6))
-        for k in range(blink):
-            y = yb - h_ * (k + 1) / blink
-            S(circ(x, y, 12, "#ff3a2a", opacity=0.3))
-            S(circ(x, y, 2.6, "#ff5a48"))
-    # a small hut at the foot of the masts, one window lit
-    S(rect(360, 318, 44, 26, "#141226"))
-    S(poly([(356, 318), (408, 318), (382, 304)], "#141226"))
-    S(rect(390, 326, 8, 7, "#ffcf7a"))
-    # grass stalks against the sky, foreground
-    for _ in range(90):
-        x = rng.uniform(-10, w + 10)
-        hh = rng.uniform(20, 70)
-        S(path(f"M{n(x)} 600 Q{n(x + rng.uniform(-8, 8))} {n(600 - hh * 0.6)} {n(x + rng.uniform(-14, 14))} {n(600 - hh)}",
-               "none", stroke="#0e0c1a", stroke_width=1.6))
-    return S.html()
-
-
-def pines(S, rng, y, amp, fill, dens=1.0, hmin=20, hmax=60):
-    """A tree line of conifers along y."""
-    out = []
-    x = -10
-    while x < S.w + 10:
-        th = rng.uniform(hmin, hmax)
-        tw = th * 0.28
-        top = y - th - amp * math.sin(x / 90)
-        out.append(poly([(x - tw, y + 2), (x, top), (x + tw, y + 2)], fill))
-        x += rng.uniform(5, 14) / dens
-    out.append(rect(0, y, S.w, 6, fill))
-    return "".join(out)
-
-
-def nostr_2a(p):
-    """A still lake at dawn: mist on the water, pines across it, a jetty."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("nostr-2a")
-    hy = 280
-    S(sky(S, [(0, "#a9aed4"), (0.6, "#efc2bc"), (1, "#fbdcbc")], 0, hy))
-    S(glow(S, 520, hy - 10, 260, "#ffe8c8", 0.8))
-    S(circ(520, hy - 4, 22, "#fff4e0"))
-    lines_ = [(hy - 20, "#c8b8c8", 0.6, 26, 40), (hy - 8, "#a898b0", 0.9, 22, 54), (hy, "#7a6e8e", 1.1, 18, 60)]
-    S(rect(0, hy, w, h - hy, S.lin([(0, "#f6d6c0"), (0.5, "#d9bcc8"), (1, "#9a9ec4")])))
-    for y, col, dens, a, b in lines_:
-        S(pines(S, rng, y, 6, col, dens, a, b))
-    # reflections: the tree lines, flipped and softened
-    refl = "".join(pines(S, random.Random(f"r{y}"), y, 6, col, dens, a, b) for y, col, dens, a, b in lines_)
-    S(g(refl, transform=f"translate(0 {2 * hy + 8}) scale(1 -1)", opacity=0.35, filter=S.blur(1.5, 3)))
-    # mist lying on the water
-    bl = S.blur(14)
-    for y, op in ((hy + 4, 0.8), (hy + 26, 0.5), (hy + 60, 0.35)):
-        S(ell(w * 0.45, y, w * 0.7, 16, "#fff4ec", opacity=op, filter=bl))
-    S(water_glints(rng, 380, 660, hy + 10, h, "#fff2e0", 36, 0.5, 60, center=520, spread=40))
-    # the jetty running out from the bottom left
-    planks = []
-    for i in range(18):
-        t0, t1 = i / 18, (i + 0.85) / 18
-        def P(t, side):
-            x = -40 + t * 330 + side * (70 - t * 55)
-            y = h + 10 - t * 240
-            return (x, y)
-        planks.append(poly([P(t0, -1), P(t0, 1), P(t1, 1), P(t1, -1)], mix("#6a5048", "#b09088", i / 18)))
-    S(g(planks))
-    for t in (0.3, 0.6, 0.9):
-        x = -40 + t * 330
-        y = h + 10 - t * 240
-        for side in (-1, 1):
-            xx = x + side * (70 - t * 55)
-            S(rect(xx - 3, y - 6, 6, 40 * (1 - t) + 14, "#4a3838"))
-    # reeds at the right edge
-    for _ in range(40):
-        x = rng.uniform(690, 810)
-        hh = rng.uniform(40, 130)
-        S(path(f"M{n(x)} {h} Q{n(x - 6)} {n(h - hh * 0.5)} {n(x + rng.uniform(-18, 6))} {n(h - hh)}", "none",
-               stroke="#5a4e58", stroke_width=2))
-    return S.html()
-
-
 def snap_0(p):
     """A beach at golden hour: a striped towel, a parasol's long shadow, the sun on the sea."""
     w, h = p["size"]
@@ -3061,8 +2952,6 @@ PICS = {
     "ig-like-0": ig_like_0,
     "ig-notice-0": ig_notice_0,
     "bsky-4b": bsky_4b,
-    "nostr-0": nostr_0,
-    "nostr-2a": nostr_2a,
     "snap-0": snap_0,
     "snap-1": snap_1,
     "snap-4": snap_4,

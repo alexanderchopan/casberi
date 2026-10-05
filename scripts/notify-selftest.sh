@@ -669,7 +669,7 @@ ok(oneApp.kind == .digest && oneApp.title == "Bluesky" && oneApp.body == "2 new"
    "one app with several things is its name and a count")
 ok(oneApp.link == "casberi://feed/source/Bluesky", "…and opens that app's room")
 let crowd = NotifyDigest.plan((0..<25).map {
-    social("s\($0)", ["Nostr", "Bluesky", "X"][$0 % 3], [.likesReceived, .followersGained, .repliesReceived][$0 % 3], at: at(8))
+    social("s\($0)", ["Instagram", "Bluesky", "X"][$0 % 3], [.likesReceived, .followersGained, .repliesReceived][$0 % 3], at: at(8))
 })!
 ok(crowd.title == "Social" && crowd.body == "25 new", "several apps are the category and a count, however many")
 ok(crowd.link == "casberi://feed", "…and open All")

@@ -308,7 +308,7 @@ enum Retriever {
             // `postText` is the one that mattered most and was missing: for
             // every social row `content` holds the PERMALINK, `title` is an
             // 80-char clamp, and the post's real words live only here — so the
-            // searchable body of a Farcaster, Bluesky, Nostr, Slack or X row
+            // searchable body of a Farcaster, Bluesky, Slack or X row
             // was a URL, and anything said past the clamp could not be found.
             // `summary` is display copy the source wrote (a Trello card back,
             // an x402 seller's line); the

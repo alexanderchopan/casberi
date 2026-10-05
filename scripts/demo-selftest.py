@@ -1189,9 +1189,8 @@ def check_i_wallet_counterparties_are_named(files_text):
 LITERAL_HEAD = r'"([^"\\]*)'
 
 # Literal namespaces that are never a `Thing.sourceRef`: bundled sample art
-# (`RemoteImageLoader` resolves that scheme in DEBUG), permalinks, and the
-# note ids a Nostr row carries as its `content`.
-NON_REF_LITERALS = ("http", "sample:", "nostr:note", "obsidian://", "casberi:")
+# (`RemoteImageLoader` resolves that scheme in DEBUG) and permalinks.
+NON_REF_LITERALS = ("http", "sample:", "obsidian://", "casberi:")
 
 # Argument labels and properties that hold a namespaced string which is not a
 # ref. Matched against the 40 characters before the literal.

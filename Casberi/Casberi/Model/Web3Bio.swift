@@ -5,7 +5,7 @@ import Foundation
 ///
 /// `api.web3.bio/ns/{query}` takes an address or a name and returns every
 /// record it links: ENS, Basenames, Linea Name Service, Farcaster, Lens, SNS.
-/// Farcaster's rows are dropped since the seat was retired (prd §1109): the
+/// Farcaster's rows are dropped since the seat was retired (prd §1110): the
 /// platform is not in `Platform`, so `record` refuses it.
 /// `api.ensideas.com` (the resolver `ENS` has used since 2026-07-09) answers
 /// ENS alone, one name per call, and could not say whether `jesse.base.eth`

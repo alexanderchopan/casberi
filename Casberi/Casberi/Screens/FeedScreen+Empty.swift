@@ -349,7 +349,7 @@ private struct EmptyFeedPile: View {
     // doors that need no account and land rows in one tap.
     static let pileApps = ["Notion", "Strava", "RSS", "Photos",
                            "YouTube", "Substack",
-                           "Gmail", "GitHub", "Nostr", "Bluesky",
+                           "Gmail", "GitHub", "Telegram", "Bluesky",
                            "Files", "Wallet"]
 
     /// Deterministic per-tile jitter — no randomness in a view body; the

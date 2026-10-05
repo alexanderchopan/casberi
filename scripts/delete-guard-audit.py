@@ -79,24 +79,17 @@ ABSENT = re.compile(r"!\s*([A-Za-z_][\w.]*)\.contains\(")
 # nothing noticing, which is the failure this whole audit exists to prevent,
 # one level up. Caught by mutation on this audit's first run — removing the
 # HomeKit ingest's `if !homes.isEmpty` guard left the tree green. (That entry,
-# idiom (1) below, went with the HomeKit bridge on 2026-09-04; the numbering
-# is left alone so the surviving reasons keep the labels they were written
-# with.)
+# idiom (1) below, went with the HomeKit bridge on 2026-09-04, and idiom (2),
+# Nostr's relay-reachability flag, with the Nostr seat on 2026-10-05; the
+# numbering is left alone so the surviving reasons keep the labels they were
+# written with.)
 #
 # A prune reaches this list only by proving its upstream read SUCCEEDED some
 # other way than testing the named set's emptiness. The shapes in this tree do,
-# by three surviving idioms, and naming which one is the whole value of the
+# by two surviving idioms, and naming which one is the whole value of the
 # entry: the next person to touch one of these functions needs to know what
 # they must not remove.
 KNOWN_SAFE = {
-    # (2) A reachability flag, which is STRONGER than an emptiness test: it
-    #     separates 'the relay answered nothing' from 'no relay answered'.
-    ("NostrIngest.swift", "heal"):
-        ("guarded by `guard result.reached else { continue }` — a timed-out "
-        "chunk is never treated as gone, so an empty `present` can only mean "
-        "the relay answered and said so.",
-         'guard result.reached else { continue }'),
-
     # (3) Success-gated accumulation: the prune's own domain is only widened
     #     after a good fetch, so a failed chunk is unreachable by the delete.
     ("BlueskyIngest.swift", "heal"):

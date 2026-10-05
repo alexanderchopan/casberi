@@ -23,7 +23,7 @@ struct Identity: Hashable, Codable {
     enum Kind: String, Codable, CaseIterable {
         case contact, email, github, wallet
         case ens, basename, linea, lens
-        case bluesky, nostr, worldApp, feed
+        case bluesky, worldApp, feed
         /// A merchant that charges you on a schedule (prd §1106) — LAST, so a
         /// biller never leads a contact a card or an address also names.
         case biller
@@ -46,7 +46,6 @@ struct Identity: Hashable, Codable {
             case .email:     return "mail:"
             case .github:    return "gh:"
             case .bluesky:   return "bsky:"
-            case .nostr:     return "nostr:"
             case .worldApp:  return "world:"
             case .feed:      return "feed:"
             case .biller:    return "biller:"
@@ -86,19 +85,17 @@ struct Identity: Hashable, Codable {
 
     /// A key back to its kind, for link endpoints that are not seeds.
     static func parse(key: String) -> Identity? {
-        // Farcaster's prefix (retired, prd §1109). The ledger syncs, so a
-        // link written before the seat went can still arrive; it names nobody
-        // now, and without this it would fall through to a World App username.
-        if key.hasPrefix(retiredFarcasterPrefix) { return nil }
         for kind in Kind.allCases where !kind.prefix.isEmpty && key.hasPrefix(kind.prefix) {
             return Identity(kind: kind, key: key)
         }
         if key.hasPrefix("0x"), key.count == 42 { return Identity(kind: .wallet, key: key) }
+        // A key with a prefix no kind claims is a deleted kind's (a link or a
+        // saved name from the Nostr or Farcaster seat, `nostr:`/`fc:`), never
+        // a World App username.
+        guard !key.contains(":") else { return nil }
         if let named = Kind.classify(primaryName: key) { return Identity(kind: named, key: key) }
         return nil
     }
-
-    static let retiredFarcasterPrefix = "fc:"
 
     /// The body after the prefix: the address, the handle, the name.
     var body: String { String(key.dropFirst(kind.prefix.count)) }
@@ -109,7 +106,7 @@ struct Identity: Hashable, Codable {
         case .wallet:                    return "…" + body.suffix(4)
         case .bluesky:                   return "@" + body
         case .email, .github, .contact,
-             .nostr, .worldApp, .feed, .biller,
+             .worldApp, .feed, .biller,
              .ens, .basename, .linea, .lens: return body
         }
     }
@@ -119,7 +116,7 @@ extension Identity.Kind {
     /// The kind of a primary name by its SHAPE — `AddressNames` stores a
     /// localized label beside each name, so the label is not a key. The rest
     /// are suffixes; an `@`-prefixed row is a Farcaster handle a device
-    /// stored before the seat was retired (prd §1109), and names nobody.
+    /// stored before the seat was retired (prd §1110), and names nobody.
     /// A bare word is a World App username; any other dotted name is ENS
     /// (which is where `.wei`/`.gwei` file too — they resolve like ENS).
     static func classify(primaryName: String) -> Identity.Kind? {
@@ -406,7 +403,6 @@ enum ContactIndex {
         if let h = authorHandle, !h.isEmpty {
             switch source {
             case "Bluesky":   out.append(Identity.key(.bluesky, h))
-            case "Nostr":     out.append(Identity.key(.nostr, h))
             case "GitHub" where !isNotification: out.append(Identity.key(.github, h))
             // A `where` on a multi-pattern case binds to its LAST pattern
             // only — the harness caught "Gmail" matching a bare display

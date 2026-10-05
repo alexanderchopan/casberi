@@ -265,7 +265,6 @@ enum BridgeGlyph {
         case "telegram":  return "paperplane.fill"
         case "pinterest": return "pin"
         case "bluesky":   return "at"
-        case "nostr":     return "bird"
         case "cal.com", "calendly": return "calendar"
         case "steam":     return "gamecontroller"
         case "obsidian":  return "text.book.closed"
