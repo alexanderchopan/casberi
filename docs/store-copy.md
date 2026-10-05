@@ -13,6 +13,11 @@ live appInfo (READY_FOR_SALE) and the in-review one (WAITING_FOR_REVIEW). Shared
 Mac: the subtitle rides the app, not a version. Promotional text was EMPTY on both
 platforms until it was applied the same day (below). Full snapshot: `docs/store-live.json`.
 
+**Subtitle, owed with the next version (user, 2026-10-05):** `Every subscription, one place` (29 of 30). The live
+appInfo reads `One app for your things`; the subtitle rides the app, so it changes with the next submitted version.
+The iOS description's opening line below carries the same line; the Mac description's opening is owed the same edit
+when it is next rewritten.
+
 ## iOS — description REWRITTEN 2026-09-13 for §697b, REVISED 2026-09-27, NOT YET APPLIED
 
 **2026-09-27 revision (user):** the ask lives on through the keyed agents — each opens
@@ -44,7 +49,7 @@ Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
 
 ### iOS description (1,641 chars) — 2.0, no third-party product names (4.1(a), 2026-10-02)
 
-Everything you build, run and owe is scattered across apps. Casberi brings it into one private place on your iPhone, iPad and Mac. No account, no servers, no tracking.
+Every subscription, in one place. Everything you build, run and owe is scattered across apps, wallets and agents. Casberi shows what each one is doing, all together or one at a time, on your iPhone, iPad and Mac. No account, no servers, no tracking.
 
 Everything new, in one place.
 Home is your daily brief: a deploy that failed, a payment that landed, a meeting coming up, a note you saved. Newest first, in one feed.
@@ -157,6 +162,6 @@ Bugs
 
 Bankr answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 
-### Promotional text — both platforms (134 chars) — APPLIED 2026-09-27 (iOS 1.0.39 live, 1.0.40 in review; Mac 1.0.40 live)
+### Promotional text — both platforms (142 chars) — "Every subscription, in one place" (user, 2026-10-05); NOT YET APPLIED to 2.0.x (both read empty 2026-10-05)
 
-Your apps, wallets and agents in one private feed. Bring your own key for Claude, ChatGPT or Gemini and talk to it beside your things.
+Every subscription, in one place. See what every app, wallet and agent you use is doing, all together or one at a time. Free, with no account.

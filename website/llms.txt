@@ -1,19 +1,19 @@
 # Casberi
 
-> Casberi is a free iOS app that gathers everything you make — notes, links, screenshots, events, chats, voice notes, and the output of your apps and agents — into one private feed on your iPhone. One search finds everything. Your things live on your device, work offline, and leave only by your choice.
+> Casberi puts every subscription in one place. Everything you do is scattered across apps, wallets and agents; Casberi shows what each one is doing, all together or one at a time. Free on iPhone, iPad and Mac, with no account, and read on your device.
 
 Key facts:
 
-- Native iOS app (iPhone), free on the App Store.
-- Everything becomes a "thing" in one feed; one search spans all of it.
-- Capture in one gesture: share sheet, screenshots, Siri, paste, voice. Typed text never saves silently.
-- Nearly a hundred apps connect as bridges: Photos, Calendar, Reminders, Contacts, Apple Health, Apple Wallet, Strava, Apple Music, Spotify, Duolingo, RSS, Substack, Bluesky, Pinterest, Gmail, iCloud Mail, GitHub, GitLab, Jira, Slack, Trello, Notion, Linear, Todoist, Stripe, PostHog, Sentry, Vercel, Cloudflare, App Store Connect, Readwise, Raindrop, Obsidian, Kindle, Cal.com, Calendly, YouTube, Podcasts, Twitch, Steam, Instagram / Snapchat / TikTok / X imports, ChatGPT / Claude / Claude Code / Gemini / Day One / Apple Journal imports, and more.
-- Wallets and exchanges connect with no account and no key: watch a wallet by address or ENS/.sol name (or connect a wallet app), plus a watchlist of stocks and tokens (Markets), Coinbase, Kraken, Binance, Bitrefill, Peer, and 0xBow Privacy Pools. Every one of these is read-only — Casberi can never trade or move funds.
-- One screen: your things in one feed, with a dock along the bottom — All, then a chip for each category, whose folder opens the apps inside it. No tabs, no home screen, no board. Your avatar opens Settings; the catalog of apps sits at the end of the strip.
-- Each app opens as a room shaped like what's in it: Calendar reads as an agenda, Photos as a grid, a wallet leads with its balance. A Home Screen widget carries your wallet; Spotlight and the composer's Find find any thing by what it says.
-- Agents connect too: their output arrives in the feed with provenance, and any write waits for your tap (approvals).
-- Agent seats — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter — connect with your own key, kept in the Keychain; requests go from the phone straight to that provider, never through a Casberi server.
-- No account, no analytics, no trackers. iCloud sync is opt-in and off by default. Export, import, and delete-everything are real controls.
+- Free on the App Store for iPhone, iPad and Mac.
+- More than 100 apps connect, among them Gmail, iCloud Mail, Calendar, Reminders, Photos, Apple Health, Apple Wallet, GitHub, GitLab, Linear, Jira, Notion, Slack, Trello, Stripe, Vercel, Cloudflare, AWS, App Store Connect, Readwise, RSS, Substack, YouTube, Spotify, Bluesky, Farcaster, X, Instagram, TikTok, Telegram, Claude, ChatGPT, Claude Code, Cursor and Gemini.
+- Every app sits in one of ten categories, each one inbox: Wallet, Markets, Testnets, Work, Day, Life, Agents, Media, Social and Reading. See a category all together, or pick one app to see it alone.
+- Wallet: one balance across self-custody wallets (Ethereum, Base, Arbitrum, World Chain, HyperEVM, Robinhood Chain, Tempo, Solana, Bitcoin and Lightning), Coinbase, Kraken, Binance and Gemini, ETH validators, and Wise and Apple Wallet cash. One timeline of card spends, transfers, deposits and swaps. Permissions, positions and risk show what could hurt you; Coming up lists Safe signatures and charges ahead. Railgun, Privacy Pools and Peer sit beside everything else. Watching is read-only: you paste an address or a name, never a seed phrase, and Casberi cannot move your funds.
+- Markets: follow the stock or token behind every app you use, with price alerts.
+- Testnets: the Hegotá Frames devnet and the Logos testnet, with test coins only.
+- Agents: read what every agent you use did, in one place. Ask Claude, ChatGPT, Gemini and others with your own key, kept in the Keychain and sent from the device straight to that provider, or Apple Intelligence with no key.
+- Notes and voice notes, an address book of everyone across your accounts, and share cards.
+- No account, no analytics, no trackers. iCloud sync is opt-in. Export, import and delete-everything are real controls.
+- Next, not yet live: pay for your stack from one place, invest in the apps you use, and earn rewards back.
 
 ## Docs
 
