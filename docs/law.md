@@ -77,7 +77,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Every row is one anatomy, `DSFeedRow` (§744): a 46pt lead centred in a 60pt head (§1017).
 - Titles are one line. Rows show no age: the right slot holds only money or a clock still ahead of you. No fold counts. The line never names the source. The day divider stands alone (§902).
 - Money trails the title on the right, and blue is only for taps (§900).
-- A fold leads with the bare source mark and is named by its newest member. Its tap opens the room (§903).
+- Home groups by app inside each day: every app gets a header (its mark and name, a tap into its room), and stands as its newest thing. Its row leaves the app's mark out. Nothing folds (§1103).
 - Rows are bare, with no plate or card. The cover has no backing (§749).
 - Nothing from today is dimmed (§773).
 - Pictures tile under their own day, three across, in the room's own shape, with the caption under the picture (§910).
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1232 of 1291 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1233 of 1292 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -639,7 +639,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §374 — Hide wallet balances
 - §375 — The archive reads like an archive (amended by §396; part superseded by §821)
 - §376 — Connecting a wallet becomes a choice, not a silent bulk-add
-- §377 — A folded run is drawn as its members, not as a sentence about them (part superseded by §719)
+- §377 — A folded run is drawn as its members, not as a sentence about them (amended by §1103; part superseded by §719)
 - §378 — The All feed gains one hierarchy, and it is provenance (amended by §773)
 - §379 — The tail says what it was about, and the fold rules become provable
 - §380 — Every room that knows who, shows who
@@ -1226,7 +1226,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §893 — A note's sheet leads with where it is from, the words under the dial
 - §894 — Chats and mail lead with who they are from, the dial under the head
 - §895 — Work items and purchases take the shared head
-- §896 — A fold says its newest thing, and counts the rest on the line's tail (part superseded by §902)
+- §896 — A fold says its newest thing, and counts the rest on the line's tail (amended by §1103; part superseded by §902)
 - §897 — Media leads with its art, a chart with its asset
 - §898 — The swipe is dealt on the brand ground
 - §898a — The brand ground steps down to B 42
@@ -1239,8 +1239,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §901 — A row lead turns to its dock category's glyph and back, once
 - §901a — The turn is an ease, not a spring: two frames read as a flicker
 - §901b — The landing is the thing's ARRIVAL, never its date: the cycle was live and almost never fired
-- §902 — The All feed's Apple pass: one row head, one-line titles, no ages, no counts, no source in the line, the day alone (part superseded by §1017)
-- §903 — A fold's lead is the bare mark: the stacked plate is deleted
+- §902 — The All feed's Apple pass: one row head, one-line titles, no ages, no counts, no source in the line, the day alone (amended by §1103; part superseded by §1017)
+- §903 — A fold's lead is the bare mark: the stacked plate is deleted (amended by §1103)
 - §904 — Every cover holds the box: one lead height in every room and the All feed (amended by §1102)
 - §905 — The ladder grows: a thin cover fills the box with larger words, a larger lede and a second row of faces (amended by §905a, §1102; part superseded by §1006)
 - §905a — Three tiers, not two: the shelf grows even when the words cannot (part superseded by §1006)
@@ -1453,6 +1453,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1100 — Writing a note: one editor at the cursor, save as you type, headings and quotes, ticked items sink, lines move and in…
 - §1101 — The Aa key: formatting for someone who never types markdown
 - §1102 — One smaller box: every room's lead is 236pt, every room's tiles stand at one y, and a sheet shows its picture whole
+- §1103 — Home groups by app: every app a header, each as its newest thing, and the folds are deleted
 
 ## Dead rulings → what replaced them (generated)
 

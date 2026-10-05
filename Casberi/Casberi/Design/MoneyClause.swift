@@ -34,12 +34,6 @@ enum MoneyClause {
         return (head, tail)
     }
 
-    /// The title with its money clause removed — a fold's name, which never
-    /// shows money: a figure beside "+3 more" reads as the total of all four.
-    static func stripped(_ title: String) -> String {
-        split(title)?.title ?? title
-    }
-
     private static let symbols: Set<Character> = ["$", "€", "£", "¥", "₩", "₹", "₿"]
     private static let separators: Set<Character> = [",", ".", " ", "\u{00A0}", "\u{202F}"]
 

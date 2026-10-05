@@ -20,6 +20,7 @@ extension FeedScreen {
     /// changed, and `verify.sh` greps for presence, not for the last write.
     private func logAllFeedCensus(groups: [(String, [FeedRow])],
                                   hasCover: Bool,
+                                  appHeads: Int,
                                   boundary: String?,
                                   moment: Bool,
                                   momentDays: [String: String] = [:],
@@ -31,16 +32,11 @@ extension FeedScreen {
                                   dayLine: DayBrief.Whisper?,
                                   tailDays: Int,
                                   tailDrawn: Int) -> Void {
-        var single = 0, strip = 0, bundle = 0
-        var stripTiles = 0, bundleArt = 0, ambient = 0
+        var single = 0, ambient = 0
         for (_, rows) in groups {
             for row in rows {
                 if row.ambient { ambient += 1 }
-                switch row.kind {
-                case .single: single += 1
-                case .strip(_, _, _, _, let tiles): strip += 1; stripTiles += tiles.count
-                case .bundle(_, _, _, _, _, let art): bundle += 1; bundleArt += art.count
-                }
+                single += 1
             }
         }
         // Each line is one FEATURE of this room, named the way `verify.sh`'s
@@ -48,10 +44,9 @@ extension FeedScreen {
         // titles would be a corpus dump, and the question here is only ever
         // "can this room draw this at all on the demo".
         let lines = [
-            "days=\(groups.count) rows=\(single + strip + bundle)",
+            "days=\(groups.count) rows=\(single)",
             "cover=\(hasCover ? 1 : 0)",
-            "single=\(single) strip=\(strip) bundle=\(bundle)",
-            "stripTiles=\(stripTiles) bundleArt=\(bundleArt)",
+            "single=\(single) appHeads=\(appHeads)",
             "imageOnly=\(imageOnly.count) wideArt=\(wideArt.count)",
             "coarse=\(coarse.count)",
             "newSince=\(boundary == nil ? 0 : 1) moment=\(moment ? 1 : 0)",
@@ -138,7 +133,7 @@ extension FeedScreen {
             // regression: before this carve-out existed those rows folded
             // unconditionally, so the stale case is exactly the old behaviour.
             memo.groups = perfAccum("bundle") {
-                bundle(memo.days, nextEventID: nextEventID, excluding: memo.lede)
+                feedRows(memo.days, excluding: memo.lede)
             }
             // `ledeMinRows` is a floor in ROWS, and rows are only known after
             // the fold — which needs the cover's identity first, so the two
@@ -153,7 +148,7 @@ extension FeedScreen {
             if memo.lede != nil, source == "All",
                memo.groups.reduce(1, { $0 + $1.1.count }) < Self.ledeMinRows {
                 memo.lede = nil
-                memo.groups = bundle(memo.days, nextEventID: nextEventID)
+                memo.groups = feedRows(memo.days)
             }
             memo.imageOnly = perfAccum("imageOnlyIDs") { imageOnlyIDs(memo.days) }
             memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(memo.groups) }
@@ -166,22 +161,26 @@ extension FeedScreen {
         // built, so recomputing it per render costs a walk and no derivation.
         let allGroups = memo.groups
         let split = momentSplit(allGroups)
+        // Under app headers (prd §1103), after the split: the split cuts by
+        // date, and grouping takes the rows out of time order.
+        let byApp = Self.groupedByApp(split.groups, momentDays: split.days)
+        let heads = byApp.heads
         // Windowed (prd §264). `boundary` and `lede` read the FULL set so
         // neither moves depending on whether the window is open.
-        let window = windowed(split.groups, weight: Self.things(in:))
+        let window = windowed(byApp.groups)
         let _ = { memo.windowHasMore = window.more }()
         let groups = window.shown
         // Suppressed under a moment split: the section header IS the boundary
         // there, and two seams for one fact is worse than either alone.
         let boundary = split.moment ? nil : boundaryID(in: split.groups)
         // The away section's day openers (prd §879) — see `momentSplit`.
-        let momentDays = split.days
+        let momentDays = byApp.days
         // Whether the window drew the WHOLE away section (prd §879). A section
         // cut at the row budget ends in "Show older", and the seam under it
         // may not say "caught up" over rows it is hiding — §866a's floor,
         // at the other end.
         let momentWhole = split.moment
-            && (groups.first?.1.count ?? 0) == (split.groups.first?.1.count ?? 0)
+            && (groups.first?.1.count ?? 0) == (byApp.groups.first?.1.count ?? 0)
         // The cover is already OUT of `memo.groups` (prd §389c), so it is
         // resolved from the day it came from rather than searched for among the
         // rows. `.isLive` before the id read: `memo.days` is held across
@@ -260,7 +259,7 @@ extension FeedScreen {
                 visible.filter { $0.isLive && $0.capturedAt < cut }
             } ?? []
             let tailDayGroups = dayGroups(tail)
-            let tailDrawn = tailDayGroups.reduce(0) { $0 + bundledRowCount($1.1) }
+            let tailDrawn = tailDayGroups.reduce(0) { $0 + appRowCount($1.1) }
             // `memo.groups`, NOT `groups` — measured 2026-08-17 on the demo and
             // the difference is the whole check: `groups` is `windowed(...)`'s
             // SHOWN slice (prd §264), so the first census over a 467-row demo
@@ -271,7 +270,8 @@ extension FeedScreen {
             // forever. The question here is what the room CAN draw, which is a
             // property of the whole composed feed; whether the window is open
             // is reported separately, as its own fact.
-            logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil, boundary: boundary,
+            logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil,
+                             appHeads: heads.count, boundary: boundary,
                              moment: split.moment, momentDays: momentDays,
                              momentWhole: momentWhole, imageOnly: imageOnly, wideArt: wideArt,
                              coarse: coarse, more: window.more,
@@ -349,8 +349,11 @@ extension FeedScreen {
                     if label == Self.momentLabel, let day = momentDays[row.id] {
                         momentDayDivider(day)
                     }
-                    switch row.kind {
-                    case .single(let item):
+                    if let app = heads[row.id] {
+                        appHeaderRow(app)
+                            .opacity(isQuiet(row) ? Self.quietRow : 1)
+                    }
+                    if case .single(let item) = row.kind {
                         // `live` before ANY read (corollary 3, build 176 —
                         // see `ThingRowKeying`): this closure is re-evaluated
                         // against the array it already holds when a heal's
@@ -375,16 +378,10 @@ extension FeedScreen {
                                           imageOnly: imageOnly.contains(thing.id),
                                           wideArt: anchor)
                                 .opacity(!anchor && isQuiet(row) ? Self.quietRow : 1)
+                                // The header wears the app's mark; the row's
+                                // own copy of it stands empty (prd §1103).
+                                .environment(\.dsGroupedSource, row.source)
                         }
-                    case .bundle(let source, _, let lead, let count, let newest, let art):
-                        bundleListRow(source: source, lead: lead, count: count,
-                                      newest: newest, art: art, index: i, position: positions[i])
-                            .opacity(isQuiet(row) ? Self.quietRow : 1)
-                    case .strip(let source, let lead, let count, let newest, let tiles):
-                        stripListRow(source: source, lead: lead, count: count,
-                                     newest: newest, tiles: tiles, index: i,
-                                     position: positions[i])
-                            .opacity(isQuiet(row) ? Self.quietRow : 1)
                     }
                 }
                 // The moment closed with a sentence here until prd §915
@@ -616,67 +613,39 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
     }
 
-    /// A bundle in the list: same card treatment as a thing row; the tap
-    /// opens the source's own shape (where volume is designed to live) —
-    /// no swipes, nothing here is a single thing to pin or open.
-    private func bundleListRow(source: String, lead: String, count: Int,
-                               newest: Date, art: [String] = [], index: Int,
-                               position: RunPosition = .only) -> some View {
-        let skin = rowSkin(forSource: source)
-        return BundleRow(source: source, count: count, lead: lead, newest: newest, art: art)
-            .environment(\.colorScheme, skin?.ink ?? colorScheme)
-            .modifier(rowEntrance(index))
-            .contentShape(Rectangle())
-            .onTapGesture {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { filter.source = source }
+    /// An app's header in the All feed (prd §1103): its mark in the lead
+    /// column and its name where a row's title stands, so the things under
+    /// it read in the column the name opens. One weight up from a row's
+    /// title, one size under the day's name. The tap lands in the app's
+    /// room, as a fold's did — the place its volume lives (§377).
+    private func appHeaderRow(_ source: String) -> some View {
+        Button {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) { filter.source = source }
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: source, size: DSFeedRow<EmptyView, EmptyView, EmptyView>.leadSize)
+                    .environment(\.dsRoundBrandMarks, true)
+                Text(BridgeCatalog.seatName(forSource: source))
+                    .dsText(.body17)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .dsTapCard()
-            // A bundle is an ordinary row, never a designed card, so it goes
-            // bare on the ink like every list row (lists are air) — UNLESS the
-            // room mixes sources, where the card IS the source's colour and a
-            // bundle is the row most worth colouring: it stands for the whole
-            // of that source's day.
-            .listRowBackground(runBackground(position, bare: true, skin: skin))
-            // Feed rhythm: `rowAir` (prd §900, see its doc).
-            .listRowInsets(.init(top: Self.rowAir,
-                                 leading: DSRoomChassis.rowInset,
-                                 bottom: Self.rowAir,
-                                 trailing: DSRoomChassis.rowInset))
-            .listRowSeparator(.hidden)
-    }
-
-    /// A strip in the list — the same row contract as a bundle, drawn as its
-    /// members (prd §377).
-    ///
-    /// ONE gesture, opening the source's own room, exactly like `bundleListRow`
-    /// — the tiles are a picture of what folded, never controls. Two rules say
-    /// so and they agree: a feed row is a read with one gesture (2026-07-16),
-    /// and §35's bundle contract already sends volume to "that source's chip,
-    /// whose shape is where volume is designed to live" — which for screenshots
-    /// IS the photo grid. Per-tile taps were considered and held: a second
-    /// target on a row is also the shape that made five sibling `.sheet`
-    /// modifiers self-dismiss (2026-07-28), and it is not a change worth
-    /// making unseen.
-    private func stripListRow(source: String, lead: String, count: Int,
-                              newest: Date, tiles: [StripTile], index: Int,
-                              position: RunPosition = .only) -> some View {
-        let skin = rowSkin(forSource: source)
-        return StripRow(source: source, count: count, lead: lead, newest: newest, tiles: tiles)
-            .environment(\.colorScheme, skin?.ink ?? colorScheme)
-            .modifier(rowEntrance(index))
+            // The mark's height, not a row's 44pt head: the first row's own
+            // head already carries the air under the name.
+            .frame(minHeight: DSFeedRow<EmptyView, EmptyView, EmptyView>.leadSize)
             .contentShape(Rectangle())
-            .onTapGesture {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { filter.source = source }
-            }
-            .dsTapCard()
-            .listRowBackground(runBackground(position, bare: true, skin: skin))
-            .listRowInsets(.init(top: Self.rowAir,
-                                 leading: DSRoomChassis.rowInset,
-                                 bottom: Self.rowAir,
-                                 trailing: DSRoomChassis.rowInset))
-            .listRowSeparator(.hidden)
+        }
+        .buttonStyle(RowPress())
+        .accessibilityAddTraits(.isHeader)
+        .listRowBackground(Color.clear)
+        .listRowInsets(.init(top: DS.Space.s4,
+                             leading: DSRoomChassis.rowInset,
+                             bottom: 0,
+                             trailing: DSRoomChassis.rowInset))
+        .listRowSeparator(.hidden)
     }
 
     @ViewBuilder

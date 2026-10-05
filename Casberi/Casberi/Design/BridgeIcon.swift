@@ -58,6 +58,11 @@ struct BridgeIcon: View {
     /// row is round without 64 call sites changing — and a badge riding the
     /// lead is untouched, because it is not a brand icon.
     @Environment(\.dsRoundBrandMarks) private var roundInContext
+    /// The app whose header this row stands under in the All feed (prd
+    /// §1103). The header already wears that app's mark, so a row's lead
+    /// that would repeat it stands empty; a face, a picture or a note's
+    /// glyph is a different fact and still draws.
+    @Environment(\.dsGroupedSource) private var groupedSource
 
     var assetName: String {
         // DIACRITICS ARE FOLDED (2026-08-27, "Ethrex Hegotá"). An asset
@@ -95,7 +100,9 @@ struct BridgeIcon: View {
     }
 
     var body: some View {
-        if symbol == nil, let ui = BridgeIconArt.image(assetName) {
+        if symbol == nil, let groupedSource, groupedSource == name {
+            Color.clear.frame(width: size, height: size)
+        } else if symbol == nil, let ui = BridgeIconArt.image(assetName) {
             Image(uiImage: ui)
                 .resizable()
                 .scaledToFill()
@@ -186,4 +193,15 @@ extension EnvironmentValues {
         get { self[DSRoundBrandMarksKey.self] }
         set { self[DSRoundBrandMarksKey.self] = newValue }
     }
+
+    /// The source whose app header this subtree stands under (prd §1103);
+    /// `BridgeIcon` draws nothing for that source's own mark.
+    var dsGroupedSource: String? {
+        get { self[DSGroupedSourceKey.self] }
+        set { self[DSGroupedSourceKey.self] = newValue }
+    }
+}
+
+private struct DSGroupedSourceKey: EnvironmentKey {
+    static let defaultValue: String? = nil
 }

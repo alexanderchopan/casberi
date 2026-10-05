@@ -1696,17 +1696,12 @@ harness "Telegram export pure-logic self-test" "Telegram export pure-logic self-
 # comes first IS the feature), and that the three follow examples stay the
 # ones measured against the live services rather than plausible fakes.
 
-# The All feed's fold decisions (prd §377/§378/§379). Every failure it catches
-# is a silent wrong answer on the LANDING SCREEN that renders perfectly: a
-# screenshot run collapsing into a sentence about it, five songs off one record
-# drawn as four identical covers, the next-up calendar event folded away (§35
-# ruled that must never happen and until §377 nothing enforced it), or a
-# transaction receding because the fold was scored on its first member. These
-# rules lived as private methods inside a 5,000-line SwiftUI view until §379
-# pulled them into `Model/FeedFold.swift` for exactly this reason — §255 is the
-# record of what an unprovable fold rule costs (a gate that measured THINGS
-# while the feed drew ROWS, wrong for a month, found by eye).
-harness "Feed-fold self-test" "feed-fold self-test" "scripts/feed-fold-selftest.sh" "the feed-fold self-test failed — run scripts/feed-fold-selftest.sh"
+# The All feed under app headers (prd §1103, which deleted the folds §377
+# drew): every app a header, each as its newest thing, the away section's days
+# grouped apart. A wrong grouping renders perfectly on the LANDING SCREEN, so
+# the rule is pure (`Model/AppGroups.swift`) and compiled whole here, with the
+# provenance tier (§378) that outlived the folds.
+harness "Feed-groups self-test" "feed-groups self-test" "scripts/feed-groups-selftest.sh" "the feed-groups self-test failed — run scripts/feed-groups-selftest.sh"
 
 # The bound that keeps a long list from costing a sheet drag ten seconds of
 # wall clock (prd §657, build 539's `0x8BADF00D`). The person room drew EVERY
@@ -3803,9 +3798,9 @@ if [[ -z "$POURED" ]]; then
   print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping All-room coverage%f"
 else
   # Each entry is one feature of the All room that exists in NO other room.
-  # `cover`/`strip`/`bundle` are the load-bearing three: without them the
-  # opening screen is a flat chronological list.
-  ALLFEED_REQUIRED=(strip bundle imageOnly)
+  # `appHeads` is the load-bearing one since prd §1103 deleted the folds
+  # (`strip`/`bundle`): without it the opening screen is a flat list.
+  ALLFEED_REQUIRED=(appHeads imageOnly)
   xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
   xcrun simctl spawn "$DEVICE_ID" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "allFeed|"' \
     --style compact > "$ALLFEED_LOG" 2>/dev/null &

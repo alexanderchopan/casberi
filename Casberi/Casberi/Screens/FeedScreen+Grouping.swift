@@ -1,8 +1,8 @@
 import SwiftUI
 import SwiftData
 
-// Grouping and bundling: day, coarse and session groups, `FeedRow`, folds,
-// the lede's pick and the moment split, split out of
+// Grouping: day, coarse and session groups, `FeedRow`, the app headers
+// (prd §1103), the lede's pick and the moment split, split out of
 // FeedScreen.swift (prd §718). Nothing here changed but the file it lives
 // in and, where another file reads a member, its access level.
 extension FeedScreen {
@@ -66,11 +66,8 @@ extension FeedScreen {
         else { return dayGroups(visible) }
         let recent = visible.filter { $0.capturedAt >= cutoff }
         let older = visible.filter { $0.capturedAt < cutoff }
-        // Wrapped rather than passed by reference: `bundledRowCount` grew a
-        // defaulted `nextEventID`, and Swift does not apply default arguments
-        // when converting a function to a value.
         return dayGroups(recent)
-            + coarsenIfSparse(dayGroups(older), rows: { bundledRowCount($0) })
+            + coarsenIfSparse(dayGroups(older), rows: { appRowCount($0) })
     }
 
     /// The sparseness gate + regroup, shared by the plain day path and the
@@ -79,8 +76,8 @@ extension FeedScreen {
     /// `rows` answers how many ROWS a day will actually DRAW, which is not
     /// always how many things it holds (prd §255, 2026-07-31). In a source's
     /// own room the two are the same number and the default is right. The All
-    /// feed BUNDLES after grouping, so a day whose seven wallet transactions
-    /// collapse into one row was scoring seven here — and this gate, whose
+    /// feed draws one row per APP (prd §1103; it folded per source before), so
+    /// a day whose seven wallet transactions stand as one row was scoring seven here — and this gate, whose
     /// entire job is to prevent a ladder of one-row day cards, therefore never
     /// once fired on the one feed that actually had one. Measured on a real
     /// corpus: single-row days marching back 487 days, every header full
@@ -96,37 +93,11 @@ extension FeedScreen {
         return coarseGroups(days.flatMap { $0.1 })
     }
 
-    /// How many rows a day's things draw once `bundle` has run over them.
-    ///
-    /// Asks the REAL fold decision (`foldBuckets` + `fold`) rather than
-    /// mirroring it. It used to mirror — a hand-copy of "a source with
-    /// `bundleThreshold`+ bundleable things collapses to one row" — and §255
-    /// is the record of what that costs: the gate measured THINGS while the
-    /// feed drew ROWS, so the tail-coarsening it guards never once fired.
-    /// Two folds (a bundle and a strip, with different eligibility) is exactly
-    /// where a second copy would go quietly wrong again, so there is only one.
-    ///
-    /// `nextEventID` defaults to nil, and that is CORRECT rather than lazy for
-    /// this caller: the clock carve-out below only ever spares a FUTURE event,
-    /// which by construction cannot sit in the coarsened tail this gate is
-    /// deciding about.
-    func bundledRowCount(_ dayThings: [Thing], nextEventID: UUID? = nil) -> Int {
-        let (bySource, eligible) = foldBuckets(dayThings, nextEventID: nextEventID)
-        var folded: Set<String> = []
-        for (source, members) in bySource
-        where FeedFold.decide(members, faceSources: BandRow.faceSources) != nil {
-            folded.insert(source)
-        }
-        var rows = 0
-        var seen: Set<String> = []
-        for t in dayThings {
-            if folded.contains(t.source), eligible.contains(ObjectIdentifier(t)) {
-                if seen.insert(t.source).inserted { rows += 1 }
-            } else {
-                rows += 1
-            }
-        }
-        return rows
+    /// How many rows a day draws in the All feed: one per app (prd §1103),
+    /// since each app stands under its header as its newest thing. Asked by
+    /// the tail's sparseness gate (§255), which counts ROWS, not things.
+    func appRowCount(_ dayThings: [Thing]) -> Int {
+        Set(dayThings.map(\.source)).count
     }
 
     /// Regroup already-ordered (newest-first) things by week, then month —
@@ -251,16 +222,6 @@ extension FeedScreen {
     /// keeps the diffing path off the model entirely; the model is only touched
     /// in the row body, which renders exclusively from the post-delete `@Query`
     /// snapshot that already excludes the deleted row.
-    /// How many things a feed row stands for — a fold its members, anything
-    /// else one (the `Show older` door's count, prd §900).
-    static func things(in row: FeedRow) -> Int {
-        switch row.kind {
-        case .single: 1
-        case .bundle(_, _, _, let count, _, _): count
-        case .strip(_, _, let count, _, _): count
-        }
-    }
-
     struct FeedRow: Identifiable {
         let id: String
         let date: Date
@@ -271,47 +232,23 @@ extension FeedScreen {
         /// loop must be able to ask "does this recede?" without a
         /// stored-property read on a model a heal may since have deleted.
         let ambient: Bool
+        /// The source a SINGLE row came from, stored at construction for the
+        /// same reason `id` is: the All feed groups its rows under app
+        /// headers (prd §1103) after the away split, per render, and must not
+        /// read a model a heal may since have deleted to do it.
+        var source = ""
         enum Kind {
             /// `KeyedThing`, not a raw `Thing` — so every read of the model
             /// goes through `.thing`/`.live` and the liveness audit's check 3
             /// can SEE it. Build 176 trapped right here, in a row body that
             /// bound its `Thing` straight out of this payload: correct by the
             /// rules as written, invisible to the lint that enforces them.
+            /// The only kind since prd §1103 deleted the All feed's folds.
             case single(KeyedThing)
-            /// `art`: up to three member preview-image URLs, newest first — the
-            /// bundle's own pictures (2026-07-21), so "Photos · 100 photos"
-            /// can show what actually arrived instead of one brand glyph.
-            ///
-            /// `lead` is the newest member's title, the line the row draws
-            /// before "+N more" (prd §896); `word` is the kind's plural, which
-            /// only the Wallet room's own fold still says ("14 transfers").
-            case bundle(source: String, word: String, lead: String, count: Int,
-                        newest: Date, art: [String])
-            /// A run folded into its MEMBERS rather than into a sentence about
-            /// them (prd §377): screenshots and file images as their pictures,
-            /// posts as their authors' faces, songs as their covers. Same
-            /// one-row compression as `.bundle`, drawn side by side instead of
-            /// as an overlapped fan.
-            case strip(source: String, lead: String, count: Int, newest: Date, tiles: [StripTile])
         }
         static func single(_ t: Thing) -> FeedRow {
             FeedRow(id: t.id.uuidString, date: t.capturedAt, kind: .single(KeyedThing(t)),
-                    ambient: FeedFold.tier(t) == .arrived)
-        }
-        static func bundle(source: String, word: String = "", lead: String = "",
-                           count: Int, newest: Date, art: [String],
-                           ambient: Bool) -> FeedRow {
-            FeedRow(id: "bundle-\(source)-\(newest.timeIntervalSince1970)", date: newest,
-                    kind: .bundle(source: source, word: word, lead: lead, count: count,
-                                  newest: newest, art: art),
-                    ambient: ambient)
-        }
-        static func strip(source: String, lead: String, count: Int,
-                          newest: Date, tiles: [StripTile], ambient: Bool) -> FeedRow {
-            FeedRow(id: "strip-\(source)-\(newest.timeIntervalSince1970)", date: newest,
-                    kind: .strip(source: source, lead: lead, count: count,
-                                 newest: newest, tiles: tiles),
-                    ambient: ambient)
+                    ambient: FeedFold.tier(t) == .arrived, source: t.source)
         }
     }
 
@@ -427,16 +364,21 @@ extension FeedScreen {
     /// becoming a gallery — the same minority discipline `imageOnlyIDs` uses,
     /// stated as a count instead of a ratio.
     ///
-    /// Read off the BUNDLED groups, not the raw days: a row that collapsed
-    /// into a bundle never renders as a band, so choosing from the day would
-    /// silently promote a row nobody can see (RSS is bundleable, and RSS is
-    /// one of the three sources that qualify).
+    /// Chosen among the rows the feed DRAWS: each app's newest (prd §1103,
+    /// `AppGroups.rowCap`). An older row under the same header never draws, and
+    /// promoting it would promote a row nobody can see.
     ///
     /// Withheld under 3 rows — on a two-row day the promoted picture is half
     /// the day, which is a gallery, not an anchor.
     func wideArtIDs(_ groups: [(String, [FeedRow])]) -> Set<UUID> {
         var ids: Set<UUID> = []
-        for (_, rows) in groups where rows.count >= 3 {
+        for (_, all) in groups {
+            var drawn: [String: Int] = [:]
+            let rows = all.filter { row in
+                drawn[row.source, default: 0] += 1
+                return drawn[row.source, default: 0] <= AppGroups.rowCap
+            }
+            guard rows.count >= 3 else { continue }
             for row in rows {
                 // `.live` before any stored read (corollary 3, build 176).
                 guard case .single(let item) = row.kind, let thing = item.live
@@ -450,117 +392,21 @@ extension FeedScreen {
         return ids
     }
 
-    /// `bundleThreshold`+ foldable things from one source in one day collapse
-    /// into ONE row at the position of their newest member — a `StripRow` when
-    /// the members can be drawn as themselves, a `BundleRow` otherwise (see
-    /// `fold`). Order is untouched either way — compression, not ranking.
-    /// Takes the already-computed day groups so the caller derives `dayGroups`
-    /// (→`visible`→`feedThings`) ONCE per render and reuses it for the day
-    /// totals too, instead of rebuilding the whole chain here a second time.
+    /// The All feed's rows, one per thing, day by day (prd §1103: the app
+    /// header gathers an app's things now, so nothing folds).
     ///
-    /// `excluding` is the cover (prd §389c) — removed BEFORE the fold buckets
-    /// are built, not filtered out of the finished rows, so a source whose run
-    /// the cover was part of counts and draws its remaining members honestly
-    /// (three mails minus the cover is two mails, which is under
-    /// `bundleThreshold` and correctly stops folding at all). Filtering after
-    /// the fact would have left "iCloud Mail · 3 emails" beside a cover that is
-    /// one of those three.
-    func bundle(_ days: [(String, [Thing])],
-                        nextEventID: UUID? = nil,
-                        excluding cover: UUID? = nil) -> [(String, [FeedRow])] {
-        days.map { label, allDayThings in
-            let dayThings = cover.map { id in allDayThings.filter { $0.id != id } }
-                ?? allDayThings
-            // Grouped ONCE per day (perf, 2026-07-28): the old version
-            // re-filtered the whole day for every bundled source it found
-            // (O(day size²) — a heavy sync day with several bundled sources
-            // multiplied its own count against itself). Same membership,
-            // built with one pass instead of one pass per source.
-            let (bySource, eligible) = foldBuckets(dayThings, nextEventID: nextEventID)
-            var folded: [String: FeedFold.Decision] = [:]
-            for (source, members) in bySource {
-                if let decision = FeedFold.decide(members, faceSources: BandRow.faceSources) {
-                    folded[source] = decision
-                }
-            }
-            var rows: [FeedRow] = []
-            var seen: Set<String> = []
-            for t in dayThings {
-                guard let decision = folded[t.source],
-                      eligible.contains(ObjectIdentifier(t)) else {
-                    rows.append(.single(t)); continue
-                }
-                guard seen.insert(t.source).inserted else { continue }
-                let members = bySource[t.source] ?? []
-                // The line names the newest member and counts the rest (prd
-                // §896). `t` IS the newest: the fold stands where its first
-                // member in the day's order stands. Read here, while the
-                // model is live — the row value carries a string, never it.
-                let lead = t.title
-                // A fold recedes only if EVERY member would — one transaction
-                // or one clock inside a mixed run keeps the whole row at full
-                // weight, since the row is the only thing standing in for it.
-                let ambient = FeedFold.ambient(members)
-                switch decision {
-                case .strip(let choices):
-                    // A choice names its member by INDEX — the seam that keeps
-                    // `FeedFold` free of SwiftData and therefore harnessable
-                    // (§379). The models are still live here: this runs while
-                    // building the row value, the same moment `FeedRow.single`
-                    // captures its id.
-                    let tiles = choices.map {
-                        StripTile(members[$0.index], remote: $0.remote, circular: $0.circular)
-                    }
-                    rows.append(.strip(source: t.source, lead: lead,
-                                       count: members.count, newest: t.capturedAt,
-                                       tiles: tiles, ambient: ambient))
-                case .bundle(let art):
-                    rows.append(.bundle(source: t.source, lead: lead,
-                                        count: members.count, newest: t.capturedAt,
-                                        art: art, ambient: ambient))
-                }
-            }
-            return (label, rows)
+    /// `excluding` is the cover (prd §389c), removed here so it draws once.
+    func feedRows(_ days: [(String, [Thing])],
+                  excluding cover: UUID? = nil) -> [(String, [FeedRow])] {
+        days.map { label, dayThings in
+            let rows = cover.map { id in dayThings.filter { $0.id != id } } ?? dayThings
+            return (label, rows.map(FeedRow.single))
         }
         // A day whose only row was the cover has no run left, and a header
         // over nothing is a sentence about nothing (the All feed showed a
         // bare "Today" above "Yesterday" on a day-old pour, 2026-09-26). The
         // cover still resolves from `memo.days`, which is untouched.
         .filter { !$0.1.isEmpty }
-    }
-
-    /// The things in a day that are ELIGIBLE to fold, bucketed by source, plus
-    /// their identities so the row loop can ask "was this one folded?" in
-    /// constant time (the O(day²) trap the 2026-07-28 perf pass fixed once
-    /// already — a `contains(where:)` per thing would put it straight back).
-    ///
-    /// Two things are held out, for opposite reasons:
-    ///
-    /// - Anything neither `bundleable` nor a strip candidate. A screenshot is
-    ///   the case worth naming: it is deliberately still NOT `bundleable`, so
-    ///   it can never collapse into "Photos · 4 screenshots" — a sentence that
-    ///   hides the only thing a screenshot has. It folds only into a strip,
-    ///   where its picture survives.
-    /// - Anything carrying a CLOCK (prd §377). §35 ruled that perishables show
-    ///   their countdown "everywhere … not just in their source's shape", and
-    ///   nothing enforced it: a day with three calendar events folded the
-    ///   next-up row away, and a live row can't be floated to the top of its
-    ///   day (2026-07-21) once it has stopped existing as a row. Its siblings
-    ///   still fold; the row with the clock stands out of the fold.
-    private func foldBuckets(_ dayThings: [Thing], nextEventID: UUID?)
-        -> (bySource: [String: [Thing]], eligible: Set<ObjectIdentifier>) {
-        var bySource: [String: [Thing]] = [:]
-        var eligible: Set<ObjectIdentifier> = []
-        for t in dayThings {
-            guard FeedFold.bundleable(t)
-                    || FeedFold.stripCandidate(t, faceSources: BandRow.faceSources)
-            else { continue }
-            guard !FeedFold.carriesAClock(t, nextEventID: nextEventID,
-                                          isLive: isLive(t)) else { continue }
-            bySource[t.source, default: []].append(t)
-            eligible.insert(ObjectIdentifier(t))
-        }
-        return (bySource, eligible)
     }
 
     /// The first row at-or-past the last-visit boundary — the "new since"
@@ -785,6 +631,13 @@ extension FeedScreen {
         }
         guard !fresh.isEmpty, !rest.isEmpty else { return (groups, false, [:]) }
         return ([(Self.momentLabel, fresh)] + rest, true, days.count > 1 ? days : [:])
+    }
+
+    /// The All feed under app headers (prd §1103) — `AppGroups` holds the
+    /// rule; this hands it `FeedRow`'s stored id and source.
+    static func groupedByApp(_ groups: [(String, [FeedRow])], momentDays: [String: String])
+        -> AppGroups.Result<FeedRow> {
+        AppGroups.group(groups, momentDays: momentDays, id: \.id, source: \.source)
     }
 
     /// The away section's name. A constant so the header's whisper gate and

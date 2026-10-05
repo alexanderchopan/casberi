@@ -12,17 +12,14 @@
 #     driven over the titles the bridges and the demo actually land — including
 #     the ones that must be left alone ("$ETH", "€100 in bitcoin", a dispute
 #     whose figure is followed by a deadline).
-#   • A FOLD NEVER SHOWS MONEY. Its name is the newest member's title, and a
-#     figure beside "+3 more" reads as the total of all four. Asserted on the
-#     source: both fold rows name themselves through `FoldName.of`, which
-#     strips, and neither draws `price17`.
+#   • (A fold's money rule went with the folds, prd §1103.)
 #   • BLUE IS FOR WHAT YOU TAP. A new row's time is primary ink at medium
 #     weight, the next event's countdown is primary, and the line's project
 #     clause is medium weight in the line's own ink — none of them the tint,
 #     and the line no longer wears the source's hue.
 #   • THE DOOR SAYS WHAT IT HOLDS. `Show older` is a row with the count of
 #     things it holds back, and that count comes from the same walk as the
-#     window's `more`, weighted so a fold counts as its members.
+#     window's `more`.
 #   • ONE PADDING. Feed rows sit in `rowAir` (s1), not s2 on top of the row's
 #     own s2.
 #
@@ -95,9 +92,6 @@ stays("Rate · $1.2k")                                     // a suffix is not a 
 stays("Price · $$40")                                     // two symbols
 stays("Mixed · $40 €")                                    // one each side
 
-// A fold's name is stripped, and a plain title passes through untouched.
-check(MoneyClause.stripped("Ada Lovelace · $49.00") == "Ada Lovelace", "a fold's name drops its figure")
-check(MoneyClause.stripped("TAP-1147-confirmation.pdf") == "TAP-1147-confirmation.pdf", "a plain title is unchanged")
 
 if failures > 0 { print("✗ \(failures) money-clause case(s) failed"); exit(1) }
 SWIFT
@@ -125,26 +119,8 @@ guards() {
   grep -q -- 'else if let figure = titleFigure' <<< "$R" \
     || echo "the title's figure no longer draws in the trailing slot"
 
-  # A fold never shows money.
-  local bundle strip
-  bundle=$(awk '/^struct BundleRow/{p=1} /^enum FoldName/{p=0} p' <<< "$R")
-  # Ends at the next top-level declaration: `strip_comments` deletes the
-  # `// MARK:` line, and a slice ending there ran to the end of the file.
-  strip=$(awk '/^struct StripRow/{p=1; print; next} p && /^(struct|enum|class|final class|extension) /{p=0} p' <<< "$R")
-  grep -q -- 'DSFeedRow(name: FoldName.of(lead' <<< "$bundle" \
-    || echo "BundleRow no longer names itself by its newest member through FoldName"
-  grep -q -- 'DSFeedRow(name: FoldName.of(lead' <<< "$strip" \
-    || echo "StripRow no longer names itself by its newest member through FoldName"
-  grep -q -- 'price17' <<< "$bundle$strip" \
-    && echo "a fold draws a price — beside '+N more' it reads as the total"
-  grep -q -- 'MoneyClause.stripped(lead)' <<< "$R" \
-    || echo "FoldName no longer strips a money clause from the fold's name"
-  # A fold's lead is the bare mark (prd §903): the stacked plate read as an
-  # error, and on a busy source it stood every day, so it said nothing.
-  grep -q -- 'BridgeIcon(name: source, size: DS.Mark.row)' <<< "$bundle" \
-    || echo "BundleRow no longer leads with the source's bare mark (prd §903)"
-  grep -q -- 'BridgeIcon(name: source, size: DS.Mark.row)' <<< "$strip" \
-    || echo "StripRow no longer leads with the source's bare mark (prd §903)"
+  # The folds are deleted (prd §1103) — feed-groups-selftest.sh holds the
+  # app headers that replaced them. Their plate stays deleted with them.
   grep -q -- 'DSFoldLead' <<< "$R" \
     && echo "a fold's lead stands on a plate again (prd §903 deleted DSFoldLead)"
 
@@ -167,18 +143,12 @@ guards() {
   doors=$(grep -c -- 'if window.more { olderRow(hidden: window.hidden) }' <<< "$F" || true)
   [[ "$doors" == 2 ]] \
     || echo "a Show older door no longer carries the window's hidden count ($doors of 2)"
-  grep -q -- 'windowed(split.groups, weight: Self.things(in:))' <<< "$F" \
-    || echo "the All feed's window no longer counts a fold as its members"
   grep -q -- 'DSPushRowLabel(title: Text("Show older")' <<< "$F" \
     || echo "Show older is no longer a row in the column"
 
   # One padding.
   grep -q -- 'static let rowAir: CGFloat = DS.Space.s1' <<< "$F" \
     || echo "rowAir is no longer s1 — the row's own s2 is doubled again"
-  local folds
-  folds=$(awk '/private func bundleListRow/{p=1} /private func stripListRow/{q=1} p||q{print; n++} n>=80{exit}' <<< "$F")
-  grep -q -- 'top: DS.Space.s2' <<< "$folds" \
-    && echo "a fold row sits in the old s2 inset"
 
   # The head every row shares (prd §902): a minimum height the lead is
   # centred in, the title on one line, and no count tail anywhere.
@@ -227,10 +197,6 @@ mutate() {  # label, file-var, perl expression
 }
 mutate "the alarm's age back in the tint" rows \
   's/LiveTimeText\(date: thing\.capturedAt, color: DS\.destructiveInk\)/LiveTimeText(date: thing.capturedAt, color: DS.tint)/'
-mutate "a fold draws its newest figure" rows \
-  's/(struct BundleRow.*?\} trailing: \{\n\s*)EmptyView\(\)/$1Text("\$1").dsText(.price17)/s'
-mutate "a fold counts its members again (prd §902)" rows \
-  's/(struct StripRow.*?\} trailing: \{\n\s*)EmptyView\(\)/$1DSFeed.more(count - 1)/s'
 mutate "the title wraps again (prd §902)" template \
   's/\.lineLimit\(1\)\n(\s*\.contentTransition\(\.opacity\))/.lineLimit(2)\n$1/'
 mutate "the head lost its floor (prd §902)" template \
@@ -238,9 +204,9 @@ mutate "the head lost its floor (prd §902)" template \
 mutate "the lead back at the top of the head (prd §902)" template \
   's/HStack\(alignment: \.center, spacing: DS\.Space\.s3\)/HStack(alignment: .top, spacing: DS.Space.s3)/'
 mutate "a fold's lead back on its plate (prd §903)" rows \
-  's/(struct BundleRow.*?)BridgeIcon\(name: source, size: DS\.Mark\.row\)/$1DSFoldLead(source: source)/s'
-mutate "a fold names itself by its source again" rows \
-  's/(struct StripRow.*?)DSFeedRow\(name: FoldName\.of\(lead, source: source\)/$1DSFeedRow(name: source/s'
+  's/(struct BandRow: View \{)/struct DSFoldLeadUse { let v = DSFoldLead(source: "") }\n$1/'
+mutate "a fold counts its members again (prd §902)" rows \
+  's/(struct BandRow: View \{)/let foldMore = DSFeed.more(2)\n$1/'
 mutate "title money ungated" rows \
   's/guard moneyAmount == nil, thing\.priceValue != nil else/guard moneyAmount == nil else/'
 mutate "the door forgets its count" feed \

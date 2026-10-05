@@ -121,9 +121,6 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
             out.append("D: the caller does not hand the cycle the thing's id for its arrival (§901b) — `capturedAt` is the thing's own date")
         if "cyclesOnChange: !moneyColumn" not in flat:
             out.append("D: the ledger's rows are not opted out of the change cycle (§171's ripple is their motion)")
-    for fold in re.findall(r"struct (?:BundleRow|StripRow): View \{[\s\S]*?\n\}", r):
-        if ".leadCycle(" in fold:
-            out.append("D: a fold's lead carries the cycle")
 
     # E — the landing rule: the ARRIVAL against the wave, and a fresh window.
     if not re.search(r"landed\s*=\s*(?:arrival\s*\?\?\s*)?LandingLedger\.landedAt\(id\)", c):
@@ -216,8 +213,6 @@ struct BandRow: View {
         }
     }
 }
-struct BundleRow: View { var body: some View { BridgeIcon(name: source, size: DS.Mark.row) }
-}
 """
 GOOD_FEED = """
         List { rows }
@@ -272,8 +267,8 @@ def self_test() -> bool:
          GOOD_CYCLE.replace('guard !reduceMotion, !cycling', 'guard !cycling'), GOOD_ROWS, GOOD_FEED, 1),
         ("D: the ledger's rows cycle on a retitle too",
          GOOD_CYCLE, GOOD_ROWS.replace('cyclesOnChange: !moneyColumn', 'cyclesOnChange: true'), GOOD_FEED, 1),
-        ("D: a second caller on the fold's lead",
-         GOOD_CYCLE, GOOD_ROWS.replace('BridgeIcon(name: source, size: DS.Mark.row) }', 'BridgeIcon(name: source, size: DS.Mark.row).leadCycle(source: source, capturedAt: .now, fact: name) }'), GOOD_FEED, 1),
+        ("D: a second caller on another row's lead",
+         GOOD_CYCLE, GOOD_ROWS + 'struct OtherRow: View { var body: some View { BridgeIcon(name: source, size: DS.Mark.row).leadCycle(source: source, capturedAt: .now, fact: name) }\n}\n', GOOD_FEED, 1),
         ("D: the caller deleted",
          GOOD_CYCLE, re.sub(r"\.leadCycle\([\s\S]*?cyclesOnChange: !moneyColumn\)", "", GOOD_ROWS), GOOD_FEED, 1),
         ("D: the fact is not the title",
