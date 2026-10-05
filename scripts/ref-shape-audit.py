@@ -84,6 +84,10 @@ KNOWN_UNPRODUCED = {
     # as content, which this audit counted as a producer; real ingest stores
     # the bsky.app permalink, and so does the demo now.
     "at://": "a pasted Bluesky feed URI, the person's input, never a stored ref (prd §1070)",
+    # The `-serviceDoor` DEBUG hook's own argument syntax (prd §1113): it
+    # names a door to take, never a stored ref, so nothing produces it.
+    "plan:": "the -serviceDoor DEBUG hook's own argument, never a stored ref (prd §1113)",
+    "list:": "the -serviceDoor DEBUG hook's own argument, never a stored ref (prd §1113)",
 }
 
 

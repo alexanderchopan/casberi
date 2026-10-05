@@ -192,6 +192,7 @@ struct SubscriptionsSummary: View {
                 let figure = SubscriptionCategories.picked(pick, drawn: tiles.map(\.id), reading: reading)
                 Text(verbatim: caption(pick, monthly: figure.monthly, count: figure.counted))
                     .dsText(.body17)
+                    .monospacedDigit()
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
