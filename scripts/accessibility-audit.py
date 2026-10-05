@@ -211,15 +211,6 @@ KNOWN_EXEMPT = {
     # unchanged; only the offsets moved.
     "WalletFlowBand.swift:494",
     "WalletFlowBand.swift:611",
-    #
-    # The wallet Risk floor's columns (2026-08-26, prd §493) — the same
-    # figure-speaks-as-one-sentence treatment (§299): the figure speaks as
-    # ONE combined sentence in its ranked order (§299), and each column's tap
-    # is published as a named `.accessibilityActions` Button ("Open Aave"), so
-    # the gesture is reachable by the route the platform prefers. A trait on
-    # the column would add a stray label to a figure that already speaks in
-    # full — which is what §299 forbade when this was dots on a track.
-    "WalletRiskStrip.swift:146",
 }
 
 # Size expressions that already encode the floor, so an explicit number is not

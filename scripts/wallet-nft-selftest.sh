@@ -204,7 +204,8 @@ import sys, re
 src = open(sys.argv[1]).read()
 if re.search(r'case \.nfts\b', src):
     sys.exit("  ✗ an NFTs scope is back — Cards holds that tile and NFTs read under Holdings (prd §1048)")
-m = re.search(r'case \.holdings:(.*?)case \.positions:', src, re.S)
+# Holdings is followed by Security since prd §1107 (Positions folded in).
+m = re.search(r'case \.holdings:(.*?)case \.security:', src, re.S)
 if not m or "walletNFTListSection" not in m.group(1):
     sys.exit("  ✗ the NFT rows are not under Holdings (prd §1048)")
 PY

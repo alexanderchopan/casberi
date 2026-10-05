@@ -49,7 +49,7 @@ WALLET_VIEWS = (
     "WalletFeedTiles.swift", "WalletScreen.swift", "WalletWatchField.swift",
     "WalletHistoryScreen.swift",
     "WalletFlowBand.swift", "WalletLiquidityCard.swift", "WalletPerpsCard.swift",
-    "WalletRiskStrip.swift", "WalletApprovalExposureCard.swift",
+    "WalletApprovalExposureCard.swift",
     "AddressBookViews.swift",
     # `GnosisPayRoomCard.swift` became `CardSpendRoomCard.swift` in prd §858;
     # `WalletRosterSection.swift` (§511) and `AddressConnectionsCard.swift`
