@@ -136,7 +136,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Markets is its own category; Testnets (Hegotá Frames, Logos, `flask`) is its own, never inside Wallet (§1050, §1050a).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
-- Day's Subscriptions tile lists every mailing list that writes to you, found by `List-Id` or `List-Unsubscribe`, never a guess: one row per list, the most mail this month first, each with how often it writes and a way out that opens in the browser or Mail; the app never unsubscribes for you and shows no open counts (§1111).
+- Day's Subscriptions tile lists every mailing list that writes to you, found by `List-Id` or `List-Unsubscribe`, never a guess: one row per list, the most mail this month first, each with how often it writes and a way out that opens in the browser or Mail; the app never unsubscribes for you and shows no open counts (§1111). A sender with no list header joins it from its mail's sheet, Add a subscription, the Wallet's words; every mail from that address files, and Stop tracking takes back only what the add filed (§1115).
 - Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows (§1039). Four tiles each and no verb among them: a verb that adds an account is the Accounts menu's first row (Watch a wallet, New account), a verb that moves money leads Holdings (Frames' Send · Top up, Logos' Send), per §774's page rule (§1107, §1108). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
@@ -220,7 +220,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1248 of 1309 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1249 of 1310 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1466,10 +1466,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 - §1109 — The Nostr seat is removed; Lightning keeps the relay client (amended by §1110)
 - §1110 — Farcaster leaves the app: the seat, its rows, and Farcaster as an identity in Addresses
-- §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113)
+- §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113, §1115)
 - §1112 — The Wallet's Subscriptions tile maps where the money goes: categories by monthly cost, a press filters the list
 - §1113 — One identity per service: a plan, its app and its mailing list open each other, and both Subscriptions tiles are one…
 - §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
+- §1115 — A mail's sheet adds its sender to Day's Subscriptions
 
 ## Dead rulings → what replaced them (generated)
 

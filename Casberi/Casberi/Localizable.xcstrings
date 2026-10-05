@@ -1513,6 +1513,34 @@
         }
       }
     },
+    "Added to subscriptions" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadido a Suscripciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サブスクリプションに追加しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "구독에 추가됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已添加到订阅"
+          }
+        }
+      }
+    },
     "Address poisoning" : {
       "localizations" : {
         "es" : {
@@ -77367,6 +77395,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一个地址收到了 %@ 笔付款 — 每一笔都与其他付款相关联"
+          }
+        }
+      }
+    },
+    "Only what you added goes. Mail sent as a list stays." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo se quita lo que añadiste. El correo enviado como lista se queda."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "削除されるのは自分で追加した分だけです。リストとして届くメールは残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "직접 추가한 항목만 삭제됩니다. 메일링 리스트로 온 메일은 남습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只会移除你添加的内容。以邮件列表发送的邮件会保留。"
           }
         }
       }

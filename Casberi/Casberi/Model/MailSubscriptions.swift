@@ -19,6 +19,12 @@ import Foundation
 /// the read flag at ingest is the flag at arrival, so a count from it would
 /// be a number the app cannot honestly know (§83).
 ///
+/// **Or the person says so (prd §1115).** A sender with no list header, or
+/// mail that landed before §1111 kept the headers, joins the tile when the
+/// person adds it from a mail's sheet ("Add a subscription"). That is their
+/// word, never an inference: the reading files every mail from an address
+/// they added (`file(_:added:)`), and nothing else without a header.
+///
 /// Foundation-only, so `scripts/mail-subscriptions-selftest.sh` compiles it
 /// whole.
 enum MailSubscriptions {
@@ -35,6 +41,20 @@ enum MailSubscriptions {
         var unsubscribe: String?
         var at: Date
         /// The mail seat it landed in (Gmail, iCloud Mail).
+        var source: String
+        /// Filed because the person added its sender, not by a header.
+        var byYou = false
+    }
+
+    /// One landed mail as the store holds it, before it is filed: the key its
+    /// `List` fact carries (nil when it carried no list header).
+    struct Landed: Equatable {
+        var id: UUID
+        var listKey: String?
+        var sender: String?
+        var address: String?
+        var unsubscribe: String?
+        var at: Date
         var source: String
     }
 
@@ -57,6 +77,9 @@ enum MailSubscriptions {
         var sources: [String]
         /// Its mails, newest first — the sheet's Recent.
         var mailIDs: [UUID]
+        /// Some of its mail is here only because the person added the
+        /// sender, so Stop tracking has something to take away.
+        var byYou = false
     }
 
     /// The window the box counts ("N mails in 30 days").
@@ -99,6 +122,58 @@ enum MailSubscriptions {
         return nil
     }
 
+    /// The sender's mailbox: the address the envelope gave, else the one
+    /// inside a "Name <box@host>" sender (mail landed before §916 kept the
+    /// address beside the name only), else a sender that is a bare address.
+    static func address(_ email: String?, sender: String?) -> String? {
+        if let email = email?.trimmingCharacters(in: .whitespaces), email.contains("@") { return email }
+        guard let sender = sender?.trimmingCharacters(in: .whitespaces) else { return nil }
+        if let open = sender.lastIndex(of: "<"), let close = sender.lastIndex(of: ">"), open < close {
+            let inner = sender[sender.index(after: open)..<close].trimmingCharacters(in: .whitespaces)
+            return inner.contains("@") ? inner : nil
+        }
+        return sender.contains("@") && !sender.contains(" ") ? sender : nil
+    }
+
+    /// The sender's name without its mailbox: "Receipts" out of
+    /// "Receipts <receipts@shop.example>". nil when nothing is left.
+    static func senderName(_ sender: String?) -> String? {
+        guard var name = sender?.trimmingCharacters(in: .whitespaces), !name.isEmpty else { return nil }
+        if let open = name.lastIndex(of: "<"), name.hasSuffix(">") {
+            name = name[..<open].trimmingCharacters(in: .whitespaces)
+        }
+        name = name.trimmingCharacters(in: CharacterSet(charactersIn: "\"").union(.whitespaces))
+        return name.isEmpty ? nil : name
+    }
+
+    /// Which landed mail is a subscription's, and under which key. A mail
+    /// with a list header files under its own key. A mail without one files
+    /// only when the person added its sender (`added`, keyed as
+    /// `key(listID: nil, address:)` keys), and then under the key that
+    /// sender's headed mail already uses, so a sender added before its list
+    /// headers arrived stays ONE row; else under its address. Everything else
+    /// is a mail, not a subscription.
+    static func file(_ landed: [Landed], added: Set<String>) -> [Mail] {
+        var headed: [String: (list: String, at: Date)] = [:]
+        for mail in landed {
+            guard let list = mail.listKey,
+                  let address = Self.key(listID: nil, address: mail.address) else { continue }
+            if let standing = headed[address], standing.at >= mail.at { continue }
+            headed[address] = (list, mail.at)
+        }
+        return landed.compactMap { mail -> Mail? in
+            if let list = mail.listKey {
+                return Mail(id: mail.id, key: list, sender: mail.sender ?? list, address: mail.address,
+                            unsubscribe: mail.unsubscribe, at: mail.at, source: mail.source)
+            }
+            guard let address = Self.key(listID: nil, address: mail.address), added.contains(address)
+            else { return nil }
+            return Mail(id: mail.id, key: headed[address]?.list ?? address,
+                        sender: mail.sender ?? address, address: mail.address,
+                        unsubscribe: mail.unsubscribe, at: mail.at, source: mail.source, byYou: true)
+        }
+    }
+
     /// Group, then order: most mail in the last thirty days first, then most
     /// overall, then by name.
     static func compose(_ mails: [Mail], now: Date) -> [Item] {
@@ -115,7 +190,8 @@ enum MailSubscriptions {
                         lastMonth: sorted.filter { $0.at >= windowStart }.count,
                         cadenceDays: cadenceDays(sorted.map(\.at)),
                         last: newest.at, since: oldest.at,
-                        unsubscribe: link, sources: sources, mailIDs: sorted.map(\.id))
+                        unsubscribe: link, sources: sources, mailIDs: sorted.map(\.id),
+                        byYou: sorted.contains(where: \.byYou))
         }
         return items.sorted {
             if $0.lastMonth != $1.lastMonth { return $0.lastMonth > $1.lastMonth }
