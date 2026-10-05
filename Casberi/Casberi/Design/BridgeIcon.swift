@@ -76,6 +76,13 @@ struct BridgeIcon: View {
         BridgeIconArt.assetName(for: name)
     }
 
+    /// Whether `name` wears a mark of its own — bundled art, or a seat's
+    /// glyph — rather than the blank `app` square a stranger's name falls to.
+    static func hasMark(_ name: String) -> Bool {
+        BridgeIconArt.image(BridgeIconArt.assetName(for: name)) != nil
+            || BridgeGlyph.symbol(for: name) != "app"
+    }
+
     private var shape: AnyShape {
         circular || roundInContext ? AnyShape(Circle())
                  : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous))

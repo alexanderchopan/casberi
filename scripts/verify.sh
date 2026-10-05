@@ -2445,6 +2445,13 @@ harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-s
 # label wearing a control's clothes (§83). None of that fails a build or a sweep.
 harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selftest.sh" "the wallet section self-test failed — run scripts/wallet-section-selftest.sh"
 
+# The Wallet's Subscriptions tile (prd §1105): which repeating charges are
+# subscriptions, how a card charge, a bill and a hand-added one merge, and the
+# monthly total. Every failure is an ordinary-looking list with wrong numbers:
+# a ride or a grocery bill listed as a plan, a cancelled plan still counted,
+# $20.29 for a $20 plan, one plan counted twice, a euro plan counted at par.
+harness "Subscriptions pure-logic self-test" "subscriptions" "scripts/subscriptions-selftest.sh" "the subscriptions self-test failed — run scripts/subscriptions-selftest.sh"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

@@ -16,10 +16,10 @@ enum ScopeTileGlyph {
     static let accounts    = "person.2"
     static let permissions = "key"
     static let positions   = "building.columns"
-    /// The Wallet's Cards tile (prd §1048). Not the bare `creditcard`, which
-    /// was the Wallet's own mark when this was chosen (the Wallet wears the
-    /// dollar sign since §1063); kept so the tile does not change under you.
-    static let cards       = "creditcard.and.123"
+    /// The Wallet's Subscriptions tile (prd §1105): a charge that comes round
+    /// again. No tile or dock seat wears it; a row lead for Rocket Money or
+    /// Uniswap falls back to it, which is a seat's mark and not a scope's.
+    static let subscriptions = "arrow.triangle.2.circlepath"
     static let risk        = "shield"
     static let frames      = "square.stack.3d.down.right"
     /// Privy's Apps — "every app that made you a wallet" (user, 2026-09-19:
@@ -165,9 +165,7 @@ extension AgentRoomScope: DSTileScope {
     }
 }
 
-/// Follow wears Watch's eye (prd §1039): following an address privately IS
-/// watching it (`ScopeTileGlyph.watch` names Follow address among its uses),
-/// so one meaning, one glyph — a declared alias in `tile-glyph-audit.py`.
+/// The Wallet's verb is Watch since prd §1105 and wears its own name's glyph.
 extension WalletSection: DSTileScope {
     var glyph: String {
         switch self {
@@ -175,10 +173,10 @@ extension WalletSection: DSTileScope {
         case .holdings:    return ScopeTileGlyph.holdings
         case .comingUp:    return ScopeTileGlyph.comingUp
         case .positions:   return ScopeTileGlyph.positions
-        case .cards:       return ScopeTileGlyph.cards
+        case .subscriptions: return ScopeTileGlyph.subscriptions
         case .risk:        return ScopeTileGlyph.risk
         case .permissions: return ScopeTileGlyph.permissions
-        case .follow:      return ScopeTileGlyph.watch
+        case .watch:       return ScopeTileGlyph.watch
         }
     }
 }

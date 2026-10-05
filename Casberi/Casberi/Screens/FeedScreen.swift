@@ -821,6 +821,7 @@ struct FeedScreen: View {
     @MainActor static var notesProbed = false
     @MainActor static var socialProbed = false
     @MainActor static var walletFollowProbed = false
+    @MainActor static var subscriptionsProbed = false
     #endif
     /// What the Wallet last read you hold, for Markets' "You hold" line.
     @State var held: (byContract: [String: Double], bySymbol: [String: Double]) = ([:], [:])

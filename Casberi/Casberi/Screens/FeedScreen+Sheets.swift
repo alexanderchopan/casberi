@@ -86,8 +86,12 @@ extension FeedScreen {
         case notesSearch
         /// Social's Follow (prd §1086).
         case socialFollow
-        /// The Wallet's Follow (prd §1090).
+        /// The Wallet's Follow (prd §1090), the Watch tile since prd §1105.
         case walletFollow
+        /// One subscription, by its key (prd §1105).
+        case subscription(String)
+        /// Add a subscription by hand (prd §1105).
+        case subscriptionAdd
         /// A company from Markets' index you don't watch yet (prd §1082).
         case company(CompanyPacks.Company)
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
@@ -119,6 +123,8 @@ extension FeedScreen {
             case .notesSearch: "notesSearch"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
+            case .subscription(let id): "subscription:\(id)"
+            case .subscriptionAdd: "subscriptionAdd"
             case .company(let c): "company:\(c.name)"
             case .deposits: "deposits"
             case .locks: "locks"
@@ -270,6 +276,10 @@ extension FeedScreen {
             SocialFollowSheet()
         case .walletFollow:
             WalletFollowSheet()
+        case .subscription(let id):
+            SubscriptionSheet(id: id)
+        case .subscriptionAdd:
+            SubscriptionAddTray()
         case .readingFind(let scope):
             ReadingFindSheet(mode: scope == .search ? .search : .follow) { thing in
                 // The find tray closes before the thing's sheet rises: one

@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1237 of 1296 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1238 of 1297 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1369,15 +1369,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
-- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084, §1090)
-- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078, §1090)
+- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084, §1090, §1105)
+- §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078, §1090, §1105)
 - §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
 - §1043 — `enrichedText` is the sheet's body and never a row's line; provider-authored display copy stays on `summary` and `pos…
 - §1044 — On the phone, a room draws no capsule beside the face: its venues are the tray and a swipe, and its "whose" control s…
 - §1045 — "Start here" leads Apps while nothing is connected
 - §1046 — §1006's items 4 and 7 are declined
 - §1047 — The ask is deleted: the on-device model reads and no longer answers, and the composer keeps Find and the agents you c…
-- §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050, §1051a, §1078)
+- §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050, §1051a, §1078, §1105)
 - §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats (part superseded by §1078)
 - §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e)
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
@@ -1426,7 +1426,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1075 — The tile-action sweep
 - §1076 — A Wallet transfer with no address and no token wears the way it moved
 - §1077 — The 2.0 store listing, after the 4.1(a) rejection
-- §1078 — The One Wallet, five changes: your own moves are one row, Holdings dates a stored reading and the total names a card…
+- §1078 — The One Wallet, five changes: your own moves are one row, Holdings dates a stored reading and the total names a card… (amended by §1105)
 - §1079 — Work and Reading show one row per object, Work's box is its newest event, and Social gets its threads and faces back (amended by §1080)
 - §1080 — Work's Coming up leads with what needs you, then what is due
 - §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082)
@@ -1458,6 +1458,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1103b — Under an app header a picture rides the right as a thumbnail, and the item's words start under the app's name
 - §1103c — Under an app header, the person a thing is by wears a small face before its title
 - §1104 — An old install is told a newer one is out, and every older TestFlight build expires on ship
+- §1105 — The Wallet's Cards tile becomes Subscriptions, Coming up and Subscriptions share one calendar box, and Follow is Watch
 
 ## Dead rulings → what replaced them (generated)
 

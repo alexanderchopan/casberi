@@ -93,19 +93,21 @@ struct WalletImprovementsTests {
 
     @Test func billsInsideTheWindowAddUp() {
         let reading = WalletDue.compose(bills: [
-            Self.bill(RocketMoneyLive.source, 15.49, days: 2),
-            Self.bill(RocketMoneyLive.source, 240, days: 20),
-            Self.bill(RocketMoneyLive.source, 99, days: 45),
+            Self.bill(AppleWalletBridge.sourceName, 15.49, days: 2),
+            Self.bill(AppleWalletBridge.sourceName, 240, days: 20),
+            Self.bill(AppleWalletBridge.sourceName, 99, days: 45),
         ], waiting: 0, rates: [:], now: Self.now)
         #expect(abs(reading.total - 255.49) < 0.001)
         #expect(reading.counted == 2)
     }
 
     /// Coming up also holds money ARRIVING and deadlines with no money; only
-    /// a bill's source counts.
+    /// a bill's source counts. Rocket Money's bills repeat, so they are
+    /// Subscriptions' since prd §1105 and Coming up's box does not add them.
     @Test func onlyABillSourceCounts() {
         let reading = WalletDue.compose(bills: [Self.bill("Peer", 500, days: 1),
-                                                Self.bill("World App", 40, days: 3)],
+                                                Self.bill("World App", 40, days: 3),
+                                                Self.bill(RocketMoneyLive.source, 20, days: 3)],
                                         waiting: 0, rates: [:], now: Self.now)
         #expect(!reading.hasFigure)
         #expect(reading.uncounted.isEmpty)
@@ -115,7 +117,7 @@ struct WalletImprovementsTests {
     @Test func aBillWithNoAmountIsNamedNotCounted() {
         let reading = WalletDue.compose(bills: [
             Self.bill(AppleWalletBridge.sourceName, nil, nil, days: 9, title: "Apple Card payment due"),
-            Self.bill(RocketMoneyLive.source, 20, days: 4),
+            Self.bill(AppleWalletBridge.sourceName, 20, days: 4),
         ], waiting: 2, rates: [:], now: Self.now)
         #expect(reading.total == 20)
         #expect(reading.uncounted == ["Apple Card payment due"])
@@ -123,58 +125,9 @@ struct WalletImprovementsTests {
     }
 
     @Test func aBillInAnUnpricedCurrencyIsNamed() {
-        let reading = WalletDue.compose(bills: [Self.bill(RocketMoneyLive.source, 30, "SGD", days: 4, title: "Gym")],
+        let reading = WalletDue.compose(bills: [Self.bill(AppleWalletBridge.sourceName, 30, "SGD", days: 4, title: "Gym")],
                                         waiting: 0, rates: ["EUR": 1.1], now: Self.now)
         #expect(reading.counted == 0)
         #expect(reading.uncounted == ["Gym"])
-    }
-
-    // MARK: - Cards in dollars
-
-    private static func spendRow(_ source: String, _ amount: Double, _ currency: String, ref: String) -> Thing {
-        let thing = Thing(kind: .transaction, title: "t", content: "c", source: source,
-                          capturedAt: Date().addingTimeInterval(-86_400), sourceRef: ref)
-        thing.tags = ["Card"]
-        thing.priceValue = amount
-        thing.priceCurrency = currency
-        return thing
-    }
-
-    /// Inserted, so `live` holds: an uninserted row reads as deleted and
-    /// `compose` returns nil. Held by the caller.
-    private static func inserted(_ rows: [Thing]) throws -> ModelContainer {
-        let container = try ModelContainer(
-            for: Thing.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-        for row in rows { container.mainContext.insert(row) }
-        return container
-    }
-
-    @Test func cardsConvertAtTheGivenRateAndRankByDollars() throws {
-        let things = [
-            Self.spendRow(AppleWalletBridge.sourceName, 60, "USD", ref: "a1"),
-            Self.spendRow(AppleWalletBridge.sourceName, 40, "USD", ref: "a2"),
-            Self.spendRow(WalletCards.privacySource, 20, "USD", ref: "privacy:txn:1"),
-        ]
-        let container = try Self.inserted(things)
-        _ = container
-        let reading = try #require(WalletCards.compose(things: things))
-        let dollars = try #require(WalletCards.inDollars(reading, rates: [:]))
-        #expect(dollars.total == 120)
-        #expect(dollars.cards.map(\.seat) == [AppleWalletBridge.sourceName, WalletCards.privacySource])
-        #expect(dollars.rates.isEmpty)
-    }
-
-    /// A currency with no rate keeps the count figure: nothing at par.
-    @Test func aCurrencyWithNoRateKeepsTheCountFigure() throws {
-        let things = [Self.spendRow(AppleWalletBridge.sourceName, 60, "USD", ref: "a1"),
-                      Self.spendRow(AppleWalletBridge.sourceName, 40, "SGD", ref: "a2")]
-        let container = try Self.inserted(things)
-        _ = container
-        let reading = try #require(WalletCards.compose(things: things))
-        #expect(WalletCards.inDollars(reading, rates: ["EUR": 1.1]) == nil)
-        let converted = try #require(WalletCards.inDollars(reading, rates: ["SGD": 0.75]))
-        #expect(abs(converted.total - 90) < 0.001)
-        #expect(converted.rates.map(\.code) == ["SGD"])
     }
 }

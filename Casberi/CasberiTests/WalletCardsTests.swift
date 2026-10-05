@@ -3,7 +3,7 @@ import SwiftData
 import Testing
 @testable import Casberi
 
-/// **Which rows the Wallet's Cards tile counts** (prd §1048, step 2).
+/// **Which of the Wallet's card rows are spends** (prd §1048, step 2).
 ///
 /// Five seats, three shapes of room. The onchain cards defer to
 /// `CardSpendSeat` (§868); Apple Wallet's room also holds bank moves, dues,
@@ -68,38 +68,5 @@ struct WalletCardsTests {
         #expect(!RoomAccounts.rides(room: "Markets", source: GnosisPayBridge.sourceName))
         #expect(RoomAccounts.roomSources("Markets") == ["Markets"])
         #expect(RoomAccounts.roomSources(CategoryFold.walletRoom).first == CategoryFold.walletRoom)
-    }
-
-    /// `isLive` needs a context, so a test on bare `Thing()`s would hand
-    /// `compose` nothing and pass while proving nothing (`CardSpendSeatTests`'
-    /// own lesson). Held by the caller: a released container deletes its rows.
-    private static func inserted(_ rows: [Thing]) throws -> (ModelContainer, [Thing]) {
-        let container = try ModelContainer(
-            for: Thing.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-        for row in rows { container.mainContext.insert(row) }
-        return (container, rows)
-    }
-
-    /// Euros and dollars stay apart, and the busiest card leads by COUNT.
-    @Test func cardsRankBySpendsAndCurrenciesAreNotSummed() throws {
-        let (container, rows) = try Self.inserted([
-            Self.row(source: GnosisPayBridge.sourceName, ref: "g1", amount: 40, currency: "EUR"),
-            Self.row(source: AppleWalletBridge.sourceName, ref: "a1", tags: ["Card"], amount: 5),
-            Self.row(source: AppleWalletBridge.sourceName, ref: "a2", tags: ["Card"], amount: 7),
-        ])
-        _ = container
-        let reading = WalletCards.compose(things: rows)
-        #expect(reading?.cards.map(\.seat) == [AppleWalletBridge.sourceName, GnosisPayBridge.sourceName])
-        #expect(Set(reading?.all.currencies.map(\.code) ?? []) == ["USD", "EUR"])
-        #expect(reading?.all.currencies.first(where: { $0.code == "USD" })?.total == 12)
-    }
-
-    /// Inserted, so a nil here means "no spends", not "no live rows".
-    @Test func noSpendsIsNoReading() throws {
-        let (container, rows) = try Self.inserted([Self.row(source: CategoryFold.walletRoom, ref: "w")])
-        _ = container
-        #expect(rows.allSatisfy { $0.isLive })
-        #expect(WalletCards.compose(things: rows) == nil)
     }
 }

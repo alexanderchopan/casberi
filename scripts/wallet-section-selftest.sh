@@ -53,20 +53,25 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .comingUp, .positions, .cards, .risk, .permissions],
-      "order is home → holdings → comingUp → positions → cards → risk → permissions")
+check(WalletSection.order == [.home, .holdings, .comingUp, .positions, .subscriptions, .risk, .permissions],
+      "order is home → holdings → comingUp → positions → subscriptions → risk → permissions")
+// **SUBSCRIPTIONS TOOK THE CARDS TILE (prd §1105).** A card's spends are on
+// Home and one pick away in the account menu; the tile answers what repeats.
+check(!WalletSection.allCases.contains { $0.rawValue == "cards" },
+      "the Cards tile is gone — Subscriptions took its place (prd §1105)")
+check(WalletSection.subscriptions.label == "Subscriptions", "the tile reads Subscriptions")
 // **COMING UP IS ITS OWN SCOPE (prd §1041)** — Home is only what happened.
 check(WalletSection.comingUp.label == "Coming up", "the scope reads Coming up — the app's own word")
 check(WalletSection.comingUp.isConditional, "coming up can be empty, so it sits in the tail")
-// **THE VERB IS A CASE, NEVER A SCOPE (prd §1039).** Follow is the last tile:
+// **THE VERB IS A CASE, NEVER A SCOPE (prd §1039).** Watch is the last tile:
 // every case is a scope in `order` or a verb in `verbs`, never both.
 check(WalletSection.order.count + WalletSection.verbs.count == WalletSection.allCases.count
       && Set(WalletSection.order).isDisjoint(with: WalletSection.verbs),
       "order and verbs list every case once — a new scope cannot be silently unlisted")
-check(WalletSection.verbs == [.follow] && WalletSection.follow.isVerb
+check(WalletSection.verbs == [.watch] && WalletSection.watch.isVerb
       && !WalletSection.order.contains(where: \.isVerb),
-      "Follow is the one verb, and no scope is a verb")
-check(WalletSection.follow.label == "Follow", "the verb tile reads Follow (prd §1039)")
+      "Watch is the one verb, and no scope is a verb")
+check(WalletSection.watch.label == "Watch", "the verb tile reads Watch, Work's word (prd §1105)")
 check(!WalletSection.allCases.contains { $0.rawValue == "activity" || $0.rawValue == "accounts" },
       "Activity and Accounts are gone — Home's list is the activity, the menu picks the account (prd §1039)")
 
@@ -83,7 +88,7 @@ check(WalletSection.order.first == .home, "home leads")
 check(WalletSection.home.isAlwaysPresent, "home is always present")
 check(!WalletSection.home.isConditional, "home is not conditional")
 check(!WalletSection.holdings.isConditional, "holdings is not conditional")
-for s in [WalletSection.comingUp, .positions, .cards, .risk, .permissions] {
+for s in [WalletSection.comingUp, .positions, .subscriptions, .risk, .permissions] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
 
@@ -93,7 +98,7 @@ for s in [WalletSection.comingUp, .positions, .cards, .risk, .permissions] {
 let all = WalletSection.present()
 check(all == WalletSection.order, "every scope is present, in order")
 check(all.count == WalletSection.order.count, "no scope is hidden from anybody")
-check(!all.contains(.follow), "the verb is never published as a scope")
+check(!all.contains(.watch), "the verb is never published as a scope")
 
 // THE OBLIGATION THAT MAKES THAT HONEST. A chip that opens onto nothing is the
 // dead control §83 bans; the scopes that can be empty are allowed only because
@@ -149,8 +154,8 @@ check(WalletSection.resolve(.permissions, present: [.home, .holdings]) == .home,
       "a scope whose content has gone falls back to home")
 check(WalletSection.resolve(.holdings, present: [.holdings, .risk]) == .holdings,
       "resolve honours a present scope even when home is absent")
-check(WalletSection.resolve(.follow, present: WalletSection.order + WalletSection.verbs) == .home,
-      "a verb is never resolved to — Follow acts, it is not a page (prd §1039)")
+check(WalletSection.resolve(.watch, present: WalletSection.order + WalletSection.verbs) == .home,
+      "a verb is never resolved to — Watch acts, it is not a page (prd §1039)")
 // The fixture that separates "falls back to activity" from "falls back to the
 // first present scope" — without it, both implementations pass every case above.
 check(WalletSection.resolve(.permissions, present: [.holdings, .home]) == .home,
@@ -166,13 +171,12 @@ check(WalletSection.shows(present: [.home, .holdings]), "two scopes draw a strip
 check(WalletSection.home.label == "Home", "home reads Home")
 check(WalletSection.holdings.label == "Holdings", "holdings reads Holdings")
 check(WalletSection.positions.label == "Positions", "positions reads Positions")
-check(WalletSection.cards.label == "Cards", "cards reads Cards")
 check(WalletSection.risk.label == "Risk", "risk reads Risk")
 check(WalletSection.permissions.label == "Permissions", "permissions reads Permissions")
 for s in WalletSection.allCases {
     // One line on a tile: one word, or two short ones ("Coming up", prd §1041).
     check(s.label.split(separator: " ").count <= 2, "\(s.rawValue)'s label fits one tile line — the grid must not wrap")
-    check(s.label.count <= 11, "\(s.rawValue)'s label is short enough for a chip")
+    check(s.label.count <= 13, "\(s.rawValue)'s label is short enough for a tile")
     check(!s.summary.isEmpty, "\(s.rawValue) carries an accessibility summary")
     check(s.summary != s.label, "\(s.rawValue)'s summary says more than its label")
 }
@@ -214,7 +218,7 @@ mutate() {
 }
 
 mutate "a conditional scope moved out of the tail (the strip reflows)" \
-  's/\.home, \.holdings, \.comingUp, \.positions, \.cards, \.risk, \.permissions,/.home, .risk, .holdings, .comingUp, .positions, .cards, .permissions,/'
+  's/\.home, \.holdings, \.comingUp, \.positions, \.subscriptions, \.risk, \.permissions,/.home, .risk, .holdings, .comingUp, .positions, .subscriptions, .permissions,/'
 mutate "home no longer leads" \
   's/\.home, \.holdings, \.comingUp/.holdings, .home, .comingUp/'
 mutate "resolve falls back to the first present scope instead of home" \
@@ -222,11 +226,11 @@ mutate "resolve falls back to the first present scope instead of home" \
 mutate "the verb resolved to as a page (prd §1039)" \
   's/guard let wanted, !wanted\.isVerb, present\.contains\(wanted\)/guard let wanted, wanted.isVerb || present.contains(wanted)/'
 mutate "the verb slips into the scopes' order (prd §1039)" \
-  's/\.cards, \.risk, \.permissions,\n    \]/.cards, .risk, .permissions, .follow,\n    ]/'
+  's/\.subscriptions, \.risk, \.permissions,\n    \]/.subscriptions, .risk, .permissions, .watch,\n    ]/'
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
 mutate "risk is marked unconditional, so the tail rule stops being enforced" \
-  's/case \.comingUp, \.positions, \.cards, \.risk, \.permissions: return true/case .comingUp, .positions, .cards, .permissions: return true\n        case .risk: return false/'
+  's/case \.comingUp, \.positions, \.subscriptions, \.risk, \.permissions: return true/case .comingUp, .positions, .subscriptions, .permissions: return true\n        case .risk: return false/'
 mutate "every scope gated again, so five chips vanish on the wallet that most needs them" \
   's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
@@ -460,20 +464,30 @@ guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.i
 guard WalletHistoryScreen.swift "RoomAccounts.roomSources(CategoryFold.walletRoom)" \
   "the history screen no longer reads every source Home counts — its door opens a shorter list than it promises (prd §837, §1048)"
 
-# ── the Cards tile and NFTs under Holdings (prd §1048) ───────────────────────
+# ── the card seats' rows, Subscriptions and NFTs under Holdings (prd §1048, §1105)
 # The Wallet's query carries the card seats, and three places must agree on
 # which rows those are: the query, the row filter and the safety-net probe. If
 # the probe forgets them, every pass reads the card rows as rows the query
-# invented and swaps in a Wallet-only fetch, and the tile goes empty with
-# nothing failing (measured on the simulator, 2026-10-01).
+# invented and swaps in a Wallet-only fetch, and Home loses every card spend
+# with nothing failing (measured on the simulator, 2026-10-01).
 guard FeedScreen.swift "RoomAccounts.roomSources(source)" \
-  "the Wallet's query or its probe no longer reads RoomAccounts.roomSources — the Cards tile empties (prd §1048)"
+  "the Wallet's query or its probe no longer reads RoomAccounts.roomSources — Home loses the card spends (prd §1048)"
 guard FeedScreen.swift "RoomAccounts.rides(room: source, source: thing.source)" \
-  "the room filter drops the card seats' rows — the Cards tile empties (prd §1048)"
-guard FeedScreen.swift "WalletCards.compose(things: visible)" \
-  "the Cards tile's figure lost its reading (prd §1048)"
-guard FeedScreen.swift "let spends = visible.live.filter(WalletCards.isSpend)" \
-  "the Cards tile's list no longer reads the card spends (prd §1048)"
+  "the room filter drops the card seats' rows — Home loses the card spends (prd §1048)"
+# Subscriptions reads its OWN fetch (the room's is bounded), runs it from a
+# task, and its box and list are the two halves of one reading (prd §1105).
+guard FeedScreen.swift ".task(id: walletSubscriptionsKey) {" \
+  "the Subscriptions box no longer refreshes its reading — the tile stands on whatever was read first (prd §1105)"
+guard FeedScreen.swift "case .subscriptions: walletSubscriptionsFigure" \
+  "the Subscriptions tile lost its box (prd §1105)"
+guard FeedScreen.swift "walletSubscriptionsSections" \
+  "the Subscriptions tile lost its list (prd §1105)"
+# A repeating bill lives on ONE tile: Coming up and Home leave it to Subscriptions.
+guard FeedScreen.swift "!SubscriptionsSource.isBill(\$0, now: now)" \
+  "Coming up lists a repeating bill again — the same charge on two tiles (prd §1105)"
+guard FeedScreen.swift ".union(visible.filter { SubscriptionsSource.isBill(\$0) }" \
+  "Home's stream lists a repeating bill again — it belongs to Subscriptions (prd §1105)"
+
 python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: NFTs left Holdings — their tile is gone, so their list must stand under the tokens (prd §1048)"
 import re, sys
 src = open(sys.argv[1]).read()
@@ -515,4 +529,4 @@ guard DSChip.swift "if ranges.count > 1" \
   "the chips' own draw gate moved — every budget above spells this predicate and would now be asking the wrong question"
 
 echo "  ok   drift guards: mount, gate, publication, clear, dot, scopes, generic control, crown chip budget"
-echo "✓ wallet sections: order, presence, resolve, shows, labels, 8 mutations, 16 drift guards"
+echo "✓ wallet sections: order, presence, resolve, shows, labels, 12 mutations, drift guards"

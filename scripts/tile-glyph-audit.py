@@ -55,10 +55,8 @@ FOLD = f"{APP}/Model/CategoryFold.swift"
 
 # A case that wears another name's constant, with the reason it is one meaning.
 ALIASES = {
-    # The Wallet's Follow tile (prd §1039) IS watching an address privately -
-    # Watch's own meaning ("Follow address" is named among its uses), so
-    # Watch's eye, never a second glyph for one meaning.
-    ("WalletSection", "follow"): "watch",
+    # (The Wallet's verb was Follow wearing Watch's eye until prd §1105 named
+    # it Watch; it wears its own name now, so its alias is gone.)
     # Reading's Follow (prd §1085) follows a site's feed - watching it
     # privately, the same meaning.
     ("ReadingScope", "follow"): "watch",
@@ -241,7 +239,7 @@ extension WalletSection: DSTileScope {
         switch self {
         case .home:      return ScopeTileGlyph.home
         case .positions: return ScopeTileGlyph.positions
-        case .follow:    return ScopeTileGlyph.watch
+        case .watch:     return ScopeTileGlyph.watch
         }
     }
 }
@@ -307,7 +305,8 @@ MUTATIONS = [
     ("a case wears another name's constant (Privy's Apps in Frames' glyph)",
      "glyphs", "case .new: return ScopeTileGlyph.new", "case .new: return ScopeTileGlyph.home", "B"),
     ("a declared alias outlives its case",
-     "glyphs", "        case .follow:    return ScopeTileGlyph.watch\n", "", "C"),
+     "glyphs", "        case .all: return ScopeTileGlyph.all\n        case .follow: return ScopeTileGlyph.watch\n        }\n    }\n}\n\nextension SocialScope",
+     "        case .all: return ScopeTileGlyph.all\n        }\n    }\n}\n\nextension SocialScope", "C"),
     ("two constants share one symbol",
      "glyphs", 'static let new         = "plus"', 'static let new         = "eye"', "D"),
     ("a constant takes a dock category's symbol",

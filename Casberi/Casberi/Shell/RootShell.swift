@@ -203,7 +203,7 @@ struct RootShell: View {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(4))
                 NSLog("[Casberi] openSection: %@", raw)
-                // A verb tile (Follow, Create, Send, Top up, Explorer) is
+                // A verb tile (Watch, Create, Send, Top up, Explorer) is
                 // never a page (prd §1039); `activity` and `accounts` are gone.
                 if let s = WalletSection(rawValue: raw), !s.isVerb { chrome.walletSection = s }
                 if let s = FramesSection(rawValue: raw), !s.isVerb { chrome.framesSection = s }

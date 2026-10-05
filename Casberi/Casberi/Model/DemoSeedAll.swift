@@ -3509,6 +3509,15 @@ enum DemoSeedAll {
             ("Uber", 24.30, 3), ("Uber", 18.75, 11), ("Uber", 31.10, 20),
             ("Blue Bottle", 6.50, 4), ("Blue Bottle", 6.50, 9), ("Blue Bottle", 7.25, 18),
             ("Delta", 412.00, 26),
+            // The Subscriptions tile's charges (prd §1105): three a month
+            // each, so `AppleWalletRoom.recurringSeries` believes the
+            // cadence, and Notion's last one up two dollars inside the
+            // price-rise window. The renewals fall across the next five weeks.
+            ("Claude", 20.00, 6), ("Claude", 20.00, 36), ("Claude", 20.00, 66),
+            ("Cursor", 20.00, 25), ("Cursor", 20.00, 55), ("Cursor", 20.00, 85),
+            ("Notion", 12.00, 10), ("Notion", 10.00, 40), ("Notion", 10.00, 70),
+            ("Linear", 10.00, 16), ("Linear", 10.00, 46), ("Linear", 10.00, 76),
+            ("iCloud+", 2.99, 3), ("iCloud+", 2.99, 33), ("iCloud+", 2.99, 63),
         ]
         return spends.enumerated().map { i, s in
             row(.transaction, "\(s.0) · $\(String(format: "%.2f", s.1))",

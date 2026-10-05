@@ -283,7 +283,10 @@ extension FeedScreen {
             // Promoted rows leave the stream, or the same deadline would be
             // read twice on one screen — once as what's coming and once as
             // whenever it happened to land.
+            // A bill that repeats lives on Subscriptions (prd §1105), so it
+            // leaves the stream the same way.
             let promoted = Set(upcoming.map(\.id))
+                .union(visible.filter { SubscriptionsSource.isBill($0) }.map(\.id))
             // **HOME IS EVERYTHING THAT HAPPENED, ACROSS EVERY APP THE WALLET
             // FOLDED IN (prd §1048, step 4).** The history screen behind its
             // door reads the same sources (`RoomAccounts.roomSources`), so its
@@ -373,11 +376,8 @@ extension FeedScreen {
             // a Section of its own here any more: as a sibling it took its own
             // row insets and the List's section spacing, and the tiles landed
             // at a different height than on Home.
-            // The Cards tile's reading (prd §1048), composed only while it is
-            // the page — a fold over every card row is not paid on every scope.
-            let cards = section == .cards ? WalletCards.compose(things: visible) : nil
             walletScopeChromeSection(section, visible: visible,
-                                     upcoming: upcoming, cards: cards, inert: inert,
+                                     upcoming: upcoming, inert: inert,
                                      streamTotal: all.count)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you
@@ -404,7 +404,7 @@ extension FeedScreen {
                 walletStreamSections(stream.rows, ownMoves: stream.ownMoves, nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
                 // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** The
-                // Follow tile above is the remedy, one tap away (§1039).
+                // Watch tile above is the remedy, one tap away (§1039).
                 if all.isEmpty {
                     walletSkeletonRowsSection
                 }
@@ -416,7 +416,7 @@ extension FeedScreen {
                 if upcoming.isEmpty {
                     walletSkeletonRowsSection
                 }
-            case .follow:
+            case .watch:
                 // A verb is never a page — `resolve` never lands here.
                 EmptyView()
             case .holdings:
@@ -441,15 +441,11 @@ extension FeedScreen {
                 walletDeFiSection
                 walletLiquiditySection
                 walletPerpsSection
-            case .cards:
-                // **EVERY CARD'S SPENDS, UNDER THE DAY THEY FELL ON (prd
-                // §1048).** The figure above says what they add up to; these
-                // are the purchases, each row's line naming its card.
-                let spends = visible.live.filter(WalletCards.isSpend)
-                walletStreamSections(spends.map(FeedRow.single), nextEventID: nextEventID)
-                if spends.isEmpty {
-                    walletSkeletonRowsSection
-                }
+            case .subscriptions:
+                // **WHAT REPEATS, MOST EXPENSIVE FIRST (prd §1105).** Add
+                // leads, for anything no card or bill reading can see; the
+                // box above says when each renews.
+                walletSubscriptionsSections
             case .risk:
                 // **WHAT COULD CLOSE, THEN WHAT LOOKS WRONG (prd §947).** The
                 // Worth-a-look door and Positions' Lending and Perps cards,

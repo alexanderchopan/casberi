@@ -7,8 +7,9 @@ import Foundation
 /// **Only a bill is "due".** Coming up also holds money ARRIVING (a World ID
 /// grant, a Peer sale settling) and deadlines with no money (an ENS expiry, a
 /// card offer), so the figure adds only the sources whose dated rows are
-/// payments you make: Rocket Money's next charges and Apple Wallet's card
-/// payments. A bill with no amount (Apple's payment row carries a date, not a
+/// payments you make: Apple Wallet's card payments. Rocket Money's next
+/// charges moved to the Subscriptions tile with prd §1105 (they repeat), so
+/// Coming up holds what happens once. A bill with no amount (Apple's payment row carries a date, not a
 /// sum) is NAMED, never counted as zero. A currency with no rate is left out
 /// and named the same way, as the Wallet total does (§1048).
 ///
@@ -18,7 +19,7 @@ enum WalletDue {
     static let windowDays = 30
 
     /// Sources whose dated rows are payments the person makes.
-    static let billSources: Set<String> = [RocketMoneyLive.source, AppleWalletBridge.sourceName]
+    static let billSources: Set<String> = [AppleWalletBridge.sourceName]
 
     struct Bill: Equatable {
         let title: String

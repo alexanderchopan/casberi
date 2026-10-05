@@ -204,8 +204,7 @@ extension FeedScreen {
     /// halves. Splitting those is worth doing deliberately, not as a side
     /// effect of a layout pass.
     @ViewBuilder
-    func walletScopeVisualSection(_ section: WalletSection, upcoming: [Thing] = [],
-                                  cards: WalletCards.Reading? = nil) -> some View {
+    func walletScopeVisualSection(_ section: WalletSection, upcoming: [Thing] = []) -> some View {
         switch section {
         // Home's drawing is the sparkline, which the crown draws itself — so
         // this slot is already filled there rather than empty.
@@ -215,11 +214,9 @@ extension FeedScreen {
         case .comingUp where upcoming.isEmpty:
             WalletScopeEmptyFigure(section: .comingUp)
         case .comingUp:    walletComingUpFigure(upcoming)
-        // Cards is decided where its rows are in hand (`cards`), as Coming up is.
-        case .cards where cards == nil:
-            WalletScopeEmptyFigure(section: .cards)
-        case .cards:
-            if let cards { WalletCardsFigure(reading: cards).modifier(rowEntrance(2)) }
+        // Subscriptions reads its own store (`SubscriptionsReading`), so it
+        // decides its emptiness in its own figure (prd §1105).
+        case .subscriptions: walletSubscriptionsFigure
         // **THE EMPTY STATE IS IN THE SLOT (prd §611, §610's ruling carried
         // here).** The five standing scopes
         // had nothing at all, so a chip onto Positions on a wallet with no
@@ -227,7 +224,7 @@ extension FeedScreen {
         case _ where walletScopeIsEmpty(section):
             WalletScopeEmptyFigure(section: section)
         // A verb is never a page (prd §1039): `resolve` never lands here.
-        case .follow:      EmptyView()
+        case .watch:       EmptyView()
         case .holdings:    holdingsBlockSection
         case .positions:   walletCompositionSection
         // **THE RANKED BARS LEAD, NOT "Worth a look"** (prd §483, 2026-08-26).
@@ -274,7 +271,6 @@ extension FeedScreen {
     func walletScopeChromeSection(_ active: WalletSection,
                                   visible: [Thing],
                                   upcoming: [Thing],
-                                  cards: WalletCards.Reading? = nil,
                                   inert: Set<WalletSection> = [],
                                   streamTotal: Int) -> some View {
         // Read HERE, in this body, and captured by the crown below: read only
@@ -298,7 +294,7 @@ extension FeedScreen {
                     // Follow is a tray in the room (prd §1090), as Social's
                     // and Reading's are; the account page keeps its own field
                     // behind the sliders disc beside the room's name.
-                    if picked == .follow {
+                    if picked == .watch {
                         feedSheet = .walletFollow
                         return
                     }
@@ -349,7 +345,7 @@ extension FeedScreen {
                     // `reservesHeadline: false` (prd §495): Wallet's figures
                     // name themselves inside their own drawing.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        walletScopeVisualSection(scope, upcoming: upcoming, cards: cards)
+                        walletScopeVisualSection(scope, upcoming: upcoming)
                     }
                 }
             )
@@ -704,7 +700,7 @@ extension FeedScreen {
     func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
         switch section {
         // Coming up is decided where its rows are in hand (`upcoming`).
-        case .home, .follow, .comingUp, .cards: return false
+        case .home, .watch, .comingUp, .subscriptions: return false
         case .holdings:    return blockStream.els.isEmpty
         case .positions:   return !(hasLendingCard
                                     || !walletLive.uniswap.isEmpty
@@ -737,14 +733,16 @@ extension FeedScreen {
     /// **THE SCOPES AN APP PICK CANNOT FILL (prd §1078).** Positions, Risk
     /// and Permissions are an address's readings, and an app pick clears
     /// them (§1067), so they are inert for every app. Holdings, Coming up and
-    /// Cards are inert only when this app has nothing there: an exchange
-    /// holds money, a card spends, a Safe has a queue. Home never is. On All,
+    /// Subscriptions are inert only when this app has nothing there: an
+    /// exchange holds money, a card pays a subscription, a Safe has a queue. Home never is. On All,
     /// nothing is inert: an empty scope there explains itself (§611).
     func walletInertSections(visible: [Thing], upcoming: [Thing]) -> Set<WalletSection> {
         var out: Set<WalletSection> = [.positions, .risk, .permissions]
         if walletScopeIsEmpty(.holdings) { out.insert(.holdings) }
         if upcoming.isEmpty { out.insert(.comingUp) }
-        if !visible.live.contains(where: WalletCards.isSpend) { out.insert(.cards) }
+        if SubscriptionsReading.shared.items(in: walletSubscriptionSources).isEmpty {
+            out.insert(.subscriptions)
+        }
         return out
     }
 
@@ -1287,18 +1285,18 @@ extension FeedScreen {
             return false
         }
         .sorted { $0.capturedAt > $1.capturedAt }
+        // A bill that repeats is Subscriptions' (prd §1105), never two tiles'.
         let dated = live
-            .filter { ($0.dueAt ?? .distantPast) > now }
+            .filter { ($0.dueAt ?? .distantPast) > now && !SubscriptionsSource.isBill($0, now: now) }
             .sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
         return pending + dated
     }
 
-    /// **COMING UP'S BOX (prd §1041): the next one, and the spread.** No new
-    /// figure: the next item's title over its countdown (`dueLine`, the
-    /// cover's own formatting), over `WalletRunwayRail` — the drawing the
-    /// CardPointers head already uses for deadlines, whether they are bunched
-    /// or spread (§417). Nothing due draws the scope's empty state instead
-    /// (§769, `walletScopeVisualSection`).
+    /// **COMING UP'S BOX (prd §1041, §1105): the statement, one line, and the
+    /// five weeks as a calendar** (`WalletDueFigure`). The dot rail it drew
+    /// was a calendar with the dates taken off (user: "this part is useless").
+    /// Nothing due draws the scope's empty state instead (§769,
+    /// `walletScopeVisualSection`).
     @ViewBuilder
     func walletComingUpFigure(_ upcoming: [Thing]) -> some View {
         let now = Date.now
@@ -1312,24 +1310,7 @@ extension FeedScreen {
                          amount: thing.priceValue, currency: thing.priceCurrency, due: due)
         }
         let waiting = live.filter { ($0.dueAt ?? .distantPast) <= now }.count
-        if bills.contains(where: { WalletDue.billSources.contains($0.source) }) || waiting > 0 {
-            WalletDueFigure(bills: bills, waiting: waiting,
-                            dates: live.compactMap(\.dueAt), next: live.first)
-        } else if let next = live.first {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text(next.title)
-                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-                if let due = Self.dueLine(next) {
-                    Text(due)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                }
-                Spacer(minLength: 0)
-                WalletRunwayRail(dates: upcoming.compactMap { $0.isLive ? $0.dueAt : nil })
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .accessibilityElement(children: .combine)
-        }
+        WalletDueFigure(bills: bills, waiting: waiting, upcoming: live)
     }
 
     // `walletComingUpSection` — the deadlines' own card, drawn nowhere since

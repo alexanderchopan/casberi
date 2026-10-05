@@ -46,7 +46,7 @@ import Foundation
 /// list — so what moved (and what is ahead, under its own date) is Home's
 /// list, the account menu under the tiles picks the account, and the
 /// Overview rows and the Actions block are gone. Following an address is the
-/// LAST tile, `follow`, a verb that never lights (GitHub's Watch, prd §1031).
+/// LAST tile, `watch`, a verb that never lights (GitHub's Watch, prd §1031).
 ///
 /// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610).** Until
 /// 2026-09-05 `present(…)` dropped a scope the wallet had nothing for, so a
@@ -69,16 +69,18 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// §1041, user: "its own tile"). Home is only what happened.
     case comingUp
     case positions
-    /// Every card's spends (prd §1048): Gnosis Pay, MetaMask Card, ether.fi,
-    /// Apple Card and Privacy.com, through `WalletCards`.
-    case cards
+    /// What repeats, what it costs and when it renews (prd §1105, which took
+    /// the Cards tile's place: a card's spends are on Home, and the account
+    /// menu narrows the room to any one card).
+    case subscriptions
     case risk
     case permissions
-    /// The room's VERB (prd §1039): follow another address. Never a scope —
+    /// The room's VERB (prd §1039): watch another address. Never a scope —
     /// it is never in `order`, never resolved to, and never lights. It rides
     /// this enum as Watch rides `WorkScope` (prd §1031, §1057), because a verb
-    /// tile is drawn by the same grid as the scopes.
-    case follow
+    /// tile is drawn by the same grid as the scopes. It read Follow until prd
+    /// §1105, which gave it Work's word.
+    case watch
 
     var id: String { rawValue }
 
@@ -87,15 +89,15 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// it is stated where a reader looking for it will find it and where a
     /// self-test can assert it.
     static let order: [WalletSection] = [
-        .home, .holdings, .comingUp, .positions, .cards, .risk, .permissions,
+        .home, .holdings, .comingUp, .positions, .subscriptions, .risk, .permissions,
     ]
 
     /// The verbs, drawn after the scopes (`DSScopeTiles.alphabetical`) on
-    /// every page — following is the room's act, not one account's (§774).
-    static let verbs: [WalletSection] = [.follow]
+    /// every page — watching is the room's act, not one account's (§774).
+    static let verbs: [WalletSection] = [.watch]
 
     /// A verb acts instead of scoping, and never lights.
-    var isVerb: Bool { self == .follow }
+    var isVerb: Bool { self == .watch }
 
     /// Which scopes can be EMPTY.
     ///
@@ -106,8 +108,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
-        case .home, .holdings, .follow: return false
-        case .comingUp, .positions, .cards, .risk, .permissions: return true
+        case .home, .holdings, .watch: return false
+        case .comingUp, .positions, .subscriptions, .risk, .permissions: return true
         }
     }
 
@@ -122,11 +124,11 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         // The app's own word for what's ahead (the feed's "Coming up" group).
         case .comingUp:    return String(localized: "Coming up")
         case .positions:   return String(localized: "Positions")
-        case .cards:       return String(localized: "Cards")
+        case .subscriptions: return String(localized: "Subscriptions")
         case .risk:        return String(localized: "Risk")
         case .permissions: return String(localized: "Permissions")
-        // "Follow", not "Follow address" (prd §1039): a tile carries one word.
-        case .follow:      return String(localized: "Follow")
+        // One word (prd §1039), and Work's (§1031, prd §1105).
+        case .watch:       return String(localized: "Watch")
         }
     }
 
@@ -140,10 +142,10 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:    return String(localized: "What your money is made of")
         case .comingUp:    return String(localized: "What's ahead, soonest first")
         case .positions:   return String(localized: "Money you've deployed")
-        case .cards:       return String(localized: "What your cards spent")
+        case .subscriptions: return String(localized: "What repeats, and what it costs")
         case .risk:        return String(localized: "Positions that could move against you")
         case .permissions: return String(localized: "What you've granted reach to")
-        case .follow:      return String(localized: "Follow an address, privately")
+        case .watch:       return String(localized: "Watch an address, privately")
         }
     }
 
@@ -168,11 +170,11 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings:    return String(localized: "Nothing held")
         case .comingUp:    return String(localized: "Nothing ahead")
         case .positions:   return String(localized: "Nothing deployed")
-        case .cards:       return String(localized: "No card spends")
+        case .subscriptions: return String(localized: "No subscriptions")
         case .risk:        return String(localized: "Nothing at risk")
         case .permissions: return String(localized: "No grants")
         // A verb has no empty state: it is never on screen as a page.
-        case .follow:      return nil
+        case .watch:       return nil
         }
     }
 
@@ -204,13 +206,13 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "Unlocks, expiries and grants with a date still to come.")
         case .positions:
             return String(localized: "Money lent, pooled, or held as a perp.")
-        case .cards:
-            return String(localized: "Purchases on a card you connected.")
+        case .subscriptions:
+            return String(localized: "A charge that repeats on a card you connected, or one you add.")
         case .risk:
             return String(localized: "A position a price move could liquidate, and how close it stands.")
         case .permissions:
             return String(localized: "A token approval, a Safe module, a delegate.")
-        case .follow:
+        case .watch:
             return nil
         }
     }
