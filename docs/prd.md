@@ -64378,3 +64378,7 @@ Billers stay in Addresses (§1106, §1106a), but a tap on one that is a subscrip
 **Guards.** `scripts/mail-subscriptions-selftest.sh` (now 9 mutations): a header-less mail from a sender nobody added, an added sender split from its own list, an added row that forgets it was added; plus wiring greps for the reading, the add and the stop. `-mailSubscriptionAdd "<address>[,…]"|clear` adds headlessly and logs `mailSubscriptionAdd| <name> | <mails> | byYou|header`.
 
 **Not seen.** Written in a Linux container with no Swift toolchain: not compiled, not run on a simulator. The demo's iCloud Mail rows ("Receipts <receipts@shop.example>", "Mia Rowe <mia@example.com>") carry no list header and are the case to open.
+
+## §1116 — Apps wears four squares (user, 2026-10-05: "that apps icon in the you tray should have four squares not six"; amends §831's glyph)
+
+`ScopeTileGlyph.apps` is `square.grid.2x2` (was `square.grid.3x2`): the You row's Apps door and Privy's Apps tile, one meaning, one glyph. §831 chose six squares because four read as spoken for; four's other wearers are the empty feed's door to Apps (the same catalogue), two rows that are not tiles (Choose collections, Browse every chain), and `CategoryFold.glyph(for:)`'s fallback, which `category-fold-selftest.sh` keeps from ever drawing. `tile-glyph-audit.py` passes. §1115 is the mail-subscription change, built alongside.

@@ -28,9 +28,14 @@ enum ScopeTileGlyph {
     /// holds a wallet for you are two meanings, and §815's rule reads both
     /// ways: one meaning is one glyph, so two meanings may not share one.
     ///
-    /// A 3x2 grid of squares, which is the one affordance that says "apps"
-    /// without argument — and it is free: `square.grid.2x2` is spoken for.
-    static let apps        = "square.grid.3x2"
+    /// A 2x2 grid of squares, the one affordance that says "apps" without
+    /// argument (user, 2026-10-05: the You tray's Apps "should have four
+    /// squares not six"). It was `square.grid.3x2` while `square.grid.2x2`
+    /// read as spoken for, but its only other wearers are doors to the same
+    /// catalogue (the empty feed's) and rows that are no tile, and
+    /// `CategoryFold.glyph(for:)`'s fallback is never drawn
+    /// (`category-fold-selftest.sh`).
+    static let apps        = "square.grid.2x2"
     /// Every room's All (prd §815): the dock's own All glyph, read from its
     /// one table rather than retyped.
     static var all: String { CategoryFold.glyph(for: "All") }
