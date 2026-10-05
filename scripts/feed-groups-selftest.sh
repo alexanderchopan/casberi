@@ -32,8 +32,8 @@ TIER_SRC="Casberi/Casberi/Model/FeedFold.swift"
 FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
-ICON="Casberi/Casberi/Design/BridgeIcon.swift"
-for f in "$GROUPS_SRC" "$TIER_SRC" "$FEED" "$ICON"; do
+ROW="Casberi/Casberi/Design/DSFeedRow.swift"
+for f in "$GROUPS_SRC" "$TIER_SRC" "$FEED" "$ROW"; do
   [[ -f "$f" ]] || { print -u2 "feed-groups-selftest: missing $f"; exit 1; }
 done
 
@@ -200,8 +200,10 @@ guard "the header draws before its app's first row" \
       "$FEED" 'if let app = heads\[row\.id\]'
 guard "a row under a header is told whose header it stands under" \
       "$FEED" '\.environment\(\\\.dsGroupedSource, row\.source\)'
-guard "BridgeIcon leaves the header's own mark out of the row" \
-      "$ICON" 'groupedSource == name'
+guard "a row under a header draws no lead, a face included (§1103a)" \
+      "$ROW" 'if groupedSource == nil \{'
+guard "and its words sit at the top of the head, hugging the label" \
+      "$ROW" 'alignment: groupedSource == nil \? \.center : \.top'
 guard "AppGroups imports no SwiftUI or SwiftData — the reason it compiles here" \
       "$GROUPS_SRC" '^import Foundation$'
 if strip_comments "$FEED" | grep -E 'case \.(bundle|strip)\(' >/dev/null; then

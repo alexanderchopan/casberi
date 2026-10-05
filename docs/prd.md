@@ -64181,3 +64181,14 @@ Walked first on a simulator (the demo, dark): changing a note took three steps �
 4. **Disclosed** as "App Store" in `NetworkReach` (always on; the request carries only the app's id).
 
 **Seen** on a private iPhone 17 Pro simulator, light, DEBUG with `-storeVersionProbe 9.9.9`: the toast over the empty Home and over Settings, the colophon's Update line. Catalyst compiled. **Not seen:** a Release build's real lookup (DEBUG never asks; only the probe speaks), the Mac, dark theme, a device.
+
+## §1103a — An app's header is a label over its item, and nothing under it draws a lead (user: "i feel like the dividers we gave just perpetuated the problem b/c the source title is same color or weght ir whatever as the item in it", "also, i think we have some that aren't indented, like the social face", "how would apple do this feed", 2026-10-04; amends §1103 items 1 and 3) — BUILT
+
+**What was wrong.** §1103's header drew the app at the row's own size and ink, one weight up, beside a 30pt mark, so each pair read as two items and the column still blended; and only a row whose lead was the app's own mark gave it up, so a face, a picture or a repo's avatar still stood in the lead column and those rows sat out of line (seen on build 742).
+
+1. **The header is a label, Notification Center's order:** the badge mark (`DS.Mark.badge`, 20pt) and the app's name at `label12` in `DS.textSecondary`, the item under it at `body17` in the primary ink. Its row takes no ~44pt list minimum (`defaultMinListRowHeight` 0, per row), and the item's words sit at the TOP of its 44pt head (`DSFeedRow`, under `\.dsGroupedSource`), so the label hugs its item and the spare height falls between apps.
+2. **Nothing under a header draws a lead** — a mark, a face or a picture alike. `DSFeedRow` owns the rule (one template, every row species), and `BridgeIcon`'s per-mark case is deleted. The words start flush under the badge. A row's lead cycle (§901) therefore does not show in Home; the rooms keep it.
+
+**Guarded.** `feed-groups-selftest.sh` guards the lead rule and the top alignment in `DSFeedRow`; `feed-grammar-selftest.sh` reads the head's floor through its new alignment.
+
+**Seen** on a private iPhone 17 Pro simulator, demo, dark: Today scrolled, every app a grey label hugging a white item. **Not seen:** a picture-led row (a screenshot loses its thumbnail under a header; Apple would carry it at the trailing edge — not built), the Mac, light theme, a device.

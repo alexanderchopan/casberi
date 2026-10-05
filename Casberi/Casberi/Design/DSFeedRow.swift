@@ -69,14 +69,22 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// finger.
     static var headHeight: CGFloat { 44 }
 
+    /// The app header this row stands under in the All feed (prd §1103a). The
+    /// header names the app, so EVERY row under it draws no lead — a mark, a
+    /// face or a picture alike (user: "we have some that aren't indented, like
+    /// the social face") — and its words start flush under the app's name.
+    @Environment(\.dsGroupedSource) private var groupedSource
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: DS.Space.s3) {
-                lead
-                    .frame(width: Self.leadSize, height: Self.leadSize)
-                    // Round, like every other mark in the app (see
-                    // `BridgeIcon.roundInContext`).
-                    .environment(\.dsRoundBrandMarks, true)
+                if groupedSource == nil {
+                    lead
+                        .frame(width: Self.leadSize, height: Self.leadSize)
+                        // Round, like every other mark in the app (see
+                        // `BridgeIcon.roundInContext`).
+                        .environment(\.dsRoundBrandMarks, true)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                         // ONE LINE, always (prd §902 — user: "don't wrap
@@ -105,9 +113,13 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                     }
                 }
             }
-            .frame(minHeight: Self.headHeight)
+            // Under an app header the words sit at the TOP of the 44pt head
+            // (prd §1103a): the label above hugs its item, and the head's
+            // spare height falls below it, between this app and the next.
+            .frame(minHeight: Self.headHeight,
+                   alignment: groupedSource == nil ? .center : .top)
             below
-                .padding(.leading, Self.leadSize + DS.Space.s3)
+                .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : 0)
         }
     }
 

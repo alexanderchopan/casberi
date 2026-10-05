@@ -77,7 +77,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Every row is one anatomy, `DSFeedRow` (§744): a 46pt lead centred in a 60pt head (§1017).
 - Titles are one line. Rows show no age: the right slot holds only money or a clock still ahead of you. No fold counts. The line never names the source. The day divider stands alone (§902).
 - Money trails the title on the right, and blue is only for taps (§900).
-- Home groups by app inside each day: every app gets a header (its mark and name, a tap into its room), and stands as its newest thing. Its row leaves the app's mark out. Nothing folds (§1103).
+- Home groups by app inside each day: every app gets a header (a tap into its room), and stands as its newest thing. Nothing folds (§1103). The header is a label over its item — the badge mark and the name at `label12` in the secondary ink — and nothing under it draws a lead (§1103a).
 - Rows are bare, with no plate or card. The cover has no backing (§749).
 - Nothing from today is dimmed (§773).
 - Pictures tile under their own day, three across, in the room's own shape, with the caption under the picture (§910).
@@ -219,10 +219,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1234 of 1293 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1235 of 1294 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
-- §3 — Goals
+- §3 — Goals (amended by §1103a)
 - §4 — Persona variables
 - §5 — How it works today — Bob
 - §6 — How it works today — Alice
@@ -1453,7 +1453,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1100 — Writing a note: one editor at the cursor, save as you type, headings and quotes, ticked items sink, lines move and in…
 - §1101 — The Aa key: formatting for someone who never types markdown
 - §1102 — One smaller box: every room's lead is 236pt, every room's tiles stand at one y, and a sheet shows its picture whole
-- §1103 — Home groups by app: every app a header, each as its newest thing, and the folds are deleted
+- §1103 — Home groups by app: every app a header, each as its newest thing, and the folds are deleted (amended by §1103a)
+- §1103a — An app's header is a label over its item, and nothing under it draws a lead
 - §1104 — An old install is told a newer one is out, and every older TestFlight build expires on ship
 
 ## Dead rulings → what replaced them (generated)

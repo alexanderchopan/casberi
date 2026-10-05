@@ -613,31 +613,34 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
     }
 
-    /// An app's header in the All feed (prd §1103): its mark in the lead
-    /// column and its name where a row's title stands, so the things under
-    /// it read in the column the name opens. One weight up from a row's
-    /// title, one size under the day's name. The tap lands in the app's
-    /// room, as a fold's did — the place its volume lives (§377).
+    /// An app's header in the All feed (prd §1103, §1103a): a LABEL over its
+    /// item, never a second item. §1103 drew it at the row's own size and
+    /// ink, one weight up, and the column still blended (user: "the source
+    /// title is same color or weght ir whatever as the item in it"). So it is
+    /// the badge mark and the name at `label12` in the secondary ink — the
+    /// Notification Center order: app, then the thing, louder. The row under
+    /// it draws no lead and starts flush with the mark. The tap lands in the
+    /// app's room, as a fold's did (§377).
     private func appHeaderRow(_ source: String) -> some View {
         Button {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { filter.source = source }
         } label: {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: source, size: DSFeedRow<EmptyView, EmptyView, EmptyView>.leadSize)
+            HStack(spacing: DS.Space.s2) {
+                BridgeIcon(name: source, size: DS.Mark.badge)
                     .environment(\.dsRoundBrandMarks, true)
                 Text(BridgeCatalog.seatName(forSource: source))
-                    .dsText(.body17)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            // The mark's height, not a row's 44pt head: the first row's own
-            // head already carries the air under the name.
-            .frame(minHeight: DSFeedRow<EmptyView, EmptyView, EmptyView>.leadSize)
+            .frame(minHeight: DS.Mark.badge)
             .contentShape(Rectangle())
         }
+        // The label hugs its item: a List gives any row ~44pt unless told
+        // otherwise, per row (`FeedScreen+RoomLedes`' fold anchor, same fix).
+        .environment(\.defaultMinListRowHeight, 0)
         .buttonStyle(RowPress())
         .accessibilityAddTraits(.isHeader)
         .listRowBackground(Color.clear)
