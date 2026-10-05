@@ -114,7 +114,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                         // has the rest.
                         HStack(alignment: .center, spacing: DS.Space.s2) {
                             if let groupedSource, let face {
-                                RemoteThumb(urlString: face, size: DS.Mark.badge,
+                                RemoteThumb(urlString: face, size: DS.Face.badge,
                                             fallback: groupedSource, circular: true)
                             }
                             Text(name)
