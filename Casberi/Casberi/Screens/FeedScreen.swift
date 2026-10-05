@@ -869,6 +869,9 @@ struct FeedScreen: View {
     /// The map's width, measured off the map's own row, which it is
     /// laid out in (its fold depends on it, and so does what Other holds).
     @State var subscriptionsMapWidth: CGFloat = 0
+    /// Day's Subscriptions map, its pick and its measured width (prd §1117).
+    @State var mailSubscriptionsPick: SubscriptionsPick?
+    @State var mailSubscriptionsMapWidth: CGFloat = 0
     #if DEBUG
     /// `-marketsScope` fires once per launch, not once per page build.
     @MainActor static var marketsProbed = false

@@ -456,7 +456,7 @@ extension FeedScreen {
     }
 
     /// **SEND AND TOP UP LEAD HOLDINGS (prd §1108)** — the deleted verb tiles,
-    /// drawn as Subscriptions' "Add a subscription" row is (§1105), over the
+    /// drawn as Subscriptions' "Track a subscription" row is (§1105, §1117), over the
     /// list of what there is to send. Only on a page `FramesActs` allows
     /// (§774): All and your own accounts, never a stranger's.
     @ViewBuilder

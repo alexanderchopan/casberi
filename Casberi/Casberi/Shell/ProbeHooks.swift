@@ -4225,7 +4225,7 @@ enum ProbeHooks {
             }
         },
         // `-mailSubscriptionAdd "<address>[,<address>…]"|clear` — add senders
-        // to Day's Subscriptions tile as the mail sheet's Add a subscription
+        // to Day's Subscriptions tile as the mail sheet's Track a subscription
         // does (prd §1115), then read the tile and log each list as
         // `mailSubscriptionAdd| <name> | <mails> | byYou|header`. `clear`
         // forgets every added sender first.

@@ -6,80 +6,92 @@ import SwiftData
 /// what writes to you, in the same anatomy — the box a figure, the rows
 /// `DSFeedRow`, the sheet `SubscriptionSheet`'s.
 
-/// The box: how many lists, how much mail they sent this month, and the
-/// loudest four as bars, each its share of the loudest.
+/// The box (prd §1117, was §1111's bars): the Wallet's box in mail. How
+/// much mail the lists sent in thirty days where the Wallet states what they
+/// cost a month, one line, then the same five-week calendar looking back,
+/// each list's face on the days it wrote.
 struct MailSubscriptionsFigure: View {
     let items: [MailSubscriptions.Item]
-    /// The bars grow in once, on the room's arrival; under Reduce Motion they
-    /// are simply there.
-    @State private var grown = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let month = items.reduce(0) { $0 + $1.lastMonth }
-        let top = Array(items.prefix(4))
-        let peak = max(1, top.map(\.lastMonth).max() ?? 1)
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text("\(items.count) subscriptions")
-                .dsText(.heading24).foregroundStyle(DS.textPrimary)
+            Text(verbatim: Self.statement(month))
+                .dsText(.heading24).monospacedDigit().foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
-            Text("\(month) mails in \(Int(MailSubscriptions.windowDays)) days")
-                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                .minimumScaleFactor(0.8)
+            Text(verbatim: Self.line(items))
+                .foregroundStyle(DS.textTertiary)
+                .dsText(.subhead12)
                 .lineLimit(1)
-            Spacer(minLength: DS.Space.s2)
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ForEach(top) { item in
-                    HStack(spacing: DS.Space.s2) {
-                        SubscriptionFace(name: item.name, size: DS.Face.row)
-                        // The name beside its face: a letter alone names nobody.
-                        Text(verbatim: item.name)
-                            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                            .frame(width: 96, alignment: .leading)
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(DS.fillFaint)
-                                Capsule().fill(DS.fillStrong)
-                                    .frame(width: grown
-                                           ? max(6, geo.size.width * CGFloat(item.lastMonth) / CGFloat(peak))
-                                           : 6)
-                            }
-                        }
-                        .frame(height: 8)
-                        Text(verbatim: "\(item.lastMonth)")
-                            .dsText(.subhead12).monospacedDigit()
-                            .foregroundStyle(DS.textSecondary)
-                            .frame(minWidth: 24, alignment: .trailing)
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text("\(item.name), \(item.lastMonth) mails"))
-                }
-            }
+            Spacer(minLength: DS.Space.s1)
+            WalletCalendar(marks: Self.marks(items), looksBack: true)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .onAppear {
-            guard !grown else { return }
-            if reduceMotion { grown = true } else { withAnimation(DS.Motion.standard) { grown = true } }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "16 mails a month", the Wallet's "$77.98 a month" in mail.
+    static func statement(_ month: Int) -> String {
+        month == 1 ? String(localized: "1 mail a month") : String(localized: "\(month) mails a month")
+    }
+
+    /// "6 subscriptions · 2 added by you" — the Wallet's line, how many and
+    /// one more fact.
+    static func line(_ items: [MailSubscriptions.Item]) -> String {
+        var parts = [String(localized: "\(items.count) subscriptions")]
+        let added = items.filter(\.byYou).count
+        if added > 0 { parts.append(String(localized: "\(added) added by you")) }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Every arrival as a face on its day; the calendar keeps one face a day
+    /// and counts the rest.
+    static func marks(_ items: [MailSubscriptions.Item], now: Date = .now) -> [WalletCalendar.Mark] {
+        // Only what the five weeks can show: a daily list keeps years.
+        let from = WalletCalendar.window(now: now, looksBack: true).start
+        return items.flatMap { item in
+            item.arrivals.prefix(while: { $0 >= from }).enumerated().map { index, day in
+                WalletCalendar.Mark(id: "\(item.id)#\(index)", day: day, face: item.name)
+            }
         }
     }
 }
 
-/// One list: its face, its name, and how often it writes and how much —
-/// `SubscriptionRow`, the Wallet's row, with no figure at its trailing edge.
+/// One list: its face, its name, how often · when it last wrote · the other
+/// room, and its mails in thirty days at the trailing edge — the Wallet's
+/// row with mail for money (prd §1117).
 struct MailSubscriptionRow: View {
     let item: MailSubscriptions.Item
+    /// The service's plan in the Wallet, when §1113's identity found one.
+    var paid = false
 
     var body: some View {
-        SubscriptionRow(name: item.name, line: Text(verbatim: Self.line(item))) {
-            EmptyView()
+        SubscriptionRow(name: item.name, line: Text(verbatim: Self.line(item, paid: paid))) {
+            Text(verbatim: Self.figure(item.lastMonth))
+                .dsText(.price17).monospacedDigit()
+                .foregroundStyle(item.lastMonth > 0 ? DS.textPrimary : DS.textTertiary)
         }
     }
 
-    /// "About weekly · 12 mails" — the cadence once there is one.
-    static func line(_ item: MailSubscriptions.Item) -> String {
-        [MailSubscriptions.cadenceWords(item.cadenceDays),
-         String(localized: "\(item.count) mails")]
-            .compactMap(\.self).joined(separator: " · ")
+    /// "6 mails", the trailing slot where the Wallet states a price.
+    static func figure(_ count: Int) -> String {
+        count == 1 ? String(localized: "1 mail") : String(localized: "\(count) mails")
+    }
+
+    /// "About weekly · Last Oct 4 · Paid in Wallet". Under three mails there
+    /// is no cadence, so a sender you added says so in its place.
+    static func line(_ item: MailSubscriptions.Item, paid: Bool) -> String {
+        var parts: [String] = []
+        if let cadence = MailSubscriptions.cadenceWords(item.cadenceDays) {
+            parts.append(cadence)
+        } else if item.byYou {
+            parts.append(String(localized: "Added by you"))
+        }
+        parts.append(String(localized: "Last \(WalletSubscriptionRow.day(item.last))"))
+        // No price outside the Wallet (§1113): the row names the room.
+        if paid { parts.append(String(localized: "Paid in Wallet")) }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -218,5 +230,84 @@ struct MailSubscriptionSheet: View {
         if url.scheme?.lowercased() == "mailto" { return Text("Unsubscribe in Mail") }
         let host = SubscriptionWords.host(url.host ?? "")
         return host.isEmpty ? Text("Unsubscribe") : Text("Unsubscribe on \(host)")
+    }
+}
+
+/// TRACK A SUBSCRIPTION, from Day (prd §1117): the Wallet's tray in mail. A
+/// sender is never typed: the list is everyone whose mail this month carried
+/// no list header (`MailSubscriptions.candidates`), the most mail first, and
+/// a tap tracks one. Every mail from that address then files, the older
+/// ones too (§1115), and the tray closes on Day's tile with the row in it.
+struct MailSubscriptionAddTray: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Environment(ShellChrome.self) private var chrome
+    @State private var query = ""
+    @FocusState private var fieldFocused: Bool
+
+    var body: some View {
+        let candidates = Self.matching(MailSubscriptionsReading.shared.candidates, query: query)
+        // The find tray's shape (`DSTraySearchField`): the rows, and the
+        // field at the bottom on glass.
+        DSTray(title: SubscriptionWords.track, height: 640, detents: [.large]) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    if candidates.isEmpty {
+                        DSEmptyState(headline: DSProse.text("No one else wrote this month"),
+                                     words: Text("Mail with no list header shows here"),
+                                     scale: .list(rows: 3))
+                            .padding(.horizontal, DS.Space.s4)
+                    } else {
+                        DSTrayHead(String(localized: "Writes to you most"))
+                        ForEach(candidates) { candidate in
+                            Button { track(candidate) } label: {
+                                SubscriptionRow(name: candidate.name,
+                                                line: Text(verbatim: Self.line(candidate))) {
+                                    Image(systemName: "plus")
+                                        .dsGlyph(.body)
+                                        .foregroundStyle(DS.tint)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(RowPress())
+                            .dsHover()
+                            .padding(.horizontal, DS.Space.s4)
+                            .accessibilityLabel(Text("Track \(candidate.name)"))
+                        }
+                    }
+                }
+                .padding(.bottom, 96)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom) {
+                DSTraySearchField(placeholder: String(localized: "Search who writes to you"),
+                                  text: $query, focus: $fieldFocused) { EmptyView() }
+            }
+        }
+        .task { MailSubscriptionsReading.shared.refresh(modelContext) }
+    }
+
+    /// "mia@example.com · 4 mails in 30 days".
+    static func line(_ candidate: MailSubscriptions.Candidate) -> String {
+        let count = candidate.count == 1
+            ? String(localized: "1 mail in 30 days")
+            : String(localized: "\(candidate.count) mails in 30 days")
+        return [candidate.address, count].joined(separator: " · ")
+    }
+
+    /// A name or an address that holds what was typed.
+    static func matching(_ all: [MailSubscriptions.Candidate], query: String) -> [MailSubscriptions.Candidate] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return all }
+        return all.filter { $0.name.localizedCaseInsensitiveContains(q) || $0.address.localizedCaseInsensitiveContains(q) }
+    }
+
+    /// The one write, `-mailSubscriptionAdd`'s and the mail sheet's: the
+    /// sender's address joins the store, and the toast says it.
+    private func track(_ candidate: MailSubscriptions.Candidate) {
+        guard MailSubscriptionStore.shared.add(address: candidate.address, name: candidate.name) != nil else { return }
+        DSHaptic.selection()
+        chrome.flash(String(localized: "Tracking \(candidate.name)"))
+        dismiss()
     }
 }

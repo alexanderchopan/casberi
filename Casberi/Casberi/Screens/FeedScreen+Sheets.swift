@@ -89,10 +89,12 @@ extension FeedScreen {
         case walletTokens
         /// One subscription, by its key (prd §1105).
         case subscription(String)
-        /// Add a subscription by hand (prd §1105).
+        /// Track a subscription by hand (prd §1105, the verb since §1117).
         case subscriptionAdd
         /// One mailing list, by its key (prd §1111).
         case mailSubscription(String)
+        /// Track a sender's mail as a subscription (prd §1117).
+        case mailSubscriptionAdd
         /// A company from Markets' index you don't watch yet (prd §1082).
         case company(CompanyPacks.Company)
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
@@ -128,6 +130,7 @@ extension FeedScreen {
             case .subscription(let id): "subscription:\(id)"
             case .subscriptionAdd: "subscriptionAdd"
             case .mailSubscription(let id): "mailSubscription:\(id)"
+            case .mailSubscriptionAdd: "mailSubscriptionAdd"
             case .company(let c): "company:\(c.name)"
             case .web(let url): "web:\(url.absoluteString)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
@@ -294,6 +297,8 @@ extension FeedScreen {
             SubscriptionSheet(id: id)
         case .subscriptionAdd:
             SubscriptionAddTray()
+        case .mailSubscriptionAdd:
+            MailSubscriptionAddTray()
         case .mailSubscription(let id):
             MailSubscriptionSheet(id: id) { mailID in
                 // One sheet at a time (§872): the list closes, then the mail.

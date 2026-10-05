@@ -131,7 +131,7 @@ struct SubscriptionSheet: View {
     }
 }
 
-/// ADD A SUBSCRIPTION (prd §1105): for anything no card, account or bill
+/// TRACK A SUBSCRIPTION (prd §1105, the verb since §1117): for anything no card, account or bill
 /// reading can see. A name, a price, monthly or yearly, the next renewal, and
 /// what pays it. When the same name later shows up as a charge a card names,
 /// the two merge by name (`Subscriptions.compose`) and are counted once.
@@ -150,7 +150,7 @@ struct SubscriptionAddTray: View {
     private enum Field { case name, price, site }
 
     var body: some View {
-        DSTray(title: String(localized: "Add a subscription"), height: 640, detents: [.large]) {
+        DSTray(title: SubscriptionWords.track, height: 640, detents: [.large]) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     well(String(localized: "Name"), text: $name, field: .name)
@@ -216,7 +216,7 @@ struct SubscriptionAddTray: View {
     }
 
     private var addTitle: String {
-        trimmed.isEmpty ? String(localized: "Add") : String(localized: "Add \(trimmed)")
+        trimmed.isEmpty ? String(localized: "Track") : String(localized: "Track \(trimmed)")
     }
 
     /// What already pays a subscription here — the cards and accounts the

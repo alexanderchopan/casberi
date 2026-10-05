@@ -189,7 +189,9 @@ extension FeedScreen {
         case .subscriptions:
             walletSubscriptionsFigure
                 .task(id: walletSubscriptionsKey) {
-                    await SubscriptionsReading.shared.refresh(modelContext)
+                    // The tile's reading, and the doors to each service's
+                    // list, which its rows name (prd §1117).
+                    await ServiceLinks.shared.refresh(modelContext, seats: bridges.bridges.map(\.name))
                     subscriptionsProbe()
                     subscriptionsCategoryProbe()
                 }

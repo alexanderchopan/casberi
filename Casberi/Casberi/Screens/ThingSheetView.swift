@@ -158,7 +158,7 @@ struct ThingSheetView: View {
     /// re-labels itself the moment it is used.
     @State private var tracking = false
     /// The Subscriptions list this mail is on, once read (prd §1115): its
-    /// door to the list, or Add a subscription when it is on none.
+    /// door to the list, or Track a subscription when it is on none.
     @State private var mailList: MailSubscriptions.Item?
     @State private var mailListRead = false
     /// The same link, saved earlier from a different source (2026-07-21) —
@@ -3103,7 +3103,7 @@ struct ThingSheetView: View {
 
     /// The door under a mail (prd §1115). On a list: "Writes about weekly",
     /// into Day's Subscriptions tile with the list's sheet up (§1113's door,
-    /// the tile's glyph). On none: Add a subscription, the Wallet's words,
+    /// the tile's glyph). On none: Track a subscription, the Wallet's words,
     /// which files every mail from this sender, the ones already here
     /// included. Nothing while the reading has not answered, and nothing for
     /// a sender with no address to file by (§83).
@@ -3116,7 +3116,7 @@ struct ThingSheetView: View {
                 chrome.open(.list(list.id))
             }
         } else if mailListRead, let address = mailSubscriptionAddress {
-            DSDoorRow(icon: "plus", label: "Add a subscription") {
+            DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
                 addMailSubscription(address)
             }
         } else {
@@ -3145,7 +3145,7 @@ struct ThingSheetView: View {
         let name = MailSubscriptions.senderName(Self.mailSender(thing))
         guard MailSubscriptionStore.shared.add(address: address, name: name) != nil else { return }
         withAnimation(DS.Motion.standard) { readMailList() }
-        chrome.flash(String(localized: "Added to subscriptions"))
+        chrome.flash(String(localized: "Tracking \(name ?? address)"))
     }
 
     /// Watching an unfinished record from the lock screen (prd §369

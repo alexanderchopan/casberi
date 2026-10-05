@@ -131,6 +131,12 @@ struct SubscriptionRow<Figure: View>: View {
 
 /// The words the two sheets share.
 enum SubscriptionWords {
+    /// The verb that starts one, in both rooms and on a mail (prd §1117):
+    /// Casberi tracks what you pay for and what writes to you; it never
+    /// subscribes you to anything, so the verb is never "Add" or
+    /// "Subscribe". It pairs with Stop tracking.
+    static var track: String { String(localized: "Track a subscription") }
+
     /// A host as a door names it: no scheme, no path, no leading `www.`.
     static func host(_ raw: String) -> String {
         var host = raw.trimmingCharacters(in: .whitespaces).lowercased()

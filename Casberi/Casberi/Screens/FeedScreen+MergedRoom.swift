@@ -198,7 +198,9 @@ extension FeedScreen {
         .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox, maxHeight: DSRoomChassis.leadBox)
         .dsRoomHeadBlock()
         .task(id: mailSubscriptionsKey) {
-            MailSubscriptionsReading.shared.refresh(modelContext)
+            // The tile's reading, and the doors to each service's plan,
+            // which its rows name (prd §1117).
+            await ServiceLinks.shared.refresh(modelContext, seats: bridges.bridges.map(\.name))
             mailSubscriptionProbe()
         }
         .listRowBackground(Color.clear)
@@ -215,8 +217,8 @@ extension FeedScreen {
         return "\(chrome.refreshPulse):\(added.count):\(stamp)"
     }
 
-    /// `-mailSubscriptionSheet <name>` — raise one mailing list's sheet by
-    /// its name once the tile has read (DEBUG; NSLogs
+    /// `-mailSubscriptionSheet add|<name>` — raise Track a subscription's
+    /// tray (prd §1117), or one mailing list's sheet by its name, once the tile has read (DEBUG; NSLogs
     /// `mailSubscriptionSheet:`), as `-subscriptionsSheet` does for a plan,
     /// because a `simctl`-launched capture has no tap.
     func mailSubscriptionProbe() {
@@ -227,27 +229,64 @@ extension FeedScreen {
         let items = MailSubscriptionsReading.shared.items
         NSLog("[Casberi] mailSubscriptionSheet: %@ (%d lists: %@)", raw, items.count,
               items.map(\.name).joined(separator: ", "))
-        if let item = items.first(where: { $0.name.localizedCaseInsensitiveCompare(raw) == .orderedSame }) {
+        if raw == "add" {
+            // Track a subscription's tray (prd §1117), as `-subscriptionsSheet add`.
+            NSLog("[Casberi] mailSubscriptionSheet: add (%d senders: %@)",
+                  MailSubscriptionsReading.shared.candidates.count,
+                  MailSubscriptionsReading.shared.candidates.map { "\($0.name) \($0.count)" }.joined(separator: ", "))
+            feedSheet = .mailSubscriptionAdd
+        } else if let item = items.first(where: { $0.name.localizedCaseInsensitiveCompare(raw) == .orderedSame }) {
             feedSheet = .mailSubscription(item.id)
         }
         #endif
     }
 
-    /// The list: every list that writes to you, the loudest first, each
-    /// opening its sheet. A list is found by its header, or added from a
-    /// mail's sheet (prd §1115), never typed here.
+    /// **DAY'S SUBSCRIPTIONS LIST, THE WALLET'S ORDER (prd §1117).** Track a
+    /// subscription first (a sender whose mail carries no list header, picked
+    /// from the ones that wrote this month), then the map of where the mail
+    /// comes from, by the catalogue category of the app each list is (§1113's
+    /// identity; a list it does not name is Other), then every list, the
+    /// loudest first. A press on the map narrows the rows, as the Wallet's.
     @ViewBuilder
     var mailSubscriptionsSections: some View {
-        let items = MailSubscriptionsReading.shared.items(in: mailSubscriptionSources)
-        if items.isEmpty {
-            walletSkeletonRowsSection
-        }
+        let all = MailSubscriptionsReading.shared.items(in: mailSubscriptionSources)
+        let reading = mailSubscriptionsReading(all)
+        let tiles = FeedScreen.subscriptionsTiles(reading, width: mailSubscriptionsMapWidth)
+        let drawn = tiles.map(\.id)
+        let signature = all.map(\.id).sorted().joined(separator: "|")
+        let pick = mailSubscriptionsPick.flatMap { $0.over == signature && !tiles.isEmpty ? $0.tile : nil }
+        let items: [MailSubscriptions.Item] = {
+            guard let pick else { return all }
+            let keys = SubscriptionCategories.members(of: pick, drawn: drawn, slices: reading.slices)
+            return all.filter { keys.contains(mailSubscriptionKey($0)) }
+        }()
         Section {
+            DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
+                feedSheet = .mailSubscriptionAdd
+            }
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                      bottom: 0, trailing: DSRoomChassis.rowInset))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            if reading.counted > 0 {
+                SubscriptionsSummary(reading: reading, tiles: tiles, pick: pick, mails: true) { tile in
+                    mailSubscriptionsPick = tile.map { SubscriptionsPick(tile: $0, over: signature) }
+                }
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { mailSubscriptionsMapWidth = $0 }
+                .task(id: SubscriptionsSummary.logKey(reading, tiles: drawn) + "|\(mailSubscriptionsMapWidth > 0)") {
+                    guard mailSubscriptionsMapWidth > 0 else { return }
+                    SubscriptionsSummary.log(reading, tiles: tiles, mails: true)
+                }
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                          bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
             ForEach(items) { item in
                 Button {
                     feedSheet = .mailSubscription(item.id)
                 } label: {
-                    MailSubscriptionRow(item: item)
+                    MailSubscriptionRow(item: item, paid: mailSubscriptionIsPaid(item))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
@@ -258,6 +297,29 @@ extension FeedScreen {
                 .listRowSeparator(.hidden)
             }
         }
+    }
+
+    /// A list's place on Day's map: the category of the app §1113's identity
+    /// names it, else Other.
+    func mailSubscriptionKey(_ item: MailSubscriptions.Item) -> String {
+        guard let offer = ServiceLinks.shared.byList[item.id]?.offer else { return SubscriptionCategories.otherKey }
+        let category = BillersSource.category(ofMerchant: offer)
+        return category == BillersSource.fallbackCategory ? SubscriptionCategories.otherKey : category
+    }
+
+    /// Lists → categories, measured in mails these thirty days; a quiet list
+    /// stays in the rows and out of the map.
+    func mailSubscriptionsReading(_ items: [MailSubscriptions.Item]) -> SubscriptionCategories.Reading {
+        SubscriptionCategories.read(measured: items.compactMap { item -> (key: String, measure: Double)? in
+            guard item.lastMonth > 0 else { return nil }
+            return (key: mailSubscriptionKey(item), measure: Double(item.lastMonth))
+        })
+    }
+
+    /// The service also has a plan in the Wallet (§1113), so its row says so.
+    func mailSubscriptionIsPaid(_ item: MailSubscriptions.Item) -> Bool {
+        guard let planID = ServiceLinks.shared.byList[item.id]?.planID else { return false }
+        return SubscriptionsReading.shared.items.contains { $0.id == planID }
     }
 }
 
