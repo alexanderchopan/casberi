@@ -66,7 +66,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The lead has no count foot, and day headers show no counts (§914).
 - Every room opens on a lead, with no exception for a shape. A room's tiles never depend on its head (`standaloneLead`) (§911).
 - Kind tiles show when a pick would change the list (§822). Tiles keep their glyphs (§938).
-- Tiles read A–Z, with All/Home first and the verbs (New, Watch, Follow, Create · Send · Top up, Explorer) last, A–Z among themselves (§995, §1039). The Wallet's are Home · Coming up · Holdings · Security, one row, no verb (§1107). Spans of time keep their given order (`readsInTime`) (§999).
+- Tiles read A–Z, with All/Home first and the verbs (New, Watch, Follow, Search) last, A–Z among themselves (§995, §1039). The Wallet's are Home · Coming up · Holdings · Security, one row, no verb (§1107). Spans of time keep their given order (`readsInTime`) (§999).
 - Tiles never rise: when nothing is open, the lead holds its empty well over the tiles (§979, §997).
 - Every empty state draws a skeleton of what would fill it (`.room`/`.list`). A door appears only where it is the remedy (§771).
 - Every connected seat keeps a room, empty or not. The exceptions are `LiveRoomSources.landsNothing`: Apple Intelligence, ETH Validators and the four exchanges (§1036).
@@ -136,7 +136,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Markets is its own category; Testnets (Hegotá Frames, Logos, `flask`) is its own, never inside Wallet (§1050, §1050a).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
-- Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows: the verbs are the last tiles, on every page, per §774's rule (§1039). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
+- Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows (§1039). Four tiles each and no verb among them: a verb that adds an account is the Accounts menu's first row (Watch a wallet, New account), a verb that moves money leads Holdings (Frames' Send · Top up, Logos' Send), per §774's page rule (§1107, §1108). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 
@@ -148,7 +148,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 
 ### 12. Devnets (Frames, Logos)
 - Devnet rooms use the Wallet's shapes, and Home lists the moves (§1039; the Accounts and Activity tiles are gone). Holdings: a treemap over test money, a count and never a dollar total (§949). Moves: under the day, no ages (§950). Permissions: the Wallet's crown (§951). Frames: one column per transaction (§952).
-- Accounts split into On this phone, Watching, then Tied to yours (§964). Every devnet page offers Create, a tile (§774, §1039); Frames' own pages add Send and Top up. No suggested addresses (§990).
+- Accounts split into On this phone, Watching, then Tied to yours (§964). Every Frames page offers New account in the Accounts menu, Logos' while the phone holds no key; Frames' own pages lead Holdings with Send and Top up, Logos' with Send (§774, §1108). No suggested addresses (§990).
 - Frames runs on ethpandaops' frames-devnet-0. `FramesNetwork.current` is the one value that names the chain (§962).
 - Logos: watch a public LEZ account, keyless, forward from the watch. Never in the wallet total (§988). Your own node is read at the address you give, through GETs only (§989). The room is Home · Node · Rewards, then Explorer, a verb tile (§991, §1016, §1039). Tickets are a count, and the phone never mines (§1016). A pasted public key resolves to its account (§1034). A reset is detected by block 1's hash and stated once (§1035).
 
@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1242 of 1301 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1243 of 1302 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1080,7 +1080,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §771 — Every empty state in the app draws its skeleton, and an empty wallet list carries its remedy
 - §772 — A lead's body is a ladder, and the box gives way when the ladder runs out (amended by §775, §815, §905; part superseded by §904)
 - §773 — Nothing from today is dimmed
-- §774 — Every devnet Home offers Create account, and a phone can hold more than one account on Frames, Hegotá and the Privacy… (amended by §1039)
+- §774 — Every devnet Home offers Create account, and a phone can hold more than one account on Frames, Hegotá and the Privacy… (amended by §1039, §1108)
 - §776 — Duolingo, on the same door as Spotify, Instagram, TikTok and X
 - §777 — Measure the web app before writing the seat
 - §778 — Wise, and the two doors that stay shut: Plaid, Stripe Financial Connections, and a cookie sign-in for banks
@@ -1369,7 +1369,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1036 — Every connected app keeps a room, empty or not, so every connected row in Apps is a status; Apple Notes leaves the ca… (amended by §1040)
 - §1037 — The user is the builder: six goals, each traced from how it works today to what Casberi does now and next
 - §1038 — Four devnet seats and Reddit leave the catalogue, and their stored rows, keys and settings go with them
-- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084, §1090, §1105, §1107)
+- §1039 — Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list; the verbs are the last tiles,… (amended by §1041, §1048, §1084, §1090, §1105, §1107, §1108)
 - §1041 — Home is only what happened: what's ahead is the Wallet's own tile, "Coming up", soonest first; and the connections re… (amended by §1078, §1090, §1105, §1107)
 - §1042 — Code nothing on screen reaches is deleted: four room-head models, the weather read, the address-book flight and scrub…
 - §1043 — `enrichedText` is the sheet's body and never a row's line; provider-authored display copy stays on `summary` and `pos…
@@ -1463,6 +1463,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
 - §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub…
+- §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 
 ## Dead rulings → what replaced them (generated)
 

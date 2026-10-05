@@ -203,11 +203,11 @@ struct RootShell: View {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(4))
                 NSLog("[Casberi] openSection: %@", raw)
-                // A verb tile (Create, Send, Top up, Explorer) is never a page
-                // (prd §1039); the Wallet has none since §1107.
+                // A verb tile is never a page (prd §1039); the wallet family
+                // has none since §1107 and §1108.
                 if let s = WalletSection(rawValue: raw) { chrome.walletSection = s }
-                if let s = FramesSection(rawValue: raw), !s.isVerb { chrome.framesSection = s }
-                if let s = LogosSection(rawValue: raw), !s.isVerb { chrome.logosSection = s }
+                if let s = FramesSection(rawValue: raw) { chrome.framesSection = s }
+                if let s = LogosSection(rawValue: raw) { chrome.logosSection = s }
                 // And a Tokens company pack, by its category name ("Work").
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
                 // Work's Coming up (prd §1057), for the room sweep.

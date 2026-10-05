@@ -23,17 +23,18 @@ extension FeedScreen {
         case .rewards:
             return rows.filter { LogosRoom.isRewardsRef($0.sourceRef) }
         // Holdings lists what is held, not what happened (`logosHoldingsSection`).
-        case .holdings, .create, .explorer, .send:
+        case .holdings:
             return []
         }
     }
 
     /// The devnets' chrome, Logos' parts (prd §991). Every account feeds the
     /// menu, never the scoped list, for Frames' reason: this is the control
-    /// that SETS the scope. The verbs are the last tiles (prd §1039, §1084):
-    /// Create makes this phone's account, Send sends from it, and Explorer
-    /// opens the explorer's root on All and the account's own page on an
-    /// account's — which of them a page shows is `LogosSection.verbs(for…)`.
+    /// that SETS the scope. The verbs are rows, not tiles (prd §1108): "New
+    /// account" heads the Accounts menu while this phone holds no key, and
+    /// Send leads Holdings (`logosHoldingsSection`); which a page offers is
+    /// `LogosSection.canCreate`/`canSend`. The Explorer tile is deleted: the
+    /// Logos page carries the door and every row opens its transaction.
     @ViewBuilder
     func logosScopeChromeSection(_ active: LogosSection) -> some View {
         let head = LogosRoom.compose(scope: chrome.logosScope)
@@ -42,31 +43,19 @@ extension FeedScreen {
             DSRoomScopeChrome(
                 source: LogosRoom.source,
                 sections: chrome.logosSections,
-                // A key whose account is no longer watched offers Create, which
-                // watches it again (`LogosSend.create`).
-                verbs: LogosSection.verbs(forAccount: chrome.logosScope,
-                                          keyAccount: LogosKey.accountID().flatMap { roster.contains($0) ? $0 : nil }),
                 active: active,
                 home: .home,
-                onPick: { picked in
-                    switch picked {
-                    case .explorer:
-                        let page = chrome.logosScope.map { "\(LogosIngest.explorer)/account/\($0)" }
-                            ?? LogosIngest.explorer
-                        if let url = URL(string: page) { UIApplication.shared.open(url) }
-                    case .create:
-                        logosCreate()
-                    case .send:
-                        feedSheet = .logosSend
-                    case .home, .holdings, .node, .rewards:
-                        chrome.logosSection = picked
-                    }
-                },
+                onPick: { picked in chrome.logosSection = picked },
                 accounts: logosAccountSlots(roster) + hostedNetworkSlots,
                 scope: chrome.logosScope,
                 onPickAccount: { picked in
                     if !pickHostedNetwork(picked) { logosPickAccount(picked) }
                 },
+                // A key whose account is no longer watched offers it again,
+                // which watches it (`LogosSend.create`).
+                accountAction: LogosSection.canCreate(keyAccount: logosKeyAccount(roster))
+                    ? .init(title: String(localized: "New account"), symbol: "plus") { logosCreate() }
+                    : nil,
                 crown: { slot in
                     Group {
                         if slot.isShowing(chrome.logosScope) {
@@ -159,11 +148,29 @@ extension FeedScreen {
         }
     }
 
+    /// This phone's account, when the room still watches it — a key whose
+    /// account was unwatched counts as none, so Create can watch it again.
+    func logosKeyAccount(_ roster: [String]) -> String? {
+        LogosKey.accountID().flatMap { roster.contains($0) ? $0 : nil }
+    }
+
     /// Holdings' list (prd §1084): one row per asset, the family's
-    /// `RoomHoldingsRows`, in the rows' column like the Wallet's.
+    /// `RoomHoldingsRows`, in the rows' column like the Wallet's. **Send leads
+    /// it (prd §1108)**, Frames' row, on the pages `LogosSection.canSend`
+    /// allows.
     @ViewBuilder
     var logosHoldingsSection: some View {
         let cells = LogosHoldings.cells(LogosRoom.compose(scope: chrome.logosScope))
+        if LogosSection.canSend(account: chrome.logosScope,
+                                keyAccount: logosKeyAccount(LogosStore.shared.accounts)) {
+            Section {
+                DSDoorRow(icon: "arrow.up.right", label: "Send") { feedSheet = .logosSend }
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                              bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
         if !cells.isEmpty {
             Section {
                 RoomHoldingsRows(cells: cells)

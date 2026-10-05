@@ -5,7 +5,10 @@ import Foundation
 /// falling back to `.home`, `emptyHeadline`/`emptyBody` for a scope with
 /// nothing yet) and `DSRoomScopeChrome` is the shared control, which draws
 /// Home first and the rest in the alphabet (§936 amended): Home · Holdings ·
-/// Node · Rewards, then the verbs Create · Explorer · Send.
+/// Node · Rewards. The verbs are rows, not tiles (prd §1108): Create is "New
+/// account" at the head of the Accounts menu and Send leads Holdings, as in
+/// Frames; Explorer's door is the Logos page's, and every row opens its own
+/// transaction there.
 ///
 /// **What the family has that Logos does not, and why** (user, 2026-09-29:
 /// "i just want to make sure we stay aligned w/ the devnets and wallet and not
@@ -28,12 +31,6 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
     case holdings
     case node
     case rewards
-    /// The room's VERBS (prd §1039, §1084): make this phone's account, open
-    /// the explorer for the page showing, send test coins. Never scopes —
-    /// never in `order`, never resolved to, never lit.
-    case create
-    case explorer
-    case send
 
     var id: String { rawValue }
 
@@ -42,22 +39,17 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
     /// moves and the account menu under the tiles picks the account.
     static let order: [LogosSection] = [.home, .holdings, .node, .rewards]
 
-    /// Every verb, drawn after the scopes (`DSScopeTiles.alphabetical`).
-    /// Which of them a page shows is `verbs(for:)`.
-    static let verbs: [LogosSection] = [.create, .explorer, .send]
+    /// **WHICH ACTS A PAGE OFFERS (prd §1084's rule, drawn as rows since
+    /// §1108).** One account per phone: "New account" heads the Accounts menu
+    /// only while this phone holds no Logos key. Send leads Holdings on the
+    /// All page and on this phone's own account's, never on a watched
+    /// stranger's, where nothing can be sent from. `keyAccount` is a defaults
+    /// read (`LogosKey`), never the Keychain.
+    static func canCreate(keyAccount: String?) -> Bool { keyAccount == nil }
 
-    var isVerb: Bool { Self.verbs.contains(self) }
-
-    /// The verbs for the page showing (prd §1084, Frames' rule §774 in this
-    /// room's words). This phone holds no Logos key: Create and Explorer.
-    /// It holds one: Explorer and Send on the All page and on its own
-    /// account's — one account per phone, so Create goes — and Explorer
-    /// alone on a watched stranger's page, where nothing can be sent from.
-    /// `holdsKey`/`mine` are defaults reads (`LogosKey`), never the Keychain.
-    static func verbs(forAccount account: String?, keyAccount: String?) -> [LogosSection] {
-        guard let keyAccount else { return [.create, .explorer] }
-        if let account, account != keyAccount { return [.explorer] }
-        return [.explorer, .send]
+    static func canSend(account: String?, keyAccount: String?) -> Bool {
+        guard let keyAccount else { return false }
+        return account == nil || account == keyAccount
     }
 
     var label: String {
@@ -66,9 +58,6 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings: return String(localized: "Holdings")
         case .node:     return String(localized: "Node")
         case .rewards:  return String(localized: "Rewards")
-        case .create:   return String(localized: "Create")
-        case .explorer: return String(localized: "Explorer")
-        case .send:     return String(localized: "Send")
         }
     }
 
@@ -78,9 +67,6 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings: return String(localized: "The tokens your accounts hold")
         case .node:     return String(localized: "Your node's sync and peers")
         case .rewards:  return String(localized: "What your node earns: mining tickets and reward vouchers")
-        case .create:   return String(localized: "Make a Logos account on this phone")
-        case .explorer: return String(localized: "Open the testnet's explorer")
-        case .send:     return String(localized: "Send test coins from this phone's account")
         }
     }
 
@@ -92,7 +78,7 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings: return String(localized: "No tokens")
         case .node:     return String(localized: "No node")
         case .rewards:  return String(localized: "No node")
-        case .home, .create, .explorer, .send: return nil
+        case .home: return nil
         }
     }
 
@@ -101,12 +87,12 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings: return String(localized: "A token held by an account you watch.")
         case .node:     return String(localized: "Give the Logos page your node's address.")
         case .rewards:  return String(localized: "Mine with your own Logos node, added on the Logos page.")
-        case .home, .create, .explorer, .send: return nil
+        case .home: return nil
         }
     }
 
     static func resolve(_ wanted: LogosSection?, present: [LogosSection]) -> LogosSection {
-        guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }
+        guard let wanted, present.contains(wanted) else { return .home }
         return wanted
     }
 }

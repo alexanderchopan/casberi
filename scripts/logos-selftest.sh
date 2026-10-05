@@ -106,11 +106,15 @@ grep -q 'store.advance(to: block.id)' "$BRIDGE" || { echo "✗ the walk no longe
 ROOM="Casberi/Casberi/Model/LogosRoom.swift"
 # Activity and Accounts went with the merge (prd §1039): Home lists the moves,
 # the account menu picks the account. Holdings arrived with v0.3's token
-# shards, and Create · Explorer · Send are the verbs (prd §1084).
+# shards. No verb is a tile (prd §1108): Create heads the Accounts menu and
+# Send leads Holdings, so the enum is the four scopes and nothing else.
 grep -q 'static let order: \[LogosSection\] = \[.home, .holdings, .node, .rewards\]' "$ROOM" \
   || { echo "✗ LogosSection's scopes moved — Home, Holdings, Node, Rewards (prd §991, §1016, §1084)"; guard_fail=1; }
-grep -q 'static let verbs: \[LogosSection\] = \[.create, .explorer, .send\]' "$ROOM" \
-  || { echo "✗ Logos' verb tiles moved — Create, Explorer, Send (prd §1039, §1084)"; guard_fail=1; }
+if grep -qE '^\s*case (create|explorer|send)\b' "$ROOM"; then
+  echo "✗ a Logos verb is a tile again — Create is the menu's first row, Send leads Holdings (prd §1108)"; guard_fail=1
+fi
+grep -q 'accountAction: LogosSection.canCreate' Casberi/Casberi/Screens/FeedScreen+LogosRoom.swift \
+  || { echo "✗ Logos' New account left the Accounts menu (prd §1108)"; guard_fail=1; }
 # What the node EARNED is Rewards', never Node's (prd §1016): every kind that
 # lands an earning must be in rewardKinds, or it shows under Node.
 grep -q 'static let rewardKinds: Set<String> = \["vouchers", "tickets", "mining", "idle"\]' "$ROOM" \

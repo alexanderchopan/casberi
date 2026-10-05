@@ -1094,6 +1094,7 @@ struct FeedScreen: View {
             // (§752) — and `FramesRoomList` draws the page's list: the moves
             // on Home.
             framesScopeChromeSection(framesScope, head: head)
+            framesMoneyDoorsSection(framesScope)
             Group {
                 FramesRoomList(head: head,
                                accounts: framesAccounts,
@@ -1132,7 +1133,7 @@ struct FeedScreen: View {
             logosScopeChromeSection(logosSection)
             if logosSection == .holdings {
                 logosHoldingsSection
-            } else if !logosSection.isVerb {
+            } else {
                 let days = chronoGroups(logosRows(rows, section: logosSection))
                 groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
             }

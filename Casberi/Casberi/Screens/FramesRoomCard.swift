@@ -47,9 +47,6 @@ struct FramesRoomFigure: View {
             // time (prd §683, and the "2.2960 ETH" over "2.2960 ETH" the
             // Privacy conversion showed).
             return nil
-        // A verb is never a page — `resolve` never lands here.
-        case .create, .send, .topUp:
-            return nil
         case .holdings:
             // **NO TOTAL (prd §680, user: "it isn't supposed to say the
             // balance, we say that on home").** The cells carry the names and
@@ -141,7 +138,7 @@ struct FramesRoomFigure: View {
     /// Frames list uses, so the slot and the rows beneath it cannot disagree.
     private func isEmpty(_ section: FramesSection) -> Bool {
         switch section {
-        case .home, .create, .send, .topUp: return false
+        case .home: return false
         // **A ONE-CELL TREEMAP IS THE 100% BAR §610 REMOVED.** An address
         // holding only test ETH has nothing to split, so Holdings is EMPTY
         // here rather than drawing the balance a second time — the crown on
@@ -188,7 +185,6 @@ struct FramesRoomFigure: View {
             case .permissions: permissions
             case .holdings:        holdingsFigure
             case .frames:          frames
-            case .create, .send, .topUp: EmptyView()
             }
         }
     }
@@ -561,9 +557,6 @@ struct FramesRoomList: View {
             // moves lived one tile over. The Activity tile is deleted; its
             // rows, pending sends first, are Home's.
             rows(pairs)
-        case .create, .send, .topUp:
-            // A verb is never a page — `resolve` never lands here.
-            EmptyView()
         case .holdings:
             if FramesHoldings.cells(head: head, accounts: accounts).isEmpty {
                 DSSkeletonRows()

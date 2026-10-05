@@ -24,9 +24,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CONSOLE = ROOT / "Casberi/Casberi/Screens/DevnetSendConsole.swift"
-# The Frames verbs' dispatcher (prd §1039): Send, Top up and Create are the
-# room's last tiles, and this file is what each tile runs. It was
-# `FramesSendCard.swift`, the Actions block's panel, until the merge.
+# The Frames verbs' dispatcher (prd §1108): Create heads the Accounts menu,
+# Send and Top up lead Holdings, and this file is what each row runs. It was
+# `FramesSendCard.swift`, the Actions block's panel, until the merge (§1039).
 CARD = ROOT / "Casberi/Casberi/Screens/FramesActs.swift"
 FEED = ROOT / "Casberi/Casberi/Screens/FeedScreen.swift"
 # The wallet room's half of FeedScreen (prd §718): read as one text with FEED.
@@ -123,19 +123,20 @@ def checks(console: str, card: str, feed: str):
     c_bare = strip_comments(console)
     k_bare = strip_comments(card)
 
-    # 1. **HOME'S VERBS ARE THE GRID'S LAST TILES (prd §1039, 2026-10-01).**
+    # 1. **THE VERBS ARE ROWS, AND NOT ON HOME (prd §1108, 2026-10-04).**
     #    §750 made them rows in an Actions block, after §553's loud price40
-    #    tiles; the merge deleted the block and made each verb a tile in the
-    #    room's own grid — the scopes' tile, never lit, last. What this asserts
-    #    is that the Frames chrome hands its verbs to the grid and the tap runs
-    #    `FramesActs`, and that no verb panel or verb row grows back on Home.
+    #    tiles; the merge (§1039) made each a tile in the room's grid, and
+    #    §1108 cut the grid to four: Create is the Accounts menu's first row,
+    #    Send and Top up lead Holdings. What this asserts is that each still
+    #    has its door, gated by `FramesActs`, and no verb block grows back.
     for name in ("DevnetSendPanel", "DevnetVerbRow", "DevnetCreatePanel"):
         if "struct %s" % name in c_bare:
-            out.append("%s is back — Home's verbs are the grid's last tiles, not a block (prd §1039)" % name)
+            out.append("%s is back — the verbs are Holdings' rows and the menu's, not a block (prd §1108)" % name)
     if "DevnetTileSurface" in c_bare:
-        out.append("the loud verb tile's surface is back — a verb is a grid tile (§750, prd §1039)")
-    if "verbs: FramesActs.verbs(for:" not in feed:
-        out.append("the Frames chrome no longer hands its verbs to the grid — Send, Top up and Create have no tile")
+        out.append("the loud verb tile's surface is back — a verb is a row (§750, prd §1108)")
+    if "accountAction:" not in feed or "FramesActs.movesMoney(on:" not in feed:
+        out.append("the Frames room lost a verb's door — Create heads the Accounts menu, "
+                   "Send and Top up lead Holdings on the pages FramesActs allows (prd §1108)")
 
     # 1b. THE PLAN STRIP STEPS ASIDE RATHER THAN RESERVING SPACE (prd §548).
     #     The amount screen is a plain `VStack` with NO `ScrollView`, so a
@@ -162,11 +163,11 @@ def checks(console: str, card: str, feed: str):
     if ".sheet(" in k_bare:
         out.append("FramesActs presents its own sheet — it will half-open and close inside a List row")
 
-    # 5. ONE DISPATCHER. Each verb tile runs what its row ran; a tap handled
+    # 5. ONE DISPATCHER. Each verb row runs what its tile ran; a tap handled
     #    inline in the room is how Send stops selecting the page's account.
     for verb in ("FramesActs.send(", "FramesActs.topUp(", "FramesActs.create("):
         if verb not in feed:
-            out.append("the Frames room no longer routes a verb tile through %s" % verb)
+            out.append("the Frames room no longer routes a verb through %s" % verb)
 
     # 6. THE DEMO REACHES IT, AND STOPS WHERE THE MONEY STARTS (prd §552b).
     #    A scope's whole content gated on a device credential is invisible to
@@ -206,7 +207,8 @@ struct DevnetKeypad { }
               '    static func topUp(account: String?) {\n        guard !DemoMode.isActive else { return }\n    }\n')
     good_f = ('    func sendFrames(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
               '    func sendFramesStitched(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
-              '    verbs: FramesActs.verbs(for: account),\n'
+              '    accountAction: .init(title: t, symbol: "plus") { FramesActs.create(store: s) },\n'
+              '    if FramesActs.movesMoney(on: account) {}\n'
               '    FramesActs.send(account: a) {}\n    FramesActs.topUp(account: a) {}\n'
               '    FramesActs.create(store: s)\n')
 
@@ -218,14 +220,16 @@ struct DevnetKeypad { }
                   good_console + "struct DevnetVerbRow: View { }\n", good_k, good_f, True))
     cases.append(("the loud verb tile's surface comes back",
                   good_console + "DevnetTileSurface()\n", good_k, good_f, True))
-    cases.append(("the chrome stops handing over its verbs",
-                  good_console, good_k, good_f.replace("verbs: FramesActs.verbs(for:", "verbs: ["), True))
+    cases.append(("Create leaves the Accounts menu",
+                  good_console, good_k, good_f.replace("accountAction:", "verbs:"), True))
+    cases.append(("Send and Top up lose their gate",
+                  good_console, good_k, good_f.replace("FramesActs.movesMoney(on: account)", "true"), True))
     cases.append(("the system keypad comes back",
                   good_console.replace("struct DevnetKeypad { }", "keyboardType(.decimalPad)"),
                   good_k, good_f, True))
     cases.append(("the card presents its own sheet from a List row",
                   good_console, good_k + '.sheet(isPresented: $x)', good_f, True))
-    cases.append(("a verb tile handled inline instead of through FramesActs",
+    cases.append(("a verb handled inline instead of through FramesActs",
                   good_console, good_k, good_f.replace("FramesActs.topUp(account: a) {}", "openURL(u)"), True))
     cases.append(("the console cannot be reached in the demo",
                   good_console, good_k.replace("DemoMode.isActive", "true"), good_f, True))
@@ -277,9 +281,9 @@ def main() -> int:
         for f in found:
             print("\033[31m✗ %s\033[39m" % f)
         return 1
-    print("\033[32m✓ devnet-console audit: Home's verbs are the grid's last tiles, "
+    print("\033[32m✓ devnet-console audit: the verbs are rows (the Accounts menu and Holdings), "
           "the keypad is ours, the plan strip steps aside, and nothing acts in a demo "
-          "(prd §1039)\033[39m")
+          "(prd §1108)\033[39m")
     return 0
 
 

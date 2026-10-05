@@ -2,8 +2,8 @@ import SwiftUI
 
 // THE TESTNETS ROOM (prd §1050, built §1050k). Hegotá Frames and Logos fold
 // into one room, and the room shows one network's own screen at a time —
-// its tiles, its verbs (Frames' Create · Send · Top up, Logos' Explorer) and
-// its accounts — because test ETH and Logos test coins add up to nothing,
+// its tiles, its verbs (rows since prd §1108: New account in the menu, Send
+// and Top up in Holdings) and its accounts — because test ETH and Logos test coins add up to nothing,
 // so no view across the two could say one thing about both. `MainSurface`
 // mounts the picked network's screen with the room as its `hostRoom`; the
 // account menu is how you cross to the other network.

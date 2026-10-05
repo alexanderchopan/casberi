@@ -1,22 +1,24 @@
 import SwiftUI
 
-/// THE FRAMES ROOM'S THREE VERBS — Create, Send, Top up — as the last three
-/// TILES (prd §1039, 2026-10-01; the user approved three verb tiles in this
-/// one room). They were rows in Home's Actions block (`FramesSendCard`, §750,
-/// §774), which the merge deleted with the Overview rows under it.
+/// THE FRAMES ROOM'S THREE VERBS — Create, Send, Top up — as ROWS (prd §1108,
+/// user: "redesign the frames room so it only has four tiles"). They were the
+/// last three tiles (§1039) and, before that, rows in Home's Actions block
+/// (§750, §774). Create is "New account", the first row of the Accounts menu
+/// (the Wallet's "Watch a wallet" slot, §1107); Send and Top up are the first
+/// rows of Holdings, where what you would send is listed.
 ///
-/// **Each tile does exactly what its row did.** Send selects the page's account
+/// **Each row does exactly what its tile did.** Send selects the page's account
 /// and raises the room's one send sheet; Top up copies the address and opens
 /// the faucet's page in the in-app Safari sheet (prd §962 — the faucet is
 /// proof-of-work plus a captcha, so it is a door, never an in-place claim);
 /// Create makes a key (the first) or another account (prd §774). What a row
 /// said as its fact or under its title — "The faucet isn't reached in the
-/// demo.", a keychain refusal — is a flash now, since a tile has no line.
+/// demo.", a keychain refusal — is a flash, since a row has no line.
 ///
-/// **Which verbs a page offers is §774's rule, unchanged** (`verbs(for:)`):
+/// **Which verbs a page offers is §774's rule, unchanged** (`movesMoney(on:)`):
 /// All acts for this phone's current account, one of your own accounts acts
 /// for itself, a stranger's page keeps Create alone, and a phone with no key
-/// yet offers Create alone on All.
+/// yet offers Create alone on All. Create is in the menu on every page.
 ///
 /// Nothing here presents: Send hands upward to the screen's single `.sheet`,
 /// for the reason that has been paid for three times (a `.sheet` on a view in
@@ -24,18 +26,17 @@ import SwiftUI
 @MainActor
 enum FramesActs {
 
-    /// The verb tiles for the page showing (prd §774). `account` is nil on the
-    /// All page. Defaults reads only (`FramesKey`, the passkey address) — the
-    /// Keychain is never asked from a body, the build-525 class.
-    static func verbs(for account: String?) -> [FramesSection] {
+    /// Whether the page showing offers Send and Top up (prd §774). `account`
+    /// is nil on the All page. Defaults reads only (`FramesKey`, the passkey
+    /// address) — the Keychain is never asked from a body, the build-525 class.
+    static func movesMoney(on account: String?) -> Bool {
         let mine = account == nil || FramesKey.holds(account)
             || FramesPasskey.accountAddress()
                 .map { $0.caseInsensitiveCompare(account ?? "") == .orderedSame } == true
-        guard mine else { return [.create] }
-        // No key on this phone and the All page: Create is the one act; Send
-        // and Top up would act for nobody.
-        if account == nil, FramesKey.address() == nil { return [.create] }
-        return FramesSection.verbs
+        guard mine else { return false }
+        // No key on this phone and the All page: Send and Top up would act
+        // for nobody.
+        return !(account == nil && FramesKey.address() == nil)
     }
 
     /// Send: this page's account becomes the one the send sheet signs as. A

@@ -173,8 +173,8 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// All and the wallet family's Home stay first (user: leads stay), a
     /// verb (New) stays last because it is not a list, and everything
     /// between sorts by the word the person reads, in their language.
-    /// **SEVERAL VERBS READ A–Z AMONG THEMSELVES (prd §1039)** — Frames
-    /// carries three (Create · Send · Top up), after every scope. A lead
+    /// **SEVERAL VERBS READ A–Z AMONG THEMSELVES (prd §1039)** — Reading
+    /// carries two (Follow · Search), after every scope. A lead
     /// is known by its GLYPH: `tile-glyph-audit.py` holds every tile glyph
     /// to one meaning, so `ScopeTileGlyph.all` and `.home` can only be All
     /// and Home. Not "whatever is first": a room may list a scope first that

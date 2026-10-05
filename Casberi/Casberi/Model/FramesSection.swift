@@ -75,10 +75,13 @@ import Foundation
 /// **HOME'S LIST IS THE ACTIVITY; ACTIVITY, ACCOUNTS AND THE ACTIONS BLOCK
 /// ARE DELETED (prd §1039, 2026-10-01).** The Wallet's merge, one chain over:
 /// Home lists the moves, the account menu under the tiles picks the account,
-/// and Send, Top up and Create account are the LAST three tiles — `send`,
-/// `topUp` and `create`, verbs that never light (GitHub's Watch, prd §1031;
-/// the user approved three verb tiles in this one room). A stranger's page
-/// keeps Create alone (§774), which the room decides per page.
+/// and the verbs are not tiles.
+///
+/// **FOUR TILES, AND THE VERBS ARE ROWS (prd §1108, user: "redesign the frames
+/// room so it only has four tiles").** Create is "New account", the first row
+/// of the Accounts menu — the slot the Wallet's "Watch a wallet" took (§1107);
+/// Send and Top up are the first rows of Holdings (`FramesActs`). The three
+/// verb cases are deleted (§723): nothing in this enum acts any more.
 ///
 /// Foundation-only by design: `scripts/frames-tx-selftest.sh` compiles it
 /// WHOLE and unmodified. Every failure it catches renders as a perfectly
@@ -89,11 +92,6 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     case holdings
     case frames
     case permissions
-    /// The room's VERBS (prd §1039) — never scopes: never in `order`, never
-    /// resolved to, never lit.
-    case create
-    case send
-    case topUp
 
     var id: String { rawValue }
 
@@ -110,14 +108,6 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// they are the entire reason the chain and this seat exist.
     static let order: [FramesSection] = [.home, .holdings, .frames, .permissions]
 
-    /// The verbs, drawn after the scopes, A–Z among themselves
-    /// (`DSScopeTiles.alphabetical`). Which of them a page offers is the
-    /// room's call (§774): a stranger's page keeps `create` alone.
-    static let verbs: [FramesSection] = [.create, .send, .topUp]
-
-    /// A verb acts instead of scoping, and never lights.
-    var isVerb: Bool { Self.verbs.contains(self) }
-
     /// Which scopes can be EMPTY.
     ///
     /// **It no longer gates `present()` (prd §611)** — every scope is drawn
@@ -127,7 +117,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// it is what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
-        case .home, .create, .send, .topUp: return false
+        case .home: return false
         case .holdings, .frames, .permissions: return true
         }
     }
@@ -151,10 +141,6 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         // "Sponsors" — the room's only kind of permission wearing its own
         // name, which left five rooms asking one question under nine chips.
         case .permissions: return String(localized: "Permissions")
-        // One word a tile (prd §1039): "Create", not "Create account".
-        case .create: return String(localized: "Create")
-        case .send:   return String(localized: "Send")
-        case .topUp:  return String(localized: "Top up")
         }
     }
 
@@ -166,9 +152,6 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings: return String(localized: "The tokens this address holds")
         case .frames:      return String(localized: "The steps each transaction ran")
         case .permissions: return String(localized: "What's allowed to act on your accounts, and what already has")
-        case .create: return String(localized: "Make another account on this phone")
-        case .send:   return String(localized: "Send test ETH from this account")
-        case .topUp:  return String(localized: "Open the faucet for test ETH")
         }
     }
 
@@ -186,7 +169,6 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         case .holdings: return String(localized: "Test ETH only")
         case .frames:      return String(localized: "No steps")
         case .permissions: return String(localized: "No permissions")
-        case .create, .send, .topUp: return nil
         }
     }
 
@@ -200,7 +182,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// the dust floor, the spam filter.
     ///
     /// No subject (the face rail above says which is scoped), no door (Top up
-    /// and Send are Home's tiles, §553), and nothing that states a chain-wide
+    /// and Send are Holdings' first rows, §1108), and nothing that states a chain-wide
     /// fact — every transaction measured on this chain is self-paid, and a
     /// sentence saying so becomes a lie the first time one is not.
     var emptyBody: String? {
@@ -213,8 +195,6 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "A plain transfer runs no steps.")
         case .permissions:
             return String(localized: "Here that means gas somebody else paid.")
-        case .create, .send, .topUp:
-            return nil
         }
     }
 
@@ -254,7 +234,7 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// whose content has since gone resolves to the crown rather than to an
     /// empty page claiming to be a section.
     static func resolve(_ wanted: FramesSection?, present: [FramesSection]) -> FramesSection {
-        guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }
+        guard let wanted, present.contains(wanted) else { return .home }
         return wanted
     }
 

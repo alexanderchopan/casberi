@@ -12,17 +12,15 @@ import SwiftUI
 ///   1. **the box** — the room's crown on Home (the figure, the chart, its
 ///      range chips), the section's figure everywhere else, one fixed box
 ///      (prd §765, §936);
-///   2. **the tiles** — the scopes, Home first then A–Z, and the room's VERBS
-///      last, A–Z among themselves (`DSScopeTiles.alphabetical`): Follow in
-///      the Wallet, Create · Send · Top up in Frames, Explorer in Logos. A
-///      verb tile acts and never lights — GitHub's Watch (prd §1031);
+///   2. **the tiles** — the four scopes, Home first then A–Z
+///      (`DSScopeTiles.alphabetical`), and no verb (prd §1107, §1108);
 ///   3. **the account menu** (`DSScopeMenu`, prd §936) — the pick the deleted
 ///      Accounts tiles duplicated;
 ///   4. **the list** — the room's own, drawn by the room under this chrome:
 ///      on Home, what moved (the deleted Activity tile's list).
 ///
-/// **The verbs are per PAGE (prd §774).** The room hands in the verbs for the
-/// account showing; Frames keeps Create alone on a stranger's page.
+/// **No verb is a tile (prd §1107, §1108).** A room's verb is the first row of
+/// the Accounts menu (`accountAction`) or a row in its own list.
 ///
 /// **NOTHING STANDS ON A PLATE (prd §757, §758).** The box is the head
 /// template's well; the tiles are the grid's own flat fills.
@@ -36,9 +34,6 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// The room this chrome stands in — the key the published rail carries.
     let source: String
     let sections: [Scope]
-    /// The room's verbs for the page showing, drawn as the LAST tiles (prd
-    /// §1039). The room's `onPick` receives them and acts; none ever lights.
-    var verbs: [Scope] = []
     let active: Scope
     let home: Scope
     var attention: Set<Scope> = []
@@ -109,9 +104,8 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
             // drew Actions and the Overview rows under these until the merge;
             // the room's own list follows the chrome now, as in every room.
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSScopeTiles(sections: sections + verbs, active: active,
-                             attention: attention, verbs: Set(verbs),
-                             inert: inert, onPick: onPick)
+                DSScopeTiles(sections: sections, active: active,
+                             attention: attention, inert: inert, onPick: onPick)
                 accountLine
             }
             .padding(.horizontal, DSRoomChassis.inset)

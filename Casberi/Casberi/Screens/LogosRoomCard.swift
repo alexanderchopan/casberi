@@ -30,7 +30,7 @@ struct LogosRoomFigure: View {
 
     private var drawsEmptyState: Bool {
         switch section {
-        case .home, .create, .explorer, .send: return false
+        case .home: return false
         // **A ONE-CELL TREEMAP IS THE 100% BAR §610 REMOVED** (Frames' rule):
         // with no token, the coins alone are Home's crown, not a map.
         case .holdings: return head.hasRead && head.tokens.isEmpty
@@ -44,8 +44,6 @@ struct LogosRoomFigure: View {
         case .holdings: RoomHoldingsFigure(cells: LogosHoldings.cells(head))
         case .node:     node
         case .rewards:  rewards
-        // A verb is never a page — `resolve` never lands here.
-        case .create, .explorer, .send: EmptyView()
         }
     }
 

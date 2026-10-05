@@ -395,10 +395,10 @@ extension FeedScreen {
     /// so the chrome mounts that view pinned to `.home`. Off Home the same
     /// view draws the scope's figure in the same box.
     ///
-    /// **The verbs are the last three tiles, per page (prd §774, §1039):**
-    /// `FramesActs.verbs(for:)` gives All and your own accounts Create · Send
-    /// · Top up and a stranger's page Create alone, and the tap runs exactly
-    /// what the Actions row ran.
+    /// **Four tiles, and the verbs are rows (prd §1108):** Create is "New
+    /// account" at the head of the Accounts menu, on every page; Send and Top
+    /// up lead Holdings (`framesMoneyDoorsSection`) where `FramesActs` allows
+    /// them (§774). Each tap runs exactly what the tile ran.
     @ViewBuilder
     func framesScopeChromeSection(_ active: FramesSection,
                                           head: FramesRoom.Head) -> some View {
@@ -406,31 +406,22 @@ extension FeedScreen {
         // the scope, so feeding it the narrowed set would leave one card on
         // screen and no way back.
         let roster = FramesRoomSource.accounts()
-        let account = chrome.framesScope
         Section {
             DSRoomScopeChrome(
                 source: FramesIdentity.source,
                 sections: chrome.framesSections,
-                verbs: FramesActs.verbs(for: account),
                 active: active,
                 home: .home,
                 attention: FramesSection.attention(),
-                onPick: { picked in
-                    switch picked {
-                    case .send:
-                        FramesActs.send(account: account) { feedSheet = .framesSend }
-                    case .topUp:
-                        FramesActs.topUp(account: account, chrome: chrome) { feedSheet = .web($0) }
-                    case .create:
-                        FramesActs.create(store: bridges, chrome: chrome)
-                    case .home, .holdings, .frames, .permissions:
-                        chrome.framesSection = picked
-                    }
-                },
+                onPick: { picked in chrome.framesSection = picked },
                 accounts: framesAccountSlots(roster) + hostedNetworkSlots,
                 scope: chrome.framesScope,
                 onPickAccount: { picked in
                     if !pickHostedNetwork(picked) { framesPickAccount(picked) }
+                },
+                accountAction: .init(title: String(localized: "New account"),
+                                     symbol: "plus") {
+                    FramesActs.create(store: bridges, chrome: chrome)
                 },
                 crown: { slot in
                     // The room figure carries its own slot (prd §953); a second
@@ -462,6 +453,31 @@ extension FeedScreen {
         // no read yet (a first account, or any room after the demo's Exit)
         // never read at all and sat on "Reading the chain…" (measured).
         .task { await FramesLiveState.shared.refresh() }
+    }
+
+    /// **SEND AND TOP UP LEAD HOLDINGS (prd §1108)** — the deleted verb tiles,
+    /// drawn as Subscriptions' "Add a subscription" row is (§1105), over the
+    /// list of what there is to send. Only on a page `FramesActs` allows
+    /// (§774): All and your own accounts, never a stranger's.
+    @ViewBuilder
+    func framesMoneyDoorsSection(_ scope: FramesSection) -> some View {
+        let account = chrome.framesScope
+        if scope == .holdings, FramesActs.movesMoney(on: account) {
+            Section {
+                VStack(spacing: 0) {
+                    DSDoorRow(icon: "arrow.up.right", label: "Send") {
+                        FramesActs.send(account: account) { feedSheet = .framesSend }
+                    }
+                    DSDoorRow(icon: "drop", label: "Top up") {
+                        FramesActs.topUp(account: account, chrome: chrome) { feedSheet = .web($0) }
+                    }
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                          bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+        }
     }
 
     /// The Frames accounts as deck cards, "All" first.

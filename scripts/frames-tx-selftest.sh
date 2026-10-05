@@ -1182,23 +1182,13 @@ check("and carries no dollar sign",
 // ordinary room — a scope that never appears, a remembered scope resolving to
 // one nobody picked, or a strip drawn over a single chip.
 check("Home leads", FramesSection.order.first == .home)
-// **THE VERBS ARE CASES, NEVER SCOPES (prd §1039).** Create, Send and Top up
-// are the last three tiles: every case is a scope in `order` or a verb in
-// `verbs`, never both, and no verb can be resolved to or published.
-check("the order and the verbs cover every case",
-      Set(FramesSection.order).union(FramesSection.verbs) == Set(FramesSection.allCases))
-check("and list each exactly once",
-      FramesSection.order.count + FramesSection.verbs.count == FramesSection.allCases.count
-        && Set(FramesSection.order).isDisjoint(with: FramesSection.verbs))
-check("the verbs are Create, Send and Top up",
-      FramesSection.verbs == [.create, .send, .topUp]
-        && FramesSection.verbs.allSatisfy(\.isVerb)
-        && !FramesSection.order.contains(where: \.isVerb))
-check("the verb tiles carry the ruled words",
-      FramesSection.create.label == "Create" && FramesSection.send.label == "Send"
-        && FramesSection.topUp.label == "Top up")
-check("a verb is never resolved to",
-      FramesSection.resolve(.send, present: FramesSection.order + FramesSection.verbs) == .home)
+// **FOUR TILES, NO VERB AMONG THEM (prd §1108).** Create, Send and Top up are
+// rows now (the Accounts menu, Holdings): every case is a scope in `order`,
+// and a raw value a verb tile once wore resolves to nothing.
+check("the order is every case, once",
+      FramesSection.order == FramesSection.allCases && FramesSection.order.count == 4)
+check("no verb case is back",
+      ["create", "send", "topUp"].allSatisfy { FramesSection(rawValue: $0) == nil })
 // **ACTIVITY AND ACCOUNTS ARE DELETED (prd §1039)** — Home's list is the
 // moves and the account menu picks the account.
 check("Activity and Accounts are gone",
@@ -2475,14 +2465,11 @@ mutate "the wei-per-ETH divisor losing a zero" $F2 \
 mutate "a conditional scope ahead of an unconditional one" $F3 \
   '[.home, .holdings, .frames, .permissions]' '[.holdings, .home, .frames, .permissions]'
 mutate "the remembered scope falling back to the first present one" $F3 \
-  'guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }' \
+  'guard let wanted, present.contains(wanted) else { return .home }' \
   'guard let wanted, present.contains(wanted) else { return present.first ?? .home }'
-mutate "a verb tile resolved to as a page (prd §1039)" $F3 \
-  'guard let wanted, !wanted.isVerb, present.contains(wanted) else { return .home }' \
-  'guard let wanted else { return .home }; if wanted.isVerb { return wanted }; guard present.contains(wanted) else { return .home }'
-mutate "a verb slipping into the scopes' order (prd §1039)" $F3 \
+mutate "a scope dropped from the four tiles (prd §1108)" $F3 \
   'static let order: [FramesSection] = [.home, .holdings, .frames, .permissions]' \
-  'static let order: [FramesSection] = [.home, .holdings, .frames, .permissions, .send]'
+  'static let order: [FramesSection] = [.home, .holdings, .frames]'
 mutate "a strip drawn over a single chip" $F3 'present.count > 1' 'present.count > 0'
 mutate "every scope gated again, so two chips vanish on the address that most needs them" $F3 \
   'static func present() -> [FramesSection] { order }' \
