@@ -111,6 +111,7 @@ enum StoreVersion {
     private static func fetch() async -> String? {
         var request = URLRequest(url: lookupURL, timeoutInterval: 10)
         request.cachePolicy = .reloadIgnoringLocalCacheData
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
