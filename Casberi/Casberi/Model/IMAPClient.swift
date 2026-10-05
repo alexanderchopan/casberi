@@ -52,6 +52,10 @@ enum IMAPClient {
         /// fetch failed; the two are the same from here, which is why nothing
         /// downstream may phrase an empty list as "no attachments".
         var attachments: [String] = []
+        /// A mailing list's `List-Id` and `List-Unsubscribe` (prd §1111),
+        /// out of the same raw bytes — nil for a mail from a person.
+        var listID: String? = nil
+        var listUnsubscribe: String? = nil
     }
 
     /// `fetch` is distinct from `select` on purpose (2026-08-02): the heal's
@@ -120,6 +124,7 @@ enum IMAPClient {
             uids: parsed.map(\.uid), maxBytes: bodyByteCap)) ?? [:]
         let withBodies = parsed.map { m in
             let raw = rawBodies[m.uid]
+            let list = raw.map(MailMIME.listHeaders)
             return Message(uid: m.uid, subject: m.subject, from: m.from,
                            fromAddress: m.fromAddress, date: m.date,
                            body: raw.flatMap(MailMIME.plainText),
@@ -127,7 +132,8 @@ enum IMAPClient {
                            // Same bytes the body was decoded from — no second
                            // fetch, and no request at all when the body pass
                            // above already failed.
-                           attachments: raw.map(MailMIME.attachmentNames) ?? [])
+                           attachments: raw.map(MailMIME.attachmentNames) ?? [],
+                           listID: list?.id, listUnsubscribe: list?.unsubscribe)
         }
         #if DEBUG
         NSLog("IMAP %@: %d fetched, %d parsed, %d bodies", host, lines.count, parsed.count,

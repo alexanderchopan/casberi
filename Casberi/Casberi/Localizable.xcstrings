@@ -1121,6 +1121,34 @@
         }
       }
     },
+    "%@, %lld mails" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@, %2$lld correos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@、%2$lld通"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@, 메일 %2$lld통"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@，%2$lld 封邮件"
+          }
+        }
+      }
+    },
     "%@, Kraken's mid rate" : {
       "localizations" : {
         "es" : {
@@ -1173,6 +1201,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@，示例汇率"
+          }
+        }
+      }
+    },
+    "%lld a month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld al mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "月%lld通"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한 달에 %lld통"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每月 %lld 封"
+          }
+        }
+      }
+    },
+    "%lld a week" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld a la semana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "週%lld通"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일주일에 %lld통"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每周 %lld 封"
+          }
+        }
+      }
+    },
+    "%lld mails" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld correos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld通"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일 %lld통"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 封邮件"
+          }
+        }
+      }
+    },
+    "%lld mails in %lld days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld correos en %2$lld días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld日間で%1$lld通"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld일 동안 메일 %1$lld통"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld 天内 %1$lld 封邮件"
           }
         }
       }
@@ -1317,6 +1457,62 @@
         }
       }
     },
+    "About monthly" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada mes, más o menos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ほぼ毎月"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대략 매달"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "大约每月"
+          }
+        }
+      }
+    },
+    "About weekly" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada semana, más o menos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ほぼ毎週"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대략 매주"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "大约每周"
+          }
+        }
+      }
+    },
     "Add an alert" : {
       "localizations" : {
         "es" : {
@@ -1341,6 +1537,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加提醒"
+          }
+        }
+      }
+    },
+    "Added" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadidas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "追加済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "추가됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已添加"
           }
         }
       }
@@ -1967,6 +2191,34 @@
         }
       }
     },
+    "Casberi can't unsubscribe for you." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi no puede cancelar la suscripción por ti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberiが代わりに配信停止することはできません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 대신 구독을 취소할 수는 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 无法替你退订。"
+          }
+        }
+      }
+    },
     "Checked on this phone when iOS lets Casberi refresh. No server watches for you." : {
       "localizations" : {
         "es" : {
@@ -2383,6 +2635,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每个应用背后的每家公司"
+          }
+        }
+      }
+    },
+    "Every two weeks" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada dos semanas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "2週間ごと"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "2주마다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每两周"
           }
         }
       }
@@ -3087,6 +3367,34 @@
         }
       }
     },
+    "Last one" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El último"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近一封"
+          }
+        }
+      }
+    },
     "Last read: %@" : {
       "localizations" : {
         "es" : {
@@ -3167,6 +3475,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "带有文件的邮件"
+          }
+        }
+      }
+    },
+    "Mails" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Correos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通数"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "邮件"
           }
         }
       }
@@ -3783,6 +4119,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "最新"
+          }
+        }
+      }
+    },
+    "Newsletters and lists from your mail" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Boletines y listas de tu correo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メールのニュースレターとリスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일의 뉴스레터와 메일링 리스트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自你邮箱的简报和邮件列表"
           }
         }
       }
@@ -76419,6 +76783,62 @@
         }
       }
     },
+    "No subscriptions yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay suscripciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サブスクリプションはまだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 구독이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还没有订阅"
+          }
+        }
+      }
+    },
+    "Nobody by that name on Bluesky." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nadie con ese nombre en Bluesky."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Blueskyにその名前の人はいません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bluesky에 그 이름을 가진 사람이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bluesky 上没有这个名字的人。"
+          }
+        }
+      }
+    },
     "Not counted: %@" : {
       "localizations" : {
         "es" : {
@@ -76783,6 +77203,34 @@
         }
       }
     },
+    "Now and then" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De vez en cuando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ときどき"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가끔"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "偶尔"
+          }
+        }
+      }
+    },
     "Numbered list" : {
       "localizations" : {
         "es" : {
@@ -77087,6 +77535,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已置顶 · %@"
+          }
+        }
+      }
+    },
+    "Plans that renew on a card or account, the bills that repeat, and the ones you add." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Planes que se renuevan en una tarjeta o cuenta, las facturas que se repiten y los que añades tú."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カードや口座で更新されるプラン、繰り返す請求、自分で追加したもの。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "카드나 계좌에서 갱신되는 요금제, 반복되는 청구서, 직접 추가한 항목."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在卡或账户上续订的方案、重复的账单，以及你自己添加的项目。"
           }
         }
       }
@@ -77511,6 +77987,34 @@
         }
       }
     },
+    "Search Bluesky by name. People who reply to you show here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca en Bluesky por nombre. Aquí aparecen quienes te responden."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前でBlueskyを検索。あなたに返信した人がここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름으로 Bluesky를 검색하세요. 내게 답장한 사람이 여기 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按名字搜索 Bluesky。回复过你的人会显示在这里。"
+          }
+        }
+      }
+    },
     "Search by name, ticker, or paste a contract address on any chain." : {
       "localizations" : {
         "es" : {
@@ -77675,6 +78179,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已设为 %@"
+          }
+        }
+      }
+    },
+    "Several a week" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Varias a la semana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "週に数回"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일주일에 여러 번"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每周几次"
           }
         }
       }
@@ -78211,6 +78743,34 @@
         }
       }
     },
+    "The newsletters and lists that write to you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los boletines y listas que te escriben"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたに届くニュースレターとリスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내게 오는 뉴스레터와 메일링 리스트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "给你发邮件的简报和邮件列表"
+          }
+        }
+      }
+    },
     "The price alerts you set" : {
       "localizations" : {
         "es" : {
@@ -78659,6 +79219,90 @@
         }
       }
     },
+    "Unsubscribe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelar suscripción"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "配信停止"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "구독 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退订"
+          }
+        }
+      }
+    },
+    "Unsubscribe in Mail" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelar suscripción en Mail"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メールで配信停止"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일에서 구독 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在“邮件”中退订"
+          }
+        }
+      }
+    },
+    "Unsubscribe on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelar suscripción en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で配信停止"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 구독 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上退订"
+          }
+        }
+      }
+    },
     "Untick %@" : {
       "localizations" : {
         "es" : {
@@ -78967,6 +79611,34 @@
         }
       }
     },
+    "What renews, and what it costs you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que se renueva y lo que te cuesta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "更新されるものとその費用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "갱신되는 항목과 그 비용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "会续订的项目，以及它花你多少钱"
+          }
+        }
+      }
+    },
     "What you pinned" : {
       "localizations" : {
         "es" : {
@@ -79271,6 +79943,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "写下或录制笔记，或对任何内容%@以置顶到这里。"
+          }
+        }
+      }
+    },
+    "Writes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escribe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "配信頻度"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "발송 빈도"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送频率"
           }
         }
       }

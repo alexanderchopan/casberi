@@ -2678,6 +2678,40 @@ enum DemoSeedAll {
                 if let file = gmailAttached[i] { t.facts = [ThingFact(MailIngest.attachedLabel, file).encoded] }
             }
         }
+        // MAILING LISTS (prd §1111): each issue carries the two headers the
+        // real ingest keeps as rowless facts, so Day's Subscriptions tile
+        // has lists to count, a cadence to state and a way out to offer.
+        let lists: [(name: String, address: String, id: String, unsubscribe: String,
+                     issues: [(String, Double)])] = [
+            ("Uber Eats", "uber@eats.example", "eats.example", "https://eats.example/unsubscribe",
+             [("$0 delivery on your next order", 0.4), ("Your weekend picks are here", 2),
+              ("Lunch, sorted", 3.5), ("New near you: Rosa's", 5), ("Back by popular demand", 7),
+              ("Your favourites, 20% off", 9)]),
+            ("The Weekly Fold", "hello@weeklyfold.example", "weekly.weeklyfold.example",
+             "https://weeklyfold.example/leave",
+             [("Issue 112: what the merge changed", 1), ("Issue 111: the quiet launch", 8),
+              ("Issue 110: small teams, big tools", 15), ("Issue 109: on defaults", 22)]),
+            ("Linear", "changelog@linear.example", "changelog.linear.example",
+             "mailto:unsubscribe@linear.example",
+             [("Changelog: faster triage", 3), ("Changelog: project updates", 17),
+              ("Changelog: cycles, reworked", 31)]),
+            ("Notion", "team@mail.notion.example", "updates.notion.example",
+             "https://notion.example/unsubscribe",
+             [("What's new in October", 6), ("What's new in September", 36)]),
+        ]
+        for (l, list) in lists.enumerated() {
+            for (i, issue) in list.issues.enumerated() {
+                out.append(row(.mail, issue.0, source: "Gmail", ref: "demo:gmail:list:\(l):\(i)",
+                               days: issue.1, hour: 8,
+                               content: "This week's issue, in full in your inbox.") { t in
+                    t.authorHandle = list.name
+                    t.authorEmail = list.address
+                    t.facts = MailIngest.listFacts(listID: "\(list.name) <\(list.id)>",
+                                                   unsubscribe: "<\(list.unsubscribe)>",
+                                                   address: list.address).map(\.encoded)
+                })
+            }
+        }
         let icloud: [(String, String, Double)] = [
             ("Your receipt from the hardware store", "Receipts <receipts@shop.example>", 3),
             ("Flight TAP 1147 — check in now", "TAP Air <noreply@flytap.example>", 5),

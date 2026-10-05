@@ -190,6 +190,19 @@ enum MailMIME {
         return parts
     }
 
+    /// A mailing list's two headers, off the top-level header block (prd
+    /// §1111): `List-Id` (RFC 2919) names the list, `List-Unsubscribe` (RFC
+    /// 2369) is how to leave it, and Gmail and Yahoo require the second from
+    /// every bulk sender since 2024. Read out of the bytes the body pass
+    /// already fetched, so a subscription costs no request. Both nil for a
+    /// mail from a person, and for one whose body fetch failed.
+    static func listHeaders(from raw: Data) -> (id: String?, unsubscribe: String?) {
+        guard let (headers, _) = splitHeaderBody(raw) else { return (nil, nil) }
+        let id = headerValue("List-Id", in: headers).flatMap { $0.isEmpty ? nil : $0 }
+        let unsubscribe = headerValue("List-Unsubscribe", in: headers).flatMap { $0.isEmpty ? nil : $0 }
+        return (id, unsubscribe)
+    }
+
     // MARK: - Header parsing
 
     /// Unfolds RFC 822 header continuation lines (a value wrapped onto the

@@ -399,7 +399,13 @@ extension FeedScreen {
                 // — and the moves lived one tile over, under Activity. The
                 // Activity tile is deleted and its list is Home's: the moves
                 // under the feed's day headers (§942), then the door to all of
-                // them. What is still AHEAD is Coming up's, not Home's.
+                // them.
+                //
+                // **WHAT'S AHEAD LEADS IT (prd §1111, user: "coming up moved to
+                // activity", "'needs you' becomes a section in home").** Coming
+                // up became Subscriptions, so Needs you and the dated rows
+                // stand at the head of Home, above what happened.
+                walletComingUpSections(upcoming, nextEventID: nextEventID)
                 let stream = walletStream(all)
                 walletStreamSections(stream.rows, ownMoves: stream.ownMoves, nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
@@ -409,12 +415,9 @@ extension FeedScreen {
                 if all.isEmpty {
                     walletSkeletonRowsSection
                 }
-            case .comingUp:
-                // **WHAT'S AHEAD, WHAT WAITS ON YOU, WHAT REPEATS (prd §1041,
-                // §1107).** Needs you, then every row with a future `dueAt`
-                // under the day it falls due, then every subscription with
-                // Add at its foot — Subscriptions' tile, folded in.
-                walletComingUpSections(upcoming, nextEventID: nextEventID)
+            case .subscriptions:
+                // **SUBSCRIPTIONS AND NOTHING ELSE (prd §1111).** Add first,
+                // the person builds the list up, then every plan.
                 walletSubscriptionsSections
             case .holdings:
                 if portfolio?.isEmpty ?? true, !hasLendingCard, walletLive.uniswap.isEmpty,

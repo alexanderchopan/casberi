@@ -55,7 +55,7 @@ grep -q 'fell below the' Casberi/Casberi/Model/WalletDeFi.swift && grep -q 'fell
 grep -q 'HoldingMoves.note(owners:' "$INGEST" \
   || { echo "✗ the holdings read no longer notes moves per wallet — one wallet's read wipes another's"; exit 1; }
 grep -q 'needsYouGroup' "$ROOM" \
-  || { echo "✗ Coming up no longer leads with Needs you"; exit 1; }
+  || { echo "✗ Home no longer leads with Needs you (prd §1111)"; exit 1; }
 for f in Casberi/Casberi/Model/WalletDeFi.swift Casberi/Casberi/Model/MorphoDeFi.swift; do
   grep -q 'DeFiRisk.alertLine' "$f" \
     || { echo "✗ $f no longer notifies at your line (DeFiRisk.alertLine)"; exit 1; }

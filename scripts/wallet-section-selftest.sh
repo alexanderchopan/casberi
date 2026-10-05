@@ -53,20 +53,21 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .comingUp, .security],
-      "order is home → holdings → comingUp → security")
+check(WalletSection.order == [.home, .holdings, .subscriptions, .security],
+      "order is home → holdings → subscriptions → security")
 // **FOUR TILES, ONE ROW (prd §1107).** Positions folded into Holdings, the
-// loan risk with it; Subscriptions into Coming up; Permissions and Worth a
-// look into Security; Watch into the Accounts pill. None may come back as a
-// scope — a remembered raw value must resolve to Home, never to a page.
-for gone in ["positions", "subscriptions", "risk", "permissions", "watch", "cards", "activity", "accounts"] {
+// loan risk with it; Permissions and Worth a look into Security; Watch into
+// the Accounts pill; and Coming up became Subscriptions (prd §1111), its
+// dated rows moved to Home. None may come back as a scope — a remembered raw
+// value must resolve to Home, never to a page.
+for gone in ["positions", "comingUp", "risk", "permissions", "watch", "cards", "activity", "accounts"] {
     check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107)")
 }
 check(WalletSection.allCases.count == 4, "the wallet has four tiles — one row (prd §1107)")
 check(WalletSection.order.count == WalletSection.allCases.count,
       "order lists every case once — a new scope cannot be silently unlisted")
 check(WalletSection.security.label == "Security", "the tile reads Security, not Safety or Risk (user)")
-check(WalletSection.comingUp.label == "Coming up", "the scope reads Coming up — the app's own word")
+check(WalletSection.subscriptions.label == "Subscriptions", "the tile reads Subscriptions — Day's tile says it too (prd §1111)")
 
 // Conditional scopes sit at the tail, so the strip's head is the same on every
 // wallet.
@@ -80,7 +81,7 @@ check(WalletSection.order.first == .home, "home leads")
 check(WalletSection.home.isAlwaysPresent, "home is always present")
 check(!WalletSection.home.isConditional, "home is not conditional")
 check(!WalletSection.holdings.isConditional, "holdings is not conditional")
-for s in [WalletSection.comingUp, .security] {
+for s in [WalletSection.subscriptions, .security] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
 
@@ -169,9 +170,9 @@ mutate() {
 }
 
 mutate "a conditional scope moved out of the tail (the strip reflows)" \
-  's/\[\.home, \.holdings, \.comingUp, \.security\]/[.home, .security, .holdings, .comingUp]/'
+  's/\[\.home, \.holdings, \.subscriptions, \.security\]/[.home, .security, .holdings, .subscriptions]/'
 mutate "home no longer leads" \
-  's/\[\.home, \.holdings, \.comingUp/[.holdings, .home, .comingUp/'
+  's/\[\.home, \.holdings, \.subscriptions/[.holdings, .home, .subscriptions/'
 mutate "resolve falls back to the first present scope instead of home" \
   's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
 mutate "a retired tile comes back as a scope (prd §1107)" \
@@ -179,7 +180,7 @@ mutate "a retired tile comes back as a scope (prd §1107)" \
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
 mutate "security is marked unconditional, so the tail rule stops being enforced" \
-  's/case \.comingUp, \.security: return true/case .comingUp: return true\n        case .security: return false/'
+  's/case \.subscriptions, \.security: return true/case .subscriptions: return true\n        case .security: return false/'
 mutate "every scope gated again, so two tiles vanish on the wallet that most needs them" \
   's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
@@ -438,18 +439,22 @@ guard FeedScreen.swift "RoomAccounts.roomSources(source)" \
 guard FeedScreen.swift "RoomAccounts.rides(room: source, source: thing.source)" \
   "the room filter drops the card seats' rows — Home loses the card spends (prd §1048)"
 # Subscriptions reads its OWN fetch (the room's is bounded), runs it from a
-# task, and Coming up carries both halves of the reading since prd §1107: the
-# renewals on its calendar, and every subscription as its last group.
+# task, and since prd §1111 its tile holds subscriptions and nothing else: the
+# renewals on its calendar, every plan in its list. What waits on you and the
+# dated rows lead Home.
 guard FeedScreen.swift ".task(id: walletSubscriptionsKey) {" \
-  "Coming up no longer refreshes the subscriptions reading — it stands on whatever was read first (prd §1105, §1107)"
+  "Subscriptions no longer refreshes its reading — it stands on whatever was read first (prd §1105, §1111)"
 guard FeedScreen.swift "subscriptions: subscriptions," \
-  "Coming up's box lost the subscriptions — their renewals are off the calendar (prd §1107)"
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Coming up's list lost its Subscriptions group, or it no longer follows what's ahead (prd §1107)"
+  "the Subscriptions box lost the subscriptions — their renewals are off the calendar (prd §1111)"
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Home no longer leads with what's ahead, or Subscriptions holds more than subscriptions (prd §1111)"
 import re, sys
 src = open(sys.argv[1]).read()
-m = re.search(r"case \.comingUp:(.*?)case \.holdings:", src, re.S)
-ok = m and "walletComingUpSections(upcoming" in m.group(1) and "walletSubscriptionsSections" in m.group(1) \
-    and m.group(1).index("walletComingUpSections(upcoming") < m.group(1).index("walletSubscriptionsSections")
+home = re.search(r"case \.home:(.*?)case \.subscriptions:", src, re.S)
+subs = re.search(r"case \.subscriptions:(.*?)case \.holdings:", src, re.S)
+ok = home and subs \
+    and "walletComingUpSections(upcoming" in home.group(1) and "walletStream(all)" in home.group(1) \
+    and home.group(1).index("walletComingUpSections(upcoming") < home.group(1).index("walletStream(all)") \
+    and "walletSubscriptionsSections" in subs.group(1) and "walletComingUpSections" not in subs.group(1)
 sys.exit(0 if ok else 1)
 PY
 # A repeating bill lives on ONE tile: Coming up and Home leave it to Subscriptions.

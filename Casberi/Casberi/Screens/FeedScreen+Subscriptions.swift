@@ -1,10 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// THE WALLET'S SUBSCRIPTIONS (prd §1105), a group of Coming up since §1107:
-/// each renewal stands on Coming up's calendar and their monthly cost rides
-/// its line; the list ends with every one, most expensive first, then an Add
-/// row for anything no card, account or bill reading can see.
+/// THE WALLET'S SUBSCRIPTIONS (prd §1105), a tile again since §1111 (a group
+/// of Coming up from §1107): each renewal stands on its calendar and their
+/// monthly cost is the statement; the list is Add, then every one, most
+/// expensive first.
 extension FeedScreen {
 
     /// The seats a scoped room reads subscriptions from: every one on All
@@ -40,24 +40,23 @@ extension FeedScreen {
         #endif
     }
 
-    /// **SUBSCRIPTIONS, THE LAST GROUP OF COMING UP (prd §1107).** Every
-    /// one, most expensive first, under the group's name in the day headers'
-    /// ramp (primary, §740: only a day wears the brand hue), then Add for
-    /// anything no card, account or bill reading can see. Add stands even
-    /// with none, because it is how the first one gets here.
+    /// **THE SUBSCRIPTIONS TILE'S LIST (prd §1111).** Add first, for anything
+    /// no card, account or bill reading can see — it stands even with none,
+    /// because it is how the first one gets here — then every one, most
+    /// expensive first.
     @ViewBuilder
     var walletSubscriptionsSections: some View {
         let items = SubscriptionsReading.shared.items(in: walletSubscriptionSources)
         Section {
-            Text(Self.subscriptionsGroup)
-                .dsText(.heading20)
-                .foregroundStyle(DS.textPrimary)
-                .padding(.leading, DS.Space.s4)
-                .padding(.top, DS.Space.s6)
-                .padding(.bottom, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+            // The tile names the list (prd §1111), so no group header; Add
+            // leads, because the list is the person's to build up.
+            DSDoorRow(icon: "plus", label: "Add a subscription") {
+                feedSheet = .subscriptionAdd
+            }
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                      bottom: 0, trailing: DSRoomChassis.rowInset))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
             ForEach(items) { item in
                 Button {
                     feedSheet = .subscription(item.id)
@@ -72,17 +71,8 @@ extension FeedScreen {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
-            DSDoorRow(icon: "plus", label: "Add a subscription") {
-                feedSheet = .subscriptionAdd
-            }
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
-                                      bottom: 0, trailing: DSRoomChassis.rowInset))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
         }
     }
-
-    static var subscriptionsGroup: String { String(localized: "Subscriptions") }
 }
 
 /// One subscription in the list: its face, its name, what it costs a month,

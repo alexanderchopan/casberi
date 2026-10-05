@@ -574,6 +574,23 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// ISO 8601, read by the note page's date line (`NoteEdits`), never
         /// drawn as a fact row.
         case edited
+        /// A mail that came from a mailing list (prd §1111): `value` the
+        /// list's key (`MailSubscriptions.key`), read by Day's Subscriptions
+        /// tile, never drawn as a fact row.
+        case list
+        /// How to leave that list: `value` the `List-Unsubscribe` link, https
+        /// before mailto (`MailSubscriptions.unsubscribeURL`). Drawn as the
+        /// subscription sheet's door, never as a fact row.
+        case unsubscribe
+
+        /// Kept on the thing for a reader elsewhere, never drawn as a label
+        /// and value row (`FactRows` skips these).
+        var isRowless: Bool {
+            switch self {
+            case .reminder, .edited, .list, .unsubscribe: return true
+            default: return false
+            }
+        }
     }
 
     var id: String { "\(label)\u{1F}\(value)" }

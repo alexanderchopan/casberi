@@ -1,13 +1,12 @@
 import SwiftUI
 
 /// THE WALLET'S CALENDAR (prd §1105): five weeks from the start of this one,
-/// each dated thing on its day as its face. Coming up and Subscriptions draw
-/// it in their boxes — one drawing for everything with a date in the room, so
-/// the two tiles read the same way and differ only in what they hold.
+/// each renewal on its day as its face, in the Subscriptions tile's box
+/// (Coming up's too until §1111 made that tile Subscriptions).
 ///
-/// Five weeks is the 30 days Coming up's statement counts ("due in 30 days"),
-/// rounded out to whole weeks, so the box never pages and nothing in it claims
-/// a horizontal drag the room's pager owns.
+/// Five weeks is a month of renewals rounded out to whole weeks, so the box
+/// never pages and nothing in it claims a horizontal drag the room's pager
+/// owns.
 struct WalletCalendar: View {
     struct Mark: Identifiable, Equatable {
         let id: String

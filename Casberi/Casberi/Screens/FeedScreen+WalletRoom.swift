@@ -182,13 +182,12 @@ extension FeedScreen {
         switch section {
         case .home:
             EmptyView()
-        // **COMING UP CARRIES SUBSCRIPTIONS (prd §1107).** Its calendar was
-        // already Subscriptions' (§1105); now the renewals stand on it beside
-        // the bills, and the line adds what they cost a month. It reads the
-        // subscriptions here, so the tile no longer needs a tile of its own
-        // to start the read.
-        case .comingUp:
-            walletComingUpFigure(upcoming)
+        // **SUBSCRIPTIONS, AND ONLY THEM (prd §1111).** The calendar shows
+        // each renewal on its day and the statement what they cost a month;
+        // what waits on you and the dated rows moved to Home. It starts the
+        // reading here, its own fetch (§1105).
+        case .subscriptions:
+            walletSubscriptionsFigure
                 .task(id: walletSubscriptionsKey) {
                     await SubscriptionsReading.shared.refresh(modelContext)
                     subscriptionsProbe()
@@ -276,7 +275,7 @@ extension FeedScreen {
                                 // balance on home shouldn't it?") leads with
                                 // what it holds, the figure its Holdings tile
                                 // draws. A Safe's waiting signatures stand in
-                                // Coming up, where they already are.
+                                // Home's Needs you, where they already are.
                                 holdingsBlockSection
                             } else if let head = seatHead {
                                 sourceHeadCard(head, visible: visible)
@@ -538,8 +537,8 @@ extension FeedScreen {
     /// acting on it, so it reads the section's own holders.
     func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
         switch section {
-        // Coming up is decided where its rows are in hand (`upcoming`).
-        case .home, .comingUp: return false
+        // Subscriptions is decided by its own reading, in its figure.
+        case .home, .subscriptions: return false
         case .holdings:        return blockStream.els.isEmpty
         // Every kind the checkup counts, the same reads its sections draw on.
         case .security:        return walletSecurityCounts.isEmpty
@@ -567,15 +566,15 @@ extension FeedScreen {
 
     /// **THE SCOPES AN APP PICK CANNOT FILL (prd §1078, §1107).** Security is
     /// an address's reading, and an app pick clears it (§1067), so it is inert
-    /// for every app. Holdings and Coming up are inert only when this app has
-    /// nothing there: an exchange holds money, a card pays a subscription, a
-    /// Safe has a queue. Home never is. On All, nothing is inert: an empty
+    /// for every app. Holdings and Subscriptions are inert only when this app
+    /// has nothing there: an exchange holds money, a card pays a subscription.
+    /// Home never is. On All, nothing is inert: an empty
     /// scope there explains itself (§611).
     func walletInertSections(visible: [Thing], upcoming: [Thing]) -> Set<WalletSection> {
         var out: Set<WalletSection> = [.security]
         if walletScopeIsEmpty(.holdings) { out.insert(.holdings) }
-        if upcoming.isEmpty, SubscriptionsReading.shared.items(in: walletSubscriptionSources).isEmpty {
-            out.insert(.comingUp)
+        if SubscriptionsReading.shared.items(in: walletSubscriptionSources).isEmpty {
+            out.insert(.subscriptions)
         }
         return out
     }
@@ -1058,37 +1057,23 @@ extension FeedScreen {
         return pending + dated
     }
 
-    /// **COMING UP'S BOX (prd §1041, §1105, §1107): the statement, one line,
-    /// and the five weeks as a calendar** (`WalletDueFigure`), the bills' and
-    /// the subscriptions' days on one calendar. Nothing due and no
-    /// subscription draws the scope's empty state instead (§769).
+    /// **SUBSCRIPTIONS' BOX (prd §1105, §1111): what they cost a month, one
+    /// line, and the five weeks as a calendar** (`WalletSubscriptionsFigure`), a face on
+    /// each renewal's day. No subscription draws the scope's empty state
+    /// (§769) once the reading has landed, and nothing before it.
     @ViewBuilder
-    func walletComingUpFigure(_ upcoming: [Thing]) -> some View {
-        let now = Date.now
-        let live = upcoming.filter(\.isLive)
-        let bills = live.compactMap { thing -> WalletDue.Bill? in
-            guard let due = thing.dueAt else { return nil }
-            // Apple Wallet's dated rows include card renewals and creep; only
-            // its payment rows are bills.
-            if thing.source == AppleWalletBridge.sourceName, !thing.tags.contains("Payment") { return nil }
-            return .init(title: thing.title, source: thing.source,
-                         amount: thing.priceValue, currency: thing.priceCurrency, due: due)
-        }
-        let waiting = live.filter { ($0.dueAt ?? .distantPast) <= now }.count
-        // Every subscription in scope (prd §1107): its renewal stands on the
-        // calendar beside the bills, and what they cost rides the line.
+    var walletSubscriptionsFigure: some View {
         let reading = SubscriptionsReading.shared
         let subscriptions = reading.items(in: walletSubscriptionSources)
-        if live.isEmpty && subscriptions.isEmpty {
+        if subscriptions.isEmpty {
             if reading.read {
-                WalletScopeEmptyFigure(section: .comingUp)
+                WalletScopeEmptyFigure(section: .subscriptions)
             } else {
                 Color.clear
             }
         } else {
-            WalletDueFigure(bills: bills, waiting: waiting, upcoming: live,
-                            subscriptions: subscriptions,
-                            monthly: subscriptions.isEmpty ? nil : reading.total(of: subscriptions))
+            WalletSubscriptionsFigure(subscriptions: subscriptions,
+                                      monthly: reading.total(of: subscriptions))
         }
     }
 
@@ -1251,24 +1236,25 @@ extension FeedScreen {
                           nextEventID: nextEventID)
     }
 
-    /// **COMING UP'S LIST (prd §1041): soonest first, each row under the day
-    /// it falls due** — the one list in the room that reads forward, because
-    /// that is the scope's whole point. No "new since" divider: a due row's
-    /// `capturedAt` is when it was read, not news.
+    /// **WHAT'S AHEAD, AT THE HEAD OF HOME (prd §1041, moved by §1111): Needs
+    /// you, then each dated row under the day it falls due, soonest first** —
+    /// above what happened, the way a day's list reads from now. No "new
+    /// since" divider: a due row's `capturedAt` is when it was read, not news.
     @ViewBuilder
     func walletComingUpSections(_ upcoming: [Thing], nextEventID: UUID?) -> some View {
         walletDaySections(walletComingUpDays(upcoming), boundary: nil,
                           named: [Self.needsYouGroup], nextEventID: nextEventID)
     }
 
-    /// **"NEEDS YOU" LEADS COMING UP (prd §1090, Work's §1080 carried over).**
+    /// **"NEEDS YOU" LEADS HOME (prd §1090, Work's §1080 carried over; Home's
+    /// since §1111, when Coming up became Subscriptions).**
     /// The undated rows — a Safe transaction in the queue, a deposit waiting
     /// on proof — are the ones the box counts as "need you now", so their
     /// group says so, named by what it is rather than a time word, in the
     /// primary ramp (§740: only a day wears the brand hue).
     static var needsYouGroup: String { String(localized: "Needs you") }
 
-    /// The day sections both lists draw — the stream's and Coming up's.
+    /// The day sections Home draws twice — what's ahead, then the stream.
     @ViewBuilder
     func walletDaySections(_ groups: [(String, [FeedRow])], boundary: String?,
                            ownMoves: [UUID: KeyedThing] = [:],
@@ -1519,7 +1505,7 @@ extension FeedScreen {
 
     /// Day groups over the stream's rows, newest first — `dayGroups`' rule
     /// (including its "drop what's still ahead" clause, which is now genuinely
-    /// true here: anything future-dated was promoted to Coming up above).
+    /// true here: anything future-dated leads Home under its own day, §1111).
     func walletStreamDays(_ rows: [FeedRow]) -> [(String, [FeedRow])] {
         let today = Self.groupingCalendar.startOfDay(for: .now)
         var order: [String] = []

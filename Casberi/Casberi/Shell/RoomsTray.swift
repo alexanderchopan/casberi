@@ -249,7 +249,8 @@ struct RoomsTray: View {
     /// — five destinations nobody should have to recognise by glyph alone.
     private var youDoors: [Door] {
         doors(home: filter.source == "All" && route.path.isEmpty,
-              notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty)
+              notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty,
+              apps: route.path.first == .apps)
     }
 
     /// The You row's doors, in order.
@@ -260,16 +261,19 @@ struct RoomsTray: View {
         let act: () -> Void
     }
 
-    private func doors(home: Bool = false, notes: Bool = false) -> [Door] {
+    private func doors(home: Bool = false, notes: Bool = false, apps: Bool = false) -> [Door] {
         [
             Door(word: String(localized: "Home"), glyph: home ? "house.fill" : "house",
                  lit: home) { pick("All") },
             Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
                  lit: notes) { pick(Pinboard.room) },
+            // APPS AND SETTINGS ARE TWO DOORS AGAIN (prd §1111, reversing
+            // §1050g): Apps is everything you can connect, what you have
+            // marked; Settings is Casberi's own options and nothing else.
+            Door(word: String(localized: "Apps"), glyph: ScopeTileGlyph.apps,
+                 lit: apps) { screen(.apps) },
             Door(word: String(localized: "Addresses"), glyph: "at") { screen(.addresses) },
-            // ONE DOOR FOR SETTINGS (prd §1050g): Apps and Settings became one
-            // list — Casberi's own settings pinned first, then every app.
-            Door(word: String(localized: "Settings"), glyph: "gearshape") { screen(.apps) },
+            Door(word: String(localized: "Settings"), glyph: "gearshape") { screen(.casberi) },
         ]
     }
 
@@ -379,7 +383,10 @@ struct RoomsTray: View {
     /// disc white behind the same glyph (§1053). You is no room, so the word
     /// is a heading, not a door.
     private var youRow: some View {
-        HStack(spacing: DS.Space.s3) {
+        // s1, not the rows' s3: five doors since §1111 (Apps is back) leave
+        // "You" 40pt of the 288 the card holds, and the discs keep the rows'
+        // gap so their columns line up with the category rows' below.
+        HStack(spacing: DS.Space.s1) {
             Text("You")
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
@@ -447,8 +454,7 @@ struct RoomsTray: View {
         chrome.sourceRequest = target
     }
 
-    /// Open Accounts on Connect; its switcher holds Manage (§933, §958).
-    /// Open a screen of its own — Settings or Addresses (§933).
+    /// Open a screen of its own — Apps, Addresses or Settings (§933, §1111).
     private func screen(_ door: HomeRoute.Node) {
         DSHaptic.selection()
         close()

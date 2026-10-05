@@ -10,9 +10,11 @@ import Foundation
 /// at a time and had to remember which tile held what. The eight fold into
 /// four by what they are about, and nothing that mattered is dropped:
 ///
-///   • **Coming up** takes Subscriptions. The two already drew one calendar
-///     (§1105); a subscription is something coming up again. The list is
-///     Needs you, the dated rows under their days, then every subscription.
+///   • **Subscriptions** (Coming up until prd §1111) tracks subscriptions
+///     and nothing else: the renewals on its calendar, then every plan with
+///     Add first. What waits on you and the dated rows moved to Home, the
+///     activity: Needs you leads it, then what is ahead under its days (user:
+///     "coming up moved to activity", "'needs you' becomes a section in home").
 ///   • **Holdings** takes Positions, and the loan risk with it: tokens first
 ///     (the biggest few, the rest one row away), then Positions, each loan
 ///     saying how far it can fall (Risk's own sentence, §1090).
@@ -38,9 +40,10 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case home
     /// What you hold — tokens, then Positions (prd §1107).
     case holdings
-    /// What's AHEAD — every row with a future `dueAt`, what waits on you, and
-    /// every subscription (prd §1041, §1107).
-    case comingUp
+    /// What renews, and what it costs (prd §1111): every subscription, the
+    /// user's to build up. Was `comingUp` (§1041, §1107); a remembered
+    /// "comingUp" resolves to Home.
+    case subscriptions
     /// Who can act for you, and what is trying to fool you (prd §1107).
     case security
 
@@ -48,14 +51,14 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
 
     /// The publication's order. `allCases` already declares it, but the order
     /// is a RULING (see the type's doc), stated where a self-test can assert it.
-    static let order: [WalletSection] = [.home, .holdings, .comingUp, .security]
+    static let order: [WalletSection] = [.home, .holdings, .subscriptions, .security]
 
     /// Which scopes can be EMPTY. They sit at the tail, and each must carry an
     /// `emptyBody`.
     var isConditional: Bool {
         switch self {
         case .home, .holdings: return false
-        case .comingUp, .security: return true
+        case .subscriptions, .security: return true
         }
     }
 
@@ -67,8 +70,9 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "Home")
         case .holdings: return String(localized: "Holdings")
-        // The app's own word for what's ahead (the feed's "Coming up" group).
-        case .comingUp: return String(localized: "Coming up")
+        // The word the app converges on for what keeps coming (prd §1111):
+        // Day's mail tile says it too.
+        case .subscriptions: return String(localized: "Subscriptions")
         // The word wallets use for approvals and scams (user, over "Safety").
         case .security: return String(localized: "Security")
         }
@@ -79,7 +83,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "The line, and what moved")
         case .holdings: return String(localized: "Your tokens, and money you've deployed")
-        case .comingUp: return String(localized: "What's ahead, what waits on you, and what repeats")
+        case .subscriptions: return String(localized: "What renews, and what it costs you")
         case .security: return String(localized: "Who can act for you, and what's trying to fool you")
         }
     }
@@ -94,7 +98,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         // drew nothing at all.
         case .home:     return String(localized: "No balance yet")
         case .holdings: return String(localized: "Nothing held")
-        case .comingUp: return String(localized: "Nothing ahead")
+        case .subscriptions: return String(localized: "No subscriptions yet")
         case .security: return String(localized: "Nothing to review")
         }
     }
@@ -109,8 +113,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "What these accounts are worth, and the line it traces.")
         case .holdings:
             return String(localized: "Tokens sized by worth, then money lent, pooled or held as a perp. Dust below the floor is left out.")
-        case .comingUp:
-            return String(localized: "Bills, unlocks and grants with a date still to come, and the subscriptions that renew.")
+        case .subscriptions:
+            return String(localized: "Plans that renew on a card or account, the bills that repeat, and the ones you add.")
         case .security:
             return String(localized: "A Safe signature, a delegate, a token approval, or a transfer made to fool you.")
         }
@@ -119,8 +123,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// Resolve the scope actually shown from the one the person last picked.
     ///
     /// **Falls back to `.home`, never to "the first present scope."** A
-    /// remembered scope the room no longer has — Positions, Risk, Permissions
-    /// and Subscriptions since §1107 — resolves to Home rather than to an
+    /// remembered scope the room no longer has — Positions, Risk and
+    /// Permissions since §1107, Coming up since §1111 — resolves to Home rather than to an
     /// empty page claiming to be a section.
     static func resolve(_ wanted: WalletSection?, present: [WalletSection]) -> WalletSection {
         guard let wanted, present.contains(wanted) else { return .home }

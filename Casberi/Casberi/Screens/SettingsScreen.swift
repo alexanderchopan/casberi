@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Settings, its own pushed screen again (prd §933, 2026-09-26).
+/// Settings, its own pushed screen again (prd §933, 2026-09-26; again since
+/// §1111, after §1050g folded it under Apps' list for four days).
 ///
 /// §796 made Settings a section of Accounts so the dock's face could toggle
 /// ONE screen in and out; the switcher was doing a menu's job. The rooms tray
@@ -13,9 +14,10 @@ struct SettingsScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                // Casberi's own settings (prd §1050g): the pinned first row of
-                // Settings opens this page, so it is named for the app.
-                DSScreenHead(title: Text(verbatim: "Casberi"))
+                // Casberi's own settings, and only them (prd §1111): the
+                // tray's Settings door opens this page again, and the apps
+                // are their own door, Apps.
+                DSScreenHead(title: Text("Settings"))
                 SettingsRows()
             }
             .padding(.horizontal, DS.Space.s4)
@@ -27,7 +29,7 @@ struct SettingsScreen: View {
         .dsSoftScrollEdges()
         // The name is in the content and the way back is the dock's seat, so
         // nothing stands at the top edge (prd §767).
-        .navigationTitle(Text(verbatim: "Casberi"))
+        .navigationTitle(Text("Settings"))
         .toolbar(.hidden, for: .navigationBar)
     }
 }

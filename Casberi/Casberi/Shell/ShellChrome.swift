@@ -566,6 +566,8 @@ final class ShellChrome {
     /// The Work room's standing tile (prd §1057), All or Coming up; cleared
     /// on every source change like `notesScope`.
     var workScope: WorkScope = .all
+    /// The Day room's picked tile (prd §1111): All or Subscriptions.
+    var dayScope: DayScope = .all
     /// The Reading room's picked tile (prd §1085).
     var readingScope: ReadingScope = .all
     /// The Social room's picked tile (prd §1086).

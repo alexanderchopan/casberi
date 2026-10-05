@@ -23,6 +23,8 @@ struct AppsScreen: View {
     /// the search field.
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var query = ""
+    /// The Added filter (prd §1111): the one list narrowed to what you have.
+    @State private var addedOnly = false
     @FocusState private var searchFocused: Bool
     /// The connect payoff (delight): every Connect on this screen — story
     /// card OR shelf capsule — ends the same way the product page's does,
@@ -101,7 +103,7 @@ struct AppsScreen: View {
     /// The whole catalogue, connected rows included (prd §1033, retiring
     /// §812's split): Manage is deleted, so an account you hold stands in the
     /// directory wearing its state, and managing it is the room's own door.
-    private var ranked: [Ranked] { rankedAll }
+    private var ranked: [Ranked] { addedOnly ? rankedAll.filter(isAdded) : rankedAll }
 
     private var rankedAll: [Ranked] {
         BridgeCatalog.offers.compactMap { offer in
@@ -133,9 +135,10 @@ struct AppsScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.s6) {
                         // The screen's name, in the content (prd §767).
-                        // SETTINGS (prd §1050g, §1050h): Apps and Settings
-                        // are one door and one list.
-                        DSScreenHead(title: Text("Settings"))
+                        // APPS (prd §1111): everything you can connect, what
+                        // you have marked; Casberi's settings left for their
+                        // own door.
+                        DSScreenHead(title: Text("Apps"))
                             .id(Self.topAnchor)
                         // The search field leads the page (user ruling,
                         // 2026-07-23: "make sure the search bar is at the
@@ -145,8 +148,10 @@ struct AppsScreen: View {
                         // Search alone under the name (prd §1033): the
                         // Connect | Manage switcher is deleted, and the
                         // catalogue is the one list.
-                        searchField
-                        if casberiShown { casberiRow }
+                        HStack(spacing: DS.Space.s2) {
+                            searchField
+                            addedChip
+                        }
                         sections(proxy)
                     }
                     .padding(.horizontal, DS.Space.s4)
@@ -580,50 +585,34 @@ struct AppsScreen: View {
 
     // MARK: - Search field (prd §200 — leads the page, not a nav-bar pull-down)
 
-    /// **CASBERI, PINNED FIRST (prd §1050g).** Always on and never
-    /// disconnectable, so it is no catalogue entry: its row opens what
-    /// Settings held (theme, iCloud sync, the Data tray, What this app
-    /// reaches, Diagnostics). A search for "settings" — or for anything that
-    /// page holds — finds it.
-    private var casberiShown: Bool {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return true }
-        let words = ["Casberi", "Settings", "Theme", "iCloud", "Sync", "Data", "Diagnostics",
-                     String(localized: "Settings")]
-        return words.contains { $0.range(of: q, options: [.caseInsensitive, .anchored]) != nil }
+    /// **ADDED (prd §1111).** One filter on the one list: off, the screen is
+    /// every app A to Z with what you have marked; on, the same list narrowed
+    /// to what you have, combining with the category bar. Drawn only once
+    /// something is added — a filter that narrows to nothing is §83's dead
+    /// control.
+    @ViewBuilder
+    private var addedChip: some View {
+        let count = addedCount
+        if count > 0 {
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { addedOnly.toggle() }
+            } label: {
+                Chip(text: String(localized: "Added"), count: count, selected: addedOnly)
+            }
+            .buttonStyle(PressSpring())
+            .accessibilityAddTraits(addedOnly ? .isSelected : [])
+        }
     }
 
-    private var casberiRow: some View {
-        Button {
-            DSHaptic.tap()
-            route.fromAccountsList { route.openCasberiSettings() }
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                Circle()
-                    .fill(DS.brand)
-                    .overlay(
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: DS.Mark.tile * 0.43, weight: .semibold))
-                            .foregroundStyle(Color.white))
-                    .frame(width: DS.Mark.tile, height: DS.Mark.tile)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: "Casberi")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                    Text("Theme, iCloud sync, your data")
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                DSPushRowTrail()
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressSpring())
-        .padding(.vertical, DS.Space.s2)
-        .accessibilityLabel(Text("Casberi settings"))
+    /// What you have: connected or broken, never paused (`connectedNames`'s
+    /// rule, so the chip's census and the list it narrows to agree).
+    private func isAdded(_ entry: Ranked) -> Bool {
+        guard let bridge = entry.bridge else { return false }
+        return bridge.status != .paused
     }
+
+    private var addedCount: Int { rankedAll.filter(isAdded).count }
 
     private var searchField: some View {
         // The slab rung, spelled as itself. It used to say

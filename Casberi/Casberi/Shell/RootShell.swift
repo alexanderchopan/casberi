@@ -212,6 +212,8 @@ struct RootShell: View {
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
                 // Work's Coming up (prd §1057), for the room sweep.
                 if let s = WorkScope(rawValue: raw), !s.isVerb { chrome.workScope = s }
+                // Day's Subscriptions (prd §1111).
+                if let s = DayScope(rawValue: raw), !s.isVerb { chrome.dayScope = s }
             }
         }
         // `-roomScope "<room>|seat:<Name>"` picks an app in a merged room's
@@ -907,15 +909,11 @@ struct RootShell: View {
             // Settings is its own screen again since prd §933 (a section of
             // Accounts from §796 to then), so the hook presents it outright;
             // `-openAddresses YES` is the same shape one word over.
-            // Settings is the one list since prd §1050g (Casberi pinned
-            // first, then every app).
+            // Settings is Casberi's own page again since prd §1111 (the apps
+            // are their own door, Apps), so `-accountDetail`, read in
+            // `SettingsRows`, stands on the screen this presents.
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                sceneState.route.present(.apps)
-                // `-accountDetail` reads in `SettingsRows`, on the Casberi
-                // page one level in since Settings became one list (§1050g).
-                if UserDefaults.standard.string(forKey: "accountDetail") != nil {
-                    sceneState.route.openCasberiSettings()
-                }
+                sceneState.route.present(.casberi)
             }
             if UserDefaults.standard.bool(forKey: "openAddresses") {
                 sceneState.route.present(.addresses)
@@ -2559,14 +2557,8 @@ struct RootShell: View {
         case "account", "apps":
             sceneState.route.present(.apps)
         case "settings":
-            // Settings, the one list (prd §1050g): Casberi first, then every app.
-            sceneState.route.present(.apps)
-            #if DEBUG
-            // The `-accountDetail` probe's sheet stands on the Casberi page.
-            if UserDefaults.standard.string(forKey: "accountDetail") != nil {
-                sceneState.route.openCasberiSettings()
-            }
-            #endif
+            // Casberi's own settings (prd §1111); the apps are casberi://apps.
+            sceneState.route.present(.casberi)
         // casberi://room/<category | Your notes> — the Category widget's
         // door (2026-10-04): the room a tray pick lands in. On a cold launch
         // a category's apps are not listed yet and the first ask lands

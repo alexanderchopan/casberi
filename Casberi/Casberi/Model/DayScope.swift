@@ -1,17 +1,21 @@
 import Foundation
 
-/// The Day room's tiles (prd §1049, built §1056): All, and New, the verb.
-/// Mail and Lists tiles were proposed and dropped: each was a few seats'
-/// rows (§1049's bundle rule). Foundation-only, its conformance beside every
-/// other in `ScopeTileGlyphs.swift`.
+/// The Day room's tiles (prd §1049, built §1056): All, Subscriptions, and
+/// New, the verb. Subscriptions (prd §1111) is every mailing list that writes
+/// to you, the Wallet's Subscriptions tile in the room where mail lives: one
+/// idea in two rooms, which the user ruled needs a place here despite
+/// §1049's bundle rule ("no matter what it needs to be a tile", "it is
+/// something we are converging on and having user build up"). Foundation-
+/// only, its conformance beside every other in `ScopeTileGlyphs.swift`.
 enum DayScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, new
+    case all, subscriptions, new
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
         case .all: return String(localized: "All")
+        case .subscriptions: return String(localized: "Subscriptions")
         case .new: return String(localized: "New")
         }
     }
@@ -19,6 +23,7 @@ enum DayScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .all: return String(localized: "What needs you next")
+        case .subscriptions: return String(localized: "The newsletters and lists that write to you")
         case .new: return String(localized: "Make an event, a reminder or an email")
         }
     }

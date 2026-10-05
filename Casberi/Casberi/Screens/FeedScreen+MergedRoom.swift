@@ -115,10 +115,14 @@ extension FeedScreen {
         let now = Date.now
         let next = visible.filter { $0.isLive && Self.dayWhen($0) >= now }
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
-        let cover = heroShown ? nil : (next ?? visible.first { $0.isLive })
+        let subscriptions = chrome.dayScope == .subscriptions
+        let cover = heroShown || subscriptions ? nil : (next ?? visible.first { $0.isLive })
         // Box B (prd §1087): the next thing over today's shape, while there
         // is a next thing and a day to draw; else the cover, as every room.
-        if let cover, cover.id == next?.id, let strip = dayStrip, !strip.isEmpty {
+        // Subscriptions draws its own figure in the box (prd §1111).
+        if subscriptions {
+            Section { mailSubscriptionsBox }
+        } else if let cover, cover.id == next?.id, let strip = dayStrip, !strip.isEmpty {
             Section { dayAheadRow(cover, strip: strip) }
         } else if let cover {
             Section { ledeListRow(cover) }
@@ -131,8 +135,11 @@ extension FeedScreen {
         let makes = dayMakes
         Section {
             DSScopeTiles(sections: DayScope.allCases.filter { !$0.isVerb || !makes.isEmpty },
-                         active: .all, attention: [], verbs: [.new]) { picked in
-                guard picked.isVerb else { return }
+                         active: chrome.dayScope, attention: [], verbs: [.new]) { picked in
+                guard picked.isVerb else {
+                    withAnimation(DS.Motion.standard) { chrome.dayScope = picked }
+                    return
+                }
                 if makes.count == 1 { makeInDay(makes[0]) } else { dayMakeOpen = true }
             }
             // Today's strip, read off the main path's body (§628) and again
@@ -150,7 +157,79 @@ extension FeedScreen {
                                       trailing: DSRoomChassis.inset))
         }
         roomScopeSection
-        groupedSections(liftingCover(groups, id: cover?.id), nextEventID: nextEventID)
+        if subscriptions {
+            mailSubscriptionsSections
+        } else {
+            groupedSections(liftingCover(groups, id: cover?.id), nextEventID: nextEventID)
+        }
+    }
+}
+
+// MARK: - Day's Subscriptions (prd §1111)
+
+extension FeedScreen {
+    /// The mail seats a scoped Day reads lists from: every one on All, the
+    /// picked app's on an app pick.
+    var mailSubscriptionSources: Set<String>? {
+        guard let seat = selectedSeat else { return nil }
+        return seat.source.map { [$0] } ?? []
+    }
+
+    /// The box: the figure once there are lists, the empty state once the
+    /// reading says there are none, and nothing before it lands. It starts
+    /// the reading, its own fetch, on every refresh.
+    @ViewBuilder
+    var mailSubscriptionsBox: some View {
+        let reading = MailSubscriptionsReading.shared
+        let items = reading.items(in: mailSubscriptionSources)
+        Group {
+            if items.isEmpty {
+                if reading.read {
+                    DSEmptyState(headline: DSProse.text("No subscriptions yet"),
+                                 words: Text("Newsletters and lists from your mail"),
+                                 scale: .list(rows: 3))
+                } else {
+                    Color.clear
+                }
+            } else {
+                MailSubscriptionsFigure(items: items)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox, maxHeight: DSRoomChassis.leadBox)
+        .dsRoomHeadBlock()
+        .task(id: chrome.refreshPulse) {
+            MailSubscriptionsReading.shared.refresh(modelContext)
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                  bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+    }
+
+    /// The list: every list that writes to you, the loudest first, each
+    /// opening its sheet. Nothing to add: a list is found, never typed.
+    @ViewBuilder
+    var mailSubscriptionsSections: some View {
+        let items = MailSubscriptionsReading.shared.items(in: mailSubscriptionSources)
+        if items.isEmpty {
+            walletSkeletonRowsSection
+        }
+        Section {
+            ForEach(items) { item in
+                Button {
+                    feedSheet = .mailSubscription(item.id)
+                } label: {
+                    MailSubscriptionRow(item: item)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .dsHover()
+                .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                          bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+        }
     }
 }
 

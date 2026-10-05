@@ -363,18 +363,22 @@ grep -q 'SettingsRows()' "$TMP/apps.nc" \
   && { echo "✗ the Accounts screen draws SettingsRows again — Settings is its own screen (prd §933)."; fail=1; }
 grep -rq 'openSettings = ' Casberi/Casberi --include='*.swift' \
   && { echo "✗ HomeRoute.openSettings is back — the doors present Settings outright (prd §933)."; fail=1; }
-# SETTINGS IS THE ONE LIST (prd §1050g, §1050h): the deep link and
-# -openSettings present it (`.apps`), Casberi's own page is the list's pinned
-# first row (`.casberi`), and no separate `settings` screen comes back.
-[ "$(grep -c 'route.present(.apps)' "$TMP/root.nc")" -ge 2 ] \
+# APPS AND SETTINGS ARE TWO DOORS AGAIN (prd §1111, reversing §1050g): the
+# deep link and -openSettings present Casberi's own page (`.casberi`), the
+# tray's You row carries an Apps door and a Settings door, and Apps no longer
+# pins a Casberi row (a second way into Settings is a second meaning).
+[ "$(grep -c 'route.present(.casberi)' "$TMP/root.nc")" -ge 2 ] \
   || { echo "✗ RootShell's settings doors (the deep link, -openSettings) no longer present"; \
-       echo "  the one Settings list (prd §1050g)."; fail=1; }
+       echo "  Casberi's own settings (prd §1111)."; fail=1; }
 grep -qE '^[[:space:]]*case casberi[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
-  || { echo "✗ HomeRoute.Node lost Casberi's own settings page (prd §1050g)."; fail=1; }
+  || { echo "✗ HomeRoute.Node lost Casberi's own settings page (prd §1111)."; fail=1; }
 ! grep -qE '^[[:space:]]*case settings[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
-  || { echo "✗ a separate Settings screen is back — Settings is the one list (prd §1050g)."; fail=1; }
+  || { echo "✗ a second Settings node is back — Settings is .casberi (prd §1111)."; fail=1; }
 grep -q 'casberiRow' "$TMP/apps.nc" \
-  || { echo "✗ Settings lost its pinned Casberi row (prd §1050g)."; fail=1; }
+  && { echo "✗ Apps pins a Casberi row again — Settings has its own door (prd §1111)."; fail=1; }
+strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
+grep -q 'screen(.apps)' "$TMP/tray.nc" && grep -q 'screen(.casberi)' "$TMP/tray.nc" \
+  || { echo "✗ the tray's You row lost its Apps door or its Settings door (prd §1111)."; fail=1; }
 grep -qE '^[[:space:]]*case addresses[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   || { echo "✗ HomeRoute.Node lost its addresses case — Addresses is a screen (prd §933)."; fail=1; }
 # THE CATALOGUE DOOR IS DELETED (prd §798, 2026-09-17, user: "you forgot to

@@ -2266,7 +2266,7 @@ struct FactRows: View {
         // traits `Button` was giving for free are added by hand in
         // `DSSpecRow`.
         DSSpecTable {
-            ForEach(facts) { fact in
+            ForEach(facts.filter { !$0.action.isRowless }) { fact in
                 let url = Self.destination(for: fact)
                 let actionable = url.map { UIApplication.shared.canOpenURL($0) } ?? false
                 DSSpecRow(label: Text(verbatim: fact.label),
@@ -2301,7 +2301,7 @@ struct FactRows: View {
             guard let url = URL(string: fact.value),
                   url.scheme == "https" || url.scheme == "http" else { return nil }
             return url
-        case .none, .metric, .state, .allDay, .reminder, .edited:
+        case .none, .metric, .state, .allDay, .reminder, .edited, .list, .unsubscribe:
             return nil
         }
     }

@@ -2459,6 +2459,13 @@ harness "Subscriptions pure-logic self-test" "subscriptions" "scripts/subscripti
 # with no charges because its key and its charges' keys disagree.
 harness "Billers pure-logic self-test" "billers" "scripts/billers-selftest.sh" "the billers self-test failed — run scripts/billers-selftest.sh"
 
+# Day's Subscriptions tile (prd §1111): which mail is a list's (a header, never
+# a guess), one row per list across renames, the way out (https before mailto,
+# never http), a cadence only from three mails, and the loudest list first.
+# Every failure is an ordinary-looking list: a newsletter twice, an http door,
+# "Every day" off one gap, the cleanup question answered upside down.
+harness "Mail subscriptions pure-logic self-test" "mail subscriptions" "scripts/mail-subscriptions-selftest.sh" "the mail subscriptions self-test failed — run scripts/mail-subscriptions-selftest.sh"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

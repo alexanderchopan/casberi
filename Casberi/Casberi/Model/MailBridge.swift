@@ -91,6 +91,19 @@ enum MailIngest {
     /// still read it.
     static var attachedLabel: String { String(localized: "Attached") }
 
+    /// The two rowless facts a list's mail carries (prd §1111): the list's
+    /// key, and the link to leave by when the header names one we can open.
+    /// Nothing for a mail with no list header.
+    static func listFacts(listID: String?, unsubscribe: String?, address: String?) -> [ThingFact] {
+        guard listID != nil || unsubscribe != nil,
+              let key = MailSubscriptions.key(listID: listID, address: address) else { return [] }
+        var out = [ThingFact("List", key, .list)]
+        if let url = MailSubscriptions.unsubscribeURL(from: unsubscribe) {
+            out.append(ThingFact("Unsubscribe", url.absoluteString, .unsubscribe))
+        }
+        return out
+    }
+
     @MainActor private static var running: Set<MailProvider> = []
 
     /// The IMAP failure behind the last nil `refresh` — the generic "couldn't
@@ -213,6 +226,11 @@ enum MailIngest {
                 thing.enrichedText = [thing.enrichedText, m.attachments.joined(separator: "\n")]
                     .compactMap { $0 }.joined(separator: "\n")
             }
+            // A MAILING LIST'S MAIL (prd §1111): its key and its way out, as
+            // rowless facts Day's Subscriptions tile reads. A header, never a
+            // guess — a mail from a person carries neither.
+            thing.facts += Self.listFacts(listID: m.listID, unsubscribe: m.listUnsubscribe,
+                                          address: m.fromAddress).map(\.encoded)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1

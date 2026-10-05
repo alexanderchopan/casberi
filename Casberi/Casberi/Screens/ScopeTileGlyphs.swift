@@ -61,6 +61,10 @@ enum ScopeTileGlyph {
     /// is still ahead. NOT the bare `calendar`, which is the dock's Life glyph
     /// and the event kind's: one glyph carries one meaning (prd §999).
     static let comingUp     = "calendar.badge.clock"
+    /// Subscriptions (prd §1105, a tile again since §1111): two arrows
+    /// chasing each other, what comes round again. The Wallet's and Day's
+    /// tiles share it, because they are one idea in two rooms.
+    static let subscriptions = "arrow.triangle.2.circlepath"
     /// Reading's Highlights (prd §1085): the system's highlighter, the pen a
     /// passage is kept with.
     static let highlights   = "highlighter"
@@ -106,11 +110,12 @@ extension SocialScope: DSTileScope {
     }
 }
 
-/// The Day room's tiles (prd §1056).
+/// The Day room's tiles (prd §1056; Subscriptions, §1111).
 extension DayScope: DSTileScope {
     var glyph: String {
         switch self {
         case .all: return ScopeTileGlyph.all
+        case .subscriptions: return ScopeTileGlyph.subscriptions
         case .new: return ScopeTileGlyph.new
         }
     }
@@ -153,14 +158,15 @@ extension AgentRoomScope: DSTileScope {
     }
 }
 
-/// The Wallet's four (prd §1107). Watch is not a tile any more: it is the
-/// first row of the Accounts pill's list.
+/// The Wallet's four (prd §1107; Coming up became Subscriptions, §1111).
+/// Watch is not a tile any more: it is the first row of the Accounts pill's
+/// list.
 extension WalletSection: DSTileScope {
     var glyph: String {
         switch self {
         case .home:     return ScopeTileGlyph.home
         case .holdings: return ScopeTileGlyph.holdings
-        case .comingUp: return ScopeTileGlyph.comingUp
+        case .subscriptions: return ScopeTileGlyph.subscriptions
         case .security: return ScopeTileGlyph.security
         }
     }
