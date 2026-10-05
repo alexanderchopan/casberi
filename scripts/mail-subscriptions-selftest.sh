@@ -13,6 +13,9 @@
 #   • a cadence stated off two mails ("Every day" from one gap)
 #   • the loudest list sorted last, so the cleanup question is answered upside
 #     down
+#   • (prd §1115) a header-less mail filed from a sender nobody added; a
+#     sender added before its list headers arrived standing as two rows; an
+#     added sender's row with no Stop tracking because it forgot it was added
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -97,8 +100,47 @@ check(items.first { $0.id == "eats" }?.sources == ["Gmail", "iCloud Mail"], "eac
 check(items.first { $0.id == "rare" }?.lastMonth == 0, "a mail outside the window is not this month's")
 check(fold?.mailIDs.count == 4, "every mail is on the row, for the sheet's Recent")
 
+// ADDRESS and NAME: the envelope's address, else the one inside the sender.
+check(MailSubscriptions.address("a@b.example", sender: "X <z@y.example>") == "a@b.example",
+      "the envelope's address wins")
+check(MailSubscriptions.address(nil, sender: "Receipts <receipts@shop.example>") == "receipts@shop.example",
+      "else the address inside the sender")
+check(MailSubscriptions.address(nil, sender: "mia@example.com") == "mia@example.com", "a bare address is one")
+check(MailSubscriptions.address(nil, sender: "Mia Rowe") == nil, "a name alone files nothing")
+check(MailSubscriptions.senderName("Receipts <receipts@shop.example>") == "Receipts", "the name without its box")
+check(MailSubscriptions.senderName("\"Mia Rowe\" <mia@example.com>") == "Mia Rowe", "quotes go")
+check(MailSubscriptions.senderName("<mia@example.com>") == nil, "a box alone is no name")
+
+// FILE (prd §1115): a header files; an added sender files; nothing else does.
+func landed(_ list: String?, _ address: String?, _ days: Double, sender: String? = "S") -> MailSubscriptions.Landed {
+    .init(id: UUID(), listKey: list, sender: sender, address: address, unsubscribe: nil,
+          at: ago(days), source: "Gmail")
+}
+let raw = [
+    landed("fold.example", "news@fold.example", 1),
+    landed(nil, "news@fold.example", 40),             // before §1111 kept headers
+    landed(nil, "Mia@Example.com", 3), landed(nil, "mia@example.com", 10),
+    landed(nil, "stranger@x.example", 2),
+    landed(nil, nil, 2),
+]
+let filedNone = MailSubscriptions.file(raw, added: [])
+check(filedNone.count == 1 && filedNone.first?.key == "fold.example",
+      "with nothing added, only the headed mail files")
+let filed = MailSubscriptions.file(raw, added: ["news@fold.example", "mia@example.com"])
+check(filed.count == 4, "an added sender's mail files, a stranger's and an addressless one do not")
+check(filed.filter { $0.key == "fold.example" }.count == 2,
+      "a sender added before its headers arrived files under the list's key: one row")
+check(filed.filter { $0.key == "mia@example.com" }.count == 2, "an added sender keys on its address, any case")
+check(filed.first { $0.key == "fold.example" && $0.at == ago(40) }?.byYou == true
+      && filed.first { $0.key == "fold.example" && $0.at == ago(1) }?.byYou == false,
+      "byYou marks only what the add filed")
+let filedItems = MailSubscriptions.compose(filed, now: now)
+check(filedItems.count == 2, "two rows: the list and the added sender")
+check(filedItems.allSatisfy(\.byYou), "a row holding an added mail can be stopped")
+check(MailSubscriptions.compose(filedNone, now: now).first?.byYou == false, "a headed row alone cannot")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   keys, doors, cadence, compose")
+print("  ok   keys, doors, cadence, compose, file")
 SWIFT
 
 build() { swiftc -Onone -o "$work/run" "$1" "$work/main.swift" 2>"$work/err" || return 1 }
@@ -130,6 +172,12 @@ mutate "the quietest list sorted first" \
   's/return \$0\.lastMonth > \$1\.lastMonth/return \$0.lastMonth < \$1.lastMonth/'
 mutate "a list named by its oldest mail" \
   's/return Item\(id: key, name: newest\.sender/return Item(id: key, name: oldest.sender/'
+mutate "a header-less mail filed from a sender nobody added" \
+  's/, added\.contains\(address\)\n/\n/'
+mutate "an added sender split from its own list (two rows)" \
+  's/key: headed\[address\]\?\.list \?\? address/key: address/'
+mutate "an added sender's row forgets it was added" \
+  's/byYou: sorted\.contains\(where: \\\.byYou\)/byYou: false/'
 
 # Wiring: the ingest keeps the headers through this key and door; the reading
 # composes through this function; the tile draws the reading; the pass runs
@@ -142,9 +190,16 @@ grep -q "MailMIME.listHeaders" Casberi/Casberi/Model/IMAPClient.swift \
   || fail "drift: the IMAP client no longer reads the list headers off the fetched bytes"
 grep -q "MailSubscriptions.compose(mails, now: now)" Casberi/Casberi/Model/MailSubscriptionsReading.swift \
   || fail "drift: the reading no longer composes through MailSubscriptions.compose"
+grep -q "MailSubscriptions.file(landed, added: MailSubscriptionStore.shared.addresses)" \
+  Casberi/Casberi/Model/MailSubscriptionsReading.swift \
+  || fail "drift: the reading no longer files through MailSubscriptions.file with the added senders"
+grep -q "MailSubscriptionStore.shared.add(address: address, name: name)" Casberi/Casberi/Screens/ThingSheetView.swift \
+  || fail "drift: a mail's sheet no longer adds its sender (prd §1115)"
+grep -q "MailSubscriptionStore.shared.remove(address: address)" Casberi/Casberi/Screens/MailSubscriptionViews.swift \
+  || fail "drift: an added sender's sheet no longer stops tracking it (prd §1115)"
 grep -q "case .reminder, .edited, .list, .unsubscribe: return true" Casberi/Shared/Thing.swift \
   || fail "drift: a list's facts are no longer rowless — the mail's sheet prints its key and its link"
 grep -q "mail-subscriptions-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-echo "✓ mail subscriptions: keys, doors, cadence, compose, 6 mutations"
+echo "✓ mail subscriptions: keys, doors, cadence, compose, file, 9 mutations"

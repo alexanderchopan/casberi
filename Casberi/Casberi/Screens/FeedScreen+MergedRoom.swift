@@ -197,7 +197,7 @@ extension FeedScreen {
         }
         .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox, maxHeight: DSRoomChassis.leadBox)
         .dsRoomHeadBlock()
-        .task(id: chrome.refreshPulse) {
+        .task(id: mailSubscriptionsKey) {
             MailSubscriptionsReading.shared.refresh(modelContext)
             mailSubscriptionProbe()
         }
@@ -205,6 +205,14 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                   bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+    }
+
+    /// What re-reads the tile: a refresh, or a sender added or removed from a
+    /// mail's sheet (prd §1115), `walletSubscriptionsKey`'s shape.
+    var mailSubscriptionsKey: String {
+        let added = MailSubscriptionStore.shared.entries
+        let stamp = added.values.map(\.at).max()?.timeIntervalSince1970 ?? 0
+        return "\(chrome.refreshPulse):\(added.count):\(stamp)"
     }
 
     /// `-mailSubscriptionSheet <name>` — raise one mailing list's sheet by
@@ -226,7 +234,8 @@ extension FeedScreen {
     }
 
     /// The list: every list that writes to you, the loudest first, each
-    /// opening its sheet. Nothing to add: a list is found, never typed.
+    /// opening its sheet. A list is found by its header, or added from a
+    /// mail's sheet (prd §1115), never typed here.
     @ViewBuilder
     var mailSubscriptionsSections: some View {
         let items = MailSubscriptionsReading.shared.items(in: mailSubscriptionSources)

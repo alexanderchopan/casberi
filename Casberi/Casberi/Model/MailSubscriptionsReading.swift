@@ -6,7 +6,8 @@ import SwiftData
 /// landed mail, through `MailSubscriptions`. Its own fetch, as the Wallet's
 /// tile has (`SubscriptionsReading`): the room's query is bounded, and a
 /// year of newsletters would push a list's older issues past it. Run from a
-/// `.task`, never a body (prd §628).
+/// `.task`, never a body (prd §628). A mail files by its list header, or
+/// because the person added its sender (`MailSubscriptionStore`, prd §1115).
 @Observable
 @MainActor
 final class MailSubscriptionsReading {
@@ -28,19 +29,26 @@ final class MailSubscriptionsReading {
         // Every column the loop below reads (prd §722).
         d.propertiesToFetch = [\.id, \.source, \.facts, \.authorHandle, \.authorEmail, \.capturedAt]
         let things = ((try? context.fetch(d)) ?? []).live
-        var mails: [MailSubscriptions.Mail] = []
-        for thing in things {
+        let landed: [MailSubscriptions.Landed] = things.map { thing in
             let facts = thing.factList
-            guard let key = facts.first(where: { $0.action == .list })?.value else { continue }
-            mails.append(.init(id: thing.id, key: key,
-                               sender: thing.authorHandle ?? key,
-                               address: thing.authorEmail,
-                               unsubscribe: facts.first { $0.action == .unsubscribe }.map { "<\($0.value)>" },
-                               at: thing.capturedAt, source: thing.source))
+            return .init(id: thing.id,
+                         listKey: facts.first(where: { $0.action == .list })?.value,
+                         sender: MailSubscriptions.senderName(thing.authorHandle),
+                         address: MailSubscriptions.address(thing.authorEmail, sender: thing.authorHandle),
+                         unsubscribe: facts.first { $0.action == .unsubscribe }.map { "<\($0.value)>" },
+                         at: thing.capturedAt, source: thing.source)
         }
+        // A header files a mail; so does a sender the person added (§1115).
+        let mails = MailSubscriptions.file(landed, added: MailSubscriptionStore.shared.addresses)
         let composed = MailSubscriptions.compose(mails, now: now)
         if composed != items { items = composed }
         read = true
+    }
+
+    /// The list a landed mail is on, if any — a mail's sheet asks, to draw
+    /// its door to the list or the add (prd §1115).
+    func item(holding mail: UUID) -> MailSubscriptions.Item? {
+        items.first { $0.mailIDs.contains(mail) }
     }
 
     /// The lists a scoped room shows: every one on All, and on an app's pick

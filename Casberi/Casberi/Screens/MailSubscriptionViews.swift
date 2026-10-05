@@ -86,7 +86,8 @@ struct MailSubscriptionRow: View {
 /// One list's sheet: how often it writes where the Wallet's shows a price,
 /// the facts, this service's other pages (`ServiceLinks`: the app's feed,
 /// the plan you pay for — named, never priced, because what a thing costs is
-/// the Wallet's, prd §1111), the way out, then its newest mail. It composes
+/// the Wallet's, prd §1111), the way out, Stop tracking for a sender the
+/// person added (§1115), then its newest mail. It composes
 /// `SubscriptionPage`, as the Wallet's `SubscriptionSheet` does.
 struct MailSubscriptionSheet: View {
     let id: String
@@ -98,6 +99,7 @@ struct MailSubscriptionSheet: View {
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
     @State private var recent: [Thing] = []
+    @State private var confirmingRemove = false
 
     private var item: MailSubscriptions.Item? {
         MailSubscriptionsReading.shared.items.first { $0.id == id }
@@ -114,6 +116,17 @@ struct MailSubscriptionSheet: View {
         .task(id: id) {
             loadRecent()
             await ServiceLinks.shared.refresh(modelContext, seats: store.bridges.map(\.name))
+        }
+        // The Wallet's words for the same act (prd §1115).
+        .confirmationDialog(Text("Remove \(item?.name ?? "")?"), isPresented: $confirmingRemove,
+                            titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                if let address = item?.address { MailSubscriptionStore.shared.remove(address: address) }
+                MailSubscriptionsReading.shared.refresh(modelContext)
+                dismiss()
+            }
+        } message: {
+            Text("Only what you added goes. Mail sent as a list stays.")
         }
     }
 
@@ -177,6 +190,13 @@ struct MailSubscriptionSheet: View {
         if let url = item.unsubscribe {
             out.append(.init(id: "unsubscribe", icon: SubscriptionWords.wayOutGlyph,
                              title: unsubscribeTitle(url)) { openURL(url) })
+        }
+        // A sender the person added from a mail's sheet (prd §1115) goes the
+        // way a hand-added plan does.
+        if item.byYou, item.address != nil {
+            out.append(.init(id: "stop", icon: "trash", title: Text("Stop tracking"), role: .destructive) {
+                confirmingRemove = true
+            })
         }
         return out
     }

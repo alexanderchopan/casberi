@@ -157,6 +157,10 @@ struct ThingSheetView: View {
     /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
     /// re-labels itself the moment it is used.
     @State private var tracking = false
+    /// The Subscriptions list this mail is on, once read (prd §1115): its
+    /// door to the list, or Add a subscription when it is on none.
+    @State private var mailList: MailSubscriptions.Item?
+    @State private var mailListRead = false
     /// The same link, saved earlier from a different source (2026-07-21) —
     /// `CrossSourceEcho` was built for this and briefly wired into a row
     /// anatomy (`ThingRow.swift`) nothing actually rendered, which would
@@ -906,6 +910,16 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn(delay: 0.18)
+                // A MAIL'S SUBSCRIPTION (prd §1115): the list it is on, or
+                // the add when it is on none — the person's word puts a
+                // sender with no list header on Day's Subscriptions tile.
+                if mailHead {
+                    mailSubscriptionDoor
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.19)
+                        .task(id: thing.id) { readMailList() }
+                }
                 if let check = approvalCheck {
                     ApprovalPrepareCard(thing: thing, check: check)
                         .padding(.horizontal, DS.Space.s4)
@@ -3085,6 +3099,53 @@ struct ThingSheetView: View {
         } else {
             Task { await perform(verb) }
         }
+    }
+
+    /// The door under a mail (prd §1115). On a list: "Writes about weekly",
+    /// into Day's Subscriptions tile with the list's sheet up (§1113's door,
+    /// the tile's glyph). On none: Add a subscription, the Wallet's words,
+    /// which files every mail from this sender, the ones already here
+    /// included. Nothing while the reading has not answered, and nothing for
+    /// a sender with no address to file by (§83).
+    @ViewBuilder
+    private var mailSubscriptionDoor: some View {
+        if mailListRead, let list = mailList {
+            DSDoorRow(icon: SubscriptionWords.planGlyph,
+                      title: Text(verbatim: MailSubscriptions.writesWords(list.cadenceDays))) {
+                dismiss()
+                chrome.open(.list(list.id))
+            }
+        } else if mailListRead, let address = mailSubscriptionAddress {
+            DSDoorRow(icon: "plus", label: "Add a subscription") {
+                addMailSubscription(address)
+            }
+        } else {
+            Color.clear.frame(height: 0)
+        }
+    }
+
+    /// The sender's mailbox: the envelope's address, else the one in the
+    /// sender's name. Only for a mail seat the reading reads, or the add
+    /// would file nothing (§83).
+    private var mailSubscriptionAddress: String? {
+        guard MailSubscriptionsReading.sources.contains(thing.source) else { return nil }
+        return MailSubscriptions.address(thing.authorEmail, sender: Self.mailSender(thing))
+    }
+
+    /// Read once the sheet is up (prd §628): the tile's own reading.
+    private func readMailList() {
+        MailSubscriptionsReading.shared.refresh(modelContext)
+        mailList = MailSubscriptionsReading.shared.item(holding: thing.id)
+        mailListRead = true
+    }
+
+    /// The one write: the sender joins the tile. The door turns into the
+    /// list's own, and the toast says where it went.
+    private func addMailSubscription(_ address: String) {
+        let name = MailSubscriptions.senderName(Self.mailSender(thing))
+        guard MailSubscriptionStore.shared.add(address: address, name: name) != nil else { return }
+        withAnimation(DS.Motion.standard) { readMailList() }
+        chrome.flash(String(localized: "Added to subscriptions"))
     }
 
     /// Watching an unfinished record from the lock screen (prd §369

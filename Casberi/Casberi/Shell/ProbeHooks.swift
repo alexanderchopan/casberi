@@ -4224,6 +4224,27 @@ enum ProbeHooks {
                 NSLog("[Casberi] holdingsWindowProbe: done")
             }
         },
+        // `-mailSubscriptionAdd "<address>[,<address>…]"|clear` — add senders
+        // to Day's Subscriptions tile as the mail sheet's Add a subscription
+        // does (prd §1115), then read the tile and log each list as
+        // `mailSubscriptionAdd| <name> | <mails> | byYou|header`. `clear`
+        // forgets every added sender first.
+        Hook(key: "mailSubscriptionAdd") { spec, context in
+            if spec == "clear" {
+                MailSubscriptionStore.shared.removeAll()
+            } else {
+                for address in spec.split(separator: ",") {
+                    MailSubscriptionStore.shared.add(address: String(address), name: nil)
+                }
+            }
+            MailSubscriptionsReading.shared.refresh(context)
+            NSLog("[Casberi] mailSubscriptionAdd: %d added, %d lists",
+                  MailSubscriptionStore.shared.entries.count, MailSubscriptionsReading.shared.items.count)
+            for item in MailSubscriptionsReading.shared.items {
+                NSLog("[Casberi] mailSubscriptionAdd| %@ | %d | %@", item.name, item.count,
+                      item.byYou ? "byYou" : "header")
+            }
+        },
         // `-addressBook "<Name>:<address>[,<Name>:<address>…]"|clear` — seed the
         // address book headlessly (prd §169). `clear` empties it. Splits each
         // pair on the LAST colon so a name may carry its own.
