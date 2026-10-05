@@ -64361,3 +64361,7 @@ The money direction (§1105) needs the address book to know who bills you, not o
 ## §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses (user, 2026-10-05: "Keep, open the Wallet's sheet", of billers in Addresses; amends §1106's page)
 
 Billers stay in Addresses (§1106, §1106a), but a tap on one that is a subscription (`Billers.Biller.subscription`, one price recurring) leaves Addresses for the Wallet's Subscriptions tile with that plan's sheet up (`AddressesSection.open(_:)`, `ShellChrome.open(.plan(_:))`, §1113's route): one page about what something charges, not two. A moving bill, which the tile does not list, keeps its own page here, so no tap lands nowhere (§83). **Seen** on a private simulator, DEBUG demo: Netflix.com in Addresses → the Wallet with Netflix.com's sheet up.
+
+## §1116 — Apps wears four squares (user, 2026-10-05: "that apps icon in the you tray should have four squares not six"; amends §831's glyph)
+
+`ScopeTileGlyph.apps` is `square.grid.2x2` (was `square.grid.3x2`): the You row's Apps door and Privy's Apps tile, one meaning, one glyph. §831 chose six squares because four read as spoken for; four's other wearers are the empty feed's door to Apps (the same catalogue), two rows that are not tiles (Choose collections, Browse every chain), and `CategoryFold.glyph(for:)`'s fallback, which `category-fold-selftest.sh` keeps from ever drawing. `tile-glyph-audit.py` passes. §1115 is taken by the mail-subscription change on its own branch; this entry skips it.

@@ -220,7 +220,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1248 of 1309 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1249 of 1310 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1158,7 +1158,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §828 — MEASURED: Alchemy serves Robinhood with no prices, so its money reads through Zerion
 - §829 — A pushed screen leaves the back door's column clear, so nothing comes to rest under it
 - §830 — A room's kind tiles draw from the first frame, from what it drew last
-- §831 — Privy's Apps tile wore Frames' glyph, and the guard could not see it
+- §831 — Privy's Apps tile wore Frames' glyph, and the guard could not see it (amended by §1116)
 - §832 — Photos, Files and RSS lead with their newest thing
 - §833 — Apple Intelligence is a seat: Apple's model on Private Cloud Compute answers the composer, turned on in one tap (amended by §1047)
 - §834 — The Safe sign block reads a call it cannot name in its protocol's own words: ERC-7730, from the Ethereum Foundation's…
@@ -1470,6 +1470,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1112 — The Wallet's Subscriptions tile maps where the money goes: categories by monthly cost, a press filters the list
 - §1113 — One identity per service: a plan, its app and its mailing list open each other, and both Subscriptions tiles are one…
 - §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
+- §1116 — Apps wears four squares
 
 ## Dead rulings → what replaced them (generated)
 
