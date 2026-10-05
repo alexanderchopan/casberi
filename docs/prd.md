@@ -64200,3 +64200,12 @@ Walked first on a simulator (the demo, dark): changing a note took three steps �
 3. **Every item starts the same distance under its label**: a post under a header takes `rowAir` like its neighbours (it took s2, 4pt lower), and a thumbnail's row aligns to the top rather than centring its words on the picture.
 
 **Seen** on a private iPhone 17 Pro simulator, demo, dark: Today and Yesterday — Steam, TikTok, Instagram, YouTube and Photos with their pictures on the right, every item's words in the app name's column. **Not seen:** the Mac, light theme, a device.
+
+## §1103c — Under an app header, the person a thing is by wears a small face before its title (user: "what about for a social post", then "i like the faces", "mock up not on simulator tho", "yes i like A", and of GitHub "a person may be following other repos and people so the face is useful with it", 2026-10-04; amends §1103a item 2) — BUILT
+
+Drawn two ways first (`design/mockups/home-faces.html`): A, the face inline at the app mark's 20pt before the title; B, the face at 44pt on the right like a photo, which put two pictures on a liked photo's row. The user took A.
+
+1. **`DSFeedRow.face`** — the person's avatar — draws under an app header at `DS.Mark.badge` before the title, on the title's line; in a room it is ignored and the row's own lead says who. The item still starts in the app name's column (§1103b) and the right edge stays a picture of the thing, so a liked photo carries both.
+2. **Who counts as a person:** a row that already leads with a face (`BandRow.faceSources` — GitHub among them, for the people and repos you follow), else the author of a thing on a network that draws posts (`SocialRoom.drawsPosts`: X, Instagram, TikTok, Bluesky, Farcaster…), whose notices lead with the liked picture in their rooms. `PostCard` and `SocialThreadCard` hand in their author. Everything else — payments, calendar, mail, wallets — stays text under its header.
+
+**Seen** on a private iPhone 17 Pro simulator, demo, dark: TikTok, Instagram, Twitch and X with their people's faces inline, the liked video and photo still on the right. **Not seen:** a real GitHub follow's avatar, the Mac, light theme, a device.

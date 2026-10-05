@@ -208,6 +208,10 @@ guard "the words start under the app's name, past the badge (§1103b)" \
       "$ROW" 'groupedSource == nil \? 0 : Self\.groupIndent'
 guard "a post under a header takes the row air its neighbours take (§1103b)" \
       "$FEED" 'standsAlone\(thing\) && !grouped \? DS\.Space\.s2 : Self\.rowAir'
+guard "a person's face rides inline before the title under a header (§1103c)" \
+      "$ROW" 'if let groupedSource, let face \{'
+guard "a notice on a post network hands in its author's face (§1103c)" \
+      "Casberi/Casberi/Screens/ShapedRows.swift" 'face: personFace'
 guard "and its words sit at the top of the head, hugging the label" \
       "$ROW" 'alignment: groupedSource == nil \? \.center : \.top'
 guard "AppGroups imports no SwiftUI or SwiftData — the reason it compiles here" \

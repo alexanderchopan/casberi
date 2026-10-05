@@ -549,6 +549,17 @@ struct BandRow: View {
         }
     }
 
+    /// Who this item is by, under an app header (prd §1103c): the face the
+    /// row already leads with, else — on a network that draws posts, where a
+    /// notice leads with the liked picture — its author's avatar.
+    private var personFace: String? {
+        guard groupedSource != nil else { return nil }
+        if let avatar = identityAvatarURL { return avatar }
+        guard SocialRoom.drawsPosts(thing.source),
+              let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
+        return avatar
+    }
+
     /// The trailing thumbnail fills the row's head; the lead stays a mark's size.
     private var pictureSize: CGFloat {
         groupedSource == nil ? DS.Mark.row : DSFeedRow<EmptyView, EmptyView, EmptyView>.headHeight
@@ -664,7 +675,8 @@ struct BandRow: View {
                   line: imageOnly ? nil
                       : notePreview ? previewLine
                       : line(project: project, leader: leader, qualifier: seam.line),
-                  leadIsPicture: isPicture(leader)) {
+                  leadIsPicture: isPicture(leader),
+                  face: personFace) {
             leaderView
                 .overlay(alignment: .bottomTrailing) {
                     if thing.isFlagged {
@@ -2272,7 +2284,8 @@ struct PostCard: View {
         // and fits the name slot, it IS the name; the quote and the media
         // still ride below. `SocialRoom.rowSentence` is the rule.
         let sentence = SocialRoom.rowSentence(words: words, author: author)
-        DSFeedRow(name: sentence ?? author) {
+        DSFeedRow(name: sentence ?? author,
+                  face: thing.authorAvatarURL.flatMap { $0.isEmpty ? nil : $0 }) {
             if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
                 RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                             fallback: thing.source, circular: true)
@@ -2464,7 +2477,8 @@ struct SocialThreadCard: View {
         // ONE ANATOMY (prd §744), as `PostCard`. The 2pt rule that ran down the
         // replies is gone with it: it was a line, and nothing in this app draws
         // a line (§8). The replies are paragraphs of the same post, spaced.
-        DSFeedRow(name: author) {
+        DSFeedRow(name: author,
+                  face: head.authorAvatarURL.flatMap { $0.isEmpty ? nil : $0 }) {
             if let avatar = head.authorAvatarURL, !avatar.isEmpty {
                 RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                             fallback: head.source, circular: true)

@@ -52,6 +52,13 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// it moves to the trailing edge as a thumbnail, as a notification
     /// carries its attachment (prd §1103b); any other lead is dropped there.
     var leadIsPicture = false
+    /// The PERSON this item is by — whose post, mention, like, follow or
+    /// push. Under an app header their face rides inline before the title at
+    /// the badge's size (prd §1103c, user: "i like A", and for GitHub "the
+    /// face is useful"), whatever the lead is: a liked photo keeps its
+    /// thumbnail on the right AND the liker's face. Ignored in a room, where
+    /// the row's own lead says who.
+    var face: String? = nil
     @ViewBuilder var lead: Lead
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var below: Below
@@ -105,16 +112,22 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                         // them"). A title that runs on is cut at its tail;
                         // the line beneath says who and where, and the sheet
                         // has the rest.
-                        Text(name)
-                            .dsText(.body17)
-                            .fontWeight(emphasized ? .medium : .regular)
-                            .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                            .strikethrough(done, color: DS.textTertiary)
-                            .lineLimit(1)
-                            .contentTransition(.opacity)
-                            .animation(DS.Motion.standard.delay(Double(ripple % 8) * 0.045),
-                                       value: name)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack(alignment: .center, spacing: DS.Space.s2) {
+                            if let groupedSource, let face {
+                                RemoteThumb(urlString: face, size: DS.Mark.badge,
+                                            fallback: groupedSource, circular: true)
+                            }
+                            Text(name)
+                                .dsText(.body17)
+                                .fontWeight(emphasized ? .medium : .regular)
+                                .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
+                                .strikethrough(done, color: DS.textTertiary)
+                                .lineLimit(1)
+                                .contentTransition(.opacity)
+                                .animation(DS.Motion.standard.delay(Double(ripple % 8) * 0.045),
+                                           value: name)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         // ONE fact, or none (prd §902): money, a clock still
                         // ahead of you, or Live. A row's age went — the day
                         // header already says when — and so did a fold's
@@ -201,11 +214,12 @@ extension DSFeedRow where Below == EmptyView {
          done: Bool = false, ripple: Int = 0,
          line: Text? = nil, lineLines: Int = 1,
          leadIsPicture: Bool = false,
+         face: String? = nil,
          @ViewBuilder lead: () -> Lead,
          @ViewBuilder trailing: () -> Trailing) {
         self.init(name: name, emphasized: emphasized,
                   done: done, ripple: ripple, line: line, lineLines: lineLines,
-                  leadIsPicture: leadIsPicture,
+                  leadIsPicture: leadIsPicture, face: face,
                   lead: lead, trailing: trailing, below: { EmptyView() })
     }
 }
