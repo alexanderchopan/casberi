@@ -6,6 +6,8 @@
 #   2. Sets the beta "What to Test" release notes (locale en-US).
 #   3. Assigns the build to the "Casberi Public Beta" external group.
 #   4. Submits it for Beta App Review.
+#   5. Once it is approved, expires every older TestFlight build
+#      (testflight-expire-after.sh).
 #
 # This is a STANDARD step of every ship (user ruling 2026-07-21) — never
 # ship without it, and never wait to be asked. See docs/testflight-handoff.md.
@@ -164,6 +166,7 @@ CODE=$(echo "$SUBMIT" | jq -r '.errors[0].code // empty')
 if [ -n "$STATE" ]; then
   echo "  betaReviewState: $STATE"
   echo "OK: Public Beta handoff complete for build $VERSION."
+  "$(dirname "$0")/testflight-expire-after.sh" "$BUILD_ID"
 elif [ "$CODE" = "ENTITY_UNPROCESSABLE.SUBMISSION_LIMIT_REACHED" ]; then
   cat <<MSG
   ⚠ Apple's beta-review submission limit is reached — NOT submitted.

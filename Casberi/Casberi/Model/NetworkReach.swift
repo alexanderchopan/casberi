@@ -86,6 +86,12 @@ enum NetworkReach {
                  purpose: "A few sites don't put a title or preview in the page itself — saving one of those links asks that site's own public preview endpoint instead. The request carries only the link you saved.",
                  hosts: ["www.tiktok.com", "vimeo.com", "soundcloud.com",
                          "open.spotify.com", "www.flickr.com", "publish.x.com"]),
+        // `StoreVersion` (prd §1104): at most twice a day, Apple's public
+        // lookup says which Casberi is live, so an old install can be told.
+        Endpoint(service: "App Store",
+                 reach: .always,
+                 purpose: "Asks Apple's public App Store directory which version of Casberi is current, at most twice a day. The request carries only Casberi's own app id.",
+                 hosts: ["itunes.apple.com"]),
         // The IMPORTS that reach the network — one until 2026-08-02, three
         // now, and they share a single reason. ChatGPT, Claude, Day One and
         // the rest are read entirely on this device and appear nowhere in this

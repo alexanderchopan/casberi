@@ -139,6 +139,7 @@ CODE=$(echo "$SUBMIT" | jq -r '.errors[0].code // empty')
 if [ -n "$STATE" ]; then
   echo "  betaReviewState: $STATE"
   echo "OK: Public Beta handoff complete for MAC_OS build $VERSION."
+  "$(dirname "$0")/testflight-expire-after.sh" "$BUILD_ID"
 elif [ "$CODE" = "ENTITY_UNPROCESSABLE.SUBMISSION_LIMIT_REACHED" ]; then
   cat <<MSG
   ⚠ Apple's beta-review submission limit is reached — NOT submitted.

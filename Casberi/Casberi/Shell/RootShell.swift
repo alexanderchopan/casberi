@@ -1898,6 +1898,15 @@ struct RootShell: View {
                 // "checked 2h ago" is a claim about the SOURCE, not about our own
                 // store. See `MoneyActivityDriver.sync`.
                 Task { await MoneyActivityDriver.sync(context: modelContext) }
+                // A newer build on the App Store is said ONCE per release
+                // (prd §1104); Settings keeps saying it under the version.
+                Task { @MainActor in
+                    guard onboarded, let newer = await StoreVersion.unannouncedNewer() else { return }
+                    chrome.flash(String(localized: "Casberi \(newer) is out"),
+                                 action: .init(label: String(localized: "Update")) {
+                                     UIApplication.shared.open(StoreVersion.storeURL)
+                                 }, seconds: 6)
+                }
                 // Build the on-device semantic index for anything new or
                 // not yet embedded — a bounded background sweep, so Ask can
                 // retrieve by meaning, not just shared words.

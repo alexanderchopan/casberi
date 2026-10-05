@@ -219,7 +219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1233 of 1292 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1234 of 1293 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals
@@ -1454,6 +1454,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1101 — The Aa key: formatting for someone who never types markdown
 - §1102 — One smaller box: every room's lead is 236pt, every room's tiles stand at one y, and a sheet shows its picture whole
 - §1103 — Home groups by app: every app a header, each as its newest thing, and the folds are deleted
+- §1104 — An old install is told a newer one is out, and every older TestFlight build expires on ship
 
 ## Dead rulings → what replaced them (generated)
 

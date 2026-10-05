@@ -243,6 +243,7 @@ struct SettingsRows: View {
     /// it needs the count when the screen opens, and again when the app comes
     /// back to it.
     @State private var thingCount = 0
+    @State private var storeNewer: String?
     private func readCounts() {
         thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
     }
@@ -524,12 +525,26 @@ struct SettingsRows: View {
             Text(buildLine)
                 .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
+                // One label, so VoiceOver reads a signature instead of three orphans.
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("Casberi, \(buildLine)"))
+            // Behind the store (prd §1104): the one place a person checks
+            // their version says the newer one and opens the App Store.
+            if let newer = storeNewer {
+                Button {
+                    openURL(StoreVersion.storeURL)
+                } label: {
+                    Text("Update to \(newer)")
+                        .dsText(.subhead12)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(CasberiMark.pink)
+                }
+                .buttonStyle(RowPress())
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, DS.Space.s6)
-        // One label, so VoiceOver reads a signature instead of three orphans.
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Casberi, \(buildLine)"))
+        .onAppear { storeNewer = StoreVersion.cachedNewer() }
     }
 
     /// Marketing version and build, the pair a bug report needs. Both are read
