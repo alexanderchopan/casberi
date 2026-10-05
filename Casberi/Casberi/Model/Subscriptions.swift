@@ -26,8 +26,8 @@ import Foundation
 /// charges, every gap within tolerance). A Rocket Money bill whose frequency
 /// the page did not say is listed with its next charge and left out of the
 /// monthly total, named, rather than assumed monthly (§83). A charge that
-/// stopped (`AppleWalletRoom.silences`) is not a subscription any more and is
-/// not listed. Currencies are never summed without a rate (`total`).
+/// stopped (`hasStopped`) is not a subscription any more and is not listed,
+/// however long ago it stopped (prd §1106b). Currencies are never summed without a rate (`total`).
 ///
 /// Foundation-only, and it reads `AppleWalletRoom` (also Foundation-only), so
 /// `scripts/subscriptions-selftest.sh` compiles both WHOLE.
@@ -159,8 +159,10 @@ enum Subscriptions {
             byKey[item.id] = item
         }
 
-        // A charge that stopped is not a subscription any more.
-        let stopped = Set(AppleWalletRoom.silences(found.map(\.series), now: now).map { key($0.merchant) })
+        // A charge that stopped is not a subscription any more, however long
+        // ago (`hasStopped`): a bill or a hand-added entry below can still
+        // list it, because they say it is live.
+        let stopped = Set(found.map(\.series).filter { hasStopped($0, now: now) }.map { key($0.merchant) })
 
         // Newest charge first, so the item takes the card that paid it LAST
         // when two cards both paid the same merchant.
@@ -229,6 +231,19 @@ enum Subscriptions {
                 return a.name.localizedStandardCompare(b.name) == .orderedAscending
             }
         }
+    }
+
+    /// A card's series that stopped (prd §1106b): as late as
+    /// `AppleWalletRoom.silences` calls silent, with NO ceiling. `silences`
+    /// stops reporting at `silenceCeilingDays` (120) because a long-quit plan
+    /// is no NEWS; a subscription is a standing fact, so the ceiling cannot
+    /// apply here. With it, a plan last charged 126 days ago was listed with a
+    /// renewal date in the past and counted in the monthly total.
+    static func hasStopped(_ series: AppleWalletRoom.Series, now: Date) -> Bool {
+        let late = now.timeIntervalSince(series.nextExpected) / 86_400
+        let threshold = max(Double(AppleWalletRoom.silenceFloorDays),
+                            Double(series.cadenceDays) * (AppleWalletRoom.silenceFactor - 1))
+        return late >= threshold
     }
 
     /// The first renewal on or after the start of today, stepping from the

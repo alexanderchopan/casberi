@@ -79,6 +79,14 @@ check(items2.count == 1 && items2.first?.was == 10 && items2.first?.amount == 12
 // A plan that stopped is not listed.
 check(compose(found(series("Hulu", [(8, 160), (8, 130), (8, 100)]))).isEmpty,
       "a charge that stopped is not a subscription any more")
+// …however long ago (prd §1106b): `silences` stops reporting at 120 days, and
+// a plan last charged 126 days ago was listed with a renewal in the past.
+let quit = series("Gym", [(40, 186), (40, 156), (40, 126)])
+check(compose(found(quit)).isEmpty, "a plan quit months ago is not a subscription")
+// A bill another reading still dates keeps it: the card is not all that saw it.
+let stillBilled = Subscriptions.Bill(name: "Gym", amount: 40, currency: "USD", due: ago(-5), source: "Rocket Money")
+check(compose(found(quit), bills: [stillBilled]).map(\.name) == ["Gym"],
+      "a stopped card does not hide a bill another reading still dates")
 
 // A bill merges with the card's charge by name, once.
 let bill = Subscriptions.Bill(name: "CLAUDE", amount: 20, currency: "USD", due: ago(-20), source: "Rocket Money")
@@ -152,6 +160,8 @@ mutate "a weekly charge believed (the cadence floor dropped)" \
   's/guard series\.cadenceDays >= minCadenceDays else \{ return false \}//'
 mutate "a bill that moves believed (the one-price rule dropped)" \
   's/return earlier\.allSatisfy \{ abs\(\$0 - median\) <= median \* steadyTolerance \}/return true/'
+mutate "a plan quit months ago still listed (the silences ceiling back)" \
+  's/let stopped = Set\(found\.map\(\\\.series\)\.filter \{ hasStopped\(\$0, now: now\) \}\.map \{ key\(\$0\.merchant\) \}\)/let stopped = Set(AppleWalletRoom.silences(found.map(\\.series), now: now).map { key(\$0.merchant) })/'
 mutate "a stopped plan still listed" \
   's/guard believes\(f\.series\), !stopped\.contains\(k\) else/guard believes(f.series) else/'
 mutate "a monthly plan costs price × 30.4375 / 30" \
@@ -169,4 +179,4 @@ grep -q "Subscriptions.compose(found: found, bills: bills" Casberi/Casberi/Model
 grep -q "subscriptions-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-echo "✓ subscriptions: detection, merge, cadence, renewals, order, total, 7 mutations"
+echo "✓ subscriptions: detection, merge, cadence, renewals, order, total, 8 mutations"

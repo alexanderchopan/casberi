@@ -64243,3 +64243,13 @@ The money direction (§1105) needs the address book to know who bills you, not o
 3. **No price on a biller's page**, as §1106 built it: the Wallet holds the figures.
 
 **Seen** on a private iPhone 17 Pro simulator, light, DEBUG demo: the bar went from All · Wallet · Life · Social to All · Wallet · Work · Life · Agents · Social; Agents holds Claude, Work holds Linear and Notion with their marks; following one feed (`-rssFeed`) added Reading on the next open. `CasberiTests/BillersCategoryTests` holds the match (4 tests).
+
+## §1106b — A subscription that stopped is gone however long ago it stopped (user: "fix it", of the defect §1106 item 2 recorded, 2026-10-04; amends §1105 item 2's "a charge that stopped")
+
+`Subscriptions.compose` asked `AppleWalletRoom.silences` which plans stopped, and `silences` stops reporting at `silenceCeilingDays` (120) because a long-quit plan is no news. So a plan last charged 121–400 days ago (the lookback) was listed on the Subscriptions tile with a renewal date in the past and counted in the monthly total.
+
+1. **`Subscriptions.hasStopped`** is `silences`' lateness (`silenceFloorDays`, `silenceFactor`) with no ceiling, and `compose` reads it. `silences` itself is unchanged: its rows are news, and the ceiling is right there.
+2. **A bill or a hand-added entry still lists it**: a stopped card series is skipped, and Rocket Money's dated bill or your own entry for the same name stands on its own word (paid from a card that is not connected, say).
+3. **Billers read the same rule** (`Billers` drops its own copy and its after-the-fact filter; `compose` already left the plan out).
+
+`subscriptions-selftest.sh` holds it: a plan last charged 126 days ago is not listed, a dated bill keeps it, and a mutation restoring the `silences` call fails the pass. **Not seen on screen:** the demo holds no plan quit that long ago, so the tile looks the same.

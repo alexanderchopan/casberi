@@ -71,7 +71,7 @@ check(byName["PG&E"]?.subscription == false, "…and never a subscription")
 check(byName["PG&E"]?.item.was == nil, "a moving bill carries no price rise")
 check(byName["PG&E"]?.item.paysWith == "Apple Card", "a moving bill keeps what pays it")
 check(byName["Blue Bottle"] == nil, "a weekly coffee is no biller")
-check(byName["Gym"] == nil, "a plan quit months ago is no biller")
+check(byName["Gym"] == nil, "a plan quit months ago is no biller (Subscriptions.hasStopped)")
 check(byName["Water"] == nil, "a moving bill that stopped is no biller")
 check(all.filter { $0.item.name == "Claude" }.count == 1, "a plan is listed once")
 
@@ -128,16 +128,12 @@ mutate "a weekly charge let in (the cadence floor dropped)" \
   's/f\.series\.cadenceDays >= Subscriptions\.minCadenceDays/true/'
 mutate "a stopped bill still standing" \
   's/!seen\.contains\(key\), !stopped\.contains\(key\)/!seen.contains(key)/'
-mutate "a plan quit months ago still standing (the silences ceiling inherited)" \
-  's/!stopped\.contains\(item\.id\) \|\| /true || /'
-mutate "a stopped card hides a bill another reading still dates" \
-  's/ \|\| item\.foundIn\.contains \{ !cards\.contains\(\$0\) \}//'
 mutate "a plan listed twice" \
   's/guard !key\.isEmpty, !seen\.contains\(key\),/guard !key.isEmpty,/'
 mutate "a moving bill marked a subscription" \
   's/subscription: false\)\)/subscription: true))/'
 mutate "only one-price plans let in (the moving bills dropped)" \
-  's/(var out = standing\.map \{ Biller\(item: \$0, subscription: true\) \})/\$1\n        return out/'
+  's/(var out = subscriptions\.map \{ Biller\(item: \$0, subscription: true\) \})/\$1\n        return out/'
 
 # Wiring: the index seeds billers and keys charges to them; the reading
 # composes through this function; the pass runs this harness.
@@ -150,4 +146,4 @@ grep -q "merchant: BillersSource.merchant(of: thing)" Casberi/Casberi/Model/Cont
 grep -q "billers-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-echo "✓ billers: moving bills in, weekly and stopped out, one per merchant, keys, 7 mutations"
+echo "✓ billers: moving bills in, weekly and stopped out, one per merchant, keys, 5 mutations"

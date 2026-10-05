@@ -13,7 +13,8 @@ import Foundation
 ///     bills, the ones you added), marked `subscription`;
 ///   • a card's series that keeps a cadence of `Subscriptions.minCadenceDays`
 ///     or longer while its price moves, unmarked.
-/// A charge that stopped (`hasStopped`) is no biller, however long ago. The
+/// A charge that stopped (`Subscriptions.hasStopped`) is no biller, however
+/// long ago. The
 /// onchain cards name no merchant, so they add none.
 ///
 /// Foundation-only, reading `Subscriptions` and `AppleWalletRoom` (both
@@ -37,17 +38,12 @@ enum Billers {
                         calendar: Calendar = .current) -> [Biller] {
         let subscriptions = Subscriptions.compose(found: found, bills: bills, manual: manual,
                                                   now: now, calendar: calendar)
-        let stopped = Set(found.map(\.series).filter { hasStopped($0, now: now) }
+        // `compose` already left out a plan whose card stopped, unless a bill
+        // or a hand-added entry says it is live.
+        var out = subscriptions.map { Biller(item: $0, subscription: true) }
+        var seen = Set(subscriptions.map(\.id))
+        let stopped = Set(found.map(\.series).filter { Subscriptions.hasStopped($0, now: now) }
             .map { Subscriptions.key($0.merchant) })
-        // A stopped card series ends the biller only when the card is all
-        // that saw it: a Rocket Money bill or one you added still says it is
-        // live (paid from a card that is not connected, say).
-        let cards = Set(found.map(\.source))
-        let standing = subscriptions.filter { item in
-            !stopped.contains(item.id) || item.foundIn.contains { !cards.contains($0) }
-        }
-        var out = standing.map { Biller(item: $0, subscription: true) }
-        var seen = Set(standing.map(\.id))
 
         // Newest charge first, as `Subscriptions.compose` takes them, so a
         // merchant two cards paid names the card that paid it last.
@@ -68,18 +64,5 @@ enum Billers {
                 subscription: false))
         }
         return out
-    }
-
-    /// A card's series that stopped: as late as `AppleWalletRoom.silences`
-    /// calls silent, with NO ceiling. `silences` stops reporting at
-    /// `silenceCeilingDays` because a long-quit plan is no NEWS; a biller is
-    /// a standing fact, and a plan quit five months ago is not one, so the
-    /// ceiling cannot apply here (measured: a plan last charged 126 days ago
-    /// passed `Subscriptions.compose` with a renewal date in the past).
-    static func hasStopped(_ series: AppleWalletRoom.Series, now: Date) -> Bool {
-        let late = now.timeIntervalSince(series.nextExpected) / 86_400
-        let threshold = max(Double(AppleWalletRoom.silenceFloorDays),
-                            Double(series.cadenceDays) * (AppleWalletRoom.silenceFactor - 1))
-        return late >= threshold
     }
 }
