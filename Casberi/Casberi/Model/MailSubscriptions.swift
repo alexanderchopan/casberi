@@ -21,7 +21,7 @@ import Foundation
 ///
 /// **Or the person says so (prd §1115).** A sender with no list header, or
 /// mail that landed before §1111 kept the headers, joins the tile when the
-/// person adds it from a mail's sheet ("Add a subscription"). That is their
+/// person adds it from a mail's sheet ("Track a subscription"). That is their
 /// word, never an inference: the reading files every mail from an address
 /// they added (`file(_:added:)`), and nothing else without a header.
 ///
@@ -80,6 +80,21 @@ enum MailSubscriptions {
         /// Some of its mail is here only because the person added the
         /// sender, so Stop tracking has something to take away.
         var byYou = false
+        /// When each of its mails arrived, newest first: the days Day's
+        /// calendar puts its face on (prd §1117).
+        var arrivals: [Date] = []
+    }
+
+    /// A sender the person could track (prd §1117): mail with no list header
+    /// from an address not on the tile, in the last thirty days.
+    struct Candidate: Identifiable, Equatable {
+        /// The lowercased address.
+        var id: String
+        var name: String
+        var address: String
+        /// How many arrived in the last thirty days.
+        var count: Int
+        var last: Date
     }
 
     /// The window the box counts ("N mails in 30 days").
@@ -174,6 +189,37 @@ enum MailSubscriptions {
         }
     }
 
+    /// The senders Track a subscription offers (prd §1117): every address
+    /// whose mail in the last thirty days carried no list header, that is
+    /// not added already and whose mail no header puts on the tile. Most mail
+    /// first, then the newest, then by name. Nothing is guessed: the person
+    /// picks.
+    static func candidates(_ landed: [Landed], added: Set<String>, now: Date) -> [Candidate] {
+        let windowStart = now.addingTimeInterval(-windowDays * 86_400)
+        var listed: Set<String> = []
+        for mail in landed where mail.listKey != nil {
+            if let address = Self.key(listID: nil, address: mail.address) { listed.insert(address) }
+        }
+        var groups: [String: [Landed]] = [:]
+        for mail in landed where mail.listKey == nil && mail.at >= windowStart && mail.at <= now {
+            guard let address = Self.key(listID: nil, address: mail.address),
+                  !added.contains(address), !listed.contains(address) else { continue }
+            groups[address, default: []].append(mail)
+        }
+        let out: [Candidate] = groups.compactMap { address, mails in
+            let sorted = mails.sorted { $0.at > $1.at }
+            guard let newest = sorted.first else { return nil }
+            let name = sorted.lazy.compactMap(\.sender).first ?? address
+            return Candidate(id: address, name: name, address: newest.address ?? address,
+                             count: sorted.count, last: newest.at)
+        }
+        return out.sorted {
+            if $0.count != $1.count { return $0.count > $1.count }
+            if $0.last != $1.last { return $0.last > $1.last }
+            return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+        }
+    }
+
     /// Group, then order: most mail in the last thirty days first, then most
     /// overall, then by name.
     static func compose(_ mails: [Mail], now: Date) -> [Item] {
@@ -191,7 +237,8 @@ enum MailSubscriptions {
                         cadenceDays: cadenceDays(sorted.map(\.at)),
                         last: newest.at, since: oldest.at,
                         unsubscribe: link, sources: sources, mailIDs: sorted.map(\.id),
-                        byYou: sorted.contains(where: \.byYou))
+                        byYou: sorted.contains(where: \.byYou),
+                        arrivals: sorted.map(\.at))
         }
         return items.sorted {
             if $0.lastMonth != $1.lastMonth { return $0.lastMonth > $1.lastMonth }

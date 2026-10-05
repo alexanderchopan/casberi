@@ -139,8 +139,30 @@ check(filedItems.count == 2, "two rows: the list and the added sender")
 check(filedItems.allSatisfy(\.byYou), "a row holding an added mail can be stopped")
 check(MailSubscriptions.compose(filedNone, now: now).first?.byYou == false, "a headed row alone cannot")
 
+// ARRIVALS (prd §1117): every mail's day, newest first, for Day's calendar.
+let foldArrivals = filedItems.first { $0.id == "fold.example" }?.arrivals ?? []
+check(foldArrivals == [ago(1), ago(40)], "a row keeps each mail's day, newest first")
+
+// CANDIDATES (prd §1117): header-less senders this month, not added, not
+// already a list, most mail first.
+let pool = [
+    landed(nil, "mia@example.com", 2, sender: "Mia Rowe"), landed(nil, "Mia@Example.com", 9, sender: "Mia Rowe"),
+    landed(nil, "mia@example.com", 20, sender: "Mia Rowe"),
+    landed(nil, "shop@x.example", 1, sender: "Shop"), landed(nil, "shop@x.example", 3, sender: "Shop"),
+    landed(nil, "old@x.example", 45, sender: "Old"),                 // outside the month
+    landed(nil, "added@x.example", 2, sender: "Added"),              // already tracked
+    landed("fold.example", "news@fold.example", 5),                  // a list by its header
+    landed(nil, "news@fold.example", 4),                             // the same sender, headerless
+    landed(nil, nil, 1, sender: "Nobody"),                           // no address
+]
+let offered = MailSubscriptions.candidates(pool, added: ["added@x.example"], now: now)
+check(offered.map(\.id) == ["mia@example.com", "shop@x.example"],
+      "this month's headerless senders, not added, not a list, most mail first")
+check(offered.first?.count == 3 && offered.first?.name == "Mia Rowe", "a sender's mail counted once per mail, any case")
+check(offered.last?.last == ago(1), "a sender's newest mail dates it")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   keys, doors, cadence, compose, file")
+print("  ok   keys, doors, cadence, compose, file, arrivals, candidates")
 SWIFT
 
 build() { swiftc -Onone -o "$work/run" "$1" "$work/main.swift" 2>"$work/err" || return 1 }
@@ -176,6 +198,12 @@ mutate "a header-less mail filed from a sender nobody added" \
   's/, added\.contains\(address\)\n/\n/'
 mutate "an added sender split from its own list (two rows)" \
   's/key: headed\[address\]\?\.list \?\? address/key: address/'
+mutate "a candidate from outside the month" \
+  's/where mail\.listKey == nil && mail\.at >= windowStart && mail\.at <= now/where mail.listKey == nil/'
+mutate "a sender already on the tile offered again" \
+  's/!added\.contains\(address\), !listed\.contains\(address\)/!added.contains(address)/'
+mutate "the quietest sender offered first" \
+  's/if \$0\.count != \$1\.count \{ return \$0\.count > \$1\.count \}/if \$0.count != \$1.count { return \$0.count < \$1.count }/'
 mutate "an added sender's row forgets it was added" \
   's/byYou: sorted\.contains\(where: \\\.byYou\)/byYou: false/'
 
@@ -195,6 +223,10 @@ grep -q "MailSubscriptions.file(landed, added: MailSubscriptionStore.shared.addr
   || fail "drift: the reading no longer files through MailSubscriptions.file with the added senders"
 grep -q "MailSubscriptionStore.shared.add(address: address, name: name)" Casberi/Casberi/Screens/ThingSheetView.swift \
   || fail "drift: a mail's sheet no longer adds its sender (prd §1115)"
+grep -q "MailSubscriptions.candidates(landed, added: added, now: now)" Casberi/Casberi/Model/MailSubscriptionsReading.swift \
+  || fail "drift: the reading no longer offers senders through MailSubscriptions.candidates (prd §1117)"
+grep -q "WalletCalendar(marks: Self.marks(items), looksBack: true)" Casberi/Casberi/Screens/MailSubscriptionViews.swift \
+  || fail "drift: Day's box is no longer the Wallet's calendar looking back (prd §1117)"
 grep -q "MailSubscriptionStore.shared.remove(address: address)" Casberi/Casberi/Screens/MailSubscriptionViews.swift \
   || fail "drift: an added sender's sheet no longer stops tracking it (prd §1115)"
 grep -q "case .reminder, .edited, .list, .unsubscribe: return true" Casberi/Shared/Thing.swift \
@@ -202,4 +234,4 @@ grep -q "case .reminder, .edited, .list, .unsubscribe: return true" Casberi/Shar
 grep -q "mail-subscriptions-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-echo "✓ mail subscriptions: keys, doors, cadence, compose, file, 9 mutations"
+echo "✓ mail subscriptions: keys, doors, cadence, compose, file, arrivals, candidates, 12 mutations"

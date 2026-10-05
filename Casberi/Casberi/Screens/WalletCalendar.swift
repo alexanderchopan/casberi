@@ -7,6 +7,11 @@ import SwiftUI
 /// Five weeks is a month of renewals rounded out to whole weeks, so the box
 /// never pages and nothing in it claims a horizontal drag the room's pager
 /// owns.
+///
+/// **Day's Subscriptions box is the same calendar looking BACK (prd §1117)**:
+/// the five weeks that END with this one, each list's face on the days it
+/// wrote. What is ahead of a mailing list is a guess, so it never looks
+/// forward; the days after today stay quiet instead.
 struct WalletCalendar: View {
     struct Mark: Identifiable, Equatable {
         let id: String
@@ -20,6 +25,8 @@ struct WalletCalendar: View {
 
     let marks: [Mark]
     var now: Date = .now
+    /// The five weeks ending with this one, not starting with it (Day's box).
+    var looksBack = false
 
     static let weeks = 5
     static let rowHeight: CGFloat = 27
@@ -28,7 +35,7 @@ struct WalletCalendar: View {
 
     var body: some View {
         let cal = Calendar.current
-        let start = Self.start(now: now, calendar: cal)
+        let start = Self.start(now: now, calendar: cal, looksBack: looksBack)
         let today = cal.startOfDay(for: now)
         let days = (0..<(Self.weeks * 7)).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
         let byDay = Dictionary(grouping: marks) { cal.startOfDay(for: $0.day) }
@@ -62,7 +69,9 @@ struct WalletCalendar: View {
     private func cell(_ day: Date, index: Int, today: Date, marks: [Mark],
                       calendar cal: Calendar) -> some View {
         let isToday = day == today
-        let isPast = day < today
+        // What the box is not about fades: the days gone, ahead; the days
+        // still to come, looking back.
+        let isPast = looksBack ? day > today : day < today
         let number = cal.component(.day, from: day)
         // The first of a month names its month, so the turn reads.
         let label = number == 1 && index > 0
@@ -107,14 +116,17 @@ struct WalletCalendar: View {
         .frame(maxWidth: .infinity, minHeight: Self.rowHeight, maxHeight: Self.rowHeight)
     }
 
-    /// The first day of this week, in the person's own week.
-    static func start(now: Date, calendar cal: Calendar) -> Date {
-        cal.dateInterval(of: .weekOfYear, for: now)?.start ?? cal.startOfDay(for: now)
+    /// The first day of this week, in the person's own week; looking back,
+    /// the first day of the week four before it.
+    static func start(now: Date, calendar cal: Calendar, looksBack: Bool = false) -> Date {
+        let thisWeek = cal.dateInterval(of: .weekOfYear, for: now)?.start ?? cal.startOfDay(for: now)
+        guard looksBack else { return thisWeek }
+        return cal.date(byAdding: .day, value: -(weeks - 1) * 7, to: thisWeek) ?? thisWeek
     }
 
     /// The marks inside the five weeks, for a caller that counts them.
-    static func window(now: Date, calendar cal: Calendar = .current) -> DateInterval {
-        let start = start(now: now, calendar: cal)
+    static func window(now: Date, calendar cal: Calendar = .current, looksBack: Bool = false) -> DateInterval {
+        let start = start(now: now, calendar: cal, looksBack: looksBack)
         let end = cal.date(byAdding: .day, value: weeks * 7, to: start) ?? start
         return DateInterval(start: start, end: end)
     }
@@ -126,9 +138,12 @@ struct WalletCalendar: View {
     }
 
     private func spoken(start: Date, calendar cal: Calendar) -> String {
-        let window = Self.window(now: now, calendar: cal)
-        let inside = marks.filter { window.contains($0.day) }.sorted { $0.day < $1.day }
-        guard !inside.isEmpty else { return String(localized: "Nothing dated in the next five weeks") }
+        let window = Self.window(now: now, calendar: cal, looksBack: looksBack)
+        let inside = marks.filter { window.contains($0.day) }.sorted { looksBack ? $0.day > $1.day : $0.day < $1.day }
+        guard !inside.isEmpty else {
+            return looksBack ? String(localized: "Nothing in the last five weeks")
+                             : String(localized: "Nothing dated in the next five weeks")
+        }
         let parts = inside.prefix(6).map {
             "\($0.face), \($0.day.formatted(.dateTime.month(.wide).day()))"
         }

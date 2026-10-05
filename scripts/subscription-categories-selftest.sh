@@ -157,7 +157,7 @@ mutate() {
 mutate "the fallback drawn as Wallet" \
   's/return c == fallback \? otherKey : c/return c/'
 mutate "a price with no cadence counted" \
-  's/guard let monthly = item\.monthly, let dollars = usd\(monthly, item\.currency\) else \{ continue \}/guard let dollars = usd(item.monthly ?? item.amount ?? 0, item.currency) else { continue }/'
+  's/guard let monthly = item\.monthly, let dollars = usd\(monthly, item\.currency\) else \{ return nil \}/guard let dollars = usd(item.monthly ?? item.amount ?? 0, item.currency) else { return nil }/'
 mutate "a pressed Other forgets the folded tail" \
   's/\$0 == otherKey \|\| !shown\.contains\(\$0\)/\$0 == otherKey/'
 mutate "a one-tile map drawn" \

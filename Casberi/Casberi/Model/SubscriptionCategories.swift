@@ -55,14 +55,22 @@ enum SubscriptionCategories {
     /// Items → the categories their monthly dollars land in.
     static func read(_ items: [Subscriptions.Item], usd: (Double, String) -> Double?,
                      category: (String) -> String, fallback: String) -> Reading {
+        read(measured: items.compactMap { item -> (key: String, measure: Double)? in
+            guard let monthly = item.monthly, let dollars = usd(monthly, item.currency) else { return nil }
+            return (key: key(of: item, category: category, fallback: fallback), measure: dollars)
+        })
+    }
+
+    /// Any measure a month, already keyed, → the map's reading. The Wallet
+    /// measures dollars; Day measures mails (prd §1117), and both maps are
+    /// this one sum, so a slice means the same thing in either room.
+    static func read(measured: [(key: String, measure: Double)]) -> Reading {
         var sums: [String: (monthly: Double, count: Int)] = [:]
         var total = 0.0, counted = 0
-        for item in items {
-            guard let monthly = item.monthly, let dollars = usd(monthly, item.currency) else { continue }
-            let k = key(of: item, category: category, fallback: fallback)
-            sums[k, default: (0, 0)].monthly += dollars
+        for (k, measure) in measured {
+            sums[k, default: (0, 0)].monthly += measure
             sums[k, default: (0, 0)].count += 1
-            total += dollars
+            total += measure
             counted += 1
         }
         let slices = sums

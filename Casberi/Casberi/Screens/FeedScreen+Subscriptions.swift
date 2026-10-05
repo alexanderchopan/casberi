@@ -75,7 +75,12 @@ extension FeedScreen {
     /// The map's tiles at the group's measured width: the Holdings treemap's
     /// layout (true area, squarified, the tail folded into the one Other).
     func subscriptionsTiles(_ reading: SubscriptionCategories.Reading) -> [HoldingsTreemapLayout.Tile] {
-        let width = subscriptionsMapWidth
+        Self.subscriptionsTiles(reading, width: subscriptionsMapWidth)
+    }
+
+    /// The same layout at any measured width: Day's map has its own (§1117).
+    static func subscriptionsTiles(_ reading: SubscriptionCategories.Reading,
+                                   width: CGFloat) -> [HoldingsTreemapLayout.Tile] {
         guard width > 0, reading.slices.count >= SubscriptionCategories.minTiles else { return [] }
         let tiles = HoldingsTreemapLayout.layout(
             reading.slices.map { (id: $0.key, share: $0.share) },
@@ -110,7 +115,7 @@ extension FeedScreen {
         Section {
             // The tile names the list (prd §1111), so no group header; Add
             // leads, because the list is the person's to build up.
-            DSDoorRow(icon: "plus", label: "Add a subscription") {
+            DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
                 feedSheet = .subscriptionAdd
             }
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
@@ -139,7 +144,7 @@ extension FeedScreen {
                 Button {
                     feedSheet = .subscription(item.id)
                 } label: {
-                    WalletSubscriptionRow(item: item)
+                    WalletSubscriptionRow(item: item, writes: walletSubscriptionWrites(item))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
@@ -153,6 +158,15 @@ extension FeedScreen {
     }
 
     static var subscriptionsOther: String { String(localized: "Other") }
+
+    /// The list this plan's service mails you from, as its row says it
+    /// (§1113's join, read by `ServiceLinks` from the tile's `.task`).
+    func walletSubscriptionWrites(_ item: Subscriptions.Item) -> String? {
+        guard let listID = ServiceLinks.shared.byPlan[item.id]?.listID,
+              let list = MailSubscriptionsReading.shared.items.first(where: { $0.id == listID })
+        else { return nil }
+        return MailSubscriptions.writesWords(list.cadenceDays)
+    }
 }
 
 /// The Subscriptions group's pressed category, and the set it was pressed over.
@@ -170,6 +184,8 @@ struct SubscriptionsSummary: View {
     /// Empty when there is no map to draw (fewer than two tiles).
     let tiles: [HoldingsTreemapLayout.Tile]
     let pick: String?
+    /// Day's map (prd §1117): the measure is mails a month, not dollars.
+    var mails = false
     let onPick: (String?) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -202,9 +218,14 @@ struct SubscriptionsSummary: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// "Agents · $20.00 a month · 1 subscription".
+    /// "Agents · $20.00 a month · 1 subscription"; Day's, "Work · 3 mails a
+    /// month · 2 subscriptions".
     private func caption(_ pick: String, monthly: Double, count n: Int) -> String {
         let name = Self.name(pick)
+        if mails {
+            return [name, MailSubscriptionsFigure.statement(Int(monthly.rounded())),
+                    String(localized: "\(n) subscriptions")].joined(separator: " · ")
+        }
         let money = BalancePrivacy.shared.withheld ? BalancePrivacy.mask
                                                    : CardSpendRoom.money(monthly, code: "USD")
         return n == 1 ? String(localized: "\(name) · \(money) a month · 1 subscription")
@@ -267,8 +288,22 @@ struct SubscriptionsSummary: View {
     /// `subscriptionsMap| <Category> | <monthly> | <share>`, one line per
     /// category (DEBUG): how much of a real phone's spend lands in Other.
     /// Hide balances logs shares only.
-    static func log(_ reading: SubscriptionCategories.Reading, tiles: [HoldingsTreemapLayout.Tile]) {
+    static func log(_ reading: SubscriptionCategories.Reading, tiles: [HoldingsTreemapLayout.Tile],
+                    mails: Bool = false) {
         #if DEBUG
+        // Day's map logs its own lines (prd §1117): mails are no balance, so
+        // Hide balances does not withhold them.
+        if mails {
+            for slice in reading.slices {
+                NSLog("[Casberi] mailSubscriptionsMap| %@ | %d | %@", name(slice.key),
+                      Int(slice.monthly.rounded()), HoldingsTreemapLayout.percent(slice.share))
+            }
+            let other = tiles.first { $0.id == SubscriptionCategories.otherKey }
+            NSLog("[Casberi] mailSubscriptionsMap| %d tiles%@%@", tiles.count,
+                  tiles.isEmpty ? " (no map)" : "",
+                  other.map { " · Other tile \(HoldingsTreemapLayout.percent($0.share))" } ?? "")
+            return
+        }
         let hidden = BalancePrivacy.shared.withheld
         for slice in reading.slices {
             let share = HoldingsTreemapLayout.percent(slice.share)
@@ -292,10 +327,13 @@ struct SubscriptionsSummary: View {
 /// pays it.
 struct WalletSubscriptionRow: View {
     let item: Subscriptions.Item
+    /// How often this service's list writes, when §1113's identity found one
+    /// ("Writes every two weeks"): the row names the other room (prd §1117).
+    var writes: String? = nil
 
     var body: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        SubscriptionRow(name: item.name, line: Self.line(item, mask: mask)) {
+        SubscriptionRow(name: item.name, line: Self.line(item, mask: mask, writes: writes)) {
             if let monthly = item.monthly {
                 Text(verbatim: mask ?? CardSpendRoom.money(monthly, code: item.currency))
                     .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
@@ -310,8 +348,9 @@ struct WalletSubscriptionRow: View {
         date.formatted(.dateTime.month(.abbreviated).day())
     }
 
-    /// "Price rise · was $10.00 · Renews Oct 24 · Apple Card".
-    static func line(_ item: Subscriptions.Item, mask: String?) -> Text {
+    /// "Price rise · was $10.00 · Renews Oct 24 · Apple Card · Writes about
+    /// monthly".
+    static func line(_ item: Subscriptions.Item, mask: String?, writes: String? = nil) -> Text {
         var rest: [String] = []
         if item.isYearly, let amount = item.amount {
             rest.append(String(localized: "\(mask ?? CardSpendRoom.money(amount, code: item.currency)) yearly"))
@@ -326,6 +365,7 @@ struct WalletSubscriptionRow: View {
             }
         }
         if let pays = item.paysWith { rest.append(pays) }
+        if let writes { rest.append(writes) }
         let tail = Text(verbatim: rest.joined(separator: " · "))
         guard let was = item.was else { return tail }
         let word = Text("Price rise · was \(mask ?? CardSpendRoom.money(was, code: item.currency))")

@@ -14,6 +14,8 @@ final class MailSubscriptionsReading {
     static let shared = MailSubscriptionsReading()
 
     private(set) var items: [MailSubscriptions.Item] = []
+    /// The senders Track a subscription offers (prd §1117).
+    private(set) var candidates: [MailSubscriptions.Candidate] = []
     /// True once a read has finished, so the tile can tell "none" from "not yet".
     private(set) var read = false
 
@@ -39,9 +41,12 @@ final class MailSubscriptionsReading {
                          at: thing.capturedAt, source: thing.source)
         }
         // A header files a mail; so does a sender the person added (§1115).
-        let mails = MailSubscriptions.file(landed, added: MailSubscriptionStore.shared.addresses)
+        let added = MailSubscriptionStore.shared.addresses
+        let mails = MailSubscriptions.file(landed, added: added)
         let composed = MailSubscriptions.compose(mails, now: now)
         if composed != items { items = composed }
+        let offered = MailSubscriptions.candidates(landed, added: added, now: now)
+        if offered != candidates { candidates = offered }
         read = true
     }
 
