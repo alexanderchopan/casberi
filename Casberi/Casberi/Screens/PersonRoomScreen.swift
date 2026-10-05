@@ -2,10 +2,9 @@ import SwiftUI
 import SwiftData
 
 /// The person room (item 2 of the 2026-07-27 social enrichment pass) —
-/// everything Casberi holds about ONE person, joined into one chronology:
-/// their own posts, and — for a Farcaster account with a verified onchain
-/// address — their wallet's moves. Nowhere else in the app can put a
-/// person's words beside their money.
+/// everything Casberi holds about ONE person in one chronology: their own
+/// posts. The onchain half — a Farcaster account's verified addresses and
+/// their wallet's moves — went with the Farcaster seat (prd §1109).
 ///
 /// The quick-glance `SocialProfileCard` tray keeps every entry point it
 /// already has (a post's face, a reply, `casberi://person/…`) — this is the
@@ -21,35 +20,17 @@ struct PersonRoomScreen: View {
 
     @State private var loaded: SocialProfile?
     @State private var posts: [Thing] = []
-    @State private var transactions: [Thing] = []
-    @State private var verifiedAddresses: [String] = []
-    /// IS ANYBODY THERE (prd §785) — what World ID's book says about this
-    /// person's verified addresses. One person is one verification however
-    /// many addresses they have proved, so this is the best mark among them,
-    /// not a list. READ off the `@Observable` store rather than copied into
-    /// `@State`, so it draws when the answer lands whoever bought it; the read
-    /// itself is bought at the END of `load()`.
-    ///
-    /// Farcaster only, and not by taste: an account's verified addresses are
-    /// the only place in this app where a social handle is joined to an
-    /// address the person proved they hold. Nothing here draws unless the mark
-    /// exists (§83) — absence is the ordinary answer and says nothing about
-    /// whoever is posting.
-    private var worldStatus: WorldID.Status {
-        WorldIDSource.shared.status(among: verifiedAddresses)
-    }
     /// Your years with this person, when the corpus can describe them
     /// (2026-08-18, prd §396). X only: it is the one source here whose rows
     /// name somebody you never watched and never will be able to.
     @State private var xPerson: XPerson?
     @State private var loading = true
     @State private var sheetThing: Thing?
-    @State private var filter: Filter = .all
 
     /// How far the window has been opened, in `RowWindow` steps.
     ///
     /// **THE ROOM WAS UNBOUNDED, AND THIS SHEET IS WHERE BUILD 539 DIED (prd
-    /// §657).** `merged` is every row the corpus holds about one person — an X
+    /// §657).** `posts` is every row the corpus holds about one person — an X
     /// archive lands 10,000 posts (§307) and a decade of conversation with one
     /// correspondent is a large fraction of them — and all of it was drawn into
     /// ONE `List` section, inside a sheet a finger can drag. `RowWindow`'s doc
@@ -58,76 +39,26 @@ struct PersonRoomScreen: View {
     /// row's index by a linear walk, and backgrounded that render gets ~16% of
     /// a core against a ten-second wall.
     ///
-    /// MONOTONIC for the life of the screen, and it deliberately does NOT reset
-    /// when `filter` changes — the feed's own ruling (`FeedScreen.windowSteps`):
-    /// a window that collapses under the person would undo their scrolling
-    /// every time they glanced at the Onchain slice. It is a CAP, so a wider
-    /// window still draws at most `budget` rows of whichever slice is showing.
+    /// MONOTONIC for the life of the screen — the feed's own ruling
+    /// (`FeedScreen.windowSteps`). It is a CAP, so a wider window still draws
+    /// at most `budget` rows.
     @State private var windowSteps = 0
-
-    /// The merged, sorted room — built when its INPUTS change, not on every
-    /// body pass (`/code-review` finding, 2026-09-08, prd §657).
-    ///
-    /// `merged` concatenates two arrays, filters both `.live` and sorts the
-    /// result on `capturedAt`. Sorting is n log n COMPARISONS, each one a
-    /// stored-property read on a live SwiftData model — at the ten thousand
-    /// rows an X archive lands (§307) that is well over a hundred thousand
-    /// property accesses, and a body evaluation is exactly what a sheet drag
-    /// causes per offset change. So `RowWindow` bounded the term SwiftUI
-    /// spends (the list diff, now constant) and left this one growing with the
-    /// corpus on the very same path. Both terms are bounded now: this is
-    /// rebuilt on the three events that can change it (each fetch landing, and
-    /// a filter change), and the body reads it.
-    ///
-    /// HELD RAW MODEL REFS, so `.live` is spelled AT THE HANDOFF in `body`
-    /// (liveness corollary 4, build 177): a delete-sync heal can tombstone a
-    /// row while this room is open, and the cache is deliberately behind the
-    /// store between rebuilds.
-    @State private var mergedRows: [Thing] = []
-
-    private enum Filter: String, CaseIterable, Identifiable, DSSectionScope {
-        case all = "Everything", posts = "Posts", chain = "Onchain"
-        var id: String { rawValue }
-        var label: String { rawValue }
-    }
 
     private var shown: SocialProfile { loaded ?? profile }
 
-    /// Newest first, whichever slice the segmented picker asks for. Merging
-    /// happens here (not at fetch time) so switching tabs never re-queries.
-    private var merged: [Thing] {
-        // `.live` at the boundary (build 177's lesson): `posts` and
-        // `transactions` are @State-held raw refs from a manual fetch, so a
-        // delete-sync heal can tombstone one while this room is open — and
-        // `.all` reads `capturedAt` off them right here, to sort. Spelled out
-        // per branch rather than shadowed once above: a shadowing rebind hides
-        // the guard from the liveness audit, which reads these lines.
-        switch filter {
-        case .all:   return (posts.live + transactions.live)
-                        .sorted { $0.capturedAt > $1.capturedAt }
-        case .posts: return posts.live
-        case .chain: return transactions.live
-        }
-    }
-
     var body: some View {
         // ONE READ OF THE ROOM'S ARRAY FOR THE WHOLE BODY (prd §646's rule,
-        // applied here for §657). `mergedRows` is the memoised merge — see its
-        // own note for why the sort must not run per body pass — and `.live`
-        // is its handoff guard. Bound once, then answered from: the rows, the
-        // opener and the empty state all read this one value.
-        let window = RowWindow.slice(mergedRows.live, steps: windowSteps)
+        // applied here for §657). `posts` holds raw model refs from a manual
+        // fetch, so `.live` is its handoff guard (liveness corollary 4, build
+        // 177). Bound once, then answered from: the rows, the opener and the
+        // empty state all read this one value.
+        let window = RowWindow.slice(posts.live, steps: windowSteps)
         return List {
             Section {
                 header
                 if let bio = shown.bio, !bio.isEmpty {
                     Text(bio)
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if case .verified(let until) = worldStatus {
-                    Text("Verified human · World ID until \(until.formatted(.dateTime.month(.wide).year()))")
-                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let xPerson {
@@ -141,9 +72,6 @@ struct PersonRoomScreen: View {
                         .padding(.top, DS.Space.s1)
                 } else {
                     cadenceSection
-                }
-                if !transactions.isEmpty {
-                    filterPicker
                 }
             }
             .listRowBackground(Color.clear)
@@ -209,9 +137,6 @@ struct PersonRoomScreen: View {
         .navigationTitle(shown.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $sheetThing) { thing in ThingSheetView(thing: thing) }
-        // The picker swaps WHICH rows are merged, so the cache is rebuilt —
-        // `windowSteps` deliberately is not reset (see its own note).
-        .onChange(of: filter) { _, _ in mergedRows = merged }
         .task { await load() }
     }
 
@@ -254,31 +179,14 @@ struct PersonRoomScreen: View {
         }
     }
 
-    private var filterPicker: some View {
-        // The app's own scope control, not UIKit's gray segmented one
-        // (prd §716) — the switcher every room's rail already wears.
-        DSSectionSwitcher(sections: Filter.allCases, active: filter) { picked in
-            withAnimation(DS.Motion.standard) { filter = picked }
-        }
-        .padding(.top, DS.Space.s1)
-    }
-
-    @ViewBuilder
     private func row(for thing: Thing) -> some View {
-        if thing.kind == .transaction {
-            BandRow(thing: thing, moneyColumn: true)
-        } else {
-            PostCard(thing: thing)
-        }
+        PostCard(thing: thing)
     }
 
-    /// Two independent reads: this person's own posts (a plain equality
-    /// fetch — the `.contains`-on-array crash class doesn't apply, there's
-    /// no array here), and, for Farcaster, their verified addresses'
-    /// transactions among things the wallet bridge already landed. Resolves
-    /// addresses even for someone NOT in `FarcasterStore`'s watched list —
-    /// the room works for anyone whose face you tapped, not only people
-    /// you've formally watched.
+    /// This person's own posts (a plain equality fetch — the
+    /// `.contains`-on-array crash class doesn't apply, there's no array
+    /// here), then their profile. The room works for anyone whose face you
+    /// tapped, not only people you've formally watched.
     private func load() async {
         let handle = profile.handle
         let src = profile.source
@@ -307,49 +215,7 @@ struct PersonRoomScreen: View {
             posts = ((try? modelContext.fetch(postDescriptor)) ?? [])
                 .sorted { $0.capturedAt > $1.capturedAt }
         }
-        // Draw what we have before the awaits below — the posts are the room
-        // for every source but Farcaster, and this is where they used to
-        // appear when the body merged for itself.
-        mergedRows = merged
-
-        async let profileFetch = SocialPeople.profile(handle: handle, source: src)
-
-        if src == "Farcaster" {
-            var addrs = FarcasterStore.shared.accounts
-                .first(where: { $0.username == handle })?.verifiedAddresses ?? []
-            if addrs.isEmpty, let fid = await FarcasterIngest.fid(forName: handle) {
-                addrs = await FarcasterIngest.verifiedEthAddresses(fid: fid)
-            }
-            verifiedAddresses = addrs
-            if !addrs.isEmpty {
-                let addressSet = Set(addrs)
-                // Same proven-safe shape `WalletScreen`/`WalletApprovals` use
-                // (`source == "Wallet"`) — filtering to `.transaction` and
-                // matching the address set happens in Swift after the fetch.
-                let walletDescriptor = FetchDescriptor<Thing>(
-                    predicate: #Predicate<Thing> { $0.source == "Wallet" })
-                let landed = (try? modelContext.fetch(walletDescriptor)) ?? []
-                transactions = landed.filter { t in
-                    t.kind == .transaction &&
-                        ((t.walletAddress.map { addressSet.contains($0.lowercased()) } ?? false)
-                         || (t.counterpartyAddress.map { addressSet.contains($0.lowercased()) } ?? false))
-                }.sorted { $0.capturedAt > $1.capturedAt }
-                mergedRows = merged
-            }
-        }
-
-        loaded = await profileFetch
+        loaded = await SocialPeople.profile(handle: handle, source: src)
         loading = false
-
-        // WORLD ID LAST, AND THE ORDER IS THE FIX (`/code-review`, 2026-09-16).
-        // This is up to `perPassBudget` sequential calls to a public RPC whose
-        // reachability is UNMEASURED, at 15s a timeout — and it sat ahead of
-        // the transactions fetch, the merge and the profile, so an unreachable
-        // World Chain left the whole room spinning for a minute and a half to
-        // decide one line that usually draws nothing. Nothing below waits on
-        // it: the header reads the store, which re-renders when an answer
-        // lands. The read is still bought by opening the room (`AddressNames`'
-        // rule) and answers persist, so a second visit costs nothing.
-        await WorldIDSource.shared.fill(verifiedAddresses)
     }
 }

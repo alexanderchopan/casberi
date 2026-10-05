@@ -241,10 +241,9 @@ enum BridgeGlyph {
         // already uses for a pending Safe signature, so the catalog tile and
         // the Worth-a-look row can't pick different glyphs for one thing.
         case "safe":      return "signature"
-        // A NAME, not a handle — "at" is already spoken for by Farcaster and
-        // Bluesky, whose whole subject is a social identity. ENS's is a name
-        // that RESOLVES (to an address, and eventually to nothing, once it
-        // expires), so the mark says "readable text" rather than "@someone".
+        // A NAME, not a handle — "at" is already spoken for by Bluesky, whose
+        // whole subject is a social identity. ENS's is a name that RESOLVES
+        // (to an address, and eventually to nothing, once it expires), so the mark says "readable text" rather than "@someone".
         case "ens":       return "textformat.characters"
         case "kalshi":    return "percent"
         case "opensea":   return "sailboat.fill"
@@ -264,7 +263,6 @@ enum BridgeGlyph {
         case "rss":       return "dot.radiowaves.up.forward"
         case "snapchat":  return "camera.fill"
         case "telegram":  return "paperplane.fill"
-        case "farcaster": return "at"
         case "pinterest": return "pin"
         case "bluesky":   return "at"
         case "nostr":     return "bird"

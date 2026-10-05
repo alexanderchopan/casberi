@@ -58,7 +58,6 @@ final class ContactProfiles {
                 let key: String
                 switch platform {
                 case "github":    key = Identity.key(.github, handle)
-                case "farcaster": key = Identity.key(.farcaster, handle)
                 case "bluesky":   key = Identity.key(.bluesky, handle)
                 default:          continue
                 }

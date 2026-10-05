@@ -24,10 +24,9 @@ Nothing failed to compile, nothing rendered wrong, and no other check here
 could see it: two correct-looking filters, four files apart from the read they
 silently emptied. That distance is the whole reason this exists.
 
-**(1) Farcaster's account page does not decline replies unconditionally.**
-A literal `topLevelOnly: true` in `FarcasterIngest.swift` is the bug as
-written — `refresh` is the only caller that passes the flag, and it must gate
-it on the account (`topLevelOnly: !account.mine`).
+**(1) Retired with the Farcaster seat (prd §1109).** It held
+`FarcasterIngest.swift`'s `topLevelOnly` flag to a gate on `mine`; the file
+is deleted, so there is nothing left for it to read.
 
 **(2) Bluesky's author feed does not ask for `posts_no_replies`
 unconditionally.** The literal may stay — it is right for a watched stranger —
@@ -85,7 +84,6 @@ import pathlib
 
 SOURCES = ["Casberi/Casberi", "Casberi/Shared"]
 
-FARCASTER = "FarcasterIngest.swift"
 BLUESKY = "BlueskyIngest.swift"
 INBOUND = "SocialInbound.swift"
 SWEEP = "NotifySweep.swift"
@@ -175,12 +173,6 @@ def audit_text(name, text):
     out = []
     body = strip_comments(text)
 
-    if name == FARCASTER:
-        for m in re.finditer(r"topLevelOnly\s*:\s*true\b", body):
-            line = body[:m.start()].count("\n") + 1
-            out.append(f"{name}:{line}: topLevelOnly: true declines YOUR replies too — "
-                       "gate it on the account (topLevelOnly: !account.mine)")
-
     if name == BLUESKY:
         for m in re.finditer(r'"posts_no_replies"', body):
             line = body[:m.start()].count("\n") + 1
@@ -220,22 +212,6 @@ def audit_text(name, text):
 
 
 # ---------------------------------------------------------------- fixtures
-
-FIXED_FARCASTER = """
-added += await landPage(messages, topLevelOnly: !account.mine, existing: &existing,
-                        landed: landed, backfill: backfill, context: context)
-let url = "https://farcaster.xyz/\\(username)/\\(short)"
-"""
-
-BROKEN_FARCASTER = """
-added += await landPage(messages, topLevelOnly: true, existing: &existing,
-                        landed: landed, backfill: backfill, context: context)
-"""
-
-COMMENTED_FARCASTER = """
-// The old rule read `topLevelOnly: true` and that is the bug.
-added += await landPage(messages, topLevelOnly: !account.mine, existing: &existing)
-"""
 
 FIXED_BLUESKY = """
 comps.queryItems = [
@@ -324,10 +300,7 @@ let b = "https://hub.example/v1/reactionsByCast"
 
 def self_test():
     cases = [
-        ("passes the gated Farcaster landing", FARCASTER, FIXED_FARCASTER, 0),
-        ("flags  an unconditional topLevelOnly: true", FARCASTER, BROKEN_FARCASTER, 1),
-        ("passes the rule named in a comment", FARCASTER, COMMENTED_FARCASTER, 0),
-        ("passes a URL-heavy Farcaster file", FARCASTER, URL_HEAVY, 0),
+        ("passes a URL-heavy Bluesky file", BLUESKY, URL_HEAVY, 0),
         ("passes the gated Bluesky filter", BLUESKY, FIXED_BLUESKY, 0),
         ("flags  an unconditional posts_no_replies", BLUESKY, BROKEN_BLUESKY, 1),
         ("passes the filter named only in a doc line", BLUESKY, DOC_ONLY_BLUESKY, 0),
@@ -338,8 +311,8 @@ def self_test():
         ("flags  a share() that cannot spot a reply", INBOUND, BLIND_SHARE, 1),
         ("passes repliesReceived keyed on the marker", SWEEP, FIXED_SWEEP, 0),
         ("flags  repliesReceived keyed on anything looser", SWEEP, BROKEN_SWEEP, 1),
-        ("passes an unrelated file", "A.swift", BROKEN_FARCASTER, 0),
-        ("passes an empty file", FARCASTER, "", 0),
+        ("passes an unrelated file", "A.swift", BROKEN_BLUESKY, 0),
+        ("passes an empty file", BLUESKY, "", 0),
     ]
     ok = True
     for label, name, text, want in cases:
@@ -375,7 +348,7 @@ def main():
 
     # A check whose subject has been renamed away certifies nothing — say so
     # rather than reporting clean over four files that no longer exist.
-    for needed in (FARCASTER, BLUESKY, INBOUND, SWEEP):
+    for needed in (BLUESKY, INBOUND, SWEEP):
         if needed not in seen:
             findings.append(f"{needed}: not found — this check has lost its subject")
 

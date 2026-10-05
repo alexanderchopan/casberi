@@ -380,7 +380,7 @@ enum FeedFetch {
             else { return nil }
             let artist = (r["artistName"] as? String) ?? "Podcast"
             let art = IngestSupport.imageURL((r["artworkUrl600"] as? String) ?? (r["artworkUrl100"] as? String))
-            return UserSearch.Hit(handle: artist, displayName: name, avatarURL: art, fid: nil, feedURL: feed)
+            return UserSearch.Hit(handle: artist, displayName: name, avatarURL: art, feedURL: feed)
         }
     }
 

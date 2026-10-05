@@ -10,7 +10,7 @@ import SwiftUI
 /// owner's own `WalletFace`, lit when they've signed and dim when they
 /// haven't, yours marked — instead of the bare fraction "2 of 3", which says
 /// nothing about who to go ask. Names come from `WalletIngest.knownLabel`'s
-/// existing chain (address-book name → Farcaster handle → short hex), so a
+/// existing chain (address-book name → linked contact → short hex), so a
 /// person who has named their co-signers sees people, not hex.
 ///
 /// Two facts the old card couldn't state, both cheap and both the kind almost

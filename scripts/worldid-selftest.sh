@@ -49,10 +49,9 @@ WORLDID="Casberi/Casberi/Model/WorldID.swift"
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 SOURCE="Casberi/Casberi/Model/WorldIDSource.swift"
 CARD="Casberi/Casberi/Screens/AddressBookViews.swift"
-ROOM="Casberi/Casberi/Screens/PersonRoomScreen.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 CHAINS="Casberi/Casberi/Model/WalletChainStore.swift"
-for f in "$WORLDID" "$KECCAK" "$SOURCE" "$CARD" "$ROOM" "$REACH" "$CHAINS"; do
+for f in "$WORLDID" "$KECCAK" "$SOURCE" "$CARD" "$REACH" "$CHAINS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -75,7 +74,6 @@ PY
 }
 strip "$SOURCE" > "$TMP/source.stripped"
 strip "$CARD"   > "$TMP/card.stripped"
-strip "$ROOM"   > "$TMP/room.stripped"
 
 # --- the compiled assertions -------------------------------------------------
 cat > "$TMP/main.swift" <<'SWIFT'
@@ -192,41 +190,29 @@ grep -q 'guard let returned = await ethCall(data: data) else { return false }' "
 grep -q 'WorldID.verifiedUntilSeconds(from: returned) ?? WorldID.unreadableSeconds' "$TMP/source.stripped" \
   || { echo "✗ WorldIDSource.fill no longer keeps an answer it could not read — dropping it re-asks that address on every visit forever"; exit 1; }
 
-# 2. ABSENCE DRAWS NOTHING, on both surfaces. The card switches all four cases
-#    and the two silent ones must stay silent; the room draws only on a live
-#    mark.
+# 2. ABSENCE DRAWS NOTHING. The card switches all four cases and the two
+#    silent ones must stay silent. (The person room's line went with the
+#    Farcaster seat's verified addresses, prd §1109.)
 grep -q 'case .absent, .unknown:' "$TMP/card.stripped" \
   || { echo "✗ the address card no longer answers .absent/.unknown together — absence must draw nothing"; exit 1; }
 grep -A 1 'case .absent, .unknown:' "$TMP/card.stripped" | grep -q 'EmptyView()' \
   || { echo "✗ the address card draws something for .absent/.unknown — 'not in World ID's book' is not a fact about a person (§83)"; exit 1; }
-grep -q 'if case .verified(let until) = worldStatus' "$TMP/room.stripped" \
-  || { echo "✗ the person room no longer draws only on a VERIFIED mark"; exit 1; }
-# 2b. NOTHING IN THE ROOM WAITS ON THIS READ. Up to `perPassBudget` sequential
-#     calls to a public RPC at 15s a timeout; ahead of the room's own loads it
-#     left the whole screen spinning to decide one line that usually draws
-#     nothing.
-fill_line=$(grep -n 'WorldIDSource.shared.fill(' "$TMP/room.stripped" | head -1 | cut -d: -f1)
-done_line=$(grep -n 'loading = false' "$TMP/room.stripped" | head -1 | cut -d: -f1)
-if [[ -z "$fill_line" || -z "$done_line" || "$fill_line" -lt "$done_line" ]]; then
-  echo "✗ the person room awaits the World ID read before it finishes loading — an unreachable World Chain stalls the room"; exit 1
-fi
-# 2c. BOTH SURFACES READ THE STORE, never a `@State` copy taken after `fill`
+# 2c. THE CARD READS THE STORE, never a `@State` copy taken after `fill`
 #     returns: `fill` returns immediately for an address already in flight, so
 #     a copy made then stays `.unknown` for the whole visit.
-for _f in "$TMP/card.stripped" "$TMP/room.stripped"; do
-  if grep -q '@State private var worldStatus' "$_f"; then
-    echo "✗ a surface copies the World ID status into @State — it must read the @Observable store"; exit 1
-  fi
-done
+if grep -q '@State private var worldStatus' "$TMP/card.stripped"; then
+  echo "✗ the card copies the World ID status into @State — it must read the @Observable store"; exit 1
+fi
 
 # 3. THE READ IS BOUGHT BY AN INTENT, never by a row. `fill` may be reached
-#    from a card task and the room's load, and from nowhere that scrolls.
+#    from a card task, and from nowhere that scrolls.
 callers=$(grep -rn "WorldIDSource.shared" --include="*.swift" Casberi/Casberi | grep -v "Model/WorldIDSource.swift" | wc -l | tr -d ' ')
 # Eight since prd §918: the Addresses card reads the wallets on its OWN open
 # (`.task`, bounded to three), which is exactly the rule — a card opening
-# buys the read. A ninth caller is a row scrolling past until proven otherwise.
-[[ "$callers" -le 8 ]] \
-  || { echo "✗ $callers callers of WorldIDSource — a read is bought by opening a card or a room, never by a row scrolling past (AddressNames' rule; 8 since §918)"; exit 1; }
+# buys the read. Six since §1109 took the person room's two. A seventh caller
+# is a row scrolling past until proven otherwise.
+[[ "$callers" -le 6 ]] \
+  || { echo "✗ $callers callers of WorldIDSource — a read is bought by opening a card or a room, never by a row scrolling past (AddressNames' rule; 6 since §1109)"; exit 1; }
 
 # 4. THE HOST IS DISCLOSED, and under its own service. It is a `g.alchemy.com`
 #    subdomain, so the receipts screen would file it under the Wallet bridge —

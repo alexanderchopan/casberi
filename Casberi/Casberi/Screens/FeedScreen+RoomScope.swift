@@ -131,8 +131,7 @@ extension FeedScreen {
 // MARK: - The Social room's people (prd §1079)
 
 // §1068 merged the networks into one Social room and the face row went with
-// their rooms. It stands again here, over Farcaster, Bluesky and Nostr at
-// once, one face per PERSON: accounts the Addresses index joins into one
+// their rooms. It stands again here, over Bluesky and Nostr at once, one face per PERSON: accounts the Addresses index joins into one
 // contact are one face, and a pick keeps that person's posts on every network
 // (`FollowedPeople`). On every size class: the shell's rail draws only for a
 // network's own room, which no longer opens.
@@ -143,11 +142,9 @@ extension FeedScreen {
     /// The followed accounts of the networks with a roster, narrowed to the
     /// app the menu picked, grouped into people.
     var socialPeople: [FollowedPeople.Person] {
-        let networks: [(String, Identity.Kind)] = [("Farcaster", .farcaster), ("Bluesky", .bluesky),
-                                                  ("Nostr", .nostr)]
+        let networks: [(String, Identity.Kind)] = [("Bluesky", .bluesky), ("Nostr", .nostr)]
         // The accounts marked yours, by network and key.
         var mine: Set<String> = []
-        for a in FarcasterStore.shared.accounts where a.mine { mine.insert("Farcaster:\(a.username)") }
         for a in BlueskyStore.shared.accounts where a.mine { mine.insert("Bluesky:\(a.handle)") }
         for a in NostrStore.shared.accounts where a.mine && !a.pubkeyHex.isEmpty {
             mine.insert("Nostr:\(a.pubkeyHex)")

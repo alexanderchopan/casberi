@@ -365,9 +365,9 @@ check("named root",
 check("named root with provenance",
       rootText(AddressSpine.events(standing: nil, transfers: [], total: 0,
                                    root: .named(at: day(2026, 3, 3),
-                                                provenance: "Farcaster · @jesse"),
+                                                provenance: "Bluesky · @jesse"),
                                    now: now, calendar: cal)),
-      "Mar 3 | You added this from Farcaster · @jesse and named it")
+      "Mar 3 | You added this from Bluesky · @jesse and named it")
 // An empty provenance string is an absent one, not a sentence with a hole.
 check("named root with empty provenance",
       rootText(AddressSpine.events(standing: nil, transfers: [], total: 0,

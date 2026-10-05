@@ -1114,13 +1114,12 @@ enum WalletIngest {
     }
 
     /// A synchronously-known name for a counterparty address — the person's own
-    /// label, a watched Farcaster handle, or a canonical contract (no async ENS).
+    /// label, a linked contact, or a canonical contract (no async ENS).
     /// The thing sheet's "Who" row shows this over the raw hex.
     static func knownLabel(for address: String) -> String? {
         let a = address.lowercased()
         return AddressBook.shared.name(for: a)
             ?? ContactIndexSources.contact(forKey: Identity.key(.wallet, a)).flatMap { $0.isUnnamed ? nil : $0.name }
-            ?? FarcasterStore.shared.handle(forAddress: a)
             ?? knownContracts[a]
     }
 
@@ -1155,13 +1154,10 @@ enum WalletIngest {
                 names[a] = mine
             } else if let contact = ContactIndexSources.contact(forKey: Identity.key(.wallet, a)),
                       !contact.isUnnamed {
-                // A contact the index LINKED to this address — a Farcaster
-                // account's display name, a card — beats every resolver below
+                // A contact the index LINKED to this address — a name, a
+                // card — beats every resolver below
                 // (prd §916): "from Jesse", not "from 0x2211…7da9".
                 names[a] = contact.name
-            } else if let handle = FarcasterStore.shared.handle(forAddress: a) {
-                // A watched Farcaster account's verified wallet — "from @dwr".
-                names[a] = handle
             } else if let watched = WalletStore.shared.addresses.first(where: {
                 $0.address.lowercased() == a
             }) {

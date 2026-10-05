@@ -151,7 +151,7 @@ absent "a grid test moved into the rules half" \
 
 # --- the two rooms that had no case at all ----------------------------------
 present "Nostr resolves to the social room" \
-  'case "Farcaster", "Bluesky", "Nostr": self = \.social' "$TMP/feed.nc"
+  'case "Bluesky", "Nostr": self = \.social' "$TMP/feed.nc"
 present "TikTok resolves to a room of its own" \
   'case "TikTok":              self = \.tiktok' "$TMP/feed.nc"
 # A single-account social room leaned on an activity grid, and Telegram on a
@@ -253,20 +253,20 @@ func cast(_ source: String, context: String? = nil) -> Row {
 }
 
 print("The table")
-check("the three live networks have a roster",
-      ["Bluesky", "Farcaster", "Nostr"].allSatisfy(SocialRoom.hasRoster))
-check("…and nothing else does",
-      ["X", "Instagram", "Telegram", "TikTok", "Snapchat"].allSatisfy { !SocialRoom.hasRoster($0) })
+check("the two live networks have a roster",
+      ["Bluesky", "Nostr"].allSatisfy(SocialRoom.hasRoster))
+check("…and nothing else does — Farcaster's seat is retired (prd §1109)",
+      ["X", "Instagram", "Telegram", "TikTok", "Snapchat", "Farcaster"].allSatisfy { !SocialRoom.hasRoster($0) })
 check("a source outside the table has no roster", !SocialRoom.hasRoster("Wallet"))
 check("threads fold only where a parent can be named exactly",
-      ["Bluesky", "Farcaster", "Nostr", "X"].allSatisfy(SocialRoom.foldsThreads)
+      ["Bluesky", "Nostr", "X"].allSatisfy(SocialRoom.foldsThreads)
         && ["Instagram", "Telegram", "TikTok", "Snapchat"].allSatisfy { !SocialRoom.foldsThreads($0) })
 check("Snapchat is in the table so the catalog guard sees it decided",
       SocialRoom.facts(for: "Snapchat") != nil)
 check("…and draws no posts, which is what being decided means here",
       !SocialRoom.drawsPosts("Snapchat"))
-check("the other seven draw posts",
-      ["Bluesky", "Farcaster", "Nostr", "X", "Instagram", "Telegram", "TikTok"]
+check("the other six draw posts",
+      ["Bluesky", "Nostr", "X", "Instagram", "Telegram", "TikTok"]
         .allSatisfy(SocialRoom.drawsPosts))
 check("an unknown source draws no posts", !SocialRoom.drawsPosts("Kalshi"))
 check("…and its rows fall back to the band rather than trapping",
@@ -301,8 +301,8 @@ check("a notice with a newline keeps the two-line shape",
       SocialRoom.rowSentence(words: "mia liked\nyour post", author: "mia") == nil)
 
 print("")
-print("The three live networks — and NOSTR IS ONE OF THEM")
-for net in ["Bluesky", "Farcaster", "Nostr"] {
+print("The two live networks — and NOSTR IS ONE OF THEM")
+for net in ["Bluesky", "Nostr"] {
     check("\(net): a cast is a post card", kind(cast(net)) == .post(whole: false))
     check("\(net): a cast with self-replies folds into a thread",
           kind(cast(net), replies: true) == .thread(whole: false))
@@ -428,7 +428,7 @@ check("a Nostr post does now",
 check("a shared article no longer takes a card of its own",
       !SocialRoom.standsAlone(Row(source: "Bluesky", kind: "link")))
 check("neither does a follow notification",
-      !SocialRoom.standsAlone(cast("Farcaster", context: "follow")))
+      !SocialRoom.standsAlone(cast("Bluesky", context: "follow")))
 check("nor a TikTok reading row",
       !SocialRoom.standsAlone(Row(source: "TikTok", kind: "link")))
 
@@ -503,8 +503,8 @@ echo "Mutations"
 # THE BUG THIS PASS EXISTS FOR, put back: Nostr drops out of the live-network
 # case and every one of its rows falls to the band.
 mutate "Nostr falls out of the social room again" \
-  'case "Bluesky", "Farcaster", "Nostr":' \
-  'case "Bluesky", "Farcaster":'
+  'case "Bluesky", "Nostr":' \
+  'case "Bluesky":'
 
 # §915: a longer name reads as the name ("samantha" names sam), so the
 # eyebrow drops a name the sentence never said.

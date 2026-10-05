@@ -227,9 +227,6 @@ for i, (t, s) in enumerate(pinterest):
     pic(f"pin-{i}", "scene_home", (540, 810), f"Pin '{t}': {s}")
 
 # ── Social posts' own pictures (DemoSeedAll.social) ───────────────────────
-pic("fc-0", "ui", (800, 600), "Photo attached to 'Shipped the new onboarding today. Four screens became one.': a laptop-screen photo of a design file showing one phone screen where four used to be, the old four struck through to the side")
-pic("fc-5a", "scene_home", (800, 600), "Photo attached to 'Books that changed how I plan.': a stack of books on a desk")
-pic("fc-5b", "scene_home", (800, 600), "Second photo on 'Books that changed how I plan.': an open book with pencil notes and a coffee")
 pic("bsky-2", "scene_home", (800, 600), "Photo on 'Sanded the walnut shelf. Six coats of oil to go.': a walnut shelf on two sawhorses in a small workshop, sandpaper, an oil tin, sawdust")
 pic("bsky-4a", "scene_home", (800, 600), "Photo on 'Notes from a quiet week.': an open notebook and pen on a table")
 pic("bsky-4b", "scene_out", (800, 600), "Second photo on 'Notes from a quiet week.': an empty park path in the rain")

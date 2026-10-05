@@ -158,7 +158,6 @@ enum CompanyPacks {
             "YouTube": alphabet,
             // Social
             "Bluesky": own("Bluesky"),
-            "Farcaster": own("Farcaster"),
             "Instagram": meta,
             "Snapchat": ("Snap", .stock("SNAP")),
             "Telegram": own("Telegram"),

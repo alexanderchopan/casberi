@@ -833,7 +833,7 @@ check("a name somebody typed keeps the row",
 check("a note keeps an unnamed row",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, note: "paid me in March"))
 check("a verified provenance keeps an unnamed row",
-      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, provenance: "Farcaster · @jesse"))
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, provenance: "Bluesky · @jesse"))
 // A network tag records a MEETING, and meetings do not repeat — nothing would
 // ever put it back.
 check("a network tag keeps an unnamed row",

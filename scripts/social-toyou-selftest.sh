@@ -54,13 +54,13 @@ func to(_ r: SocialToYou.Row) -> Bool { SocialToYou.isToYou(r, myHandles: me) }
 
 // ── To you ───────────────────────────────────────────────────────────
 check(to(row("Bluesky", "reply")), "a reply to you is to you")
-check(to(row("Farcaster", "follow")), "a new follower is to you")
+check(to(row("Nostr", "follow")), "a new follower is to you")
 check(to(row("Instagram", "follow", ref: "ig-live:notif:1")), "an Instagram follow is to you")
 check(to(row("Bluesky", "mention", text: "nice one @alex.bsky.social!")), "a mention of your handle is to you")
-check(to(row("Farcaster", "mention", text: "cc @Alex")), "a mention matches without case")
+check(to(row("Nostr", "mention", text: "cc @Alex")), "a mention matches without case")
 check(!to(row("Bluesky", "mention", text: "thanks @maya.bsky.social")), "a mention of someone else is not")
-check(!to(row("Farcaster", "liked")), "what someone you follow liked is not")
-check(!to(row("Farcaster", "recast")), "what someone you follow recast is not")
+check(!to(row("Nostr", "liked")), "what someone you follow liked is not")
+check(!to(row("Nostr", "recast")), "what someone you follow recast is not")
 check(!to(row("Bluesky")), "a post by someone you follow is not")
 check(to(row("TikTok", ref: "tiktok:live:notif:3", title: "rui liked your video")), "a TikTok notice is to you")
 check(to(row("Instagram", ref: "ig-live:notif:2", title: "lena liked your photo.")), "an Instagram notice is to you")
@@ -74,11 +74,11 @@ check(!SocialToYou.isToYou(row("Bluesky", "mention", text: "@"), myHandles: [""]
 let rows: [(row: SocialToYou.Row, at: Date)] = [
     (row("Bluesky"), ago(0.1)),
     (row("Bluesky", "reply"), ago(0.5)),
-    (row("Farcaster", "follow"), ago(1)),
+    (row("Nostr", "follow"), ago(1)),
     (row("Bluesky", "reply"), ago(2)),
     (row("Bluesky", "reply"), ago(3)),
-    (row("Farcaster", "reply"), ago(9)),
-    (row("Farcaster", "reply"), now.addingTimeInterval(3_600)),
+    (row("Nostr", "reply"), ago(9)),
+    (row("Nostr", "reply"), now.addingTimeInterval(3_600)),
 ]
 let lead = SocialToYou.leading(rows, myHandles: me, now: now)
 check(lead == [1, 2, 3], "the week's three newest rows to you lead, newest first")
@@ -92,7 +92,7 @@ check(SocialToYou.mentions(in: "mail me at a@b.com") == [], "an email address is
 
 // ── Suggestions ──────────────────────────────────────────────────────
 let s = SocialToYou.suggestions(
-    talkers: [("Bluesky", "@Nikhil.bsky.social", ago(1)), ("Farcaster", "sam", ago(2)),
+    talkers: [("Bluesky", "@Nikhil.bsky.social", ago(1)), ("Bluesky", "sam.bsky.social", ago(2)),
               ("Bluesky", "nikhil.bsky.social", ago(3)), ("X", "kim", ago(1)),
               ("Bluesky", "alex.bsky.social", ago(1))],
     posts: [("Bluesky", "great thread by @eva.bsky.social", ago(1)),
@@ -101,9 +101,9 @@ let s = SocialToYou.suggestions(
             ("Bluesky", "@old.bsky.social", ago(10)), ("Bluesky", "@old.bsky.social", ago(11)),
             ("Bluesky", "@nikhil.bsky.social @nikhil.bsky.social", ago(1)),
             ("Bluesky", "@mia.bsky.social", ago(1)), ("Bluesky", "@mia.bsky.social", ago(2))],
-    watched: ["Farcaster": ["sam"], "Bluesky": ["mia.bsky.social"]], mine: me, now: now)
+    watched: ["Bluesky": ["mia.bsky.social", "sam.bsky.social"]], mine: me, now: now)
 check(s.first == .init(source: "Bluesky", handle: "nikhil.bsky.social", why: .talksToYou), "who talks to you leads, once, normalised")
-check(!s.contains { $0.handle == "sam" }, "someone you follow is never suggested")
+check(!s.contains { $0.handle == "sam.bsky.social" }, "someone you follow is never suggested")
 check(!s.contains { $0.handle == "kim" }, "a network Follow cannot land on is never suggested")
 check(!s.contains { $0.handle == "alex.bsky.social" }, "you are never suggested to yourself")
 check(s.contains(.init(source: "Bluesky", handle: "eva.bsky.social", why: .mentioned(2))), "two posts naming someone make a suggestion, counted once a post")

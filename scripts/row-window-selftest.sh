@@ -54,20 +54,18 @@ STRIPPED=$(mktemp)
 trap 'rm -f "$STRIPPED"' EXIT
 sed -E 's://.*$::' "$ROOM" > "$STRIPPED"
 
-grep -q 'RowWindow.slice(mergedRows.live, steps: windowSteps)' "$ROOM" \
+grep -q 'RowWindow.slice(posts.live, steps: windowSteps)' "$ROOM" \
   || { echo "✗ the person room no longer slices its rows through RowWindow — the list is unbounded again (prd §657)"; exit 1; }
 grep -q 'ForEach(window.shown.keyed)' "$ROOM" \
   || { echo "✗ the person room's ForEach no longer draws the window's own rows"; exit 1; }
-grep -q 'ForEach(merged' "$STRIPPED" \
+grep -qE 'ForEach\((posts|merged)' "$STRIPPED" \
   && { echo "✗ the person room draws the unwindowed array again — this is build 539's own line"; exit 1; }
-# The merge is MEMOISED. Sorting is n log n stored-property reads on live
-# models, and a sheet drag evaluates the body per offset change — so a body
-# that calls `merged` itself leaves that term growing with the corpus on the
-# very path the window was added to bound.
-grep -q '@State private var mergedRows' "$ROOM" \
-  || { echo "✗ the merged room is no longer memoised — the sort would run on every body pass, per drag frame"; exit 1; }
-grep -qE '(let|var) window = RowWindow.slice\(merged,' "$STRIPPED" \
-  && { echo "✗ the body merges and sorts for itself again — memoise into mergedRows"; exit 1; }
+# The SORT runs in `load()`, never in the body. Sorting is n log n
+# stored-property reads on live models, and a sheet drag evaluates the body per
+# offset change. (The memoised merge of posts and onchain moves went with the
+# Farcaster seat, prd §1109; the room is the posts alone, sorted once.)
+grep -qE 'RowWindow.slice\([^)]*sorted' "$STRIPPED" \
+  && { echo "✗ the body sorts the room for itself — sort once in load()"; exit 1; }
 # The opener must be a TAP. `.onAppear` growth is a runaway (the feed's
 # `olderRow` carries the measurement: 12% → 60% of main-thread samples).
 grep -q 'windowSteps += 1' "$ROOM" \

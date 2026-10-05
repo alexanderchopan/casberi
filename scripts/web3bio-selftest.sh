@@ -8,8 +8,8 @@
 # and both render fine:
 #
 #   • A RECORD FOR SOMEBODY ELSE. `/ns/{address}` answers records whose own
-#     `address` is NOT the one asked — vitalik's Farcaster row carries a
-#     different verified address (MEASURED). Take the array as "this address's
+#     `address` is NOT the one asked — vitalik's Lens row carries a
+#     different address (MEASURED). Take the array as "this address's
 #     names" and a stranger's handle stands beside somebody's money (§599).
 #   • A 404 READ AS AN EMPTY LIST, or a 200 THAT IS NOT AN ARRAY read as one.
 #     "Nothing under this query" and "we could not read the answer" must stay
@@ -82,7 +82,8 @@ func prow(_ platform: String, _ identity: String, _ address: String,
 }
 
 // The measured vitalik array: four records, three of which carry OTHER
-// addresses than the ENS one.
+// addresses than the ENS one. The Farcaster row is dropped at parse since the
+// seat was retired (prd §1109), so three are read.
 let V = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
 let vitalik: [Any] = [
     row("ens", "vitalik.eth", V, avatar: "https://euc.li/vitalik.eth"),
@@ -94,11 +95,11 @@ let vitalik: [Any] = [
 
 // ── Pure: parse ─────────────────────────────────────────────────────────
 if case .records(let rs) = Web3Bio.parse(vitalik, status: 200) {
-    check(rs.count == 4, "four name records parsed")
+    check(rs.count == 3, "three name records parsed — the Farcaster row is dropped (prd §1109)")
     check(rs.first?.platform == .ens && rs.first?.identity == "vitalik.eth", "the ENS row parsed")
     check(rs[1].platform == .basenames, "a basenames row is .basenames")
-    check(rs[2].platform == .farcaster && rs[2].displayName == "Vitalik Buterin", "displayName kept")
-    check(rs[3].avatar == nil, "a null avatar is nil")
+    check(rs[2].platform == .lens, "a lens row is .lens")
+    check(rs[2].avatar == nil, "a null avatar is nil")
 } else { check(false, "a 200 array parses as records") }
 
 check(Web3Bio.parse(vitalik, status: 404) == .none, "404 is .none")
@@ -116,6 +117,10 @@ check(Web3Bio.parse([row("ethereum", dead, dead)], status: 200) == .records([]),
 check(Web3Bio.parse([row("solana", "abc", "abc")], status: 200) == .records([]),
       "the solana placeholder row is not a name")
 check(Web3Bio.record(row("myspace", "tom", V)) == nil, "an unknown platform is dropped")
+check(Web3Bio.record(row("farcaster", "vitalik.eth", V)) == nil,
+      "a Farcaster record is dropped — the seat is retired (prd §1109)")
+check(Web3Bio.record(row("ens", "x.eth", V, display: "Vitalik Buterin"))?.displayName == "Vitalik Buterin",
+      "displayName kept")
 check(Web3Bio.record(row("ENS", "vitalik.eth", "0xD8DA6BF26964AF9D7EED9E03E53415D37AA96045"))?.address == V,
       "platform case folded and an EVM address lowercased")
 check(Web3Bio.record(row("sns", "toly.sol", "86xCnPeV69n6t3DnyGvkKobf9FdN2H9oiVDdaMpo2MMY"))?.address
@@ -135,23 +140,22 @@ check(own.count == 1 && own.first?.platform == .ens,
       "only the record whose OWN address is the query names it (the §599 half)")
 check(Web3Bio.names(recs, ownedBy: V.uppercased().replacingOccurrences(of: "0X", with: "0x")).count == 1,
       "a checksummed spelling still finds its lowercased record")
-check(Web3Bio.names(recs, ownedBy: "0x96b6bb2bd2eba3b4fbefd7dbac448ad7b6cbf279").first?.platform == .farcaster,
-      "the Farcaster record names ITS address")
+check(Web3Bio.names(recs, ownedBy: "0xe4aaa97cda406c6af7c02a5260a8013910bd683c").first?.platform == .lens,
+      "the Lens record names ITS address")
 check(Web3Bio.forwardAddress(recs, for: "vitalik.lens") == "0xe4aaa97cda406c6af7c02a5260a8013910bd683c",
       "forward picks the record whose identity is the name, not the first row")
 check(Web3Bio.forwardAddress(recs, for: "VITALIK.ETH") == V, "forward matches the name case-insensitively")
 check(Web3Bio.forwardAddress(recs, for: "nobody.eth") == nil, "forward for an absent name is nil")
 
 // ── Pure: platform words ────────────────────────────────────────────────
-check(Web3Bio.Platform.farcaster.display("jesse") == "@jesse", "a Farcaster identity wears the @")
 check(Web3Bio.Platform.basenames.display("jesse.base.eth") == "jesse.base.eth", "a name is already the name")
-check(Web3Bio.Platform.basenames.isLinkedEVMName && Web3Bio.Platform.farcaster.isLinkedEVMName
+check(Web3Bio.Platform.basenames.isLinkedEVMName
       && Web3Bio.Platform.lens.isLinkedEVMName && Web3Bio.Platform.linea.isLinkedEVMName,
-      "Base, Linea, Farcaster and Lens are the linked rows")
+      "Base, Linea and Lens are the linked rows")
 check(!Web3Bio.Platform.ens.isLinkedEVMName && !Web3Bio.Platform.sns.isLinkedEVMName,
       "ENS has its own row and SNS is not EVM")
 check(!Web3Bio.Platform.ethereum.isName && !Web3Bio.Platform.solana.isName, "placeholders are not names")
-check(Web3Bio.Platform.basenames.label == "Base" && Web3Bio.Platform.farcaster.label == "Farcaster"
+check(Web3Bio.Platform.basenames.label == "Base" && Web3Bio.Platform.linea.label == "Linea"
       && Web3Bio.Platform.lens.label == "Lens" && Web3Bio.Platform.ens.label == "ENS", "the labels")
 
 // ── Pure: one name, one row ─────────────────────────────────────────────
@@ -159,15 +163,15 @@ var rows = [Web3Bio.Named(label: "ENS", name: "jesse.base.eth")]
 Web3Bio.fold(Web3Bio.Named(label: "Base", name: "Jesse.Base.ETH"), into: &rows)
 check(rows.count == 1 && rows[0].label == "Base" && rows[0].name == "jesse.base.eth",
       "a name the ENS step listed is relabelled in place by the specific service, case folded")
-Web3Bio.fold(Web3Bio.Named(label: "Farcaster", name: "@jesse.base.eth"), into: &rows)
-check(rows.count == 2 && rows[1].label == "Farcaster", "a different name appends after it")
+Web3Bio.fold(Web3Bio.Named(label: "Linea", name: "jesse.linea.eth"), into: &rows)
+check(rows.count == 2 && rows[1].label == "Linea", "a different name appends after it")
 Web3Bio.fold(Web3Bio.Named(label: "Lens", name: "x.lens"), into: &rows)
-check(rows.map(\.name) == ["jesse.base.eth", "@jesse.base.eth", "x.lens"], "the order is the arrival order")
+check(rows.map(\.name) == ["jesse.base.eth", "jesse.linea.eth", "x.lens"], "the order is the arrival order")
 
 // ── Pure: the URL ───────────────────────────────────────────────────────
 check(Web3Bio.url(for: "vitalik.eth")?.absoluteString == "https://api.web3.bio/ns/vitalik.eth", "a plain name")
 check(Web3Bio.url(for: "  jesse.base.eth ")?.absoluteString == "https://api.web3.bio/ns/jesse.base.eth", "trimmed")
-check(Web3Bio.url(for: "farcaster,vitalik.eth")?.absoluteString == "https://api.web3.bio/ns/farcaster,vitalik.eth",
+check(Web3Bio.url(for: "lens,vitalik.lens")?.absoluteString == "https://api.web3.bio/ns/lens,vitalik.lens",
       "a platform-scoped query keeps its comma")
 check(Web3Bio.url(for: "a/b.eth") == nil, "a slash is refused, never encoded into a path")
 check(Web3Bio.url(for: "a?b.eth") == nil, "a query string is refused")
@@ -187,16 +191,15 @@ Task { @MainActor in
         base + "nobody.eth": (["error": "Not Found"], 404),
         base + "busy.eth": (nil, 429),
         base + "broken.eth": (["error": "x"], 200),
-        base + "farcaster,vitalik.eth": ([row("farcaster", "vitalik.eth", "0x96b6bb2bd2eba3b4fbefd7dbac448ad7b6cbf279"),
-                                          row("ens", "vitalik.eth", V)], 200),
         base + "lens,vitalik.lens": ([row("lens", "vitalik.lens", "0xe4aaa97cda406c6af7c02a5260a8013910bd683c")], 200),
         base + "basenames,jesse.base.eth": ([row("basenames", "jesse.base.eth", "0x2211d1d0020daea8039e46cf1367962070d77da9")], 200),
         base + "0x2211d1d0020daea8039e46cf1367962070d77da9":
             ([row("basenames", "jesse.base.eth", "0x2211d1d0020daea8039e46cf1367962070d77da9"),
-              row("farcaster", "jesse", "0x2211d1d0020daea8039e46cf1367962070d77da9",
+              row("linea", "jesse.linea.eth", "0x2211d1d0020daea8039e46cf1367962070d77da9",
                   avatar: "https://i.example/jesse.png"),
               row("lens", "jesse.lens", "0x2211d1d0020daea8039e46cf1367962070d77da9")], 200),
-        base + "farcaster,jesse": ([row("farcaster", "jesse", "0x0000000000000000000000000000000000000001")], 200),
+        // The forward answer is ANOTHER address — the record is not believed.
+        base + "linea,jesse.linea.eth": ([row("linea", "jesse.linea.eth", "0x0000000000000000000000000000000000000001")], 200),
         // The forward answer names the address on the SAME platform under a
         // DIFFERENT identity — a squatter's shape. Not verified.
         base + "lens,jesse.lens": ([row("lens", "other.lens", "0x2211d1d0020daea8039e46cf1367962070d77da9")], 200),
@@ -211,7 +214,7 @@ Task { @MainActor in
     // Reverse: only records naming THIS address.
     let names = await Web3Bio.names(for: V)
     check(names.count == 1 && names.first?.platform == .ens,
-          "names(for:) keeps the ENS row and drops the three web3.bio joined in")
+          "names(for:) keeps the ENS row and drops the ones web3.bio joined in")
 
     // Forward verification: the record's own platform+identity comes back to the address.
     let jesse = "0x2211d1d0020daea8039e46cf1367962070d77da9"
@@ -219,7 +222,7 @@ Task { @MainActor in
     check(jn.count == 3, "all three of jesse's records name jesse")
     check(await Web3Bio.verified(jn[0], is: jesse) == true, "the basename forward-verifies")
     check(await Web3Bio.verified(jn[1], is: jesse) == false,
-          "a Farcaster record whose forward answer is another address FAILS closed")
+          "a record whose forward answer is another address FAILS closed")
     check(await Web3Bio.verified(jn[2], is: jesse) == false,
           "a record whose forward answer names the address under ANOTHER identity fails closed")
     check(IngestSupport.requests.contains(base + "basenames,jesse.base.eth"),
@@ -247,7 +250,7 @@ Task { @MainActor in
     IngestSupport.canned[pbase + pj] = ([
         prow("basenames", "jesse.base.eth", pj, bio: "  base.eth builder #001 ",
              links: ["github": "jessepollak", "twitter": "jessepollak", "website": "jesse.xyz"]),
-        prow("farcaster", "someoneelse", "0x0000000000000000000000000000000000000009",
+        prow("lens", "someoneelse.lens", "0x0000000000000000000000000000000000000009",
              bio: "not jesse", links: ["github": "impostor"]),
     ], 200)
     IngestSupport.canned[pbase + "0x0000000000000000000000000000000000000404"] = (["error": "x"], 404)
@@ -368,9 +371,6 @@ mutate "verification stops asking the forward query" \
 mutate "the same name is listed twice under two services" \
   '            rows[i].label = row.label' \
   '            rows.append(row)'
-mutate "a Farcaster identity loses its @" \
-  'self == .farcaster ? "@" + identity : identity' \
-  'identity'
 mutate "a profile keeps another address's links" \
   '        case .records(let records): return names(records, ownedBy: address)' \
   '        case .records(let records): return records'

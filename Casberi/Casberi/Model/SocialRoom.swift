@@ -84,7 +84,6 @@ enum SocialRoom {
     /// the sheet while nobody remembered the room.
     static let table: [String: Facts] = [
         "Bluesky":   Facts(foldsThreads: true,  hasRoster: true),
-        "Farcaster": Facts(foldsThreads: true,  hasRoster: true),
         "Nostr":     Facts(foldsThreads: true,  hasRoster: true),
         "X":         Facts(foldsThreads: true,  hasRoster: false, leadsWithNewest: true),
         "Instagram": Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true),
@@ -210,11 +209,11 @@ enum SocialRoom {
 
         switch row.source {
 
-        // THE THREE LIVE NETWORKS. Their posts land as `.chat` by kind (see
-        // `BlueskyIngest`/`FarcasterIngest`/`NostrIngest`), so — unlike every
+        // THE TWO LIVE NETWORKS. Their posts land as `.chat` by kind (see
+        // `BlueskyIngest`/`NostrIngest`), so — unlike every
         // room below — a `.chat` here is the post itself and must NOT take the
         // transcript branch.
-        case "Bluesky", "Farcaster", "Nostr":
+        case "Bluesky", "Nostr":
             // A FOLLOWER IS A PERSON, not an article somebody shared
             // (2026-08-12). `SocialInbound.landFollower` lands a follow as a
             // `.link`, and the link branch below would read it as a shared

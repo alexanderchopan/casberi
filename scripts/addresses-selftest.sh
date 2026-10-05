@@ -48,19 +48,20 @@ let t2 = Date(timeIntervalSince1970: 3_000_000)
 // ── Keys ────────────────────────────────────────────────────────────────
 check(Identity.key(.wallet, "0xD8DA6BF26964AF9D7EED9E03E53415D37AA96045") == "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
       "a wallet key is lowercased")
-check(Identity.key(.farcaster, "@Jesse") == "fc:jesse", "a Farcaster key drops the @ and folds case")
-check(Identity.key(.farcaster, "fc:jesse") == "fc:jesse", "a key already prefixed is not double-prefixed")
+check(Identity.key(.bluesky, "@Jesse") == "bsky:jesse", "a handle key drops the @ and folds case")
+check(Identity.key(.bluesky, "bsky:jesse") == "bsky:jesse", "a key already prefixed is not double-prefixed")
 check(Identity.key(.github, "Torvalds") == "gh:torvalds", "a GitHub login folds case")
 check(Identity.key(.email, "Jesse@Example.com") == "mail:jesse@example.com", "an email folds case")
 check(Identity.key(.contact, "contact:ABC-123") == "contact:abc-123", "a contact key keeps its prefix once")
-check(Identity.parse(key: "fc:jesse")?.kind == .farcaster, "a key parses back to its kind")
+check(Identity.parse(key: "bsky:jesse")?.kind == .bluesky, "a key parses back to its kind")
+check(Identity.parse(key: "fc:jesse") == nil, "a retired Farcaster key parses to nobody, never a World App name (prd §1109)")
 check(Identity.parse(key: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")?.kind == .wallet, "a bare address parses as a wallet")
 check(Identity.parse(key: "jesse.base.eth")?.kind == .basename, "a basename parses by shape")
 check(Identity.parse(key: "nonsense") == nil || Identity.parse(key: "nonsense")?.kind == .worldApp,
       "a bare word is at most a World App name")
 check(Identity.make(.wallet, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045").label == "…6045", "a wallet's label is its tail")
-check(Identity.make(.farcaster, "jesse").label == "@jesse", "a handle's label wears the @")
-check(Identity.Kind.classify(primaryName: "@vitalik") == .farcaster, "classify: @ is Farcaster")
+check(Identity.make(.bluesky, "jesse").label == "@jesse", "a handle's label wears the @")
+check(Identity.Kind.classify(primaryName: "@vitalik") == nil, "classify: an @ name is a retired Farcaster handle and names nobody (prd §1109)")
 check(Identity.Kind.classify(primaryName: "jesse.base.eth") == .basename, "classify: .base.eth")
 check(Identity.Kind.classify(primaryName: "x.linea.eth") == .linea, "classify: .linea.eth")
 check(Identity.Kind.classify(primaryName: "vitalik.lens") == .lens, "classify: .lens")
@@ -71,13 +72,13 @@ check(Identity.Kind.classify(primaryName: "0xd8da6bf26964af9d7eed9e03e53415d37aa
 check(Identity.Kind.contact.precedence < Identity.Kind.email.precedence
       && Identity.Kind.email.precedence < Identity.Kind.github.precedence
       && Identity.Kind.github.precedence < Identity.Kind.wallet.precedence
-      && Identity.Kind.wallet.precedence < Identity.Kind.farcaster.precedence,
+      && Identity.Kind.wallet.precedence < Identity.Kind.bluesky.precedence,
       "lead precedence: contact, email, GitHub, wallet, then social")
 
 // ── The ledger ──────────────────────────────────────────────────────────
 let A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 let B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-let J = "fc:jesse"
+let J = "bsky:jesse"
 let sugg = ContactLink(A, J, tier: .suggested, source: "corpus.email", at: t0)
 check(sugg.a == A && sugg.b == J && ContactLink(J, A, tier: .suggested, source: "x").pairKey == sugg.pairKey,
       "a pair is stored sorted, one key per pair")
@@ -93,7 +94,7 @@ ledger = ledger.declining(J, A)
 check(ledger.link(A, J)?.declined == true && ledger.link(A, J)?.suggests == false, "declined sticks and stops suggesting")
 ledger = ledger.recording(ContactLink(A, J, tier: .suggested, source: "corpus.email", at: t1))
 check(ledger.link(A, J)?.declined == true, "a re-suggestion does not clear a No")
-ledger = ledger.recording(ContactLink(A, J, tier: .verified, source: "farcaster.verifications", at: t2))
+ledger = ledger.recording(ContactLink(A, J, tier: .verified, source: "network.verified", at: t2))
 check(ledger.link(A, J)?.tier == .verified && ledger.link(A, J)?.declined == false,
       "a later VERIFIED edge replaces a declined suggestion — a fact beats an opinion")
 ledger = ledger.recording(ContactLink(A, J, tier: .suggested, source: "x", at: t2))
@@ -112,26 +113,26 @@ check(merged.link(A, J)?.declined == true, "a remote No lands as a No")
 
 // ── Build: no name merge ────────────────────────────────────────────────
 let alexWallet = ContactIndex.Seed(Identity.make(.wallet, A), name: "Alex", typed: true, since: t0)
-let alexFC = ContactIndex.Seed(Identity.make(.farcaster, "alexx"), name: "Alex")
-var contacts = ContactIndex.build(seeds: [alexWallet, alexFC], links: [])
+let alexSocial = ContactIndex.Seed(Identity.make(.bluesky, "alexx"), name: "Alex")
+var contacts = ContactIndex.build(seeds: [alexWallet, alexSocial], links: [])
 check(contacts.count == 2, "two seeds called Alex with no edge are two contacts")
 
 // ── Build: verified merges, suggested does not ──────────────────────────
-contacts = ContactIndex.build(seeds: [alexWallet, alexFC], links: [ContactLink(A, "fc:alexx", tier: .suggested, source: "x")])
+contacts = ContactIndex.build(seeds: [alexWallet, alexSocial], links: [ContactLink(A, "bsky:alexx", tier: .suggested, source: "x")])
 check(contacts.count == 2, "a suggested edge does not merge")
-contacts = ContactIndex.build(seeds: [alexWallet, alexFC], links: [ContactLink(A, "fc:alexx", tier: .verified, source: "farcaster.verifications")])
+contacts = ContactIndex.build(seeds: [alexWallet, alexSocial], links: [ContactLink(A, "bsky:alexx", tier: .verified, source: "network.verified")])
 check(contacts.count == 1, "a verified edge merges")
 let alex = contacts[0]
 check(alex.id == A && alex.lead.kind == .wallet, "the lead is the wallet (precedence over social)")
 check(alex.name == "Alex", "the typed name")
-check(alex.identities.count == 2 && alex.identities[1].tier == .verified && alex.identities[1].source == "farcaster.verifications",
+check(alex.identities.count == 2 && alex.identities[1].tier == .verified && alex.identities[1].source == "network.verified",
       "the joined identity carries the edge's tier and source")
 
 // ── Build: declined cut, verified still merges ──────────────────────────
-var l = LinkLedger().recording(ContactLink(A, "fc:alexx", tier: .suggested, source: "x")).declining(A, "fc:alexx")
-check(ContactIndex.build(seeds: [alexWallet, alexFC], links: l.all).count == 2, "a declined pair stays apart")
-l = l.recording(ContactLink(A, "fc:alexx", tier: .verified, source: "farcaster.verifications", at: t2))
-check(ContactIndex.build(seeds: [alexWallet, alexFC], links: l.all).count == 1, "…until a verified edge arrives")
+var l = LinkLedger().recording(ContactLink(A, "bsky:alexx", tier: .suggested, source: "x")).declining(A, "bsky:alexx")
+check(ContactIndex.build(seeds: [alexWallet, alexSocial], links: l.all).count == 2, "a declined pair stays apart")
+l = l.recording(ContactLink(A, "bsky:alexx", tier: .verified, source: "network.verified", at: t2))
+check(ContactIndex.build(seeds: [alexWallet, alexSocial], links: l.all).count == 1, "…until a verified edge arrives")
 
 // ── Build: a link end that is no seed becomes an identity ───────────────
 contacts = ContactIndex.build(seeds: [alexWallet], links: [ContactLink(A, "jesse.base.eth", tier: .verified, source: "web3.bio")])
@@ -167,27 +168,27 @@ let two = ContactIndex.build(seeds: [w1, w2], links: [ContactLink(A, B, tier: .v
 check(two.count == 1 && two[0].id == B, "the oldest entry leads at equal precedence")
 
 // ── Name precedence ─────────────────────────────────────────────────────
-let fcOnly = ContactIndex.Seed(Identity.make(.farcaster, "jesse"), name: "Jesse Pollak")
+let socialOnly = ContactIndex.Seed(Identity.make(.bluesky, "jesse"), name: "Jesse Pollak")
 let jw = ContactIndex.Seed(Identity.make(.wallet, B), name: nil, typed: false)
-var jc = ContactIndex.build(seeds: [jw, fcOnly], links: [ContactLink(B, "fc:jesse", tier: .verified, source: "farcaster.verifications"),
+var jc = ContactIndex.build(seeds: [jw, socialOnly], links: [ContactLink(B, "bsky:jesse", tier: .verified, source: "network.verified"),
                                                          ContactLink(B, "jesse.base.eth", tier: .verified, source: "web3.bio")])
 check(jc.count == 1 && jc[0].name == "jesse.base.eth", "with no typed name, a verified name-service name beats a display name")
-jc = ContactIndex.build(seeds: [jw, fcOnly], links: [ContactLink(B, "fc:jesse", tier: .verified, source: "farcaster.verifications")])
+jc = ContactIndex.build(seeds: [jw, socialOnly], links: [ContactLink(B, "bsky:jesse", tier: .verified, source: "network.verified")])
 check(jc[0].name == "Jesse Pollak", "then the seat's display name")
-jc = ContactIndex.build(seeds: [ContactIndex.Seed(Identity.make(.farcaster, "jesse"))], links: [])
+jc = ContactIndex.build(seeds: [ContactIndex.Seed(Identity.make(.bluesky, "jesse"))], links: [])
 check(jc[0].name == "@jesse", "then the lead's own label")
 
 // ── Kind ────────────────────────────────────────────────────────────────
 let safeSeed = ContactIndex.Seed(Identity.make(.wallet, A), name: "Treasury", typed: true, kind: .safe)
-check(ContactIndex.build(seeds: [safeSeed, alexFC], links: [ContactLink(A, "fc:alexx", tier: .verified, source: "you")])[0].kind == .safe,
+check(ContactIndex.build(seeds: [safeSeed, alexSocial], links: [ContactLink(A, "bsky:alexx", tier: .verified, source: "you")])[0].kind == .safe,
       "a Safe stays a Safe when a social seat joins")
 let pub = ContactIndex.Seed(Identity.make(.feed, "https://x.substack.com/feed"), name: "X", kind: .publication)
 check(ContactIndex.build(seeds: [pub], links: [])[0].kind == .publication, "a feed alone is a publication")
 check(ContactIndex.build(seeds: [pub], links: [])[0].lead.kind == .feed, "keyed on its feed")
 
 // ── Determinism and order ───────────────────────────────────────────────
-let manyA = ContactIndex.build(seeds: [alexFC, alexWallet, card, mail, pub], links: links)
-let manyB = ContactIndex.build(seeds: [pub, mail, card, alexWallet, alexFC], links: links.reversed())
+let manyA = ContactIndex.build(seeds: [alexSocial, alexWallet, card, mail, pub], links: links)
+let manyB = ContactIndex.build(seeds: [pub, mail, card, alexWallet, alexSocial], links: links.reversed())
 check(manyA == manyB, "the same inputs in another order build the same list")
 check(manyA.first?.lead.kind == .contact && manyA.last?.lead.kind == .feed, "ordered by lead precedence")
 
@@ -200,7 +201,8 @@ func keys(source: String, kind: String = "link", ref: String? = nil, handle: Str
 }
 check(keys(source: "Wallet", counterparty: A.uppercased().replacingOccurrences(of: "0X", with: "0x")) == [A],
       "a transfer resolves its counterparty, case folded")
-check(keys(source: "Farcaster", handle: "jesse") == ["fc:jesse"], "a cast resolves its author")
+check(keys(source: "Bluesky", handle: "jesse") == ["bsky:jesse"], "a post resolves its author")
+check(keys(source: "Farcaster", handle: "jesse") == [], "a retired Farcaster row resolves nobody (prd §1109)")
 check(keys(source: "GitHub", handle: "torvalds") == ["gh:torvalds"], "a GitHub event resolves its actor")
 check(keys(source: "GitHub", handle: "tokio-rs", notif: true) == [], "a GitHub NOTIFICATION resolves nobody — its handle is the repo owner")
 check(keys(source: "Gmail", handle: "jesse@example.com") == ["mail:jesse@example.com"], "a mail row resolves its sender address")
@@ -212,13 +214,13 @@ check(keys(source: "Wallet", wallet: A, counterparty: B) == [B, A], "the counter
 
 // ── Suggestions: a look-alike is a question, never a merge ──────────────
 let cardJ = ContactSuggest.Card(key: "contact:j1", name: "Jesse Pollak",
-                                lines: ["Farcaster: jesse", "Twitter: jessepollak"], emails: ["jesse@example.com"])
-let fcJ = ContactIndex.Seed(Identity.make(.farcaster, "jesse"), name: "Jesse Pollak")
+                                lines: ["Bluesky: jesse", "Twitter: jessepollak"], emails: ["jesse@example.com"])
+let socialJ = ContactIndex.Seed(Identity.make(.bluesky, "jesse"), name: "Jesse Pollak")
 let bskyJ = ContactIndex.Seed(Identity.make(.bluesky, "jesse.bsky.social"), name: "Jesse Pollak")
 let ghJ = ContactIndex.Seed(Identity.make(.github, "jesse"), name: "jesse")
-let statedLinks = ContactSuggest.stated(cards: [cardJ], seeds: [fcJ, bskyJ, ghJ])
+let statedLinks = ContactSuggest.stated(cards: [cardJ], seeds: [socialJ, bskyJ, ghJ])
 let handleStated = statedLinks.filter { !$0.a.hasPrefix("mail:") && !$0.b.hasPrefix("mail:") }
-check(handleStated.count == 1 && handleStated[0].tier == .stated && handleStated.contains { $0.b == "fc:jesse" || $0.a == "fc:jesse" },
+check(handleStated.count == 1 && handleStated[0].tier == .stated && handleStated.contains { $0.b == "bsky:jesse" || $0.a == "bsky:jesse" },
       "a card line naming a handle you follow is a STATED edge to that handle")
 // The card's own emails (2026-09-25): stated, so a mail from that address is
 // from this person — and it needs no roster, the card said it.
@@ -235,33 +237,33 @@ let actRows: [ContactIndex.ActivityRow] = [
     .init(keys: [A], title: "old transfer", at: t0, acted: true),
     .init(keys: [A], title: "newest post", at: t2, acted: false),
     .init(keys: [A], title: "middle transfer", at: t1, acted: true),
-    .init(keys: ["fc:alexx"], title: "a cast", at: t1, acted: false),
+    .init(keys: ["bsky:alexx"], title: "a post", at: t1, acted: false),
 ]
 let act = ContactIndex.activity(rows: actRows)
 check(act[A]?.lastThing == "newest post" && act[A]?.lastAt == t2, "the newest thing wins the line regardless of order")
 check(act[A]?.actedAt == t1, "only a thing WITH you moves the acted stamp, and the newest of those wins")
-check(act["fc:alexx"]?.actedAt == nil, "a thing merely from them never counts as dealt with")
-let acted = ContactIndex.build(seeds: [alexWallet, alexFC],
-                               links: [ContactLink(A, "fc:alexx", tier: .verified, source: "farcaster.verifications")],
+check(act["bsky:alexx"]?.actedAt == nil, "a thing merely from them never counts as dealt with")
+let acted = ContactIndex.build(seeds: [alexWallet, alexSocial],
+                               links: [ContactLink(A, "bsky:alexx", tier: .verified, source: "network.verified")],
                                activity: act)
 check(acted.count == 1 && acted[0].lastThing == "newest post" && acted[0].lastActedAt == t1,
       "a contact folds every identity's activity: the line from the newest, Recent from the newest dealing")
-let quiet = ContactIndex.build(seeds: [alexWallet, alexFC], links: [])
+let quiet = ContactIndex.build(seeds: [alexWallet, alexSocial], links: [])
 check(quiet.allSatisfy { $0.lastThing == nil && $0.lastActedAt == nil }, "no activity, no line, no Recent")
 let kw = ContactIndex.build(seeds: [ContactIndex.Seed(Identity.make(.contact, "contact:k1"), name: "Ana", typed: true, keywords: ["Stripe", "", "Designer"])], links: [])
 check(kw[0].keywords == ["Stripe", "Designer"], "keywords ride the contact, blanks dropped")
 check(ContactSuggest.identity(fromCardLine: "Twitter: x") == nil, "a service with no roster yields nothing")
 check(ContactSuggest.identity(fromCardLine: "GitHub: Torvalds")?.key == "gh:torvalds", "a GitHub line folds case")
-let sugg2 = ContactSuggest.suggested(cards: [cardJ], seeds: [fcJ, bskyJ, ghJ])
+let sugg2 = ContactSuggest.suggested(cards: [cardJ], seeds: [socialJ, bskyJ, ghJ])
 check(sugg2.allSatisfy { $0.tier == .suggested }, "every look-alike is SUGGESTED, never verified")
-check(sugg2.contains { $0.pairKey == ContactLink.pairKey("contact:j1", "fc:jesse") }
+check(sugg2.contains { $0.pairKey == ContactLink.pairKey("contact:j1", "bsky:jesse") }
       && sugg2.contains { $0.pairKey == ContactLink.pairKey("contact:j1", "bsky:jesse.bsky.social") },
       "a card's full name matching a seat's display name is suggested")
-check(sugg2.contains { $0.pairKey == ContactLink.pairKey("fc:jesse", "bsky:jesse.bsky.social") },
+check(sugg2.contains { $0.pairKey == ContactLink.pairKey("bsky:jesse", "bsky:jesse.bsky.social") },
       "two seats sharing a display name are suggested to each other")
 check(sugg2.contains { $0.pairKey == ContactLink.pairKey("contact:j1", "gh:jesse") && $0.source == "corpus.email" },
       "a card email's mailbox matching a watched login is suggested")
-let builtS = ContactIndex.build(seeds: [fcJ, bskyJ, ghJ, ContactIndex.Seed(Identity.make(.contact, "contact:j1"), name: "Jesse Pollak", typed: true)],
+let builtS = ContactIndex.build(seeds: [socialJ, bskyJ, ghJ, ContactIndex.Seed(Identity.make(.contact, "contact:j1"), name: "Jesse Pollak", typed: true)],
                                 links: statedLinks + sugg2)
 check(builtS.count == 3, "stated merges the handle into the card; suggestions merge nothing")
 var sl = LinkLedger()
@@ -271,43 +273,44 @@ check(firstPick != nil && firstPick!.suggests, "the list is offered one live sug
 sl = sl.declining(firstPick!.a, firstPick!.b)
 check(ContactSuggest.next(in: sl, known: { _ in true })?.pairKey != firstPick!.pairKey, "a declined one is never offered again")
 check(ContactSuggest.next(in: sl, known: { _ in false }) == nil, "a suggestion whose ends are not in the index is not offered")
-check(ContactSuggest.suggested(cards: [], seeds: [ContactIndex.Seed(Identity.make(.farcaster, "a"), name: "Al"),
+check(ContactSuggest.suggested(cards: [], seeds: [ContactIndex.Seed(Identity.make(.nostr, "a"), name: "Al"),
                                                   ContactIndex.Seed(Identity.make(.bluesky, "b"), name: "Al")]).isEmpty,
       "a two-letter name is too short to suggest on")
 
 // ── More rules (prd §1025): bios, profile links, provenance, senders ────
 let bioIDs = ContactSuggest.handles(inBio: "builder. github.com/JessePollak, bsky.app/profile/jesse.xyz · warpcast.com/jesse. @uma.bsky.social and @plain")
-check(bioIDs.map(\.key) == ["gh:jessepollak", "bsky:jesse.xyz", "fc:jesse", "bsky:uma.bsky.social"],
+check(bioIDs.map(\.key) == ["gh:jessepollak", "bsky:jesse.xyz", "bsky:uma.bsky.social"],
       "a bio's LINKS name handles, case folded and trailing punctuation dropped: \(bioIDs.map(\.key))")
 check(!bioIDs.contains { $0.key.hasSuffix("plain") }, "a bare @handle in a bio names nothing — it could be any network")
-check(ContactSuggest.handles(inBio: "farcaster.xyz/jesse").map(\.key) == ["fc:jesse"], "farcaster.xyz is read like warpcast.com")
+check(ContactSuggest.handles(inBio: "farcaster.xyz/jesse warpcast.com/jesse").isEmpty,
+      "a Farcaster link names nobody since the seat was retired (prd §1109)")
 let walletJ = ContactIndex.Seed(Identity.make(.wallet, A), name: "Jesse", typed: true)
 let ghPollak = ContactIndex.Seed(Identity.make(.github, "jessepollak"), name: "Jesse Pollak")
 let claimedLinks = ContactSuggest.claimed(
     profiles: [ContactSuggest.Profile(key: A, bio: nil, claims: ["gh:jessepollak", "gh:nobody", A]),
-               ContactSuggest.Profile(key: "fc:jesse", bio: "code: github.com/jessepollak", claims: [])],
-    seeds: [walletJ, ghPollak, fcJ])
+               ContactSuggest.Profile(key: "bsky:jesse", bio: "code: github.com/jessepollak", claims: [])],
+    seeds: [walletJ, ghPollak, socialJ])
 check(claimedLinks.count == 2 && claimedLinks.allSatisfy { $0.tier == .suggested },
       "a profile's claims and a bio's links are SUGGESTED, one per held handle: \(claimedLinks.map(\.pairKey))")
 check(claimedLinks.contains { $0.pairKey == ContactLink.pairKey(A, "gh:jessepollak") && $0.source == "web3.bio.links" },
       "a web3.bio link to a login you watch is suggested to the wallet")
-check(claimedLinks.contains { $0.pairKey == ContactLink.pairKey("fc:jesse", "gh:jessepollak") && $0.source == "corpus.bio" },
+check(claimedLinks.contains { $0.pairKey == ContactLink.pairKey("bsky:jesse", "gh:jessepollak") && $0.source == "corpus.bio" },
       "a bio's GitHub link is suggested to the account whose bio it is")
 check(!claimedLinks.contains { $0.pairKey.contains("gh:nobody") }, "a claim to a handle nobody watches draws nothing")
-let builtClaims = ContactIndex.build(seeds: [walletJ, ghPollak, fcJ], links: claimedLinks)
+let builtClaims = ContactIndex.build(seeds: [walletJ, ghPollak, socialJ], links: claimedLinks)
 check(builtClaims.count == 3, "a claim merges nothing")
 
 let bskyUma = ContactIndex.Seed(Identity.make(.bluesky, "uma.bsky.social"), name: "Uma")
 let prov = ContactSuggest.fromProvenance([
-    .init(address: A, name: "Jesse", provenance: "Farcaster · @jesse"),
+    .init(address: A, name: "Jesse", provenance: "Bluesky · @jesse"),
     .init(address: B, name: "@uma.bsky.social", provenance: "Bluesky"),
     .init(address: "0x" + String(repeating: "c", count: 40), name: "Mom", provenance: "Contacts"),
-    .init(address: "0x" + String(repeating: "d", count: 40), name: "@ghost", provenance: "Farcaster"),
+    .init(address: "0x" + String(repeating: "d", count: 40), name: "@ghost", provenance: "Bluesky"),
     .init(address: "0x" + String(repeating: "e", count: 40), name: "@jesse", provenance: "Safe signer · main"),
-], seeds: [fcJ, bskyUma])
+], seeds: [socialJ, bskyUma])
 check(prov.count == 2 && prov.allSatisfy { $0.tier == .suggested && $0.source == "book.provenance" },
       "a book entry saved from a social door is suggested to that handle: \(prov.map(\.pairKey))")
-check(prov.contains { $0.pairKey == ContactLink.pairKey(A, "fc:jesse") }, "\"Farcaster · @jesse\" names fc:jesse")
+check(prov.contains { $0.pairKey == ContactLink.pairKey(A, "bsky:jesse") }, "\"Bluesky · @jesse\" names bsky:jesse")
 check(prov.contains { $0.pairKey == ContactLink.pairKey(B, "bsky:uma.bsky.social") }, "a name @uma under Bluesky names bsky:uma")
 
 let cardAna = ContactSuggest.Card(key: "contact:a1", name: "Ana Ruiz", lines: [], emails: ["ana@home.com"])
@@ -341,10 +344,10 @@ check(ContactSuggest.next(in: jl, known: cardKnown, joinable: isMail, apart: { _
       "a suggestion whose ends are already one contact is not offered")
 
 // The name you gave (prd §1025): only a typed name marks the contact named.
-let namedC = ContactIndex.build(seeds: [walletJ, fcJ],
-                                links: [ContactLink(A, "fc:jesse", tier: .verified, source: "farcaster.verifications")])
+let namedC = ContactIndex.build(seeds: [walletJ, socialJ],
+                                links: [ContactLink(A, "bsky:jesse", tier: .verified, source: "network.verified")])
 check(namedC.count == 1 && namedC[0].named && namedC[0].name == "Jesse", "a typed name marks the contact named")
-let displayOnly = ContactIndex.build(seeds: [fcJ], links: [])
+let displayOnly = ContactIndex.build(seeds: [socialJ], links: [])
 check(displayOnly.count == 1 && !displayOnly[0].named, "a seat's display name is not a name you gave")
 
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
@@ -444,7 +447,7 @@ mutate "a name match becomes a verified edge" "$SUGGEST" \
   '            out.append(ContactLink(a, b, tier: .verified, source: source, at: at))'
 mutate "a card line for a service with no roster becomes an edge" "$SUGGEST" \
   '        default:                      return nil' \
-  '        default:                      return Identity.make(.farcaster, handle)'
+  '        default:                      return Identity.make(.nostr, handle)'
 mutate "a declined suggestion is offered again" "$SUGGEST" \
   '            .filter { $0.suggests && ((known($0.a) && known($0.b))' \
   '            .filter { $0.tier == .suggested && ((known($0.a) && known($0.b))'
@@ -473,7 +476,7 @@ mutate "provenance from any service becomes an edge" "$SUGGEST" \
   '            default:          continue
             }
             let wallet' \
-  '            default:          identity = Identity.make(.farcaster, handle)
+  '            default:          identity = Identity.make(.bluesky, handle)
             }
             let wallet'
 mutate "a first name alone suggests a sender" "$SUGGEST" \

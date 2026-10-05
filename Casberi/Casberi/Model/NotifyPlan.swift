@@ -1125,7 +1125,7 @@ enum NotifyDigest {
         "Sentry", "Vercel", "PagerDuty", "Cloudflare", "App Store Connect", "Stripe",
         "YouTube", "Spotify", "Strava", "Garmin",
         "Todoist", "Pinterest", "Day One", "Duolingo",
-        "Farcaster", "Telegram", "Bluesky", "Instagram", "Snapchat", "TikTok", "X",
+        "Telegram", "Bluesky", "Instagram", "Snapchat", "TikTok", "X",
         "Steam", "Dropbox", "Twitch", "Substack",
     ]
 

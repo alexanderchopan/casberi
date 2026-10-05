@@ -296,9 +296,9 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The Safe CO-SIGNER — a key that can sign and can never spend** (`-signerProbe`) → docs/hooks/wallet.md · prd §425
 - **The signer's four doors, no funded wallet (prd §913)** → docs/hooks/wallet.md · prd §913
 - `-wipeAccessProbe YES` — run the Data tray's Delete access internals and log before/after credential counts.
-- `-fcRecasts` `-bskyReposts` — Social grew an INBOUND half (2026-07-31, prd §239) → docs/hooks/social.md · prd §239
+- `-bskyReposts` — Social grew an INBOUND half (2026-07-31, prd §239) → docs/hooks/social.md · prd §239
 - **An account marked `mine` lands its OWN replies (2026-09-17)** → docs/hooks/social.md · prd §804
-- `-fcName` `-fcLikes` `-fcMentions` — Farcaster grew likes/mentions/channels/replies (2026-07-14, same keyless Snapchain node): -fcName → docs/hooks/social.md
+- **Farcaster is DELETED (prd §1109, user: "remove farcaster")**: the seat, its ingest, signers, starter pack, channels, the `-fc*` probes, its hosts, the person room's onchain half and Farcaster as an identity in Addresses (`fc:` keys and `@names` parse to nobody; web3.bio's Farcaster rows are dropped). Its rows, defaults (`farcaster.`) and seat record go through `SourceRename.sweepRetiredSeats` → prd §1109
 - Social enrichment (2026-07-16, prd 81) — both networks, one pass through Model/SocialBridge.swift. → docs/hooks/social.md
 - `-likersProbe` — Who liked your post (2026-08-07, prd §330, Model/SocialLikers.swift, -likersProbe YES) → docs/hooks/social.md · prd §330
 - `-followsProbe` — Follow import (2026-07-16, prd 87) → docs/hooks/social.md
@@ -354,7 +354,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **Wei / Gwei names, and the router the six copies became** (`-weiNameProbe`) → docs/hooks/wallet.md · prd §597
 - `-addressesProbe YES` `-addressesForget YES` — the Addresses index rebuilt over the stores and the link ledger (prd §916 step 2, `Model/ContactIndex.swift` pure + `ContactIndexSources.swift`) → docs/hooks/wallet.md · prd §916
 - **Addresses suggests from profile links, bios, book provenance and mail senders; a name you gave names the post's author; the receipt says the first transfer; a named book address anchors poisoning; `ThingsWithContactIntent` (prd §1025).** `-addressesProbe fill` reads web3.bio `/profile` first. Never "Waiting on you" from the to-do mark: bridges set it to mean "open" → prd §1025
-- **web3.bio is the resolver behind ENS, and the card gains Base/Linea/Farcaster/Lens rows (prd §916).** → docs/hooks/wallet.md · prd §916
+- **web3.bio is the resolver behind ENS, and the card gains Base/Linea/Lens rows (prd §916; Farcaster's went with §1109).** → docs/hooks/wallet.md · prd §916
 - **Whether an address belongs to a VERIFIED HUMAN, keylessly** → docs/hooks/wallet.md · prd §785 · §785a
 - **World Chain is ON by default, MEASURED (prd §788; §785 landed it off)** → docs/hooks/wallet.md · prd §785 · §788
 - **Alchemy's `getAssetTransfers` returns NO timestamp on HyperEVM and World Chain; a missing time is read off the block (`TransferTimes`, cached) and a transfer whose block cannot be read is DROPPED, never dated now (prd §790, `transfer-times-selftest.sh`)** → docs/hooks/wallet.md · prd §790
@@ -412,7 +412,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-stockWatch` — resolves each query on Stocktwits' keyless symbol search and watches the top match in Markets (the Stocktwits seat is retired, its takes dropped) → docs/hooks/bridges.md
 - **Markets is ONE app (prd §1000): the Tokens seat renamed, Stocktwits' watched stocks moved in by `SourceRename.sweepStockWatches` (takes deleted, seat retired), and every catalogue category is a company pack (`CompanyPacks`) — Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted, never a valuation**
 
-Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://room/<category | Your notes>` (the Category widget's door), `casberi://thing/<id>`, `casberi://person/<Bluesky|Farcaster>/<handle>`, `casberi://frames/sponsor?r=` (a payment request, prd §728c).
+Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://room/<category | Your notes>` (the Category widget's door), `casberi://thing/<id>`, `casberi://person/<Bluesky|Nostr|X>/<handle>`, `casberi://frames/sponsor?r=` (a payment request, prd §728c).
 
 - **Two widgets: Wallet, and Category (2026-10-04) — you pick a category, Notes by default; `WidgetPublish.shelves` publishes Notes plus every category with rows (money categories withheld under Hide balances), the picker lists what was published, black/white with a pink header (user: "we don't use blue"). `-widgetProbe YES` logs `widgetShelf|`.** The Today widget went with the ask (prd §877, 2026-10-01). `WidgetPublish` clears the retired tiles' payloads from the app group. → docs/hooks/system.md · prd §382 · §877
 

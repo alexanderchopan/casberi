@@ -4,7 +4,7 @@ import Foundation
 /// identities being one contact (prd §916, `docs/addresses-spec.md` section 3).
 ///
 /// **Stated** (tier 3): a contact card's own field names a handle the app
-/// follows — "Farcaster: jesse", "GitHub: torvalds" in the card's social
+/// follows — "Bluesky: jesse", "GitHub: torvalds" in the card's social
 /// profiles or IM addresses. The card said it; the edge merges the handle
 /// INTO that card and nothing else.
 ///
@@ -34,7 +34,6 @@ enum ContactSuggest {
         let handle = line[sep.upperBound...].trimmingCharacters(in: .whitespaces)
         guard !handle.isEmpty else { return nil }
         switch service {
-        case "farcaster", "warpcast": return Identity.make(.farcaster, handle)
         case "bluesky":               return Identity.make(.bluesky, handle)
         case "nostr":                 return Identity.make(.nostr, handle)
         case "github":                return Identity.make(.github, handle)
@@ -82,7 +81,7 @@ enum ContactSuggest {
         for card in cards {
             for seed in byName[fold(card.name)] ?? [] { add(card.key, seed.identity.key, "corpus.name") }
         }
-        // Two seats share a display name (a Farcaster and a Bluesky "Uma").
+        // Two seats share a display name (a Bluesky and a Nostr "Uma").
         for (_, group) in byName where group.count > 1 {
             let keys = group.map(\.identity.key).sorted()
             for i in keys.indices { for j in keys.indices where j > i { add(keys[i], keys[j], "corpus.name") } }
@@ -105,7 +104,7 @@ enum ContactSuggest {
     // MARK: - More rules (prd §1025)
 
     /// What else the app knows about ONE identity that a rule can read: the
-    /// words it says about itself (a Farcaster or Bluesky bio, a web3.bio
+    /// words it says about itself (a Bluesky bio, a web3.bio
     /// description) and the handles its profile claims (web3.bio's `links`,
     /// read for book addresses only). Both are the identity's OWN claim about
     /// itself — self-asserted, so they SUGGEST and never merge.
@@ -132,7 +131,7 @@ enum ContactSuggest {
     }
 
     /// The handles a bio spells as LINKS — `github.com/x`, `bsky.app/profile/x`,
-    /// `farcaster.xyz/x` (and `warpcast.com/x`), `@x.bsky.social`. A bare `@x`
+    /// `@x.bsky.social`. A bare `@x`
     /// names nothing: it could be any network's x.
     static func handles(inBio bio: String) -> [Identity] {
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
@@ -155,9 +154,6 @@ enum ContactSuggest {
         }
         for login in token(after: "github.com/", in: bio) { add(Identity.make(.github, login)) }
         for handle in token(after: "bsky.app/profile/", in: bio) { add(Identity.make(.bluesky, handle)) }
-        for user in token(after: "farcaster.xyz/", in: bio) + token(after: "warpcast.com/", in: bio) {
-            add(Identity.make(.farcaster, user))
-        }
         for word in token(after: "@", in: bio) where word.lowercased().hasSuffix(".bsky.social") {
             add(Identity.make(.bluesky, word))
         }
@@ -181,8 +177,8 @@ enum ContactSuggest {
         return out
     }
 
-    /// A book entry saved from a social door — "Farcaster · @jesse", or the
-    /// name `@jesse` under provenance `Farcaster` — to that handle, when the
+    /// A book entry saved from a social door — "Bluesky · @jesse", or the
+    /// name `@jesse` under provenance `Bluesky` — to that handle, when the
     /// app holds it. Suggested: the door verified the address at the moment
     /// of saving, but the app did not keep the proof.
     static func fromProvenance(_ entries: [BookEntry], seeds: [ContactIndex.Seed], at: Date = .now) -> [ContactLink] {
@@ -197,7 +193,6 @@ enum ContactSuggest {
             guard let handle else { continue }
             let identity: Identity
             switch service {
-            case "farcaster": identity = Identity.make(.farcaster, handle)
             case "bluesky":   identity = Identity.make(.bluesky, handle)
             default:          continue
             }

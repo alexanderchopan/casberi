@@ -7,7 +7,6 @@ extension FeedScreen {
     /// accounts you marked as yours (§804), lower-cased, no `@`.
     var socialMyHandles: Set<String> {
         var out = Set<String>()
-        for a in FarcasterStore.shared.accounts where a.mine { out.insert(SocialToYou.normalized(a.username)) }
         for a in BlueskyStore.shared.accounts where a.mine { out.insert(SocialToYou.normalized(a.handle)) }
         return out
     }

@@ -10,7 +10,7 @@ import SwiftData
 /// The words themselves are the sheet's HERO (ThingSheetView draws `postText`
 /// in the title slot — a post is prose, and prose is the point). What's left is
 /// everything around them: the pictures, the post it quotes, and how it landed.
-/// Source-neutral throughout — Bluesky and Farcaster answer the same shapes, so
+/// Source-neutral throughout — Bluesky and Nostr answer the same shapes, so
 /// nothing here learns a network's name.
 struct SocialPostContent: View {
     let thing: Thing
@@ -42,7 +42,7 @@ struct SocialPostContent: View {
         // case) — but SwiftUI can re-render a child on the model's own
         // observation before the parent re-evaluates its guard, so this reads
         // `thing`'s stored props (likeCount, imageURLs, quote…) independently.
-        // Bluesky/Farcaster run their OWN foreground delete-sync heals that can
+        // Bluesky runs its OWN foreground delete-sync heal that can
         // remove an open post, so guard here too: reading a tombstoned model's
         // stored property traps (2026-07-24). `isLive` is safe on a tombstone.
         if !thing.isLive {
@@ -311,10 +311,10 @@ struct SocialPostThread: View {
                 // THE FACE IS A DOOR ONLY WHERE ONE LEADS SOMEWHERE (prd §704)
                 // — the same `facesAreDoors` test `ThingSheetView` has always
                 // applied to its own eyebrow, applied here at last. This
-                // walker only ever opened over Farcaster and Bluesky cards, so
+                // walker only ever opened over Bluesky cards, so
                 // the unconditional button was correct by accident; a notice
                 // now lands X cards in it, and `SocialProfileCard` says in its
-                // own doc that it opens "only for Farcaster/Bluesky people" —
+                // own doc that it opens "only for Bluesky/Nostr people" —
                 // its `bridge` is nil for X, so Watch, the switches and the
                 // follow row all render dead. No dead controls (§83).
                 if SocialThread.isSocial(source) {
@@ -501,8 +501,6 @@ struct SocialProfileCard: View {
     @Environment(ShellChrome.self) private var chrome: ShellChrome?
     @State private var loaded: SocialProfile?
     @State private var watched = false
-    @State private var elsewhere: [UserSearch.Hit] = []
-    @State private var searchedElsewhere = false
     /// Who-they-follow (prd §169), reached from here now — the ledger rework
     /// (prd §184) moved every per-account action off the setup screen's row
     /// and onto this card, which every account face taps into.
@@ -514,7 +512,7 @@ struct SocialProfileCard: View {
 
     /// The bridge behind this profile's source — nil for a source that isn't
     /// a name-only handle bridge (shouldn't happen; the card only ever opens
-    /// for Farcaster/Bluesky people).
+    /// for Bluesky/Nostr people).
     private var bridge: HandleBridge? { HandleBridge(rawValue: profile.source) }
 
     /// This person's Likes/Mentions switches, read straight off the
@@ -535,8 +533,7 @@ struct SocialProfileCard: View {
         // Draggable past its resting height (2026-08-28). Making the footer
         // hold its lines removes the give this tray was silently taking, and
         // this card's length is genuinely unpredictable — a bio is any number
-        // of lines and the "elsewhere" search appends a row per hit — so a
-        // hard ceiling clips rather than compresses. DSTray's own doc names
+        // of lines — so a hard ceiling clips rather than compresses. DSTray's own doc names
         // this as the answer for exactly that shape.
         DSTray(title: shown.title, height: 560, ink: true, detents: [.height(560), .large]) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
@@ -549,12 +546,8 @@ struct SocialProfileCard: View {
                 watchRow
                 if watched {
                     switchesSection
-                    if profile.source == "Farcaster" {
-                        walletRow
-                    }
                     followRow
                 }
-                elsewhereSection
                 Spacer(minLength: 0)
             }
         }
@@ -695,46 +688,6 @@ struct SocialProfileCard: View {
         }
     }
 
-    /// The wallet↔Farcaster join, here as well as on the setup row — you meet
-    /// someone in a thread, you can watch what they hold. Watch-only, so
-    /// peeking is legitimate (the standing wallet ruling).
-    private var walletRow: some View {
-        DSDoorRow(icon: "wallet.pass", label: "Watch their wallet") {
-            watchWallet()
-        }
-    }
-
-    /// "Are they on the other network too?" — a SEARCH, never a claim. Nothing
-    /// links a Farcaster username to a Bluesky handle, so asserting a match
-    /// would be a guess wearing a fact's clothes. The card runs the same
-    /// people-search the setup field runs and hands over the hits; which one is
-    /// really them — if any — is the person's call, and their tap watches it.
-    @ViewBuilder private var elsewhereSection: some View {
-        if let other = SocialPeople.otherSource(profile.source) {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if !searchedElsewhere {
-                    DSDoorRow(icon: "magnifyingglass", label: "Look for them on \(other)") {
-                        findElsewhere()
-                    }
-                } else if elsewhere.isEmpty {
-                    Text("No \(other) account by that name.")
-                        .dsText(.body17).foregroundStyle(DS.textTertiary)
-                } else {
-                    // "— tap to watch one" restated the rows under it (prd §748).
-                    Text("\(other) accounts by that name")
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    ForEach(elsewhere) { hit in
-                        BridgeSearchResultRow(
-                            imageURL: hit.avatarURL, fallbackIcon: other,
-                            title: hit.displayName,
-                            subtitle: "@\(SocialThread.shortHandle(hit.handle))",
-                            action: { watchElsewhere(hit, on: other) })
-                    }
-                }
-            }
-        }
-    }
-
     private func watch() {
         guard SocialPeople.watch(shown) else {
             chrome?.flash(String(localized: "Already watching @\(shown.shortHandle)."))
@@ -744,52 +697,5 @@ struct SocialProfileCard: View {
         watched = true
         chrome?.flash(String(localized: "Watching @\(shown.shortHandle)."), tone: .success)
         Task { await SocialPeople.sync(source: shown.source, context: modelContext) }
-    }
-
-    private func watchWallet() {
-        Task {
-            let verified = await FarcasterIngest.verifiedEthAddresses(username: shown.handle)
-            let already = Set(WalletStore.shared.addresses.map { $0.address.lowercased() })
-            guard let address = verified.first(where: { !already.contains($0) }) else {
-                if verified.isEmpty {
-                    chrome?.flash(String(localized: "No verified wallet for @\(shown.shortHandle)."), tone: .failure)
-                } else {
-                    chrome?.flash(String(localized: "Already watching @\(shown.shortHandle)'s wallet."))
-                }
-                return
-            }
-            // The watch cap, worded at this door too (prd §170): the wallet
-            // still gets NAMED — the light tier is unlimited — so the person
-            // keeps something rather than bouncing off a silent refusal.
-            switch WalletStore.shared.outcome(ofAdding: address, label: "@\(shown.handle)") {
-            case .added:
-                chrome?.flash(String(localized: "Watching @\(shown.shortHandle)'s wallet."), tone: .success)
-            case .limitReached:
-                AddressBook.shared.setName("@\(shown.handle)", for: address,
-                                           provenance: shown.source, kind: .wallet)
-                chrome?.flash(String(localized: "Watching \(WalletStore.watchLimit) wallets already — saved @\(shown.shortHandle) to your address book instead."))
-            case .alreadyWatching, .invalid:
-                chrome?.flash(String(localized: "Already watching @\(shown.shortHandle)'s wallet."))
-            }
-        }
-    }
-
-    private func findElsewhere() {
-        Task {
-            elsewhere = await SocialPeople.findElsewhere(profile.handle, from: profile.source)
-            searchedElsewhere = true
-        }
-    }
-
-    private func watchElsewhere(_ hit: UserSearch.Hit, on other: String) {
-        let picked = SocialProfile(source: other, handle: hit.handle,
-                                   displayName: hit.displayName, bio: nil,
-                                   avatarURL: hit.avatarURL, fid: hit.fid)
-        guard SocialPeople.watch(picked) else {
-            chrome?.flash(String(localized: "Already watching that account."))
-            return
-        }
-        chrome?.flash(String(localized: "Watching @\(picked.shortHandle) on \(other)."), tone: .success)
-        Task { await SocialPeople.sync(source: other, context: modelContext) }
     }
 }

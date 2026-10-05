@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// One foreground refresh for every connected polling bridge (RSS, Bluesky,
-/// Farcaster, and each connected token bridge). RootShell fires it on
+/// Nostr, and each connected token bridge). RootShell fires it on
 /// scenePhase → .active; screens can reuse it (e.g. pull-to-refresh) instead of
 /// repeating the guard-then-Task shape per bridge. Each bridge refreshes
 /// independently, fire-and-forget, on the main actor.
@@ -67,7 +67,7 @@ enum BridgeRefresh {
     /// `healInterval`, keyed in UserDefaults so the throttle survives relaunch.
     /// A deleted item lingering a few extra minutes is invisible; a full
     /// source-wide fetch+diff on every foreground is not free. (Bluesky/
-    /// Farcaster/Mail heals already carry their own 1h network throttle.)
+    /// Mail heals already carry their own 1h network throttle.)
     private static let healInterval: TimeInterval = 600
     static func dueForHeal(_ key: String) -> Bool {
         let k = "heal.due.\(key)"
@@ -411,19 +411,6 @@ enum BridgeRefresh {
             let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await BlueskyIngest.heal(context: context)
-            }
-        }
-        if FarcasterStore.shared.connected {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await FarcasterIngest.refresh(context: context)
-                SocialTopics.reconcile(source: "Farcaster",
-                    watchedHandles: FarcasterStore.shared.usernames,
-                    topics: FarcasterStore.shared.channels.map(\.name), context: context)
-            }
-            let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s2)
-                _ = await FarcasterIngest.heal(context: context)
             }
         }
         if NostrStore.shared.connected {

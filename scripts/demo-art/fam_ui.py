@@ -1,8 +1,8 @@
 """fam_ui.py — screens and documents for the demo (render.py's `ui` family).
 
 Phone screenshots (shot-5…12), drawings (file-0/1/2/4), a whiteboard and a
-checklist page, two channel graphics (tg-2/4), a photographed
-laptop showing a design file (fc-0) and a paper figure (hf-paper-1). Every page is self-contained:
+checklist page, two channel graphics (tg-2/4) and a paper figure
+(hf-paper-1). Every page is self-contained:
 inline CSS and SVG, system fonts only, no logos.
 
 `html(p)` dispatches on `p["key"]`; each builder returns the page's body and
@@ -939,90 +939,6 @@ def tg_4(p):
     return doc(p, body, bg="#143CA8")
 
 
-# ── photo of a laptop design file ──────────────────────────────────────────
-
-def fc_0(p):
-    """A photographed laptop screen: a design file, one onboarding phone where four used to be."""
-    BL = "#0D99FF"
-
-    def mini_phone(w, h, inner, extra=""):
-        return (f'<div style="position:relative;width:{w}px;height:{h}px;background:#fff;border-radius:{w * .12:.0f}px;overflow:hidden;'
-                f'box-shadow:0 1px 3px rgba(0,0,0,.18);{extra}">{inner}</div>')
-
-    def old_screen(title, n):
-        lines = "".join(f'<div style="height:3px;width:{w}%;background:#D7DAE0;border-radius:2px;margin:3px auto"></div>' for w in (80, 66, 72)[:n])
-        return (f'<div style="height:30px;margin:10px 8px 6px;border-radius:6px;background:#EEF0F4"></div>'
-                f'<div style="font:700 6.5px {SANS};color:#222;text-align:center">{title}</div>{lines}'
-                f'<div class="abs" style="left:8px;right:8px;bottom:9px;height:9px;border-radius:5px;background:#9AA3B2"></div>'
-                f'<div class="abs" style="left:0;right:0;bottom:3px;text-align:center;font:500 4px {SANS};color:#9AA3B2">{n} of 4</div>')
-    olds = "".join(
-        f'<div style="position:relative;text-align:left"><div style="font:500 7px {SANS};color:#8A8F98;margin-bottom:3px">{i}. {t}</div>'
-        f'{mini_phone(62, 128, old_screen(t, i), "opacity:.55")}'
-        f'<svg class="abs" style="left:-4px;top:6px" width="70" height="136" viewBox="0 0 70 136"><path d="M4 132L66 8" stroke="#F24822" stroke-width="2.6" stroke-linecap="round"/></svg></div>'
-        for i, t in enumerate(["Welcome", "Connect", "Notifications", "You're set"], 1))
-    feat = "".join(
-        f'<div style="display:flex;align-items:center;gap:7px;margin:6px 0"><span style="width:16px;height:16px;border-radius:5px;background:{c};flex:none"></span>'
-        f'<div style="flex:1"><div style="font:600 7px {SANS};color:#111">{a}</div><div style="font:400 5.5px {SANS};color:#8A8F98">{b}</div></div></div>'
-        for c, a, b in [("#FFB020", "Drafts that save themselves", "Every keystroke, kept"), ("#2FBF71", "Tags, not folders", "File it once you know"),
-                        ("#5B7CFA", "Publish when ready", "One tap to your blog")])
-    new_inner = f'''<div style="height:12px"></div>
-<div style="margin:10px 12px 0;height:74px;border-radius:12px;background:linear-gradient(135deg,#FFE3C2,#FFC1D0 50%,#C9D6FF);position:relative;overflow:hidden">
-  <div class="abs" style="left:20px;top:14px;width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.75)"></div>
-  <div class="abs" style="left:56px;top:24px;width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.55)"></div>
-  <div class="abs" style="left:92px;top:10px;width:30px;height:30px;border-radius:15px;background:rgba(255,255,255,.65)"></div></div>
-<div style="padding:10px 12px 0"><div style="font:800 12px/1.15 {SANS};color:#111;letter-spacing:-.2px">Write first.<br>Sort it out later.</div>
-  <div style="margin-top:6px">{feat}</div></div>
-<div class="abs" style="left:12px;right:12px;bottom:22px;height:20px;border-radius:7px;background:#111;color:#fff;font:600 7.5px {SANS};display:grid;place-items:center">Get started</div>
-<div class="abs" style="left:0;right:0;bottom:10px;text-align:center;font:500 5.5px {SANS};color:#8A8F98">I already have an account</div>'''
-    sel = "".join(f'<span class="abs" style="{pos};width:6px;height:6px;background:#fff;border:1.3px solid {BL}"></span>'
-                  for pos in ("left:-4px;top:-4px", "right:-4px;top:-4px", "left:-4px;bottom:-4px", "right:-4px;bottom:-4px"))
-    layers = "".join(f'<div style="height:17px;line-height:17px;padding-left:{8 + 9 * d}px;font:{500 if s else 400} 8px {SANS};'
-                     f'color:{"#fff" if s else "#C4C4C4"};background:{"#0C5DA5" if s else "transparent"};white-space:nowrap">{n}</div>'
-                     for n, d, s in [("Onboarding v2", 0, False), ("Welcome — one screen", 1, True), ("Hero", 2, False),
-                                     ("Features", 2, False), ("Get started", 2, False), ("Onboarding v1 (old)", 0, False),
-                                     ("1. Welcome", 1, False), ("2. Connect", 1, False), ("3. Notifications", 1, False), ("4. You're set", 1, False)])
-    screen = f'''<div style="width:100%;height:100%;background:#E5E5E5;position:relative;font-family:{SANS}">
-  <div class="abs" style="left:0;right:0;top:0;height:28px;background:#2C2C2C;display:flex;align-items:center;padding:0 10px;gap:10px">
-    <span style="width:18px;height:18px;border-radius:4px;background:{BL}"></span>
-    {''.join('<span style="width:12px;height:12px;border:1.5px solid #BDBDBD;border-radius:2px"></span>' for _ in range(3))}
-    <span style="flex:1;text-align:center;font:500 9.5px {SANS};color:#E8E8E8">Onboarding &mdash; v2 <span style="color:#8C8C8C">/ Drafts</span></span>
-    <span style="width:16px;height:16px;border-radius:8px;background:#9747FF;color:#fff;font:600 8px {SANS};display:grid;place-items:center">U</span>
-    <span style="font:600 8.5px {SANS};color:#fff;background:{BL};padding:3px 8px;border-radius:4px">Share</span></div>
-  <div class="abs" style="left:0;top:28px;bottom:0;width:118px;background:#2C2C2C;padding-top:8px;border-top:1px solid #3A3A3A">
-    <div style="font:600 8px {SANS};color:#fff;padding:0 8px 6px">Layers</div>{layers}</div>
-  <div class="abs" style="right:0;top:28px;bottom:0;width:104px;background:#2C2C2C;padding:8px;border-top:1px solid #3A3A3A;font:400 8px {SANS};color:#C4C4C4">
-    <div style="font:600 8px {SANS};color:#fff;margin-bottom:8px">Frame</div>
-    <div style="display:flex;gap:6px;margin-bottom:6px"><span style="flex:1;background:#383838;padding:3px 5px;border-radius:3px">W 390</span><span style="flex:1;background:#383838;padding:3px 5px;border-radius:3px">H 844</span></div>
-    <div style="font:600 8px {SANS};color:#fff;margin:12px 0 6px">Prototype</div>
-    <div style="background:#383838;padding:3px 5px;border-radius:3px">Starting point</div>
-    <div style="font:600 8px {SANS};color:#fff;margin:12px 0 6px">Comments</div>
-    <div style="line-height:1.4">&ldquo;Four screens became one.&rdquo;</div></div>
-  <div class="abs" style="left:136px;top:44px;font:600 9px {SANS};color:#7A7A7A"><s>Onboarding v1 &middot; 4 screens</s></div>
-  <div class="abs" style="left:136px;top:60px;display:grid;grid-template-columns:repeat(2,62px);gap:12px 14px">{olds}</div>
-  <div class="abs" style="left:318px;top:44px;font:600 9px {SANS};color:{BL}">Onboarding v2 &middot; 1 screen</div>
-  <div class="abs" style="left:318px;top:60px">{mini_phone(152, 318, new_inner, "outline:1.5px solid " + BL + ";border-radius:16px")}{sel}
-    <div class="abs" style="left:50%;bottom:-16px;transform:translateX(-50%);background:{BL};color:#fff;font:600 7.5px {SANS};padding:1px 5px;border-radius:3px;white-space:nowrap">390 &times; 844</div></div>
-  <svg class="abs" style="left:282px;top:180px" width="34" height="20" viewBox="0 0 34 20"><path d="M2 10h26M22 4l7 6-7 6" fill="none" stroke="#8A8F98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-</div>'''
-    body = f'''<div class="abs" style="inset:0;background:radial-gradient(ellipse at 82% 20%,#4A3826 0%,transparent 45%),radial-gradient(ellipse at 50% 60%,#23252B,#0A0B0D 80%)"></div>
-{''.join(f'<div class="abs" style="left:{x}px;top:{y}px;width:{r}px;height:{r}px;border-radius:50%;background:{c};filter:blur({b}px)"></div>' for x, y, r, c, b in [
-        (660, 30, 90, 'rgba(255,170,90,.35)', 18), (720, 110, 50, 'rgba(255,200,120,.3)', 12), (40, 60, 70, 'rgba(120,150,255,.15)', 20)])}
-<div class="abs" style="left:50%;top:50%;width:660px;height:430px;margin:-250px 0 0 -330px;perspective:1100px">
-  <div style="width:100%;height:100%;transform:rotateY(-14deg) rotateX(7deg) rotateZ(-1deg);transform-origin:50% 60%;position:relative">
-    <div class="abs" style="inset:0;border-radius:18px;background:linear-gradient(#1C1F25,#0F1115);padding:14px 14px 22px;
-      box-shadow:0 40px 80px rgba(0,0,0,.7),0 0 0 1.5px #2C3038,0 0 90px rgba(200,200,220,.14)">
-      <div style="width:100%;height:100%;border-radius:4px;overflow:hidden;position:relative;filter:blur(.35px)">{screen}
-        <div class="abs" style="inset:0;background:linear-gradient(118deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,.03) 38%,transparent 55%)"></div></div>
-    </div>
-    <div class="abs" style="left:-40px;right:-40px;bottom:-40px;height:26px;border-radius:0 0 14px 14px;
-      background:linear-gradient(#5A5E66,#2A2D33 40%,#15171A);box-shadow:0 20px 40px rgba(0,0,0,.6)"></div>
-  </div>
-</div>
-<div class="abs" style="inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(0,0,0,.55))"></div>'''
-    css = "body{filter:saturate(.95)}"
-    return doc(p, body, css, bg="#07080B")
-
-
 # ── a paper figure ─────────────────────────────────────────────────────────
 
 def hf_paper_1(p):
@@ -1093,7 +1009,7 @@ BUILDERS = {
     "shot-9": shot_9, "shot-10": shot_10, "shot-11": shot_11, "shot-12": shot_12,
     "file-0": file_0, "file-1": file_1, "file-2": file_2, "file-4": file_4,
     "tg-2": tg_2, "tg-4": tg_4,
-    "fc-0": fc_0, "hf-paper-1": hf_paper_1,
+    "hf-paper-1": hf_paper_1,
 }
 
 

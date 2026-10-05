@@ -663,13 +663,13 @@ func social(_ id: String, _ seat: String, _ kind: NotifyKind, at when: Date) -> 
 // "For each category tallied up the total numbers… we could still use the
 // icons and images" (user, 2026-09-23). The title is the place alone and the
 // body one line; only something that needs you, and money, are not a count.
-let oneApp = NotifyDigest.plan([social("a", "Farcaster", .likesReceived, at: at(10)),
-                                social("b", "Farcaster", .repliesReceived, at: at(11))])!
-ok(oneApp.kind == .digest && oneApp.title == "Farcaster" && oneApp.body == "2 new",
+let oneApp = NotifyDigest.plan([social("a", "Bluesky", .likesReceived, at: at(10)),
+                                social("b", "Bluesky", .repliesReceived, at: at(11))])!
+ok(oneApp.kind == .digest && oneApp.title == "Bluesky" && oneApp.body == "2 new",
    "one app with several things is its name and a count")
-ok(oneApp.link == "casberi://feed/source/Farcaster", "…and opens that app's room")
+ok(oneApp.link == "casberi://feed/source/Bluesky", "…and opens that app's room")
 let crowd = NotifyDigest.plan((0..<25).map {
-    social("s\($0)", ["Farcaster", "Bluesky", "X"][$0 % 3], [.likesReceived, .followersGained, .repliesReceived][$0 % 3], at: at(8))
+    social("s\($0)", ["Nostr", "Bluesky", "X"][$0 % 3], [.likesReceived, .followersGained, .repliesReceived][$0 % 3], at: at(8))
 })!
 ok(crowd.title == "Social" && crowd.body == "25 new", "several apps are the category and a count, however many")
 ok(crowd.link == "casberi://feed", "…and open All")
@@ -764,26 +764,26 @@ for p in [oneApp, crowd, money, outnumbered, NotifyDigest.plan(long)!] {
 // ── the card (prd §881) ──────────────────────────────────────────────────────
 // The long press is where the day is read: the order above, a row per thing
 // that needs you, per transfer and per reply, one for follows and one for likes.
-let fcDay = [
-    kinded("l1", "Farcaster", .likesReceived, title: "Liked by linda and 11 others", body: "gm", who: "linda", at: at(9)),
-    kinded("l2", "Farcaster", .likesReceived, title: "Liked by jesse and 29 others", body: "rooms", who: "jesse", at: at(10)),
-    kinded("l3", "Farcaster", .likesReceived, title: "Liked by anna and 2 others", body: "hi", who: "anna", at: at(11)),
-    kinded("q", "Farcaster", .repliesReceived, body: "can you share the build?", who: "jesse", at: at(8)),
-    kinded("n", "Farcaster", .repliesReceived, body: "nice one", who: "rafa", at: at(12)),
-    kinded("v", "Farcaster", .followersGained, body: "New follower", who: "vitalik", at: at(7)),
+let socialDay = [
+    kinded("l1", "Bluesky", .likesReceived, title: "Liked by linda and 11 others", body: "gm", who: "linda", at: at(9)),
+    kinded("l2", "Bluesky", .likesReceived, title: "Liked by jesse and 29 others", body: "rooms", who: "jesse", at: at(10)),
+    kinded("l3", "Bluesky", .likesReceived, title: "Liked by anna and 2 others", body: "hi", who: "anna", at: at(11)),
+    kinded("q", "Bluesky", .repliesReceived, body: "can you share the build?", who: "jesse", at: at(8)),
+    kinded("n", "Bluesky", .repliesReceived, body: "nice one", who: "rafa", at: at(12)),
+    kinded("v", "Bluesky", .followersGained, body: "New follower", who: "vitalik", at: at(7)),
 ].map { i -> NotifyDigest.Item in
     var i = i; i.tally = ["l1": 12, "l2": 30, "l3": 3][i.id]; return i
 }
-ok(NotifyDigest.plan(fcDay)!.body == "6 new", "a people day is a count; the faces say who")
-let fcCard = NotifyDigest.card(fcDay)!
-ok(fcCard.rows.map { $0.who ?? $0.app } == ["rafa", "jesse", "vitalik", "Farcaster"],
+ok(NotifyDigest.plan(socialDay)!.body == "6 new", "a people day is a count; the faces say who")
+let socialCard = NotifyDigest.card(socialDay)!
+ok(socialCard.rows.map { $0.who ?? $0.app } == ["rafa", "jesse", "vitalik", "Bluesky"],
    "the card reads replies, then follows, then likes")
-ok(fcCard.rows.filter { $0.line.contains("like") }.count == 1
-   && fcCard.rows.last?.line == "45 likes on 3 posts · anna, jesse, linda and 42 more"
-   && fcCard.rows.last?.who == nil,
+ok(socialCard.rows.filter { $0.line.contains("like") }.count == 1
+   && socialCard.rows.last?.line == "45 likes on 3 posts · anna, jesse, linda and 42 more"
+   && socialCard.rows.last?.who == nil,
    "the day's likes are ONE card row led by the app, counting people, never \"Liked by\" per post")
-ok(NotifyDigest.cardEntries(fcDay).count == fcCard.rows.count
-   && NotifyDigest.cardEntries(fcDay).last?.item.picture == nil,
+ok(NotifyDigest.cardEntries(socialDay).count == socialCard.rows.count
+   && NotifyDigest.cardEntries(socialDay).last?.item.picture == nil,
    "every card row has the item its face comes from, and the likes row draws no liker's face")
 var sentBy = paid
 sentBy[0].who = "mira.eth"; sentBy[0].amount = "0.42 ETH"
@@ -833,7 +833,7 @@ ok(learned.slot == cal.date(bySettingHour: 19, minute: 45, second: 0, of: at(10)
 
 // ── the card (prd §809) ─────────────────────────────────────────────────────
 let replies = ["linda", "jesse", "anna", "rafa", "sam"].enumerated().map {
-    kinded("r\($0.offset)", "Farcaster", .repliesReceived, body: "a reply", who: $0.element, at: at(12 - $0.offset))
+    kinded("r\($0.offset)", "Bluesky", .repliesReceived, body: "a reply", who: $0.element, at: at(12 - $0.offset))
 }
 ok(NotifyDigest.card([replies[0]]) == nil,
    "one thing has no card; its long press is its own picture")

@@ -652,7 +652,7 @@ struct SafeScreen: View {
     /// WHO YOU SIGN WITH — the page's roster since §639. A Safe is the one
     /// place in this app where others act on your behalf, and the co-signers
     /// are the part of it worth recognising at a glance. Named from the
-    /// address book / Farcaster where possible; short hex otherwise, never a
+    /// address book / a linked contact where possible; short hex otherwise, never a
     /// guessed identity. Empty when no Safe is detected, so nothing claims a
     /// roster that isn't there.
     /// Reads the queue once. Called from `onAppear` and after a sync — the two

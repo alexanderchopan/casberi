@@ -89,7 +89,7 @@ enum SocialToYou {
 
     /// The networks a Follow can land on: the ones whose stores watch a
     /// handle (`SocialBridge.watch`).
-    static let followable: Set<String> = ["Farcaster", "Bluesky"]
+    static let followable: Set<String> = ["Bluesky"]
 
     /// Someone near you: who they are, on which network, and why.
     struct Person: Equatable, Sendable {
@@ -140,8 +140,8 @@ enum SocialToYou {
         return Array(out.prefix(suggestionCap))
     }
 
-    /// The `@handles` in a post, lower-cased: a Farcaster name or a Bluesky
-    /// domain handle. A trailing full stop is the sentence's, not the handle's.
+    /// The `@handles` in a post, lower-cased: a Bluesky domain handle or a
+    /// bare name. A trailing full stop is the sentence's, not the handle's.
     static func mentions(in text: String) -> [String] {
         text.matches(of: #/(?:^|[^A-Za-z0-9_])@([A-Za-z0-9_][A-Za-z0-9_.\-]{0,62})/#).map {
             var h = String($0.1).lowercased()

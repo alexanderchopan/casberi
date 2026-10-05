@@ -38,7 +38,7 @@ final class AccessibilityAuditTests: XCTestCase {
         Screen(name: "feed", args: []),
         Screen(name: "feed-scrolled", args: [], scrolls: 2),
         Screen(name: "room-github", args: ["-openRoom", "GitHub"]),
-        Screen(name: "room-farcaster", args: ["-openRoom", "Farcaster"]),
+        Screen(name: "room-bluesky", args: ["-openRoom", "Bluesky"]),
         Screen(name: "room-calendar", args: ["-openRoom", "Calendar"]),
         Screen(name: "room-wallet", args: ["-openRoom", "Wallet"]),
         Screen(name: "thing-sheet", args: ["-deeplink", "casberi://thing/latest"]),

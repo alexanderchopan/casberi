@@ -364,8 +364,8 @@ struct AddressMark: View {
                 // preview under the field. §362's ruling, one screen down —
                 // "the best way to make it simple is things being the same."
                 // THEIR PICTURE OVER THE IDENTICON (2026-09-25): a wallet
-                // whose person has a face — an ENS avatar, a Farcaster or
-                // Bluesky picture the join verified onto it — wears it, and
+                // whose person has a face — an ENS avatar, a Bluesky
+                // picture the join verified onto it — wears it, and
                 // the identicon shows through until it loads or if it never
                 // does. The branch above already did this for a social row;
                 // a wallet-led contact ignored `avatarURL` entirely, so every
@@ -1458,7 +1458,7 @@ struct AddressCard: View {
     /// and these read as categories — a chain, a person, a place.
     static func reachGlyph(for label: String) -> String {
         switch label {
-        case "Bluesky", "Farcaster", "Nostr", "Twitch": return "at"
+        case "Bluesky", "Nostr", "Twitch": return "at"
         case "Contacts": return "person.crop.circle"
         default:         return "cube"
         }

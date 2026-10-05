@@ -1,17 +1,16 @@
 import Foundation
 import SwiftData
 
-/// The source-neutral social surfaces (2026-07-14) — the shapes both the
-/// Farcaster and Bluesky bridges answer, so the shared setup row and the
+/// The source-neutral social surfaces (2026-07-14) — the shapes the
+/// Bluesky and Nostr bridges answer, so the shared setup row and the
 /// thing sheet's thread render from ONE path instead of a per-bridge fork.
 /// When a third social bridge arrives it fills these in; nothing in the UI
 /// learns its name.
 
 /// One reply under a post/cast — the thing sheet's thread context. `url` is
 /// the reply's own web permalink (the Open verb); `ref` is its PROTOCOL ref in
-/// `sourceRef` form ("fc:<hash>", "bsky:<at-uri>"), which is what reading its
-/// own replies needs — the web permalink can't stand in, because Farcaster's
-/// carries only the first 10 characters of the hash (2026-07-16).
+/// `sourceRef` form ("bsky:<at-uri>", "nostr:<id>"), which is what reading
+/// its own replies needs (2026-07-16).
 struct SocialReply: Identifiable {
     let id: String
     let handle: String
@@ -29,9 +28,9 @@ struct SocialReply: Identifiable {
 
 /// One engagement number as the network actually reported it (2026-07-16).
 /// `atLeast` is the honesty valve: Bluesky's AppView serves exact totals, but
-/// Snapchain serves reaction MESSAGES, so a Farcaster count is the size of one
-/// page — a full page means "at least this many", and the sheet says "100+"
-/// rather than claiming a total nobody counted.
+/// a network that serves reaction MESSAGES counts the size of one page — a
+/// full page means "at least this many", and the sheet says "100+" rather
+/// than claiming a total nobody counted.
 struct SocialCount: Equatable {
     let value: Int
     var atLeast: Bool = false
@@ -59,7 +58,7 @@ enum SocialThread {
     /// The sources that carry an author, a thread, and a network wash — the
     /// UI keys its social treatment (author eyebrow, Open-thread verb, thread
     /// section) off this, never off a hardcoded name.
-    static let sources: Set<String> = ["Bluesky", "Farcaster", "Nostr"]
+    static let sources: Set<String> = ["Bluesky", "Nostr"]
     static func isSocial(_ source: String) -> Bool { sources.contains(source) }
 
     /// Sources that earn a CONTEXT LABEL ("Mentions you", a channel name) in
@@ -107,7 +106,7 @@ enum SocialThread {
     static let replyCap = 8
 
     /// A handle without Bluesky's ".bsky.social" tail — the name the person
-    /// knows. Farcaster handles have no tail, so they pass through unchanged.
+    /// knows.
     /// A raw 64-hex Nostr pubkey (what `Thing.authorHandle`/`SocialCard.
     /// handle` store for that source, since a display name isn't always
     /// available) becomes a short npub instead — the one choke point every
@@ -141,23 +140,18 @@ enum SocialThread {
 
     /// A post's replies by its protocol ref — the one reader, so a thing's
     /// thread and a REPLY's own thread come through the same door and the
-    /// conversation can be walked in-app (2026-07-16). Farcaster needs the
-    /// author's handle to resolve the fid its node keys casts by; Bluesky's
-    /// at-uri carries everything.
+    /// conversation can be walked in-app (2026-07-16). Bluesky's at-uri
+    /// carries everything.
     @MainActor
     static func replies(source: String, ref: String, handle: String?) async -> [SocialReply] {
         switch source {
-        case "Farcaster":
-            guard ref.hasPrefix("fc:"), let handle, !handle.isEmpty else { return [] }
-            return await FarcasterIngest.replies(handle: handle,
-                                                 hash: String(ref.dropFirst(3)), limit: replyCap)
         case "Bluesky":
             guard ref.hasPrefix("bsky:") else { return [] }
             return await BlueskyIngest.replies(uri: String(ref.dropFirst("bsky:".count)),
                                                limit: replyCap)
         case "Nostr":
             // No handle needed — an `#e`-tag filter finds a note's replies by
-            // its own id alone, unlike Farcaster's fid-keyed lookup.
+            // its own id alone.
             guard ref.hasPrefix("nostr:") else { return [] }
             return await NostrIngest.replies(eventID: String(ref.dropFirst("nostr:".count)),
                                              limit: replyCap)
@@ -176,7 +170,6 @@ enum SocialThread {
         // row can already be deleted by the time this line does (prd §297).
         guard thing.isLive else { return nil }
         switch thing.source {
-        case "Farcaster": return await FarcasterIngest.engagement(for: thing)
         case "Bluesky":   return await BlueskyIngest.engagement(for: thing)
         case "Nostr":     return await NostrIngest.engagement(for: thing)
         default:          return nil
@@ -184,22 +177,20 @@ enum SocialThread {
     }
 
     /// WHY this post is here, in one word the row can wear (2026-07-16) —
-    /// "Liked", "Mentions you", "/design". A liked cast, a channel cast, and
+    /// "Liked", "Mentions you", "#design". A liked post, a hashtag post, and
     /// your own post used to render identically, so the feed couldn't say why
     /// any of them had arrived. nil for the plain case (an account you watch
     /// posted it), where the face already says everything.
     ///
     /// The channel wins over the provenance word: a mention that arrives in a
-    /// channel is more usefully "/design" than "Mentions you" — the channel is
+    /// channel is more usefully "#design" than "Mentions you" — the channel is
     /// the lane, and the sheet's eyebrow still carries both.
     static func contextLabel(for thing: Thing) -> String? {
         guard hasContext(thing.source) else { return nil }
         if let channel = thing.channelName, !channel.isEmpty {
-            // Farcaster channels ARE "/design" to the person, a followed
-            // Nostr hashtag is "#design", and a Bluesky feed is a proper
-            // name ("Science") that wears neither mark.
+            // A followed Nostr hashtag is "#design", and a Bluesky feed is a
+            // proper name ("Science") that wears no mark.
             switch thing.source {
-            case "Farcaster": return "/\(channel)"
             case "Nostr":     return "#\(channel)"
             default:          return channel
             }
@@ -219,21 +210,17 @@ enum SocialThread {
     }
 
     /// The word a network uses for an amplified post — one shared marker
-    /// ("recast") on the thing, spoken in each network's own noun. Nostr
-    /// calls it a repost too (NIP-18), so Farcaster is the exception here,
-    /// not the rule.
+    /// ("recast") on the thing. Bluesky and Nostr (NIP-18) both call it a
+    /// repost.
     static func recastWord(_ source: String) -> String {
-        source == "Farcaster" ? String(localized: "Recast") : String(localized: "Reposted")
+        String(localized: "Reposted")
     }
 
     /// The count's noun under a number ("12 recasts", "3 reposts") — a
     /// PLURAL, where `recastWord` is a row's label. The sheet lowercased that
     /// label, so every count read "12 recast" and "3 reposted" (prd §884).
     static func repostNoun(_ source: String, one: Bool = false) -> String {
-        if source == "Farcaster" {
-            return one ? String(localized: "recast") : String(localized: "recasts")
-        }
-        return one ? String(localized: "repost") : String(localized: "reposts")
+        one ? String(localized: "repost") : String(localized: "reposts")
     }
 
     /// The same fact as a CLAUSE, for the sheet's eyebrow — where it sits in a
@@ -244,7 +231,6 @@ enum SocialThread {
         guard hasContext(thing.source) else { return nil }
         if let channel = thing.channelName, !channel.isEmpty {
             switch thing.source {
-            case "Farcaster": return String(localized: "in /\(channel)")
             case "Nostr":     return String(localized: "in #\(channel)")
             default:          return String(localized: "in \(channel)")
             }
@@ -256,10 +242,7 @@ enum SocialThread {
         // whichever WATCHED account amplified it, which is usually not you.
         // The thing carries no recaster handle, so the phrase says exactly
         // what's known and no more.
-        case "recast":
-            return thing.source == "Farcaster"
-                ? String(localized: "recast by an account you watch")
-                : String(localized: "reposted by an account you watch")
+        case "recast":  return String(localized: "reposted by an account you watch")
         case "mention": return String(localized: "mentions you")
         case "reply":   return String(localized: "replied to you")
         case "follow":  return String(localized: "started following you")
@@ -278,8 +261,6 @@ struct SocialProfile: Identifiable, Hashable {
     let displayName: String?
     let bio: String?
     let avatarURL: String?
-    /// Farcaster only — carried so the card's Watch skips the name→fid resolve.
-    var fid: Int? = nil
 
     /// One person on one network — what `.sheet(item:)` keys the card on.
     var id: String { "\(source):\(handle)" }
@@ -291,25 +272,10 @@ struct SocialProfile: Identifiable, Hashable {
 /// dispatched by source, so the card never learns a bridge's name (2026-07-16).
 enum SocialPeople {
 
-    /// The OTHER social network — what "are they over here too?" searches.
-    /// Restricted to the two networks with a real user-search API: Nostr has
-    /// no reliable global search (see `NostrIngest`'s own doc comment), so
-    /// "find them on Nostr" would have nothing to search with — asking FROM
-    /// a Nostr profile, or searching FOR one, both correctly find nothing.
-    static func otherSource(_ source: String) -> String? {
-        let searchable: Set<String> = ["Bluesky", "Farcaster"]
-        guard searchable.contains(source) else { return nil }
-        return searchable.subtracting([source]).first
-    }
-
     /// Whether this handle is already watched on its network.
     @MainActor
     static func isWatched(handle: String, source: String) -> Bool {
         switch source {
-        case "Farcaster":
-            return FarcasterStore.shared.accounts.contains {
-                $0.username == FarcasterStore.normalize(handle)
-            }
         case "Bluesky":
             return BlueskyStore.shared.accounts.contains {
                 $0.handle == BlueskyStore.normalize(handle)
@@ -328,11 +294,6 @@ enum SocialPeople {
     @discardableResult
     static func watch(_ profile: SocialProfile) -> Bool {
         switch profile.source {
-        case "Farcaster":
-            if let fid = profile.fid, fid > 0 {
-                return FarcasterStore.shared.add(profile.handle, fid: fid)
-            }
-            return FarcasterStore.shared.add(profile.handle)
         case "Bluesky":
             return BlueskyStore.shared.add(profile.handle)
         case "Nostr":
@@ -346,7 +307,6 @@ enum SocialPeople {
     /// COMPARING a hit against the watch list has to normalize first.
     static func normalize(_ handle: String, source: String) -> String {
         switch source {
-        case "Farcaster": return FarcasterStore.normalize(handle)
         case "Bluesky":   return BlueskyStore.normalize(handle)
         case "Nostr":     return NostrStore.normalize(handle)
         default:          return handle
@@ -359,7 +319,6 @@ enum SocialPeople {
     @MainActor
     static func watchedHandles(source: String) -> Set<String> {
         switch source {
-        case "Farcaster": return Set(FarcasterStore.shared.accounts.map(\.username))
         case "Bluesky":   return Set(BlueskyStore.shared.accounts.map(\.handle))
         case "Nostr":
             return Set(NostrStore.shared.accounts.map { $0.pubkeyHex.isEmpty ? $0.input : $0.pubkeyHex })
@@ -369,15 +328,13 @@ enum SocialPeople {
 
     /// Starts watching a whole picked set at once (2026-07-16) — the follow
     /// import's landing. One store write for the lot, so a 200-person import
-    /// persists once; each carries the fid/handle the graph read already knew.
+    /// persists once; each carries the handle the graph read already knew.
     /// Returns how many were NEW, which is what the sheet reports (picking
     /// someone already watched is a no-op, not a second connect).
     @MainActor
     @discardableResult
     static func watch(_ people: [UserSearch.Hit], source: String) -> Int {
         switch source {
-        case "Farcaster":
-            return FarcasterStore.shared.add(contentsOf: people.map { ($0.handle, $0.fid) })
         case "Bluesky":
             return BlueskyStore.shared.add(contentsOf: people.map(\.handle))
         case "Nostr":
@@ -394,7 +351,6 @@ enum SocialPeople {
     @MainActor
     static func sync(source: String, context: ModelContext) async {
         switch source {
-        case "Farcaster": _ = await FarcasterIngest.refresh(context: context)
         case "Bluesky":   _ = await BlueskyIngest.refresh(context: context)
         case "Nostr":     _ = await NostrIngest.refresh(context: context)
         default: break
@@ -412,12 +368,6 @@ enum SocialPeople {
             guard let p = await BlueskyIngest.profile(handle: h) else { return nil }
             return SocialProfile(source: source, handle: h, displayName: p.displayName,
                                  bio: p.bio, avatarURL: p.avatarURL)
-        case "Farcaster":
-            let n = FarcasterStore.normalize(handle)
-            guard let fid = await FarcasterIngest.fid(forName: n),
-                  let p = await FarcasterIngest.profile(fid: fid) else { return nil }
-            return SocialProfile(source: source, handle: n, displayName: p.displayName,
-                                 bio: p.bio, avatarURL: p.avatarURL, fid: fid)
         case "Nostr":
             guard let hex = await NostrIngest.pubkeyHex(for: NostrStore.normalize(handle)),
                   let p = await NostrIngest.profile(pubkeyHex: hex) else { return nil }
@@ -426,28 +376,11 @@ enum SocialPeople {
         default: return nil
         }
     }
-
-    /// Search the OTHER network for this name (2026-07-16). Deliberately a
-    /// SEARCH, not a join: nothing links a Farcaster username to a Bluesky
-    /// handle (Farcaster's onchain verifications have no Bluesky analog), so
-    /// claiming "@dwr here is @dwr there" would be a guess wearing the clothes
-    /// of a fact — exactly what the honesty rule forbids. The card asks the
-    /// question and hands the person the hits; the tap that watches one is
-    /// theirs, and it's the same tap the setup screen's finder offers.
-    static func findElsewhere(_ handle: String, from source: String) async -> [UserSearch.Hit] {
-        guard let other = otherSource(source) else { return [] }
-        let query = SocialThread.shortHandle(handle)
-        switch other {
-        case "Bluesky":   return await UserSearch.bluesky(query)
-        case "Farcaster": return await UserSearch.farcaster(query)
-        default:          return []
-        }
-    }
 }
 
 /// One "watch more" toggle on an account row (Likes / Recasts / Mentions) —
 /// the capability a bridge offers per account. Bluesky offers Reposts and
-/// Mentions (likes need sign-in); Farcaster offers all three.
+/// Mentions (likes need sign-in).
 struct SocialWatch: Identifiable, Equatable {
     /// `mine` is the odd one out and stays here anyway: it's the same gesture
     /// (a switch on a person, in the same strip) and it reads as one to the
@@ -458,7 +391,7 @@ struct SocialWatch: Identifiable, Equatable {
     }
     let kind: Kind
     let on: Bool
-    /// The word THIS network uses for the kind — Farcaster recasts, Bluesky
+    /// The word THIS network uses for the kind — Bluesky and Nostr say
     /// reposts. The KIND is shared (one flag, one code path); only the noun
     /// differs, and a bridge never renames someone else's verb. Defaults to
     /// the kind's own name.
@@ -488,7 +421,7 @@ struct SocialAccount: Identifiable, Equatable {
 
 /// Unfollowing a topic takes its posts with it (prd §286, 2026-08-02).
 ///
-/// `FarcasterStore.removeChannel` and `BlueskyStore.removeFeed` only ever
+/// `BlueskyStore.removeFeed` and the other topic follows only ever
 /// edited their own list — nothing touched the corpus — so a channel you
 /// unfollowed went on filling the feed forever, with no way to get rid of it
 /// short of Delete everything. Reported 2026-08-02: "i was following a
@@ -500,7 +433,7 @@ struct SocialAccount: Identifiable, Equatable {
 /// the whole difficulty: `channelName` does NOT mean "arrived via the
 /// channel". Both bridges' heal back-fills it onto a post that landed for
 /// another reason and later turned up in a followed channel (see
-/// `FarcasterIngest`/`BlueskyIngest`'s `if thing.channelName == nil`), so
+/// `BlueskyIngest`'s `if thing.channelName == nil`), so
 /// deleting on that field alone would take a watched friend's own post with
 /// it and read as data loss. Two exemptions carry that:
 ///
@@ -544,7 +477,7 @@ enum SocialTopics {
     ///
     /// `pruneTopic`/`pruneAuthor` fire at the MOMENT you tap unfollow, which
     /// leaves two holes: anyone who unfollowed BEFORE those existed still has
-    /// the orphans (reported immediately — "the old farcaster channel is
+    /// the orphans (reported immediately — "the old channel is
     /// still showing"), and a reinstall can't clear them either, since the
     /// corpus comes back down from CloudKit exactly as it was. A tap-time
     /// prune also can't survive the app being killed mid-write. So the rule
@@ -604,7 +537,7 @@ enum SocialTopics {
     /// topic concept (the feed follows) that's simply empty.
     ///
     /// `handle` is matched against `authorHandle`, which is what every one of
-    /// these bridges stores: a username on Farcaster, a handle on Bluesky,
+    /// these bridges stores: a handle on Bluesky,
     /// the resolved pubkey hex on Nostr, and the FEED'S OWN NAME on a feed
     /// follow (`FeedFollowBridges` sets it so several followed feeds stay
     /// distinguishable) — which is why the caller resolves the display name

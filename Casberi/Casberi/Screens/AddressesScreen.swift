@@ -19,7 +19,7 @@ import SwiftData
 /// nudge and the one nudge row above the list is gone.
 ///
 /// **The chips.** A contact stands in every dock category one of its
-/// identities belongs to — a wallet with a Farcaster handle is under Wallet
+/// identities belongs to — a wallet with a Bluesky handle is under Wallet
 /// AND Social — and a chip is drawn only for a category that holds somebody,
 /// so a selected chip never stands over an empty list (the Accounts rule).
 struct AddressesSection: View {
@@ -205,7 +205,7 @@ struct AddressesSection: View {
         // asks the model nothing.
         let describe = { (c: Contact) in
             ((c.name.contains("@") ? [] : [c.name]) + c.identities
-                .filter { [.farcaster, .bluesky, .github, .ens, .basename, .linea, .lens, .worldApp].contains($0.kind) }
+                .filter { [.bluesky, .github, .ens, .basename, .linea, .lens, .worldApp].contains($0.kind) }
                 .map { ContactSheet.service($0.kind) + " " + $0.label })
                 .joined(separator: ", ")
         }
@@ -292,13 +292,14 @@ struct AddressesSection: View {
         var isNamed: Bool { !name.hasPrefix("…") }
     }
 
-    /// A query worth asking about: a hex address, a dotted name with no
-    /// spaces, or an `@handle`. A person's name is not — that is the
-    /// filter's job, and web3.bio would 404 on it every keystroke.
+    /// A query worth asking about: a hex address, or a dotted name with no
+    /// spaces. A person's name is not — that is the filter's job, and
+    /// web3.bio would 404 on it every keystroke. Nor is an `@handle`: it
+    /// asked web3.bio for a Farcaster name until the seat was retired
+    /// (prd §1109).
     static func resolvable(_ q: String) -> Bool {
         if ENS.isHexAddress(q) { return true }
-        guard !q.contains(" "), q.count >= 3 else { return false }
-        if q.hasPrefix("@") { return q.count >= 2 }
+        guard !q.contains(" "), q.count >= 3, !q.hasPrefix("@") else { return false }
         return q.contains(".") && !q.hasPrefix(".") && !q.hasSuffix(".")
     }
 
@@ -319,26 +320,18 @@ struct AddressesSection: View {
             return Resolved(query: q, address: address, name: named ?? WalletStore.shortAddress(address),
                             identities: identities, avatar: records.compactMap(\.avatar).first)
         }
-        let handle = q.hasPrefix("@") ? String(q.dropFirst()) : nil
-        let asked = handle.map { "farcaster,\($0)" } ?? q
-        guard case .records(let records) = await Web3Bio.lookup(asked), !records.isEmpty else { return nil }
-        let address: String?
-        if let handle {
-            address = records.first { $0.platform == .farcaster && $0.identity.lowercased() == handle.lowercased() }?.address
-        } else {
-            address = Web3Bio.forwardAddress(records, for: q)
-        }
+        guard case .records(let records) = await Web3Bio.lookup(q), !records.isEmpty else { return nil }
+        let address = Web3Bio.forwardAddress(records, for: q)
         var identities: [Identity] = []
         if let address, ENS.isHexAddress(address) {
             identities.append(Identity.make(.wallet, address))
             identities += Web3Bio.names(records, ownedBy: address).compactMap(identity(for:))
         }
-        let own = handle.map { Identity.make(.farcaster, $0) }
-            ?? Identity.Kind.classify(primaryName: q).map { Identity.make($0, q) }
+        let own = Identity.Kind.classify(primaryName: q).map { Identity.make($0, q) }
         if let own, !identities.contains(where: { $0.key == own.key }) { identities.append(own) }
         guard !identities.isEmpty else { return nil }
         return Resolved(query: q, address: address.flatMap { ENS.isHexAddress($0) ? $0.lowercased() : nil },
-                        name: handle ?? q.lowercased(), identities: identities,
+                        name: q.lowercased(), identities: identities,
                         avatar: records.compactMap(\.avatar).first)
     }
 
@@ -348,7 +341,6 @@ struct AddressesSection: View {
         case .ens:       return Identity.make(.ens, record.identity)
         case .basenames: return Identity.make(.basename, record.identity)
         case .linea:     return Identity.make(.linea, record.identity)
-        case .farcaster: return Identity.make(.farcaster, record.identity)
         case .lens:      return Identity.make(.lens, record.identity)
         case .sns, .ethereum, .solana: return nil
         }
@@ -399,7 +391,7 @@ struct AddressesSection: View {
     }
 
     /// Follow, from the search — the same choke point every door funnels
-    /// through (`WalletStore.outcome(ofAdding:)`), worded as the Farcaster
+    /// through (`WalletStore.outcome(ofAdding:)`), worded as a social
     /// profile's door words it: the cap still NAMES the wallet (§170).
     private func follow(_ hit: Resolved, address: String) {
         let label = hit.isNamed ? hit.name : ""
@@ -848,7 +840,7 @@ extension Contact {
             case .wallet, .ens, .basename, .linea, .lens, .worldApp: category = "Wallet"
             // A biller files where the app it bills for lives (prd §1106a).
             case .biller: category = BillersSource.category(ofMerchant: identity.body)
-            case .farcaster, .bluesky, .nostr:                      category = "Social"
+            case .bluesky, .nostr:                                  category = "Social"
             case .github:                                            category = "Work"
             case .contact, .email:                                   category = "Life"
             case .feed:                                              category = "Reading"
@@ -1017,9 +1009,6 @@ struct ContactSheet: View {
         contact.identities.compactMap { identity in
             let body = identity.body
             switch identity.kind {
-            case .farcaster:
-                guard let a = FarcasterStore.shared.accounts.first(where: { $0.username.lowercased() == body }) else { return nil }
-                return ("Farcaster", a.username)
             case .bluesky:
                 guard let a = BlueskyStore.shared.accounts.first(where: { $0.handle.lowercased() == body }) else { return nil }
                 return ("Bluesky", a.handle)
@@ -1423,8 +1412,6 @@ struct ContactSheet: View {
                 take(FetchDescriptor(predicate: #Predicate { $0.counterpartyAddress == body }))
             case .email:
                 take(FetchDescriptor(predicate: #Predicate { $0.authorEmail == body }))
-            case .farcaster:
-                take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Farcaster" }))
             case .bluesky:
                 take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Bluesky" }))
             case .nostr:
@@ -1473,7 +1460,7 @@ struct ContactSheet: View {
         var out: [String] = []
         for identity in contact.identities {
             switch identity.kind {
-            case .farcaster, .github: out.append("@" + identity.body)
+            case .github:             out.append("@" + identity.body)
             case .bluesky:            out.append("@" + identity.body); out.append(identity.body)
             case .ens, .basename, .linea, .lens: out.append(identity.body)
             default: continue
@@ -1529,10 +1516,9 @@ struct ContactSheet: View {
             let entry = AddressBook.shared.entry(for: identity.body)
                 ?? AddressBook.Entry(address: identity.body, name: contact.name, addedAt: .now)
             return { pushed = .address(entry) }
-        case .farcaster, .bluesky, .nostr:
+        case .bluesky, .nostr:
             let source: String
             switch identity.kind {
-            case .farcaster: source = "Farcaster"
             case .bluesky:   source = "Bluesky"
             default:         source = "Nostr"
             }
@@ -1563,7 +1549,6 @@ struct ContactSheet: View {
         case .ens:       return String(localized: "ENS")
         case .basename:  return String(localized: "Base")
         case .linea:     return String(localized: "Linea")
-        case .farcaster: return String(localized: "Farcaster")
         case .lens:      return String(localized: "Lens")
         case .bluesky:   return String(localized: "Bluesky")
         case .nostr:     return String(localized: "Nostr")
@@ -1585,7 +1570,6 @@ struct ContactSheet: View {
         case .ens:       return "ENS"
         case .basename:  return "Wallet"
         case .linea:     return "Linea"
-        case .farcaster: return "Farcaster"
         case .lens:      return "Lens"
         case .bluesky:   return "Bluesky"
         case .nostr:     return "Nostr"

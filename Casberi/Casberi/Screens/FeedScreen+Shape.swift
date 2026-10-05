@@ -148,7 +148,7 @@ extension FeedScreen {
             // same, `SocialThread.replies` reads its threads, and
             // `NostrStore.socialAccounts` was drawn on the setup screen. One
             // switch statement never learned the name.
-            case "Farcaster", "Bluesky", "Nostr": self = .social
+            case "Bluesky", "Nostr": self = .social
             // X, 2026-08-06 — the same ruling as the line above, arriving two
             // years of somebody's writing late. The room had NO case here at
             // all, so it fell to `.plain` and drew a `BandRow` per row: an

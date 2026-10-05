@@ -4875,34 +4875,6 @@
         }
       }
     },
-    "%@ accounts by that name" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ cuentas con ese nombre"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "その名前のアカウント %@ 件"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해당 이름의 계정 %@개"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "该名称的账户 %@ 个"
-          }
-        }
-      }
-    },
     "%@ accounts by that name — tap to watch one." : {
       "localizations" : {
         "es" : {
@@ -35171,34 +35143,6 @@
         }
       }
     },
-    "@name, or /channel" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@nombre, o /canal"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@名前、または/チャンネル"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@이름 또는 /채널"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@名字，或 /频道"
-          }
-        }
-      }
-    },
     "A Bitcoin address is read too, from its own public API." : {
       "localizations" : {
         "es" : {
@@ -35223,34 +35167,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "比特币地址也会通过其自身的公开 API 读取。"
-          }
-        }
-      }
-    },
-    "A Bluesky or Farcaster handle, or a feed." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Un usuario de Bluesky o Farcaster, o un feed."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "BlueskyまたはFarcasterのハンドル、またはフィード。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bluesky 또는 Farcaster 핸들, 또는 피드."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bluesky 或 Farcaster 用户名，或订阅流。"
           }
         }
       }
@@ -36137,34 +36053,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "guard 检查此 Safe 上的每笔交易"
-          }
-        }
-      }
-    },
-    "A hand-picked list, in one tap" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Una lista escogida a mano, en un toque"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "厳選されたリストを、ワンタップで"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "엄선된 목록을 한 번의 탭으로"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "精选名单，一键完成"
           }
         }
       }
@@ -41422,34 +41310,6 @@
         }
       }
     },
-    "Already watching @%@'s wallet." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ya estás siguiendo el wallet de @%@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@%@のウォレットはすでに監視中です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@%@ 님의 지갑을 이미 지켜보는 중입니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已经在关注 @%@ 的钱包。"
-          }
-        }
-      }
-    },
     "Already watching @%@." : {
       "localizations" : {
         "es" : {
@@ -42094,34 +41954,6 @@
         }
       }
     },
-    "An app was given permission to post as you" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Una app recibió permiso para publicar en tu nombre"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "アプリにあなたとして投稿する権限が付与されました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "앱이 회원님을 대신해 게시할 권한을 부여받았습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "有一个应用获得了以你的身份发帖的权限"
-          }
-        }
-      }
-    },
     "An app you connect shows up here" : {
       "localizations" : {
         "es" : {
@@ -42146,34 +41978,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你连接的应用会出现在这里"
-          }
-        }
-      }
-    },
-    "An app's permission to post as you was revoked" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Se revocó el permiso de una app para publicar en tu nombre"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "アプリがあなたとして投稿する権限が取り消されました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "앱이 회원님을 대신해 게시할 권한이 취소되었습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "有一个应用以你的身份发帖的权限已被撤销"
           }
         }
       }
@@ -50066,35 +49870,6 @@
         }
       }
     },
-    "Casts" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casts"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キャスト"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "캐스트"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casts"
-          }
-        }
-      }
-    },
     "Catch up now" : {
       "localizations" : {
         "es" : {
@@ -54903,34 +54678,6 @@
         }
       }
     },
-    "Couldn't find that channel — check the name." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No se encontró ese canal — revisa el nombre."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "そのチャンネルが見つかりませんでした — 名前を確認してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해당 채널을 찾을 수 없습니다 — 이름을 확인하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "未找到该频道——请检查名称。"
-          }
-        }
-      }
-    },
     "Couldn't find that repo on GitHub." : {
       "localizations" : {
         "es" : {
@@ -55879,34 +55626,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接 Duolingo — 请稍后再试。"
-          }
-        }
-      }
-    },
-    "Couldn't reach Farcaster — try again." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No se pudo conectar con Farcaster — inténtalo de nuevo."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcasterに接続できませんでした — もう一度お試しください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster에 연결할 수 없습니다 — 다시 시도하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "无法连接到 Farcaster——请重试。"
           }
         }
       }
@@ -66438,62 +66157,6 @@
         }
       }
     },
-    "Farcaster" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster"
-          }
-        }
-      }
-    },
-    "Farcaster · 1h ago · replying to you" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster · hace 1 h · respondiéndote"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster · 1時間前 · あなたに返信"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster · 1시간 전 · 회원님에게 답장"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster · 1 小时前 · 回复你"
-          }
-        }
-      }
-    },
     "February" : {
       "localizations" : {
         "es" : {
@@ -67190,34 +66853,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在查找…"
-          }
-        }
-      }
-    },
-    "Finding the channel…" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Buscando el canal…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "チャンネルを検索中…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "채널 찾는 중…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在查找频道…"
           }
         }
       }
@@ -68298,34 +67933,6 @@
         }
       }
     },
-    "Followed %lld on Farcaster" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Has seguido a %lld en Farcaster"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster で %lld 人をフォローしました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster에서 %lld명을 팔로우했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已在 Farcaster 关注 %lld 人"
-          }
-        }
-      }
-    },
     "Followed you" : {
       "localizations" : {
         "es" : {
@@ -69330,34 +68937,6 @@
         }
       }
     },
-    "From the Farcaster team's own public node. Channels and mentions of you can be followed too." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Desde el propio nodo público del equipo de Farcaster. También puedes seguir canales y menciones a ti."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcasterチームの公開ノードから。チャンネルや自分へのメンションもフォローできます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Farcaster 팀의 공개 노드에서. 채널과 나에 대한 멘션도 팔로우할 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "来自 Farcaster 团队自己的公共节点。也可以关注频道和提到你的内容。"
-          }
-        }
-      }
-    },
     "From the agent's own console. It stays in %@'s Keychain and goes only to that provider." : {
       "localizations" : {
         "es" : {
@@ -70263,34 +69842,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "他人支付的燃料费，对比你支付的燃料费"
-          }
-        }
-      }
-    },
-    "Gave %@ permission to post as you" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Le diste a %@ permiso para publicar en tu nombre"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ に、あなたとして投稿する権限を付与しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@에게 회원님 대신 게시할 권한을 부여했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已授予 %@ 以你的身份发布内容的权限"
           }
         }
       }
@@ -83250,34 +82801,6 @@
         }
       }
     },
-    "Look for them on %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Búscalos en %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@で探してみてください"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@에서 찾아보세요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在%@上找找看"
-          }
-        }
-      }
-    },
     "Look up" : {
       "localizations" : {
         "es" : {
@@ -87122,34 +86645,6 @@
         }
       }
     },
-    "Name someone and their casts arrive, from the Farcaster team's own public node. Channels and mentions of you can be followed too." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nombra a alguien y sus casts llegan desde el nodo público del propio equipo de Farcaster. También puedes seguir canales y menciones a ti."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "人物を指定すると、Farcaster チーム自身の公開ノードからキャストが届きます。チャンネルや自分へのメンションもフォローできます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "사람을 지정하면 Farcaster 팀의 공개 노드에서 캐스트가 도착합니다. 채널과 나를 언급한 글도 팔로우할 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "指定一个人，其 cast 会从 Farcaster 团队自己的公开节点送达。也可以关注频道和提及你的内容。"
-          }
-        }
-      }
-    },
     "Name someone and their notes arrive from whichever public relays this %@ can reach. Nothing here can ever post." : {
       "localizations" : {
         "es" : {
@@ -89217,34 +88712,6 @@
         }
       }
     },
-    "No %@ account by that name." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No hay ninguna cuenta de %@ con ese nombre."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "その名前の%@アカウントは見つかりません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해당 이름의 %@ 계정이 없습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "没有该名称的%@账户。"
-          }
-        }
-      }
-    },
     "No Bankr key saved." : {
       "localizations" : {
         "es" : {
@@ -89577,34 +89044,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无需账号也无需登录 — 指定一个节目，其单集就会通过该节目自己的公开订阅源到达。"
-          }
-        }
-      }
-    },
-    "No account and no sign-in — name someone and their casts arrive, served by the Farcaster team's own public node. Channels and mentions of you can be followed too." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Sin cuenta ni inicio de sesión: nombra a alguien y sus casts llegarán, servidos por el nodo público del propio equipo de Farcaster. También puedes seguir canales y las menciones a ti."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "アカウントもサインインも不要 — 誰かを指定すると、Farcaster チーム自身の公開ノードからキャストが届きます。チャンネルや自分へのメンションもフォローできます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "계정도 로그인도 필요 없습니다 — 누군가를 지정하면 Farcaster 팀의 공개 노드를 통해 캐스트가 도착합니다. 채널과 나를 언급한 글도 팔로우할 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "无需账号也无需登录 — 指定某个人，其 cast 就会由 Farcaster 团队自己的公共节点提供并到达。也可以关注频道以及提到你的内容。"
           }
         }
       }
@@ -91827,34 +91266,6 @@
         }
       }
     },
-    "No verified wallet for @%@." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No hay ningún wallet verificado para @%@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@%@には確認済みのウォレットがありません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@%@에 대한 인증된 지갑이 없습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@%@ 没有已验证的钱包。"
-          }
-        }
-      }
-    },
     "No wallet app on %@ — paste the address instead." : {
       "localizations" : {
         "es" : {
@@ -91991,34 +91402,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "按 Walletbeat 的判断：否"
-          }
-        }
-      }
-    },
-    "Nobody by that name on Bluesky or Farcaster." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Nadie con ese nombre en Bluesky ni Farcaster."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bluesky にも Farcaster にもその名前の人はいません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bluesky나 Farcaster에 그 이름의 사용자가 없습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bluesky 和 Farcaster 上都没有这个名字的人。"
           }
         }
       }
@@ -109291,35 +108674,6 @@
         }
       }
     },
-    "Read-only, public data only — served by the Farcaster team's own public node." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Solo lectura, solo datos públicos — servidos por el propio nodo público del equipo de Farcaster."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "読み取り専用、公開データのみ — Farcaster チーム自身の公開ノードから提供されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "읽기 전용, 공개 데이터만 — Farcaster 팀 자체 공개 노드에서 제공돼요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "只读，仅公开数据 — 由 Farcaster 团队自己的公开节点提供。"
-          }
-        }
-      }
-    },
     "Read-only, public data only. Likes arrive with sign-in, later." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -110045,34 +109399,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取市场…"
-          }
-        }
-      }
-    },
-    "Reading the pack…" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Leyendo el pack…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "パックを読み取り中…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "팩을 읽는 중…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在读取合集…"
           }
         }
       }
@@ -115882,34 +115208,6 @@
         }
       }
     },
-    "Revoked %@'s permission to post as you" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Revocaste el permiso de %@ para publicar en tu nombre"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@があなたとして投稿する権限を取り消しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@가 나를 대신해 게시할 권한을 취소했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已撤销 %@ 以你的身份发布内容的权限"
-          }
-        }
-      }
-    },
     "Revoking is free apart from gas." : {
       "localizations" : {
         "es" : {
@@ -118594,34 +117892,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "搜索"
-          }
-        }
-      }
-    },
-    "Search Bluesky and Farcaster by name. People who reply to you show here." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Busca en Bluesky y Farcaster por nombre. Quienes te responden aparecen aquí."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bluesky と Farcaster を名前で検索。あなたに返信した人がここに表示されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bluesky와 Farcaster를 이름으로 검색하세요. 나에게 답글을 단 사람이 여기에 표시됩니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "按名字搜索 Bluesky 和 Farcaster。回复你的人会显示在这里。"
           }
         }
       }
@@ -136729,35 +135999,6 @@
         }
       }
     },
-    "Track any Farcaster account" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sigue cualquier cuenta de Farcaster"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "任意の Farcaster アカウントを追跡"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "어떤 Farcaster 계정이든 추적"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "追踪任意 Farcaster 账户"
-          }
-        }
-      }
-    },
     "Track any token" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -142359,34 +141600,6 @@
         }
       }
     },
-    "Watch their wallet" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Seguir su wallet"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "相手のウォレットを監視"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "상대방의 지갑 지켜보기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "关注他们的钱包"
-          }
-        }
-      }
-    },
     "Watch this address" : {
       "localizations" : {
         "es" : {
@@ -143336,40 +142549,6 @@
         }
       }
     },
-    "Watching %lld wallets already — saved @%@ to your address book instead." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Watching %1$lld wallets already — saved @%2$@ to your address book instead."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ya siguiendo %lld wallets; en su lugar, se guardó @%@ en tu libreta de direcciones."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "すでに%lld件のウォレットを監視中のため、代わりに@%@をアドレス帳に保存しました。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "이미 지갑 %lld개를 지켜보는 중이라 대신 @%@을(를) 주소록에 저장했습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已在关注 %lld 个钱包——已改为将 @%@ 保存到你的地址簿。"
-          }
-        }
-      }
-    },
     "Watching %lld · hold to unwatch" : {
       "localizations" : {
         "es" : {
@@ -143792,68 +142971,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在关注 @%@"
-          }
-        }
-      }
-    },
-    "Watching @%@ on %@." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Watching @%1$@ on %2$@."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Siguiendo a @%@ en %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@で@%@を監視中。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@에서 @%@ 지켜보는 중."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在 %@ 上关注 @%@。"
-          }
-        }
-      }
-    },
-    "Watching @%@'s wallet." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Siguiendo el wallet de @%@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@%@のウォレットを監視中。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "@%@의 지갑을 지켜보는 중."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在关注 @%@ 的钱包。"
           }
         }
       }
@@ -160604,34 +159721,6 @@
         }
       }
     },
-    "in /%@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "en /%@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "/%@ で"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "/%@ 에서"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在 /%@ 中"
-          }
-        }
-      }
-    },
     "in 1 protocol" : {
       "localizations" : {
         "es" : {
@@ -166483,62 +165572,6 @@
         }
       }
     },
-    "recast by an account you watch" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "recast de una cuenta que sigues"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "フォロー中のアカウントがリキャストしました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "팔로우 중인 계정이 리캐스트함"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "由你关注的账号转帖"
-          }
-        }
-      }
-    },
-    "recasts" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "recasts"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "リキャスト"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "리캐스트"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "转发"
-          }
-        }
-      }
-    },
     "received" : {
       "localizations" : {
         "es" : {
@@ -168805,34 +167838,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "某人"
-          }
-        }
-      }
-    },
-    "someone or a channel" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "a alguien o un canal"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "誰かやチャンネル"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "사람이나 채널"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "某人或频道"
           }
         }
       }

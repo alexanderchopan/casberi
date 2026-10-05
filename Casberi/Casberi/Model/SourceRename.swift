@@ -246,10 +246,13 @@ enum SourceRename {
     /// Deals, Shopify and Cursor joined them the same day (prd §1049): the two
     /// shopping seats followed someone else's catalogue and nobody would use
     /// them, and Cursor went with them.
+    ///
+    /// Farcaster joined them 2026-10-05 (prd §1109, user: "remove farcaster"):
+    /// the seat, its casts, channels, likes and signer grants, and its rows.
     static let droppedSources: Set<String> = [
         "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
         "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
-        "Deals", "Shopify", "Cursor",
+        "Deals", "Shopify", "Cursor", "Farcaster",
     ]
 
     /// The address-book network tags those seats wrote (`AddressBook.Network`
@@ -261,11 +264,12 @@ enum SourceRename {
     /// devnet's sampled value history, Reddit's follows; Deals' source
     /// toggles (`deals.sources.v1`), Shopify's store list
     /// (`shopify.stores.v1`) and the throttle stamp of Cursor's pull-request
-    /// pass (`heal.due.cursor.pullRequests`).
+    /// pass (`heal.due.cursor.pullRequests`); Farcaster's accounts, channels,
+    /// heal stamp, follower ledgers and signer cursors (`farcaster.`).
     private static let droppedDefaultsPrefixes = [
         "altana.", "vibenet.", "hegota.", "privacydevnet.",
         "room.value.history.privacyDevnet", "feed.reddit",
-        "deals.", "shopify.", "heal.due.cursor.",
+        "deals.", "shopify.", "heal.due.cursor.", "farcaster.",
     ]
 
     /// The Keychain services the devnets' signing keys lived under. Test money
@@ -282,9 +286,10 @@ enum SourceRename {
     private static let droppedVaultKeys = ["token.cursor"]
 
     /// `.v2` since prd §1049 added three seats: a device that ran the `.v1`
-    /// pass would otherwise never clear their defaults or Cursor's key. The
-    /// `.v1` work it repeats is idempotent — every delete finds nothing.
-    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v2"
+    /// pass would otherwise never clear their defaults or Cursor's key. `.v3`
+    /// since prd §1109 added Farcaster, for the same reason. The work an
+    /// earlier pass already did is idempotent — every delete finds nothing.
+    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v3"
 
     /// Drops what the deleted seats left behind, in `sweepVoice`'s shape: the
     /// ROWS at every launch, because the store mirrors to CloudKit and a

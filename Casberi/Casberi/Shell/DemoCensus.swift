@@ -287,7 +287,7 @@ enum DemoCensus {
         })
 
         // ── Social: rosters and the inbound half ──────────────────────────
-        for source in ["Farcaster", "Bluesky"] where sources.contains(source) {
+        for source in ["Bluesky"] where sources.contains(source) {
             out.append(Surface(name: "social.\(source)", gate: .required) {
                 let rows = all.filter { $0.source == source }
                 let text = rows.filter { !($0.postText ?? "").isEmpty }.count
@@ -300,20 +300,15 @@ enum DemoCensus {
             })
         }
         out.append(Surface(name: "social.inbound", gate: .required) {
-            let fc = FarcasterStore.shared.accounts.filter(\.mine).map(\.username)
             let bsky = BlueskyStore.shared.accounts.filter(\.mine).map(\.handle)
-            guard !fc.isEmpty || !bsky.isEmpty else { return .empty("no account marked mine") }
+            guard !bsky.isEmpty else { return .empty("no account marked mine") }
             var own = 0
-            for h in fc {
-                own += SocialInbound.ownRecentPosts(IngestSupport.thingsByRef(context, source: "Farcaster"),
-                                                    handle: h, refPrefix: "fc:").count
-            }
             for h in bsky {
                 own += SocialInbound.ownRecentPosts(IngestSupport.thingsByRef(context, source: "Bluesky"),
                                                     handle: h, refPrefix: "bsky:").count
             }
-            return own > 0 ? .ok("mine fc=\(fc.count) bsky=\(bsky.count) ownPosts=\(own)")
-                           : .empty("mine fc=\(fc.count) bsky=\(bsky.count) but no own posts eligible")
+            return own > 0 ? .ok("mine bsky=\(bsky.count) ownPosts=\(own)")
+                           : .empty("mine bsky=\(bsky.count) but no own posts eligible")
         })
         out.append(Surface(name: "social.likers", gate: .required) {
             let n = SocialLikers.shared.rolls.count

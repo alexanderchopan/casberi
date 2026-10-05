@@ -410,8 +410,7 @@ enum AnswerFigure {
     @MainActor
     private static func ownHandles() -> Set<String> {
         var out: Set<String> = ["you"]
-        for name in FarcasterStore.shared.accounts.filter(\.mine).map(\.username)
-            + BlueskyStore.shared.accounts.filter(\.mine).map(\.handle) {
+        for name in BlueskyStore.shared.accounts.filter(\.mine).map(\.handle) {
             out.insert(name.trimmingCharacters(in: CharacterSet(charactersIn: "@ ")).lowercased())
         }
         return out

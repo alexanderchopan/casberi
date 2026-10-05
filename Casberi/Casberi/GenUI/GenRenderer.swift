@@ -790,7 +790,7 @@ private struct SoloMailTile: View {
     }
 }
 
-/// A pinned Bluesky/Farcaster post as a solo 1×1 tile: the author's own
+/// A pinned Bluesky/Nostr post as a solo 1×1 tile: the author's own
 /// avatar and handle up top, the post's full text below — the same idiom
 /// the old single-post card carried, now the tile's small form.
 private struct SoloPostTile: View {
@@ -3141,7 +3141,7 @@ private struct GenMailRow: View {
 }
 
 /// PostRow(handle, text, avatarURL, thingId, openable) — a social post inside
-/// a pinned Bluesky/Farcaster tile: the author's own avatar leads (circular,
+/// a pinned Bluesky/Nostr tile: the author's own avatar leads (circular,
 /// same idiom the old single-post SocialCard used), then handle + text. An
 /// account with no avatar URL falls back to its initial via RemoteThumb, same
 /// as everywhere else a remote image can be dead or missing.
@@ -3203,7 +3203,7 @@ private struct GenTakeawayCard: View {
 /// A monogram where a bridge gave us no avatar, never a blank or a silhouette:
 /// `RemoteThumb`'s own fallback, so the circle is always a real circle and the
 /// row never has a hole in it. That matters more here than elsewhere because
-/// avatar coverage is genuinely uneven — Farcaster, Bluesky, Nostr, RSS,
+/// avatar coverage is genuinely uneven — Bluesky, Nostr, RSS,
 /// Stocktwits and GitHub all populate `authorAvatarURL`, while an X archive or
 /// a TikTok save names the person and carries no picture.
 private struct GenFaces: View {

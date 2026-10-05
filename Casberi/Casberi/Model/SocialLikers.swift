@@ -38,7 +38,7 @@ import Observation
 /// **A roll with no names is never written.** A total with nobody named is the
 /// tally the doctrine forbids, and it is also what the sheet's engagement line
 /// already shows. If not one liker could be resolved, this says nothing.
-/// Unisolated and `@Observable`, exactly like `FarcasterStore`/`BlueskyStore`
+/// Unisolated and `@Observable`, exactly like `BlueskyStore`
 /// beside it: written from the `@MainActor` ingest passes, read from a row's
 /// body, persisted to `UserDefaults` on every change.
 @Observable

@@ -103,7 +103,7 @@ enum NameResolve {
     }
 
     /// Every primary name an address has set, across ENS, WNS and GNS — and
-    /// since prd §916 the Base, Linea, Farcaster and Lens names it linked.
+    /// since prd §916 the Base, Linea and Lens names it linked.
     ///
     /// ENS leads because it is the one people mean by "their name", and the
     /// order is FIXED rather than ranked — a ranking would be a claim about
@@ -142,7 +142,7 @@ enum NameResolve {
             out.append(PrimaryName(label: registry.label, name: name))
         }
         // The names an address linked to itself elsewhere — Base, Linea,
-        // Farcaster, Lens — off web3.bio (prd §916). Each clears §599's two
+        // Lens — off web3.bio (prd §916). Each clears §599's two
         // bars: the record's own address is this one (`names(for:)`), and the
         // forward query for that platform and identity comes back to it
         // (`verified`). A record web3.bio joined through its graph — the

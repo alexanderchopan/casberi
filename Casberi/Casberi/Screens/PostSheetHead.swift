@@ -54,7 +54,7 @@ struct PostSheetHead: View {
         SocialThread.shortHandle(thing.authorHandle ?? "")
     }
 
-    /// "Farcaster · in /design" — the network, and why the post is here when
+    /// "Nostr · in #design" — the network, and why the post is here when
     /// there is a reason worth stating (`SocialThread.contextPhrase`, the
     /// eyebrow's own vocabulary, so the two can never disagree).
     private var whereLine: String {

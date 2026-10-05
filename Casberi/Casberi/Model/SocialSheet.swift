@@ -118,7 +118,7 @@ enum SocialSheet {
     }
 
     /// The anatomy, or nil for a social thing that needs none (a Snapchat
-    /// memory is a picture; a Farcaster signer grant is a permission notice).
+    /// memory is a picture).
     ///
     /// Order is load-bearing and each step earns its place:
     ///

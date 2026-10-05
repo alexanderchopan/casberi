@@ -12,7 +12,7 @@ import Foundation
 /// name, §632). A pick narrows the room to that person on every network
 /// they post from.
 ///
-/// A handle is only a person within its own network ("alice" on Farcaster
+/// A handle is only a person within its own network ("alice" on Bluesky
 /// and "alice" on Nostr are strangers until a link says otherwise), so a
 /// member is always a (network, handle) pair, and an account with no contact
 /// is a person of its own.

@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// The rows every bridge setup screen shares — RSS, Bluesky, Farcaster, the
+/// The rows every bridge setup screen shares — RSS, Bluesky, Nostr, the
 /// token bridges, ChatGPT. One field row, one pair of proof rows, one
 /// recent-things section; the screens differ only in their words.
 
@@ -335,7 +335,7 @@ struct BridgeSyncStatusRows: View {
 
 /// Waits for typing to pause before searching, so a fast typist doesn't fire
 /// one request per keystroke — shared by every field that doubles as a
-/// finder (Bluesky/Farcaster people search, token search), so
+/// finder (Bluesky people search, token search), so
 /// the delay and minimum length live in one place, not copied per screen.
 /// Returns nil when superseded by a newer keystroke (the caller leaves its
 /// results alone); `[]` when the query's too short to search yet.

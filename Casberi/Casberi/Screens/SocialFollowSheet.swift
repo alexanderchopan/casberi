@@ -7,7 +7,7 @@ import SwiftData
 /// Before you type, the people already near you that you follow nowhere on
 /// that network (`SocialToYou.suggestions`): who followed you or replied to
 /// you, newest first, then who your feed keeps naming. As you type, people on
-/// Bluesky and Farcaster, through the keyless typeahead the setup screens
+/// Bluesky, through the keyless typeahead the setup screens
 /// already ride (`UserSearch`). A follow is a private watch — the app never
 /// writes to a network (§801) — and the sheet stays open, so you can keep
 /// several.
@@ -25,7 +25,6 @@ struct SocialFollowSheet: View {
         let name: String?
         let avatarURL: String?
         let line: String
-        var fid: Int? = nil
         var id: String { source + ":" + handle }
     }
 
@@ -71,7 +70,7 @@ struct SocialFollowSheet: View {
 
     @ViewBuilder private var results: some View {
         if !found.isEmpty {
-            ForEach(["Bluesky", "Farcaster"], id: \.self) { network in
+            ForEach(["Bluesky"], id: \.self) { network in
                 let people = found.filter { $0.source == network }
                 if !people.isEmpty {
                     DSTrayHead(network)
@@ -86,9 +85,9 @@ struct SocialFollowSheet: View {
         let text: Text = if DemoMode.isActive && !trimmed.isEmpty {
             Text("Search works once you leave the demo.")
         } else if trimmed.isEmpty {
-            Text("Search Bluesky and Farcaster by name. People who reply to you show here.")
+            Text("Search Bluesky by name. People who reply to you show here.")
         } else {
-            Text("Nobody by that name on Bluesky or Farcaster.")
+            Text("Nobody by that name on Bluesky.")
         }
         return DSFootnote(text)
             .padding(.horizontal, DS.Space.s4)
@@ -134,7 +133,7 @@ struct SocialFollowSheet: View {
         }
         let profile = SocialProfile(source: person.source, handle: person.handle,
                                     displayName: person.name, bio: nil,
-                                    avatarURL: person.avatarURL, fid: person.fid)
+                                    avatarURL: person.avatarURL)
         guard SocialPeople.watch(profile) else { return }
         watched[person.source, default: []].insert(SocialToYou.normalized(person.handle))
         justFollowed = person.id
@@ -154,24 +153,18 @@ struct SocialFollowSheet: View {
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
         searching = true
-        async let b = UserSearch.bluesky(q)
-        async let f = UserSearch.farcaster(q)
-        let (bsky, fc) = await (b, f)
+        let bsky = await UserSearch.bluesky(q)
         guard !Task.isCancelled else { return }
         found = bsky.map { Candidate(source: "Bluesky", handle: $0.handle, name: $0.displayName,
                                      avatarURL: $0.avatarURL, line: "@\($0.handle)") }
-            + fc.map { Candidate(source: "Farcaster", handle: $0.handle, name: $0.displayName,
-                                 avatarURL: $0.avatarURL, line: "@\($0.handle)", fid: $0.fid) }
         searching = false
     }
 
     private func load() {
         watched = [
             "Bluesky": Set(SocialPeople.watchedHandles(source: "Bluesky").map(SocialToYou.normalized)),
-            "Farcaster": Set(SocialPeople.watchedHandles(source: "Farcaster").map(SocialToYou.normalized)),
         ]
         var mine = Set<String>()
-        for a in FarcasterStore.shared.accounts where a.mine { mine.insert(SocialToYou.normalized(a.username)) }
         for a in BlueskyStore.shared.accounts where a.mine { mine.insert(SocialToYou.normalized(a.handle)) }
         let members = RoomAccounts.roomSources(RoomAccounts.socialRoom)
         var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { members.contains($0.source) },

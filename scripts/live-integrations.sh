@@ -693,7 +693,7 @@ hr
 # ── web3.bio (prd §916) ──────────────────────────────────────────────────────
 # The resolver behind `ENS` since 2026-09-24, keyless. When it stops answering
 # the app falls back to ensideas for ENS and goes QUIET for Base/Linea/
-# Farcaster/Lens names — no row breaks, the linked rows simply never draw
+# Lens names — no row breaks, the linked rows simply never draw
 # (§311's shape). Pinned to a name whose ENS record cannot lapse quietly.
 print -P "%Bweb3.bio%b  (keyless name lookup, api.web3.bio/ns)"
 w3b=$(curl -s --max-time "$TIMEOUT" "https://api.web3.bio/ns/vitalik.eth" 2>/dev/null)

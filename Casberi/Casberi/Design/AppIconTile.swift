@@ -96,7 +96,6 @@ extension DS {
         case "raindrop":            return Color.fixed("#0db4e7")
         case "readwise":            return Color.fixed("#087bff")
         case "rss":                 return Color.fixed("#f26522")
-        case "farcaster":           return Color.fixed("#855dcd")
         case "pinterest":           return Color.fixed("#e60023")
         case "spotify":             return Color.fixed("#1db954")   // their brand green — missing until now, so Spotify's icon tile and rain wash both fell back to gray/default blue
         case "apple music":         return Color.fixed("#fc3c44")   // Apple Music's coral-red mark
@@ -337,7 +336,7 @@ extension DS {
     ///
     /// THE INK COMES WITH THE FILL, and that pairing is the whole reason this
     /// is one type rather than two calls. A saturated card decides what can be
-    /// read on it: Farcaster's purple needs the white ramp, Hugging Face's
+    /// read on it: a deep purple needs the white ramp, Hugging Face's
     /// yellow and Snapchat's need the black one, and a caller that fetched the
     /// fill and forgot the ink would render white-on-yellow — legible in the
     /// simulator's dark theme, invisible in the light one, and caught by

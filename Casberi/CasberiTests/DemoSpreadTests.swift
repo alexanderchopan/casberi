@@ -21,7 +21,7 @@ struct DemoSpreadTests {
 
     /// How many rooms one topic may appear in. Two lets a thread cross on
     /// purpose — the Lisbon trip is in Photos and Instagram, the books in
-    /// Obsidian and Farcaster — while a third room is a subject the whole demo
+    /// Obsidian and Bluesky — while a third room is a subject the whole demo
     /// is about.
     private static let roomsPerTopic = 2
 

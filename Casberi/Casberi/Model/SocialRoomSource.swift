@@ -17,8 +17,7 @@ enum SocialRoomSource {
     ///
     /// **This function is the fix, not a tidy-up.** Before it there were three
     /// dispatches and they disagreed: `FeedScreen.rosterAccounts` was a
-    /// `source == "Farcaster" ? FarcasterStore : BlueskyStore` ternary — so any
-    /// third network would have been handed BLUESKY's watched accounts, a rail
+    /// two-store ternary — so any third network would have been handed BLUESKY's watched accounts, a rail
     /// of the wrong faces, ringed by the wrong freshness, filtering to handles
     /// that match nothing — `MainSurface.socialAccounts` was a two-case switch
     /// that failed closed (so Nostr's rail simply never drew), and
@@ -36,7 +35,6 @@ enum SocialRoomSource {
     static func accounts(for source: String) -> [SocialAccount] {
         guard SocialRoom.hasRoster(source) else { return [] }
         switch source {
-        case "Farcaster": return FarcasterStore.shared.socialAccounts
         case "Bluesky":   return BlueskyStore.shared.socialAccounts
         case "Nostr":     return NostrStore.shared.socialAccounts
         default:          return []
@@ -94,11 +92,10 @@ enum SocialRoomSource {
     /// above"). That is the §396a shape exactly: one question answered beside
     /// itself, drifting the first time somebody fixes one.
     ///
-    /// Empty-string handles exist (an unmigrated Farcaster row), so the source
-    /// name is the fallback. A Nostr `authorHandle` is the raw hex pubkey — the
+    /// Empty-string handles exist (an unmigrated row), so the source name is
+    /// the fallback. A Nostr `authorHandle` is the raw hex pubkey — the
     /// stable matching key, not a display string (see `NostrIngest.land`) — so
-    /// it alone routes through `shortHandle`; Farcaster and Bluesky store a real
-    /// handle and are returned as they are.
+    /// it alone routes through `shortHandle`; Bluesky stores a real handle and are returned as they are.
     ///
     /// **A name you gave wins (prd §1025).** When the Addresses index holds a
     /// contact for the author whose name YOU gave it — their card, a save, a

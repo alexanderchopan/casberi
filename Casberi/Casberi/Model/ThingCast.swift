@@ -33,7 +33,7 @@ import Observation
 /// Farcaster "N others liked", a GitHub review roster and a group chat are the
 /// same fact and get the same store rather than a second one (§489's rule).
 ///
-/// Unisolated and `@Observable` like `SocialLikers`/`FarcasterStore` beside it:
+/// Unisolated and `@Observable` like `SocialLikers`/`BlueskyStore` beside it:
 /// written from the `@MainActor` ingest passes, read from a lead's body,
 /// persisted on every change.
 @Observable

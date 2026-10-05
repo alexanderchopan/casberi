@@ -1935,142 +1935,6 @@ enum ProbeHooks {
                 NSLog("[Casberi] appleWalletBalance| (none read on this device)")
             }
         },
-        // `-fcName <username>` connects Farcaster headlessly (appends, so a
-        // comma-separated list watches several — dedupes, safe to re-fire).
-        Hook(key: "fcName") { name, context in
-            for n in name.split(separator: ",") { FarcasterStore.shared.add(String(n)) }
-            Task { @MainActor in
-                let n = await FarcasterIngest.refresh(context: context)
-                NSLog("Farcaster probe: %@ new things", n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-fcChannel <name[,name]>` follows Farcaster channels headlessly
-        // (each name resolves via the channel directory, the way a username
-        // resolves its fid) and syncs. Fire Farcaster probes one at a time —
-        // the refresh's running guard makes a concurrent one report 0.
-        Hook(key: "fcChannel") { names, context in
-            Task { @MainActor in
-                var followed = 0
-                for n in names.split(separator: ",") {
-                    if await FarcasterIngest.followChannel(String(n)) != nil { followed += 1 }
-                }
-                let n = await FarcasterIngest.refresh(context: context)
-                NSLog("Farcaster channel probe: %d followed, %@ new things",
-                      followed, n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-fcLikes <username>` watches an account's LIKES (adding the
-        // account if new) and syncs — liked casts land as things.
-        Hook(key: "fcLikes") { name, context in
-            let n = FarcasterStore.normalize(name)
-            FarcasterStore.shared.add(n)
-            FarcasterStore.shared.setLikes(true, for: n)
-            Task { @MainActor in
-                let added = await FarcasterIngest.refresh(context: context)
-                // Resurfaced is reported beside landed on purpose: a like of a
-                // cast the corpus already holds lands NOTHING, so "0 new things"
-                // is what a working pass says when the whole job was moving a
-                // held post back into view.
-                NSLog("Farcaster likes probe: %@ new things, %d resurfaced",
-                      added.map(String.init) ?? "FAILED", FarcasterIngest.resurfaced)
-            }
-        },
-        // `-fcRecasts <username>` watches an account's RECASTS (adding the
-        // account if new) and syncs — what they rebroadcast lands as things,
-        // stamped with the recast's time. Reports resurfaced beside landed for
-        // the same reason `-fcLikes` does: a recast of a cast the corpus
-        // already holds lands NOTHING and moves it instead.
-        Hook(key: "fcRecasts") { name, context in
-            let n = FarcasterStore.normalize(name)
-            FarcasterStore.shared.add(n)
-            FarcasterStore.shared.setRecasts(true, for: n)
-            Task { @MainActor in
-                let added = await FarcasterIngest.refresh(context: context)
-                NSLog("Farcaster recasts probe: %@ new things, %d resurfaced",
-                      added.map(String.init) ?? "FAILED", FarcasterIngest.resurfaced)
-            }
-        },
-        // `-fcMentions <username>` watches MENTIONS of an account and syncs.
-        Hook(key: "fcMentions") { name, context in
-            let n = FarcasterStore.normalize(name)
-            FarcasterStore.shared.add(n)
-            FarcasterStore.shared.setMentions(true, for: n)
-            Task { @MainActor in
-                let added = await FarcasterIngest.refresh(context: context)
-                NSLog("Farcaster mentions probe: %@ new things",
-                      added.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-fcMine <username>` marks a watched Farcaster account as YOURS and
-        // syncs — the inbound half (replies to your casts, likes on them, new
-        // followers). The follower ledger seeds SILENTLY on first sight, so
-        // the first run of this reports 0 followers by design and the SECOND
-        // is the one that can land any; `-inboundProbe YES` reports the state
-        // either way.
-        Hook(key: "fcMine") { name, context in
-            let n = FarcasterStore.normalize(name)
-            FarcasterStore.shared.add(n)
-            FarcasterStore.shared.setMine(true, for: n)
-            Task { @MainActor in
-                let added = await FarcasterIngest.refresh(context: context)
-                NSLog("Farcaster mine probe: %@ new things, %d resurfaced",
-                      added.map(String.init) ?? "FAILED", FarcasterIngest.resurfaced)
-            }
-        },
-        // `-fcSignerProbe <username|YES>` runs the signer sweep directly —
-        // which apps can post as you (`Model/FarcasterSigners.swift`), the
-        // WalletApprovals shape for social identity. A bare YES uses the first
-        // account marked `mine`. Logs one line per landed grant/revocation
-        // plus the whole inventory currently held, because the landed count
-        // alone reports 0 on every pass after the first — which is what a
-        // working sweep looks like once the inventory is in.
-        Hook(key: "fcSignerProbe") { spec, context in
-            Task { @MainActor in
-                let store = FarcasterStore.shared
-                let name = FarcasterStore.normalize(spec)
-                let account = name.isEmpty || name == "yes"
-                    ? store.accounts.first(where: \.mine) ?? store.accounts.first
-                    : store.accounts.first { $0.username == name }
-                guard let account, let fid = await FarcasterIngest.fid(forName: account.username)
-                else { return NSLog("fcSignerProbe: no watched account to read") }
-                var existing = IngestSupport.existingSourceRefs(context, source: "Farcaster")
-                let added = await FarcasterSigners.sync(fid: fid, existing: &existing,
-                                                        context: context)
-                if added > 0 { context.saveHonestly() }
-                NSLog("fcSignerProbe @%@ (fid %d): %d landed", account.username, fid, added)
-                let held = IngestSupport.thingsByRef(context, source: "Farcaster")
-                    .filter { $0.key.hasPrefix("farcaster:signer:") }
-                    .values.filter(\.isLive)
-                    .sorted { $0.capturedAt > $1.capturedAt }
-                NSLog("fcSignerProbe inventory: %d held", held.count)
-                for thing in held {
-                    NSLog("fcSigner| %@ — %@", thing.title,
-                          thing.capturedAt.formatted(date: .abbreviated, time: .omitted))
-                }
-            }
-        },
-        // `-fcHealProbe YES` runs the delete-sync reconcile headlessly over
-        // already-watched accounts and NSLogs how many stale casts it
-        // removed. `force: true` bypasses heal's own hourly throttle.
-        Hook(key: "fcHealProbe") { _, context in
-            Task { @MainActor in
-                let n = await FarcasterIngest.heal(context: context, force: true)
-                NSLog("Farcaster heal probe: %d removed", n)
-            }
-        },
-        // `-fcReplies "<username>:<0xhash>"` fetches a cast's thread and
-        // NSLogs the count + first line (the sheet's replies section,
-        // headless — just the author's name and the full hash, no thing).
-        Hook(key: "fcReplies") { spec, _ in
-            guard let colon = spec.firstIndex(of: ":") else { return }
-            let handle = FarcasterStore.normalize(String(spec[..<colon]))
-            let hash = String(spec[spec.index(after: colon)...])
-            Task { @MainActor in
-                let replies = await FarcasterIngest.replies(handle: handle, hash: hash)
-                NSLog("Farcaster replies probe: %d replies%@", replies.count,
-                      replies.first.map { " — @\($0.handle): \(String($0.text.prefix(60)))" } ?? "")
-            }
-        },
         // `-pinterestUser <username|name/board>` adds a Pinterest follow headlessly.
         Hook(key: "pinterestUser") { name, context in
             PinterestStore.shared.add(name)
@@ -2089,7 +1953,7 @@ enum ProbeHooks {
             }
         },
         // `-bskyFeed <query|at-uri>` follows a Bluesky FEED headlessly and
-        // syncs — Bluesky's answer to a Farcaster channel (2026-07-16). A bare
+        // syncs (2026-07-16). A bare
         // word searches the feed directory and takes the top hit; an at-uri
         // follows that feed exactly.
         Hook(key: "bskyFeed") { query, context in
@@ -2100,7 +1964,7 @@ enum ProbeHooks {
                       feed?.name ?? "NONE", n.map(String.init) ?? "FAILED")
             }
         },
-        // `-followsProbe "<Bluesky|Farcaster>:<handle>"` reads that account's
+        // `-followsProbe "<Bluesky|Nostr>:<handle>"` reads that account's
         // follow graph and reports what came back (2026-07-16, prd 87) — the
         // read behind the "Who they follow" picker, headless. It WATCHES
         // NOBODY: the graph is a read, and the taps that watch are the
@@ -2110,7 +1974,7 @@ enum ProbeHooks {
         Hook(key: "followsProbe") { spec, _ in
             let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
             guard parts.count == 2 else {
-                NSLog("followsProbe: expected \"<Bluesky|Farcaster>:<handle>\", got %@", spec)
+                NSLog("followsProbe: expected \"<Bluesky|Nostr>:<handle>\", got %@", spec)
                 return
             }
             Task { @MainActor in
@@ -2129,9 +1993,8 @@ enum ProbeHooks {
                 NSLog("followsProbe hydration: %d with a face, %d with a display name",
                       faces, named)
                 for p in graph.people.prefix(3) {
-                    NSLog("followsProbe · %@ (@%@) fid=%@ face=%@",
-                          p.displayName, p.handle, p.fid.map(String.init) ?? "nil",
-                          p.avatarURL ?? "nil")
+                    NSLog("followsProbe · %@ (@%@) face=%@",
+                          p.displayName, p.handle, p.avatarURL ?? "nil")
                 }
             }
         },
@@ -2159,32 +2022,7 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-fcPackProbe YES` reads then follows the pinned Farcaster starter
-        // pack headlessly (`FarcasterStarterPack`, 2026-08-08) — no sheet
-        // needed, since there's nothing to search or pick between (Farcaster's
-        // client API has no keyless browse/search, so unlike Bluesky's this
-        // pack is pinned in code, not fetched). Reports hydration the same way
-        // `-followsProbe`/`-starterPackProbe` do — a landed count alone can't
-        // tell a hydrated face from a blank one — then actually follows, so a
-        // rerun's delta (should read 0 new) proves the dedupe.
-        Hook(key: "fcPackProbe") { spec, _ in
-            Task { @MainActor in
-                let members = await FarcasterStarterPack.members()
-                let faces = members.filter { $0.avatarURL != nil }.count
-                let named = members.filter { $0.displayName != nil }.count
-                NSLog("fcPackProbe: %d of %d pinned resolved, %d with a face, %d with a display name",
-                      members.count, FarcasterStarterPack.people.count, faces, named)
-                for m in members.prefix(3) {
-                    NSLog("fcPackProbe member · %@ (@%@) fid=%d face=%@",
-                          m.displayName ?? m.username, m.username, m.fid, m.avatarURL ?? "nil")
-                }
-                guard spec == "YES" else { return }
-                let n = FarcasterStarterPack.followAll()
-                NSLog("fcPackProbe: followed %d new", n)
-            }
-        },
-        // `-inboundProbe YES` reports the INBOUND half's state across both
-        // networks (2026-07-31) — which accounts are marked yours, how many of
+        // `-inboundProbe YES` reports the INBOUND half's state (2026-07-31) — which accounts are marked yours, how many of
         // your own recent posts are eligible for the likes/replies reads, how
         // many followers each ledger has recorded, and what actually landed
         // wearing each inbound marker. One NSLog per line (the `-todayProbe`
@@ -2197,8 +2035,6 @@ enum ProbeHooks {
         Hook(key: "inboundProbe") { _, context in
             Task { @MainActor in
                 for (source, prefix, mine) in [
-                    ("Farcaster", "fc:",
-                     FarcasterStore.shared.accounts.filter(\.mine).map(\.username)),
                     ("Bluesky", "bsky:",
                      BlueskyStore.shared.accounts.filter(\.mine).map(\.handle)),
                 ] {
@@ -2208,9 +2044,7 @@ enum ProbeHooks {
                     for handle in mine {
                         let own = SocialInbound.ownRecentPosts(landed, handle: handle,
                                                                refPrefix: prefix)
-                        let key = source == "Farcaster"
-                            ? FarcasterStore.followerLedgerKey(handle)
-                            : BlueskyStore.followerLedgerKey(handle)
+                        let key = BlueskyStore.followerLedgerKey(handle)
                         let ledger = SocialInbound.FollowerLedger(key: key)
                         // Whether the eligible posts came from the preferred
                         // window or the §331 fallback. Both are correct; the
@@ -2270,7 +2104,7 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-socialProbe <Bluesky|Farcaster>` reports what the enrichment
+        // `-socialProbe <Bluesky|Nostr>` reports what the enrichment
         // actually landed across that source's corpus (2026-07-16) — how many
         // posts carry their full text, pictures, a quote, a parent, a context
         // marker — so the batch verifies headlessly instead of by eye. Also
@@ -2862,16 +2696,14 @@ enum ProbeHooks {
                       added != nil ? "watched" : "already")
             }
         },
-        // `-userSearch "<bluesky|farcaster>:<query>"` runs the find-a-person
-        // search and logs the hits — headless test of the search endpoints.
+        // `-userSearch "bluesky:<query>"` runs the find-a-person search and
+        // logs the hits — headless test of the search endpoint.
         Hook(key: "userSearch") { spec, _ in
             guard let colon = spec.firstIndex(of: ":") else { return }
             let which = String(spec[..<colon]).lowercased()
             let query = String(spec[spec.index(after: colon)...])
             Task { @MainActor in
-                let hits = which.hasPrefix("f")
-                    ? await UserSearch.farcaster(query)
-                    : await UserSearch.bluesky(query)
+                let hits = await UserSearch.bluesky(query)
                 NSLog("User search probe (%@ '%@'): %d hits%@", which, query, hits.count,
                       hits.isEmpty ? "" : " — " + hits.map {
                           "\($0.displayName) @\($0.handle)"
@@ -4080,8 +3912,6 @@ enum ProbeHooks {
             var rows: [(String, String, Int, Int, Bool)] = []
             rows.append(("wallet.addresses", "the wallet face rail + per-row wallet names",
                          WalletStore.shared.addresses.count, 2, true))
-            rows.append(("farcaster.accounts", "Farcaster's face rail",
-                         FarcasterStore.shared.accounts.count, 2, true))
             rows.append(("bluesky.accounts", "Bluesky's face rail",
                          BlueskyStore.shared.accounts.count, 2, true))
             rows.append(("nostr.accounts", "Nostr's face rail",

@@ -18,10 +18,11 @@ struct Identity: Hashable, Codable {
 
     /// Every way the app can know somebody. The ORDER is the lead-identity
     /// precedence (section 2.1): what Mail, Contacts and GitHub carry comes
-    /// first, because more people use those than Farcaster (user, 2026-09-24).
+    /// first, because more people use those than any one network (user,
+    /// 2026-09-24).
     enum Kind: String, Codable, CaseIterable {
         case contact, email, github, wallet
-        case ens, basename, linea, farcaster, lens
+        case ens, basename, linea, lens
         case bluesky, nostr, worldApp, feed
         /// A merchant that charges you on a schedule (prd §1106) — LAST, so a
         /// biller never leads a contact a card or an address also names.
@@ -44,7 +45,6 @@ struct Identity: Hashable, Codable {
             case .contact:   return "contact:"
             case .email:     return "mail:"
             case .github:    return "gh:"
-            case .farcaster: return "fc:"
             case .bluesky:   return "bsky:"
             case .nostr:     return "nostr:"
             case .worldApp:  return "world:"
@@ -86,6 +86,10 @@ struct Identity: Hashable, Codable {
 
     /// A key back to its kind, for link endpoints that are not seeds.
     static func parse(key: String) -> Identity? {
+        // Farcaster's prefix (retired, prd §1109). The ledger syncs, so a
+        // link written before the seat went can still arrive; it names nobody
+        // now, and without this it would fall through to a World App username.
+        if key.hasPrefix(retiredFarcasterPrefix) { return nil }
         for kind in Kind.allCases where !kind.prefix.isEmpty && key.hasPrefix(kind.prefix) {
             return Identity(kind: kind, key: key)
         }
@@ -94,6 +98,8 @@ struct Identity: Hashable, Codable {
         return nil
     }
 
+    static let retiredFarcasterPrefix = "fc:"
+
     /// The body after the prefix: the address, the handle, the name.
     var body: String { String(key.dropFirst(kind.prefix.count)) }
 
@@ -101,7 +107,7 @@ struct Identity: Hashable, Codable {
     var label: String {
         switch kind {
         case .wallet:                    return "…" + body.suffix(4)
-        case .farcaster, .bluesky:       return "@" + body
+        case .bluesky:                   return "@" + body
         case .email, .github, .contact,
              .nostr, .worldApp, .feed, .biller,
              .ens, .basename, .linea, .lens: return body
@@ -111,14 +117,15 @@ struct Identity: Hashable, Codable {
 
 extension Identity.Kind {
     /// The kind of a primary name by its SHAPE — `AddressNames` stores a
-    /// localized label beside each name, so the label is not a key. A
-    /// Farcaster handle is the one `@`-prefixed row; the rest are suffixes.
+    /// localized label beside each name, so the label is not a key. The rest
+    /// are suffixes; an `@`-prefixed row is a Farcaster handle a device
+    /// stored before the seat was retired (prd §1109), and names nobody.
     /// A bare word is a World App username; any other dotted name is ENS
     /// (which is where `.wei`/`.gwei` file too — they resolve like ENS).
     static func classify(primaryName: String) -> Identity.Kind? {
         let n = primaryName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !n.isEmpty, !n.hasPrefix("0x") else { return nil }
-        if n.hasPrefix("@") { return .farcaster }
+        if n.hasPrefix("@") { return nil }
         if n.hasSuffix(".base.eth") { return .basename }
         if n.hasSuffix(".linea.eth") { return .linea }
         if n.hasSuffix(".lens") { return .lens }
@@ -398,7 +405,6 @@ enum ContactIndex {
         if let e = authorEmail, e.contains("@") { out.append(Identity.key(.email, e)) }
         if let h = authorHandle, !h.isEmpty {
             switch source {
-            case "Farcaster": out.append(Identity.key(.farcaster, h))
             case "Bluesky":   out.append(Identity.key(.bluesky, h))
             case "Nostr":     out.append(Identity.key(.nostr, h))
             case "GitHub" where !isNotification: out.append(Identity.key(.github, h))

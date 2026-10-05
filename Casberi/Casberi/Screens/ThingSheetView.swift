@@ -96,7 +96,7 @@ struct ThingSheetView: View {
     }
     @State private var counterpartyDraft = ""
     /// A post/cast's thread (2026-07-14) — fetched live from the source's
-    /// public API when the sheet opens a social thing (Bluesky or Farcaster);
+    /// public API when the sheet opens a social thing (Bluesky or Nostr);
     /// the section renders only when replies exist (no dead section, no
     /// spinner theater).
     @State private var replies: [SocialReply] = []

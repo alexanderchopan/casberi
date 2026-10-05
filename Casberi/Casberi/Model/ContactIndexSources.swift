@@ -57,10 +57,6 @@ enum ContactIndexSources {
                              keywords: [entry.note ?? ""]))
         }
 
-        for account in FarcasterStore.shared.accounts {
-            out.append(.init(Identity.make(.farcaster, account.username),
-                             name: account.displayName, avatar: account.avatarURL))
-        }
         for account in BlueskyStore.shared.accounts {
             out.append(.init(Identity.make(.bluesky, account.handle),
                              name: account.displayName, avatar: account.avatarURL))
@@ -134,26 +130,18 @@ enum ContactIndexSources {
 
     // MARK: - Verified links the stores already hold
 
-    /// Tier-1 edges nothing had to ask for: a Farcaster account's verified
-    /// addresses (Snapchain, §85's shape), and every name `AddressNames`
+    /// Tier-1 edges nothing had to ask for: every name `AddressNames`
     /// stores — each already forward-verified before it was written (§599,
     /// §916). Recorded into the ledger so the mirror carries them.
     static func discoverVerified() -> [ContactLink] {
         var out: [ContactLink] = []
-        for account in FarcasterStore.shared.accounts {
-            let handle = Identity.key(.farcaster, account.username)
-            for address in account.verifiedAddresses {
-                out.append(ContactLink(handle, Identity.key(.wallet, address),
-                                       tier: .verified, source: "farcaster.verifications"))
-            }
-        }
         for (address, record) in AddressNames.shared.allRecords {
             let wallet = Identity.key(.wallet, address)
             for entry in record.names {
                 guard let kind = Identity.Kind.classify(primaryName: entry.name) else { continue }
                 out.append(ContactLink(wallet, Identity.key(kind, entry.name),
                                        tier: .verified,
-                                       source: kind == .farcaster || kind.isNameService ? "web3.bio" : "ens"))
+                                       source: kind.isNameService ? "web3.bio" : "ens"))
             }
         }
         return out
@@ -227,7 +215,7 @@ enum ContactIndexSources {
                 authorHandle: thing.authorHandle, walletAddress: nil,
                 counterpartyAddress: thing.counterpartyAddress, authorEmail: thing.authorEmail,
                 isNotification: notification, merchant: BillersSource.merchant(of: thing))
-            let social = ["Farcaster", "Bluesky", "Nostr"].contains(thing.source)
+            let social = ["Bluesky", "Nostr"].contains(thing.source)
             if !withKeys.isEmpty {
                 rows.append(.init(keys: withKeys, title: thing.title, at: thing.capturedAt,
                                   acted: !social || thing.quote != nil))
@@ -240,14 +228,11 @@ enum ContactIndexSources {
         return (ContactIndex.activity(rows: rows), senders)
     }
 
-    /// What each identity says about itself (prd §1025): the Farcaster and
-    /// Bluesky bios the watch lists already hold, and the book addresses'
+    /// What each identity says about itself (prd §1025): the Bluesky bios
+    /// the watch list already holds, and the book addresses'
     /// web3.bio profiles (`ContactProfiles`). Read, never fetched.
     static func profiles() -> [ContactSuggest.Profile] {
         var out = ContactProfiles.shared.profiles
-        for a in FarcasterStore.shared.accounts {
-            if let bio = a.bio, !bio.isEmpty { out.append(.init(key: Identity.key(.farcaster, a.username), bio: bio)) }
-        }
         for a in BlueskyStore.shared.accounts {
             if let bio = a.bio, !bio.isEmpty { out.append(.init(key: Identity.key(.bluesky, a.handle), bio: bio)) }
         }
@@ -300,8 +285,7 @@ enum ContactIndexSources {
     // MARK: - Yourself
 
     /// Whether a contact IS the person — it carries a social account marked
-    /// `mine`, or anything the join verified onto one (your Farcaster
-    /// account's verified wallets ride with it). The Addresses list is the
+    /// `mine`, or anything the join verified onto one. The Addresses list is the
     /// parties behind your accounts, and you are not one of them: Manage
     /// holds your accounts, and the demo showed "you", "You" and "You" as
     /// three strangers (user, 2026-09-25). The index still BUILDS the
@@ -313,9 +297,6 @@ enum ContactIndexSources {
     /// The keys of every account marked yours, read live from the stores.
     private static var yourKeys: Set<String> {
         var out = Set<String>()
-        for a in FarcasterStore.shared.accounts where a.mine {
-            out.insert(Identity.make(.farcaster, a.username).key)
-        }
         for a in BlueskyStore.shared.accounts where a.mine {
             out.insert(Identity.make(.bluesky, a.handle).key)
         }

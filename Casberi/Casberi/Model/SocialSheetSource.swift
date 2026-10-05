@@ -21,7 +21,7 @@ enum SocialSheetSource {
     /// the catalog by `social-sheet-selftest.sh`, so a renamed or added
     /// `Network` seat fails the build rather than silently losing its anatomy.
     static let sources: Set<String> = [
-        "Bluesky", "Farcaster", "Nostr", "X", "Instagram", "TikTok", "Snapchat",
+        "Bluesky", "Nostr", "X", "Instagram", "TikTok", "Snapchat",
         "Telegram",
     ]
 

@@ -348,7 +348,7 @@ print("Reception — the sentence and the staleness clause")
 let day = Date(timeIntervalSince1970: 1_555_459_200)     // 17 Apr 2019
 let read = Date(timeIntervalSince1970: 1_786_000_000)    // Aug 2026
 
-func input(source: String = "Farcaster", shape: SocialSheet.Shape = .post,
+func input(source: String = "Bluesky", shape: SocialSheet.Shape = .post,
            archive: Bool = false, when: Date? = nil, importedAt: Date? = nil,
            act: SocialReception.Act? = nil, phrase: String? = nil,
            likes: SocialReception.Reading? = nil,
@@ -380,10 +380,10 @@ check("a reception with nothing in it is nil",
 // and a suppression that fires nowhere are equally wrong, and only the pair
 // tells them apart.
 check("a live post with no phrase says only where it is",
-      SocialReception.compose(input(likes: like))?.provenance == "On Farcaster.")
+      SocialReception.compose(input(likes: like))?.provenance == "On Bluesky.")
 check("a live post carries the eyebrow's own phrase",
       SocialReception.compose(input(phrase: "you liked this", likes: like))?
-        .provenance == "On Farcaster — you liked this.")
+        .provenance == "On Bluesky — you liked this.")
 check("…and stands down entirely when the eyebrow already said both",
       SocialReception.compose(input(phrase: "you liked this", likes: like,
                                     eyebrowNamesIt: true))?.provenance == nil)

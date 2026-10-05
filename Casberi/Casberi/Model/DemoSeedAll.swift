@@ -100,10 +100,8 @@ enum DemoSeedAll {
     /// prefix (`cloudflare:cert:<real zone id>`) and must never be swept up
     /// by `clear`/`teardown`.
     /// Who liked which demo post — keyed on the posts' own refs (the person's
-    /// own casts wear `fc:demo:`/`bsky:demo:`, see `social()`).
+    /// own posts wear `bsky:demo:`, see `social()`).
     static let demoLikerRolls: [(ref: String, handles: [String], total: Int)] = [
-        ("fc:demo:0", ["mia", "sam", "nils"], 32),
-        ("fc:demo:2", ["sam", "uma"], 9),
         ("bsky:demo:0", ["uma", "nils", "mia"], 18),
     ]
 
@@ -170,10 +168,12 @@ enum DemoSeedAll {
     }
 
     static let refPrefixes = ["demo:", "sample:demo-shot-", "files:demo/",
-                              // The person's OWN casts and posts wear the real
-                              // bridges' prefixes (see `social()`), so the
-                              // inbound half can find them — and so teardown
-                              // needs these two or they outlive the demo.
+                              // The person's OWN posts wear the real bridge's
+                              // prefix (see `social()`), so the inbound half
+                              // can find them — and so teardown needs it or
+                              // they outlive the demo. `fc:demo:` stays for
+                              // the casts a demo poured before the Farcaster
+                              // seat was retired (prd §1109).
                               "fc:demo:", "bsky:demo:",
                               "import:receipt:", "cloudflare:cert:demo",
                               // The agent rooms' demo conversations (2026-09-20)
@@ -683,7 +683,7 @@ enum DemoSeedAll {
     static let demoVisits: [String: Int] = [
         "Photos": 9, "X": 8, "Markets": 7, "Obsidian": 6, "Linear": 6,
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
-        "Farcaster": 4, "Apple Wallet": 3, "TikTok": 3,
+        "Apple Wallet": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5,
         // Hegotá Frames (prd §548) — landless for exactly Hegotá's reason,
         // one line above: it lands no `Thing` at all, so its chip has no row
@@ -838,8 +838,6 @@ enum DemoSeedAll {
         forgetAddressBook()
         // The watched social accounts, by HANDLE — never a blanket wipe, since
         // a dev install watches real people through the same stores.
-        let fcDemo = Set(demoFarcaster.map(\.handle))
-        FarcasterStore.shared.accounts.removeAll { fcDemo.contains($0.username) }
         let bskyDemo = Set(demoBluesky.map(\.handle))
         BlueskyStore.shared.accounts.removeAll { bskyDemo.contains($0.handle) }
         // Nostr, the third social roster — seeded since 2026-08-12 and never
@@ -849,8 +847,8 @@ enum DemoSeedAll {
         // control something already checks the presence of, and presence was
         // all it checked.
         //
-        // Keyed on the PUBKEY, not the handle. Farcaster and Bluesky match on
-        // what the person typed because that is what their stores hold, but a
+        // Keyed on the PUBKEY, not the handle. Bluesky matches on what the
+        // person typed because that is what its store holds, but a
         // Nostr `Account.input` is normalized on the way in (an npub, a hex
         // key or a NIP-05 identifier all land differently), so a handle match
         // is a guess about that normalization. `pubkeyHex` is set from
@@ -1654,15 +1652,6 @@ enum DemoSeedAll {
         ("Gnosis Pay", .safe),
     ]
 
-    /// The watched social accounts the demo seeds, and the rows that name
-    /// them. `mine` is true for "you" alone — it is what the inbound half
-    /// (§239) reads to know whose likes and replies to look for, so marking
-    /// all three would claim three accounts are yours.
-    static let demoFarcaster: [(handle: String, name: String, bio: String)] = [
-        ("you", "You", "Making a small thing carefully."),
-        ("mia", "Mia", "Design, mostly. Occasionally onchain."),
-        ("sam", "Sam", "Building in the open."),
-    ]
     /// Nostr's watched accounts. Same three people as the rows above — one
     /// cast across the whole demo reads as a life; a fresh set per room reads
     /// as filler. The pubkeys are 64 hex characters because that is what the
@@ -1869,7 +1858,7 @@ enum DemoSeedAll {
             row(.link, n.0, source: "X", ref: "x-live:notif:demo-\(i)",
                 days: n.4, hour: n.5,
                 // The permalink an Open verb follows. A demo quote card carries
-                // no `url`/`ref` (the `castParent` rule — a fabricated id makes
+                // no `url`/`ref` (a fabricated id makes
                 // the sheet offer a walk into a thread that does not exist), but
                 // the ROW's own content is the notice's door and reads as one.
                 content: "https://x.com/\(n.3)/status/\(1_800_000_000_000 + i)") { t in
@@ -2806,35 +2795,6 @@ enum DemoSeedAll {
         return out
     }
 
-    // MARK: Social — posts, and the channel treemap the panel draws
-
-    /// `channelName` has been stamped on every cast since §81 and nothing drew
-    /// it until the panel did; two channels minimum or the treemap declines.
-    /// The cast a demo cast is replying UNDER, for the handful that reply.
-    /// No `url`/`ref`: `ReplyingToRow` draws the handle and the words, and a
-    /// fabricated `fc:<hash>` would make the sheet offer to walk a thread
-    /// that does not exist (P4 — a door that opens on nothing).
-    private static func castParent(_ i: Int) -> SocialCard? {
-        switch i {
-        case 1: SocialCard(handle: "you",
-                           text: "Shipped the new onboarding today. Four screens became one.",
-                           avatarURL: avatarArt("you"))
-        case 4: SocialCard(handle: "sam", text: "Onchain receipts, but for what exactly?",
-                           avatarURL: avatarArt("sam"))
-        default: nil
-        }
-    }
-
-    /// The cast a demo cast QUOTES. Same no-permalink rule as `castParent`.
-    private static func castQuote(_ i: Int) -> SocialCard? {
-        switch i {
-        case 3: SocialCard(handle: "mia",
-                           text: "Most product demos show a screen nobody has ever had.",
-                           avatarURL: avatarArt("mia"))
-        default: nil
-        }
-    }
-
     /// A demo vault note's body — long enough that the sheet's word count and
     /// read-time reading behave the way they do on a real note (over
     /// `NoteSheet.readTimeFloor`), and written as notes actually are: a claim,
@@ -2877,7 +2837,6 @@ enum DemoSeedAll {
         // `authorHandle` and `authorAvatarURL` — so the field costs nothing
         // to leave empty and a dead door costs the demo its credibility.
         let followers: [(handle: String, name: String, source: String, days: Double)] = [
-            ("sam", "Sam", "Farcaster", 2),
             ("uma", "Uma", "Bluesky", 5),
         ]
         out += followers.map { f in
@@ -2894,80 +2853,11 @@ enum DemoSeedAll {
                 t.socialContext = "follow"
             }
         }
-        let casts: [(String, String, String, Int, Double)] = [
-            // THREE ON ONE DAY, AND THAT IS THE POINT (2026-08-17). Measured
-            // over the poured demo: 380 rows in the All feed, of which 378 were
-            // plain singles — `strip=0`, so §377's fold-into-members had never
-            // once drawn on the room the demo OPENS ON. The cause was not the
-            // fold, which works; it was these dates. `FeedFold.decide` needs
-            // `bundleThreshold` (3) rows of ONE source on ONE day, and the
-            // demo laid every cast on a separate day, so no run could ever
-            // exist. Real use arrives in bursts — an afternoon of posting, a
-            // sync landing twenty articles at once — and a corpus spread
-            // perfectly evenly is the one shape that can never fold.
-            //
-            // Distinct hours within the day, not one repeated: identical
-            // timestamps tie the sort, and a run whose order changes between
-            // renders is the reshuffling this codebase already refuses
-            // elsewhere.
-            ("Shipped the new onboarding today. Four screens became one.", "/design", "you", 32, 1),
-            ("A chart of everything at once is a chart of nothing.", "/design", "mia", 21, 1),
-            ("Finally finishing Seeing Like a State.", "/books", "you", 9, 1),
-            ("The best demo is a real one.", "/design", "sam", 44, 10),
-            ("Onchain receipts are underrated.", "/base", "mia", 12, 14),
-            ("Books that changed how I plan.", "/books", "you", 7, 22),
-            ("Base fees are basically nothing now.", "/base", "sam", 15, 30),
-        ]
-        out += casts.enumerated().map { i, c in
-            // Own casts wear the REAL `fc:` ref shape (2026-09-05, demo census):
-            // `SocialInbound.ownRecentPosts` matches on the bridge's own prefix,
-            // so under `demo:fc:` the inbound half never had an own post to
-            // read from. `refPrefixes` carries `fc:demo:` for teardown.
-            row(.chat, c.0, source: "Farcaster",
-                ref: c.2 == "you" ? "fc:demo:\(i)" : "demo:fc:\(i)", days: c.4,
-                hour: 13 - (i % 4)) { t in
-                t.postText = c.0
-                // The channel's bare name, as `FarcasterIngest` stores it: the
-                // phrase and the row label add the "/" themselves, so the
-                // demo's "/design" read "in //design" (prd §884).
-                t.channelName = String(c.1.drop(while: { $0 == "/" }))
-                t.authorHandle = c.2
-                t.authorAvatarURL = avatarArt(c.2)
-                t.likeCount = c.3
-                t.replyCount = i % 4
-                t.repostCount = i % 3
-                // WHAT A CAST REPLIES TO AND WHAT IT QUOTES (2026-08-12).
-                // `FarcasterIngest` stamps `parent` and `quote` — and
-                // CLAUDE.md's own note on this bridge says nearly every cast
-                // it lands has one or the other, because channel casts,
-                // mentions and likes are mostly replies. The demo had
-                // neither on any row, so `ReplyingToRow` and
-                // `SocialQuoteCard` — two of the room's most distinctive
-                // pieces — never drew once. Sparse rather than on every row:
-                // a column where every entry quotes something reads as
-                // noise, and the point is that the shapes EXIST.
-                if let card = castParent(i) { t.parent = card }
-                if let card = castQuote(i) { t.quote = card }
-                // A cast's own pictures — the bundled photos, since a post
-                // attachment is a photograph, not a generated card. BOTH
-                // paths are exercised on purpose: `PostCard` draws a SINGLE
-                // image from `previewImageURL` (`PostMedia`) and only
-                // switches to `PostImageGrid` at two or more, so seeding one
-                // array of one would have drawn nothing at all — the array
-                // branch requires `count > 1` and the fallback reads a field
-                // that was never set.
-                if i == 0 { t.previewImageURL = art("fc-0") }
-                if i == 5 {
-                    t.previewImageURL = art("fc-5a")
-                    t.imageURLs = [art("fc-5a"), art("fc-5b")]
-                }
-            }
-        }
         let posts: [(String, String, Int, Double)] = [
-            // Clustered onto one day for the cast block's reason above — this
-            // room needs a run of its own or it can never fold either, and the
-            // two social rooms folding on DIFFERENT days is what keeps the feed
-            // from reading as one synthetic burst.
+            // THREE ON ONE DAY, AND THAT IS THE POINT (2026-08-17): real use
+            // arrives in bursts — an afternoon of posting — and a corpus
+            // spread perfectly evenly is the one shape that can never fold.
+            // Distinct authors and days keep the order stable between renders.
             ("Small software, made carefully.", "you", 18, 2),
             ("Critique day. Every note was some version of: say less.", "uma", 26, 2),
             ("Sanded the walnut shelf. Six coats of oil to go.", "nils", 11, 2),
@@ -2988,21 +2878,16 @@ enum DemoSeedAll {
                 t.likeCount = p.2
                 t.channelName = i % 2 == 0 ? "Design" : "Reading"
                 t.replyCount = i % 3
-                // EVERYTHING FARCASTER GOT ON 2026-08-12, WHICH BLUESKY DID
-                // NOT (2026-08-17). The two rooms share one renderer
-                // (`SocialBridge`, `PostCard`) and `BlueskyIngest` stamps every
-                // field below — `imageURLs`/`previewImageURL` at its post
-                // hydration, `quote` and `parent` beside them — so the demo's
-                // Bluesky room drew flat text rows next to a Farcaster room
-                // full of replies, quotes and pictures. Same shape, visibly
-                // poorer, and nothing could see it: both rooms render
-                // perfectly, and every other demo check looks at a different
-                // question.
+                // EVERY FIELD `BlueskyIngest` STAMPS (2026-08-17) —
+                // `imageURLs`/`previewImageURL` at its post hydration, `quote`
+                // and `parent` beside them. The demo's Bluesky room drew flat
+                // text rows while sharing one renderer (`SocialBridge`,
+                // `PostCard`) with rooms full of replies, quotes and pictures,
+                // and nothing could see it: every room renders perfectly.
                 //
-                // Sparse rather than on every row, for the reason the cast
-                // block already gives: a column where every entry quotes
-                // something reads as noise, and the point is that the shapes
-                // EXIST.
+                // Sparse rather than on every row: a column where every entry
+                // quotes something reads as noise, and the point is that the
+                // shapes EXIST.
                 t.repostCount = i % 4
                 if i == 1 {
                     t.parent = SocialCard(handle: "you",
@@ -3014,7 +2899,7 @@ enum DemoSeedAll {
                                          text: "Sanded the walnut shelf. Six coats of oil to go.",
                                          avatarURL: avatarArt("nils"))
                 }
-                // BOTH picture paths, the cast block's own lesson: `PostCard`
+                // BOTH picture paths: `PostCard`
                 // draws a SINGLE image from `previewImageURL` and only switches
                 // to `PostImageGrid` at two or more, so one array of one would
                 // have drawn nothing at all.
@@ -3068,9 +2953,9 @@ enum DemoSeedAll {
                 // The same five fields Bluesky was missing (2026-08-17), for
                 // the same reason: `NostrIngest` stamps `channelName` (the
                 // note's hashtag), both picture fields, `quote` and `parent`,
-                // and this room had none of them — so the third social room
-                // read plainer than the two beside it while sharing their
-                // renderer. Sparse, per the cast block's ruling.
+                // and this room had none of them — so it read plainer than
+                // Bluesky beside it while sharing its renderer. Sparse, per
+                // Bluesky's ruling above.
                 t.channelName = ["design", "bitcoin", "reading"][i % 3]
                 t.likeCount = 14 - i * 3
                 if i == 1 {
@@ -3082,7 +2967,7 @@ enum DemoSeedAll {
                     t.quote = SocialCard(handle: "uma",
                                          text: "Signed, not hosted. That is the whole idea.",
                                          avatarURL: avatarArt("uma"))
-                    // Both picture paths, the cast block's lesson again:
+                    // Both picture paths, Bluesky's lesson again:
                     // `PostCard` draws one from `previewImageURL` and only
                     // reaches `PostImageGrid` at two or more.
                     t.previewImageURL = art("nostr-2a")
@@ -3817,7 +3702,7 @@ enum DemoSeedAll {
         // `PrivyHomeStore`, which a demo never fills, so what the demo shows of
         // Privy is its ROWS: the app wallets and their activity.
         let privyApps: [(String, Double)] = [
-            ("Zora", 640), ("Farcaster wallet", 430), ("Quidli", 300),
+            ("Zora", 640), ("Paragraph", 430), ("Quidli", 300),
             ("Wildcard", 210), ("Virtuals Protocol", 120), ("Clankermon", 40),
         ]
         out += privyApps.enumerated().map { i, app in
@@ -3830,7 +3715,7 @@ enum DemoSeedAll {
             ("Received 0.6974 ZORA", "Zora", true, 12.40, 6),
             ("Sent 0.004145 ETH", "Zora", false, 15.90, 12),
             ("Received 2.154 ZORA", "Zora", true, 38.20, 24),
-            ("Received 0.02 ETH", "Farcaster wallet", true, 76.50, 31),
+            ("Received 0.02 ETH", "Paragraph", true, 76.50, 31),
         ]
         out += privyMoves.enumerated().map { i, move in
             row(.transaction, move.0, source: "Privy",
@@ -5308,19 +5193,8 @@ enum DemoSeedAll {
         // fourteen days, now this).
         //
         // Handles match the authors on the seeded rows, and the cast is the
-        // demo's own — Sam and Mia already move money in the wallet, Nils and
-        // Uma already talk in Slack. One set of people across the whole demo
+        // demo's own — Nils and Uma already talk in Slack. One set of people across the whole demo
         // reads as a life; four disjoint sets read as filler.
-        if FarcasterStore.shared.accounts.isEmpty {
-            FarcasterStore.shared.accounts = demoFarcaster.map {
-                var a = FarcasterStore.Account(username: $0.handle)
-                a.displayName = $0.name
-                a.bio = $0.bio
-                a.avatarURL = avatarArt($0.handle)
-                a.mine = $0.handle == "you"
-                return a
-            }
-        }
         SocialLikers.shared.seedDemo(demoLikerRolls.map { ($0.ref, $0.handles, $0.total) })
         ThingCast.shared.seedDemo(demoNoticeCast.map { cast in
             (cast.ref,
@@ -5466,7 +5340,6 @@ enum DemoSeedAll {
         ("Bookmarks", "Imported 3 links", "Holds the bookmarks you imported."),
         ("Pinterest", "Synced 1h ago", "Reads your pins."),
         ("iCloud Mail", "Synced 8m ago", "Reads your mail."),
-        ("Farcaster", "2 accounts", "Follows accounts, no sign-in."),
         ("Bluesky", "1 account", "Follows accounts, no sign-in."),
         ("Nostr", "1 relay", "Reads the relays you name."),
         // GeckoTerminal, Open Food Facts, Circle x402, Kalshi, Polymarket,

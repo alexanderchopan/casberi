@@ -52,7 +52,7 @@ KNOWN_NON_REACH=(
   dora.frames-devnet-0.ethpandaops.io
   faucet.frames-devnet-0.ethpandaops.io
   app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
-  dexscreener.com twitch.tv stocktwits.com farcaster.xyz
+  dexscreener.com twitch.tv stocktwits.com
   privacy.com polymarket.com app.safe.global app.uniswap.org
   aerodrome.finance app.hyperliquid.xyz
   cardpointers.com

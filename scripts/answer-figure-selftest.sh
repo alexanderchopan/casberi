@@ -318,7 +318,6 @@ final class Thing {
 /// the "you are excluded" rule is exercised through the literal "you" the demo
 /// stamps. A real store here would make the assertion depend on device state.
 struct StubAccount { var username = ""; var handle = ""; var mine = false }
-enum FarcasterStore { static let shared = Self.self; static var accounts: [StubAccount] { [] } }
 enum BlueskyStore { static let shared = Self.self; static var accounts: [StubAccount] { [] } }
 
 extension Array where Element == Thing {

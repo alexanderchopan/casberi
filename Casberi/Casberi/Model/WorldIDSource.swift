@@ -49,9 +49,9 @@ final class WorldIDSource {
     /// a day because neither happens often and the read is not free.
     private static let freshness: TimeInterval = 7 * 24 * 3600
 
-    /// The most addresses one pass will look up, `AddressNames`' rule: a
-    /// person's room resolving several verified addresses must not turn one
-    /// screen open into an unbounded run of chain reads.
+    /// The most addresses one pass will look up, `AddressNames`' rule: one
+    /// probe over every watched wallet must not turn into an unbounded run of
+    /// chain reads.
     static let perPassBudget = 6
 
     /// OBSERVED, and the surfaces read it DIRECTLY rather than copying it into
@@ -101,10 +101,10 @@ final class WorldIDSource {
     /// `.task`: it returns immediately for anything already known, in flight,
     /// or not a hex address.
     ///
-    /// **Answers whether it actually spent a request**, which is what lets the
-    /// list below bound REQUESTS rather than loop iterations — counting an
-    /// early return against the budget let six cached or in-flight addresses
-    /// exhaust it and skip the one address nobody had asked about.
+    /// **Answers whether it actually spent a request**, so a caller walking a
+    /// list bounds REQUESTS rather than loop iterations — counting an early
+    /// return against a budget let six cached or in-flight addresses exhaust
+    /// it and skip the one address nobody had asked about.
     @discardableResult
     func fill(_ address: String) async -> Bool {
         guard !DemoMode.isActive, ENS.isHexAddress(address) else { return false }
@@ -128,39 +128,6 @@ final class WorldIDSource {
         records[key] = Record(untilUnix: seconds, askedAt: .now)
         persist()
         return true
-    }
-
-    /// Asks for a list, bounded by `perPassBudget` REQUESTS. Sequential on
-    /// purpose: these reads share one public host, and a `TaskGroup` would
-    /// arrive as a burst (`WeiNamesSource`'s measured lesson). The staleness
-    /// and shape tests are `fill(_:)`'s alone — a second copy here could
-    /// disagree with the one that decides.
-    func fill(_ addresses: [String]) async {
-        var spent = 0
-        for address in addresses {
-            guard spent < Self.perPassBudget else { return }
-            if await fill(address) { spent += 1 }
-        }
-    }
-
-    /// The best answer the book holds about a PERSON — one person's several
-    /// addresses are one person, so a room asks about the set and draws one
-    /// line. Pure: it reads what is known and buys nothing, so a body may read
-    /// it on every pass and the fill stays an intent's cost (`fill(_:)` above,
-    /// called where the room can afford to wait).
-    ///
-    /// A live mark wins; a lapsed one beats `.absent`, because "was verified
-    /// once" is worth more than "this book holds nothing"; `.unknown` is the
-    /// answer only while nothing has been asked at all.
-    func status(among addresses: [String], asOf now: Date = .now) -> WorldID.Status {
-        var best: WorldID.Status = .unknown
-        for address in addresses {
-            let status = status(for: address, asOf: now)
-            if status.isVerified { return status }
-            if case .lapsed = status { best = status; continue }
-            if case .absent = status, case .unknown = best { best = .absent }
-        }
-        return best
     }
 
     /// Drops every answer. **No caller today, and its doc no longer invents

@@ -5,9 +5,11 @@ import Foundation
 ///
 /// `api.web3.bio/ns/{query}` takes an address or a name and returns every
 /// record it links: ENS, Basenames, Linea Name Service, Farcaster, Lens, SNS.
+/// Farcaster's rows are dropped since the seat was retired (prd §1109): the
+/// platform is not in `Platform`, so `record` refuses it.
 /// `api.ensideas.com` (the resolver `ENS` has used since 2026-07-09) answers
 /// ENS alone, one name per call, and could not say whether `jesse.base.eth`
-/// is on Base or whether an address is `@jesse` on Farcaster. This is the
+/// is on Base. This is the
 /// resolver behind `ENS` now — ensideas stays as the fallback, so a web3.bio
 /// outage costs nothing that worked before.
 ///
@@ -45,7 +47,7 @@ enum Web3Bio {
     /// The platforms a record can carry. Only the NAME services become rows;
     /// `ethereum` and `solana` are web3.bio's placeholder for a bare address.
     enum Platform: String, CaseIterable, Equatable {
-        case ens, basenames, linea, farcaster, lens, sns
+        case ens, basenames, linea, lens, sns
         case ethereum, solana
 
         /// The short label a reach row wears beside the name (`AddressNames`).
@@ -54,7 +56,6 @@ enum Web3Bio {
             case .ens:       return String(localized: "ENS")
             case .basenames: return String(localized: "Base")
             case .linea:     return String(localized: "Linea")
-            case .farcaster: return String(localized: "Farcaster")
             case .lens:      return String(localized: "Lens")
             case .sns:       return String(localized: "SNS")
             case .ethereum, .solana: return ""
@@ -68,18 +69,14 @@ enum Web3Bio {
         /// what `NameResolve.primaryNames` adds beside the ENS row.
         var isLinkedEVMName: Bool {
             switch self {
-            case .basenames, .linea, .farcaster, .lens: return true
+            case .basenames, .linea, .lens: return true
             default: return false
             }
         }
 
-        /// How the identity is spelled on a row. A Farcaster identity is a
-        /// username, and the app spells usernames with the `@`
-        /// (`FarcasterStore.handle(forAddress:)`); every name service's
+        /// How the identity is spelled on a row. Every name service's
         /// identity is already the name.
-        func display(_ identity: String) -> String {
-            self == .farcaster ? "@" + identity : identity
-        }
+        func display(_ identity: String) -> String { identity }
     }
 
     struct Record: Equatable {

@@ -2265,7 +2265,7 @@ harness "GitHub event-shape pure-logic self-test" "github-event self-test" "scri
 # catch-all, and that a resolved name never overwrites one somebody typed.
 harness "Wei/Gwei name pure-logic self-test" "wei-names self-test" "scripts/wei-names-selftest.sh" "the Wei/Gwei name self-test failed — run scripts/wei-names-selftest.sh"
 # web3.bio (prd §916) — the resolver behind `ENS` and the linked Base/Linea/
-# Farcaster/Lens rows on an address card. What it catches: a reverse answer
+# Lens rows on an address card. What it catches: a reverse answer
 # that names OTHER addresses read as this address's names (web3.bio's graph
 # joins them in — measured on vitalik's, three of four rows), a 404 or an
 # unreadable body cached as "no names", the placeholder row read as a name,

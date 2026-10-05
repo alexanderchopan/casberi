@@ -165,11 +165,10 @@ struct BandRow: View {
         // the word that differentiates is "Liked", "/design", "Mentions you",
         // not the handle a second time. A post with no such reason (an account
         // you watch simply posted) falls through to the handle rule, unchanged.
-        case "Bluesky", "Farcaster", "Nostr":
+        case "Bluesky", "Nostr":
             if let why = SocialThread.contextLabel(for: thing) { return why }
             switch thing.source {
             case "Bluesky":   return BlueskyStore.shared.rowLabel(for: thing.authorHandle)
-            case "Farcaster": return FarcasterStore.shared.rowLabel(for: thing.authorHandle)
             default:          return NostrStore.shared.rowLabel(for: thing.authorHandle)
             }
         // Slack carries a context label too (every landed thing IS a mention,
@@ -375,7 +374,7 @@ struct BandRow: View {
     /// "both" pattern — the streamer's face leads, the frame rides after the
     /// title — rather than a swap.
     static let faceSources: Set<String> = [
-        "Bluesky", "Farcaster", "Nostr", "Stocktwits", "GitHub", "Twitch",
+        "Bluesky", "Nostr", "Stocktwits", "GitHub", "Twitch",
     ]
     /// The sources whose leading slot is a publisher's MARK — a logo, so a
     /// squircle, not a circle.
@@ -2198,7 +2197,7 @@ struct ExcerptRow: View {
 }
 
 
-// MARK: - Bluesky / Farcaster — the post card (shaped feeds, 2026-07-13)
+// MARK: - Bluesky / Nostr — the post card (shaped feeds, 2026-07-13)
 
 /// In its own room a post reads as a post: the author leads (avatar + handle
 /// + time), the text sits unclamped (ingest stores one 80-char title line),

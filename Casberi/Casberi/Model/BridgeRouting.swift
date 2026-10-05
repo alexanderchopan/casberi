@@ -82,7 +82,6 @@ enum BridgeRouter {
         case nearAI
         case muse
         case bluesky
-        case farcaster
         /// Snapchat sits with the social seats but behaves like the ChatGPT
         /// imports — Snap exposes no readable API, so its screen is a file
         /// pick, not a handle field.
@@ -328,7 +327,6 @@ enum BridgeRouter {
             case .nearAI:         "nearai"
             case .muse:           "muse"
             case .bluesky:        "bsky"
-            case .farcaster:      "fc"
             // Missing when Instagram landed (2026-07-31) — this switch has no
             // `default`, so its absence was a build break, and a seat with no
             // id can't resolve `destination(forID:)` either.
@@ -451,7 +449,6 @@ enum BridgeRouter {
         Row(offer: "NEAR AI",    id: "nearai", destination: .nearAI),
         Row(offer: "Muse",       id: "muse",   destination: .muse),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
-        Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
         Row(offer: "Snapchat",  id: "snapchat", destination: .snapchat),
         Row(offer: "TikTok",    id: "tiktok",   destination: .tiktok),
         Row(offer: "X",         id: "x",        destination: .x),
@@ -641,7 +638,6 @@ struct BridgeDestinationView: View {
         case .muse:           MuseSetupScreen()
         case .exchange(let venue): ExchangeSetupScreen(venue: venue)
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
-        case .farcaster:      HandleSetupScreen(bridge: .farcaster)
         case .snapchat:       SnapchatImportScreen()
         case .tiktok:         TikTokImportScreen()
         case .x:              XArchiveImportScreen()

@@ -1613,80 +1613,6 @@ def trello_0(p):
         p.add(f'<g transform="translate({px} {py}) rotate({ang})">{g}</g>')
 
 
-def fc_5a(p):
-    """Eye level on a desk: a stack of seven books, page edges toward us, a jar of pencils, light from the left."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#c9cfc4", "#b8bfb3", x2=1, y2=0)))
-    p.add(p.soft(PL([(0, 0), (300, 0), (520, 470), (0, 470)], "#fff8e8", opacity=.35), 30))
-    p.add(PL([(0, 470), (w, 470), (w, h), (0, h)], p.lg("#c69a68", "#a57a4a")))
-    p.add(R(0, 466, w, 6, "#e0b88a"))
-    rnd = random.Random(201)
-    books = [(300, 44, "#2f3e5c"), (270, 30, "#c9a24a"), (320, 38, "#8a3b35"), (250, 26, "#e6dcc6"), (290, 34, "#4f6b5a"),
-             (240, 40, "#b5532f"), (280, 28, "#1f2a38")]
-    y = 470
-    cx = 380
-    p.add(p.soft(E(cx + 30, 474, 200, 12, "#3a2410"), 6, .6))
-    for (bw, bh, col) in books:
-        x = cx - bw / 2 + rnd.uniform(-18, 18)
-        y -= bh
-        p.add(R(x, y, bw, bh, col, rx=3))
-        p.add(R(x + bw - 10, y + 3, 8, bh - 6, "#f4ecd8", rx=1))
-        for k in range(1, int(bh // 5)):
-            p.add(L(x + bw - 10, y + 3 + k * 5, x + bw - 2, y + 3 + k * 5, "#d6cbb0", .8))
-        p.add(R(x, y, bw, 3, "#ffffff", opacity=.18))
-        p.add(R(x + 18, y + bh * .35, 6, bh * .3, lt(col, .3), opacity=.5))
-    # a glass jar of pencils
-    jx = 640
-    p.add(p.soft(E(jx + 10, 474, 50, 8, "#3a2410"), 4, .5))
-    for i, col in enumerate(("#e9b43a", "#2f6bd6", "#d44c3a", "#3a8a5a", "#1c1c1c")):
-        x = jx - 26 + i * 13
-        top = 300 + (i % 3) * 18
-        p.add(L(x, 470, x + (i - 2) * 8, top, col, 7))
-        p.add(L(x + (i - 2) * 8, top, x + (i - 2) * 8.4, top - 10, "#e8c9a0", 5))
-    p.add(R(jx - 44, 360, 88, 110, "#ffffff", rx=8, opacity=.25))
-    p.add(R(jx - 36, 366, 10, 96, "#ffffff", rx=4, opacity=.45))
-
-
-def fc_5b(p):
-    """Top-down on dark stained oak: an open book with pencil underlines and margin notes, a pencil, black coffee."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#4a3222", "#34221a", x2=1, y2=1)))
-    p.add(grain(p, 0, 0, w, h, "#1e120b", k=14, op=.4, seed=21, wav=12))
-    p.add(p.soft(E(180, 120, 260, 180, "#f0c48a", opacity=.18), 50))
-    g = []
-    g.append(p.soft(R(-236, -176, 480, 350, "#000", rx=6), 14, .6))
-    for sx in (-1, 1):
-        g.append(R(-240 if sx < 0 else 0, -180, 240, 350, p.lg("#f6efdf", "#ece2cc", x2=sx, y2=0) if sx > 0 else p.lg("#ece2cc", "#f6efdf", x2=1, y2=0), rx=4))
-    g.append(R(-18, -180, 36, 350, p.lg((0, "#000", 0), (.5, "#6b5a3a", .3), (1, "#000", 0), x2=1, y2=0)))
-    rnd = random.Random(211)
-    for sx in (-1, 1):
-        x0 = -214 if sx < 0 else 30
-        for k in range(17):
-            y = -150 + k * 18
-            ln = rnd.uniform(140, 184) if k % 6 != 5 else rnd.uniform(60, 110)
-            g.append(R(x0, y, ln, 5, "#8f8778", rx=2, opacity=.7))
-            if rnd.random() < .18:
-                g.append(P(f"M{x0},{y + 9} C{x0 + ln * .3},{y + 7} {x0 + ln * .6},{y + 11} {x0 + ln * .95},{y + 8}", "none", stroke="#4a4a4a", stroke_width=1.6, opacity=.8))
-    # margin notes: a bracket, squiggles, a star
-    g.append(P("M200,-80 C210,-80 210,-30 214,-26 C210,-22 210,24 200,24", "none", stroke="#4a4a4a", stroke_width=1.8))
-    g.append(P("M218,-20 c6,-6 10,4 16,-2 c6,-6 10,4 16,-2", "none", stroke="#4a4a4a", stroke_width=1.6))
-    g.append(P("M-232,60 l8,-14 l8,14 l-16,-9 h16 z", "none", stroke="#4a4a4a", stroke_width=1.4))
-    p.add(f'<g transform="translate(340 300) rotate(-6)">' + "".join(g) + "</g>")
-    # pencil
-    p.add(p.soft(R(90, 520, 300, 14, "#000", transform="rotate(-12 240 527)"), 4, .5))
-    p.add(R(80, 510, 280, 14, "#e9b43a", transform="rotate(-12 220 517)"))
-    p.add(PL([(360, 510), (386, 517), (360, 524)], "#e8c9a0", transform="rotate(-12 220 517)"))
-    p.add(R(60, 510, 20, 14, "#e79aa0", transform="rotate(-12 220 517)"))
-    # coffee from above
-    cx, cy = 680, 470
-    p.add(p.soft(C(cx + 10, cy + 14, 92, "#000"), 10, .6))
-    p.add(C(cx, cy, 92, p.rg("#faf7f1", "#e9e3d8", "#cfc6b8")))
-    p.add(C(cx, cy, 58, "#f2eee6"), C(cx, cy, 50, p.rg("#3a2213", "#241409", "#1a0e06", cx=.45, cy=.45)))
-    p.add(C(cx, cy, 50, "none", stroke="#8a5a36", stroke_width=3, opacity=.6))
-    p.add(E(cx - 16, cy - 18, 14, 6, "#ffffff", opacity=.35))
-    p.add(P(f"M{cx + 56},{cy - 10} C{cx + 86},{cy - 12} {cx + 86},{cy + 14} {cx + 56},{cy + 12}", "none", stroke="#ece6dc", stroke_width=10))
-
-
 def bsky_4a(p):
     """A dotted notebook open on a pale sage table, low evening sun from the right: a fountain pen's long shadow."""
     w, h = p.w, p.h
@@ -1734,7 +1660,7 @@ def bsky_4a(p):
 
 DRAW.update({
     "ig-save-8": ig_save_8, "ig-save-11": ig_save_11, "ig-like-2": ig_like_2, "file-3": file_3, "file-5": file_5,
-    "trello-0": trello_0, "fc-5a": fc_5a, "fc-5b": fc_5b, "bsky-4a": bsky_4a,
+    "trello-0": trello_0, "bsky-4a": bsky_4a,
 })
 
 

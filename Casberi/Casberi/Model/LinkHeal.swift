@@ -12,7 +12,7 @@ import SwiftData
 ///
 /// **WHICH ROWS: exactly the ones `enrich` is already called on, and no
 /// others.** A link you dropped, shared or saved through Shortcuts, and the
-/// article a Farcaster or Bluesky post carries — the four callers. A retry is
+/// article a Bluesky post carries — the three callers. A retry is
 /// the same request to the same page, so it widens nothing about what the app
 /// reaches (the "Saved links" entry in `NetworkReach`); a new source here would
 /// be a new reach and needs `FeedArticleText`'s fairness rule first. Imports
@@ -28,7 +28,7 @@ enum LinkHeal {
     /// The sources whose links `LinkTitle.enrich` is called on at landing.
     /// "Shortcuts" is the intent's default source; a person who names another
     /// one in the Shortcut is not reached, which is the conservative miss.
-    static let sources: Set<String> = ["You", "Shortcuts", "Farcaster", "Bluesky"]
+    static let sources: Set<String> = ["You", "Shortcuts", "Bluesky"]
 
     static let perPass = 6
     static let pace: Duration = .milliseconds(1200)
@@ -66,7 +66,7 @@ enum LinkHeal {
 
         var attempts = (UserDefaults.standard.dictionary(forKey: ledgerKey) as? [String: Int]) ?? [:]
         // The scan runs OFF MAIN (prd §878's lesson, the same week): four
-        // sources' recent rows — every Farcaster and Bluesky post of the
+        // sources' recent rows — every Bluesky post of the
         // month among them — materialised on the main context every
         // foreground is exactly the cost `ArticleScout` was built to remove.
         // Only ids cross back.
