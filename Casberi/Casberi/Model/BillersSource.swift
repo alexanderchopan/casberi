@@ -51,6 +51,39 @@ enum BillersSource {
         }
     }
 
+    // MARK: - Category
+
+    /// The category a biller files under in Addresses (prd §1106a): the
+    /// catalogue's own category when the merchant IS an app there (Claude in
+    /// Agents, Linear in Work), else Wallet. The merchant is matched by name,
+    /// cased as the card cased it, and again without a web suffix
+    /// ("Netflix.com", "CLAUDE.AI") — never by `contains`, which files "Apple
+    /// Store" under Apple Music.
+    nonisolated static func category(ofMerchant raw: String) -> String {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        var candidates = [name]
+        if let dot = name.lastIndex(of: "."),
+           name[name.index(after: dot)...].allSatisfy(\.isLetter) {
+            candidates.append(String(name[..<dot]))
+        }
+        for candidate in candidates {
+            if let category = categoryByOfferName[candidate] { return category }
+        }
+        return fallbackCategory
+    }
+
+    /// A biller the catalogue does not know is money, and money is Wallet.
+    nonisolated static let fallbackCategory = "Wallet"
+
+    /// Every catalogue offer's name, lowercased, to its category — built once.
+    nonisolated private static let categoryByOfferName: [String: String] = {
+        var out: [String: String] = [:]
+        for offer in BridgeCatalog.allOffers where out[offer.name.lowercased()] == nil {
+            out[offer.name.lowercased()] = BridgeCatalog.category(of: offer)
+        }
+        return out
+    }()
+
     /// How many of each billing seat's newest rows a biller's sheet reads
     /// for its charges — a year of a busy card, bounded.
     static let chargeWindow = 1_000

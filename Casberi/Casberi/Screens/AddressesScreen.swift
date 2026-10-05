@@ -845,8 +845,9 @@ extension Contact {
         for identity in identities {
             let category: String
             switch identity.kind {
-            case .wallet, .ens, .basename, .linea, .lens, .worldApp,
-                 .biller:                                            category = "Wallet"
+            case .wallet, .ens, .basename, .linea, .lens, .worldApp: category = "Wallet"
+            // A biller files where the app it bills for lives (prd §1106a).
+            case .biller: category = BillersSource.category(ofMerchant: identity.body)
             case .farcaster, .bluesky, .nostr:                      category = "Social"
             case .github:                                            category = "Work"
             case .contact, .email:                                   category = "Life"
