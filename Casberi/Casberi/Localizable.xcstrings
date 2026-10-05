@@ -1261,6 +1261,62 @@
         }
       }
     },
+    "1 token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 token"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 トークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 个代币"
+          }
+        }
+      }
+    },
+    "A Safe signature, a delegate, a token approval, or a transfer made to fool you." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una firma de Safe, un delegado, una aprobación de token o una transferencia hecha para engañarte."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe の署名、委任先、トークンの承認、またはあなたをだますための送金。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 서명, 위임, 토큰 승인 또는 당신을 속이려고 보낸 전송."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 签名、委托、代币授权，或用来骗你的转账。"
+          }
+        }
+      }
+    },
     "Add an alert" : {
       "localizations" : {
         "es" : {
@@ -1285,6 +1341,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加提醒"
+          }
+        }
+      }
+    },
+    "Address poisoning" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envenenamiento de direcciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスポイズニング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소 포이즈닝"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "地址投毒"
           }
         }
       }
@@ -1683,6 +1767,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的应用背后"
+          }
+        }
+      }
+    },
+    "Billing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Facturación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "請求"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "计费"
+          }
+        }
+      }
+    },
+    "Bills" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Facturas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "請求"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "청구서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "账单"
+          }
+        }
+      }
+    },
+    "Bills, unlocks and grants with a date still to come, and the subscriptions that renew." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Facturas, desbloqueos y subvenciones con fecha por llegar, y las suscripciones que se renuevan."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これから日付が来る請求、ロック解除、付与、そして更新されるサブスクリプション。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "날짜가 다가오는 청구서, 잠금 해제, 지급, 그리고 갱신되는 구독."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未到期的账单、解锁和发放，以及会续订的订阅。"
           }
         }
       }
@@ -2135,6 +2303,34 @@
         }
       }
     },
+    "Every %lld days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada %lld días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 日ごと"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld일마다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每 %lld 天"
+          }
+        }
+      }
+    },
     "Every app, A to Z" : {
       "localizations" : {
         "es" : {
@@ -2187,6 +2383,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每个应用背后的每家公司"
+          }
+        }
+      }
+    },
+    "Expected" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Previsto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "予定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "예정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "预计"
+          }
+        }
+      }
+    },
+    "Fake tokens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tokens falsos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "偽トークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가짜 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "假代币"
+          }
+        }
+      }
+    },
+    "Fake transfers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Transferencias falsas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "偽の送金"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가짜 전송"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "虚假转账"
           }
         }
       }
@@ -3115,6 +3395,34 @@
         }
       }
     },
+    "Monthly" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mensual"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "毎月"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "매월"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每月"
+          }
+        }
+      }
+    },
     "Move down" : {
       "localizations" : {
         "es" : {
@@ -3419,6 +3727,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "网络账户 · 仅由网络变动"
+          }
+        }
+      }
+    },
+    "New account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nueva cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新账户"
           }
         }
       }
@@ -76812,6 +77148,34 @@
         }
       }
     },
+    "Nothing to review" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada que revisar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "確認する項目はありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검토할 항목 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有需要查看的内容"
+          }
+        }
+      }
+    },
     "Nothing with %@ yet." : {
       "localizations" : {
         "es" : {
@@ -77592,6 +77956,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "涨至 %@"
+          }
+        }
+      }
+    },
+    "Search %lld tokens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buscar en %lld tokens"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件のトークンを検索"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰 %lld개 검색"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索 %lld 个代币"
           }
         }
       }
@@ -78632,6 +79024,34 @@
         }
       }
     },
+    "Tokens sized by worth, then money lent, pooled or held as a perp. Dust below the floor is left out." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tokens según su valor, luego dinero prestado, en pools o en perpetuos. Se omite el polvo por debajo del mínimo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価値順のトークン、続いて貸し出し・プール・パーペチュアルの資金。下限未満のダストは除外。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가치순 토큰, 그다음 대출·풀·무기한 선물에 든 돈. 하한 미만의 소액은 제외."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按价值排列的代币，然后是借出、入池或持有永续合约的资金。低于下限的零头不计入。"
+          }
+        }
+      }
+    },
     "Tomorrow %@" : {
       "localizations" : {
         "es" : {
@@ -78688,6 +79108,34 @@
         }
       }
     },
+    "Under $1" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Menos de $1"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$1 未満"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$1 미만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "低于 $1"
+          }
+        }
+      }
+    },
     "Untick %@" : {
       "localizations" : {
         "es" : {
@@ -78740,6 +79188,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "涨或跌，每天最多一次"
+          }
+        }
+      }
+    },
+    "Varies" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Varía"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "変動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "변동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不定"
           }
         }
       }
@@ -79052,6 +79528,62 @@
         }
       }
     },
+    "What's ahead, what waits on you, and what repeats" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que viene, lo que te espera y lo que se repite"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これからのこと、あなたを待っていること、繰り返すこと"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다가오는 일, 당신을 기다리는 일, 반복되는 일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "即将发生的、等你处理的、会重复的"
+          }
+        }
+      }
+    },
+    "Who can act for you, and what's trying to fool you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Quién puede actuar por ti y qué intenta engañarte"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの代わりに操作できる相手と、あなたをだまそうとするもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "당신 대신 움직일 수 있는 것과 당신을 속이려는 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "谁能代你操作，以及什么在试图骗你"
+          }
+        }
+      }
+    },
     "With %@ since %@." : {
       "localizations" : {
         "es" : {
@@ -79244,6 +79776,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "随时随地写一条新笔记。"
+          }
+        }
+      }
+    },
+    "Yearly" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anual"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "毎年"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "매년"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每年"
           }
         }
       }
@@ -79500,6 +80060,34 @@
         }
       }
     },
+    "Your tokens, and money you've deployed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus tokens y el dinero que has puesto a trabajar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのトークンと運用中の資金"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유 토큰과 운용 중인 자금"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的代币和已投入的资金"
+          }
+        }
+      }
+    },
     "a %lld%% move" : {
       "localizations" : {
         "es" : {
@@ -79524,6 +80112,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld%% 的变动"
+          }
+        }
+      }
+    },
+    "can fall %lld%%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "puede caer %lld%%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld%% まで下落可能"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld%% 하락 가능"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可下跌 %lld%%"
           }
         }
       }
