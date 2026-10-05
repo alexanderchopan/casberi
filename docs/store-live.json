@@ -1,63 +1,49 @@
 {
-  "readAt": "2026-10-02T19:07:12Z",
+  "readAt": "2026-10-05T17:43:53Z",
   "appId": "6788637831",
   "versions": {
     "IOS": {
       "live": {
-        "id": "8c2bd6c4-8752-48f0-b349-909d9bfcc4db",
-        "version": "1.0.44",
+        "id": "c08a0588-c0ba-4a0b-bf17-1c8fee1c1ebb",
+        "version": "2.0.3",
         "state": "READY_FOR_SALE",
         "locales": {
           "en-US": {
-            "id": "4f77ca0f-b0d1-4c5e-9726-0a3b601658d7",
-            "description": "Everything you do is scattered across apps, wallets and agents. Casberi shows them all together, or one at a time. No account, no servers, no tracking.\n\nEverything you follow. One feed.\nYour cards, wallets, work, posts and agents - in one private feed on your iPhone. No sign-up, no server, no tracking.\n\nTry it first.\nCasberi opens filled with a demo you can browse. See how it feels, then clear it and connect your own.\n\nEverything new, newest first.\nA payment. A message. A deadline. A workout. A build that failed. It all lands in one feed. Read it all together, or open\none app and see only that.\n\nYour money, actually explained.\nTrack your MetaMask, ether.fi and Gnosis Pay cards. Watch Stripe, Wise, Apple Wallet, Rocket Money and Acorns. See\nevery Privy and Splits account in one place. In the US, Apple Card, Apple Cash and Savings show the merchant's real\nname; in the UK, so do the bank accounts in your Wallet.\n\nYour wallets, without connecting them.\nFollow any address - no key, no signature, no way for Casberi to spend. See what you hold and how it is doing, which\napps can act on your behalf, and what is at risk. Read Railgun, Privacy Pools and Peer as ordinary rooms, so using\nprivacy tools never costs you sight of your own money. Get a notification the moment a Safe transaction is waiting on\nyour signature.\n\nEvery app, at a glance.\nOpen any app and see what changed over time, drawn as a chart. For social apps, who you follow and who is talking to\nwhom. If something could not be loaded, Casberi says so.\n\nOne notification a day.\nEach kind of app sends one short summary, once a day, at the time you usually check. Only what is urgent - a\ndeadline, a payment waiting for approval, a Safe signature - comes through right away. New releases, deploys and\nmentions from X, Instagram, TikTok, GitHub, Spotify and Vercel arrive the same way.\nConnect with confidence.\nMore than 100 apps. Apple apps connect with one tap. Other services connect with a read-only key, so Casberi can\nsee but never change. Where an app has no connection, import a file. Casberi never asks for a password.\n\nSave anything.\nShare from any app and it lands instantly. Screenshots come in on their own, and the words inside them are\nsearchable. Voice notes become text. Bring in your posts from X, Instagram, TikTok and Snapchat, plus your ChatGPT\nand Claude conversations, and search it all.\n\nAsk your own agents.\nChat with Muse, ChatGPT, Claude, Venice or Bankr over what you keep - with your own key, on your own terms.\n\nIry what is coming to Ethereum.\nEthrex's testnets for Hegota, Privacy and Frames run as real rooms, and Base Vibenet gives you a keystore this phone\nalone signs for. Test funds only.\n\nYours. Truly.\nNo server, no account, no ads. Sync to your iPad and Mac through your own iCloud. Export everything to one file.\nDelete everything, for good.",
+            "id": "9fbc3038-796b-416a-9d06-540cdcb27217",
+            "description": "Everything you build, run and owe is scattered across apps. Casberi brings it into one private place on your iPhone, iPad and Mac. No account, no servers, no tracking.\n\nEverything new, in one place.\nHome is your daily brief: a deploy that failed, a payment that landed, a meeting coming up, a note you saved. Newest first, in one feed.\n\nKnow what needs you.\nWork gathers issues, reviews, releases, incidents, payouts and disputes from the tools you build with. Deadlines rise to the top, soonest first. Pick one account to see only that.\n\nAll your money, one number.\nFollow any wallet address without a key or a signature, alongside your exchanges, cards and bank balances. See what you hold, how it moved and what is at risk. Casberi can read, never spend.\n\nWhat's next, soonest first.\nDay puts your calendar, to-dos and mail in one list that reads forward: what is next, then what already happened.\n\nYour notes, and everything you keep.\nWrite, record or sketch a note. Share anything from any app and it lands instantly. Screenshots are searchable by the words inside them.\n\nEvery category, one screen.\nWallet, Work, Day, Life, Media, Social, Reading and Agents each open as one screen. Pick an account to narrow it, or see them all together.\n\nConnect with confidence.\nMore than 100 apps. Apple's apps connect with one tap. Other services connect with a read-only key, so Casberi can see but never change.\n\nTry it first.\nCasberi opens with a demo you can browse. Clear it when you are ready and connect your own.\n\nYours.\nNo server, no account, no ads. Sync through your own iCloud. Export everything to one file, or delete it all for good.",
             "keywords": "wallet,crypto,portfolio,tracker,feed,reader,rss,ai,agent,assistant,dashboard,private,notes,journal",
             "promotionalText": null,
-            "whatsNew": "Design and performance improvements"
-          }
-        }
-      },
-      "editable": {
-        "id": "830bf7cb-0a2b-47fa-ba83-7596a1fbbb9d",
-        "version": "2.0",
-        "state": "REJECTED",
-        "locales": {
-          "en-US": {
-            "id": "0c4ac4ba-cf13-4860-ba40-0e8cb23861ea",
-            "description": "Everything you do is scattered across apps, wallets and agents. Casberi shows them all together, or one at a time. No account, no servers, no tracking.\n\nEverything you follow. One feed.\nYour cards, wallets, work, posts and agents - in one private feed on your iPhone. No sign-up, no server, no tracking.\n\nTry it first.\nCasberi opens filled with a demo you can browse. See how it feels, then clear it and connect your own.\n\nEverything new, newest first.\nA payment. A message. A deadline. A workout. A build that failed. It all lands in one feed. Read it all together, or open\none app and see only that.\n\nYour money, actually explained.\nTrack your MetaMask, ether.fi and Gnosis Pay cards. Watch Stripe, Wise, Apple Wallet, Rocket Money and Acorns. See\nevery Privy and Splits account in one place. In the US, Apple Card, Apple Cash and Savings show the merchant's real\nname; in the UK, so do the bank accounts in your Wallet.\n\nYour wallets, without connecting them.\nFollow any address - no key, no signature, no way for Casberi to spend. See what you hold and how it is doing, which\napps can act on your behalf, and what is at risk. Read Railgun, Privacy Pools and Peer as ordinary rooms, so using\nprivacy tools never costs you sight of your own money. Get a notification the moment a Safe transaction is waiting on\nyour signature.\n\nEvery app, at a glance.\nOpen any app and see what changed over time, drawn as a chart. For social apps, who you follow and who is talking to\nwhom. If something could not be loaded, Casberi says so.\n\nOne notification a day.\nEach kind of app sends one short summary, once a day, at the time you usually check. Only what is urgent - a\ndeadline, a payment waiting for approval, a Safe signature - comes through right away. New releases, deploys and\nmentions from X, Instagram, TikTok, GitHub, Spotify and Vercel arrive the same way.\nConnect with confidence.\nMore than 100 apps. Apple apps connect with one tap. Other services connect with a read-only key, so Casberi can\nsee but never change. Where an app has no connection, import a file. Casberi never asks for a password.\n\nSave anything.\nShare from any app and it lands instantly. Screenshots come in on their own, and the words inside them are\nsearchable. Voice notes become text. Bring in your posts from X, Instagram, TikTok and Snapchat, plus your ChatGPT\nand Claude conversations, and search it all.\n\nAsk your own agents.\nChat with Muse, ChatGPT, Claude, Venice or Bankr over what you keep - with your own key, on your own terms.\n\nIry what is coming to Ethereum.\nEthrex's testnets for Hegota, Privacy and Frames run as real rooms, and Base Vibenet gives you a keystore this phone\nalone signs for. Test funds only.\n\nYours. Truly.\nNo server, no account, no ads. Sync to your iPad and Mac through your own iCloud. Export everything to one file.\nDelete everything, for good.",
-            "keywords": "wallet,crypto,portfolio,tracker,feed,reader,rss,ai,agent,assistant,dashboard,private,notes,journal",
-            "promotionalText": null,
-            "whatsNew": "A redesign: each category is now one screen. Design and performance improvements."
+            "whatsNew": "Features\n• Track subscriptions in the Wallet: what each costs, and when it renews\n• Add a subscription by hand\n\nDesign\n• Show what's coming up as a calendar\n• Group Home by app\n• Rename Follow to Watch in the Wallet"
           }
         }
       }
     },
     "MAC_OS": {
       "live": {
-        "id": "72937692-d001-43bd-9e5b-25c9f251f6e9",
-        "version": "1.0.42",
+        "id": "aa089cc8-7137-4e3e-b6cb-6eae118aa520",
+        "version": "2.0.2",
         "state": "READY_FOR_SALE",
         "locales": {
           "en-US": {
-            "id": "247b685c-89a9-47b2-b105-7404589757d6",
+            "id": "9c1eba2c-ad0d-4f7d-9afb-1774ccb23da3",
             "description": "Everything you build is scattered across apps, wallets and accounts. Casberi is a productivity app for Mac that puts all your accounts in one private feed, and reads them back to you. No account, no servers, no tracking.\n\nTRY IT BEFORE YOU CONNECT ANYTHING\nOne tap fills Casberi with sample data, so you can feel the whole app first.\n\nONE FEED\nA deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Rooms answer to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.\n\nEVERY ACCOUNT GETS A ROOM\nNot a row of numbers — a reading. What moved and when, drawn as a real chart. What you hold, and how much of it is in one thing. Who you follow, and who they have both dealt with. What has been allowed to act on your accounts, and what already has. Every figure comes from your own device, and says so when it could not be read.\n\nCONNECT HONESTLY\nOver 90 apps across work, wallet, social, reading, notes, schedule, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.\n\nCAPTURE WITHOUT FRICTION\nShare from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.\n\nYOURS, ACTUALLY\nThere is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.\n\nCasberi is your own things, in one feed, that you can actually read.",
             "keywords": "feed,reader,rss,notes,journal,dashboard,tracker,agent,assistant,ai,private,portfolio,wallet,crypto",
             "promotionalText": null,
-            "whatsNew": "Design and performance improvements."
+            "whatsNew": "Design and performance improvements"
           }
         }
       },
       "inReview": {
-        "id": "315a6d7e-769e-41a0-9d32-0aa841dadaa0",
-        "version": "1.0.45",
-        "state": "IN_REVIEW",
+        "id": "eeca892c-3bc4-4999-96a6-ec7d8a3da87a",
+        "version": "2.0.3",
+        "state": "WAITING_FOR_REVIEW",
         "locales": {
           "en-US": {
-            "id": "7bd62ca5-795f-4250-a911-a9088dd49023",
+            "id": "01fd08c8-0e01-4a84-aef7-f38d2fb58cf2",
             "description": "Everything you build is scattered across apps, wallets and accounts. Casberi is a productivity app for Mac that puts all your accounts in one private feed, and reads them back to you. No account, no servers, no tracking.\n\nTRY IT BEFORE YOU CONNECT ANYTHING\nOne tap fills Casberi with sample data, so you can feel the whole app first.\n\nONE FEED\nA deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Rooms answer to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.\n\nEVERY ACCOUNT GETS A ROOM\nNot a row of numbers — a reading. What moved and when, drawn as a real chart. What you hold, and how much of it is in one thing. Who you follow, and who they have both dealt with. What has been allowed to act on your accounts, and what already has. Every figure comes from your own device, and says so when it could not be read.\n\nCONNECT HONESTLY\nOver 90 apps across work, wallet, social, reading, notes, schedule, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.\n\nCAPTURE WITHOUT FRICTION\nShare from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.\n\nYOURS, ACTUALLY\nThere is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.\n\nCasberi is your own things, in one feed, that you can actually read.",
             "keywords": "feed,reader,rss,notes,journal,dashboard,tracker,agent,assistant,ai,private,portfolio,wallet,crypto",
             "promotionalText": null,
-            "whatsNew": "Fixes\n• Clean pasted Logos ids before watching\n\nDesign\n• Open a room's account page from beside its name\n• Commit an account entry with a check inside the field\n• Rename Accounts to Apps and remove Manage\n\nFeatures\n• Watch a Logos account from its public key"
+            "whatsNew": "Design and performance improvements"
           }
         }
       }
@@ -65,22 +51,22 @@
   },
   "appInfo": {
     "live": {
-      "id": "e18b9111-d3eb-4f06-b9c8-e243bd96cd52",
+      "id": "4694e849-60c0-45ed-b5b4-9f99d15cdcb6",
       "state": "READY_FOR_SALE",
       "locales": {
         "en-US": {
-          "id": "39cc2bc7-bf82-4301-9918-7196bafed592",
+          "id": "87426044-5646-4132-a6fa-5861142ebc5b",
           "name": "Casberi",
           "subtitle": "One app for your things"
         }
       }
     },
     "inReview": {
-      "id": "1f182b8e-7617-4179-a9ab-7424bff1f4b0",
-      "state": "IN_REVIEW",
+      "id": "777faf28-183e-4e7b-8a73-4cadbdeae8e1",
+      "state": "WAITING_FOR_REVIEW",
       "locales": {
         "en-US": {
-          "id": "5f5ef1c3-35ad-4e1d-bc06-0821a35edc5b",
+          "id": "cc48428b-4d83-40a1-b25b-8b1370396a81",
           "name": "Casberi",
           "subtitle": "One app for your things"
         }
