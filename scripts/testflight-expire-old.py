@@ -6,7 +6,8 @@ An expired build stops launching ("This beta has expired") and TestFlight
 offers the newest; the tester's data stays (app group + iCloud). It cannot
 be undone. Per platform this KEEPS the newest build whose beta review is
 APPROVED and everything newer (still in review, or internal-only), so no
-tester is ever left with nothing to update to.
+tester is ever left with nothing to update to, and any build an App Store
+version is still waiting on.
 
 Dry run by default; --yes applies.
 
@@ -66,10 +67,27 @@ def builds(token):
     return out
 
 
+# A build an App Store version is still waiting on. Expiring it can strand the
+# review (2026-10-04: the first run expired iOS 2.0.2's build 736 while it sat
+# WAITING_FOR_REVIEW). Only a version that is live or gone lets its build go.
+SETTLED = {"READY_FOR_SALE", "REMOVED_FROM_SALE", "DEVELOPER_REMOVED_FROM_SALE",
+           "REPLACED_WITH_NEW_VERSION", "READY_FOR_DISTRIBUTION"}
+
+
+def store_held(token):
+    _, page = call("GET", f"/v1/apps/{APP_ID}/appStoreVersions?limit=50&include=build"
+                          "&fields[appStoreVersions]=appStoreState,build", token=token)
+    return {v["relationships"]["build"]["data"]["id"]
+            for v in page["data"]
+            if v["attributes"]["appStoreState"] not in SETTLED
+            and v["relationships"]["build"]["data"]}
+
+
 def main():
     apply = "--yes" in sys.argv
     token = jwt()
     rows = builds(token)
+    held = store_held(token)
     doomed = []
     for platform in sorted({r["platform"] for r in rows}):
         mine = sorted((r for r in rows if r["platform"] == platform), key=lambda r: -r["build"])
@@ -79,7 +97,10 @@ def main():
             continue
         floor = approved[0]["build"]
         keep = [r for r in mine if r["build"] >= floor]
-        old = [r for r in mine if r["build"] < floor]
+        old = [r for r in mine if r["build"] < floor and r["id"] not in held]
+        for r in mine:
+            if r["build"] < floor and r["id"] in held:
+                print(f"{platform}: keep {r['build']}, an App Store version is waiting on it")
         kept = ", ".join(f"{r['build']} ({r['marketing']}, {r['review']})" for r in keep)
         print(f"{platform}: keep {kept}")
         gone = ", ".join(str(r["build"]) for r in old) or "none"
