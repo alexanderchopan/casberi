@@ -64192,3 +64192,11 @@ Walked first on a simulator (the demo, dark): changing a note took three steps �
 **Guarded.** `feed-groups-selftest.sh` guards the lead rule and the top alignment in `DSFeedRow`; `feed-grammar-selftest.sh` reads the head's floor through its new alignment.
 
 **Seen** on a private iPhone 17 Pro simulator, demo, dark: Today scrolled, every app a grey label hugging a white item. **Not seen:** a picture-led row (a screenshot loses its thumbnail under a header; Apple would carry it at the trailing edge — not built), the Mac, light theme, a device.
+
+## §1103b — Under an app header a picture rides the right as a thumbnail, and the item's words start under the app's name (user: "yes we want thumbnail!", "we need the message to share same indentation as the source title", "otherwise it looks weird", 2026-10-04; amends §1103a item 2) — BUILT
+
+1. **A lead that is a picture OF the thing** — a screenshot, a stored photo, a link's or a video's image, never a circle crop (`BandRow.isPicture`) — moves to the trailing edge at the head's 44pt (`DSFeedRow.leadIsPicture`), its top level with the words', as a notification carries its attachment. A face, a mark or a site's icon is still dropped.
+2. **The words start under the app's name** (`DSFeedRow.groupIndent` = the badge mark and its gap), title, line and anything below alike.
+3. **Every item starts the same distance under its label**: a post under a header takes `rowAir` like its neighbours (it took s2, 4pt lower), and a thumbnail's row aligns to the top rather than centring its words on the picture.
+
+**Seen** on a private iPhone 17 Pro simulator, demo, dark: Today and Yesterday — Steam, TikTok, Instagram, YouTube and Photos with their pictures on the right, every item's words in the app name's column. **Not seen:** the Mac, light theme, a device.

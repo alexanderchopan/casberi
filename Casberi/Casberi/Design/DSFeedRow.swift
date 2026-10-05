@@ -47,6 +47,11 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// one of into a one-word column — `WalletRow.subtitleText`'s lesson (§588).
     var line: Text? = nil
     var lineLines = 1
+    /// The lead is a PICTURE of the thing (a screenshot, a photo, an
+    /// article's image), not who or where it came from. Under an app header
+    /// it moves to the trailing edge as a thumbnail, as a notification
+    /// carries its attachment (prd §1103b); any other lead is dropped there.
+    var leadIsPicture = false
     @ViewBuilder var lead: Lead
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var below: Below
@@ -75,9 +80,18 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// the social face") — and its words start flush under the app's name.
     @Environment(\.dsGroupedSource) private var groupedSource
 
+    /// Where the words start under an app header (prd §1103b, user: "we need
+    /// the message to share same indentation as the source title"): past the
+    /// header's badge mark and its gap, so the item's words and the app's
+    /// name stand in one column.
+    static var groupIndent: CGFloat { DS.Mark.badge + DS.Space.s2 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: DS.Space.s3) {
+            // Under an app header the thumbnail's top meets the words' top
+            // (prd §1103b), so every item starts the same distance under its
+            // label, picture or not.
+            HStack(alignment: groupedSource == nil ? .center : .top, spacing: DS.Space.s3) {
                 if groupedSource == nil {
                     lead
                         .frame(width: Self.leadSize, height: Self.leadSize)
@@ -112,14 +126,18 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                         styledLine(line)
                     }
                 }
+                if groupedSource != nil, leadIsPicture {
+                    lead
+                }
             }
+            .padding(.leading, groupedSource == nil ? 0 : Self.groupIndent)
             // Under an app header the words sit at the TOP of the 44pt head
             // (prd §1103a): the label above hugs its item, and the head's
             // spare height falls below it, between this app and the next.
             .frame(minHeight: Self.headHeight,
                    alignment: groupedSource == nil ? .center : .top)
             below
-                .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : 0)
+                .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : Self.groupIndent)
         }
     }
 
@@ -182,10 +200,12 @@ extension DSFeedRow where Below == EmptyView {
     init(name: String, emphasized: Bool = false,
          done: Bool = false, ripple: Int = 0,
          line: Text? = nil, lineLines: Int = 1,
+         leadIsPicture: Bool = false,
          @ViewBuilder lead: () -> Lead,
          @ViewBuilder trailing: () -> Trailing) {
         self.init(name: name, emphasized: emphasized,
                   done: done, ripple: ripple, line: line, lineLines: lineLines,
+                  leadIsPicture: leadIsPicture,
                   lead: lead, trailing: trailing, below: { EmptyView() })
     }
 }

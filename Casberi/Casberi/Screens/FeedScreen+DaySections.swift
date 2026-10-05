@@ -376,7 +376,7 @@ extension FeedScreen {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i],
                                           imageOnly: imageOnly.contains(thing.id),
-                                          wideArt: anchor)
+                                          wideArt: anchor, grouped: true)
                                 .opacity(!anchor && isQuiet(row) ? Self.quietRow : 1)
                                 // The header wears the app's mark; the row's
                                 // own copy of it stands empty (prd §1103).

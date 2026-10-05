@@ -202,6 +202,12 @@ guard "a row under a header is told whose header it stands under" \
       "$FEED" '\.environment\(\\\.dsGroupedSource, row\.source\)'
 guard "a row under a header draws no lead, a face included (§1103a)" \
       "$ROW" 'if groupedSource == nil \{'
+guard "a picture lead rides the trailing edge as a thumbnail (§1103b)" \
+      "$ROW" 'if groupedSource != nil, leadIsPicture \{'
+guard "the words start under the app's name, past the badge (§1103b)" \
+      "$ROW" 'groupedSource == nil \? 0 : Self\.groupIndent'
+guard "a post under a header takes the row air its neighbours take (§1103b)" \
+      "$FEED" 'standsAlone\(thing\) && !grouped \? DS\.Space\.s2 : Self\.rowAir'
 guard "and its words sit at the top of the head, hugging the label" \
       "$ROW" 'alignment: groupedSource == nil \? \.center : \.top'
 guard "AppGroups imports no SwiftUI or SwiftData — the reason it compiles here" \

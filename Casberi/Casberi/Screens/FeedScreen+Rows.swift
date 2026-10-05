@@ -291,7 +291,8 @@ extension FeedScreen {
                                position: RunPosition = .only,
                                imageOnly: Bool = false,
                                wideArt: Bool = false,
-                               replies: [String: [Thing]] = [:]) -> some View {
+                               replies: [String: [Thing]] = [:],
+                               grouped: Bool = false) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         // A Button since 2026-08-04 (the microanimation pass), not an
         // `onTapGesture`: the tap gesture gave no touch-down feedback, so a
@@ -343,9 +344,11 @@ extension FeedScreen {
                                              skin: skin))
             // Feed rhythm: `rowAir` (prd §900, see its doc). A card that
             // stands alone keeps s2 — it has no padding of its own inside.
-            .listRowInsets(.init(top: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
+            // Under an app header every row takes `rowAir` (prd §1103b): a
+            // post's s2 put it 4pt further under its label than its neighbours.
+            .listRowInsets(.init(top: standsAlone(thing) && !grouped ? DS.Space.s2 : Self.rowAir,
                                  leading: DSRoomChassis.rowInset,
-                                 bottom: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
+                                 bottom: standsAlone(thing) && !grouped ? DS.Space.s2 : Self.rowAir,
                                  trailing: DSRoomChassis.rowInset))
             .listRowSeparator(.hidden)
             // A row is draggable OUT of the window on Mac (prd §631) — its

@@ -535,6 +535,25 @@ struct BandRow: View {
         case glyph
     }
 
+    /// The app header this row stands under in Home (prd §1103b).
+    @Environment(\.dsGroupedSource) private var groupedSource
+
+    /// A lead that is a picture OF the thing, which under an app header rides
+    /// the trailing edge as a thumbnail (prd §1103b). A face, a mark, a site's
+    /// icon or a circle crop says who or where, not what, and is dropped there.
+    private func isPicture(_ leader: Leader) -> Bool {
+        switch leader {
+        case .thumb(_, _, let circular): !circular
+        case .screenshot, .photoData: true
+        default: false
+        }
+    }
+
+    /// The trailing thumbnail fills the row's head; the lead stays a mark's size.
+    private var pictureSize: CGFloat {
+        groupedSource == nil ? DS.Mark.row : DSFeedRow<EmptyView, EmptyView, EmptyView>.headHeight
+    }
+
     private var leader: Leader {
         if let avatar = identityAvatarURL {
             // Whose post this is, when several accounts are followed.
@@ -644,7 +663,8 @@ struct BandRow: View {
                   emphasized: emphasized, done: done, ripple: rippleIndex,
                   line: imageOnly ? nil
                       : notePreview ? previewLine
-                      : line(project: project, leader: leader, qualifier: seam.line)) {
+                      : line(project: project, leader: leader, qualifier: seam.line),
+                  leadIsPicture: isPicture(leader)) {
             leaderView
                 .overlay(alignment: .bottomTrailing) {
                     if thing.isFlagged {
@@ -760,11 +780,11 @@ struct BandRow: View {
             RemoteThumb(urlString: publisher, size: DS.Mark.row, fallback: thing.source)
         case .thumb(let image, let perishable, let circular):
             RemoteThumb(urlString: image,
-                        size: circular ? DS.Face.rowCircle : DS.Mark.row,
+                        size: circular ? DS.Face.rowCircle : pictureSize,
                         fallback: thing.source,
                         perishable: perishable, circular: circular)
         case .screenshot, .photoData:
-            PhotoWell(thing: thing, size: DS.Mark.row)
+            PhotoWell(thing: thing, size: pictureSize)
         case .glyph:
             BridgeIcon(name: thing.source, size: DS.Mark.row,
                        symbol: BridgeIcon.noteSymbol(for: thing))

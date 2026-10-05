@@ -154,7 +154,7 @@ guards() {
   # centred in, the title on one line, and no count tail anywhere.
   grep -q -- '.frame(minHeight: Self.headHeight,' <<< "$T" \
     || echo "DSFeedRow's head is no longer a fixed-minimum block (prd §902)"
-  grep -q -- 'HStack(alignment: .center, spacing: DS.Space.s3)' <<< "$T" \
+  grep -q -- 'HStack(alignment: groupedSource == nil ? .center : .top, spacing: DS.Space.s3)' <<< "$T" \
     || echo "DSFeedRow's lead is no longer centred in the head (prd §902)"
   grep -q -- '.lineLimit(1)' <<< "$T" \
     || echo "DSFeedRow's title wraps again (prd §902: one line)"
@@ -202,7 +202,7 @@ mutate "the title wraps again (prd §902)" template \
 mutate "the head lost its floor (prd §902)" template \
   's/\.frame\(minHeight: Self\.headHeight,/.frame(/'
 mutate "the lead back at the top of the head (prd §902)" template \
-  's/HStack\(alignment: \.center, spacing: DS\.Space\.s3\)/HStack(alignment: .top, spacing: DS.Space.s3)/'
+  's/HStack\(alignment: groupedSource == nil \? \.center : \.top, spacing: DS\.Space\.s3\)/HStack(alignment: .top, spacing: DS.Space.s3)/'
 mutate "a fold's lead back on its plate (prd §903)" rows \
   's/(struct BandRow: View \{)/struct DSFoldLeadUse { let v = DSFoldLead(source: "") }\n$1/'
 mutate "a fold counts its members again (prd §902)" rows \
