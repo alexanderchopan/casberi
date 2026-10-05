@@ -46,8 +46,11 @@ struct WalletWarning: Identifiable, Equatable {
             switch self {
             case .liquidation:   "chart.line.downtrend.xyaxis"
             case .poisoning:     "eye.trianglebadge.exclamationmark.fill"
-            case .spoofedSymbol: "doc.on.doc.fill"
-            case .fakeTransfer:  "trash.fill"
+            // A token that is not what its name says, and a transfer that
+            // never really came (user's picks, prd §1107a): `doc.on.doc` read
+            // as Copy and `trash` as Delete — verbs, not what happened.
+            case .spoofedSymbol: "xmark.seal.fill"
+            case .fakeTransfer:  "arrow.down.circle.dotted"
             case .approval:      "key.fill"
             case .safe:          "signature"
             case .delegation:    "arrow.triangle.branch"

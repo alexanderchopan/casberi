@@ -8,12 +8,11 @@ import SwiftUI
 /// poisoning, fake tokens, fake transfers (user: "those are three rows"). The
 /// loan risk Risk also held went to Holdings, beside the positions it is about.
 ///
-/// **The box is a CHECKUP** (user: "checkup is the best"): one statement — what
-/// needs you, else what is worth reviewing, else "All clear" — over six counts,
-/// one per kind, in the list's own order. A count with something behind it is
-/// a door to its section; a zero is a fact and takes no tap (§83). It replaced
-/// the ringed faces over "in reach" (user: "i HATE the image we have there");
-/// the dollars in reach survive as a phrase on the line.
+/// **The box is a CHECKUP** (user: "checkup is the best"): six counts, one per
+/// kind, in the list's own order, and no statement over them (§1107a). A count
+/// with something behind it is a door to its section; a zero is a fact and
+/// takes no tap (§83). It replaced the ringed faces over "in reach" (user: "i
+/// HATE the image we have there"); what each grant reaches is on its row.
 ///
 /// The cells stand bare on the box's well, as every figure does: no plate
 /// under a cell (§758, §782).
@@ -28,7 +27,6 @@ struct WalletSecurityCounts: Equatable {
     var poisoning = 0
     var fakeTokens = 0
     var fakeTransfers = 0
-    var inReach: Double? = nil
 
     var flagged: Int { poisoning + fakeTokens + fakeTransfers }
     var isEmpty: Bool {
@@ -53,8 +51,7 @@ extension FeedScreen {
             unlimited: grants.filter(\.unlimited).count,
             poisoning: warnings.filter { $0.kind == .poisoning }.count,
             fakeTokens: warnings.filter { $0.kind == .spoofedSymbol }.count,
-            fakeTransfers: warnings.filter { $0.kind == .fakeTransfer }.count,
-            inReach: WalletPermissions.totalUSD(holders))
+            fakeTransfers: warnings.filter { $0.kind == .fakeTransfer }.count)
     }
 
     /// Where a cell's door lands: its section's header.
@@ -113,84 +110,41 @@ extension FeedScreen {
     }
 }
 
-/// The checkup: a statement, one line, and six counts in two rows of three —
-/// what can act for you over what is trying to fool you.
+/// The checkup: six counts in two rows of three — what can act for you over
+/// what is trying to fool you — and nothing else (prd §1107a, user: "i'm not
+/// even sure if we need to say n Needs you"). The amber counts and the tile's
+/// amber word already say what needs you, so the box gives the counts its
+/// whole height.
 struct WalletSecurityFigure: View {
     let counts: WalletSecurityCounts
     let onJump: (FeedScreen.SecurityAnchor) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(statement)
-                .dsText(.heading24)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            if let line {
-                Text(line)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
+        Grid(horizontalSpacing: DS.Space.s2, verticalSpacing: DS.Space.s4) {
+            GridRow(alignment: .top) {
+                cell(.signatures, glyph: WalletWarning.Kind.safe.glyph, count: counts.signatures,
+                     word: String(localized: "Signatures"), needsYou: counts.signatures > 0)
+                cell(.delegations, glyph: WalletWarning.Kind.delegation.glyph,
+                     count: counts.delegations,
+                     word: String(localized: "Delegations"), needsYou: false)
+                // A grant with no limit turns the count amber.
+                cell(.approvals, glyph: WalletWarning.Kind.approval.glyph, count: counts.approvals,
+                     word: String(localized: "Approvals"), needsYou: counts.unlimited > 0)
             }
-            Spacer(minLength: 0)
-            Grid(horizontalSpacing: DS.Space.s2, verticalSpacing: DS.Space.s3) {
-                GridRow {
-                    cell(.signatures, glyph: WalletWarning.Kind.safe.glyph, count: counts.signatures,
-                         word: String(localized: "Signatures"), needsYou: counts.signatures > 0)
-                    cell(.delegations, glyph: WalletWarning.Kind.delegation.glyph,
-                         count: counts.delegations,
-                         word: String(localized: "Delegations"), needsYou: false)
-                    // How many are unlimited is the line's to say; the count
-                    // turns amber for them.
-                    cell(.approvals, glyph: WalletWarning.Kind.approval.glyph, count: counts.approvals,
-                         word: String(localized: "Approvals"), needsYou: counts.unlimited > 0)
-                }
-                GridRow {
-                    cell(.poisoning, glyph: WalletWarning.Kind.poisoning.glyph, count: counts.poisoning,
-                         word: String(localized: "Address poisoning"), needsYou: counts.poisoning > 0)
-                    cell(.fakeTokens, glyph: WalletWarning.Kind.spoofedSymbol.glyph,
-                         count: counts.fakeTokens,
-                         word: String(localized: "Fake tokens"), needsYou: counts.fakeTokens > 0)
-                    // Spam is noise to recognise, not an act (§1004's ink is
-                    // for what wants you): it never turns amber.
-                    cell(.fakeTransfers, glyph: WalletWarning.Kind.fakeTransfer.glyph,
-                         count: counts.fakeTransfers,
-                         word: String(localized: "Fake transfers"), needsYou: false)
-                }
+            GridRow(alignment: .top) {
+                cell(.poisoning, glyph: WalletWarning.Kind.poisoning.glyph, count: counts.poisoning,
+                     word: String(localized: "Address poisoning"), needsYou: counts.poisoning > 0)
+                cell(.fakeTokens, glyph: WalletWarning.Kind.spoofedSymbol.glyph,
+                     count: counts.fakeTokens,
+                     word: String(localized: "Fake tokens"), needsYou: counts.fakeTokens > 0)
+                // Spam is noise to recognise, not an act (§1004's ink is for
+                // what wants you): it never turns amber.
+                cell(.fakeTransfers, glyph: WalletWarning.Kind.fakeTransfer.glyph,
+                     count: counts.fakeTransfers,
+                     word: String(localized: "Fake transfers"), needsYou: false)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    /// What needs you, else what is worth a look, else "All clear".
-    private var statement: String {
-        if counts.signatures > 0 {
-            return counts.signatures == 1 ? String(localized: "1 needs you")
-                                          : String(localized: "\(counts.signatures) need you")
-        }
-        let review = counts.unlimited + counts.poisoning + counts.fakeTokens
-        if review > 0 { return String(localized: "\(review) to review") }
-        return String(localized: "All clear")
-    }
-
-    /// The figures the cells cannot say: unlimited grants, flagged transfers,
-    /// and the dollars in reach — masked under Hide balances.
-    private var line: String? {
-        var parts: [String] = []
-        if counts.unlimited > 0 {
-            parts.append(counts.unlimited == 1 ? String(localized: "1 unlimited approval")
-                                               : String(localized: "\(counts.unlimited) unlimited approvals"))
-        }
-        if counts.flagged > 0 {
-            parts.append(counts.flagged == 1 ? String(localized: "1 flagged transfer")
-                                             : String(localized: "\(counts.flagged) flagged transfers"))
-        }
-        if let reach = counts.inReach {
-            let money = BalancePrivacy.shared.withheld ? BalancePrivacy.mask
-                                                       : WalletApprovalExposure.money(reach)
-            parts.append(String(localized: "\(money) in reach"))
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
     @ViewBuilder
@@ -199,18 +153,20 @@ struct WalletSecurityFigure: View {
         // **THE GLYPH AND THE COUNT SHARE A LINE (user: "clipping").** Stacked,
         // a cell ran ~96pt and two rows of them overran the box; side by
         // side, each cell is one line and its word, and both rows fit.
-        let face = VStack(alignment: .leading, spacing: 2) {
+        // The glyph and the count share a line, the word under them (two
+        // stacked rows clipped the box, user: "clipping").
+        let face = VStack(alignment: .leading, spacing: DS.Space.s1) {
             HStack(spacing: DS.Space.s2) {
                 ZStack {
                     Circle().fill(DS.fillFaint)
                     Image(systemName: glyph)
-                        .dsGlyph(.caption, weight: .semibold)
+                        .dsGlyph(.subhead, weight: .semibold)
                         .foregroundStyle(needsYou ? DS.attention : DS.textSecondary)
                 }
                 .frame(width: Self.disc, height: Self.disc)
                 .accessibilityHidden(true)
                 Text("\(count)")
-                    .dsText(.stat24)
+                    .dsText(.heading28)
                     .foregroundStyle(needsYou ? DS.attentionInk
                                      : (count == 0 ? DS.textTertiary : DS.textPrimary))
                     .monospacedDigit()
@@ -238,5 +194,5 @@ struct WalletSecurityFigure: View {
         }
     }
 
-    static let disc: CGFloat = 28
+    static let disc: CGFloat = 36
 }

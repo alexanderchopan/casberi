@@ -237,8 +237,11 @@ deny DSRoomScopeChrome.swift 'String(localized: "Actions")' \
   "the Actions block is back on Home — the verbs are the last tiles (prd §1039)"
 deny DSRoomScopeChrome.swift 'String(localized: "Overview")' \
   "the Overview block is back on Home (prd §1039)"
-guard DSRoomScopeChrome.swift "verbs: Set(verbs)" \
-  "the chrome no longer hands the room's verbs to the grid as verb tiles (prd §1039)"
+# **NO VERB TILES (prd §1107, §1108).** The Wallet's Watch and the devnets'
+# Create/Send/Top up left the tiles for the Accounts list and the rows; the
+# chrome hands the grid its scopes and nothing else.
+deny DSRoomScopeChrome.swift "verbs: Set(verbs)" \
+  "the chrome hands the grid verb tiles again — the room's acts are the Accounts list's and the rows' (prd §1107, §1108)"
 # **THE HEADER BECAME TILES, UNDER THE FIGURE** (prd §752, user: "i don't want
 # the app to have controls at the top of the screen anywhere"). The chrome draws
 # the scopes as a grid, and nothing brings the strip back.
