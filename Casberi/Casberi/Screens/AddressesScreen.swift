@@ -845,7 +845,8 @@ extension Contact {
         for identity in identities {
             let category: String
             switch identity.kind {
-            case .wallet, .ens, .basename, .linea, .lens, .worldApp: category = "Wallet"
+            case .wallet, .ens, .basename, .linea, .lens, .worldApp,
+                 .biller:                                            category = "Wallet"
             case .farcaster, .bluesky, .nostr:                      category = "Social"
             case .github:                                            category = "Work"
             case .contact, .email:                                   category = "Life"
@@ -880,7 +881,11 @@ struct ContactFace: View {
         // wears their INITIALS in the ring — forty identical grey
         // silhouettes told nobody apart (the design pass, 2026-09-25;
         // §753's rule for a face with no picture).
-        if let photo {
+        if contact.lead.kind == .biller, BridgeIcon.hasMark(contact.name) {
+            // A biller wears its own mark when the app knows it (prd §1106),
+            // as the Subscriptions tile's face does; else the initials below.
+            BridgeIcon(name: contact.name, size: size, circular: true)
+        } else if let photo {
             Image(uiImage: photo)
                 .resizable().scaledToFill()
                 .frame(width: size, height: size)
@@ -1107,7 +1112,16 @@ struct ContactSheet: View {
                     // the rows are the addresses, under the name.
                     VStack(spacing: 0) {
                         ForEach(contact.identities, id: \.key) { identity in
-                            identityRow(identity)
+                            // A biller's "address" is a merchant's name, which
+                            // the heading already says: it draws what it bills
+                            // instead (prd §1106).
+                            if identity.kind == .biller {
+                                if let biller = BillersSource.byKey[identity.key] {
+                                    BillerFacts(biller: biller)
+                                }
+                            } else {
+                                identityRow(identity)
+                            }
                         }
                     }
                     if !waiting.isEmpty {
@@ -1416,6 +1430,14 @@ struct ContactSheet: View {
                 take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "Nostr" }))
             case .github:
                 take(FetchDescriptor(predicate: #Predicate { $0.authorHandle == body && $0.source == "GitHub" }))
+            case .biller:
+                // A merchant's charges and bills (prd §1106), matched by name
+                // in Swift over each billing seat's newest rows.
+                for thing in BillersSource.things(forKey: identity.key, context: context,
+                                                  limit: depth ?? limit * 2, keep: keep) {
+                    found[thing.id] = WithYouRow(id: thing.id, title: thing.title,
+                                                 source: thing.source, when: thing.capturedAt)
+                }
             case .contact, .ens, .basename, .linea, .lens, .worldApp, .feed:
                 continue
             }
@@ -1525,7 +1547,7 @@ struct ContactSheet: View {
         case .email:
             guard let url = URL(string: "mailto:\(identity.body)") else { return nil }
             return { openURL(url) }
-        case .contact, .ens, .basename, .linea, .lens, .worldApp:
+        case .contact, .ens, .basename, .linea, .lens, .worldApp, .biller:
             return nil
         }
     }
@@ -1546,6 +1568,7 @@ struct ContactSheet: View {
         case .nostr:     return String(localized: "Nostr")
         case .worldApp:  return String(localized: "World App")
         case .feed:      return String(localized: "Feed")
+        case .biller:    return String(localized: "Billing")
         }
     }
 
@@ -1567,6 +1590,7 @@ struct ContactSheet: View {
         case .nostr:     return "Nostr"
         case .worldApp:  return "World App"
         case .feed:      return "RSS"
+        case .biller:    return "Apple Wallet"
         }
     }
 }

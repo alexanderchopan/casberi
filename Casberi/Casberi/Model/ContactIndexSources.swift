@@ -120,6 +120,15 @@ enum ContactIndexSources {
                 out.append(.init(Identity.make(.feed, entry.feedURL), name: entry.displayName, kind: .publication))
             }
         }
+
+        // Billers (prd §1106): every merchant that charges you on a schedule,
+        // read as the Subscriptions tile reads them. The merchant's name is
+        // the card's word, not one you typed; what pays it is searched.
+        for biller in BillersSource.read(context: context) {
+            out.append(.init(Identity.make(.biller, biller.item.name), name: biller.item.name,
+                             kind: .organization, since: biller.item.since,
+                             keywords: [biller.item.paysWith ?? ""]))
+        }
         return out
     }
 
@@ -196,7 +205,8 @@ enum ContactIndexSources {
         var descriptor = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
         descriptor.fetchLimit = activityWindow
         descriptor.propertiesToFetch = [\.source, \.kind, \.sourceRef, \.authorHandle, \.walletAddress,
-                                        \.counterpartyAddress, \.authorEmail, \.title, \.capturedAt, \.quote]
+                                        \.counterpartyAddress, \.authorEmail, \.title, \.capturedAt, \.quote,
+                                        \.transferCounterparty, \.dueAt]
         var rows: [ContactIndex.ActivityRow] = []
         for thing in (try? context.fetch(descriptor)) ?? [] {
             guard thing.kind != .contact else { continue }
@@ -216,7 +226,7 @@ enum ContactIndexSources {
                 source: thing.source, kind: thing.kind.rawValue, sourceRef: thing.sourceRef,
                 authorHandle: thing.authorHandle, walletAddress: nil,
                 counterpartyAddress: thing.counterpartyAddress, authorEmail: thing.authorEmail,
-                isNotification: notification)
+                isNotification: notification, merchant: BillersSource.merchant(of: thing))
             let social = ["Farcaster", "Bluesky", "Nostr"].contains(thing.source)
             if !withKeys.isEmpty {
                 rows.append(.init(keys: withKeys, title: thing.title, at: thing.capturedAt,

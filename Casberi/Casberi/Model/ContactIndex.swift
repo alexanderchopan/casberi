@@ -23,6 +23,9 @@ struct Identity: Hashable, Codable {
         case contact, email, github, wallet
         case ens, basename, linea, farcaster, lens
         case bluesky, nostr, worldApp, feed
+        /// A merchant that charges you on a schedule (prd §1106) — LAST, so a
+        /// biller never leads a contact a card or an address also names.
+        case biller
 
         var precedence: Int { Self.allCases.firstIndex(of: self) ?? .max }
 
@@ -46,6 +49,7 @@ struct Identity: Hashable, Codable {
             case .nostr:     return "nostr:"
             case .worldApp:  return "world:"
             case .feed:      return "feed:"
+            case .biller:    return "biller:"
             case .wallet, .ens, .basename, .linea, .lens: return ""
             }
         }
@@ -99,7 +103,7 @@ struct Identity: Hashable, Codable {
         case .wallet:                    return "…" + body.suffix(4)
         case .farcaster, .bluesky:       return "@" + body
         case .email, .github, .contact,
-             .nostr, .worldApp, .feed,
+             .nostr, .worldApp, .feed, .biller,
              .ens, .basename, .linea, .lens: return body
         }
     }
@@ -376,8 +380,16 @@ enum ContactIndex {
     static func keys(source: String, kind: String, sourceRef: String?,
                      authorHandle: String?, walletAddress: String?,
                      counterpartyAddress: String?, authorEmail: String?,
-                     isNotification: Bool) -> [String] {
+                     isNotification: Bool, merchant: String? = nil) -> [String] {
         var out: [String] = []
+        // The merchant a card charge or a bill names (prd §1106). The caller
+        // passes it only for a billing seat's row, so a wallet transfer's
+        // counterparty NAME never becomes a biller. `Identity.key` trims and
+        // lowercases, as `AppleWalletRoom.merchantKey` does, so this
+        // key is the subscriptions' merge key behind the prefix.
+        if let m = merchant, !m.trimmingCharacters(in: .whitespaces).isEmpty {
+            out.append(Identity.key(.biller, m))
+        }
         if kind == "contact", let ref = sourceRef, ref.hasPrefix("contact:") {
             out.append(Identity.key(.contact, ref))
         }

@@ -2452,6 +2452,13 @@ harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selfte
 # $20.29 for a $20 plan, one plan counted twice, a euro plan counted at par.
 harness "Subscriptions pure-logic self-test" "subscriptions" "scripts/subscriptions-selftest.sh" "the subscriptions self-test failed — run scripts/subscriptions-selftest.sh"
 
+# Billers in the address book (prd §1106): every merchant that charges on a
+# schedule, the moving bills a subscription refuses included. Every failure is
+# an ordinary-looking address book: the power bill missing, a coffee shop filed
+# as a biller, a cancelled plan still standing, a plan twice, a biller page
+# with no charges because its key and its charges' keys disagree.
+harness "Billers pure-logic self-test" "billers" "scripts/billers-selftest.sh" "the billers self-test failed — run scripts/billers-selftest.sh"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of
