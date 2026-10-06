@@ -258,11 +258,14 @@ enum ContactIndex {
         }
         var edges: [String: [ContactLink]] = [:]
         for link in links where link.merges {
-            for end in [link.a, link.b] where parent[end] == nil {
-                guard Identity.parse(key: end) != nil else { continue }
-                parent[end] = end
-            }
-            guard parent[link.a] != nil, parent[link.b] != nil else { continue }
+            // Both ends must stand before EITHER becomes a node. A link to a
+            // retired kind (`fc:`, `nostr:`) names nobody, and the old order
+            // kept its wallet end anyway: every Farcaster verification in the
+            // ledger drew a wallet nobody added under Not named yet, with no
+            // store behind it to remove it from.
+            let ends = [link.a, link.b]
+            guard ends.allSatisfy({ parent[$0] != nil || Identity.parse(key: $0) != nil }) else { continue }
+            for end in ends where parent[end] == nil { parent[end] = end }
             union(link.a, link.b)
             edges[link.a, default: []].append(link)
             edges[link.b, default: []].append(link)
