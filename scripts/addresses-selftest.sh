@@ -140,8 +140,15 @@ contacts = ContactIndex.build(seeds: [alexWallet], links: [ContactLink(A, "jesse
 check(contacts.count == 1 && contacts[0].identities.map(\.kind) == [.wallet, .basename],
       "a verified name with no seed joins the wallet as a basename identity")
 contacts = ContactIndex.build(seeds: [alexWallet], links: [ContactLink(A, "garbage key", tier: .verified, source: "x")])
-check(contacts.count == 1 && contacts[0].identities.count == 1 || contacts[0].identities.count == 2,
-      "an unparseable link end never crashes the build")
+check(contacts.count == 1 && contacts[0].identities.count == 1,
+      "an unparseable link end never crashes the build, and never joins")
+let orphan = "0x00000000000000000000000000000000000ff78a"
+contacts = ContactIndex.build(seeds: [alexWallet], links: [ContactLink(orphan, "fc:jesse", tier: .verified, source: "farcaster.verifications")])
+check(contacts.count == 1 && contacts[0].id == A,
+      "a link to a retired kind draws no contact for its other end (the Not named yet wall)")
+contacts = ContactIndex.build(seeds: [alexWallet], links: [ContactLink(A, "fc:jesse", tier: .verified, source: "farcaster.verifications")])
+check(contacts.count == 1 && contacts[0].identities.map(\.kind) == [.wallet],
+      "a seed's link to a retired kind leaves the seed as it was")
 
 // ── Build: lead precedence and id stability ─────────────────────────────
 let card = ContactIndex.Seed(Identity.make(.contact, "contact:c1"), name: "Alex Chopan", typed: true, since: t2)
@@ -424,6 +431,11 @@ mutate "a display name becomes a merge key" "$INDEX" \
         var byName: [String: String] = [:]
         for s in seeds { if let n = s.name { if let o = byName[n] { links.append(ContactLink(o, s.identity.key, tier: .verified, source: "name")) } else { byName[n] = s.identity.key } } }
         for link in links where link.merges {'
+mutate "a link to a retired kind keeps its other end as a contact" "$INDEX" \
+  '            guard ends.allSatisfy({ parent[$0] != nil || Identity.parse(key: $0) != nil }) else { continue }
+            for end in ends where parent[end] == nil { parent[end] = end }' \
+  '            for end in ends where parent[end] == nil && Identity.parse(key: end) != nil { parent[end] = end }
+            guard ends.allSatisfy({ parent[$0] != nil }) else { continue }'
 mutate "the lead ignores precedence" "$INDEX" \
   '                if l.kind.precedence != r.kind.precedence { return l.kind.precedence < r.kind.precedence }
                 let ls' \
