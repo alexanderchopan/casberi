@@ -82,7 +82,7 @@ enum HomeScope {
 enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// Home: the feed, Today then Coming up (§1136 item 7). Spelled `feed`
     /// because `home` is the wallet family's Home tile, another glyph.
-    case feed, markets, notes, sources
+    case feed, markets, notes, settings
 
     var id: String { rawValue }
 
@@ -91,7 +91,7 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .feed:     return String(localized: "Home")
         case .markets:  return String(localized: "Markets")
         case .notes:    return String(localized: "Notes")
-        case .sources:  return String(localized: "Sources")
+        case .settings: return String(localized: "Settings")
         }
     }
 
@@ -101,7 +101,7 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .feed:     return String(localized: "Today, then what is coming up")
         case .markets:  return String(localized: "What you watch")
         case .notes:    return String(localized: "Your notes and everything you pinned")
-        case .sources:  return String(localized: "Everything you have connected")
+        case .settings: return String(localized: "Everything you have connected")
         }
     }
 
@@ -110,7 +110,7 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         if source == "All" { self = .feed }
         else if source == Pinboard.room { self = .notes }
         else if HomeScope.isMarkets(source) { self = .markets }
-        else if HomeScope.Place(source: source) == .settings { self = .sources }
+        else if HomeScope.Place(source: source) == .settings { self = .settings }
         else { return nil }
     }
 }

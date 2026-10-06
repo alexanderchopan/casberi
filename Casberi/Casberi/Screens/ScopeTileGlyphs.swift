@@ -83,17 +83,16 @@ enum ScopeTileGlyph {
     static let feed         = "house"
     /// You's Notes place (prd §1136): the tray's Notes door.
     static let notes        = "note.text"
-    /// You's Sources place (prd §1136, renamed from Settings the same day:
-    /// "lets call 'settings' 'sources' i think sources makes more sense
-    /// now"): everything your things come from, linked to you.
-    static let sources      = "link"
-    /// Sources' People (prd §1136 item 5): the people behind your accounts.
+    /// You's Settings place (prd §1136, §1136k): the system's gear. It was
+    /// Sources, wearing `link`, for an afternoon (§1136a).
+    static let settings     = "gearshape"
+    /// Settings' People (prd §1136 item 5): the people behind your accounts.
     static let people       = "person.crop.circle"
-    /// Sources' Calendars (prd §1136e, §1137): the calendars you subscribe to.
+    /// Settings' Calendars (prd §1136e, §1137): the calendars you subscribe to.
     static let calendars    = "calendar"
-    /// Sources' Feeds (prd §1136h): sites, channels and repos you follow.
+    /// Settings' Feeds (prd §1136h): sites, channels and repos you follow.
     static let feeds        = "dot.radiowaves.up.forward"
-    /// Sources' Mailing lists (prd §1136h): the lists that write to your mail.
+    /// Settings' Mailing lists (prd §1136h): the lists that write to your mail.
     static let newsletters  = "newspaper"
 }
 
@@ -240,12 +239,12 @@ extension YouTile: DSTileScope {
         case .feed:     return ScopeTileGlyph.feed
         case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
         case .notes:    return ScopeTileGlyph.notes
-        case .sources:  return ScopeTileGlyph.sources
+        case .settings: return ScopeTileGlyph.settings
         }
     }
 }
 
-/// Sources' own filters (prd §1136 item 5). Subs wears Subscriptions' arrows,
+/// Settings' own filters (prd §1136 item 5). Subs wears Subscriptions' arrows,
 /// its own name; Add is the bare plus every New wears.
 extension SettingsScope: DSTileScope {
     var glyph: String {

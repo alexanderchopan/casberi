@@ -353,7 +353,7 @@ struct RoomsTray: View {
             // white disc already says which place is standing.
             Door(word: String(localized: "Notes"), glyph: ScopeTileGlyph.notes,
                  lit: notes, key: Pinboard.room) { pick(Pinboard.room) },
-            Door(word: String(localized: "Sources"), glyph: ScopeTileGlyph.sources,
+            Door(word: String(localized: "Settings"), glyph: ScopeTileGlyph.settings,
                  lit: place == .settings || place == .apps || place == .addresses,
                  key: HomeScope.Place.settings.source) { screen(.casberi) },
         ]

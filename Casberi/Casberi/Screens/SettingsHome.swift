@@ -47,7 +47,7 @@ struct SettingsHome: View {
                     .dsRoomLeadListRow()
             }
             Section {
-                YouTilesRow(active: .sources)
+                YouTilesRow(active: .settings)
                     .dsRoomTilesListRow()
             }
             Section {
@@ -105,7 +105,7 @@ struct SettingsHome: View {
         .dsAdaptiveContentWidth(.reading)
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle(Text("Sources"))
+        .navigationTitle(Text("Settings"))
         .toolbar(.hidden, for: .navigationBar)
         .task { await read() }
         #if DEBUG
@@ -262,7 +262,7 @@ struct SettingsHome: View {
     /// below opens that connection's settings, and this is Casberi's.
     private var casberiRow: some View {
         DSPushRow(title: Text(verbatim: "Casberi"),
-                  subtitle: Text("Settings · iCloud, notifications, privacy")) {
+                  subtitle: Text("iCloud, notifications, privacy")) {
             withAnimation(DS.Motion.standard) { casberiOpen = true }
         } leading: {
             CasberiMark(size: DS.Face.row)
@@ -271,7 +271,7 @@ struct SettingsHome: View {
 
     @ViewBuilder
     private var casberiOptions: some View {
-        DSPushRow(title: Text("Sources"), subtitle: Text("Back to everything you've connected")) {
+        DSPushRow(title: Text("Settings"), subtitle: Text("Back to everything you've connected")) {
             withAnimation(DS.Motion.standard) { casberiOpen = false }
         } leading: {
             Image(systemName: "chevron.left")
@@ -423,7 +423,7 @@ struct SettingsHome: View {
     }
 }
 
-/// Sources' six kinds, picked by pressing their counts in the box, and the
+/// Settings' six kinds, picked by pressing their counts in the box, and the
 /// bar's two verbs (prd §1138, amending §1136h's scrolling bar of kinds).
 /// No All: the box is the overview of all of it (user: "the sources screen
 /// IS that list"). Add adds the kind you're on; Search searches it.

@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// YOU'S TILES (prd §1136 item 1): Home · Markets · Notes · Sources, drawn
+/// YOU'S TILES (prd §1136 item 1): Home · Markets · Notes · Settings, drawn
 /// under the box on every place in You, in the same spot, so moving between
 /// them never moves the frame. Each pick lands the place the tray's You row
-/// lands: a feed through `sourceRequest`, Sources through `route.present`.
+/// lands: a feed through `sourceRequest`, Settings through `route.present`.
 struct YouTilesRow: View {
     let active: YouTile
     @Environment(ShellChrome.self) private var chrome
@@ -21,7 +21,7 @@ struct YouTilesRow: View {
     static func open(_ tile: YouTile, chrome: ShellChrome, route: HomeRoute) {
         DSHaptic.selection()
         switch tile {
-        case .sources:
+        case .settings:
             route.present(.casberi)
         case .markets where (chrome.categoryVenues[HomeScope.markets] ?? []).isEmpty:
             // Markets' own page until something is watched (prd §1123).

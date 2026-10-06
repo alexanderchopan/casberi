@@ -1495,7 +1495,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
 - §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
-- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue
+- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue [+1 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 
