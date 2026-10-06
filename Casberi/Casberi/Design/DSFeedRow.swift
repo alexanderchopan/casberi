@@ -102,9 +102,6 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                 if groupedSource == nil {
                     lead
                         .frame(width: Self.leadSize, height: Self.leadSize)
-                        // Round, like every other mark in the app (see
-                        // `BridgeIcon.roundInContext`).
-                        .environment(\.dsRoundBrandMarks, true)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {

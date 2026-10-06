@@ -220,7 +220,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1255 of 1316 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1256 of 1317 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1405,10 +1405,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1055 — Media is one room, built: its apps and Photos fold in, its list is one square grid, and the music shelf is deleted (amended by §1118)
 - §1056 — Life splits into Life and Day, each one room, and Notes is no category, built
 - §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows… (amended by §1079, §1080, §1118)
-- §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu
+- §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu (amended by §1122)
 - §1059 — The folded rooms' own views are deleted: the kind tiles, Reminders' and Mail's tiles, the Calendar agenda, and every…
 - §1060 — The rest of the folded rooms' controls are deleted: GitHub's and Pinterest's scope rails and Privacy Pools' tiles, wh… (amended by §1072)
-- §1061 — The tray's rows are a name and a run of icons: the category's own disc first, its three most-opened apps, "+N"; You i… (amended by §1094)
+- §1061 — The tray's rows are a name and a run of icons: the category's own disc first, its three most-opened apps, "+N"; You i… (amended by §1094, §1122)
 - §1062 — A swipe right on Home opens the tray (a user: on Home "there is nothing to swipe right onto", wishing it raised the t…
 - §1063 — The Wallet category wears the dollar sign
 - §1064 — In the demo, no pick opens an empty page
@@ -1477,6 +1477,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1119 — An app that needs only a name opens its Track tray over Apps, and every follow app's page keeps what only it can do (amended by §1120)
 - §1120 — The verb is Follow a feed, and the leftovers of the follow sweep (amended by §1121)
 - §1121 — Two verbs: Follow for everything you keep up with, Track for subscriptions
+- §1122 — The tray lines its icons up in columns over a blurred room, an app is a rounded square and a person a circle, in the…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -196,6 +196,21 @@ private struct DSGlassModifier: ViewModifier {
     }
 }
 
+/// The room behind a floating menu, blurred (prd §1122): what Messages'
+/// plus menu does to the conversation under it. Under Reduce Transparency it
+/// is the page itself, mostly opaque, so the menu still stands alone.
+struct DSBackdropBlur: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        if reduceTransparency {
+            Rectangle().fill(DS.page.opacity(0.92))
+        } else {
+            Rectangle().fill(.ultraThinMaterial)
+        }
+    }
+}
+
 @available(iOS 26.0, *)
 private struct DSGlassMaterialize: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

@@ -628,7 +628,6 @@ extension FeedScreen {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 BridgeIcon(name: source, size: DS.Mark.badge)
-                    .environment(\.dsRoundBrandMarks, true)
                 Text(BridgeCatalog.seatName(forSource: source))
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)

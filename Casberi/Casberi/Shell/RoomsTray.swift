@@ -8,7 +8,8 @@ import SwiftUI
 /// our tray covers the entire width of the app and it looks weird"). It is
 /// Messages' attachment menu: a rounded glass card above the face's corner,
 /// about two thirds of the screen wide, scrolling when the list is longer
-/// than the card. Since §1061 a row is a name and a run of round icons:
+/// than the card. Since §1061 a row is a name and a run of icons (an app's
+/// a rounded square since §1122, in columns under a blurred room):
 /// You's four doors (Home, Notes, Addresses, Settings) lead, then each
 /// category in the person's Dock order (§1050j) — its own disc, its two
 /// most-opened apps, "+N". No grabber, no detents and no search
@@ -41,6 +42,12 @@ struct RoomsTray: View {
     /// How many apps a row shows before its "+N" — two since §1094, so the
     /// category's own disc keeps its seat at 44 and the name keeps its room.
     static let appsShown = 2
+    /// A category's run is a fixed four columns — its disc, two apps, "+N" —
+    /// standing under the You row's last four, so every category's own disc
+    /// sits in ONE column (prd §1122). Right-aligned runs put Markets' disc at
+    /// the far edge and Testnets' in the middle.
+    static let runSlots = 4
+    static var runWidth: CGFloat { CGFloat(runSlots) * icon + CGFloat(runSlots - 1) * iconGap }
     /// 60 since prd §1094a (user: "create some space between the rows so it
     /// doesn't look so cramped"): 16pt between a row's 44pt discs and the
     /// next, and ten rows before the card scrolls on a 17 Pro.
@@ -68,12 +75,14 @@ struct RoomsTray: View {
             ZStack(alignment: .bottomLeading) {
                 if chrome.roomsTray {
                     // The catcher: a tap anywhere else closes the menu — a
-                    // real control, so it is a Button. Clear, as Messages'
-                    // is: the card floats over the room, it does not dim it.
+                    // real control, so it is a Button. It BLURS the room, as
+                    // Messages' plus menu does (prd §1122, amending §1058's
+                    // clear catcher): the room's box stood out past the card's
+                    // edge and its pink ink bled through the glass.
                     Button {
                         close()
                     } label: {
-                        Color.black.opacity(0.001).ignoresSafeArea()
+                        DSBackdropBlur().ignoresSafeArea()
                     }
                     .buttonStyle(.plain)
                     // …and a SWIPE anywhere else closes it too (2026-10-03,
@@ -321,11 +330,12 @@ struct RoomsTray: View {
                 .dsTapTarget()
                 .contentShape(Rectangle().inset(by: -Self.iconGap / 2))
                 .accessibilityLabel(Text("All of \(category)"))
+                // An app is a rounded square, a place a circle (prd §1122).
                 ForEach(shown, id: \.name) { app in
                     Button {
                         pick(app.source ?? app.name)
                     } label: {
-                        BridgeIcon(name: app.mark, size: Self.icon, circular: true)
+                        BridgeIcon(name: app.mark, size: Self.icon)
                     }
                     .buttonStyle(PressSpring())
                     .dsTapTarget()
@@ -336,16 +346,18 @@ struct RoomsTray: View {
                     Button {
                         pickCategory(category)
                     } label: {
+                        // Plain words, not a disc: a count is not a place.
                         Text(verbatim: "+\(more)")
                             .dsText(.body17)
                             .foregroundStyle(DS.textSecondary)
                             .frame(width: Self.icon, height: Self.icon)
-                            .background(Circle().fill(DS.surfaceRaised))
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(PressSpring())
                     .accessibilityLabel(Text("\(more) more in \(category)"))
                 }
             }
+            .frame(width: Self.runWidth, alignment: .leading)
         }
         .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
     }

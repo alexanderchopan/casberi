@@ -50,14 +50,6 @@ struct BridgeIcon: View {
     /// A glyph drawn on the brand fill in place of the seat's own mark —
     /// `noteSymbol(for:)`'s answer for a note of yours, nil everywhere else.
     var symbol: String? = nil
-    /// **A ROW'S LEAD IS ROUND (user, 2026-09-26: "should all the tiles be
-    /// circles instead of square so its cohesive with rest of app?").** The
-    /// tray, the face, the avatars and the account silhouettes are circles,
-    /// and the same app wore a circle in the tray and a squircle in its feed
-    /// row. `DSFeedRow` sets this for its lead slot, so every brand mark in a
-    /// row is round without 64 call sites changing — and a badge riding the
-    /// lead is untouched, because it is not a brand icon.
-    @Environment(\.dsRoundBrandMarks) private var roundInContext
 
     var assetName: String {
         // DIACRITICS ARE FOLDED (2026-08-27, "Ethrex Hegotá"). An asset
@@ -84,7 +76,10 @@ struct BridgeIcon: View {
     }
 
     private var shape: AnyShape {
-        circular || roundInContext ? AnyShape(Circle())
+        // An app is a rounded square and a person a circle (prd §1122,
+        // reversing 2026-09-26's round leads): the feed row and the tray
+        // draw an app's mark in its own shape.
+        circular ? AnyShape(Circle())
                  : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous))
     }
 
@@ -183,17 +178,7 @@ struct TokenIcon: View {
     }
 }
 
-private struct DSRoundBrandMarksKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
 extension EnvironmentValues {
-    /// Brand icons draw as circles in this subtree (`DSFeedRow`'s lead).
-    var dsRoundBrandMarks: Bool {
-        get { self[DSRoundBrandMarksKey.self] }
-        set { self[DSRoundBrandMarksKey.self] = newValue }
-    }
-
     /// The source whose app header this subtree stands under (prd §1103a);
     /// `DSFeedRow` draws no lead under it.
     var dsGroupedSource: String? {
