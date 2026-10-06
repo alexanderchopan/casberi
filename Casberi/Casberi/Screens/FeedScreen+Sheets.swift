@@ -87,6 +87,8 @@ extension FeedScreen {
         case followingAdd(Following.Room)
         /// The Notes room's Search (prd §1099).
         case notesSearch
+        /// Subscribe to a calendar, from an empty Coming up (prd §1137).
+        case calendarSubscribe
         /// Social's Follow (prd §1086).
         case socialFollow
         /// The Wallet's Follow (prd §1090), the Watch tile since prd §1105.
@@ -131,6 +133,7 @@ extension FeedScreen {
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
             case .followingAdd(let room): "followingAdd:\(room.rawValue)"
             case .notesSearch: "notesSearch"
+            case .calendarSubscribe: "calendarSubscribe"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
             case .walletTokens: "walletTokens"
@@ -330,6 +333,8 @@ extension FeedScreen {
                     openThing(thing)
                 }
             }
+        case .calendarSubscribe:
+            CalendarSubscribeSheet()
         case .notesSearch:
             NotesSearchSheet { thing in
                 // One sheet at a time (§872): the tray closes, then the

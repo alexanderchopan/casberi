@@ -86,14 +86,34 @@ extension FeedScreen {
     func dayComingUpSections(nextEventID: UUID?) -> some View {
         let groups = comingUpDays(dayComingUp)
         if groups.isEmpty {
+            // Empty, it shows what would fill it (prd §769), as two doors
+            // (prd §1137a): no calendar is added for you, because a default
+            // would reach a host you never chose and fill the week with
+            // dates you never asked for.
             Section {
                 Text("Nothing on the calendar this week.")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                              bottom: DS.Space.s4, trailing: DSRoomChassis.rowInset))
+                                              bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                if !connectedSeatNames.contains("Calendar") {
+                    DSDoorRow(icon: ScopeTileGlyph.calendars, label: "Connect Calendar") {
+                        route.openSetup(forOffer: "Calendar")
+                    }
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                              bottom: 0, trailing: DSRoomChassis.rowInset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+                DSDoorRow(icon: ScopeTileGlyph.new, label: "Subscribe to a calendar") {
+                    feedSheet = .calendarSubscribe
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                          bottom: DS.Space.s4, trailing: DSRoomChassis.rowInset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         } else {
             groupedSections(groups, nextEventID: nextEventID)
