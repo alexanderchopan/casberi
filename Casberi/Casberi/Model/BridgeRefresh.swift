@@ -247,6 +247,15 @@ enum BridgeRefresh {
                 await BridgeRefresh.stagger(s)
                 _ = await ScheduleIngest.refreshReminders(context: context)
             }
+        } else if store.bridges.first(where: { $0.id == "rem" })?.status != .paused {
+            // Rows another device landed reach this one through iCloud; a
+            // reminder deleted upstream leaves here too, on access alone
+            // (user report 2026-10-06). Lands nothing. A paused seat is left
+            // as the person set it.
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await ScheduleIngest.pruneReminders(context: context)
+            }
         }
         // One sweep serves every Health-backed seat — the plain Apple Health
         // one and each connected rider (Strava, Garmin), which are the same

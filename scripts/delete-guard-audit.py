@@ -112,8 +112,6 @@ KNOWN_SAFE = {
         "upcoming, and clearing rows that have slipped into the past is the "
         "point. Outright EventKit deletions are `healCalendar`'s job, which "
         "has its own guard.",
-    ("ScheduleIngest.swift", "ingestReminders"):
-        "the same forward-window reasoning as `ingestEvents`.",
 
     # Not absence-driven at all — these delete because somebody said so, or
     # because the upstream explicitly reported a deletion. The audit sees the
