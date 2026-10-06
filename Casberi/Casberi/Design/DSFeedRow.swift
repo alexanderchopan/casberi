@@ -141,10 +141,13 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                 }
             }
             .padding(.leading, groupedSource == nil ? 0 : Self.groupIndent)
-            // Under an app header the words sit at the TOP of the 44pt head
-            // (prd §1103a): the label above hugs its item, and the head's
-            // spare height falls below it, between this app and the next.
-            .frame(minHeight: Self.headHeight,
+            // Under an app header the row is as tall as its words (prd
+            // §1136j, user: "is this a lot of space between rows you only see
+            // four on the home screen"): it draws no lead, so the 44pt head a
+            // lead needs only pushed air between this app and the next. The
+            // header over it and the row's own insets keep the cell taller
+            // than a finger.
+            .frame(minHeight: groupedSource == nil ? Self.headHeight : 0,
                    alignment: groupedSource == nil ? .center : .top)
             below
                 .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : Self.groupIndent)

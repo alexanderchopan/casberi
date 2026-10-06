@@ -16,6 +16,7 @@ extension View {
         listStyle(.plain)
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListHeaderHeight, 0)
+            .environment(\.defaultMinListRowHeight, 0)
             .scrollIndicators(.hidden)
     }
 

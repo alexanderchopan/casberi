@@ -1849,6 +1849,12 @@ struct FeedScreen: View {
         // the materialisation its first content build needed has been paid.
         .onAppear { SwipeClock.finish() }
         .environment(\.defaultMinListHeaderHeight, 0)
+        // A row is as tall as what it draws (prd §1136j): a List gives every
+        // row 44pt unless told otherwise, and it reads that HERE, on the list —
+        // the app header's own setting, on its button, never reached it, so
+        // each header was a 20pt label in a 44pt row. Rows that are controls
+        // keep their own tap height (`DS.Hit.min`).
+        .environment(\.defaultMinListRowHeight, 0)
         // Every lead in the room reads its foot from here (prd §766).
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
