@@ -64545,3 +64545,28 @@ Pushed screens keep their `DSScreenHead`.
 5. **Going deeper still pushes.** An app's account page, a Settings detail and the reach screen keep their back door: that is a step in, not a switch. Apps keeps its pane where the shell has one (§876), keyed on the place on screen (`HomeRoute.shownPlace`) instead of the stack.
 
 **Seen** on the iPhone 17 Pro simulator: You · Home, You · Settings and You · Apps with the row at one height, the name at one size, and no back door; Day and Wallet with their names and an "All" pill.
+
+
+## §1130 — Threads can have notifications the way Instagram does, through its own sign-in; Meta's Threads API cannot give them (user: "why is it that if we have instagram notificatiosn we can't have them for Threads? i forget", then "yes" to measuring, 2026-10-05)
+
+**Why.** Nothing ruled Threads out. §726 built Instagram's live door on request and Threads was never weighed. This entry measures both routes, the official API and the web app, so the seat can be ruled on facts. It is **NOT BUILT**: building it waits on the user.
+
+**The official Threads API is out, for three reasons (measured from Meta's docs, 2026-10-05).**
+1. **It needs a server.** The code exchange (`POST graph.threads.com/oauth/access_token`) requires `client_secret`, and no PKCE is documented. The repo is public and Casberi has no backend.
+2. **It has no notifications.** No endpoint or webhook covers likes, follows, reposts or quotes. What exists is your own posts, replies, insights and `/{user-id}/mentions` (Dec 2024).
+3. **Even mentions are gated.** Without App Review advanced access for `threads_manage_mentions`, the endpoint returns only mentions made by the app's testers. Webhooks need App Review, a verified business and a public HTTPS callback.
+
+**The web app works, the §726 way, measured against a signed-in session in the built-in browser.**
+1. **It is its own seat.** `threads.net` 301s to `www.threads.com`. The web app carries its own public app id (`X-IG-App-ID: 238260118697367`, Instagram's is `936619743392459`), so Instagram's cookies do not reach it. Sign-in is "Log in with Instagram", which redirects to Instagram's login and back. Whether an in-app web view already holding the Instagram session makes that one tap is UNMEASURED.
+2. **There is no REST inbox.** `/api/v1/news/inbox/` on threads.com answers 500 `{"status":"fail"}`. The Activity feed is one persisted GraphQL query, `BarcelonaActivityFeedV2StoryListContainerQuery` (`doc_id` 38749413951373454), `POST /api/graphql`, variables `{"first":20,"selected_filters":null,…}`.
+3. **No signature, one page token.** `doc_id` and `variables` alone return an HTML page; adding `fb_dtsg` returns the feed (`data.notifications.edges`, `page_info`); `lsd` is not needed. A plain GET of `/activity` with the session cookies carries `fb_dtsg` in `DTSGInitialData`. Nothing is computed by obfuscated JS, so §701's line holds, unlike TikTok's `X-Bogus` (§726).
+4. **A row is complete.** `XTHNotificationFeedRow` carries `title` (text plus ranged entities), `sender_users` (who acted, §707's face), `timestamp`, `notif_name`, `story_type`, `destination`, and `ufi_media` with `code` (the post's shortcode, so its permalink), the post's author and its like, reply, repost and quote counts. A `XTHNotifFeedBucketHeader` row separates time buckets and lands nothing.
+5. **Opening Activity WRITES.** The page fires `BarcelonaActivityFeedMarkInboxAsSeenMutation` (`doc_id` 27685991674412591). The measurement's own tab switch marked the account's inbox seen. A read must never send it: Casberi reads, and TikTok's door holds the same rule (§731).
+
+**What a build must do.**
+1. Land under its own namespace (`threads-live:notif:`), one row per notification, the face being who acted. Threads joins Social, beside Bluesky.
+2. Pin the `doc_id` and resolve it by module name when it stops answering. The id lives in a JS bundle as `BarcelonaActivityFeedV2StoryListContainerQuery_threadsRelayOperation`, not in the page's HTML. A dead id is its own failure, never `.refused`, so it never clears the session (§711).
+3. Keep §726's three Meta rules: the `dueForHeal` ten-minute throttle, the web app's exact headers and a browser user agent, and only a refusal clears the session.
+4. Declare `threads.com`, `www.threads.com` (and the media CDNs `cdninstagram.com`, `fbcdn.net`, already Instagram's) in `NetworkReach` under "Threads live", and land the seat on the website the same session.
+
+**UNMEASURED.** The measured account had only Threads' own notices (`text_post_app_unconnected_daily_digest`, `threads_app_daily_digest`, `text_post_app_insights`, `text_post_app_unified_settings_link`). No like, reply, mention or follow was seen, so their `notif_name`s and whether `ufi_media` is filled for them are unknown. How often the `doc_id` rotates is unknown.
