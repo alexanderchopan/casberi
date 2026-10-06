@@ -1,37 +1,56 @@
 import SwiftUI
+import SwiftData
 
-// COMING UP (prd §1136 item 7, user: "i do feel some master list or calendar
-// is lacking"): one calendar across every app, under Today on Home. It reads
-// what the rooms already date — an event's start, a deadline's `dueAt`, a
-// renewal, a grant, a reminder, a calendar you subscribed to (§1137) — so no
-// room grows a calendar tile of its own.
+// COMING UP (prd §1136 item 7, §1136c, user: "well 'day' aggregated could
+// have aggregated calendar"): one calendar across every app, as Day's Coming
+// up tile — Day is the category about time — with Home ending in a door to
+// it. It reads what the rooms already date: an event's start, a deadline's
+// `dueAt`, a renewal, a grant, a reminder, a calendar you subscribed to
+// (§1137). It is the one tile in Day that reaches across categories.
 extension FeedScreen {
-    /// How far ahead Coming up looks: the five weeks the Calendar ingest and a
-    /// subscribed calendar read.
-    static let comingUpHorizon: TimeInterval = 35 * 86_400
-    /// The most rows it draws; the rooms hold the rest.
-    static let comingUpCap = 40
+    /// How far ahead Coming up looks: the week its strip draws, today and the
+    /// six days after (prd §1136b, user: "1 week pls").
+    static let comingUpDays = 7
 
     /// When a row happens: its deadline, else its own date (an event's start
-    /// is `capturedAt`, prd ScheduleIngest's rule).
+    /// is `capturedAt`, `ScheduleIngest`'s rule).
     static func comingUpWhen(_ thing: Thing) -> Date { thing.dueAt ?? thing.capturedAt }
 
-    /// What is ahead, soonest first: live rows whose date is after now and
-    /// inside the horizon.
-    func comingUp(_ visible: [Thing], now: Date = .now) -> [Thing] {
-        let end = now.addingTimeInterval(Self.comingUpHorizon)
-        return visible
+    /// The end of the week ahead: midnight after its seventh day.
+    static func comingUpEnd(now: Date = .now) -> Date {
+        let today = groupingCalendar.startOfDay(for: now)
+        return groupingCalendar.date(byAdding: .day, value: comingUpDays, to: today)
+            ?? now.addingTimeInterval(Double(comingUpDays) * 86_400)
+    }
+
+    /// Every app's rows ahead this week, soonest first. Two bounded fetches —
+    /// what STARTS ahead (events), and what is DUE ahead (deadlines, bills,
+    /// reminders, whose `capturedAt` is when they landed) — run from the
+    /// tile's `.task`, on the main context, never from a body.
+    @MainActor
+    func loadDayComingUp() {
+        let now = Date.now
+        let end = Self.comingUpEnd(now: now)
+        var starting = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.capturedAt > now && $0.capturedAt < end },
+            sortBy: [SortDescriptor(\.capturedAt)])
+        starting.fetchLimit = 300
+        var due = FetchDescriptor<Thing>(predicate: #Predicate { $0.dueAt != nil })
+        due.fetchLimit = 600
+        let a = (try? modelContext.fetch(starting)) ?? []
+        let b = (try? modelContext.fetch(due)) ?? []
+        var seen = Set<UUID>()
+        dayComingUp = (a + b)
             .filter { $0.isLive }
-            .filter { let w = Self.comingUpWhen($0); return w > now && w <= end }
+            .filter { let w = Self.comingUpWhen($0); return w > now && w < end }
+            .filter { seen.insert($0.id).inserted }
             .sorted { Self.comingUpWhen($0) < Self.comingUpWhen($1) }
-            .prefix(Self.comingUpCap)
-            .map { $0 }
     }
 
     /// The days ahead as groups: "Later today", "Tomorrow", then a weekday.
     func comingUpDays(_ rows: [Thing]) -> [(String, [Thing])] {
         var out: [(String, [Thing])] = []
-        for thing in rows {
+        for thing in rows where thing.isLive {
             let when = Self.comingUpWhen(thing)
             let label = Self.groupingCalendar.isDateInToday(when)
                 ? String(localized: "Later today") : Self.dayWord(when)
@@ -40,48 +59,61 @@ extension FeedScreen {
         return out
     }
 
+    /// Coming up's box: the week as seven days, a dot under a day with
+    /// something on it, at the lead's one size (prd §760).
+    var dayComingUpBox: some View {
+        let days = Set(dayComingUp.filter(\.isLive).map {
+            Self.groupingCalendar.startOfDay(for: Self.comingUpWhen($0))
+        })
+        return VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text("This week")
+                .dsText(.heading20)
+                .foregroundStyle(DS.textPrimary)
+            ComingUpWeek(days: days)
+        }
+        .padding(.horizontal, DS.Space.s2)
+        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
+               maxHeight: DSRoomChassis.leadBox, alignment: .leading)
+        .dsRoomHeadBlock()
+        .task(id: chrome.dayScope) { loadDayComingUp() }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                             bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+    }
+
     @ViewBuilder
-    func comingUpSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
-        let rows = comingUp(visible)
-        Section {
-            FeedDayDivider(label: String(localized: "Coming up"), dated: false) { EmptyView() }
-                .textCase(nil)
-                .padding(.leading, DSRoomChassis.rowInset)
-                .padding(.top, DS.Space.s4)
-                .padding(.bottom, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            ComingUpWeek(days: Set(rows.map { Self.groupingCalendar.startOfDay(for: Self.comingUpWhen($0)) }))
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DS.Space.s2, trailing: DSRoomChassis.inset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            if rows.isEmpty {
-                Text("Nothing on the calendar.")
+    func dayComingUpSections(nextEventID: UUID?) -> some View {
+        let groups = comingUpDays(dayComingUp)
+        if groups.isEmpty {
+            Section {
+                Text("Nothing on the calendar this week.")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                               bottom: DS.Space.s4, trailing: DSRoomChassis.rowInset))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
+        } else {
+            groupedSections(groups, nextEventID: nextEventID)
         }
-        ForEach(comingUpDays(rows), id: \.0) { label, things in
-            Section {
-                FeedDayDivider(label: label) { EmptyView() }
-                    .textCase(nil)
-                    .padding(.leading, DSRoomChassis.rowInset)
-                    .padding(.vertical, DS.Space.s1)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                ForEach(Array(things.enumerated()), id: \.element.id) { i, thing in
-                    if thing.isLive {
-                        shapedListRow(thing, index: i, nextEventID: nextEventID)
-                    }
-                }
+    }
+
+    /// Home's last row (prd §1136c): the door to Day's Coming up. Home is
+    /// Today; what is ahead is one tap away, in the category about time.
+    @ViewBuilder
+    var comingUpDoor: some View {
+        Section {
+            DSDoorRow(icon: ScopeTileGlyph.comingUp, label: "Coming up") {
+                chrome.dayScope = .comingUp
+                chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
+                chrome.sourceRequest = RoomAccounts.dayRoom
             }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(.init(top: DS.Space.s4, leading: DSRoomChassis.rowInset,
+                                 bottom: DS.Space.s4, trailing: DSRoomChassis.rowInset))
         }
     }
 }
@@ -94,7 +126,7 @@ struct ComingUpWeek: View {
     var body: some View {
         let cal = FeedScreen.groupingCalendar
         let today = cal.startOfDay(for: .now)
-        let week = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: today) }
+        let week = (0..<FeedScreen.comingUpDays).compactMap { cal.date(byAdding: .day, value: $0, to: today) }
         HStack(spacing: DS.Space.s1) {
             ForEach(week, id: \.self) { day in
                 let isToday = day == today

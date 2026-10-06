@@ -143,6 +143,7 @@ extension DayScope: DSTileScope {
     var glyph: String {
         switch self {
         case .all: return ScopeTileGlyph.all
+        case .comingUp: return ScopeTileGlyph.comingUp
         case .subscriptions: return ScopeTileGlyph.subscriptions
         case .new: return ScopeTileGlyph.new
         }

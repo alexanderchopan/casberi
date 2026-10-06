@@ -8,13 +8,17 @@ import Foundation
 /// something we are converging on and having user build up"). Foundation-
 /// only, its conformance beside every other in `ScopeTileGlyphs.swift`.
 enum DayScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, subscriptions, new
+    /// Coming up (prd §1136c): every app's dated things, a week at a time —
+    /// the one tile in Day that reaches across categories, because Day is the
+    /// category about time.
+    case all, comingUp, subscriptions, new
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
         case .all: return String(localized: "All")
+        case .comingUp: return String(localized: "Coming up")
         case .subscriptions: return String(localized: "Subscriptions")
         case .new: return String(localized: "New")
         }
@@ -23,6 +27,7 @@ enum DayScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .all: return String(localized: "What needs you next")
+        case .comingUp: return String(localized: "Everything dated, from every app")
         case .subscriptions: return String(localized: "The newsletters and lists that write to you")
         case .new: return String(localized: "Make an event, a reminder or an email")
         }

@@ -64689,3 +64689,11 @@ The field says Search mail, and it searches every sender kept whose mail carried
 ### §1136a — Settings is called Sources (user, 2026-10-06: "lets call 'settings' 'sources' i think sources makes more sense now")
 
 The master list of §1136 items 3–6 is **Sources**: the You tile, the tray's door and the title ("Alex · Sources"), its glyph `link`. Casberi's own options keep the word Settings on their pinned row ("Casberi · Settings, iCloud, notifications, privacy"), and every door that opened Settings — ⌘,, `casberi://settings`, `-openSettings` — opens Sources, through the same `.casberi` place. You's tiles are Home · Markets · Notes · Sources, Home first and A–Z.
+
+### §1136b — Coming up is one week (user, 2026-10-06: "1 week pls")
+
+Home's Coming up reaches exactly as far as its strip: today and the six days after (`FeedScreen.comingUpDays`). It was five weeks and forty rows, which ran past the strip's last day. Further out belongs to the categories: Day for events, the Wallet for renewals.
+
+### §1136c — Coming up is Day's tile, and Home ends in a door to it (user, 2026-10-06: "well 'day' aggregated could have aggregated calendar"; "yes that's fine"; amends §1136 item 7 and §1136b)
+
+Home is Today only. What is ahead is **Day's Coming up tile** — Day is the category about time — the one tile in Day that reaches across categories: every app's dated rows this week (an event's start, a `dueAt` deadline, a bill, a reminder, a subscribed calendar), the week strip in the box, then Later today, Tomorrow and the weekdays. Day's All stays its own apps. Home's last row is the door to it ("Coming up", `FeedScreen.comingUpDoor`). The tiles read All · Coming up · Subscriptions, then New.

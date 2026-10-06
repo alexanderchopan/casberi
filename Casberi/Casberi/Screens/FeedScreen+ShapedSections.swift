@@ -476,10 +476,10 @@ extension FeedScreen {
                 // bundling there would collapse the whole screen into one row.
                 bundledSections(visible, nextEventID: nextEventID,
                                 heroShown: heroShown)
-                // Under Today, Coming up (prd §1136 item 7): one calendar for
-                // the whole app. The corpus floor went with yesterday: Home
-                // no longer reaches back to where the corpus starts.
-                comingUpSections(visible, nextEventID: nextEventID)
+                // Home is Today (prd §1136 item 7), ending in the door to
+                // Day's Coming up (§1136c). The corpus floor went with
+                // yesterday: Home no longer reaches back to where it starts.
+                comingUpDoor
             } else if source == RoomAccounts.workRoom {
                 workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.dayRoom {

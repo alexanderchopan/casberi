@@ -743,6 +743,9 @@ struct FeedScreen: View {
     @State var keptHighlights: [Thing] = []
     /// Today's shape under Day's next thing (prd §1087). Value types only.
     @State var dayStrip: DayStrip?
+    /// Day's Coming up tile (prd §1136c): every app's dated rows ahead, read
+    /// in the tile's own `.task`, never in a body (§628).
+    @State var dayComingUp: [Thing] = []
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State var openProject: ProjectRoute?

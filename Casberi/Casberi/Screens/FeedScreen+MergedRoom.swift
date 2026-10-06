@@ -92,12 +92,15 @@ extension FeedScreen {
         let next = visible.filter { $0.isLive && Self.dayWhen($0) >= now }
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
         let subscriptions = chrome.dayScope == .subscriptions
-        let cover = heroShown || subscriptions ? nil : (next ?? visible.first { $0.isLive })
+        let comingUp = chrome.dayScope == .comingUp
+        let cover = heroShown || subscriptions || comingUp ? nil : (next ?? visible.first { $0.isLive })
         // Box B (prd §1087): the next thing over today's shape, while there
         // is a next thing and a day to draw; else the cover, as every room.
         // Subscriptions draws its own figure in the box (prd §1111).
         if subscriptions {
             Section { mailSubscriptionsBox }
+        } else if comingUp {
+            Section { dayComingUpBox }
         } else if let cover, cover.id == next?.id, let strip = dayStrip, !strip.isEmpty {
             Section { dayAheadRow(cover, strip: strip) }
         } else if let cover {
@@ -135,6 +138,8 @@ extension FeedScreen {
         roomScopeSection
         if subscriptions {
             mailSubscriptionsSections
+        } else if comingUp {
+            dayComingUpSections(nextEventID: nextEventID)
         } else {
             groupedSections(liftingCover(groups, id: cover?.id), nextEventID: nextEventID)
         }

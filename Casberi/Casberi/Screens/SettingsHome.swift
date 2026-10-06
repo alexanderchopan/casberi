@@ -130,12 +130,10 @@ struct SettingsHome: View {
                 chrome.sourceRequest = CategoryFold.walletRoom
             }
             Button("Follow a feed") {
+                // The room's follow list, through the landing's own door
+                // (prd §1118), which a landing's tile reset honours.
+                chrome.landingFollowing = .reading
                 chrome.sourceRequest = RoomAccounts.readingRoom
-                // After the landing, which resets a room's tile.
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(400))
-                    chrome.readingScope = .subscriptions
-                }
             }
             Button("Subscribe to a calendar") { calendarAdd = true }
         }
