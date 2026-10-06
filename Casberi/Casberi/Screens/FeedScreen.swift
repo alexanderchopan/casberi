@@ -1832,6 +1832,13 @@ struct FeedScreen: View {
         // the rows' links, a heavy column, so they are read once per corpus
         // revision off the main actor, never in a body.
         .task(id: objectFoldKey) { await recomputeObjectKeys() }
+        // Home's Later today (prd §1139) reads the rows ahead here, on the
+        // screen: the list builds lazily, so a task on its last row would not
+        // run until you scrolled to it. Re-read whenever Home's rows change.
+        .task(id: allSnapshotKey) {
+            guard source == "All", filter.tag == "All" else { return }
+            loadDayComingUp()
+        }
         // The page coat moved UP to the shell (prd §159, 2026-07-21): the crown
         // pour lives in MainSurface's background so it can run behind the chip
         // strip, and painting the opaque themed coat again HERE would slide

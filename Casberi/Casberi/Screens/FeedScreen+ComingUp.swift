@@ -45,6 +45,13 @@ extension FeedScreen {
             .filter { let w = Self.comingUpWhen($0); return w > now && w < end }
             .filter { seen.insert($0.id).inserted }
             .sorted { Self.comingUpWhen($0) < Self.comingUpWhen($1) }
+        #if DEBUG
+        // `comingUp|` — how many rows Home's Later today and Day's week hold
+        // (prd §1139), for a check that cannot scroll.
+        let later = dayComingUp.filter { Self.groupingCalendar.isDateInToday(Self.comingUpWhen($0)) }
+        NSLog("[Casberi] comingUp| laterToday=%d week=%d first=%@", later.count, dayComingUp.count,
+              later.first.map { TitleSeam.split($0.title).name } ?? "-")
+        #endif
     }
 
     /// The days ahead as groups: "Later today", "Tomorrow", then a weekday.
@@ -120,8 +127,23 @@ extension FeedScreen {
         }
     }
 
+    /// THE REST OF TODAY ON HOME (prd §1139, user: "we made it so that the
+    /// entire day today shows on the home screen", "just one day", "that way
+    /// you have your feeds of the day and then events"): Coming up's rows
+    /// that happen later today, every one, in time order, under "Later
+    /// today", after Today's feeds. The week stays in Day's Coming up.
+    @ViewBuilder
+    func laterTodaySections(nextEventID: UUID?) -> some View {
+        let today = dayComingUp.filter {
+            $0.isLive && Self.groupingCalendar.isDateInToday(Self.comingUpWhen($0))
+        }
+        if !today.isEmpty {
+            groupedSections([(String(localized: "Later today"), today)], nextEventID: nextEventID)
+        }
+    }
+
     /// Home's last row (prd §1136c): the door to Day's Coming up. Home is
-    /// Today; what is ahead is one tap away, in the category about time.
+    /// today; the week is one tap away, in the category about time.
     @ViewBuilder
     var comingUpDoor: some View {
         Section {
