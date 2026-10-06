@@ -64717,3 +64717,7 @@ Coming up reads every app's dates, so it is not empty for anyone with an app con
 ### §1136g — Sources' bar is four tiles (user, 2026-10-06: "ok", to Apps · People · Subs · Add; amends §1136e and §1136f)
 
 A bar tile is 52pt whatever its word, so a bar beside the face shows four without scrolling; six kinds and Add scrolled. The bar is **Apps · People · Subs · Add**. Subs is the four kinds that send you things — Calendars, Feeds, Mailing lists, Subscriptions — each under its name, A–Z; Add on Subs asks which of the four. The box still counts all six, A–Z.
+
+### §1136h — Sources' bar is the six kinds, and it scrolls (user, 2026-10-06: "add the others"; "yes it's life. it'll just have to scroll"; reverses §1136g)
+
+The bar is the box's six kinds A–Z — **Apps · Calendars · Feeds · Mailing lists · People · Subscriptions** — then **Add**, pinned at its end while the kinds scroll, as Markets' bar does. Each kind is its whole list; Add adds the kind you're on.
