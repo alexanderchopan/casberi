@@ -780,7 +780,9 @@ struct MainSurface: View {
     private func leafRoom(_ node: HomeRoute.Node) -> some View {
         switch node {
         case .apps:
-            EmptyView()
+            // The catalogue rises as a sheet on the phone since prd §1142:
+            // `HomeRoute.place` no longer cuts to it.
+            AppsScreen()
         case .casberi:
             SettingsHome()
         case .addresses:

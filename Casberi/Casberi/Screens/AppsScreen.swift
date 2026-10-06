@@ -105,7 +105,12 @@ struct AppsScreen: View {
     /// The whole catalogue, connected rows included (prd §1033, retiring
     /// §812's split): Manage is deleted, so an account you hold stands in the
     /// directory wearing its state, and managing it is the room's own door.
-    private var ranked: [Ranked] { rankedAll }
+    /// **ONLY WHAT YOU COULD ADD (prd §1142, user: "when i click [Add] i see
+    /// the same apps i'm connected to on the previous screen"):** Settings ›
+    /// Apps lists what you have, so the catalogue — reached from its Add and
+    /// its "N more in <Category>" links — lists what you don't. Search still
+    /// reaches every app (`searchHits` reads `rankedAll`).
+    private var ranked: [Ranked] { rankedAll.filter { !isAdded($0) } }
 
     private var rankedAll: [Ranked] {
         // Markets is a place in You, not an app category (prd §1123, §1138):
@@ -319,7 +324,7 @@ struct AppsScreen: View {
             // simply leaves the catalog standing.
             if let name = route.openOffer {
                 route.openOffer = nil
-                if let entry = ranked.first(where: { $0.offer.name == name }) {
+                if let entry = rankedAll.first(where: { $0.offer.name == name }) {
                     rowAction(entry)?()
                 }
             }
@@ -729,41 +734,20 @@ struct AppsScreen: View {
             .map { CatalogScope(name: $0) }
     }
 
-    /// The chips wearing the attention dot — a category holding a seat that
-    /// stopped working (tier 0, the one tier whose verb is Fix).
-    ///
-    /// This is what a filter strip buys that jump chips could not. Under the
-    /// wall a broken seat was findable by scrolling to its band; under a FILTER
-    /// it is invisible from every other chip, so the dot is not decoration but
-    /// the thing that keeps the filter honest. Never set for All, which draws
-    /// every section — there the row itself is already on screen saying it.
-    private var troubledScopes: Set<CatalogScope> {
-        Set(ranked.filter { $0.tier == 0 }
-                  .map { CatalogScope(name: category(of: $0.offer)) })
-    }
-
-    /// **THE CATEGORIES ARE THE BOX (prd §1138, user, 2026-10-06: "we could
-    /// have the 9 or so categories in apps be in the box tho").** Each is how
-    /// many you have there (connected or broken, never paused), over its
-    /// word, A–Z, after an A–Z tile that is every app; pressed, the list
-    /// below is that category, and pressing the picked one again is A–Z.
-    /// A category holding a broken seat says so in its word. Replaces the
-    /// search row's Added chip and the category bar.
+    /// **THE CATEGORIES ARE THE BOX (prd §1138), A GLYPH AND A NAME (§1142,
+    /// user: "do we just get rid of the count and use glyph and category on
+    /// Apps?").** A–Z, then the categories with something left to add, A–Z;
+    /// pressed, the list below is that category, and pressing the picked one
+    /// again is A–Z. No figure: a count of apps you don't have is the
+    /// catalogue's size, and every figure in the app means yours.
     private var categoryBox: some View {
-        // A–Z leads (user: "if we wanted to fill it you could give an a-z
-        // button first"): every app, A to Z, counting all you have; nine
-        // categories and it make ten, two even rows of five.
         let cats = scopes
-        let added = rankedAll.filter(isAdded)
-        let have = Dictionary(grouping: added) { category(of: $0.offer) }
-        let troubled = troubledScopes
         let columns = min(5, max(3, (cats.count + 1) / 2))
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columns),
                          spacing: DS.Space.s2) {
             ForEach(cats) { cat in
-                let count = cat.name.map { have[$0]?.count ?? 0 } ?? added.count
-                DSCountTile(count: count, label: cat.name ?? String(localized: "A–Z"), glyph: cat.glyph,
-                            isOn: scope == cat, wants: troubled.contains(cat)) {
+                DSCountTile(count: nil, label: cat.name ?? String(localized: "A–Z"), glyph: cat.glyph,
+                            isOn: scope == cat) {
                     withAnimation(DS.Motion.standard) {
                         scope = scope == cat ? CatalogScope(name: nil) : cat
                     }
@@ -815,8 +799,7 @@ struct AppsScreen: View {
     /// order: a directory you can scan for a known app by its name beats a
     /// status-triage ordering that reshuffles as bridges connect and
     /// disconnect. `ranked`'s tiers still decide everything ELSE on the row
-    /// (the Fix/Connect/Open verb, the attention dot, the `troubledScopes`
-    /// filter dot) — only the ORDER within a section is re-sorted here.
+    /// (the Fix/Connect/Open verb, the attention dot) — only the ORDER within a section is re-sorted here.
     private var listSections: [(name: String, apps: [Ranked])] {
         Self.categories.compactMap { cat in
             if let picked = scope.name, picked != cat.name { return nil }
@@ -904,42 +887,9 @@ struct AppsScreen: View {
                     }
                 }
             }
-            yoursThenMore(allAppsSorted, more: String(localized: "More apps"), flash: nil)
-        }
-    }
-
-    /// **YOURS FIRST, THEN WHAT YOU COULD ADD (prd §1140, user: "a-z should
-    /// also [show your own]… we could have them at the bottom of the user's
-    /// screen but that would mean they need to be that way on the other
-    /// buttons pages too").** Every page of the catalogue — A–Z and each
-    /// category — lists what you have connected (a broken one included,
-    /// its verb Fix), then the rest under "More apps" / "More in <Category>",
-    /// each A–Z. A side with nothing in it draws no header.
-    @ViewBuilder
-    private func yoursThenMore(_ apps: [Ranked], more: String, flash: String?) -> some View {
-        let yours = apps.filter(isAdded)
-        let rest = apps.filter { !isAdded($0) }
-        VStack(alignment: .leading, spacing: DS.Space.s6) {
-            if !yours.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    listHeader(Text("Connected"), count: yours.count)
-                        .landFlash(flash.flatMap { shelfComplete[$0] } ?? 0,
-                                   tint: flash.map(categoryColor) ?? DS.tint)
-                    VStack(spacing: DS.Space.s1) {
-                        ForEach(Array(yours.enumerated()), id: \.element.id) { i, entry in
-                            appRow(entry).modifier(StockEntrance(index: i))
-                        }
-                    }
-                }
-            }
-            if !rest.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    listHeader(Text(more), count: rest.count)
-                    VStack(spacing: DS.Space.s1) {
-                        ForEach(Array(rest.enumerated()), id: \.element.id) { i, entry in
-                            appRow(entry).modifier(StockEntrance(index: yours.count + i))
-                        }
-                    }
+            VStack(spacing: DS.Space.s1) {
+                ForEach(Array(allAppsSorted.enumerated()), id: \.element.id) { i, entry in
+                    appRow(entry).modifier(StockEntrance(index: i))
                 }
             }
         }
@@ -962,11 +912,15 @@ struct AppsScreen: View {
         }
     }
 
-    /// One category's page: what you have in it, then the rest of it.
+    /// One category's page: what is left to add in it (prd §1142), A–Z. The
+    /// box names the category, so the list draws no header of its own.
     private func categorySection(_ name: String, apps: [Ranked]) -> some View {
-        // The box names the category (prd §1138), so the page's two headers
-        // say whose: yours, then the rest of it (prd §1140).
-        yoursThenMore(apps, more: String(localized: "More in \(name)"), flash: name)
+        VStack(spacing: DS.Space.s1) {
+            ForEach(Array(apps.enumerated()), id: \.element.id) { i, entry in
+                appRow(entry).modifier(StockEntrance(index: i))
+            }
+        }
+        .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
     }
 
     /// The seat id a cell should open as a ROOM rather than push, or nil.

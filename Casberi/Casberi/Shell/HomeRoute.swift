@@ -144,7 +144,9 @@ final class HomeRoute {
     /// The place a door names, or nil for a screen that pushes.
     static func place(_ door: Node) -> HomeScope.Place? {
         switch door {
-        case .apps: .apps
+        // The catalogue is no place since prd §1136 (Apps left You's tiles):
+        // it rises as a sheet over Settings, so a swipe down is the way back
+        // (prd §1142, user: "there is no way to get back").
         case .addresses: .addresses
         case .casberi: .settings
         default: nil
