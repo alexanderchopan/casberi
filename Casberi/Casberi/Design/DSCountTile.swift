@@ -10,7 +10,9 @@ import SwiftUI
 /// dot, and a zero is quieter than a figure. Becoming the pick crossfades on
 /// the template's own clock (§966).
 struct DSCountTile: View {
-    let count: Int
+    /// Nil draws no figure: Markets' tiles are a glyph and a name only
+    /// (user: "the categories w/ no numbers, just their glyph and name").
+    let count: Int?
     let label: String
     /// A category's glyph over the figure (Apps); nil draws figure and word.
     var glyph: String? = nil
@@ -35,10 +37,12 @@ struct DSCountTile: View {
                         .frame(height: 20)
                         .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textSecondary)
                 }
-                Text(count.formatted())
-                    .dsText(glyph == nil ? .heading28 : .heading24)
-                    .monospacedDigit()
-                    .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textPrimary)
+                if let count {
+                    Text(count.formatted())
+                        .dsText(glyph == nil ? .heading28 : .heading24)
+                        .monospacedDigit()
+                        .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textPrimary)
+                }
                 Text(label)
                     .dsText(.label12)
                     .lineLimit(1)

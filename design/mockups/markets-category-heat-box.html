@@ -1,0 +1,134 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markets heat box</title>
+<style>
+:root{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--page:#000;--box:#1c1c1e;--tile:#1c1c1e;--sel:#1e6fe6;--text:#fff;--text2:#ebebf599;--text3:#ebebf566;
+  --pink:#ff2d87;--up:#30d158;--down:#ff453a;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header,.stage,.verdict{max-width:1260px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:880px;margin-top:6px}
+.stage{display:flex;gap:28px;flex-wrap:wrap;margin-top:22px;align-items:flex-start}
+figure{width:393px;max-width:100%}
+figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:12px 6px 0}
+figcaption b{color:var(--ink)}
+.tag{display:inline-block;font:600 12px var(--rounded);color:var(--ink2);background:#ffffff14;border-radius:99px;padding:3px 9px;margin-bottom:8px}
+.tag.new{color:#fff;background:var(--pink)}
+.phone{background:var(--page);color:var(--text);border-radius:48px;height:852px;overflow:hidden;position:relative;outline:1px solid #ffffff14;box-shadow:0 24px 70px #0008;padding:62px 16px 0}
+.title{font:700 34px/41px var(--rounded);margin-bottom:12px;white-space:nowrap}
+.title .p{color:var(--pink)} .title .dot{color:var(--text3);font-weight:400}
+.box{background:var(--box);border-radius:26px;height:236px;padding:16px;position:relative;overflow:hidden}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.tile{height:58px;border-radius:16px;background:var(--tile);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:600}
+.tile .g{font-size:19px;line-height:20px}
+.tile.on{background:var(--sel)}
+
+/* today's watchlist heat map */
+.meta{display:flex;justify-content:space-between;font-size:13px;color:var(--text2);margin-bottom:8px}
+.meta b{color:var(--text);font-weight:600}
+.tree{display:grid;grid-template-columns:1.6fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;height:166px}
+.tree div{border-radius:10px;padding:8px;display:flex;flex-direction:column;justify-content:space-between;font-weight:700;font-size:15px}
+.tree div small{font-weight:600;font-size:13px;opacity:.9}
+.tree .lead{grid-row:span 2;font-size:20px}
+
+/* proposed: categories as heat tiles */
+.heat{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;height:100%;align-content:center}
+.ht{height:96px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+.ht .g{font-size:15px;line-height:18px;opacity:.85}
+.ht .m{font:700 15px/19px var(--rounded);font-variant-numeric:tabular-nums}
+.ht .l{font-size:11px;line-height:14px;opacity:.85}
+.ht.on{outline:2.5px solid #fff;outline-offset:-2.5px}
+
+/* list */
+.lh{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 4px}
+.lh .t{font:700 20px/25px var(--rounded);color:var(--pink)}
+.lh .menu{font-size:15px;color:var(--text2)}
+.row{display:flex;align-items:center;gap:12px;min-height:58px}
+.mark{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:700 14px var(--rounded);color:#fff;flex:none}
+.b{flex:1;min-width:0}
+.n{font-size:17px;line-height:22px}
+.s{font-size:13px;line-height:18px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spark{width:52px;height:22px;flex:none}
+.px{text-align:right;flex:none;width:76px}
+.px .v{font-size:15px;font-variant-numeric:tabular-nums}
+.px .c{font-size:13px;font-variant-numeric:tabular-nums}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--text3)}
+
+.band{position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(transparent,var(--page) 45%);display:flex;align-items:center;gap:10px;padding:26px 16px 0}
+.face{width:58px;height:58px;border-radius:20px;background:#2a2a2d;display:grid;place-items:center;font-size:30px;flex:none}
+.cap{height:54px;border-radius:27px;background:#2c2c2ecc;display:flex;align-items:center;gap:2px;padding:0 6px;overflow:hidden;outline:1px solid #ffffff12}
+.cap.fill{flex:1;mask-image:linear-gradient(90deg,#000 80%,transparent)}
+.cap.short{margin-left:auto}
+.cap i{font-style:normal;display:flex;flex-direction:column;align-items:center;gap:2px;width:52px;font-size:10px;font-weight:600;color:var(--text2);padding:6px 0;border-radius:14px;flex:none}
+.cap i b{font-size:17px;font-weight:400;line-height:18px}
+.cap i.on{background:var(--sel);color:#fff}
+.cap i.verb{color:#0a84ff}
+
+.verdict{margin-top:40px;font-size:15px;line-height:23px;color:var(--ink2)}
+.verdict b{color:var(--ink)}
+.verdict li{margin:6px 0 0 20px}
+</style>
+
+<header>
+  <h1>Markets: the categories in the box, coloured by the day</h1>
+  <p class="desc">Today's screen, then the proposal with Watchlist selected, then with Social selected. Demo figures, made up for the mockup. The glyphs stand in for the real SF Symbols. A category's colour is the average day move of the listed companies behind its apps; "Not traded" companies (Anthropic, Bluesky) don't count.</p>
+</header>
+
+<div class="stage">
+  <figure><span class="tag">Today</span><div class="phone" id="p0"></div>
+    <figcaption><b>The box is your watchlist's day</b>, biggest move first. The categories, Alerts, All and Search sit on a bar that scrolls; Search is pinned at the end.</figcaption></figure>
+  <figure><span class="tag new">Proposed · Watchlist</span><div class="phone" id="p1"></div>
+    <figcaption><b>Ten tiles: Watchlist, then the nine categories A–Z.</b> Each tile's colour and figure is its day. Because the fill carries the colour, the pick is a white ring, not a blue fill. Watchlist lists what you follow, as today. The bar is <b>Alerts · Search</b>.</figcaption></figure>
+  <figure><span class="tag new">Proposed · Social</span><div class="phone" id="p2"></div>
+    <figcaption><b>Pressing Social lists the companies behind your social apps</b>, with the apps under each name, biggest move first. Pressing Social again goes back to Watchlist. A star on a row would add it to the watchlist, as the index pages do now.</figcaption></figure>
+</div>
+
+<div class="verdict">
+  <b>What it costs, and what it changes</b>
+  <ul>
+    <li><b>Your watchlist's heat map leaves the box.</b> It becomes one tile, the Watchlist tile, coloured by your stocks' average move. Its list keeps the Movers order, so the biggest move still leads, just below the box rather than in it.</li>
+    <li><b>The All tile (every company, §1082) goes.</b> Search already finds any company or app. It could come back as an "A–Z" row at the top of Search.</li>
+    <li><b>The colours are already paid for.</b> Each category's index page prices its companies and draws this heat map today (<code>CompanyQuotes.load(pack)</code>), and the All page prices every company. The box would load them all at landing instead of on a tap: one read, about 60 quotes.</li>
+    <li><b>Hide balances doesn't hide this.</b> These are market moves, not your money, so the colours stay.</li>
+  </ul>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const youTiles=`<div class="tiles"><div class="tile"><span class="g">⌂</span>Home</div><div class="tile on"><span class="g">↗</span>Markets</div><div class="tile"><span class="g">▤</span>Notes</div><div class="tile"><span class="g">⛓︎</span>Sources</div></div>`;
+const title=`<div class="title"><span class="p">Alex</span> <span class="dot">·</span> Markets</div>`;
+const face='<div class="face">🐙</div>';
+// heat: colour by move against the biggest on the board
+function heat(m,max){const a=Math.min(1,Math.abs(m)/max);const base=m>=0?[48,209,88]:[255,69,58];
+  const bg=`rgba(${base.join(',')},${0.16+0.62*a})`;return bg}
+const fmt=m=>(m>0?'+':m<0?'−':'')+Math.abs(m).toFixed(1)+'%';
+const spark=(up,seed)=>{let y=11,pts=[];for(let i=0;i<=12;i++){y+=((Math.sin(i*1.7+seed)*3)+(up?-0.7:0.7));y=Math.max(2,Math.min(20,y));pts.push(`${i*4.3},${y.toFixed(1)}`)}
+  return `<svg class="spark" viewBox="0 0 52 22"><polyline fill="none" stroke="${up?'#30d158':'#ff453a'}" stroke-width="1.6" points="${pts.join(' ')}"/></svg>`};
+const row=(sym,name,line,price,m,k,col)=>`<div class="row"><div class="mark" style="background:${col}">${sym}</div><div class="b"><div class="n">${name}</div><div class="s">${line}</div></div>${spark(m>=0,k)}<div class="px"><div class="v">${price}</div><div class="c ${m>0?'up':m<0?'down':'flat'}">${fmt(m)}</div></div></div>`;
+
+const watch=[["N","NVIDIA","NVDA · you hold 12","$187.40",3.2,1,"#76b900"],["C","Coinbase","COIN · alert at $300","$281.15",-2.6,2,"#0052ff"],["Ξ","Ethereum","ETH · you hold 1.4","$4,212",-3.1,3,"#627eea"],["","Apple","AAPL","$248.90",0.8,4,"#555"],["₿","Bitcoin","BTC · you hold 0.21","$118,400",-1.4,5,"#f7931a"],["M","Microsoft","MSFT","$512.06",0.6,6,"#00a4ef"]];
+const watchRows=watch.map(w=>row(...w)).join('');
+
+// Today
+$('p0').innerHTML=title+`<div class="box"><div class="meta"><span><b>3 up</b>, 3 down</span><span><b>1D</b> · 1W · 1M</span></div>
+<div class="tree">
+ <div class="lead" style="background:${heat(3.2,3.2)}">NVDA<small>+3.2%</small></div>
+ <div style="background:${heat(-3.1,3.2)}">ETH<small>−3.1%</small></div>
+ <div style="background:${heat(-2.6,3.2)}">COIN<small>−2.6%</small></div>
+ <div style="background:${heat(-1.4,3.2)}">BTC<small>−1.4%</small></div>
+ <div style="background:${heat(0.8,3.2)}">AAPL<small>+0.8%</small></div>
+</div></div>`+youTiles+
+`<div class="lh"><span class="t">Watchlist</span><span class="menu">Movers ⌄</span></div>`+watchRows+
+`<div class="band">${face}<div class="cap fill"><i class="on"><b>☆</b>Watchlist</i><i><b>🔔︎</b>Alerts</i><i><b>▤</b>All</i><i><b>›_</b>Agents</i><i><b>▦</b>Day</i><i><b>☺︎</b>Life</i></div><div class="cap" style="padding:0 6px"><i class="verb"><b>⌕</b>Search</i></div></div>`;
+
+// Proposed heat box
+const cats=[["☆","Watchlist",1.1],["›_","Agents",1.8],["▦","Day",0.6],["☺︎","Life",0.4],["▶︎","Media",-1.2],["▯","Reading",-0.3],["❞","Social",2.4],["⚗︎","Testnets",-3.1],["$","Wallet",-1.9],["⌨︎","Work",0.9]];
+const heatBox=on=>`<div class="box" style="padding:12px"><div class="heat">${cats.map(([g,l,m])=>`<div class="ht ${l===on?'on':''}" style="background:${heat(m,3.1)}"><span class="g">${g}</span><span class="m">${fmt(m)}</span><span class="l">${l}</span></div>`).join('')}</div></div>`;
+const bar=`<div class="band">${face}<div class="cap short"><i><b>🔔︎</b>Alerts</i><i class="verb"><b>⌕</b>Search</i></div></div>`;
+$('p1').innerHTML=title+heatBox('Watchlist')+youTiles+`<div class="lh"><span class="t">Watchlist</span><span class="menu">Movers ⌄</span></div>`+watchRows+bar;
+
+const social=[["R","Reddit","Reddit","$212.30",4.1,7,"#ff4500"],["M","Meta","Instagram · Threads · WhatsApp","$742.88",2.9,8,"#0866ff"],["P","Pinterest","Pinterest","$38.12",1.2,9,"#e60023"],["S","Snap","Snapchat","$9.84",-0.9,10,"#d4c600"]];
+$('p2').innerHTML=title+heatBox('Social')+youTiles+`<div class="lh"><span class="t">Social</span><span class="menu">Movers ⌄</span></div>`+social.map(w=>row(...w)).join('')+
+`<div class="row"><div class="mark" style="background:#1185fe">B</div><div class="b"><div class="n">Bluesky</div><div class="s">Bluesky · not traded</div></div></div>`+bar;
+</script>

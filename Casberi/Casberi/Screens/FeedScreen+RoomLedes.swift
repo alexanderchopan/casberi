@@ -41,7 +41,7 @@ extension FeedScreen {
     var tokensInlineTiles: some View {
         if !DSScopeDock<TokensScope>.atBottom(roomSizeClass) {
             Section {
-                DSScopeTiles(sections: TokensScope.all, active: chrome.tokensScope,
+                DSScopeTiles(sections: TokensScope.bar, active: chrome.tokensScope,
                              strip: true, verbs: [.search]) { pickTokensScope($0) }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -58,7 +58,9 @@ extension FeedScreen {
             feedSheet = .watchAdd
             return
         }
-        withAnimation(DS.Motion.standard) { chrome.tokensScope = picked }
+        // Pressing the picked category again is the watchlist (prd §1138).
+        let next = picked == chrome.tokensScope && picked.isPack ? TokensScope.watchlist : picked
+        withAnimation(DS.Motion.standard) { chrome.tokensScope = next }
     }
 
     /// A watched row's day change, token or stock — what the Markets lede

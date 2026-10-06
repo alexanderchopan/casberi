@@ -16,8 +16,6 @@ struct TokensScope: DSTileScope {
     static let watchlist = TokensScope(category: nil)
     /// Every alert you set, and the ones that fired (prd §1081).
     static let alerts = TokensScope(category: "\u{1}alerts")
-    /// Every company behind every app, one index (prd §1082).
-    static let everything = TokensScope(category: "\u{1}all")
     /// The verb, last: search the index and the market, and watch (prd
     /// §1081, renamed from Add by §1082 when it began searching the index).
     static let search = TokensScope(category: "\u{1}search")
@@ -25,25 +23,22 @@ struct TokensScope: DSTileScope {
     var id: String { category ?? "\u{1}watchlist" }
 
     /// A catalogue category's companies, or all of them: an index page.
-    var isPack: Bool { self == .everything || (category.map { !$0.hasPrefix("\u{1}") } ?? false) }
+    var isPack: Bool { category.map { !$0.hasPrefix("\u{1}") } ?? false }
 
     var label: String {
         if self == .alerts { return String(localized: "Alerts") }
-        if self == .everything { return String(localized: "All") }
         if self == .search { return String(localized: "Search") }
         return category ?? String(localized: "Watchlist")
     }
 
     var glyph: String {
         if self == .alerts { return ScopeTileGlyph.alerts }
-        if self == .everything { return ScopeTileGlyph.all }
         if self == .search { return ScopeTileGlyph.search }
         return category.map(CategoryFold.glyph(for:)) ?? ScopeTileGlyph.watch
     }
 
     var summary: String {
         if self == .alerts { return String(localized: "The price alerts you set") }
-        if self == .everything { return String(localized: "Every company behind every app") }
         if self == .search { return String(localized: "Find something to follow") }
         guard let category else { return String(localized: "What you follow") }
         return String(localized: "The companies behind \(category)")
@@ -51,7 +46,6 @@ struct TokensScope: DSTileScope {
 
     /// The pack under this tile; empty for the room's own tiles.
     var pack: [CompanyPacks.Company] {
-        if self == .everything { return Self.everyCompany }
         guard isPack, let category else { return [] }
         return Self.packs[category] ?? []
     }
@@ -72,14 +66,23 @@ struct TokensScope: DSTileScope {
         return order.compactMap { merged[$0] }
     }()
 
-    /// Watchlist, Alerts and All, then every category whose pack holds a company
-    /// — a tile that opens an empty list is a dead control (§83) — in the
-    /// person's category order (prd §1050j), read fresh so a rearrangement
-    /// moves it, then Add, the verb, last (§1039).
-    @MainActor static var all: [TokensScope] {
-        [.watchlist, .alerts, .everything] + CategoryOrder.sorted(Array(packs.keys)).map { TokensScope(category: $0) }
-            + [.search]
-    }
+    /// THE BOX (prd §1138, user: "the categories w/ no numbers, just their
+    /// glyph and name. watchlist being the first", then "get rid of testnets
+    /// b/c it won't have a market, and use the extra slot for alerts"):
+    /// Watchlist and Alerts lead, then every category whose pack holds a
+    /// company A–Z — a tile onto an empty list is a dead control (§83).
+    /// Testnets has no market and Markets is a place in You (§1123); the All
+    /// index is deleted, Search reaches every company.
+    static let box: [TokensScope] = [.watchlist, .alerts]
+        + packs.keys.filter { $0 != "Testnets" && $0 != HomeScope.markets }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            .map { TokensScope(category: $0) }
+
+    /// The bar: Search alone, the verb.
+    static let bar: [TokensScope] = [.search]
+
+    /// Every tile, for a hook that names one.
+    static var all: [TokensScope] { box + bar }
 
     /// Every pack, built once off the static catalogue.
     private static let packs: [String: [CompanyPacks.Company]] = {

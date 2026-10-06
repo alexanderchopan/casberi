@@ -71,7 +71,7 @@ struct FeedRoomDocks: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .dsScopeDock(sections: tokens ? TokensScope.all : [],
+            .dsScopeDock(sections: tokens ? TokensScope.bar : [],
                          active: tokensScope, verbs: [.search], clearance: 0, onPick: pickTokens)
             .dsScopeDock(sections: notes ? NotesScope.allCases : [],
                          active: notesScope, verbs: [.new, .search], clearance: 0,

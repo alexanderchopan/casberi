@@ -17,41 +17,29 @@ extension FeedScreen {
         return thing.sourceRef.flatMap { WatchRanges.shared.change(ref: $0, span: watchSpan) }
     }
 
-    /// The box: the watchlist's span as a heat map, in the lead's exact
-    /// geometry and on nothing (the tiles are the colour, prd §1081).
-    @ViewBuilder
-    func marketsHeatSection(_ watches: [Thing]) -> some View {
-        let moves = watches.compactMap { thing -> (id: String, symbol: String, change: Double)? in
-            guard let change = marketsChange(thing) else { return nil }
-            let symbol = thing.authorHandle.flatMap { $0.isEmpty ? nil : $0 }
-                ?? TokensAsk.symbol(of: thing.title)
-            return (thing.id.uuidString, symbol, change)
-        }
-        let changes = moves.map(\.change)
-        Section {
-            WatchHeatBox(tiles: WatchHeat.tiles(moves),
-                         up: changes.filter { !TokenChartStyle.isFlat($0) && $0 > 0 }.count,
-                         down: changes.filter { !TokenChartStyle.isFlat($0) && $0 < 0 }.count,
-                         watched: watches.count,
-                         span: $watchSpan) { id in
-                if let thing = watches.first(where: { $0.isLive && $0.id.uuidString == id }) {
-                    openThing(thing)
+    /// THE BOX IS THE TILES (prd §1138): Watchlist and Alerts, then the
+    /// categories A–Z, a glyph and a name each, no figure and no colour
+    /// (user: "the categories w/ no numbers, just their glyph and name").
+    /// Pressing one lists it below; the box never moves. It replaced the
+    /// watchlist's heat map (§1081) and the category bar.
+    var marketsTilesSection: some View {
+        let tiles = TokensScope.box
+        let columns = min(5, max(3, (tiles.count + 1) / 2))
+        return Section {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columns),
+                      spacing: DS.Space.s2) {
+                ForEach(tiles) { tile in
+                    DSCountTile(count: nil, label: tile.label, glyph: tile.glyph,
+                                isOn: tile == chrome.tokensScope) { pickTokensScope(tile) }
                 }
             }
             .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
-                   maxHeight: DSRoomChassis.leadBox, alignment: .topLeading)
-            // **IN THE WELL, AT EVERY ROOM'S HEIGHT (prd §1102, user: "the
-            // markets card is not the same height as all the other screens").**
-            // §1081 drew the map on nothing at the bare `leadBox`, 32pt short
-            // of every other lead; it takes the head's well now.
+                   maxHeight: DSRoomChassis.leadBox)
             .dsRoomHeadBlock()
             .listRowBackground(Color.clear)
             .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                  bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
             .listRowSeparator(.hidden)
-        }
-        .task(id: "\(watchSpan.rawValue)|\(watches.count)") {
-            await WatchRanges.shared.load(watches, span: watchSpan)
         }
     }
 
@@ -99,9 +87,9 @@ extension FeedScreen {
     @ViewBuilder
     func marketsWatchlistSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
-        if !watches.isEmpty { marketsHeatSection(watches) }
-        // You's tiles under the box (prd §1136 item 1); Markets' own ride
-        // the floating bar on the phone, or the strip below beside the rail.
+        marketsTilesSection
+        // You's tiles under the box (prd §1136 item 1); Search rides the
+        // floating bar on the phone, or the strip below beside the rail.
         youTilesSection(.markets)
         tokensInlineTiles
         if watches.count > 1 { marketsListHead }
@@ -115,7 +103,7 @@ extension FeedScreen {
     }
 
     #if DEBUG
-    /// `-marketsScope alerts|all|<Category>|search` — land on a tile, or raise Search,
+    /// `-marketsScope alerts|<Category>|search` — land on a tile, or raise Search,
     /// at mount (prd §1081; NSLogs `marketsScope:`). Once per launch.
     private func marketsProbe() {
         guard !Self.marketsProbed,
@@ -125,7 +113,6 @@ extension FeedScreen {
         switch raw {
         case "alerts":        chrome.tokensScope = .alerts
         case "add", "search": feedSheet = .watchAdd
-        case "all":           chrome.tokensScope = .everything
         default:
             // A category's index by its name (`Work`).
             if let scope = TokensScope.all.first(where: { $0.category == raw }) {
@@ -140,7 +127,7 @@ extension FeedScreen {
     @ViewBuilder
     func marketsAlertsSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
-        if !watches.isEmpty { marketsHeatSection(watches) }
+        marketsTilesSection
         youTilesSection(.markets)
         tokensInlineTiles
         let byRef = Dictionary(watches.compactMap { t in t.sourceRef.map { ($0, t) } },
@@ -211,9 +198,8 @@ extension FeedScreen {
 
     // MARK: - The index (prd §1082)
 
-    /// A category's companies, or all of them, as an index: the day's heat
-    /// map of what trades, then From your apps, Everything else and Not
-    /// traded (`MarketsIndex.sections`), each row starred in one tap.
+    /// A category's companies as an index under the box's tiles: From your
+    /// apps, Everything else and Not traded (`MarketsIndex.sections`), each row starred in one tap.
     @ViewBuilder
     func marketsIndexSections(_ scope: TokensScope, visible: [Thing]) -> some View {
         let pack = scope.pack
@@ -222,34 +208,10 @@ extension FeedScreen {
         let byName = Dictionary(pack.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
         let split = MarketsIndex.sections(pack.map(MarketsWatch.entry), connected: connected)
         let watched = MarketsWatch.watchedTickers(visible)
-        let moves = pack.compactMap { company -> (id: String, symbol: String, change: Double)? in
-            guard let ticker = company.listing.ticker,
-                  let change = quotes.quote(company.listing)?.change else { return nil }
-            return (company.name, ticker, change)
-        }
-        Group {
-            if moves.isEmpty {
-                ledeSection(CompanyPackLede(name: scope.label, companies: pack, quotes: quotes))
-            } else {
-                let changes = moves.map(\.change)
-                Section {
-                    WatchHeatBox(tiles: WatchHeat.tiles(moves),
-                                 up: changes.filter { !TokenChartStyle.isFlat($0) && $0 > 0 }.count,
-                                 down: changes.filter { !TokenChartStyle.isFlat($0) && $0 < 0 }.count,
-                                 watched: pack.count, span: .constant(.day), showsSpans: false) { name in
-                        if let company = byName[name] { openCompany(company) }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
-                           maxHeight: DSRoomChassis.leadBox, alignment: .topLeading)
-                    .dsRoomHeadBlock()   // the well, as the watchlist's (prd §1102)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
-                                         bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
-                    .listRowSeparator(.hidden)
-                }
-            }
-        }
-        .task(id: scope.id) { await quotes.load(pack) }
+        // The box is the tiles on every Markets page (prd §1138): the pack's
+        // own heat map and its lede gave way to it.
+        marketsTilesSection
+            .task(id: scope.id) { await quotes.load(pack) }
         youTilesSection(.markets)
         tokensInlineTiles
         indexSection(String(localized: "From your apps"), split.yours, byName: byName,

@@ -3048,29 +3048,3 @@ struct CompanyRow: View {
             .compactMap(\.self).joined(separator: ", ")
     }
 }
-
-/// A pack's lead: the category's name over what its listed companies are
-/// worth together, from the same quotes the rows wear so the two cannot
-/// disagree. Before any read it counts the companies instead (§83).
-struct CompanyPackLede: View {
-    let name: String
-    let companies: [CompanyPacks.Company]
-    let quotes: CompanyQuotes
-
-    var body: some View {
-        let caps = companies.compactMap { quotes.quote($0.listing)?.marketCap }
-        HStack(spacing: DS.Space.s2) {
-            Text(verbatim: name)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-            Spacer(minLength: 0)
-            if caps.isEmpty {
-                Text("^[\(companies.count) company](inflect: true)")
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-            } else {
-                Text("\(MoneyFormat.compactUSD(caps.reduce(0, +))) across \(caps.count)")
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-            }
-        }
-        .padding(.vertical, DS.Space.s2)
-    }
-}
