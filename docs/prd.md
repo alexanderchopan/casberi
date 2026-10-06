@@ -64697,3 +64697,11 @@ Home's Coming up reaches exactly as far as its strip: today and the six days aft
 ### §1136c — Coming up is Day's tile, and Home ends in a door to it (user, 2026-10-06: "well 'day' aggregated could have aggregated calendar"; "yes that's fine"; amends §1136 item 7 and §1136b)
 
 Home is Today only. What is ahead is **Day's Coming up tile** — Day is the category about time — the one tile in Day that reaches across categories: every app's dated rows this week (an event's start, a `dueAt` deadline, a bill, a reminder, a subscribed calendar), the week strip in the box, then Later today, Tomorrow and the weekdays. Day's All stays its own apps. Home's last row is the door to it ("Coming up", `FeedScreen.comingUpDoor`). The tiles read All · Coming up · Subscriptions, then New.
+
+### §1136d — Sources has no All (user, 2026-10-06: "it's possible we don't even need 'all'"; "like maybe that is confusing"; "i know i said i wanted a master list, but the sources screen IS that list"; amends §1136 items 3 and 5)
+
+The box's six counts are the overview of everything connected, so an All filter was a second overview under the first. Sources opens on **Apps**, Casberi pinned first (its options, "Settings · iCloud, notifications, privacy"), then your apps under category headers. The bar is **Apps · People · Subs · + Add**, each its whole list; Add adds the kind you're on.
+
+### §1136e — Sources' bar is its six kinds, then Add and Search (user, 2026-10-06: "if in the header square we have six things … then those should be on the capsule"; "probably need a search on the capsule too"; amends §1136d)
+
+The floating bar holds what the box counts: **Apps · Calendars · Feeds · Newsletters · People · Subscriptions**, then the verbs **Add · Search** — A–Z and verbs last, the tiles' own rule (§995), and the box's six counts stand in the same A–Z order so a count and its filter share a place. Each kind is its whole list; Apps keeps Casberi pinned first. Add adds the kind you're on through the door that already adds it (an app → the catalogue, a person → Follow a wallet, a subscription → the Wallet's tile, a feed → Reading's follow list, a newsletter → Day's Subscriptions, a calendar → Subscribe to a calendar). Search is one field over every kind, matches under each kind's name, people through the book's own search.

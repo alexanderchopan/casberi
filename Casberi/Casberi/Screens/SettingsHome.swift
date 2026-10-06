@@ -20,7 +20,7 @@ struct SettingsHome: View {
     @Environment(\.modelContext) private var context
     @Environment(\.horizontalSizeClass) private var sizeClass
 
-    @State private var scope: SettingsScope = .all
+    @State private var scope: SettingsScope = .apps
     /// Casberi's own options, opened in place from its pinned row — the way a
     /// Notes folder opens (prd §980): its name leads back.
     @State private var casberiOpen = false
@@ -28,28 +28,47 @@ struct SettingsHome: View {
     @FocusState private var searchFocused: Bool
     @State private var peopleScope = AddressScope(name: nil)
     @State private var people = 0
-    @State private var adding = false
     @State private var calendarAdd = false
     @State private var unsubscribing: CalendarSubscriptionStore.Entry?
+
+    /// Where the feed's list draws the box under the title, and the tiles
+    /// under the box (`ledeListRow`'s and the tiles' row insets), so a place
+    /// drawn in a scroll view lines up with the rooms drawn in a `List`.
+    static let titleToBox: CGFloat = 38.0 / 3.0
+    static let boxToTiles: CGFloat = 18
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                YouHead(place: .settings)
-                countsBox
-                YouTilesRow(active: .sources)
+                // THE SAME FRAME AS EVERY PLACE IN YOU (user: "needs to be the
+                // same"): title, box and tiles stand where the feed's list
+                // rows put them on Home, Notes and Markets — measured off the
+                // simulator at 3x, the box's top 38/3pt under the title and
+                // the tiles 18pt under the box.
+                VStack(alignment: .leading, spacing: 0) {
+                    YouHead(place: .settings)
+                    countsBox
+                        .padding(.top, Self.titleToBox)
+                    YouTilesRow(active: .sources)
+                        .padding(.top, Self.boxToTiles)
+                }
                 if !DSScopeDock<SettingsScope>.atBottom(sizeClass), !casberiOpen {
                     DSScopeTiles(sections: SettingsScope.allCases, active: scope,
-                                 strip: true, verbs: [.new]) { pick($0) }
+                                 strip: true, verbs: SettingsScope.verbs) { pick($0) }
                 }
                 if casberiOpen {
                     casberiOptions
                 } else {
                     switch scope {
-                    case .all:           allList
-                    case .apps:          appsList(grouped: true)
+                    case .apps:
+                        casberiRow
+                        appsList
+                    case .calendars:     calendarsList
+                    case .feeds:         feedsList
+                    case .newsletters:   newslettersList
                     case .people:        peopleList
-                    case .subscriptions: subsList
+                    case .subscriptions: subscriptionsList
+                    case .search:        searchList
                     case .new:           EmptyView()
                     }
                 }
@@ -60,7 +79,7 @@ struct SettingsHome: View {
             .padding(.bottom, DS.Space.s4)
         }
         .dsScopeDock(sections: casberiOpen || searchFocused ? [] : SettingsScope.allCases,
-                     active: scope, verbs: [.new],
+                     active: scope, verbs: SettingsScope.verbs,
                      // A place in You stands where a room does, down to the
                      // safe area, so the bar centres on the seat as Markets' does.
                      clearance: 0) { pick($0) }
@@ -71,9 +90,6 @@ struct SettingsHome: View {
         .navigationTitle(Text("Sources"))
         .toolbar(.hidden, for: .navigationBar)
         .task { await read() }
-        .confirmationDialog(Text("Add"), isPresented: $adding, titleVisibility: .hidden) {
-            addChoices(for: scope)
-        }
         .confirmationDialog(Text("Unsubscribe from this calendar?"),
                             isPresented: Binding(get: { unsubscribing != nil },
                                                  set: { if !$0 { unsubscribing = nil } }),
@@ -102,40 +118,42 @@ struct SettingsHome: View {
 
     private func pick(_ picked: SettingsScope) {
         if picked == .new {
-            adding = true
+            add(scope)
             return
         }
         withAnimation(DS.Motion.standard) {
             scope = picked
             query = ""
         }
+        // Search lights and raises its field with the keyboard up.
+        if picked == .search { searchFocused = true }
     }
 
-    /// What + Add adds: the kind you're on (prd §1136 item 5).
-    @ViewBuilder
-    private func addChoices(for scope: SettingsScope) -> some View {
-        if scope == .all || scope == .apps {
-            Button("Add an app") { route.present(.apps) }
-        }
-        if scope == .all || scope == .people {
-            Button("Follow a wallet") {
-                chrome.walletFollowPending = true
-                chrome.sourceRequest = CategoryFold.walletRoom
-            }
-        }
-        if scope == .all || scope == .subscriptions {
-            Button("Track a subscription") {
-                chrome.walletScope = nil
-                chrome.walletSection = .subscriptions
-                chrome.sourceRequest = CategoryFold.walletRoom
-            }
-            Button("Follow a feed") {
-                // The room's follow list, through the landing's own door
-                // (prd §1118), which a landing's tile reset honours.
-                chrome.landingFollowing = .reading
-                chrome.sourceRequest = RoomAccounts.readingRoom
-            }
-            Button("Subscribe to a calendar") { calendarAdd = true }
+    /// What + Add adds: the kind you're on (prd §1136 item 5), each through
+    /// the door that already adds it. On Search, an app.
+    private func add(_ kind: SettingsScope) {
+        DSHaptic.selection()
+        switch kind {
+        case .apps, .search, .new:
+            route.present(.apps)
+        case .people:
+            chrome.walletFollowPending = true
+            chrome.sourceRequest = CategoryFold.walletRoom
+        case .subscriptions:
+            chrome.walletScope = nil
+            chrome.walletSection = .subscriptions
+            chrome.sourceRequest = CategoryFold.walletRoom
+        case .feeds:
+            // The room's follow list, through the landing's own door
+            // (prd §1118), which a landing's tile reset honours.
+            chrome.landingFollowing = .reading
+            chrome.sourceRequest = RoomAccounts.readingRoom
+        case .newsletters:
+            // Day's Subscriptions tile, whose Track tray adds a sender.
+            chrome.dayScope = .subscriptions
+            chrome.sourceRequest = RoomAccounts.dayRoom
+        case .calendars:
+            calendarAdd = true
         }
     }
 
@@ -143,8 +161,9 @@ struct SettingsHome: View {
         await SubscriptionsReading.shared.refresh(context)
         MailSubscriptionsReading.shared.refresh(context)
         for room in Following.Room.allCases { FollowingReading.shared.refresh(room, context: context) }
-        people = ContactIndexSources.rebuild(context: context)
-            .filter { !ContactIndexSources.isYours($0) }.count
+        let everyone = ContactIndexSources.rebuild(context: context)
+            .filter { !ContactIndexSources.isYours($0) }
+        people = everyone.count
         // A calendar subscribed elsewhere (or before this page existed) reads
         // its count fresh.
         if CalendarSubscriptionStore.shared.calendars.contains(where: { $0.lastRead == nil }) {
@@ -166,13 +185,15 @@ struct SettingsHome: View {
     /// connected to over what sends you things. Plain figures — the bar below
     /// filters, so a square that pressed would be a second door to it.
     private var countsBox: some View {
+        // A–Z, the order the bar's tiles stand in (§995), so a count and its
+        // filter sit in the same place (user: "those should be on the capsule").
         let counts: [(Int, String)] = [
             (connectedApps.count, String(localized: "Apps")),
-            (people, String(localized: "People")),
-            (SubscriptionsReading.shared.items.count, String(localized: "Subscriptions")),
+            (CalendarSubscriptionStore.shared.calendars.count, String(localized: "Calendars")),
             (feeds.count, String(localized: "Feeds")),
             (MailSubscriptionsReading.shared.items.count, String(localized: "Newsletters")),
-            (CalendarSubscriptionStore.shared.calendars.count, String(localized: "Calendars")),
+            (people, String(localized: "People")),
+            (SubscriptionsReading.shared.items.count, String(localized: "Subscriptions")),
         ]
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s3, alignment: .leading), count: 3),
                          alignment: .leading, spacing: DS.Space.s4) {
@@ -193,53 +214,6 @@ struct SettingsHome: View {
         .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
                maxHeight: DSRoomChassis.leadBox, alignment: .leading)
         .dsRoomHeadBlock()
-    }
-
-    // MARK: - All
-
-    @ViewBuilder
-    private var allList: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s6) {
-            casberiRow
-            group(String(localized: "Apps"), count: connectedApps.count, to: .apps) {
-                appsList(grouped: false, limit: 3)
-            }
-            group(String(localized: "People"), count: people, to: .people) {
-                AddressesSection(query: "", scope: $peopleScope)
-                    .frame(maxHeight: nil)
-            }
-            group(String(localized: "Subscriptions"),
-                  count: SubscriptionsReading.shared.items.count + feeds.count
-                    + MailSubscriptionsReading.shared.items.count
-                    + CalendarSubscriptionStore.shared.calendars.count,
-                  to: .subscriptions) {
-                subsList
-            }
-        }
-    }
-
-    /// A group under All: its name, a door to its whole list, its rows.
-    @ViewBuilder
-    private func group<Rows: View>(_ title: String, count: Int, to target: SettingsScope,
-                                   @ViewBuilder rows: () -> Rows) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(title).dsText(.heading17).foregroundStyle(DS.brandInk)
-                Spacer()
-                if count > 0 {
-                    Button { pick(target) } label: {
-                        Text("All \(count)")
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
-                            .frame(minHeight: DS.Hit.min)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .accessibilityLabel(Text("All \(title)"))
-                }
-            }
-            rows()
-        }
     }
 
     // MARK: - Casberi
@@ -273,16 +247,12 @@ struct SettingsHome: View {
     /// Your apps under category headers (prd §1136 item 5), in the dock's
     /// order; each opens its own account page — its settings.
     @ViewBuilder
-    private func appsList(grouped: Bool, limit: Int? = nil) -> some View {
+    private var appsList: some View {
         let apps = connectedApps
         if apps.isEmpty {
             DSEmptyState(headline: DSProse.text("No apps yet"),
                          words: Text("Add an app and it lands here."),
                          scale: .list(rows: 3))
-        } else if !grouped {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                ForEach(apps.prefix(limit ?? apps.count)) { appRow($0) }
-            }
         } else {
             let order = chrome.chipOrder
             let byCategory = Dictionary(grouping: apps) { BridgeCatalog.category(forSource: $0.name) ?? String(localized: "Other") }
@@ -325,42 +295,102 @@ struct SettingsHome: View {
 
     // MARK: - Subscriptions, feeds, newsletters, calendars
 
+    private func empty(_ words: LocalizedStringKey) -> some View {
+        DSEmptyState(headline: DSProse.text("Nothing yet"), words: Text(words), scale: .list(rows: 3))
+    }
+
     @ViewBuilder
-    private var subsList: some View {
-        let paid = SubscriptionsReading.shared.items
-        let lists = MailSubscriptionsReading.shared.items
-        let calendars = CalendarSubscriptionStore.shared.calendars
-        VStack(alignment: .leading, spacing: DS.Space.s6) {
-            if paid.isEmpty, feeds.isEmpty, lists.isEmpty, calendars.isEmpty {
-                DSEmptyState(headline: DSProse.text("Nothing yet"),
-                             words: Text("Track a subscription, follow a feed or subscribe to a calendar."),
-                             scale: .list(rows: 3))
-            }
-            section(String(localized: "Subscriptions"), paid) { item in
-                DSPushRow(title: Text(verbatim: item.name),
-                          subtitle: item.next.map { Text("Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") }) {
-                    chrome.open(.plan(item.id))
-                } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
-            }
-            section(String(localized: "Feeds"), feeds) { item in
-                DSPushRow(title: Text(verbatim: item.name), subtitle: Text(verbatim: item.seat)) {
-                    chrome.open(.followed(item.id, room(of: item)))
-                } leading: { BridgeIcon(name: item.seat, size: DS.Face.row) }
-            }
-            section(String(localized: "Newsletters"), lists) { item in
-                DSPushRow(title: Text(verbatim: item.name), subtitle: item.address.map { Text(verbatim: $0) }) {
-                    chrome.open(.list(item.id))
-                } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
-            }
-            section(String(localized: "Calendars"), calendars) { entry in
-                DSPushRow(title: Text(verbatim: entry.displayName),
-                          subtitle: Text(calendarLine(entry)), opens: false) {
-                    unsubscribing = entry
-                } leading: {
-                    Image(systemName: "calendar")
-                        .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(width: DS.Face.row, height: DS.Face.row)
+    private var subscriptionsList: some View {
+        let items = SubscriptionsReading.shared.items
+        if items.isEmpty { empty("Track a subscription and it lands here.") }
+        rows(items) { subscriptionRow($0) }
+    }
+
+    @ViewBuilder
+    private var feedsList: some View {
+        let items = feeds
+        if items.isEmpty { empty("Follow a feed and it lands here.") }
+        rows(items) { feedRow($0) }
+    }
+
+    @ViewBuilder
+    private var newslettersList: some View {
+        let items = MailSubscriptionsReading.shared.items
+        if items.isEmpty { empty("Lists that write to your mail land here.") }
+        rows(items) { newsletterRow($0) }
+    }
+
+    @ViewBuilder
+    private var calendarsList: some View {
+        let items = CalendarSubscriptionStore.shared.calendars
+        if items.isEmpty { empty("Subscribe to a calendar and its dates show in Coming up.") }
+        rows(items) { calendarRow($0) }
+    }
+
+    private func subscriptionRow(_ item: Subscriptions.Item) -> some View {
+        DSPushRow(title: Text(verbatim: item.name),
+                  subtitle: item.next.map { Text("Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") }) {
+            chrome.open(.plan(item.id))
+        } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
+    }
+
+    private func feedRow(_ item: Following.Item) -> some View {
+        DSPushRow(title: Text(verbatim: item.name), subtitle: Text(verbatim: item.seat)) {
+            chrome.open(.followed(item.id, room(of: item)))
+        } leading: { BridgeIcon(name: item.seat, size: DS.Face.row) }
+    }
+
+    private func newsletterRow(_ item: MailSubscriptions.Item) -> some View {
+        DSPushRow(title: Text(verbatim: item.name), subtitle: item.address.map { Text(verbatim: $0) }) {
+            chrome.open(.list(item.id))
+        } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
+    }
+
+    private func calendarRow(_ entry: CalendarSubscriptionStore.Entry) -> some View {
+        DSPushRow(title: Text(verbatim: entry.displayName),
+                  subtitle: Text(calendarLine(entry)), opens: false) {
+            unsubscribing = entry
+        } leading: {
+            Image(systemName: ScopeTileGlyph.calendars)
+                .dsGlyph(.body, weight: .regular)
+                .foregroundStyle(DS.textSecondary)
+                .frame(width: DS.Face.row, height: DS.Face.row)
+        }
+    }
+
+    private func rows<Item: Identifiable, Row: View>(_ items: [Item],
+                                                     @ViewBuilder row: @escaping (Item) -> Row) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            ForEach(items) { row($0) }
+        }
+    }
+
+    // MARK: - Search
+
+    /// Search (prd §1136e): one field over every kind, the matches under
+    /// each kind's name, people through the book's own search.
+    @ViewBuilder
+    private var searchList: some View {
+        DSSlabField(placeholder: String(localized: "Search sources"),
+                    text: $query, actionLabel: "",
+                    focus: $searchFocused,
+                    glyph: "magnifyingglass", clearable: true,
+                    size: .slab, submitLabel: .search, action: {})
+        let q = query.trimmingCharacters(in: .whitespaces)
+        if !q.isEmpty {
+            let hit: (String) -> Bool = { $0.localizedStandardContains(q) }
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                section(String(localized: "Apps"), connectedApps.filter { hit($0.name) }) { appRow($0) }
+                section(String(localized: "Calendars"),
+                        CalendarSubscriptionStore.shared.calendars.filter { hit($0.displayName) }) { calendarRow($0) }
+                section(String(localized: "Feeds"), feeds.filter { hit($0.name) || hit($0.seat) }) { feedRow($0) }
+                section(String(localized: "Newsletters"),
+                        MailSubscriptionsReading.shared.items.filter { hit($0.name) || hit($0.address ?? "") }) { newsletterRow($0) }
+                section(String(localized: "Subscriptions"),
+                        SubscriptionsReading.shared.items.filter { hit($0.name) }) { subscriptionRow($0) }
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    Text("People").dsText(.heading17).foregroundStyle(DS.brandInk)
+                    AddressesSection(query: q, scope: $peopleScope)
                 }
             }
         }
@@ -390,30 +420,40 @@ struct SettingsHome: View {
     }
 }
 
-/// Settings' own filters, on the floating bar (prd §1136 item 5): All · Apps
-/// · People · Subs · + Add. Add is a verb: it adds the kind you're on.
+/// Sources' own filters, on the floating bar (prd §1136d, §1136e): the box's
+/// six kinds, then Add and Search — the tiles read A–Z, verbs last (§995).
+/// No All: the box is the overview of all of it (user: "the sources screen
+/// IS that list"). Add adds the kind you're on.
 enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, apps, people, subscriptions, new
+    case apps, calendars, feeds, newsletters, people, subscriptions, new, search
 
     var id: String { rawValue }
 
+    static let verbs: Set<SettingsScope> = [.new, .search]
+
     var label: String {
         switch self {
-        case .all:           return String(localized: "All")
         case .apps:          return String(localized: "Apps")
+        case .calendars:     return String(localized: "Calendars")
+        case .feeds:         return String(localized: "Feeds")
+        case .newsletters:   return String(localized: "Newsletters")
         case .people:        return String(localized: "People")
-        case .subscriptions: return String(localized: "Subs")
+        case .subscriptions: return String(localized: "Subscriptions")
         case .new:           return String(localized: "Add")
+        case .search:        return String(localized: "Search")
         }
     }
 
     var summary: String {
         switch self {
-        case .all:           return String(localized: "Everything you've connected")
         case .apps:          return String(localized: "Your apps, by category")
+        case .calendars:     return String(localized: "The calendars you subscribe to")
+        case .feeds:         return String(localized: "Sites, channels and repos you follow")
+        case .newsletters:   return String(localized: "The lists that write to your mail")
         case .people:        return String(localized: "The people behind your accounts")
-        case .subscriptions: return String(localized: "Subscriptions, feeds, newsletters and calendars")
-        case .new:           return String(localized: "Add an app, a person or a subscription")
+        case .subscriptions: return String(localized: "What you pay for")
+        case .new:           return String(localized: "Add one of the kind you're on")
+        case .search:        return String(localized: "Find a source")
         }
     }
 }
