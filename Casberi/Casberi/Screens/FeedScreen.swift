@@ -1468,9 +1468,11 @@ struct FeedScreen: View {
     /// the rooms tray's You row gives its door — Pinned is Pinned, and a
     /// source room wears its catalog name, so an aliased seat ("Privacy
     /// Pools") reads as the app you connected.
+    ///
+    /// Notes and Markets are places in Home (prd §1127): the title says Home
+    /// and the You pill beside it names the pick.
     private var roomName: String {
-        if source == "All" { return String(localized: "Home") }
-        if source == Pinboard.room { return String(localized: "Notes") }
+        if HomeScope.contains(source) { return String(localized: "Home") }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
 

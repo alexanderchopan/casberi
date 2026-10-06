@@ -25,10 +25,10 @@ extension FeedScreen {
     /// a verb and never stands.
     func notesScopeAllows(_ thing: Thing) -> Bool {
         guard Pinboard.isPinnedRoom(source) else { return true }
-        // The pill's kind (prd §1099) narrows every tile.
-        guard NotesKind.allows(chrome.notesKind, source: thing.source,
-                               kind: thing.kind.rawValue) else { return false }
         switch chrome.notesScope {
+        case .voice:
+            // A voice note of yours; a pinned row from a seat is not one.
+            return thing.source == "You" && thing.kind.rawValue == "voice"
         case .folders:
             guard let filed = thing.folder else { return false }
             guard let open = chrome.notesFolder else { return true }
@@ -37,12 +37,12 @@ extension FeedScreen {
         }
     }
 
-    /// The Notes room's tiles (prd §969, §1099): All · Folders · New ·
-    /// Search, on the same template as every room's. New and Search are
-    /// VERBS in the row — they never light. New raises the note page; held,
-    /// it raises the page with the mic live (prd §970), and under the pill's
-    /// Voice notes a plain tap records too, because that is the only note
-    /// that pick can make. Its plus arms into the voice kind's waveform as
+    /// The Notes room's tiles (prd §969, §1099, §1127): All · Folders ·
+    /// Voice · New · Search, on the same template as every room's. New and
+    /// Search are VERBS in the row — they never light. New raises the note
+    /// page; held, it raises the page with the mic live (prd §970), and
+    /// under Voice a plain tap records too, because that is the only note
+    /// that tile lists. Its plus arms into the voice kind's waveform as
     /// the hold builds (prd §973). Search raises the find tray.
     private var notesTiles: DSScopeTiles<NotesScope> {
         DSScopeTiles(sections: NotesScope.allCases,
@@ -56,7 +56,7 @@ extension FeedScreen {
             if picked == .search {
                 feedSheet = .notesSearch
             } else if picked == .new {
-                if chrome.notesKind == .voice { chrome.newNoteByVoice() } else { chrome.newNote += 1 }
+                if chrome.notesScope == .voice { chrome.newNoteByVoice() } else { chrome.newNote += 1 }
             } else {
                 // Any pick closes an open folder — Folders tapped again is
                 // the way back to the folder list (prd §980).
@@ -114,41 +114,14 @@ extension FeedScreen {
         }
     }
 
-    /// THE NOTES ROOM'S PILL (prd §1099): Notes · Voice notes, in the title
-    /// row where every room picks between the apps in it (§1066). "All
-    /// notes" while both show.
-    var notesKindPill: some View {
-        let all = DSAccountSlot(id: "", name: String(localized: "All notes"), sub: nil, faces: [])
-        let slots = [all] + NotesKind.allCases.map { kind in
-            DSAccountSlot(id: kind.rawValue, name: kind.label, sub: nil, faces: [],
-                          symbol: kind.symbol)
-        }
-        let showing = slots.first { !$0.id.isEmpty && $0.id == chrome.notesKind?.rawValue } ?? all
-        return DSScopeMenu(slots: slots, showing: showing,
-                           spoken: { String(localized: "Showing: \($0)") },
-                           allLabel: String(localized: "All notes"),
-                           onPick: { id in
-                               withAnimation(DS.Motion.standard) {
-                                   chrome.notesKind = id.flatMap(NotesKind.init(rawValue:))
-                               }
-                           })
-        #if DEBUG
-        .task { notesProbe() }
-        #endif
-    }
-
     #if DEBUG
-    /// `-notesKind written|voice` picks the pill's kind and `-notesScope
-    /// folders|search` lands on Folders or raises Search, at mount (prd §1099;
-    /// NSLogs `notesProbe:`). Once per launch.
-    private func notesProbe() {
+    /// `-notesScope folders|voice|search` lands on Folders or Voice, or
+    /// raises Search, at mount (prd §1099, §1127; NSLogs `notesProbe:`).
+    /// Once per launch.
+    func notesProbe() {
         guard !Self.notesProbed else { return }
         Self.notesProbed = true
         let defaults = UserDefaults.standard
-        if let raw = defaults.string(forKey: "notesKind"), let kind = NotesKind(rawValue: raw) {
-            NSLog("[Casberi] notesProbe: kind %@", raw)
-            chrome.notesKind = kind
-        }
         if let raw = defaults.string(forKey: "notesScope"), let scope = NotesScope(rawValue: raw) {
             NSLog("[Casberi] notesProbe: scope %@", raw)
             if scope == .search { feedSheet = .notesSearch } else if !scope.isVerb { chrome.notesScope = scope }

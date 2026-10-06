@@ -38,7 +38,9 @@ struct CategoryOrderSheet: View {
 
     /// The working order. Held locally so a drag is instant and the store is
     /// written once per move rather than read back mid-gesture.
-    @State private var order: [String] = CategoryOrder.current
+    /// Markets is a place in Home and not in the walk (prd §1127), so it
+    /// has no slot to move here.
+    @State private var order: [String] = CategoryOrder.current.filter { !HomeScope.leavesWalk($0) }
 
     /// Which categories the strip is actually drawing — read from
     /// `ShellChrome.chipOrder`, the strip's own published order, so this
@@ -51,7 +53,7 @@ struct CategoryOrderSheet: View {
         List {
             Section {
                 // A row, not a header (prd §784): a plain list pins headers.
-                Text("All and Pinned always lead.")
+                Text("Home always leads.")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .listRowBackground(Color.clear)
@@ -120,7 +122,7 @@ struct CategoryOrderSheet: View {
         DSHaptic.tap()
         withAnimation(DS.Motion.standard) {
             CategoryOrder.reset()
-            order = CategoryOrder.current
+            order = CategoryOrder.current.filter { !HomeScope.leavesWalk($0) }
         }
         chrome.chipOrderPulse += 1
     }

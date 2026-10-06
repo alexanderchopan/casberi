@@ -459,8 +459,8 @@ final class ShellChrome {
     /// agent is not a room you looked something up in.
     var agentScope: AgentRoomScope = .all
 
-    /// Which of the Notes room's tiles is standing (prd §969) — All, Pinned
-    /// or Folders; never New, which is a verb. Here for `agentScope`'s
+    /// Which of the Notes room's tiles is standing (prd §969, §1127) — All,
+    /// Folders or Voice; never New or Search, which are verbs. Here for `agentScope`'s
     /// reason, and cleared on every source change like it.
     var notesScope: NotesScope = .all
 
@@ -470,11 +470,6 @@ final class ShellChrome {
     /// Folders tile tapped again is the way back to the list. A note made
     /// while a folder is open is filed in it.
     var notesFolder: String? = nil
-
-    /// Which kind the Notes room's pill picked (prd §1099): the notes you
-    /// wrote, the ones you spoke, or nil for everything. Cleared on every
-    /// source change with the tiles. New made under Voice notes records.
-    var notesKind: NotesKind? = nil
 
     /// Which of the Tokens room's tiles is standing — the Watchlist, or one
     /// catalogue category's company pack (`CompanyPacks`). Cleared on every

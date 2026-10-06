@@ -51,7 +51,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The tray is one grid of five columns. Every button is 46pt. Headers are a bare glyph over a `heading17` word. A Recent line holds the five rooms you last landed in. No badges, no collapsing (§1013).
 - The tray is solid black (`DS.surfaceSheet`), never glass. You doors not standing fill with `DS.surfaceRaised`. The first column sits on the face's axis (§1014).
 - The tray's search narrows the grid in place. The search and the You row stay pinned above the scroll (§1015). A mark has no hold menu (§1033).
-- You doors, in this order: Home, Notes, Apps, Addresses, Settings (§1012, §1111). While the tray is up, the face shows the octopus (§1009).
+- You doors, in this order: Home, Notes, Markets, Apps, Addresses, Settings (§1012, §1111, §1123). While the tray is up, the face shows the octopus (§1009). Home's title row carries the same six as a glass pill that says You (§1127).
+- Notes and Markets are places in Home, not in the walk: the swipe is Home, then the categories. Picked, the title stays Home and the pill names them; a swipe from either walks from Home's place (§1127).
 - A category shows in the tray only while it holds a connected seat (§977).
 - No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). No room draws an account door; an app's settings open from its row in Apps (§1050f).
 - On a pushed screen the dock's seat is the back door. The system back button is hidden at the resolver, and the edge swipe goes through `DSSwipeBack` (§767). Content comes to rest clear of the seat via `.dsSeatClearance()` (§829).
@@ -154,8 +155,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Logos: watch a public LEZ account, keyless, forward from the watch. Never in the wallet total (§988). Your own node is read at the address you give, through GETs only (§989). The room is Home · Node · Rewards, then Explorer, a verb tile (§991, §1016, §1039). Tickets are a count, and the phone never mines (§1016). A pasted public key resolves to its account (§1034). A reset is detected by block 1's hash and stated once (§1035).
 
 ### 13. Notes and voice
-- Notes is a room in You, reached through one always-drawn door. Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
-- Tiles: All · Folders · New · Search (§1099 over §995, §980). The title row's pill picks All notes · Notes · Voice notes (§1099). A thing sits in at most one folder. A folder opens in place (§980).
+- Notes is a place in Home, reached through two always-drawn doors, the tray's and Home's You pill (§1127). Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
+- Tiles: All · Folders · Voice · New · Search (§1127 over §1099, §995, §980). Voice lists the voice notes you spoke; the title row is Home's You pill (§1127). A thing sits in at most one folder. A folder opens in place (§980).
 - Pinned leads All, and the rest stand under "Notes" (§985). The long press holds five actions: Pin, Move, Lock, Share, Delete (§983).
 - A note of yours is ONE page: a tap opens it read, its items tick, a tap on the words types; a voice note's page is its player over its words (§1099, superseding §983's three keys). Writing is title over words, four tools on a glass capsule over the keyboard (§983); the words are one editor that reads and writes, its list keys act at the cursor, a ticked item sinks, lines indent and move, `[[` links, a pasted address takes its page's title, and the page saves as you type and dates an edit (§1100). The Aa key formats without markdown: heading, bold, italic, strikethrough, lists and quote, written as markdown and drawn with the marks hidden (§1101). A dash makes a bullet (§1099). A list in the box ticks in place (§1099).
 - Deleting asks for confirmation, then archives on this device for 30 days in Recently deleted (§985).
@@ -220,7 +221,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1260 of 1321 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1261 of 1322 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1305,7 +1306,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §966 — Becoming the pick is a crossfade, in the template
 - §967 — What this app reaches and what it reached are ONE pushed screen, filtered by the dock's categories
 - §968 — Robinhood is read on Alchemy beside Zerion, and a DEX-only token is priced off a pool deep enough to sell into
-- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (part superseded by §972, §975, §981, §995, §1099)
+- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (amended by §1127; part superseded by §972, §975, §981, §995, §1099)
 - §970 — A note can be spoken: the sheet's wide key carries the one verb, and holding New lands speaking (part superseded by §971)
 - §971 — Dictation is Apple's, and the note sheet's mic KEEPS A VOICE NOTE (amended by §972, §987)
 - §972 — "Voice" is retired as a source and a room, and the voice note is kept whole (part superseded by §980)
@@ -1413,7 +1414,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1063 — The Wallet category wears the dollar sign
 - §1064 — In the demo, no pick opens an empty page
 - §1065 — Every app in the demo has something behind it, and an app picked in a merged room keeps its page
-- §1066 — The account picker is a glass pill in the title row
+- §1066 — The account picker is a glass pill in the title row (amended by §1127)
 - §1067 — The room sweep
 - §1068 — Social is one room
 - §1069 — A Safe leads with its balance
@@ -1448,7 +1449,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1096 — Solana, past §86: a cursor, v1 transactions, SPL grants, a measured venue table, and `.sol` names back
 - §1097 — A Bitcoin wallet, not an address: watch an xpub, and the facts only a wallet can state — dust, reuse, a send that waits
 - §1098 — Lightning, over Nostr Wallet Connect: a seat any Lightning wallet fills, refused if it can pay
-- §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list… (amended by §1100)
+- §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list… (amended by §1100, §1127)
 - §1100 — Writing a note: one editor at the cursor, save as you type, headings and quotes, ticked items sink, lines move and in…
 - §1101 — The Aa key: formatting for someone who never types markdown
 - §1102 — One smaller box: every room's lead is 236pt, every room's tiles stand at one y, and a sheet shows its picture whole
@@ -1478,10 +1479,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1120 — The verb is Follow a feed, and the leftovers of the follow sweep (amended by §1121)
 - §1121 — Two verbs: Follow for everything you keep up with, Track for subscriptions
 - §1122 — The tray lines its icons up in columns over a blurred room, an app is a rounded square and a person a circle, in the… (amended by §1123)
-- §1123 — Markets is a You door: pink, in the top row, and the word "You" goes
+- §1123 — Markets is a You door: pink, in the top row, and the word "You" goes (amended by §1127)
 - §1124 — Privy's apps are a group in Holdings
 - §1125 — The last room's swipe left opens the tray
 - §1126 — Reading's Subscriptions count no posts
+- §1127 — Home wears a You pill, and Notes and Markets are places in Home
 
 ## Dead rulings → what replaced them (generated)
 

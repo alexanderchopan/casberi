@@ -61,6 +61,8 @@ enum ScopeTileGlyph {
     /// (2026-09-19) and is not re-proposed here either.)
     /// Folders is the bare `folder`, back with folders behind it (prd §980).
     static let folders      = "folder"
+    /// Notes' Voice (prd §1127): the voice note's own row mark.
+    static let voice        = "waveform"
     static let new          = "plus"
     /// The Wallet's Coming up (prd §1041): a calendar with a clock — what
     /// is still ahead. NOT the bare `calendar`, which is the dock's Life glyph
@@ -144,6 +146,7 @@ extension NotesScope: DSTileScope {
         switch self {
         case .all:     return ScopeTileGlyph.all
         case .folders: return ScopeTileGlyph.folders
+        case .voice:   return ScopeTileGlyph.voice
         case .new:     return ScopeTileGlyph.new
         case .search:  return ScopeTileGlyph.search
         }

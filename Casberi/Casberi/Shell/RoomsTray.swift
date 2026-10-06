@@ -187,9 +187,9 @@ struct RoomsTray: View {
     /// one app tile that is important but is part of a long catalogue list
     /// someone may not see it. it's also tied to things you have connected").
     /// It is Casberi's own index of the companies behind your apps, so it
-    /// wears the pink of the app's own places. The dock's order, the swipe and
-    /// ⌘1–9 keep it as a category; only the tray moves it.
-    static let markets = "Markets"
+    /// wears the pink of the app's own places. Since §1127 it is a place in
+    /// Home, out of the swipe and the dock's order, like Notes.
+    static let markets = HomeScope.markets
 
     /// Whether Markets has a room yet — it does once something is watched.
     private var marketsHasRoom: Bool {
@@ -283,7 +283,7 @@ struct RoomsTray: View {
     private var youDoors: [Door] {
         doors(home: filter.source == "All" && route.path.isEmpty,
               notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty,
-              markets: standingCategory == Self.markets && route.path.isEmpty,
+              markets: HomeScope.isMarkets(filter.source) && route.path.isEmpty,
               apps: route.path.first == .apps)
     }
 

@@ -36,12 +36,14 @@ extension FeedScreen {
     /// publishes (`ShellChrome.accountRail`) — the Testnets room hosts a
     /// network's chrome, so its rail is a network's source, not the room's.
     /// Nothing where there is nothing to pick between.
+    ///
+    /// Home, Notes and Markets wear Home's You pill instead (prd §1127).
     @ViewBuilder
     var titleAccountsPill: some View {
-        if mergedMenuDraws {
+        if HomeScope.contains(source) {
+            youPill
+        } else if mergedMenuDraws {
             mergedAccountsPill
-        } else if Pinboard.isPinnedRoom(source) {
-            notesKindPill
         } else if let rail = chrome.accountRail, rail.slots.count > 1 || rail.action != nil,
                   rail.source == source || source == RoomAccounts.testnetsRoom,
                   let first = rail.slots.first {

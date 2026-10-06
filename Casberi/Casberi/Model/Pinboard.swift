@@ -135,7 +135,9 @@ enum Pinboard {
 /// Foundation-only, like every scope enum, so a harness can compile it
 /// whole; the glyphs are `ScopeTileGlyphs.swift`'s.
 enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, folders, new, search
+    /// Voice (prd §1127) took the title row's Notes · Voice notes pill when
+    /// Home's You pill took the title row: the voice notes you spoke.
+    case all, folders, voice, new, search
 
     var id: String { rawValue }
 
@@ -143,6 +145,7 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:     return String(localized: "All")
         case .folders: return String(localized: "Folders")
+        case .voice:   return String(localized: "Voice")
         case .new:     return String(localized: "New")
         case .search:  return String(localized: "Search")
         }
@@ -153,6 +156,7 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:     return String(localized: "Your notes and everything you pinned")
         case .folders: return String(localized: "What you filed")
+        case .voice:   return String(localized: "What you recorded")
         case .new:     return String(localized: "Write or record a note")
         case .search:  return String(localized: "Find a note")
         }
@@ -161,43 +165,4 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// The tiles that SCOPE the list; New and Search are verbs and never
     /// stand.
     var isVerb: Bool { self == .new || self == .search }
-}
-
-/// WHICH NOTES THE ROOM SHOWS, picked from the title row's pill (prd §1099):
-/// the notes you wrote, or the ones you spoke. Apple ships Voice Memos beside
-/// Notes as its own app, and the pill is where every room picks between the
-/// apps in it (§1066) — so the room's two kinds stand there, and a folder,
-/// which is a way to look at your notes rather than an app, keeps its tile.
-///
-/// nil is everything — both kinds and every pin. A pick narrows to notes of
-/// yours of that kind; a pinned row from a seat is in neither.
-enum NotesKind: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case written, voice
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .written: return String(localized: "Notes")
-        case .voice:   return String(localized: "Voice notes")
-        }
-    }
-
-    /// The mark the pill draws for it — the row's own (`ThingKind.symbol`).
-    var symbol: String {
-        switch self {
-        case .written: return "note.text"
-        case .voice:   return "waveform"
-        }
-    }
-
-    /// Whether a thing of this kind, from this source, stands under the pick.
-    static func allows(_ pick: NotesKind?, source: String, kind: String) -> Bool {
-        guard let pick else { return true }
-        guard source == "You" else { return false }
-        switch pick {
-        case .written: return kind == "note"
-        case .voice:   return kind == "voice"
-        }
-    }
 }

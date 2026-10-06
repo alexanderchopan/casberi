@@ -1280,7 +1280,8 @@ struct MainSurface: View {
         if let held = chipFallback.value { return held }
         let fresh: (labels: [String], venues: [String: [String]], sources: [String])
         if let cached = ChipOrderCache.load(), !cached.labels.isEmpty {
-            fresh = (cached.labels, cached.venues, cached.sources)
+            // A cache written before prd §1127 still holds Notes and Markets.
+            fresh = (cached.labels.filter { !HomeScope.leavesWalk($0) }, cached.venues, cached.sources)
         } else {
             fresh = computedChips()
         }
@@ -1433,19 +1434,12 @@ struct MainSurface: View {
             ordered.append(room)
         }
         let learned = ordered
-        // Notes sits second, right after All, and does NOT enter the learned
-        // sort above (2026-08-10, as Pinned). Two reasons it is placed rather
-        // than ranked: it is not a source, so `ChipMemory`'s recency-and-visits
-        // weighting has nothing meaningful to say about it; and its position
-        // is the one thing about it that should never move, because a list you
-        // built by hand is useless if you have to hunt for the door to it.
-        //
-        // ALWAYS present (prd §969). Pinned was gated on something being
-        // pinned, because an empty room behind a chip was §83's dead control;
-        // Notes is the room where you WRITE, so an empty one is where a first
-        // note starts, and the tray's door is drawn regardless (§769: an empty
-        // room draws what would fill it).
-        let pinned = [Pinboard.room]
+        // Notes is not in the walk (prd §1127, reversing §969's "Notes sits
+        // second"): it is a place in Home, picked from Home's You pill, and
+        // so is Markets. Its door is still always drawn — the pill and the
+        // tray's You row — so an empty Notes is still where a first note
+        // starts.
+        let pinned: [String] = []
         // EVERY catalog category folds into its own chip, ALWAYS (prd §351,
         // 2026-08-11 — generalizes what was one Markets-specific fold applied
         // above a floor of 2). Applied LAST, over the finished list, so the
@@ -1480,7 +1474,11 @@ struct MainSurface: View {
         let rest = Array(folded.dropFirst(1 + pinned.count))
             .sorted { CategoryOrder.rank(of: $0, in: order)
                     < CategoryOrder.rank(of: $1, in: order) }
-        let labels = head + rest
+        // Markets keeps its venues below (the tray's door and Home's pill
+        // read them to know whether it has a room) and leaves the walk
+        // (prd §1127).
+        let walk = head + rest
+        let labels = walk.filter { !HomeScope.leavesWalk($0) }
         // The tray gets the SOURCES, so Pinned is dropped from its list for the
         // same reason a folded category label is: it is a room, not a source.
         // The tray groups by catalog category itself and the catalog has never
@@ -1505,7 +1503,7 @@ struct MainSurface: View {
         // earned learned order and one that reshuffles between opens reads
         // as broken. Two orders, each where it belongs.
         var venues: [String: [String]] = [:]
-        for category in BridgeCatalog.categories where labels.contains(category.name) {
+        for category in BridgeCatalog.categories where walk.contains(category.name) {
             venues[category.name] = learned.filter { CategoryFold.isMember($0, of: category.name) }
         }
         return (labels, venues, sources)
@@ -2054,7 +2052,6 @@ struct MainSurface: View {
             // The Notes room opens on All too (prd §969).
             chrome.notesScope = .all
             chrome.notesFolder = nil
-            chrome.notesKind = nil
             chrome.workScope = .all
             chrome.readingScope = .all
             chrome.mediaScope = .all
@@ -2461,8 +2458,11 @@ struct MainSurface: View {
             }
         }
         let labels = chipLabels
-        let a = labels.firstIndex(of: CategoryFold.chipLabel(for: from, folded: labels)) ?? 0
-        let b = labels.firstIndex(of: CategoryFold.chipLabel(for: to, folded: labels)) ?? a
+        // Notes and Markets sit at Home's place in the walk (prd §1127).
+        let start = HomeScope.contains(from) ? "All" : from
+        let end = HomeScope.contains(to) ? "All" : to
+        let a = labels.firstIndex(of: CategoryFold.chipLabel(for: start, folded: labels)) ?? 0
+        let b = labels.firstIndex(of: CategoryFold.chipLabel(for: end, folded: labels)) ?? a
         return b >= a ? .trailing : .leading
     }
 
@@ -2482,7 +2482,7 @@ struct MainSurface: View {
             // brings up the tray").** The walk's far end has nothing after
             // it either, so a swipe left there opens the tray instead of
             // springing home. Both ends of the walk now lead somewhere.
-            let atEnd = delta > 0 || filter.source == "All"
+            let atEnd = delta > 0 || HomeScope.contains(filter.source)
             if atEnd, route.path.isEmpty, !chrome.roomsTray {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.folder) { chrome.roomsTray = true }
@@ -2548,8 +2548,12 @@ struct MainSurface: View {
         // has to be somewhere, or the swipe silently dies exactly there and
         // the only way out is the strip. This is the guarantee the retired
         // `feedLabels` used to make for the pager's pages, kept.
-        if !rooms.contains(filter.source) { rooms.append(filter.source) }
-        guard let idx = rooms.firstIndex(of: filter.source),
+        //
+        // Notes and Markets stand in Home (prd §1127), so a swipe from either
+        // walks from Home's place: left to the first room, right to the tray.
+        let here = HomeScope.contains(filter.source) ? "All" : filter.source
+        if !rooms.contains(here) { rooms.append(here) }
+        guard let idx = rooms.firstIndex(of: here),
               rooms.indices.contains(idx + delta) else { return nil }
         return rooms[idx + delta]
     }

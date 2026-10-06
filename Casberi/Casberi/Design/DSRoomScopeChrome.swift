@@ -185,6 +185,10 @@ struct DSAccountSlot: Identifiable, Equatable {
     /// A glyph drawn on the note's mark in place of a face (prd §1099): the
     /// Notes room's two kinds, which are not apps with a brand.
     var symbol: String? = nil
+    /// Draw `symbol` as a You door (prd §1127): the brand pink on the raised
+    /// disc, the tray's own You row in a list. Drawn on the "All" slot too,
+    /// because Home is a door of its own.
+    var brandDisc: Bool = false
 }
 
 extension DSAccountSlot {

@@ -122,7 +122,15 @@ struct DSScopeMenu: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 Group {
-                    if !slot.id.isEmpty, let symbol = slot.symbol {
+                    if slot.brandDisc, let symbol = slot.symbol {
+                        Circle()
+                            .fill(DS.surfaceRaised)
+                            .overlay(
+                                Image(systemName: symbol)
+                                    .dsGlyph(.subhead, weight: .medium)
+                                    .foregroundStyle(DS.brand)
+                            )
+                    } else if !slot.id.isEmpty, let symbol = slot.symbol {
                         BridgeIcon(name: "", size: Self.faceSize, circular: true, symbol: symbol)
                     } else if !slot.id.isEmpty, let face = slot.faces.first {
                         MenuFace(face: face)

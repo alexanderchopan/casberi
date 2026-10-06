@@ -64506,3 +64506,16 @@ Same terms as §1062: only at the root (no pushed screen), only while the tray i
 4. **Media and Work keep their figures** ("13 new", "3 updates"): not asked.
 
 **Not seen.** No simulator in this session (a Linux container); the change is unbuilt and unseen.
+
+## §1127 — Home wears a You pill, and Notes and Markets are places in Home (user, 2026-10-06: "does notes automatically become a second room folks swipe into? … how would user see markets", "i think home should have the pill that says You and each of the pink icons are in it", "markets like notes would have no swipe. they both become like all the other apps are in a room. accessed by the toggle", then "Keep both", "All six, Home checked", "A Voice tile"; amends §969, §1066, §1099 and §1123)
+
+**Why.** Notes was always in the walk, second, and Markets joined it only once something was watched, as a category placed after Wallet. Two You doors behaved two ways. Both are the app's own places, so both now live in Home, picked the way a merged room picks an app.
+
+1. **Home's title row carries a glass pill that says You** (`FeedScreen.youPill`, §1066's `DSScopeMenu`). Its list is the tray's six doors in the tray's order, each on its pink disc (`DSAccountSlot.brandDisc`): Home · Notes · Markets · Apps · Addresses · Settings, the standing one checked.
+2. **Notes and Markets are Home's scopes** (`Model/HomeScope.swift`). The title stays "Home" and the pill names the pick ("Notes", "Markets"). Markets opens its page until something is watched (§1123).
+3. **Apps, Addresses and Settings push their screens**, as the tray's doors do.
+4. **The walk is Home, then the categories.** Notes and Markets leave the swipe, the dock's order (`CategoryOrder`'s sheet drops Markets) and ⌘1–9. A swipe from Notes or Markets walks from Home's place: left to the first room, right to the tray (§1062).
+5. **The tray keeps its You row.** Two doors to the same six places: the tray's, and Home's pill.
+6. **Notes' kind pill becomes a Voice tile.** The title row is the You pill's, so Notes' tiles are All · Folders · Voice · New · Search; Voice lists the voice notes you spoke, and New under it records. The written-only pick is deleted, with `NotesKind` and `ShellChrome.notesKind`; `-notesKind` goes and `-notesScope voice` lands on Voice.
+
+**Not seen.** No simulator in this session (a Linux container, no Xcode); the change is unbuilt and unseen. Run `scripts/verify.sh` before shipping.

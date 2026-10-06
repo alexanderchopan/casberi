@@ -6139,6 +6139,34 @@
         }
       }
     },
+    "Home always leads." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicio siempre va primero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「ホーム」は常に先頭です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "홈은 항상 맨 앞입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“主页”始终排在最前。"
+          }
+        }
+      }
+    },
     "In %lld posts this week" : {
       "localizations" : {
         "es" : {
@@ -7651,6 +7679,34 @@
         }
       }
     },
+    "What you recorded" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que grabaste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "録音したもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음한 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你录下的内容"
+          }
+        }
+      }
+    },
     "What you watch, play and listen to lands here" : {
       "localizations" : {
         "es" : {
@@ -7843,6 +7899,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你已关注 %lld 个 — 已达上限。请先取消关注一个；为地址命名仍然不限量。"
+          }
+        }
+      }
+    },
+    "You: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tú: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなた: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你：%@"
           }
         }
       }
