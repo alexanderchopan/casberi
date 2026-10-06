@@ -127,27 +127,16 @@ extension FeedScreen {
         }
     }
 
-    /// THE REST OF TODAY ON HOME (prd §1139, user: "we made it so that the
-    /// entire day today shows on the home screen", "just one day", "that way
-    /// you have your feeds of the day and then events"): Coming up's rows
-    /// that happen later today, every one, in time order, under "Later
-    /// today", after Today's feeds. The week stays in Day's Coming up.
-    @ViewBuilder
-    func laterTodaySections(nextEventID: UUID?) -> some View {
-        let today = dayComingUp.filter {
-            $0.isLive && Self.groupingCalendar.isDateInToday(Self.comingUpWhen($0))
-        }
-        if !today.isEmpty {
-            groupedSections([(String(localized: "Later today"), today)], nextEventID: nextEventID)
-        }
-    }
-
     /// Home's last row (prd §1136c): the door to Day's Coming up. Home is
     /// today; the week is one tap away, in the category about time.
     @ViewBuilder
     var comingUpDoor: some View {
         Section {
-            DSDoorRow(icon: ScopeTileGlyph.comingUp, label: "Coming up") {
+            // What waits past today, counted (prd §1141), so the door says
+            // whether it is worth a tap.
+            let later = comingUpLaterCount
+            DSDoorRow(icon: ScopeTileGlyph.comingUp,
+                      title: later > 0 ? Text("Coming up · \(later) this week") : Text("Coming up")) {
                 chrome.dayScope = .comingUp
                 chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
                 chrome.sourceRequest = RoomAccounts.dayRoom

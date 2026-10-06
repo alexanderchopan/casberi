@@ -476,12 +476,11 @@ extension FeedScreen {
                 // bundling there would collapse the whole screen into one row.
                 bundledSections(visible, nextEventID: nextEventID,
                                 heroShown: heroShown)
-                // Home is Today (prd §1136 item 7), then the rest of today
-                // (§1139, user: "the entire day today shows on the home
-                // screen", "just one day"), ending in the door to Day's
-                // Coming up for the week (§1136c). The corpus floor went with
-                // yesterday: Home no longer reaches back to where it starts.
-                laterTodaySections(nextEventID: nextEventID)
+                // Home is Today (prd §1136 item 7), then your day: every event
+                // today, earlier ones dimmed (§1139, §1141), ending in the door
+                // to Day's Coming up for the week (§1136c). The corpus floor
+                // went with yesterday: Home no longer reaches back.
+                todayScheduleSections()
                 comingUpDoor
             } else if source == RoomAccounts.workRoom {
                 workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)

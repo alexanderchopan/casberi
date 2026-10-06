@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1274 of 1335 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1275 of 1336 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1496,8 +1496,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
 - §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140) [+1 sub-entries]
-- §1139 — Home is the whole of today: its feeds, then Later today
+- §1139 — Home is the whole of today: its feeds, then Later today (part superseded by §1141)
 - §1140 — The catalogue lists yours first, then what you could add
+- §1141 — Your day: Home shows every event today, the earlier ones dimmed, and counts the week
 
 ## Dead rulings → what replaced them (generated)
 
