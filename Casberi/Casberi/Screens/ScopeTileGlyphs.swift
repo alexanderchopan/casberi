@@ -89,14 +89,24 @@ extension WorkScope: DSTileScope {
     }
 }
 
-/// The Reading room's tiles (prd §1085). Follow wears Watch's eye: following
-/// a site's feed is watching it privately, Watch's own meaning.
+/// The Media room's tiles (prd §1118).
+extension MediaScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:           return ScopeTileGlyph.all
+        case .subscriptions: return ScopeTileGlyph.subscriptions
+        }
+    }
+}
+
+/// The Reading room's tiles (prd §1085). Subscriptions wears the Wallet's
+/// and Day's glyph (§1118): one idea in every room that lists it.
 extension ReadingScope: DSTileScope {
     var glyph: String {
         switch self {
         case .all:        return ScopeTileGlyph.all
         case .highlights: return ScopeTileGlyph.highlights
-        case .follow:     return ScopeTileGlyph.watch
+        case .subscriptions: return ScopeTileGlyph.subscriptions
         case .search:     return ScopeTileGlyph.search
         }
     }

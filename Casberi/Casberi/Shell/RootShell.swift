@@ -214,6 +214,9 @@ struct RootShell: View {
                 if let s = WorkScope(rawValue: raw), !s.isVerb { chrome.workScope = s }
                 // Day's Subscriptions (prd §1111).
                 if let s = DayScope(rawValue: raw), !s.isVerb { chrome.dayScope = s }
+                // Reading's and Media's Subscriptions, Work's Watching (prd §1118).
+                if let s = ReadingScope(rawValue: raw), !s.isVerb { chrome.readingScope = s }
+                if let s = MediaScope(rawValue: raw) { chrome.mediaScope = s }
             }
         }
         // `-serviceDoor "plan:<plan name>" | "list:<list id>"` takes a service

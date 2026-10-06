@@ -25,6 +25,7 @@ struct ReadingFindSheet: View {
     var onOpen: ((Thing) -> Void)? = nil
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Environment(ShellChrome.self) private var chrome: ShellChrome?
     @Environment(BridgeStore.self) private var store: BridgeStore?
 
@@ -40,7 +41,7 @@ struct ReadingFindSheet: View {
     private static let resultCap = 20
 
     var body: some View {
-        DSTray(title: mode == .follow ? String(localized: "Follow") : String(localized: "Search"),
+        DSTray(title: mode == .follow ? SubscriptionWords.track : String(localized: "Search"),
                height: 640, detents: [.large]) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -205,10 +206,17 @@ struct ReadingFindSheet: View {
     // MARK: - Following
 
     /// Adds the site to RSS, reads it once so the feed is found now, and says
-    /// so either way: a site that publishes no feed is taken back out.
+    /// so either way: a site that publishes no feed is taken back out. A
+    /// Substack goes to Substack's own list, so one publication is never
+    /// followed twice through two apps (prd §1118). Following closes the tray
+    /// onto the Subscriptions list it joined.
     private func follow(_ host: String) async {
         guard !DemoMode.isActive else {
             chrome?.flash(String(localized: "Following works once you leave the demo."))
+            return
+        }
+        if host.hasSuffix(".substack.com") {
+            await followSubstack(host)
             return
         }
         let rss = RSSStore.shared
@@ -230,6 +238,37 @@ struct ReadingFindSheet: View {
         store?.registerConnected(id: "rss", name: "RSS",
                                  proof: String(localized: "Synced just now"),
                                  can: ["Reads the feeds you follow."])
+        landOnSubscriptions()
+    }
+
+    /// A Substack, through Substack's own list (`HandleBridge.substack`, the
+    /// seat's page's add and sync).
+    private func followSubstack(_ host: String) async {
+        let bridge = HandleBridge.substack
+        let input = FeedURL.substackInput(host)
+        guard !FeedFollowStore.substack.inputs.contains(where: { $0.caseInsensitiveCompare(input) == .orderedSame })
+        else { landOnSubscriptions(); return }
+        remember(host)
+        following = host
+        bridge.addName(input)
+        let added = await bridge.refresh(context: modelContext)
+        following = nil
+        guard added != nil else {
+            FeedFollowStore.substack.remove(input: input)
+            chrome?.flash(String(localized: "Couldn't reach \(host)"), tone: .failure)
+            return
+        }
+        followed.insert(host)
+        chrome?.flash(String(localized: "Following \(host)"), tone: .success)
+        store?.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
+                                 proof: String(localized: "Synced just now"), can: [bridge.canLine])
+        landOnSubscriptions()
+    }
+
+    /// The tray closes onto the list the follow joined.
+    private func landOnSubscriptions() {
+        chrome?.readingScope = .subscriptions
+        dismiss()
     }
 
     // MARK: - Reading

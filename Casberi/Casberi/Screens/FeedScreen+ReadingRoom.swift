@@ -5,7 +5,9 @@ import SwiftData
 
 extension FeedScreen {
     /// The Reading room: the newest thing in the box (every room's rule), All ·
-    /// Highlights · Follow · Search under it, the menu, then the days.
+    /// Highlights · Subscriptions · Search under it, the menu, then the days.
+    /// Subscriptions draws its own box and list: every feed you follow, with
+    /// Track a subscription first (prd §1118).
     ///
     /// Highlights is every passage you kept, from any app: Readwise's and
     /// Kindle's rows in the room, and the ones you kept yourself from a
@@ -14,6 +16,7 @@ extension FeedScreen {
     @ViewBuilder
     func readingRoomSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
         let highlights = chrome.readingScope == .highlights
+        let subscriptions = chrome.readingScope == .subscriptions
         // One article saved in several apps stands once, at its newest save
         // (prd §1079, `objectFolded`).
         let rows: [Thing] = highlights ? readingHighlights(visible) : objectFolded(visible)
@@ -24,7 +27,9 @@ extension FeedScreen {
             guard let id = ledeThingID(in: days) else { return nil }
             return rows.first { $0.isLive && $0.id == id }
         }()
-        if let cover {
+        if subscriptions {
+            Section { followingBox(.reading) }
+        } else if let cover {
             Section { ledeListRow(cover) }
         } else if !heroShown {
             Section {
@@ -39,7 +44,7 @@ extension FeedScreen {
         }
         Section {
             DSScopeTiles(sections: ReadingScope.allCases, active: chrome.readingScope,
-                         attention: [], verbs: [.follow, .search]) { picked in
+                         attention: [], verbs: [.search]) { picked in
                 if picked.isVerb {
                     feedSheet = .readingFind(picked)
                     return
@@ -59,8 +64,12 @@ extension FeedScreen {
             }
         }
         roomScopeSection
-        groupedSections(liftingCover(days, id: cover?.id), nextEventID: nextEventID,
-                        boundary: highlights ? nil : boundaryThingID(in: days))
+        if subscriptions {
+            followingSections(.reading)
+        } else {
+            groupedSections(liftingCover(days, id: cover?.id), nextEventID: nextEventID,
+                            boundary: highlights ? nil : boundaryThingID(in: days))
+        }
     }
 
     /// Every highlight the room can show, newest first: Readwise's and
@@ -86,15 +95,20 @@ extension FeedScreen {
     }
 
     #if DEBUG
-    /// `-readingScope highlights|follow|search` — land on Highlights, or raise
-    /// Follow or Search, at mount (prd §1085; NSLogs `readingScope:`). Once
-    /// per launch.
+    /// `-readingScope highlights|subscriptions|follow|search` — land on a
+    /// tile, or raise Follow (Subscriptions' first row, §1118) or Search, at
+    /// mount (prd §1085; NSLogs `readingScope:`). Once per launch.
     private func readingProbe() {
         guard !Self.readingProbed,
-              let raw = UserDefaults.standard.string(forKey: "readingScope"),
-              let scope = ReadingScope(rawValue: raw) else { return }
+              let raw = UserDefaults.standard.string(forKey: "readingScope") else { return }
         Self.readingProbed = true
         NSLog("[Casberi] readingScope: %@", raw)
+        if raw == "follow" {
+            chrome.readingScope = .subscriptions
+            feedSheet = .followingAdd(.reading)
+            return
+        }
+        guard let scope = ReadingScope(rawValue: raw) else { return }
         if scope.isVerb { feedSheet = .readingFind(scope) } else { chrome.readingScope = scope }
     }
     #endif

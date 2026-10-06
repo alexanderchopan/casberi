@@ -480,6 +480,8 @@ extension FeedScreen {
                 dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.readingRoom {
                 readingRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+            } else if source == RoomAccounts.mediaRoom {
+                mediaRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.socialRoom {
                 socialRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if agentRoomShown {

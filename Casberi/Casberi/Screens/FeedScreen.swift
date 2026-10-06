@@ -546,6 +546,16 @@ struct FeedScreen: View {
                 return
             }
             route = .mailSubscription(id)
+        case .followed(let id, let room):
+            guard source == ShellChrome.roomName(room) else { return }
+            if FollowingReading.shared.item(id) == nil {
+                FollowingReading.shared.refresh(room, context: modelContext)
+            }
+            guard FollowingReading.shared.item(id) != nil else {
+                chrome.serviceDoor = nil
+                return
+            }
+            route = .following(id, room)
         }
         // The room's card lands first, or the sheet's rise is refused. The
         // door is cleared AFTER the beat: clearing changes this task's own
@@ -727,7 +737,6 @@ struct FeedScreen: View {
     @State var dayMakeOpen = false
     /// Watch was tapped in the Work room with more than one seat that keeps
     /// a watch (prd §1057).
-    @State var workWatchOpen = false
     /// The highlights you kept yourself (`Highlight`, prd §1020): notes of
     /// yours, so outside Reading's query; read when Highlights is picked
     /// (prd §1085).
@@ -881,6 +890,7 @@ struct FeedScreen: View {
     @MainActor static var walletFollowProbed = false
     @MainActor static var subscriptionsProbed = false
     @MainActor static var mailSubscriptionProbed = false
+    @MainActor static var followingProbed = false
     @MainActor static var subscriptionsCategoryProbed = false
     #endif
     /// What the Wallet last read you hold, for Markets' "You hold" line.
@@ -1998,7 +2008,6 @@ struct FeedScreen: View {
         }
         .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
         .modifier(DayMakeDialog(open: $dayMakeOpen, makes: dayMakes, onPick: makeInDay))
-        .modifier(WorkWatchDialog(open: $workWatchOpen, watches: workWatches, onPick: watchInWork))
         .modifier(WhichAgentDialog(open: $askingWhichAgent, agents: answeringAgents) { provider in
             pickAgent(provider)
             chrome.beginConversation(with: provider.agent)
@@ -2015,23 +2024,6 @@ struct FeedScreen: View {
     /// screen: it must not collapse when a thing lands, or scrolling back would
     /// undo itself every sync.
     @State var windowSteps = Self.initialWindowSteps
-}
-
-/// What Watch follows in the Work room (prd §1057).
-private struct WorkWatchDialog: ViewModifier {
-    @Binding var open: Bool
-    let watches: [WorkWatch]
-    let onPick: (WorkWatch) -> Void
-
-    func body(content: Content) -> some View {
-        content.confirmationDialog(String(localized: "Watch"), isPresented: $open,
-                                   titleVisibility: .hidden) {
-            ForEach(watches) { watch in
-                Button(watch.label) { onPick(watch) }
-            }
-            Button(String(localized: "Cancel"), role: .cancel) {}
-        }
-    }
 }
 
 /// What New makes in the Day room (prd §1056).

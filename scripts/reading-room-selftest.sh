@@ -106,8 +106,8 @@ check(ReadingRoom.site(in: "two words.com") == nil, "words with a dot are a sear
 check(ReadingRoom.site(in: "x.com") == nil, "a social network is never a site to follow")
 
 // ── The tiles ────────────────────────────────────────────────────────
-check(ReadingScope.allCases == [.all, .highlights, .follow, .search], "All, Highlights, then the verbs")
-check(ReadingScope.allCases.filter(\.isVerb) == [.follow, .search], "Follow and Search are the verbs")
+check(ReadingScope.allCases == [.all, .highlights, .subscriptions, .search], "All, Highlights, Subscriptions, then the verb (prd §1118)")
+check(ReadingScope.allCases.filter(\.isVerb) == [.search], "Search is the one verb: Follow is the Subscriptions list's first row (prd §1118)")
 
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 print("✓ reading room: highlights, hosts, suggestions, typed sites, tiles")

@@ -128,6 +128,10 @@ struct MailSubscriptionSheet: View {
         .task(id: id) {
             loadRecent()
             await ServiceLinks.shared.refresh(modelContext, seats: store.bridges.map(\.name))
+            // And what you follow, for the door to it (prd §1118): only the
+            // rooms whose follows have sites; Work's never write to you.
+            FollowingReading.shared.refresh(.reading, context: modelContext)
+            FollowingReading.shared.refresh(.media, context: modelContext)
         }
         // The Wallet's words for the same act (prd §1115).
         .confirmationDialog(Text("Remove \(item?.name ?? "")?"), isPresented: $confirmingRemove,
@@ -186,6 +190,13 @@ struct MailSubscriptionSheet: View {
     private func doors(_ item: MailSubscriptions.Item) -> [SubscriptionDoor] {
         var out: [SubscriptionDoor] = []
         let link = ServiceLinks.shared.byList[item.id]
+        if let (followed, room) = FollowingReading.shared.followed(listID: item.id) {
+            out.append(.init(id: "followed", icon: ScopeTileGlyph.subscriptions,
+                             title: Text(Following.doorWords(room))) {
+                dismiss()
+                chrome.open(.followed(followed.id, room))
+            })
+        }
         if let app = link?.app {
             out.append(.init(id: "app", icon: SubscriptionWords.appGlyph, title: Text("Open \(app)")) {
                 dismiss()

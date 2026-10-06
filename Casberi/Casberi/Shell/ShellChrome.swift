@@ -570,6 +570,8 @@ final class ShellChrome {
     var dayScope: DayScope = .all
     /// The Reading room's picked tile (prd §1085).
     var readingScope: ReadingScope = .all
+    /// The Media room's picked tile (prd §1118): All or Subscriptions.
+    var mediaScope: MediaScope = .all
     /// The Social room's picked tile (prd §1086).
     var socialScope: SocialScope = .all
 
@@ -998,7 +1000,11 @@ final class ShellChrome {
     /// app disconnected since the reading) would otherwise wait and fire on
     /// some later visit: a door answers in `serviceDoorLife` or not at all.
     struct ServiceDoor: Equatable {
-        enum Target: Equatable { case plan(String), list(String) }
+        enum Target: Equatable {
+            case plan(String), list(String)
+            /// Something followed, in the room that lists it (prd §1118).
+            case followed(String, Following.Room)
+        }
         let target: Target
         let at: Date
     }
@@ -1021,7 +1027,25 @@ final class ShellChrome {
                 mergedScope[RoomAccounts.dayRoom] = nil
                 dayScope = .subscriptions
                 sourceRequest = RoomAccounts.dayRoom
+            case .followed(_, let room):
+                let name = Self.roomName(room)
+                mergedScope[name] = nil
+                switch room {
+                case .reading: readingScope = .subscriptions
+                case .media:   mediaScope = .subscriptions
+                case .work:    workScope = .watch
+                }
+                sourceRequest = name
             }
+        }
+    }
+
+    /// The room that lists what you follow there (prd §1118).
+    static func roomName(_ room: Following.Room) -> String {
+        switch room {
+        case .reading: RoomAccounts.readingRoom
+        case .media:   RoomAccounts.mediaRoom
+        case .work:    RoomAccounts.workRoom
         }
     }
 

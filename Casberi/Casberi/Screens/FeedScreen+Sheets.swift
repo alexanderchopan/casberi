@@ -78,8 +78,13 @@ extension FeedScreen {
         case socialFaces
         /// Markets' Add (prd §1081): find a token or a stock and watch it.
         case watchAdd
-        /// Reading's Follow or Search (prd §1085).
+        /// Reading's Search (prd §1085).
         case readingFind(ReadingScope)
+        /// One thing followed, by its id and room (prd §1118).
+        case following(String, Following.Room)
+        /// A room's verb for what you follow: Reading's Follow tray, Media's
+        /// track tray, Work's watch tray (prd §1118).
+        case followingAdd(Following.Room)
         /// The Notes room's Search (prd §1099).
         case notesSearch
         /// Social's Follow (prd §1086).
@@ -123,6 +128,8 @@ extension FeedScreen {
             case .socialFaces: "socialFaces"
             case .watchAdd: "watchAdd"
             case .readingFind(let scope): "readingFind:\(scope.rawValue)"
+            case .following(let id, let room): "following:\(room.rawValue):\(id)"
+            case .followingAdd(let room): "followingAdd:\(room.rawValue)"
             case .notesSearch: "notesSearch"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
@@ -309,8 +316,12 @@ extension FeedScreen {
                     if let thing = (try? modelContext.fetch(d))?.first, thing.isLive { openThing(thing) }
                 }
             }
-        case .readingFind(let scope):
-            ReadingFindSheet(mode: scope == .search ? .search : .follow) { thing in
+        case .following(let id, let room):
+            FollowingSheet(id: id, room: room)
+        case .followingAdd(let room):
+            followingAddTray(room)
+        case .readingFind:
+            ReadingFindSheet(mode: .search) { thing in
                 // The find tray closes before the thing's sheet rises: one
                 // sheet at a time, never one raised from inside another (§872).
                 feedSheet = nil

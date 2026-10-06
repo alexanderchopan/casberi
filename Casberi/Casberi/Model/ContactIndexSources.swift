@@ -102,16 +102,10 @@ enum ContactIndexSources {
                              since: saved.addedAt))
         }
 
-        // Publications: a row is an address that is not a person (user,
-        // 2026-09-24). Every feed follow, keyed on its feed URL.
-        for feed in RSSStore.shared.feeds {
-            out.append(.init(Identity.make(.feed, feed.url), name: feed.displayName, kind: .publication))
-        }
-        for store in [FeedFollowStore.substack, .youtube, .podcasts, .telegram] {
-            for entry in store.entries where !entry.feedURL.isEmpty {
-                out.append(.init(Identity.make(.feed, entry.feedURL), name: entry.displayName, kind: .publication))
-            }
-        }
+        // Feeds you follow are NOT addresses (prd §1118): each is listed in
+        // the room it reads into (Reading's and Media's Subscriptions), and a
+        // feed that was also an address stood in two places. A feed someone
+        // saved by hand above stays: that is their word.
 
         // Billers (prd §1106): every merchant that charges you on a schedule,
         // read as the Subscriptions tile reads them. The merchant's name is

@@ -57,9 +57,8 @@ FOLD = f"{APP}/Model/CategoryFold.swift"
 ALIASES = {
     # (The Wallet's verb was Follow wearing Watch's eye until prd §1105 named
     # it Watch; it wears its own name now, so its alias is gone.)
-    # Reading's Follow (prd §1085) follows a site's feed - watching it
-    # privately, the same meaning.
-    ("ReadingScope", "follow"): "watch",
+    # (Reading's Follow wore Watch's eye until prd §1118 made it the first
+    # row of its Subscriptions tile, which wears its own name.)
     # Social's Follow (prd §1086) watches a person privately: the same meaning.
     ("SocialScope", "follow"): "watch",
 }
@@ -253,15 +252,6 @@ extension NotesScope: DSTileScope {
     }
 }
 
-extension ReadingScope: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .all: return ScopeTileGlyph.all
-        case .follow: return ScopeTileGlyph.watch
-        }
-    }
-}
-
 extension SocialScope: DSTileScope {
     var glyph: String {
         switch self {
@@ -305,8 +295,8 @@ MUTATIONS = [
     ("a case wears another name's constant (Privy's Apps in Frames' glyph)",
      "glyphs", "case .new: return ScopeTileGlyph.new", "case .new: return ScopeTileGlyph.home", "B"),
     ("a declared alias outlives its case",
-     "glyphs", "        case .all: return ScopeTileGlyph.all\n        case .follow: return ScopeTileGlyph.watch\n        }\n    }\n}\n\nextension SocialScope",
-     "        case .all: return ScopeTileGlyph.all\n        }\n    }\n}\n\nextension SocialScope", "C"),
+     "glyphs", "extension SocialScope: DSTileScope {\n    var glyph: String {\n        switch self {\n        case .all: return ScopeTileGlyph.all\n        case .follow: return ScopeTileGlyph.watch\n",
+     "extension SocialScope: DSTileScope {\n    var glyph: String {\n        switch self {\n        case .all: return ScopeTileGlyph.all\n", "C"),
     ("two constants share one symbol",
      "glyphs", 'static let new         = "plus"', 'static let new         = "eye"', "D"),
     ("a constant takes a dock category's symbol",

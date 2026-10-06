@@ -2057,6 +2057,7 @@ struct MainSurface: View {
             chrome.notesKind = nil
             chrome.workScope = .all
             chrome.readingScope = .all
+            chrome.mediaScope = .all
             chrome.socialScope = .all
             // And the Tokens room's packs.
             chrome.tokensScope = .watchlist

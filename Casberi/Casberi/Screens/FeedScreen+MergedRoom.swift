@@ -389,24 +389,17 @@ extension FeedScreen {
             .sorted { $0.capturedAt > $1.capturedAt }
     }
 
-    /// What Watch can follow: the connected seats that keep a watch.
-    var workWatches: [WorkWatch] {
-        let seats = Set(RoomAccounts.connected(in: RoomAccounts.workRoom, names: connectedSeatNames)
-            .map(\.name))
-        return WorkWatch.allCases.filter { seats.contains($0.rawValue) }
-    }
-
-    /// GitHub's own tray (§1031); the others' watch lists live on their
-    /// account pages.
-    func watchInWork(_ watch: WorkWatch) {
-        if watch == .github {
+    /// GitHub's own tray (§1031) once GitHub is connected, which a repo's
+    /// lookup needs; else its page, where it connects.
+    func watchOnGitHub() {
+        if connectedSeatNames.contains("GitHub") {
             feedSheet = .githubWatch
-        } else if let destination = BridgeRouter.destination(forOffer: watch.rawValue) {
+        } else if let destination = BridgeRouter.destination(forOffer: "GitHub") {
             route.openAccount(destination)
         }
     }
 
-    /// The Work room: the newest thing, All · Coming up · Watch, the menu,
+    /// The Work room: the newest thing, All · Coming up · Watching, the menu,
     /// then the list — one row per PR, issue, ticket, incident, deployment or
     /// build, standing at its newest event (prd §1079).
     ///
@@ -417,6 +410,7 @@ extension FeedScreen {
     func workRoomSections(_ allVisible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
         let visible = objectFolded(allVisible)
         let comingUp = chrome.workScope == .comingUp
+        let watching = chrome.workScope == .watch
         // What needs you now leads Coming up, then what is due (prd §1080);
         // a row that is both stands once, under the asks.
         let asks = comingUp ? workAsks(visible) : []
@@ -425,7 +419,9 @@ extension FeedScreen {
         // Coming up leads with what needs you, else the soonest deadline.
         let cover = heroShown ? nil
             : (comingUp ? (asks.first ?? deadlines.first) : visible.first { $0.isLive })
-        if let cover {
+        if watching {
+            Section { followingBox(.work) }
+        } else if let cover {
             Section { ledeListRow(cover) }
         } else if !heroShown {
             // A head already holds the box (a picked app's own, prd §1067):
@@ -435,14 +431,8 @@ extension FeedScreen {
                              words: Text("What you build lands here"))
             }
         }
-        let watches = workWatches
         Section {
-            DSScopeTiles(sections: WorkScope.allCases.filter { !$0.isVerb || !watches.isEmpty },
-                         active: chrome.workScope, attention: [], verbs: [.watch]) { picked in
-                if picked.isVerb {
-                    if watches.count == 1 { watchInWork(watches[0]) } else { workWatchOpen = true }
-                    return
-                }
+            DSScopeTiles(sections: WorkScope.allCases, active: chrome.workScope, attention: [], verbs: []) { picked in
                 withAnimation(DS.Motion.standard) { chrome.workScope = picked }
             }
             .listRowBackground(Color.clear)
@@ -452,7 +442,9 @@ extension FeedScreen {
                                       trailing: DSRoomChassis.inset))
         }
         roomScopeSection
-        if comingUp {
+        if watching {
+            followingSections(.work)
+        } else if comingUp {
             let waiting = asks.filter { $0.id != cover?.id }
             let rest = deadlines.filter { $0.id != cover?.id }
             if waiting.isEmpty && rest.isEmpty && cover == nil {

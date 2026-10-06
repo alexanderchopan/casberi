@@ -101,28 +101,6 @@ CHECKS = [
         "every row that scrolls into view, to fill a menu nobody has pressed",
     ),
     (
-        "Casberi/Casberi/Screens/RSSScreen.swift",
-        "@State private var rows: [AccountPageShape.Row] = []",
-        # `rows` as a computed property asked `FeedFreshness.trouble(for:)`
-        # once per followed feed, per body evaluation. That call takes an
-        # NSLock which up to eight concurrent feed fetches hold across a full
-        # encode of the whole freshness store — and a body evaluates on every
-        # keystroke in the follow field directly above the roster.
-        r"private var rows: \[AccountPageShape\.Row\] \{",
-        "RSSScreen composing its roster in a computed property a body reads (prd §710)",
-        "N contended NSLock acquisitions on the main thread per body evaluation, "
-        "in the one place a person is typing — reported as the page freezing and "
-        "refusing another feed",
-    ),
-    (
-        "Casberi/Casberi/Screens/RSSScreen.swift",
-        "FeedFreshness.troubles(for: feeds.map(\\.url))",
-        None,
-        "the roster asking the freshness store once per row instead of once per read",
-        "one lock acquisition and one dictionary pass for the whole roster, "
-        "against one per feed",
-    ),
-    (
         "Casberi/Casberi/Model/OPMLImport.swift",
         "RSSStore.shared.add(\n            contentsOf:",
         r"if RSSStore\.shared\.add\(feed\.url, title: feed\.title\)",
@@ -152,14 +130,15 @@ CHECKS = [
         "the same shape as RSS's, on the four feed-follow seats — `entries` "
         "carries `didSet { persist() }` too",
     ),
+    # (The RSS page's roster and its week read went with prd §1118: what you
+    # follow is listed in Reading, read by `FollowingReading`, pinned below.)
     (
-        "Casberi/Casberi/Screens/RSSScreen.swift",
-        "properties: [\\.capturedAt, \\.authorHandle]",
+        "Casberi/Casberi/Model/FollowingReading.swift",
+        "d.propertiesToFetch = [\\.source, \\.authorHandle, \\.sourceRef, \\.capturedAt, \\.content]",
         None,
-        "the RSS roster's week read realizing every column of 2,000 rows (prd §722)",
-        "run from onAppear and again after every sync, on the main thread, for "
-        "a seat whose week really is two thousand rows — and almost all of it "
-        "is columns nobody looks at",
+        "the follow tiles' read realizing every column of four thousand rows (prd §722, §1118)",
+        "run on every refresh of three rooms' tiles and every Subscriptions "
+        "sheet, on the main thread, for the busiest seats in the app",
     ),
     (
         "Casberi/Casberi/Screens/RSSScreen.swift",
@@ -364,16 +343,6 @@ def self_test():
              "RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,",
              "let verbs = VerbDerivation.verbs(for: thing)\n"
              "                if let v = verbs.first { Button { run(v, on: thing) } label: { Text(v.label) } }")),
-        ("the RSS roster goes back to a computed property",
-         "Casberi/Casberi/Screens/RSSScreen.swift",
-         lambda t: t.replace(
-             "    @State private var rows: [AccountPageShape.Row] = []",
-             "    private var rows: [AccountPageShape.Row] { [] }")),
-        ("the RSS roster asks the freshness store per row again",
-         "Casberi/Casberi/Screens/RSSScreen.swift",
-         lambda t: t.replace(
-             "FeedFreshness.troubles(for: feeds.map(\\.url))",
-             "[String: String]()")),
         ("OPML import lands one feed at a time again",
          "Casberi/Casberi/Model/OPMLImport.swift",
          lambda t: t.replace(
@@ -397,9 +366,10 @@ def self_test():
          lambda t: t.replace(
              "        store.resolve(resolutions)",
              "        for r in resolutions { store.setTitle(parsed.title, for: r.id) }")),
-        ("the RSS week read stops naming its columns",
-         "Casberi/Casberi/Screens/RSSScreen.swift",
-         lambda t: t.replace("properties: [\\.capturedAt, \\.authorHandle]) ", "")),
+        ("the follow tiles' read stops naming its columns",
+         "Casberi/Casberi/Model/FollowingReading.swift",
+         lambda t: t.replace(
+             "        d.propertiesToFetch = [\\.source, \\.authorHandle, \\.sourceRef, \\.capturedAt, \\.content]\n", "")),
         ("the OPML export is built and written on the main thread again",
          "Casberi/Casberi/Screens/RSSScreen.swift",
          lambda t: t.replace(

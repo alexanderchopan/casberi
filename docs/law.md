@@ -220,7 +220,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1251 of 1312 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1252 of 1313 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1383,7 +1383,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
 - §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room…
 - §1048f — One Wallet: Rocket Money's next charges and Peer's settling sales reach Coming up; Bitrefill folds in
-- §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a, §1111; part superseded by §1050e)
+- §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a, §1111, §1118; part superseded by §1050e)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a)
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
 - §1050b — Photos moves from Life to Media
@@ -1402,9 +1402,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1052 — Reading is one room, built: its apps fold in, the menu lists them A to Z, and an app pick shows that app's own head
 - §1053 — The rooms tray is ONE LIST: four You rows led by a tile, then Categories as plain rows
 - §1054 — Agents is one room, built: every agent folds in, New starts a conversation with the agent the menu picked
-- §1055 — Media is one room, built: its apps and Photos fold in, its list is one square grid, and the music shelf is deleted
+- §1055 — Media is one room, built: its apps and Photos fold in, its list is one square grid, and the music shelf is deleted (amended by §1118)
 - §1056 — Life splits into Life and Day, each one room, and Notes is no category, built
-- §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows… (amended by §1079, §1080)
+- §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows… (amended by §1079, §1080, §1118)
 - §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu
 - §1059 — The folded rooms' own views are deleted: the kind tiles, Reminders' and Mail's tiles, the Calendar agenda, and every…
 - §1060 — The rest of the folded rooms' controls are deleted: GitHub's and Pinterest's scope rails and Privacy Pools' tiles, wh… (amended by §1072)
@@ -1432,7 +1432,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the…
 - §1083 — The cover says "Here's a demo." in words
 - §1084 — Logos: tokens named, Holdings, Create and Send from this phone, and a stopped node or a reset notifies
-- §1085 — Reading gets its tiles: All · Highlights · Follow · Search; the box keeps the newest thing
+- §1085 — Reading gets its tiles: All · Highlights · Follow · Search; the box keeps the newest thing (amended by §1118)
 - §1086 — Social gets its tiles: All · To you · Follow; what is to you leads All
 - §1087 — Day's box is Box B: the next thing over today's shape
 - §1089 — Frames says what you did, not how it was built: rows titled by who, one word for row and sheet, your own accounts in…
@@ -1468,11 +1468,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1110 — Farcaster leaves the app: the seat, its rows, and Farcaster as an identity in Addresses
 - §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113, §1115, §1117)
 - §1112 — The Wallet's Subscriptions tile maps where the money goes: categories by monthly cost, a press filters the list (amended by §1117)
-- §1113 — One identity per service: a plan, its app and its mailing list open each other, and both Subscriptions tiles are one…
+- §1113 — One identity per service: a plan, its app and its mailing list open each other, and both Subscriptions tiles are one… (amended by §1118)
 - §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
 - §1115 — A mail's sheet adds its sender to Day's Subscriptions (amended by §1117)
 - §1116 — Apps wears four squares
 - §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track
+- §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin…
 
 ## Dead rulings → what replaced them (generated)
 

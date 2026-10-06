@@ -33,6 +33,10 @@ struct SubscriptionSheet: View {
         // The other pages this service has, read once the sheet is up (§628).
         .task(id: id) {
             await ServiceLinks.shared.refresh(modelContext, seats: store.bridges.map(\.name))
+            // And what you follow, for the door to it (prd §1118): only the
+            // rooms whose follows have sites; Work's never write to you.
+            FollowingReading.shared.refresh(.reading, context: modelContext)
+            FollowingReading.shared.refresh(.media, context: modelContext)
         }
         .confirmationDialog(Text("Remove \(item?.name ?? "")?"), isPresented: $confirmingRemove,
                             titleVisibility: .visible) {
@@ -91,6 +95,13 @@ struct SubscriptionSheet: View {
     private func doors(_ item: Subscriptions.Item) -> [SubscriptionDoor] {
         var out: [SubscriptionDoor] = []
         let link = ServiceLinks.shared.byPlan[item.id]
+        if let (followed, room) = FollowingReading.shared.followed(planID: item.id) {
+            out.append(.init(id: "followed", icon: ScopeTileGlyph.subscriptions,
+                             title: Text(Following.doorWords(room))) {
+                dismiss()
+                chrome.open(.followed(followed.id, room))
+            })
+        }
         if let app = link?.app {
             out.append(.init(id: "app", icon: SubscriptionWords.appGlyph, title: Text("Open \(app)")) {
                 dismiss()

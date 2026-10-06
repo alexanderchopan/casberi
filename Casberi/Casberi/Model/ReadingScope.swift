@@ -1,11 +1,12 @@
 import Foundation
 
-/// The Reading room's tiles (prd §1085): All, Highlights — every passage you
-/// kept, from any app — then the two verbs, Follow and Search, last.
+/// The Reading room's tiles (prd §1085, §1118): All, Highlights — every
+/// passage you kept, from any app — Subscriptions, every feed you follow
+/// with Track a subscription as its first row, then the verb, Search, last.
 /// Foundation-only, its conformance beside every other in
 /// `ScopeTileGlyphs.swift`.
 enum ReadingScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, highlights, follow, search
+    case all, highlights, subscriptions, search
 
     var id: String { rawValue }
 
@@ -13,7 +14,7 @@ enum ReadingScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:        return String(localized: "All")
         case .highlights: return String(localized: "Highlights")
-        case .follow:     return String(localized: "Follow")
+        case .subscriptions: return String(localized: "Subscriptions")
         case .search:     return String(localized: "Search")
         }
     }
@@ -22,12 +23,12 @@ enum ReadingScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:        return String(localized: "Everything you read and save")
         case .highlights: return String(localized: "Every passage you kept")
-        case .follow:     return String(localized: "Follow a site you keep saving from")
+        case .subscriptions: return String(localized: "Every site you follow")
         case .search:     return String(localized: "Find something you read")
         }
     }
 
-    var isVerb: Bool { self == .follow || self == .search }
+    var isVerb: Bool { self == .search }
 }
 
 /// The Reading room's pure rules (prd §1085), compiled whole by
