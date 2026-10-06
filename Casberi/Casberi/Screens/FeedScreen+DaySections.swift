@@ -142,23 +142,10 @@ extension FeedScreen {
             memo.groups = perfAccum("bundle") {
                 feedRows(memo.days, excluding: memo.lede)
             }
-            // `ledeMinRows` is a floor in ROWS, and rows are only known after
-            // the fold — which needs the cover's identity first, so the two
-            // cannot both be decided in one pass. Asked here, where the answer
-            // exists: four RSS items are four THINGS and one bundled row, and a
-            // cover over a lone "RSS · 3 articles" is the whole feed being a
-            // cover, which is what that floor exists to prevent. Re-bundling
-            // costs nothing precisely because it only ever happens on a feed
-            // this small.
-            // THE ROW FLOOR IS THE ALL FEED'S TOO (prd §723) — see
-            // `ledeThingID`. A room's cover is not a claim about volume.
-            // Not on Home since prd §1136i: Home is Today, short by design
-            // (one row per app), so the floor left its box empty most days.
-            if memo.lede != nil, source != "All",
-               memo.groups.reduce(1, { $0 + $1.1.count }) < Self.ledeMinRows {
-                memo.lede = nil
-                memo.groups = feedRows(memo.days)
-            }
+            // The post-fold row floor (§723) was Home's alone, and Home is
+            // Today since prd §1136i — short by design, one row per app — so
+            // it left the box empty most days. It is gone; no room ever had
+            // it (a room's cover answers "the newest thing here").
             memo.imageOnly = perfAccum("imageOnlyIDs") { imageOnlyIDs(memo.days) }
             memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(memo.groups) }
             memo.coarse = perfAccum("coarseLabels") { coarseLabels(in: memo.days) }

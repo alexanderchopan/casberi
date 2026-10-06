@@ -152,8 +152,10 @@ guards() {
 
   # The head every row shares (prd §902): a minimum height the lead is
   # centred in, the title on one line, and no count tail anywhere.
-  grep -q -- '.frame(minHeight: Self.headHeight,' <<< "$T" \
-    || echo "DSFeedRow's head is no longer a fixed-minimum block (prd §902)"
+  # Since prd §1136j a row under an app header draws no lead and keeps no
+  # head height; every row with a lead still does.
+  grep -q -- '.frame(minHeight: groupedSource == nil ? Self.headHeight : 0,' <<< "$T" \
+    || echo "DSFeedRow's head is no longer a fixed-minimum block for a row with a lead (prd §902, §1136j)"
   grep -q -- 'HStack(alignment: groupedSource == nil ? .center : .top, spacing: DS.Space.s3)' <<< "$T" \
     || echo "DSFeedRow's lead is no longer centred in the head (prd §902)"
   grep -q -- '.lineLimit(1)' <<< "$T" \
@@ -200,7 +202,7 @@ mutate "the alarm's age back in the tint" rows \
 mutate "the title wraps again (prd §902)" template \
   's/\.lineLimit\(1\)\n(\s*\.contentTransition\(\.opacity\))/.lineLimit(2)\n$1/'
 mutate "the head lost its floor (prd §902)" template \
-  's/\.frame\(minHeight: Self\.headHeight,/.frame(/'
+  's/\.frame\(minHeight: groupedSource == nil \? Self\.headHeight : 0,/.frame(/'
 mutate "the lead back at the top of the head (prd §902)" template \
   's/HStack\(alignment: groupedSource == nil \? \.center : \.top, spacing: DS\.Space\.s3\)/HStack(alignment: .top, spacing: DS.Space.s3)/'
 mutate "a fold's lead back on its plate (prd §903)" rows \

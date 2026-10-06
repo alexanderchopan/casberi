@@ -93,7 +93,12 @@ struct Identity: Hashable, Codable {
         // saved name from the Nostr or Farcaster seat, `nostr:`/`fc:`), never
         // a World App username.
         guard !key.contains(":") else { return nil }
-        if let named = Kind.classify(primaryName: key) { return Identity(kind: named, key: key) }
+        // No name carries a space: "garbage key" is nobody, never a World App
+        // username (addresses-selftest's unparseable end).
+        guard !key.contains(where: \.isWhitespace) else { return nil }
+        // A bare name takes its kind's prefix, so `body` drops the prefix and
+        // not the name's own first letters ("world:" + a username).
+        if let named = Kind.classify(primaryName: key) { return Identity(kind: named, key: named.prefix + key) }
         return nil
     }
 

@@ -190,8 +190,10 @@ grep -q 'let isRoom = source != "All"' "$FEED" \
 grep -q 'guard isRoom || Self.isCoverFresh(thing.capturedAt, away: AppVisit.away)' "$FEED" \
   || { echo "✗ a room's cover is gated on ledeMaxAge again — a room whose newest"; \
        echo "  item is a day old would draw no head at all"; exit 1; }
-grep -q 'if memo.lede != nil, source == "All",' "$FEED" \
-  || { echo "✗ the post-fold ledeMinRows floor applies to rooms again — a quiet"; \
+# Since prd §1136i the post-fold floor is gone outright: it was Home's alone,
+# and Home is Today. Whatever comes back must not reach a room.
+! grep -q 'memo.groups.reduce(1, { $0 + $1.1.count }) < Self.ledeMinRows' "$FEED" \
+  || { echo "✗ the post-fold ledeMinRows floor is back — a quiet"; \
        echo "  room would lose the cover this rule exists to give it"; exit 1; }
 # …and the anatomy veto is NOT freshness, so it still applies in both. It is
 # `coverDeclines` since prd §756 — `standsAlone` minus the posts — and it must
@@ -365,7 +367,9 @@ grep -q 'if thing.source == "Files", Self.isCameraName(thing.title) { return nil
 # put the same card at two heights depending on the room.
 grep -q 'if let coverThing { Section { ledeListRow(coverThing) } }' "$FEED" \
   || { echo "✗ groupedSections no longer draws a shaped room's cover above the days (prd §906)"; exit 1; }
-grep -q 'if let ledeThing, ledeThing.isLive { Section { ledeListRow(ledeThing) } }' "$FEED" \
+# Home draws its cover through `homeLead` since prd §1136i (today's cover, else
+# the newest thing kept), still as the first Section above the day dividers.
+grep -q 'homeLead(homeCover)' "$FEED" && grep -q 'Section { ledeListRow(ledeThing) }' "$FEED" \
   || { echo "✗ the All feed no longer draws its cover above the first divider (prd §906)"; exit 1; }
 grep -qE 'coverThing.isLive \{ ledeListRow\(coverThing\) \}|if let cover, cover.isLive \{ ledeListRow\(cover\) \}' "$FEED" \
   && { echo "✗ a cover is drawn inside a day section again — under its header, at a second height (prd §906)"; exit 1; }
