@@ -1,5 +1,5 @@
 {
-  "readAt": "2026-10-05T17:43:53Z",
+  "readAt": "2026-10-05T23:56:44Z",
   "appId": "6788637831",
   "versions": {
     "IOS": {
@@ -14,6 +14,20 @@
             "keywords": "wallet,crypto,portfolio,tracker,feed,reader,rss,ai,agent,assistant,dashboard,private,notes,journal",
             "promotionalText": null,
             "whatsNew": "Features\n• Track subscriptions in the Wallet: what each costs, and when it renews\n• Add a subscription by hand\n\nDesign\n• Show what's coming up as a calendar\n• Group Home by app\n• Rename Follow to Watch in the Wallet"
+          }
+        }
+      },
+      "inReview": {
+        "id": "2f6406a3-a56b-4ffb-8c3a-a304f42887db",
+        "version": "2.0.4",
+        "state": "WAITING_FOR_REVIEW",
+        "locales": {
+          "en-US": {
+            "id": "64196c01-013c-4c0c-b380-3fda0067db66",
+            "description": "Every subscription, in one place. Everything you do is scattered across apps, wallets and agents. Casberi brings it together on your iPhone, iPad and Mac, with no account, no servers and no tracking.\n\nEvery subscription, in one place.\nSee the newsletters and lists filling your inbox beside the software and services you pay for. What each one costs, when it renews, and which you haven't used in a month.\n\nOne wallet for all your money.\nYour wallets, exchanges, cards, savings and cash add up to one number. Follow any wallet address without a key or a signature. See what you hold, how it moved and what's at risk. Casberi can read, never spend.\n\nFollow the stocks behind your apps.\nEvery app you use is made by a company. Markets shows its stock or token, with a heat map of your day and price alerts.\n\nWallet, Work, Day, Life, Agents, Media, Social, Reading.\nMore than 100 apps, sorted into the categories you live in. Apple's apps connect with one tap; other services with a read-only key, so Casberi can see but never change.\n\nOne feed per category.\nEverything in a category lands in one feed, newest first: a deploy that failed, a payment that landed, a reply, a meeting coming up.\n\nOr one app at a time.\nPick one account from a category's menu to see only that.\n\nTry it first.\nCasberi opens with a demo you can browse. Clear it when you're ready and connect your own.\n\nYours.\nNo server, no account, no ads. Sync through your own iCloud. Export everything to one file, or delete it all for good.",
+            "keywords": "wallet,crypto,portfolio,tracker,feed,reader,rss,ai,agent,assistant,dashboard,private,notes,journal",
+            "promotionalText": "Everything you do is scattered across subscriptions. Casberi brings it together on your iPhone, iPad and Mac.",
+            "whatsNew": "Features\n• See every newsletter and mailing list that emails you, in one list\n• See how much you spend on subscriptions, by type\n• Go from a subscription straight to its app or its emails\n• Show only the apps you've connected\n\nDesign\n• Rename Coming up to Subscriptions in the Wallet\n• Show upcoming bills on Home\n• Give Apps its own button, and keep Settings for Casberi's own settings"
           }
         }
       }
@@ -36,7 +50,7 @@
       "inReview": {
         "id": "eeca892c-3bc4-4999-96a6-ec7d8a3da87a",
         "version": "2.0.3",
-        "state": "WAITING_FOR_REVIEW",
+        "state": "IN_REVIEW",
         "locales": {
           "en-US": {
             "id": "01fd08c8-0e01-4a84-aef7-f38d2fb58cf2",
@@ -63,7 +77,7 @@
     },
     "inReview": {
       "id": "777faf28-183e-4e7b-8a73-4cadbdeae8e1",
-      "state": "WAITING_FOR_REVIEW",
+      "state": "IN_REVIEW",
       "locales": {
         "en-US": {
           "id": "cc48428b-4d83-40a1-b25b-8b1370396a81",
