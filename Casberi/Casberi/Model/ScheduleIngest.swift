@@ -142,7 +142,10 @@ enum ScheduleIngest {
         // shows a stale past date. `healCalendar` still handles events deleted
         // outright from EventKit; this handles the ones that merely passed.
         var removedIDs: [UUID] = []
-        for (ref, thing) in existing where !seen.contains(ref) {
+        // EventKit's rows only: a calendar you subscribed to by its address
+        // lands `ics:` rows under the same source (prd §1137), and its own
+        // ingest decides when they go.
+        for (ref, thing) in existing where ref.hasPrefix("ekevent:") && !seen.contains(ref) {
             removedIDs.append(thing.id)
             context.delete(thing)
         }
@@ -165,7 +168,7 @@ enum ScheduleIngest {
         guard !things.isEmpty else { return 0 }
         let store = EKEventStore()
         var removedIDs: [UUID] = []
-        for (ref, thing) in things {
+        for (ref, thing) in things where ref.hasPrefix("ekevent:") {
             let id = String(ref.dropFirst("ekevent:".count))
             guard store.calendarItem(withIdentifier: id) == nil else { continue }
             removedIDs.append(thing.id)

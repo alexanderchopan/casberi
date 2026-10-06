@@ -64661,3 +64661,31 @@ The field says Search mail, and it searches every sender kept whose mail carried
 §1133 deleted the title pill, and on the iPad and the Mac the rail's face opened Apps, not the tray, so a merged room's apps, Testnets' networks and You's places (Notes, Markets, Addresses, Settings) had no door there. Both seats now toggle the rooms tray on every layout (`dock-selftest.sh`). Beside the rail the card hangs from the top-left, by the face, under the status bar and the demo's pill (`RoomsTray.railInset`); on the phone it still grows out of the face's bottom corner. One navigation on every device: the rail or the swipe for categories, the tray for everything in them.
 
 **Seen** on an iPad Pro 13-inch simulator of this session's own: the tray beside the rail with every row, You · Settings landing from it.
+
+## §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Coming up (user, 2026-10-06: "i have multiple lists in places and don't know where they are"; "i do feel some master list or calendar is lacking"; "the magic of the app is having the same view on each screen"; "settings seems more clear"; "so yes do all"; amends §663, §969, §995, §1099, §1103, §1105, §1106, §1111, §1117, §1118, §1123, §1127 and §1133)
+
+**Why.** The rooms answer "what came in". Two other questions grew homes in every room: *what am I connected to* (Apps, Addresses, the Wallet's Subscriptions, Day's Subscriptions, Reading's and Media's Subscriptions, Work's Watching, Watch a wallet: eight lists, four verbs) and *what's next* (the Wallet's dated rows, Work's Needs you, Day's calendar, the subscription calendars). Each question now has one home. Mockups: the Design canvas "Casberi — one place for lists".
+
+1. **You is a room like every category**: title, box, tiles, list. Its tiles are **Home · Markets · Notes · Settings**, Home first, then A–Z, which here also runs daily to rarely. Picking a tile never moves the box or the tiles; only the box's face and the list change. The tray's You row is the same four. Apps and Addresses stop being places.
+2. **A place's own filters ride the floating bar at the bottom** (`DSScopeDock`, §960), never tiles under You's. Markets keeps its bar; Notes' tiles move into one unchanged (All · Folders · Voice · New · Search); Home has none.
+3. **Settings is the master list of everything you've connected**, each row opening its own settings page. Casberi is pinned first ("Casberi · Settings", its options as today's Settings); then Apps, People and Subscriptions. The tray's search must find a person by name, so nobody needs to know people live here.
+4. **Settings' box is six equal counts, no headline, not buttons**: Apps · People · Subscriptions over Feeds · Newsletters · Calendars. "Connected" only ever means apps.
+5. **Settings' bar filters by kind: All · Apps · People · Subs · + Add.** Apps lists your apps under category headers; People is People then Not named yet; Subs is Subscriptions, Feeds, Newsletters and Calendars as sections. + Add adds the kind you're on: Apps → the catalogue as a sheet, keeping today's category bar; People → a person or address; Subs → Track a subscription or Follow a feed; All → a chooser.
+6. **What goes where.** A wallet belongs to whoever owns it: someone else's is on their person in People, yours is an account of the Wallet app under Apps. Social's followed people are People. Billers (§1106) are Subscriptions. Feeds is anything you follow that isn't a person: sites, channels, Work's Watching. Newsletters are Day's mailing lists. The rooms' Subscriptions and Watching tiles stay, as views of this list.
+7. **Home is Today, then Coming up.** Today is each app's newest thing today (§1103's one row per app), no yesterday: the categories hold the past. Coming up is one calendar across every app: a week strip, then later today, tomorrow and on, read from what the rooms already date (events, renewals, grants, asks, checklist reminders, subscribed calendars). No room grows a calendar tile of its own.
+8. **The tray gains Recent**, its own row under You and above the categories: six icons, the places you went last, never a You door, only things deeper than one tap (an app, a person, a subscription, a room's tile).
+9. **The swipe walks Home, then each category's combined page and each of its apps A–Z, then the next category.** Length is accepted: the tray is the jump. An app with no rows is skipped; watched wallets are not stops. The You row never swipes (§1127); past the last page the tray opens (§1125).
+10. **No prices outside the Wallet (§1113):** Settings says when a subscription renews, never what it costs.
+
+**Not built yet.** Build order: Calendars (§1137), Home's Coming up, Settings, You's tiles and the tray, the swipe.
+
+## §1137 — Calendars you subscribe to (user, 2026-10-06: "one idea could be 'calendars' and in the calendar feature we give user ability to subscribe to calendars"; "buidl the calendar feature too")
+
+1. **Subscribe by address.** Paste a calendar's link (`webcal://` or `https://`, an `.ics`); Casberi reads it itself, read-only. iOS lets no app add a subscribed calendar to the system's Calendar, and Casberi writes nothing there.
+2. **Its events land as things** dated at their start, under the calendar's name, and show in Coming up (§1136 item 7) and in Day.
+3. **It is listed under Settings › Calendars** (§1136 item 4), with its name, how many events are ahead, and when it was last read. Removing it removes its events.
+4. **The host is the one the person typed**, recorded through `NetworkLedger.record(host:as:)` (§205).
+
+### §1136a — Settings is called Sources (user, 2026-10-06: "lets call 'settings' 'sources' i think sources makes more sense now")
+
+The master list of §1136 items 3–6 is **Sources**: the You tile, the tray's door and the title ("Alex · Sources"), its glyph `link`. Casberi's own options keep the word Settings on their pinned row ("Casberi · Settings, iCloud, notifications, privacy"), and every door that opened Settings — ⌘,, `casberi://settings`, `-openSettings` — opens Sources, through the same `.casberi` place. You's tiles are Home · Markets · Notes · Sources, Home first and A–Z.

@@ -2466,6 +2466,7 @@ harness "Subscription categories pure-logic self-test" "subscription categories"
 # service's by its sender's registrable domain only. Every failure is a wrong door:
 # "Apple Store" opening Apple Music, a display name trusted, a lookalike domain let in.
 harness "Service identity pure-logic self-test" "service identity" "scripts/service-identity-selftest.sh" "the service identity self-test failed — run scripts/service-identity-selftest.sh"
+harness "Calendar ICS pure-logic self-test" "calendar ICS" "scripts/calendar-ics-selftest.sh" "the calendar ICS self-test failed — run scripts/calendar-ics-selftest.sh"
 # What you follow, listed where you read it (prd §1118): whose row is which
 # follow's, the thirty-day figure, the cadence, the feed's site, its list and
 # its plan. Every failure is an ordinary list: a YouTube row under the RSS feed

@@ -78,6 +78,17 @@ enum ScopeTileGlyph {
     /// Social's To you (prd §1086): what is addressed to you — the system's
     /// one person, never `person.2` (Accounts, a list of people).
     static let toYou        = "person"
+    /// You's Home (prd §1136): the house the tray's Home door wears — the
+    /// feed, not the wallet family's Home (`home`, a line chart).
+    static let feed         = "house"
+    /// You's Notes place (prd §1136): the tray's Notes door.
+    static let notes        = "note.text"
+    /// You's Sources place (prd §1136, renamed from Settings the same day:
+    /// "lets call 'settings' 'sources' i think sources makes more sense
+    /// now"): everything your things come from, linked to you.
+    static let sources      = "link"
+    /// Sources' People (prd §1136 item 5): the people behind your accounts.
+    static let people       = "person.crop.circle"
 }
 
 /// The Work room's tiles (prd §1057).
@@ -210,6 +221,33 @@ extension FramesSection: DSTileScope {
         case .holdings:    return ScopeTileGlyph.holdings
         case .frames:      return ScopeTileGlyph.frames
         case .permissions: return ScopeTileGlyph.permissions
+        }
+    }
+}
+
+/// You's four places as tiles (prd §1136). Markets wears the dock's own
+/// category glyph, the one its door has always worn.
+extension YouTile: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .feed:     return ScopeTileGlyph.feed
+        case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
+        case .notes:    return ScopeTileGlyph.notes
+        case .sources:  return ScopeTileGlyph.sources
+        }
+    }
+}
+
+/// Sources' own filters (prd §1136 item 5). Subs wears Subscriptions' arrows,
+/// its own name; Add is the bare plus every New wears.
+extension SettingsScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all:           return ScopeTileGlyph.all
+        case .apps:          return ScopeTileGlyph.apps
+        case .people:        return ScopeTileGlyph.people
+        case .subscriptions: return ScopeTileGlyph.subscriptions
+        case .new:           return ScopeTileGlyph.new
         }
     }
 }

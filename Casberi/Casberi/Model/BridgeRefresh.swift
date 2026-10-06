@@ -361,6 +361,14 @@ enum BridgeRefresh {
                 _ = await sweepTimed("x.live") { await XLiveNotifications.refresh(context: context) }
             }
         }
+        // Calendars you subscribe to (prd §1137): gated on the list, as RSS
+        // is, so nobody who never subscribed pays for a read.
+        if !CalendarSubscriptionStore.shared.calendars.isEmpty {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await CalendarSubscriptionIngest.refresh(context: context)
+            }
+        }
         if !RSSStore.shared.feeds.isEmpty {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)

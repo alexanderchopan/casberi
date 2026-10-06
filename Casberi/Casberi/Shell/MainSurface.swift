@@ -750,7 +750,8 @@ struct MainSurface: View {
             switch place {
             case .apps: appsPlace
             case .addresses: AddressesScreen()
-            case .settings: SettingsScreen()
+            // The master list of everything connected (prd §1136 item 3).
+            case .settings: SettingsHome()
             }
         }
         .dsDemoMarkClearance()
@@ -782,7 +783,7 @@ struct MainSurface: View {
         case .apps:
             EmptyView()
         case .casberi:
-            SettingsScreen()
+            SettingsHome()
         case .addresses:
             AddressesScreen()
         case .reach:
@@ -2566,9 +2567,18 @@ struct MainSurface: View {
            BridgeCatalog.category(forSource: target) != open {
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
         }
+        // A merged room's combined page is the room with NO pick (prd §1136
+        // item 9): a pick an app step made, or an earlier visit left, goes.
+        if RoomAccounts.mergedRooms.contains(target) {
+            if target == CategoryFold.walletRoom { chrome.walletScope = nil } else { chrome.mergedScope[target] = nil }
+        }
+        // A step that stays in the room (combined page ↔ an app, app ↔ app)
+        // changes the pick and lands nothing, so the card settles back here.
+        let staysInRoom = (RoomAccounts.host(ofSource: target)?.room ?? target) == filter.source
         // A room's own switcher is a tap: it lands now (prd §671), through
         // `go(to:)` so a folded chip label resolves the same way a chip's does.
         go(to: target, landNow: true)
+        if staysInRoom { dragCancel() }
     }
 
     /// How long the released card flies before the room underneath swaps —
@@ -2598,13 +2608,23 @@ struct MainSurface: View {
     /// whole corpus takes more swipes than nine; nobody crosses the corpus
     /// by swiping — a flick on the dock and a tap is how you jump far.
     private func neighbour(_ delta: Int) -> String? {
+        // **…AND EACH OF ITS APPS (prd §1136 item 9, user: "i swipe and swipe
+        // between the apps and when i hit the last one i swipe into the next
+        // room").** A merged room is its combined page, then each connected
+        // app A–Z as that room picked to it, then the next category. The
+        // length is accepted: the tray is the jump.
+        let names = Set(store.bridges.lazy.filter { $0.status != .paused }.map(\.name))
         var rooms: [String] = []
         for label in chipLabels {
             if CategoryFold.isCategory(label) {
                 let present = Set(categoryVenues[label] ?? [])
-                rooms.append(contentsOf: CategoryFold.scopes(category: label, present: present))
+                for room in CategoryFold.scopes(category: label, present: present) {
+                    rooms.append(room)
+                    rooms.append(contentsOf: walkApps(in: room, names: names))
+                }
             } else {
                 rooms.append(label)
+                rooms.append(contentsOf: walkApps(in: label, names: names))
             }
         }
         // The room you are standing in may be in no walk at all — a deep
@@ -2616,11 +2636,32 @@ struct MainSurface: View {
         //
         // Notes and Markets stand in Home (prd §1127), so a swipe from either
         // walks from Home's place: left to the first room, right to the tray.
-        let here = HomeScope.contains(filter.source) ? "All" : filter.source
+        var here = HomeScope.contains(filter.source) ? "All" : filter.source
+        // Standing on an app's page: the walk is at that app, not the room.
+        if let seat = RoomAccounts.seat(chrome.roomScope(filter.source), in: filter.source),
+           rooms.contains(seat.source ?? seat.name) {
+            here = seat.source ?? seat.name
+        }
         if !rooms.contains(here) { rooms.append(here) }
         guard let idx = rooms.firstIndex(of: here),
               rooms.indices.contains(idx + delta) else { return nil }
         return rooms[idx + delta]
+    }
+
+    /// A merged room's apps as stops in the walk (prd §1136 item 9): the
+    /// connected ones its menu shows, A–Z, each by the source `go(to:)`
+    /// resolves into "this room, picked to this app". None where the room
+    /// draws no pick (one app) or its apps are screens of their own
+    /// (Testnets, whose combined page already shows one).
+    private func walkApps(in room: String, names: Set<String>) -> [String] {
+        guard RoomAccounts.mergedRooms.contains(room) else { return [] }
+        let seats = RoomAccounts.connected(in: room, names: names)
+            .filter(chrome.seatShows)
+            .filter { !$0.ownScreen }
+        guard seats.count > 1 else { return [] }
+        return seats
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            .map { $0.source ?? $0.name }
     }
 
     /// One chip's pitch in the strip — how far the ring travels for one whole

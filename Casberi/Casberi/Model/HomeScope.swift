@@ -60,3 +60,49 @@ enum HomeScope {
         label == Pinboard.room || label == markets
     }
 }
+
+/// YOU'S FOUR PLACES AS TILES (prd §1136 item 1, user: "the magic of the app
+/// is having the same view on each screen"). You is a room like every
+/// category — title, box, tiles, list — and these are its tiles: Home first,
+/// then A–Z, which here also runs from what you open daily to what you set
+/// up rarely. Picking one never moves the box or the tiles; only the box's
+/// face and the list change. The tray's You row is the same four.
+///
+/// Foundation-only, like every scope enum, so a harness can compile it whole;
+/// the glyphs are `ScopeTileGlyphs.swift`'s.
+enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
+    /// Home: the feed, Today then Coming up (§1136 item 7). Spelled `feed`
+    /// because `home` is the wallet family's Home tile, another glyph.
+    case feed, markets, notes, sources
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .feed:     return String(localized: "Home")
+        case .markets:  return String(localized: "Markets")
+        case .notes:    return String(localized: "Notes")
+        case .sources:  return String(localized: "Sources")
+        }
+    }
+
+    /// Read by VoiceOver and the tooltip.
+    var summary: String {
+        switch self {
+        case .feed:     return String(localized: "Today, then what is coming up")
+        case .markets:  return String(localized: "What you watch")
+        case .notes:    return String(localized: "Your notes and everything you pinned")
+        case .sources:  return String(localized: "Everything you have connected")
+        }
+    }
+
+    /// The tile standing for the shell's `source`, or nil outside You.
+    init?(source: String) {
+        if source == "All" { self = .feed }
+        else if source == Pinboard.room { self = .notes }
+        else if HomeScope.isMarkets(source) { self = .markets }
+        else if HomeScope.Place(source: source) == .settings { self = .sources }
+        else { return nil }
+    }
+}
+

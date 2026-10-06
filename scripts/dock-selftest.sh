@@ -380,8 +380,13 @@ grep -qE '^[[:space:]]*case casberi[[:space:]]*$' "Casberi/Casberi/Shell/HomeRou
 grep -q 'casberiRow' "$TMP/apps.nc" \
   && { echo "✗ Apps pins a Casberi row again — Settings has its own door (prd §1111)."; fail=1; }
 strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
-grep -q 'screen(.apps)' "$TMP/tray.nc" && grep -q 'screen(.casberi)' "$TMP/tray.nc" \
-  || { echo "✗ the tray's You row lost its Apps door or its Settings door (prd §1111)."; fail=1; }
+# Since prd §1136 the You row is Home · Markets · Notes · Sources: Apps and
+# Addresses are filters inside Sources, which keeps Casberi's own settings as
+# its pinned first row. The door to Sources is `.casberi`'s place.
+grep -q 'screen(.casberi)' "$TMP/tray.nc" \
+  || { echo "✗ the tray's You row lost its Sources door (prd §1136)."; fail=1; }
+grep -q 'screen(.apps)' "$TMP/tray.nc" && grep -q 'screen(.addresses)' "$TMP/tray.nc" \
+  && { echo "✗ the tray's You row has Apps and Addresses doors again — they are filters in Sources (prd §1136)."; fail=1; }
 grep -qE '^[[:space:]]*case addresses[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   || { echo "✗ HomeRoute.Node lost its addresses case — Addresses is a screen (prd §933)."; fail=1; }
 # THE CATALOGUE DOOR IS DELETED (prd §798, 2026-09-17, user: "you forgot to

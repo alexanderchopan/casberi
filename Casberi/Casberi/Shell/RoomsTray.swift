@@ -158,8 +158,9 @@ struct RoomsTray: View {
                 searchField
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
                     youRow(gap: gap)
+                    recentRow(gap: gap)
                     ForEach(Array(categories.enumerated()), id: \.element) { index, category in
-                        categoryRow(category, index: index + 1, gap: gap)
+                        categoryRow(category, index: index + 2, gap: gap)
                     }
                 } else {
                     searchResults
@@ -337,25 +338,21 @@ struct RoomsTray: View {
         [
             Door(word: String(localized: "Home"), glyph: home ? "house.fill" : "house",
                  lit: home, key: "All") { pick("All") },
-            Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
-                 lit: notes, key: Pinboard.room) { pick(Pinboard.room) },
+            // You's four places, in the tiles' order (prd §1136 item 1):
+            // Home, then A–Z. Apps and Addresses are filters inside Sources
+            // now, the master list of everything you've connected.
             // Markets (prd §1123): its room once something is watched, else
-            // the page where the first stock or token is added — the door
-            // its Apps row opens — so the door is always drawn (§969).
+            // the page where the first stock or token is added, so the door
+            // is always drawn (§969).
             Door(word: String(localized: "Markets"), glyph: CategoryFold.glyph(for: Self.markets),
                  lit: markets, key: Self.markets) {
                 if marketsHasRoom { pickCategory(Self.markets) } else { setup(Self.markets) }
             },
-            // APPS AND SETTINGS ARE TWO DOORS AGAIN (prd §1111, reversing
-            // §1050g): Apps is everything you can connect, what you have
-            // marked; Settings is Casberi's own options and nothing else.
-            // Places in You since prd §1129: the door lands, nothing pushes.
-            Door(word: String(localized: "Apps"), glyph: ScopeTileGlyph.apps,
-                 lit: place == .apps, key: HomeScope.Place.apps.source) { screen(.apps) },
-            Door(word: String(localized: "Addresses"), glyph: "at",
-                 lit: place == .addresses, key: HomeScope.Place.addresses.source) { screen(.addresses) },
-            Door(word: String(localized: "Settings"), glyph: "gearshape",
-                 lit: place == .settings, key: HomeScope.Place.settings.source) { screen(.casberi) },
+            Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
+                 lit: notes, key: Pinboard.room) { pick(Pinboard.room) },
+            Door(word: String(localized: "Sources"), glyph: ScopeTileGlyph.sources,
+                 lit: place == .settings || place == .apps || place == .addresses,
+                 key: HomeScope.Place.settings.source) { screen(.casberi) },
         ]
     }
 
@@ -429,6 +426,48 @@ struct RoomsTray: View {
             return wa != wb ? wa > wb : a.offset < b.offset
         }
         return ranked.map(\.element)
+    }
+
+    /// RECENT (prd §1136 item 8): the apps you went to last, newest first,
+    /// one line of six under You. Never a You door — those are one tap
+    /// already — only what sits deeper: an app inside a category. Read off
+    /// `ChipMemory`'s visit stamps, the same record that ranks a row's apps.
+    private var recentItems: [FolderItem] {
+        let names = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
+        var seen = Set<String>()
+        var out: [FolderItem] = []
+        for key in ChipMemory.recent() {
+            guard !HomeScope.contains(key), key != Self.markets,
+                  let host = RoomAccounts.host(ofSource: key),
+                  RoomAccounts.connected(in: host.room, names: names).contains(where: { $0.name == host.seat.name }),
+                  seen.insert(host.seat.name).inserted else { continue }
+            let seat = host.seat
+            out.append(FolderItem(id: "recent:" + seat.name, name: seat.name, face: .app(seat.mark), lit: false) {
+                pick(seat.source ?? seat.name)
+            })
+            if out.count == Self.lineSlots { break }
+        }
+        return out
+    }
+
+    @ViewBuilder
+    private func recentRow(gap: CGFloat) -> some View {
+        let items = recentItems
+        if let first = items.first {
+            wrapped(Folder(items: Array(items.dropFirst()), action: nil), gap: gap) {
+                Text("Recent")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(maxWidth: .infinity, minHeight: Self.nameHeight, alignment: .bottomLeading)
+                    .accessibilityAddTraits(.isHeader)
+            } lead: {
+                Button(action: first.act) { itemFace(first) }
+                    .buttonStyle(PressSpring())
+                    .dsTapTarget()
+                    .accessibilityLabel(Text(verbatim: first.name))
+            }
+            .modifier(Dealt(on: dealt, index: 1, reduceMotion: reduceMotion))
+        }
     }
 
     /// You: the app's own places on one row (prd §1061, user: "put home
@@ -541,6 +580,18 @@ struct RoomsTray: View {
                                 face: item.face, glyph: nil, act: item.act))
             }
         }
+        // People (prd §1136 item 3): they live in Sources now, so the
+        // search finds them by name and lands on them there. The index is
+        // the snapshot Settings and the book build; a person not yet indexed
+        // is found once either has been opened.
+        for contact in ContactIndexSources.contacts
+            where !contact.isUnnamed && !ContactIndexSources.isYours(contact) {
+            hits.append(Hit(id: "person:" + contact.id, name: contact.name,
+                            place: String(localized: "People"), face: .person(contact), glyph: nil) {
+                chrome.settingsPeopleQuery = contact.name
+                screen(.casberi)
+            })
+        }
         return hits
     }
 
@@ -630,7 +681,7 @@ struct RoomsTray: View {
     }
 
     private struct FolderItem: Identifiable {
-        enum Face { case app(String), wallet(String), place(String) }
+        enum Face { case app(String), wallet(String), place(String), person(Contact) }
         let id: String
         let name: String
         let face: Face
@@ -800,6 +851,8 @@ struct RoomsTray: View {
         case .place(let glyph):
             roundIcon(glyph, ink: DS.brand, fill: item.lit ? Color.white : DS.surfaceRaised,
                       bounces: item.lit)
+        case .person(let contact):
+            ContactFace(contact: contact, size: Self.icon)
         }
     }
 

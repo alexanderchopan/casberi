@@ -727,6 +727,13 @@ enum NetworkReach {
 
         // MARK: Reading & feeds
 
+        // Calendars you subscribe to by their address (prd §1137): a
+        // `webcal://` / `.ics` link the person pasted, so the host is theirs
+        // and the call site names it.
+        Endpoint(service: "Calendars",
+                 reach: .whenConnected(bridge: "Calendar"),
+                 purpose: "Reads the calendars you subscribe to for what is coming up. Each request goes to that calendar's own address.",
+                 hosts: ["the calendars you subscribe to"]),
         Endpoint(service: "RSS",
                  reach: .whenConnected(bridge: "RSS"),
                  purpose: "Fetches the feeds you follow for new posts. Each request goes to that feed's own site.",

@@ -98,7 +98,14 @@ extension FeedScreen {
         }
         if memo.key != key {
             memo.key = key
-            memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
+            // HOME IS TODAY (prd §1136 item 7, user: "i don't mind we get rid
+            // of yesterday b/c that is less important"): each app's newest
+            // thing TODAY, and the categories hold the past.
+            memo.days = perfAccum("dayGrouping") {
+                source == "All"
+                    ? dayGroups(visible.filter { $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt) })
+                    : recentDaysThenCoarseTail(visible)
+            }
             // The cover is chosen over THINGS and before the fold (prd §389c),
             // which is the whole of the fix: chosen after it, the newest thing
             // could be inside a fold and the card would lead with something
@@ -284,7 +291,11 @@ extension FeedScreen {
         // height as every room's lead, never under "Today". It is already
         // absent from every group's rows (prd §389c), so the run positions
         // below see the true row list with no filtering.
-        if let ledeThing, ledeThing.isLive { Section { ledeListRow(ledeThing) } }
+        homeLead(ledeThing)
+        // You's tiles under the box, the slot every room's tiles stand in
+        // (prd §1136 item 1).
+        if source == "All" { youTilesSection(.feed) }
+        if source == "All", groups.isEmpty { nothingYetToday }
         ForEach(groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
@@ -391,6 +402,44 @@ extension FeedScreen {
             }
         }
         if window.more { olderRow(hidden: window.hidden) }
+        }
+    }
+
+    /// Home's box (prd §1136): today's cover, or — when today has none, or
+    /// too few rows for one (`ledeMinRows`) — the day itself, so the tiles
+    /// below always stand under a box and never at the top of the screen
+    /// (prd §752, §862).
+    @ViewBuilder
+    func homeLead(_ ledeThing: Thing?) -> some View {
+        if let ledeThing, ledeThing.isLive {
+            Section { ledeListRow(ledeThing) }
+        } else if source == "All" {
+            Section {
+                emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
+                             words: Text(Date.now.formatted(.dateTime.month(.wide).day())))
+            }
+        }
+    }
+
+    /// Today with nothing in it yet: the day divider over one quiet line, so
+    /// Coming up below never reads as today.
+    @ViewBuilder
+    var nothingYetToday: some View {
+        Section {
+            FeedDayDivider(label: String(localized: "Today")) { EmptyView() }
+                .textCase(nil)
+                .padding(.leading, DSRoomChassis.rowInset)
+                .padding(.vertical, DS.Space.s1)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            Text("Nothing yet today.")
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                          bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
         }
     }
 

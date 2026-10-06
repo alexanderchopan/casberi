@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1269 of 1330 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1271 of 1332 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -961,7 +961,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §662f — The demo banner stops wearing the Agents glyph, goes blue, and pulses
 - §662g — The dock had not scrolled since §660, and the hold becomes UIKit's own long press
 - §662h — The scrub is deleted
-- §663 — A chip tap lands in the room and opens its folder; a swipe walks individual rooms in the dock's order
+- §663 — A chip tap lands in the room and opens its folder; a swipe walks individual rooms in the dock's order (amended by §1136)
 - §664 — The Privacy devnet room's Home drew a sentence over 240pt of nothing, and its Send tiles rode up over the last transa… (part superseded by §1038)
 - §665 — The devnet rooms: the Privacy room keeps its last read and publishes once, the vibenet Permissions grid fits its slot…
 - §666 — Toward excellent: 120Hz, one gesture gate, and a frame meter
@@ -1307,7 +1307,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §966 — Becoming the pick is a crossfade, in the template
 - §967 — What this app reaches and what it reached are ONE pushed screen, filtered by the dock's categories
 - §968 — Robinhood is read on Alchemy beside Zerion, and a DEX-only token is priced off a pool deep enough to sell into
-- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (amended by §1127; part superseded by §972, §975, §981, §995, §1099)
+- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (amended by §1127, §1136; part superseded by §972, §975, §981, §995, §1099)
 - §970 — A note can be spoken: the sheet's wide key carries the one verb, and holding New lands speaking (part superseded by §971)
 - §971 — Dictation is Apple's, and the note sheet's mic KEEPS A VOICE NOTE (amended by §972, §987)
 - §972 — "Voice" is retired as a source and a room, and the voice note is kept whole (part superseded by §980)
@@ -1333,7 +1333,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016, §1084)
 - §993 — The Reminders room holds its lead when empty, and scopes like Apple's lists (amended by §997)
 - §994 — The Calendar room is a month grid over Today · Week · Month · New (amended by §999)
-- §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039, §1050d; part superseded by §1099)
+- §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039, §1050d, §1136; part superseded by §1099)
 - §997 — The Reminders room drops Scheduled, and its tiles never rise
 - §998 — A connected Calendar or Reminders keeps its room with nothing in it (amended by §1036)
 - §999 — The Calendar room's tiles read in time, and its month title stands at the day dividers' size (part superseded by §1006)
@@ -1450,17 +1450,17 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1096 — Solana, past §86: a cursor, v1 transactions, SPL grants, a measured venue table, and `.sol` names back
 - §1097 — A Bitcoin wallet, not an address: watch an xpub, and the facts only a wallet can state — dust, reuse, a send that waits
 - §1098 — Lightning, over Nostr Wallet Connect: a seat any Lightning wallet fills, refused if it can pay
-- §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list… (amended by §1100, §1127)
+- §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list… (amended by §1100, §1127, §1136)
 - §1100 — Writing a note: one editor at the cursor, save as you type, headings and quotes, ticked items sink, lines move and in…
 - §1101 — The Aa key: formatting for someone who never types markdown
 - §1102 — One smaller box: every room's lead is 236pt, every room's tiles stand at one y, and a sheet shows its picture whole
-- §1103 — Home groups by app: every app a header, each as its newest thing, and the folds are deleted (amended by §1103a)
+- §1103 — Home groups by app: every app a header, each as its newest thing, and the folds are deleted (amended by §1103a, §1136)
 - §1103a — An app's header is a label over its item, and nothing under it draws a lead (amended by §1103b, §1103c)
 - §1103b — Under an app header a picture rides the right as a thumbnail, and the item's words start under the app's name
 - §1103c — Under an app header, the person a thing is by wears a small face before its title
 - §1104 — An old install is told a newer one is out, and every older TestFlight build expires on ship
-- §1105 — The Wallet's Cards tile becomes Subscriptions, Coming up and Subscriptions share one calendar box, and Follow is Watch (amended by §1106b, §1107, §1111, §1113, §1117; part superseded by §1121)
-- §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a, §1114)
+- §1105 — The Wallet's Cards tile becomes Subscriptions, Coming up and Subscriptions share one calendar box, and Follow is Watch (amended by §1106b, §1107, §1111, §1113, §1117, §1136; part superseded by §1121)
+- §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a, §1114, §1136)
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
 - §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133)
@@ -1468,31 +1468,33 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 - §1109 — The Nostr seat is removed; Lightning keeps the relay client (amended by §1110)
 - §1110 — Farcaster leaves the app: the seat, its rows, and Farcaster as an identity in Addresses
-- §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113, §1115, §1117)
+- §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113, §1115, §1117, §1136)
 - §1112 — The Wallet's Subscriptions tile maps where the money goes: categories by monthly cost, a press filters the list (amended by §1117)
 - §1113 — One identity per service: a plan, its app and its mailing list open each other, and both Subscriptions tiles are one… (amended by §1118)
 - §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
 - §1115 — A mail's sheet adds its sender to Day's Subscriptions (amended by §1117)
 - §1116 — Apps wears four squares
-- §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120, §1134)
-- §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin… (amended by §1119, §1120, §1121, §1126)
+- §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120, §1134, §1136)
+- §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin… (amended by §1119, §1120, §1121, §1126, §1136)
 - §1119 — An app that needs only a name opens its Track tray over Apps, and every follow app's page keeps what only it can do (amended by §1120)
 - §1120 — The verb is Follow a feed, and the leftovers of the follow sweep (amended by §1121)
 - §1121 — Two verbs: Follow for everything you keep up with, Track for subscriptions
 - §1122 — The tray lines its icons up in columns over a blurred room, an app is a rounded square and a person a circle, in the… (amended by §1123)
-- §1123 — Markets is a You door: pink, in the top row, and the word "You" goes (amended by §1127)
+- §1123 — Markets is a You door: pink, in the top row, and the word "You" goes (amended by §1127, §1136)
 - §1124 — Privy's apps are a group in Holdings
 - §1125 — The last room's swipe left opens the tray
 - §1126 — Reading's Subscriptions count no posts
-- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128, §1129, §1133)
+- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128, §1129, §1133, §1136)
 - §1128 — The pill is the room's title (amended by §1129)
 - §1129 — The category's name comes back, in pink, and You's doors are places
 - §1130 — Threads can have notifications the way Instagram does, through its own sign-in; Meta's Threads API cannot give them
 - §1131 — Threads is a seat: its own sign-in, its Activity in Social
 - §1132 — Nothing pushes on the phone: what you open rises as one sheet
-- §1133 — Two controls: the face says where, the tiles say what [+5 sub-entries]
+- §1133 — Two controls: the face says where, the tiles say what (amended by §1136) [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
+- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com…
+- §1137 — Calendars you subscribe to [+1 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

@@ -29,6 +29,9 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
     /// screen stops at its seat clearance, a room's page (the Tokens packs)
     /// reaches the safe area itself, so it passes 0.
     var clearance: CGFloat = DSDock.seatClearance
+    /// A tile's press-and-hold act (Notes' held New records, prd §970), as
+    /// the inline tiles carry it.
+    var hold: DSScopeTiles<Scope>.Hold? = nil
     let onPick: (Scope) -> Void
 
     @Environment(ShellChrome.self) private var chrome
@@ -49,7 +52,7 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
         content.overlay(alignment: .bottomLeading) {
             if sizeClass == .compact, sections.count > 2, !chrome.keyboardUp {
                 DSScopeTiles(sections: sections, active: active,
-                             attention: attention, strip: true, verbs: verbs, onPick: onPick)
+                             attention: attention, strip: true, verbs: verbs, hold: hold, onPick: onPick)
                     .padding(.horizontal, DS.Space.s1)
                     .frame(height: Self.height)
                     .clipShape(Capsule())
@@ -81,9 +84,10 @@ extension View {
                                          attention: Set<Scope> = [],
                                          verbs: Set<Scope> = [],
                                          clearance: CGFloat = DSDock.seatClearance,
+                                         hold: DSScopeTiles<Scope>.Hold? = nil,
                                          onPick: @escaping (Scope) -> Void) -> some View {
         modifier(DSScopeDock(sections: sections, active: active,
                              attention: attention, verbs: verbs, clearance: clearance,
-                             onPick: onPick))
+                             hold: hold, onPick: onPick))
     }
 }

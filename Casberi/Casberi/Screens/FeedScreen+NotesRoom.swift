@@ -44,26 +44,46 @@ extension FeedScreen {
     /// under Voice a plain tap records too, because that is the only note
     /// that tile lists. Its plus arms into the voice kind's waveform as
     /// the hold builds (prd §973). Search raises the find tray.
-    private var notesTiles: DSScopeTiles<NotesScope> {
-        DSScopeTiles(sections: NotesScope.allCases,
-                     active: chrome.notesScope,
-                     attention: [],
-                     verbs: [.new, .search],
-                     hold: DSScopeTiles<NotesScope>.Hold(
-                        glyph: "waveform",
-                        label: String(localized: "Record a note"),
-                        act: { _ in chrome.newNoteByVoice() })) { picked in
-            if picked == .search {
-                feedSheet = .notesSearch
-            } else if picked == .new {
-                if chrome.notesScope == .voice { chrome.newNoteByVoice() } else { chrome.newNote += 1 }
-            } else {
-                // Any pick closes an open folder — Folders tapped again is
-                // the way back to the folder list (prd §980).
-                withAnimation(DS.Motion.standard) {
-                    chrome.notesScope = picked
-                    chrome.notesFolder = nil
-                }
+    /// Notes' held New: raises the page with the mic live (prd §970).
+    var notesHold: DSScopeTiles<NotesScope>.Hold {
+        DSScopeTiles<NotesScope>.Hold(
+            glyph: "waveform",
+            label: String(localized: "Record a note"),
+            act: { _ in chrome.newNoteByVoice() })
+    }
+
+    /// A Notes tile's act, wherever the tile stands: the bottom bar on the
+    /// phone (prd §1136 item 2), the strip under You's tiles beside the rail.
+    func pickNotesScope(_ picked: NotesScope) {
+        if picked == .search {
+            feedSheet = .notesSearch
+        } else if picked == .new {
+            if chrome.notesScope == .voice { chrome.newNoteByVoice() } else { chrome.newNote += 1 }
+        } else {
+            // Any pick closes an open folder — Folders tapped again is
+            // the way back to the folder list (prd §980).
+            withAnimation(DS.Motion.standard) {
+                chrome.notesScope = picked
+                chrome.notesFolder = nil
+            }
+        }
+    }
+
+    /// Notes' tiles beside the rail (iPad, Mac): one strip under You's tiles.
+    /// On the phone they ride the floating bar (`dsScopeDock` on the list)
+    /// and nothing stands here, so You's tiles are the only tiles under the
+    /// box (prd §1136 item 2: a place's own filters never sit under You's).
+    @ViewBuilder
+    var notesInlineTiles: some View {
+        if !DSScopeDock<NotesScope>.atBottom(roomSizeClass) {
+            Section {
+                DSScopeTiles(sections: NotesScope.allCases, active: chrome.notesScope,
+                             strip: true, verbs: [.new, .search], hold: notesHold) { pickNotesScope($0) }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.leadGap,
+                                              trailing: DSRoomChassis.inset))
             }
         }
     }
@@ -84,8 +104,9 @@ extension FeedScreen {
         let folderList = chrome.notesScope == .folders && chrome.notesFolder == nil
         // Nothing filed holds the lead's box empty over the folder list, as
         // an empty room does (§979: the tiles never rise).
-        standaloneLead(cover: cover, tiles: notesTiles, listEmpty: visible.isEmpty,
+        standaloneLead(cover: cover, tiles: youTiles(.notes), listEmpty: visible.isEmpty,
                        emptyWords: Text(emptyLine))
+        notesInlineTiles
         if folderList {
             noteFolderRows(visible)
         } else {

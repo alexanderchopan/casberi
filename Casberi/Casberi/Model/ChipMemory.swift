@@ -47,6 +47,12 @@ enum ChipMemory {
         lastVisit = v
     }
 
+    /// Every landing key, the newest visit first — the tray's Recent row
+    /// (prd §1136 item 8) reads it and keeps the apps.
+    static func recent() -> [String] {
+        lastVisit.sorted { $0.value > $1.value }.map(\.key)
+    }
+
     /// The sort weight — halves for every `staleWindow` stretch since the
     /// last visit, so a source nobody's tapped in a week drifts back toward
     /// the recency-only tail on its own, no cap and nothing to manage.

@@ -100,6 +100,9 @@ extension FeedScreen {
     func marketsWatchlistSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
         if !watches.isEmpty { marketsHeatSection(watches) }
+        // You's tiles under the box (prd §1136 item 1); Markets' own ride
+        // the floating bar on the phone, or the strip below beside the rail.
+        youTilesSection(.markets)
         tokensInlineTiles
         if watches.count > 1 { marketsListHead }
         watchlistSection(watches, nextEventID: nextEventID)
@@ -138,6 +141,7 @@ extension FeedScreen {
     func marketsAlertsSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
         if !watches.isEmpty { marketsHeatSection(watches) }
+        youTilesSection(.markets)
         tokensInlineTiles
         let byRef = Dictionary(watches.compactMap { t in t.sourceRef.map { ($0, t) } },
                                uniquingKeysWith: { a, _ in a })
@@ -246,6 +250,7 @@ extension FeedScreen {
             }
         }
         .task(id: scope.id) { await quotes.load(pack) }
+        youTilesSection(.markets)
         tokensInlineTiles
         indexSection(String(localized: "From your apps"), split.yours, byName: byName,
                      connected: connected, watched: watched, watchAll: true)
