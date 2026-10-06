@@ -1494,7 +1494,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
 - §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com…
-- §1137 — Calendars you subscribe to [+9 sub-entries]
+- §1137 — Calendars you subscribe to [+10 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

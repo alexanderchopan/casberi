@@ -64721,3 +64721,9 @@ A bar tile is 52pt whatever its word, so a bar beside the face shows four withou
 ### §1136h — Sources' bar is the six kinds, and it scrolls (user, 2026-10-06: "add the others"; "yes it's life. it'll just have to scroll"; reverses §1136g)
 
 The bar is the box's six kinds A–Z — **Apps · Calendars · Feeds · Mailing lists · People · Subscriptions** — then **Add**, pinned at its end while the kinds scroll, as Markets' bar does. Each kind is its whole list; Add adds the kind you're on.
+
+### §1136i — Home's box always holds the newest thing (user, 2026-10-06: "in the demo this needs to be populated w/ the newest thing"; amends §723's row floor for Home)
+
+Home's box is today's newest thing, and on a day with nothing in it yet the newest thing kept — never the day's empty state while there is anything to show. §723's row floor (no cover over fewer than `ledeMinRows` rows) no longer applies to Home: Home is Today, one row per app, so the floor left its box empty most days. Other rooms keep it. "Nothing yet today" stands under the box only when today is empty.
+
+The demo is seeded for a Today-only Home (same day, user: "this IS the demo"; "it needs to be fully seeded"): `DemoSeedAll.at` folds the table's last two days into today, in order, all before now, so Today is full at any hour and nothing meant as past lands in Coming up; a row dated ahead stays ahead. The re-stamp re-dates every demo row from the table as of now — on a table change, or once the newest demo row is two hours old (was twenty, and it shifted whole days, which put an evening pour's "today" in the future the next morning). The re-stamp's head is the newest row that has already happened: a future event read as fresh forever.

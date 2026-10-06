@@ -380,9 +380,11 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apps:          return String(localized: "Apps")
         case .calendars:     return String(localized: "Calendars")
         case .feeds:         return String(localized: "Feeds")
-        case .newsletters:   return String(localized: "Mailing lists")
+        // Short on the bar (user: "makes these say Lists and Subs"); the box
+        // names them whole ("Mailing lists", "Subscriptions").
+        case .newsletters:   return String(localized: "Lists")
         case .people:        return String(localized: "People")
-        case .subscriptions: return String(localized: "Subscriptions")
+        case .subscriptions: return String(localized: "Subs")
         case .new:           return String(localized: "Add")
         }
     }

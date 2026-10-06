@@ -152,7 +152,9 @@ extension FeedScreen {
             // this small.
             // THE ROW FLOOR IS THE ALL FEED'S TOO (prd §723) — see
             // `ledeThingID`. A room's cover is not a claim about volume.
-            if memo.lede != nil, source == "All",
+            // Not on Home since prd §1136i: Home is Today, short by design
+            // (one row per app), so the floor left its box empty most days.
+            if memo.lede != nil, source != "All",
                memo.groups.reduce(1, { $0 + $1.1.count }) < Self.ledeMinRows {
                 memo.lede = nil
                 memo.groups = feedRows(memo.days)
@@ -176,7 +178,13 @@ extension FeedScreen {
         // neither moves depending on whether the window is open.
         let window = windowed(byApp.groups)
         let _ = { memo.windowHasMore = window.more }()
-        let groups = window.shown
+        // Home's box falls back to the newest thing when today chose no
+        // cover (prd §1136i); that row stands in the box, so it leaves the
+        // list under it, as a chosen cover always has (prd §389c).
+        let fallbackCover = memo.lede == nil && source == "All" && !heroShown ? newestKept(visible) : nil
+        let groups = fallbackCover.map { cover in
+            window.shown.map { ($0.0, $0.1.filter { $0.id != cover.id.uuidString }) }.filter { !$0.1.isEmpty }
+        } ?? window.shown
         // Suppressed under a moment split: the section header IS the boundary
         // there, and two seams for one fact is worse than either alone.
         let boundary = split.moment ? nil : boundaryID(in: split.groups)
@@ -291,11 +299,21 @@ extension FeedScreen {
         // height as every room's lead, never under "Today". It is already
         // absent from every group's rows (prd §389c), so the run positions
         // below see the true row list with no filtering.
-        homeLead(ledeThing)
+        // HOME'S BOX ALWAYS HOLDS THE NEWEST THING (prd §1136i, user: "this
+        // needs to be populated w/ the newest thing"): today's, else — a day
+        // with nothing in it yet — the newest thing kept, so the box is never
+        // the day's empty state while there is anything to show.
+        let homeCover = ledeThing ?? fallbackCover
+        homeLead(homeCover)
         // You's tiles under the box, the slot every room's tiles stand in
         // (prd §1136 item 1).
         if source == "All" { youTilesSection(.feed) }
-        if source == "All", groups.isEmpty { nothingYetToday }
+        // "Nothing yet today" only when today truly holds nothing: a box
+        // holding today's one thing IS today.
+        if source == "All", groups.isEmpty,
+           !(homeCover.map { $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt) } ?? false) {
+            nothingYetToday
+        }
         ForEach(groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
@@ -403,6 +421,15 @@ extension FeedScreen {
         }
         if window.more { olderRow(hidden: window.hidden) }
         }
+    }
+
+    /// The newest live thing that has already happened — Home's cover on a
+    /// day with nothing in it yet (prd §1136i). `.isLive` before the date
+    /// read, the dead-Thing rule.
+    func newestKept(_ visible: [Thing]) -> Thing? {
+        let now = Date.now
+        return visible.lazy.filter { $0.isLive && $0.capturedAt <= now }
+            .max { $0.capturedAt < $1.capturedAt }
     }
 
     /// Home's box (prd §1136): today's cover, or — when today has none, or

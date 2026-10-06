@@ -235,7 +235,11 @@ enum DemoMode {
     /// this, "Standup · 9:33 AM" dated yesterday still reads as a normal
     /// morning's lag; past it, a demo whose whole job is showing the app
     /// ALIVE starts showing the opposite.
-    private static let staleAfter: TimeInterval = 20 * 3600
+    ///
+    /// Two hours since prd §1136i: Home is Today, so a demo opened later in
+    /// the day than it was poured would show a thin Today. Re-dating from the
+    /// table is cheap and idempotent.
+    private static let staleAfter: TimeInterval = 2 * 3600
 
     /// Freshness re-stamp (2026-08-07) — a demo left alive for a week shows
     /// every row a week stale, the seat lines still say "Synced 4m ago", and
@@ -289,13 +293,18 @@ enum DemoMode {
 
         // A demo poured under an older table draws what the table says NOW
         // (prd §1005) — once per table version, before the dates move.
-        if ScratchDefaults.standard.integer(forKey: tableKey) != DemoSeedAll.version {
+        let tableChanged = ScratchDefaults.standard.integer(forKey: tableKey) != DemoSeedAll.version
+        if tableChanged {
             let moved = DemoSeedAll.refreshLanded(context)
             ScratchDefaults.standard.set(DemoSeedAll.version, forKey: tableKey)
             if moved > 0 { NSLog("[Casberi] demo| refreshed %d rows to table v%d", moved, DemoSeedAll.version) }
         }
 
+        // The newest row ALREADY HAPPENED: the demo dates events ahead, and a
+        // future head read as fresh forever, so the re-stamp never fired.
+        let now = Date.now
         var newest = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.capturedAt <= now },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         newest.propertiesToFetch = [\.capturedAt, \.sourceRef]
         newest.fetchLimit = 1
@@ -304,16 +313,27 @@ enum DemoMode {
         // demo-owned, so the distinction only matters on a dev install with
         // real data mixed in, where the right answer is to do nothing rather
         // than misjudge staleness off a stranger's timeline.
-        guard let head = (try? context.fetch(newest))?.first,
-              let ref = head.sourceRef, DemoSeedAll.refPrefixes.contains(where: ref.hasPrefix),
-              Date.now.timeIntervalSince(head.capturedAt) > staleAfter
-        else { return }
+        // A table change re-dates every demo row from the table whatever the
+        // head is (prd §1136i): re-dating only ever touches the table's own
+        // refs, so it cannot misjudge a stranger's timeline.
+        let head = (try? context.fetch(newest))?.first
+        let stale = head.map { head in
+            (head.sourceRef.map { ref in DemoSeedAll.refPrefixes.contains(where: ref.hasPrefix) } ?? false)
+                && Date.now.timeIntervalSince(head.capturedAt) > staleAfter
+        } ?? false
+        guard tableChanged || stale else { return }
 
         let calendar = Calendar.current
         let shiftDays = calendar.dateComponents(
-            [.day], from: calendar.startOfDay(for: head.capturedAt),
+            [.day], from: calendar.startOfDay(for: head?.capturedAt ?? .now),
             to: calendar.startOfDay(for: .now)).day ?? 0
-        guard shiftDays > 0 else { return }
+        // Every row re-dated from the table as of NOW (prd §1136i), so the
+        // demo's today is today at any hour; a row the table no longer holds
+        // shifts by whole days, as it always did.
+        var fresh: [String: Thing] = [:]
+        for thing in DemoSeedAll.rooms() {
+            if let ref = thing.sourceRef, fresh[ref] == nil { fresh[ref] = thing }
+        }
 
         var descriptor = FetchDescriptor<Thing>()
         descriptor.propertiesToFetch = [\.sourceRef, \.createdAt, \.capturedAt, \.dueAt]
@@ -333,6 +353,13 @@ enum DemoMode {
         let chunk = 40
         for start in stride(from: 0, to: rows.count, by: chunk) {
             for thing in rows[start..<min(start + chunk, rows.count)] where thing.isLive {
+                if let ref = thing.sourceRef, let table = fresh[ref] {
+                    if thing.createdAt != table.createdAt { thing.createdAt = table.createdAt }
+                    if thing.capturedAt != table.capturedAt { thing.capturedAt = table.capturedAt }
+                    if thing.dueAt != table.dueAt { thing.dueAt = table.dueAt }
+                    continue
+                }
+                guard shiftDays > 0 else { continue }
                 if let shifted = calendar.date(byAdding: .day, value: shiftDays, to: thing.createdAt) {
                     thing.createdAt = shifted
                 }
@@ -353,7 +380,7 @@ enum DemoMode {
         // sites (2026-08-07: was a duplicated string literal in three
         // places before this).
         let key = WalletStore.historyKey(DemoSeedAll.demoWallet)
-        if let data = ScratchDefaults.standard.data(forKey: key),
+        if shiftDays > 0, let data = ScratchDefaults.standard.data(forKey: key),
            let samples = try? JSONDecoder().decode([WalletStore.ValueSample].self, from: data) {
             let shifted = samples.map { sample in
                 WalletStore.ValueSample(
@@ -365,7 +392,7 @@ enum DemoMode {
             }
         }
 
-        NSLog("[Casberi] demoMode: re-stamped %d rows forward %d day(s)", rows.count, shiftDays)
+        NSLog("[Casberi] demoMode: re-stamped %d rows (re-dated from the table; %d day(s) for the rest)", rows.count, shiftDays)
     }
 
     /// Leave, and leave nothing behind.

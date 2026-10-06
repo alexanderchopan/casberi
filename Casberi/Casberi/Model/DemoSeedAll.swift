@@ -59,7 +59,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 12
+    static let version = 14
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -863,8 +863,22 @@ enum DemoSeedAll {
     /// the day dial (§337) shows a spread rather than marks on the hour lines.
     private static func at(_ daysAgo: Double, _ hour: Int) -> Date {
         let cal = Calendar.current
-        let day = cal.startOfDay(for: Date.now.addingTimeInterval(-daysAgo * 86_400))
-        return day.addingTimeInterval(Double(hour) * 3600 + Double((hour * 17) % 60) * 60)
+        let now = Date.now
+        let day = cal.startOfDay(for: now.addingTimeInterval(-daysAgo * 86_400))
+        let raw = day.addingTimeInterval(Double(hour) * 3600 + Double((hour * 17) % 60) * 60)
+        // HOME IS TODAY (prd §1136i, user: "this IS the demo … it needs to
+        // be fully seeded"): the table's last two days — yesterday and today,
+        // whatever their hours — fold into today, in order, all before now,
+        // so Home's Today is full at any hour and nothing the table meant as
+        // past lands in Coming up. A row the table dates AHEAD (a negative
+        // `daysAgo`) stays ahead.
+        guard daysAgo >= 0, daysAgo < 2 else { return raw }
+        let today = cal.startOfDay(for: now)
+        guard let yesterday = cal.date(byAdding: .day, value: -1, to: today),
+              let tomorrow = cal.date(byAdding: .day, value: 1, to: today) else { return raw }
+        let share = min(max(raw.timeIntervalSince(yesterday) / tomorrow.timeIntervalSince(yesterday), 0), 1)
+        let span = max(now.timeIntervalSince(today) - 120, 0)
+        return today.addingTimeInterval(60 + share * span)
     }
 
     // MARK: - Row builder
