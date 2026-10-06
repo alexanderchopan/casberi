@@ -32,6 +32,12 @@ struct SettingsHome: View {
     @State private var peopleScope = AddressScope(name: nil)
     @State private var people = 0
     @State private var calendarAdd = false
+    /// WHAT A ROW OR ADD OPENS, OVER SETTINGS (prd §1143, user: "there is no
+    /// way to get back"): a subscription, a list, a follow or an add tray
+    /// rises here, so a swipe down is Settings again. They used to land in
+    /// the Wallet, Day or Reading, and only the tray led back.
+    @State private var sheet: SettingsSheet?
+    @Environment(\.openURL) private var openURL
     @State private var unsubscribing: CalendarSubscriptionStore.Entry?
 
 
@@ -134,6 +140,15 @@ struct SettingsHome: View {
         .sheet(isPresented: $calendarAdd) {
             CalendarSubscribeSheet()
         }
+        .sheet(item: $sheet) { route in
+            sheetContent(route)
+                // A Catalyst sheet does not inherit the presenter's
+                // environment (prd §872).
+                .environment(chrome)
+                .environment(bridges)
+                .environment(self.route)
+                .environment(\.modelContext, context)
+        }
         // A search closed with nothing in it folds its field away.
         .onChange(of: searchFocused) { _, focused in
             if !focused, query.isEmpty { searchOpen = false }
@@ -182,22 +197,11 @@ struct SettingsHome: View {
             route.present(.apps)
         case .calendars:
             calendarAdd = true
-        case .feeds:
-            // The room's follow list, through the landing's own door
-            // (prd §1118), which a landing's tile reset honours.
-            chrome.landingFollowing = .reading
-            chrome.sourceRequest = RoomAccounts.readingRoom
-        case .newsletters:
-            // Day's Subscriptions tile, whose Track tray adds a list.
-            chrome.dayScope = .subscriptions
-            chrome.sourceRequest = RoomAccounts.dayRoom
-        case .people:
-            chrome.walletFollowPending = true
-            chrome.sourceRequest = CategoryFold.walletRoom
-        case .subscriptions:
-            chrome.walletScope = nil
-            chrome.walletSection = .subscriptions
-            chrome.sourceRequest = CategoryFold.walletRoom
+        // Each kind's own add tray, over Settings (prd §1143).
+        case .feeds:         sheet = .followAdd
+        case .newsletters:   sheet = .mailAdd
+        case .people:        sheet = .walletFollow
+        case .subscriptions: sheet = .subscriptionAdd
         }
     }
 
@@ -286,6 +290,29 @@ struct SettingsHome: View {
         SettingsRows()
     }
 
+    // MARK: - Sheets over Settings (prd §1143)
+
+    @ViewBuilder
+    private func sheetContent(_ route: SettingsSheet) -> some View {
+        switch route {
+        case .subscription(let id): SubscriptionSheet(id: id, showsMoney: false)
+        case .subscriptionAdd:      SubscriptionAddTray()
+        case .mailList(let id):
+            MailSubscriptionSheet(id: id) { mailID in
+                // One sheet at a time (§872): the list closes, then the mail.
+                sheet = nil
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    if let url = URL(string: "casberi://thing/\(mailID.uuidString)") { openURL(url) }
+                }
+            }
+        case .mailAdd:              MailSubscriptionAddTray()
+        case .following(let id, let room): FollowingSheet(id: id, room: room)
+        case .followAdd:            ReadingFindSheet(mode: .follow) { _ in }
+        case .walletFollow:         WalletFollowSheet()
+        }
+    }
+
     // MARK: - Apps
 
     /// Your apps under category headers (prd §1136 item 5), A–Z; each opens its own account page — its settings.
@@ -360,7 +387,8 @@ struct SettingsHome: View {
                     focus: $searchFocused,
                     glyph: "magnifyingglass", clearable: true,
                     size: .slab, submitLabel: .search, action: {})
-        AddressesSection(query: query, scope: $peopleScope)
+        AddressesSection(query: query, scope: $peopleScope,
+                         openPlan: { sheet = .subscription($0) })
     }
 
     // MARK: - Subscriptions, feeds, newsletters, calendars
@@ -379,19 +407,19 @@ struct SettingsHome: View {
     private func subscriptionRow(_ item: Subscriptions.Item) -> some View {
         DSPushRow(title: Text(verbatim: item.name),
                   subtitle: item.next.map { Text("Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") }) {
-            chrome.open(.plan(item.id))
+            sheet = .subscription(item.id)
         } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
     }
 
     private func feedRow(_ item: Following.Item) -> some View {
         DSPushRow(title: Text(verbatim: item.name), subtitle: Text(verbatim: item.seat)) {
-            chrome.open(.followed(item.id, room(of: item)))
+            sheet = .following(item.id, room(of: item))
         } leading: { BridgeIcon(name: item.seat, size: DS.Face.row) }
     }
 
     private func newsletterRow(_ item: MailSubscriptions.Item) -> some View {
         DSPushRow(title: Text(verbatim: item.name), subtitle: item.address.map { Text(verbatim: $0) }) {
-            chrome.open(.list(item.id))
+            sheet = .mailList(item.id)
         } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
     }
 
@@ -504,5 +532,25 @@ struct CalendarSubscribeSheet: View {
         }
         Task { @MainActor in await CalendarSubscriptionIngest.refresh(context: context, only: entry.id) }
         dismiss()
+    }
+}
+
+/// What Settings raises over itself (prd §1143).
+enum SettingsSheet: Identifiable, Hashable {
+    case subscription(String), subscriptionAdd
+    case mailList(String), mailAdd
+    case following(String, Following.Room), followAdd
+    case walletFollow
+
+    var id: String {
+        switch self {
+        case .subscription(let id):       "subscription:\(id)"
+        case .subscriptionAdd:            "subscriptionAdd"
+        case .mailList(let id):           "mailList:\(id)"
+        case .mailAdd:                    "mailAdd"
+        case .following(let id, let room): "following:\(room.rawValue):\(id)"
+        case .followAdd:                  "followAdd"
+        case .walletFollow:               "walletFollow"
+        }
     }
 }

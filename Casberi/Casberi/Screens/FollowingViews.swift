@@ -89,7 +89,7 @@ struct FollowingFigure: View {
                     .lineLimit(1)
             }
             Spacer(minLength: DS.Space.s1)
-            WalletCalendar(marks: Self.marks(items), looksBack: true)
+            WalletCalendar(marks: Self.marks(items), looksBack: true, counts: false)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .combine)
@@ -104,11 +104,30 @@ struct FollowingFigure: View {
         return parts.joined(separator: " · ")
     }
 
+    /// ONE MARK PER FEED PER DAY, IN ITS OWN FACE (prd §1144, user: "the
+    /// calendar in the reading room looks horrible"; "it should look like
+    /// the other calendars"): a feed's posts are many a day, so marking each
+    /// filled every day with a letter and a post count; the day's figure now
+    /// counts the feeds that wrote, and each wears its row's picture.
     static func marks(_ items: [Following.Item], now: Date = .now) -> [WalletCalendar.Mark] {
         let from = WalletCalendar.window(now: now, looksBack: true).start
-        return items.flatMap { item in
-            item.arrivals.prefix(while: { $0 >= from }).enumerated().map { index, day in
-                WalletCalendar.Mark(id: "\(item.id)#\(index)", day: day, face: item.name)
+        let cal = Calendar.current
+        // The RAREST feed first, so it takes its day: a blog that writes
+        // twice a month shows on the day it wrote, where a feed that posts
+        // every day would otherwise take every day (prd §1144, user: "RSS
+        // icon i guess is on every day and the other blogs aren't").
+        let rarest = items.sorted {
+            $0.arrivals.prefix(while: { $0 >= from }).count < $1.arrivals.prefix(while: { $0 >= from }).count
+        }
+        return rarest.flatMap { item in
+            var days: [Date] = []
+            for at in item.arrivals.prefix(while: { $0 >= from }) {
+                let day = cal.startOfDay(for: at)
+                if days.last != day { days.append(day) }
+            }
+            return days.map { day in
+                WalletCalendar.Mark(id: "\(item.id)#\(Int(day.timeIntervalSince1970))", day: day,
+                                    face: item.seat, url: item.avatar)
             }
         }
     }

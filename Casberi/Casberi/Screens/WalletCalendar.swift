@@ -21,12 +21,19 @@ struct WalletCalendar: View {
         /// Rings the face in the attention hue: it needs you, or it carries a
         /// word (a price rise).
         var attention = false
+        /// The thing's own picture (a feed's mark, prd §1144); nil draws the
+        /// app's mark by `face`, else its letter.
+        var url: String? = nil
     }
 
     let marks: [Mark]
     var now: Date = .now
     /// The five weeks ending with this one, not starting with it (Day's box).
     var looksBack = false
+    /// The small figure beside a day's face when more than one marked it.
+    /// Reading draws none (prd §1144, user: "i don't think we need to count
+    /// the number of feeds per day").
+    var counts = true
 
     static let weeks = 5
     static let rowHeight: CGFloat = 27
@@ -82,7 +89,7 @@ struct WalletCalendar: View {
                 // A dated thing TAKES its day (the box is 206pt, prd §919):
                 // the face stands where the number would, the grid says which
                 // day it is, and today keeps its tint as a ring.
-                SubscriptionFace(name: first.face, size: Self.faceSize)
+                SubscriptionFace(name: first.face, size: Self.faceSize, url: first.url)
                     .overlay {
                         if marks.contains(where: \.attention) || isToday {
                             Circle().strokeBorder(marks.contains(where: \.attention) ? DS.attention : DS.tint,
@@ -91,7 +98,7 @@ struct WalletCalendar: View {
                         }
                     }
                     .overlay(alignment: .bottomTrailing) {
-                        if marks.count > 1 {
+                        if counts, marks.count > 1 {
                             Text(verbatim: "\(marks.count)")
                                 .dsText(.dockCaption10).monospacedDigit()
                                 .foregroundStyle(DS.textPrimary)

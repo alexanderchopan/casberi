@@ -36,6 +36,9 @@ struct AddressesSection: View {
     @Binding var scope: AddressScope
     /// The scopes this list holds, handed up for that capsule.
     var onScopes: ([AddressScope]) -> Void = { _ in }
+    /// Opens a biller's subscription over the screen that holds this list
+    /// (Settings, prd §1143), instead of leaving for the Wallet.
+    var openPlan: ((String) -> Void)? = nil
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var opened: Contact?
     /// The wallet the naming alert is naming — a `Not named yet` row's own
@@ -613,8 +616,12 @@ struct AddressesSection: View {
     private func open(_ contact: Contact) {
         if contact.lead.kind == .biller,
            let biller = BillersSource.byKey[contact.lead.key], biller.subscription {
-            route.path = []
-            chrome.open(.plan(biller.id))
+            if let openPlan {
+                openPlan(biller.id)
+            } else {
+                route.path = []
+                chrome.open(.plan(biller.id))
+            }
         } else {
             opened = contact
         }

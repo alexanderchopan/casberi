@@ -11,6 +11,9 @@ import SwiftData
 /// has them (`ServiceLinks`): the app's feed, and the list that mails you.
 struct SubscriptionSheet: View {
     let id: String
+    /// What it costs: the Wallet's sheet says it; Settings' never does (prd
+    /// §1136 item 10, §1143), so it shows when it renews and where it is from.
+    var showsMoney = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.modelContext) private var modelContext
@@ -56,7 +59,7 @@ struct SubscriptionSheet: View {
     private func content(_ item: Subscriptions.Item) -> some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         return SubscriptionPage(name: item.name,
-                                statement: statement(item, mask: mask),
+                                statement: showsMoney ? statement(item, mask: mask) : nil,
                                 facts: facts(item, mask: mask),
                                 doors: doors(item))
     }
@@ -75,13 +78,13 @@ struct SubscriptionSheet: View {
             out.append(.init(item.cadenceDays == nil ? String(localized: "Next charge") : String(localized: "Renews"),
                              next.formatted(.dateTime.month(.wide).day().year())))
         }
-        if let monthly = item.monthly, item.isYearly {
+        if showsMoney, let monthly = item.monthly, item.isYearly {
             out.append(.init(String(localized: "A month"), money(monthly, item.currency, mask)))
         }
         if let since = item.since {
             out.append(.init(String(localized: "Since"), since.formatted(.dateTime.month(.wide).year())))
         }
-        if let paid = item.paid {
+        if showsMoney, let paid = item.paid {
             out.append(.init(String(localized: "Paid so far"), money(paid, item.currency, mask)))
         }
         if let pays = item.paysWith { out.append(.init(String(localized: "Pays with"), pays)) }
