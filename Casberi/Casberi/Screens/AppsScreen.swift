@@ -904,17 +904,41 @@ struct AppsScreen: View {
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                // The directory is named only while something stands above
-                // it — `A–Z` because the category chip's own word is already
-                // `All`; alone, Connect already says what it holds. Air
-                // and a second header separate the two — nothing draws a line.
-                if !lead.isEmpty {
-                    listHeader(Text("A–Z"), count: allAppsSorted.count)
+            yoursThenMore(allAppsSorted, more: String(localized: "More apps"), flash: nil)
+        }
+    }
+
+    /// **YOURS FIRST, THEN WHAT YOU COULD ADD (prd §1140, user: "a-z should
+    /// also [show your own]… we could have them at the bottom of the user's
+    /// screen but that would mean they need to be that way on the other
+    /// buttons pages too").** Every page of the catalogue — A–Z and each
+    /// category — lists what you have connected (a broken one included,
+    /// its verb Fix), then the rest under "More apps" / "More in <Category>",
+    /// each A–Z. A side with nothing in it draws no header.
+    @ViewBuilder
+    private func yoursThenMore(_ apps: [Ranked], more: String, flash: String?) -> some View {
+        let yours = apps.filter(isAdded)
+        let rest = apps.filter { !isAdded($0) }
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if !yours.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    listHeader(Text("Connected"), count: yours.count)
+                        .landFlash(flash.flatMap { shelfComplete[$0] } ?? 0,
+                                   tint: flash.map(categoryColor) ?? DS.tint)
+                    VStack(spacing: DS.Space.s1) {
+                        ForEach(Array(yours.enumerated()), id: \.element.id) { i, entry in
+                            appRow(entry).modifier(StockEntrance(index: i))
+                        }
+                    }
                 }
-                VStack(spacing: DS.Space.s1) {
-                    ForEach(Array(allAppsSorted.enumerated()), id: \.element.id) { i, entry in
-                        appRow(entry).modifier(StockEntrance(index: i))
+            }
+            if !rest.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    listHeader(Text(more), count: rest.count)
+                    VStack(spacing: DS.Space.s1) {
+                        ForEach(Array(rest.enumerated()), id: \.element.id) { i, entry in
+                            appRow(entry).modifier(StockEntrance(index: yours.count + i))
+                        }
                     }
                 }
             }
@@ -938,36 +962,11 @@ struct AppsScreen: View {
         }
     }
 
-    /// One category: its name and size, then its apps as rows in a card.
-    ///
-    /// The header sits ABOVE the card, where the wall's band label sat inside
-    /// it — a card full of rows IS a list, so a label inside it reads as the
-    /// first row. Sentence case, no eyebrow, and no rule under it (design law:
-    /// the app draws no lines at all).
+    /// One category's page: what you have in it, then the rest of it.
     private func categorySection(_ name: String, apps: [Ranked]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(LocalizedStringKey(name))
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                // What the section holds, before you scroll it. Tabular, or
-                // the digits shift the name beside them as a connect changes
-                // nothing about the count but everything about its width.
-                Text(apps.count.formatted())
-                    .dsText(.subhead12)
-                    .monospacedDigit()
-                    .foregroundStyle(DS.textTertiary)
-                Spacer(minLength: 0)
-            }
-            // Was `s1` — a category heading and its own rows on two edges
-            // (prd §590). One edge now, the page's.
-            .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
-            VStack(spacing: DS.Space.s1) {
-                ForEach(Array(apps.enumerated()), id: \.element.id) { i, entry in
-                    appRow(entry).modifier(StockEntrance(index: i))
-                }
-            }
-        }
+        // The box names the category (prd §1138), so the page's two headers
+        // say whose: yours, then the rest of it (prd §1140).
+        yoursThenMore(apps, more: String(localized: "More in \(name)"), flash: name)
     }
 
     /// The seat id a cell should open as a ROOM rather than push, or nil.
