@@ -98,6 +98,15 @@ struct SettingsHome: View {
         .navigationTitle(Text("Sources"))
         .toolbar(.hidden, for: .navigationBar)
         .task { await read() }
+        #if DEBUG
+        // `-accountDetail <case>` opens one of Casberi's own settings sheets
+        // (verify-mac's account-detail gate, the screen sweep): those rows sit
+        // behind the pinned Casberi row since prd §1136, so the hook opens it
+        // first and `SettingsRows`' own hook raises the sheet.
+        .onAppear {
+            if UserDefaults.standard.string(forKey: "accountDetail") != nil { casberiOpen = true }
+        }
+        #endif
         .confirmationDialog(Text("Unsubscribe from this calendar?"),
                             isPresented: Binding(get: { unsubscribing != nil },
                                                  set: { if !$0 { unsubscribing = nil } }),
