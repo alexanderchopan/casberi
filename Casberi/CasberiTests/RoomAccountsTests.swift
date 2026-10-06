@@ -135,7 +135,7 @@ struct RoomAccountsTests {
     // MARK: - Work (prd §1057)
 
     /// Every builder seat stays, Dodo Payments moved in from the Wallet
-    /// shelf, and Watch offers only the seats that keep a watch.
+    /// shelf, and Watching follows only through seats Work holds (prd §1118).
     @Test func workHoldsEveryBuilderSeat() {
         let work = Set(RoomAccounts.seats(for: RoomAccounts.workRoom).map(\.name))
         for app in ["GitHub", "GitLab", "Radicle", "Hugging Face", "Linear", "Jira", "Trello",
@@ -144,7 +144,7 @@ struct RoomAccountsTests {
                     "Dodo Payments"] {
             #expect(work.contains(app), "\(app) is in Work")
         }
-        #expect(Set(WorkWatch.allCases.map(\.rawValue)).isSubset(of: work))
+        #expect(Set(FollowingReading.seats(.work)).isSubset(of: work))
         #expect(RoomAccounts.host(ofSource: "Dodo Payments")?.room == RoomAccounts.workRoom)
     }
 
