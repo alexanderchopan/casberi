@@ -38,7 +38,15 @@ struct RoomsTray: View {
     /// five discs at 56 are wider than the card, and the face stands
     /// beside the card, so a disc its size would read as a second one.
     static let icon: CGFloat = DS.Face.tray
+    /// The gap between icons: 6, and less on a phone too narrow for the You
+    /// row's six doors at 6 (prd §1123). The category runs take the same gap,
+    /// so their columns stay under the You row's last four.
     static let iconGap: CGFloat = 6
+    static let youDoorCount = 6
+    static func gap(inner: CGFloat) -> CGFloat {
+        let fit = (inner - CGFloat(youDoorCount) * icon) / CGFloat(youDoorCount - 1)
+        return max(2, min(iconGap, fit))
+    }
     /// How many apps a row shows before its "+N" — two since §1094, so the
     /// category's own disc keeps its seat at 44 and the name keeps its room.
     static let appsShown = 2
@@ -47,19 +55,20 @@ struct RoomsTray: View {
     /// sits in ONE column (prd §1122). Right-aligned runs put Markets' disc at
     /// the far edge and Testnets' in the middle.
     static let runSlots = 4
-    static var runWidth: CGFloat { CGFloat(runSlots) * icon + CGFloat(runSlots - 1) * iconGap }
+    static func runWidth(gap: CGFloat) -> CGFloat { CGFloat(runSlots) * icon + CGFloat(runSlots - 1) * gap }
     /// 60 since prd §1094a (user: "create some space between the rows so it
     /// doesn't look so cramped"): 16pt between a row's 44pt discs and the
     /// next, and ten rows before the card scrolls on a 17 Pro.
     static let rowHeight: CGFloat = 60
     /// The card's corner: Messages' menu, a continuous corner.
     static let radius: CGFloat = 32
-    /// How much of the screen the card may take: 320 wide (§1094: four
-    /// 44pt discs and a name like "Testnets"), which is most of a 375pt
-    /// phone and four fifths of a 402pt one, and three quarters down before
+    /// How much of the screen the card may take: 330 wide since §1123 (320
+    /// since §1094), exactly the You row's six 44pt doors at a 6pt gap inside
+    /// the card's 18pt sides — most of a 375pt phone, where the gap gives a
+    /// point, and four fifths of a 402pt one — and three quarters down before
     /// it scrolls.
     static let widthShare: CGFloat = 0.86
-    static let maxWidth: CGFloat = 320
+    static let maxWidth: CGFloat = 330
     static let heightShare: CGFloat = 0.72
     /// The stagger between one row's arrival and the next.
     static let dealStep: Double = 0.02
@@ -127,11 +136,12 @@ struct RoomsTray: View {
     private func panel(screen: CGSize) -> some View {
         let width = min(screen.width * Self.widthShare, Self.maxWidth)
         let height = min(contentHeight, screen.height * Self.heightShare)
+        let gap = Self.gap(inner: width - 2 * DS.Space.s4)
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                youRow
+                youRow(gap: gap)
                 ForEach(Array(categories.enumerated()), id: \.element) { index, category in
-                    categoryRow(category, index: index + 1)
+                    categoryRow(category, index: index + 1, gap: gap)
                 }
             }
             .padding(.vertical, DS.Space.s3)
@@ -168,8 +178,22 @@ struct RoomsTray: View {
     /// caused it, and this gate holds it off the tray.
     private var categories: [String] {
         chrome.chipOrder.filter {
-            CategoryFold.isCategory($0) && !(chrome.categoryVenues[$0] ?? []).isEmpty
+            $0 != Self.markets
+                && CategoryFold.isCategory($0) && !(chrome.categoryVenues[$0] ?? []).isEmpty
         }
+    }
+
+    /// Markets is a You door, not a category row (prd §1123, user: "it's only
+    /// one app tile that is important but is part of a long catalogue list
+    /// someone may not see it. it's also tied to things you have connected").
+    /// It is Casberi's own index of the companies behind your apps, so it
+    /// wears the pink of the app's own places. The dock's order, the swipe and
+    /// ⌘1–9 keep it as a category; only the tray moves it.
+    static let markets = "Markets"
+
+    /// Whether Markets has a room yet — it does once something is watched.
+    private var marketsHasRoom: Bool {
+        !(chrome.categoryVenues[Self.markets] ?? []).isEmpty
     }
 
     /// The category the room you are standing in belongs to.
@@ -259,6 +283,7 @@ struct RoomsTray: View {
     private var youDoors: [Door] {
         doors(home: filter.source == "All" && route.path.isEmpty,
               notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty,
+              markets: standingCategory == Self.markets && route.path.isEmpty,
               apps: route.path.first == .apps)
     }
 
@@ -270,12 +295,20 @@ struct RoomsTray: View {
         let act: () -> Void
     }
 
-    private func doors(home: Bool = false, notes: Bool = false, apps: Bool = false) -> [Door] {
+    private func doors(home: Bool = false, notes: Bool = false, markets: Bool = false,
+                       apps: Bool = false) -> [Door] {
         [
             Door(word: String(localized: "Home"), glyph: home ? "house.fill" : "house",
                  lit: home) { pick("All") },
             Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
                  lit: notes) { pick(Pinboard.room) },
+            // Markets (prd §1123): its room once something is watched, else
+            // the page where the first stock or token is added — the door
+            // its Apps row opens — so the door is always drawn (§969).
+            Door(word: String(localized: "Markets"), glyph: CategoryFold.glyph(for: Self.markets),
+                 lit: markets) {
+                if marketsHasRoom { pickCategory(Self.markets) } else { setup(Self.markets) }
+            },
             // APPS AND SETTINGS ARE TWO DOORS AGAIN (prd §1111, reversing
             // §1050g): Apps is everything you can connect, what you have
             // marked; Settings is Casberi's own options and nothing else.
@@ -295,7 +328,7 @@ struct RoomsTray: View {
     /// category's room on All; an app lands in the room scoped to it. The
     /// standing category fills its glyph; a broken app inside wears the
     /// attention hue on the category's glyph, and the label says it too.
-    private func categoryRow(_ category: String, index: Int) -> some View {
+    private func categoryRow(_ category: String, index: Int, gap: CGFloat) -> some View {
         let lit = standingCategory == category
         let needsYou = broken(category)
         let apps = rowApps(in: category)
@@ -317,7 +350,7 @@ struct RoomsTray: View {
                 ? Text("\(category), needs your attention")
                 : Text(category))
             .accessibilityAddTraits(lit ? .isSelected : [])
-            HStack(spacing: Self.iconGap) {
+            HStack(spacing: gap) {
                 Button {
                     pickCategory(category)
                 } label: {
@@ -357,7 +390,7 @@ struct RoomsTray: View {
                     .accessibilityLabel(Text("\(more) more in \(category)"))
                 }
             }
-            .frame(width: Self.runWidth, alignment: .leading)
+            .frame(width: Self.runWidth(gap: gap), alignment: .leading)
         }
         .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
     }
@@ -390,22 +423,16 @@ struct RoomsTray: View {
 
     /// You: the app's own places on one row (prd §1061, user: "put home
     /// notes and settings in a row together and have a 'You' category
-    /// again"). Its word, then a disc per door — Home, Notes, Addresses,
-    /// Settings — the glyphs in the brand pink (§976a), the standing door's
-    /// disc white behind the same glyph (§1053). You is no room, so the word
-    /// is a heading, not a door.
-    private var youRow: some View {
-        // s1, not the rows' s3: five doors since §1111 (Apps is back) leave
-        // "You" 40pt of the 288 the card holds, and the discs keep the rows'
-        // gap so their columns line up with the category rows' below.
-        HStack(spacing: DS.Space.s1) {
-            Text("You")
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, minHeight: Self.rowHeight, alignment: .leading)
-                .accessibilityAddTraits(.isHeader)
-            HStack(spacing: Self.iconGap) {
+    /// again"). A disc per door — Home, Notes, Markets (§1123), Apps,
+    /// Addresses, Settings — the glyphs in the brand pink (§976a), the standing door's
+    /// disc white behind the same glyph (§1053).
+    private func youRow(gap: CGFloat) -> some View {
+        // No word since §1123: six doors fill the row, and the pink already
+        // says these are yours. Trailing, so their last four stand over the
+        // category runs' columns on any width; VoiceOver still hears "You".
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            HStack(spacing: gap) {
                 ForEach(Array(youDoors.enumerated()), id: \.offset) { _, door in
                     Button(action: door.act) {
                         roundIcon(door.glyph, ink: DS.brand,
@@ -418,6 +445,9 @@ struct RoomsTray: View {
                 }
             }
         }
+        .frame(minHeight: Self.rowHeight)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("You"))
         .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
     }
 
@@ -464,6 +494,13 @@ struct RoomsTray: View {
         if !route.path.isEmpty { route.path = [] }
         chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
         chrome.sourceRequest = target
+    }
+
+    /// Open an app's page to start it — Markets before anything is watched.
+    private func setup(_ offer: String) {
+        DSHaptic.selection()
+        close()
+        route.openSetup(forOffer: offer)
     }
 
     /// Open a screen of its own — Apps, Addresses or Settings (§933, §1111).

@@ -64465,3 +64465,14 @@ The swap is every on-screen string (274 lines in 98 files): labels, toasts, foot
 **Not in this pass.** About a hundred other places still pass `circular: true` for an app's mark — the lead box's cover (Work's AWS), the Accounts menu (`DSScopeMenu`), the dock folder, the share card, GenUI. Each is a call site to read, not a switch to flip, because some of those circles hold a face.
 
 **Seen** on a private iPhone 17 Pro simulator, light, demo: the tray with every disc in one column, apps square, "+N" bare, Home blurred behind; Work's rows with AWS square. **Not seen:** dark theme, Reduce Transparency, the Mac, a device.
+
+## §1123 — Markets is a You door: pink, in the top row, and the word "You" goes (user, 2026-10-05: "wdyt if Markets was elevated to be a You icon and pink and we removed the word 'You'. I ask b/c it's only one app tile that is important but is part of a long catalogue list someone may not see it. it's also tied to things you have connected", then "do the wider card b/c i hate when people bury addresses in settings"; amends §1061's You row and §1122's run)
+
+**Why.** Markets was the tray's odd row: a name and one disc, because it is not a group of apps. It is Casberi's own index of the companies behind your apps (§1082) and your watchlist, so it belongs with the app's own places, in their pink.
+
+1. **The top row is six doors: Home · Notes · Markets · Apps · Addresses · Settings** (`RoomsTray.markets`, `youDoorCount`). Markets opens its room once something is watched; before that it opens Markets' own page, where its Apps row goes, so the door is always drawn (§969). Its disc is white while you stand in Markets.
+2. **No word "You".** Six doors fill the row and the pink already says whose they are; VoiceOver still hears "You" as the row's label.
+3. **The card is 330 wide (was 320)**, exactly six 44pt doors at a 6pt gap inside its 18pt sides. On a narrower phone the gap gives (`RoomsTray.gap(inner:)`, never under 2) and the category runs take the same gap, so their columns stay under the doors' last four (§1122). Addresses keeps its door: it is not folded into Settings.
+4. **Only the tray moves it.** The dock's order, the swipe between rooms and ⌘1–9 keep Markets as a category.
+
+**Seen** on a private iPhone 17 Pro simulator, light, demo: six pink doors with no word, the columns under them, Markets' door landing in Markets. **Not seen:** a 375pt phone, dark theme, a fresh install's door to the page, the Mac.
