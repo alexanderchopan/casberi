@@ -959,13 +959,22 @@ extension FeedScreen {
     func walletAppRows(_ things: [Thing]) -> [FeedRow] {
         let store = PrivyHomeStore.shared
         let apps = things.filter { $0.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true }
-        return apps.map { thing -> (row: FeedRow, usd: Double, used: Date) in
-            let ref = thing.sourceRef ?? ""
-            return (FeedRow.single(thing), store.usd(ref) ?? 0,
-                    store.byRef[ref]?.lastActiveAt ?? thing.capturedAt)
+        // Typed steps: the one-chain form type-checked in Debug and timed out
+        // in the Release archive (build 756).
+        typealias Ranked = (row: FeedRow, usd: Double, used: Date)
+        var ranked: [Ranked] = []
+        for thing in apps {
+            let ref: String = thing.sourceRef ?? ""
+            let usd: Double = store.usd(ref) ?? 0
+            let active: Date? = store.byRef[ref]?.lastActiveAt
+            let used: Date = active ?? thing.capturedAt
+            ranked.append((row: FeedRow.single(thing), usd: usd, used: used))
         }
-        .sorted { $0.usd == $1.usd ? $0.used > $1.used : $0.usd > $1.usd }
-        .map(\.row)
+        ranked.sort { (a: Ranked, b: Ranked) -> Bool in
+            if a.usd != b.usd { return a.usd > b.usd }
+            return a.used > b.used
+        }
+        return ranked.map { (r: Ranked) -> FeedRow in r.row }
     }
 
     @ViewBuilder
