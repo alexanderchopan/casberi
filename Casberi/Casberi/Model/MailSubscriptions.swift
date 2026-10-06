@@ -86,13 +86,14 @@ enum MailSubscriptions {
     }
 
     /// A sender the person could track (prd §1117): mail with no list header
-    /// from an address not on the tile, in the last thirty days.
+    /// from an address not on the tile, in the last thirty days, or ever when
+    /// the tray is searched (§1134).
     struct Candidate: Identifiable, Equatable {
         /// The lowercased address.
         var id: String
         var name: String
         var address: String
-        /// How many arrived in the last thirty days.
+        /// How many arrived in the window it was read over.
         var count: Int
         var last: Date
     }
@@ -193,9 +194,10 @@ enum MailSubscriptions {
     /// whose mail in the last thirty days carried no list header, that is
     /// not added already and whose mail no header puts on the tile. Most mail
     /// first, then the newest, then by name. Nothing is guessed: the person
-    /// picks.
-    static func candidates(_ landed: [Landed], added: Set<String>, now: Date) -> [Candidate] {
-        let windowStart = now.addingTimeInterval(-windowDays * 86_400)
+    /// picks. `within: nil` reads every mail kept, the tray's search (§1134).
+    static func candidates(_ landed: [Landed], added: Set<String>, now: Date,
+                           within days: Double? = windowDays) -> [Candidate] {
+        let windowStart = days.map { now.addingTimeInterval(-$0 * 86_400) } ?? .distantPast
         var listed: Set<String> = []
         for mail in landed where mail.listKey != nil {
             if let address = Self.key(listID: nil, address: mail.address) { listed.insert(address) }

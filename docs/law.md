@@ -138,7 +138,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Markets is its own category; Testnets (Hegotá Frames, Logos, `flask`) is its own, never inside Wallet (§1050, §1050a).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
-- Day's Subscriptions tile lists every mailing list that writes to you, found by `List-Id` or `List-Unsubscribe`, never a guess: one row per list, the most mail this month first, each with how often it writes and a way out that opens in the browser or Mail; the app never unsubscribes for you and shows no open counts (§1111). A sender with no list header joins it from its mail's sheet or Day's own tray, Track a subscription; every mail from that address files, and Stop tracking takes back only what the add filed (§1115, §1117). Both Subscriptions tiles are one tile with two measures: a statement with "a month", one line, the five-week calendar (the Wallet's ahead, Day's looking back), then Track a subscription, the category map and the rows, each row's figure trailing (cost a month, mails in thirty days) and the other room named in its line, never a price outside the Wallet (§1117).
+- Day's Subscriptions tile lists every mailing list that writes to you, found by `List-Id` or `List-Unsubscribe`, never a guess: one row per list, the most mail this month first, each with how often it writes and a way out that opens in the browser or Mail; the app never unsubscribes for you and shows no open counts (§1111). A sender with no list header joins it from its mail's sheet or Day's own tray, Track a subscription; every mail from that address files, and Stop tracking takes back only what the add filed (§1115, §1117). Both Subscriptions tiles are one tile with two measures: a statement with "a month", one line, the five-week calendar (the Wallet's ahead, Day's looking back), then Track a subscription, the category map and the rows, each row's figure trailing (cost a month, mails in thirty days) and the other room named in its line, never a price outside the Wallet (§1117). Day's tray searches every header-less sender kept, not only this month; its field says Search mail (§1134).
 - Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows (§1039). Four tiles each and no verb among them: a verb that adds an account is the Accounts menu's first row (Watch a wallet, New account), a verb that moves money leads Holdings (Frames' Send · Top up, Logos' Send), per §774's page rule (§1107, §1108). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1267 of 1328 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1268 of 1329 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1474,7 +1474,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
 - §1115 — A mail's sheet adds its sender to Day's Subscriptions (amended by §1117)
 - §1116 — Apps wears four squares
-- §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120)
+- §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120, §1134)
 - §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin… (amended by §1119, §1120, §1121, §1126)
 - §1119 — An app that needs only a name opens its Track tray over Apps, and every follow app's page keeps what only it can do (amended by §1120)
 - §1120 — The verb is Follow a feed, and the leftovers of the follow sweep (amended by §1121)
@@ -1491,6 +1491,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1131 — Threads is a seat: its own sign-in, its Activity in Social
 - §1132 — Nothing pushes on the phone: what you open rises as one sheet
 - §1133 — Two controls: the face says where, the tiles say what [+5 sub-entries]
+- §1134 — Day's Track tray searches mail
 
 ## Dead rulings → what replaced them (generated)
 

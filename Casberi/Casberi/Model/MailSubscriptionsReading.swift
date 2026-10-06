@@ -16,6 +16,9 @@ final class MailSubscriptionsReading {
     private(set) var items: [MailSubscriptions.Item] = []
     /// The senders Track a subscription offers (prd §1117).
     private(set) var candidates: [MailSubscriptions.Candidate] = []
+    /// Every header-less sender ever kept, what the tray's search reads
+    /// (prd §1134): "Search mail" finds anyone, not only this month.
+    private(set) var senders: [MailSubscriptions.Candidate] = []
     /// True once a read has finished, so the tile can tell "none" from "not yet".
     private(set) var read = false
 
@@ -47,6 +50,8 @@ final class MailSubscriptionsReading {
         if composed != items { items = composed }
         let offered = MailSubscriptions.candidates(landed, added: added, now: now)
         if offered != candidates { candidates = offered }
+        let everyone = MailSubscriptions.candidates(landed, added: added, now: now, within: nil)
+        if everyone != senders { senders = everyone }
         read = true
     }
 

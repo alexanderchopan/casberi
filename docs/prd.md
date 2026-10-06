@@ -64635,3 +64635,13 @@ Reverses §1133a: the row's word is your name, else You (`HomeScope.title`), as 
 ### §1133e — The tray's search searches the tray (user, 2026-10-06: "fix 1", of "Search doesn't search apps")
 
 The field at the tray's top is a real search now, not a door: it filters as you type, as the App Library's does. Every app, account, place and category whose name holds the words, a name starting with them first, each saying where it lives ("Coinbase · Wallet"); a hit does what its icon does. The last row, and Return, search your THINGS for the same words in Find (`ShellChrome.openFind`, consumed by the composer, which fills and runs Find). While searching, the card stands at its full height so the field stays above the keyboard.
+
+## §1134 — Day's Track tray searches mail (user, 2026-10-06: "they should just say search mail", of the tray's field "Search who writes to you"; amends §1117 item 5)
+
+The field says Search mail, and it searches every sender kept whose mail carried no list header, not tracked and not a list already (`MailSubscriptions.candidates(…, within: nil)`, `MailSubscriptionsReading.senders`), so a sender from March is found by typing. Untyped, the tray is §1117's: this month's senders, the most mail first. A searched row's line counts every mail and dates the newest ("mia@example.com · 12 mails · Last Mar 4"), under "From your mail". An empty month says so and points at the field ("Search mail for anyone who wrote before"); a search that finds no one says "No mail matches".
+
+**The other way in stands.** A mail opened from any feed, All included, carries Track a subscription under its facts when it is on no list (§1115), or the list's own door when it is.
+
+**Guards.** `mail-subscriptions-selftest.sh` (13 mutations): searched, a sender from outside the month is offered; the search held to the month is caught; the reading and the tray are wired.
+
+**Not seen.** Written in a Linux container with no Swift toolchain: not compiled, not run on a simulator.

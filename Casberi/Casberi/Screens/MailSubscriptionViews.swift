@@ -249,6 +249,8 @@ struct MailSubscriptionSheet: View {
 /// no list header (`MailSubscriptions.candidates`), the most mail first, and
 /// a tap tracks one. Every mail from that address then files, the older
 /// ones too (§1115), and the tray closes on Day's tile with the row in it.
+/// Search mail reads every header-less sender kept, not only this month
+/// (§1134), so a sender from March is found by typing.
 struct MailSubscriptionAddTray: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -257,23 +259,28 @@ struct MailSubscriptionAddTray: View {
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        let candidates = Self.matching(MailSubscriptionsReading.shared.candidates, query: query)
+        let searching = !query.trimmingCharacters(in: .whitespaces).isEmpty
+        let reading = MailSubscriptionsReading.shared
+        let candidates = searching ? Self.matching(reading.senders, query: query) : reading.candidates
         // The find tray's shape (`DSTraySearchField`): the rows, and the
         // field at the bottom on glass.
         DSTray(title: SubscriptionWords.track, height: 640, detents: [.large]) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if candidates.isEmpty {
-                        DSEmptyState(headline: DSProse.text("No one else wrote this month"),
-                                     words: Text("Mail with no list header shows here"),
+                        DSEmptyState(headline: searching ? DSProse.text("No mail matches")
+                                                         : DSProse.text("No one else wrote this month"),
+                                     words: searching ? Text("Try a name or an address")
+                                                      : Text("Search mail for anyone who wrote before"),
                                      scale: .list(rows: 3))
                             .padding(.horizontal, DS.Space.s4)
                     } else {
-                        DSTrayHead(String(localized: "Writes to you most"))
+                        DSTrayHead(searching ? String(localized: "From your mail")
+                                             : String(localized: "Writes to you most"))
                         ForEach(candidates) { candidate in
                             Button { track(candidate) } label: {
                                 SubscriptionRow(name: candidate.name,
-                                                line: Text(verbatim: Self.line(candidate))) {
+                                                line: Text(verbatim: Self.line(candidate, searching: searching))) {
                                     Image(systemName: "plus")
                                         .dsGlyph(.body)
                                         .foregroundStyle(DS.tint)
@@ -291,19 +298,27 @@ struct MailSubscriptionAddTray: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
-                DSTraySearchField(placeholder: String(localized: "Search who writes to you"),
+                DSTraySearchField(placeholder: String(localized: "Search mail"),
                                   text: $query, focus: $fieldFocused) { EmptyView() }
             }
         }
         .task { MailSubscriptionsReading.shared.refresh(modelContext) }
     }
 
-    /// "mia@example.com · 4 mails in 30 days".
-    static func line(_ candidate: MailSubscriptions.Candidate) -> String {
+    /// "mia@example.com · 4 mails in 30 days"; searched, every mail kept and
+    /// the newest one's day, "mia@example.com · 12 mails · Last Mar 4".
+    static func line(_ candidate: MailSubscriptions.Candidate, searching: Bool = false) -> String {
+        guard searching else {
+            let count = candidate.count == 1
+                ? String(localized: "1 mail in 30 days")
+                : String(localized: "\(candidate.count) mails in 30 days")
+            return [candidate.address, count].joined(separator: " · ")
+        }
         let count = candidate.count == 1
-            ? String(localized: "1 mail in 30 days")
-            : String(localized: "\(candidate.count) mails in 30 days")
-        return [candidate.address, count].joined(separator: " · ")
+            ? String(localized: "1 mail")
+            : String(localized: "\(candidate.count) mails")
+        let last = String(localized: "Last \(WalletSubscriptionRow.day(candidate.last))")
+        return [candidate.address, count, last].joined(separator: " · ")
     }
 
     /// A name or an address that holds what was typed.

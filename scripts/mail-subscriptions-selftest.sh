@@ -161,8 +161,14 @@ check(offered.map(\.id) == ["mia@example.com", "shop@x.example"],
 check(offered.first?.count == 3 && offered.first?.name == "Mia Rowe", "a sender's mail counted once per mail, any case")
 check(offered.last?.last == ago(1), "a sender's newest mail dates it")
 
+// SEARCH MAIL (prd §1134): the tray's search reads every sender kept, so a
+// sender from outside the month is found; tracked and listed still are not.
+let everyone = MailSubscriptions.candidates(pool, added: ["added@x.example"], now: now, within: nil)
+check(everyone.map(\.id) == ["mia@example.com", "shop@x.example", "old@x.example"],
+      "searched, every headerless sender kept, not added, not a list")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   keys, doors, cadence, compose, file, arrivals, candidates")
+print("  ok   keys, doors, cadence, compose, file, arrivals, candidates, search")
 SWIFT
 
 build() { swiftc -Onone -o "$work/run" "$1" "$work/main.swift" 2>"$work/err" || return 1 }
@@ -200,6 +206,8 @@ mutate "an added sender split from its own list (two rows)" \
   's/key: headed\[address\]\?\.list \?\? address/key: address/'
 mutate "a candidate from outside the month" \
   's/where mail\.listKey == nil && mail\.at >= windowStart && mail\.at <= now/where mail.listKey == nil/'
+mutate "the search held to the month (a sender from March is never found)" \
+  's/let windowStart = days\.map \{ now\.addingTimeInterval\(-\$0 \* 86_400\) \} \?\? \.distantPast/let windowStart = now.addingTimeInterval(-(days ?? windowDays) * 86_400)/'
 mutate "a sender already on the tile offered again" \
   's/!added\.contains\(address\), !listed\.contains\(address\)/!added.contains(address)/'
 mutate "the quietest sender offered first" \
@@ -227,6 +235,10 @@ grep -q "MailSubscriptionStore.shared.add(address: address, name: name)" Casberi
   || fail "drift: a mail's sheet no longer adds its sender (prd §1115)"
 grep -q "MailSubscriptions.candidates(landed, added: added, now: now)" Casberi/Casberi/Model/MailSubscriptionsReading.swift \
   || fail "drift: the reading no longer offers senders through MailSubscriptions.candidates (prd §1117)"
+grep -q "MailSubscriptions.candidates(landed, added: added, now: now, within: nil)" Casberi/Casberi/Model/MailSubscriptionsReading.swift \
+  || fail "drift: Search mail no longer reads every sender kept (prd §1134)"
+grep -q "searching ? Self.matching(reading.senders, query: query)" Casberi/Casberi/Screens/MailSubscriptionViews.swift \
+  || fail "drift: the Track tray's search no longer searches every sender (prd §1134)"
 grep -q "WalletCalendar(marks: Self.marks(items), looksBack: true)" Casberi/Casberi/Screens/MailSubscriptionViews.swift \
   || fail "drift: Day's box is no longer the Wallet's calendar looking back (prd §1117)"
 grep -q "MailSubscriptionStore.shared.remove(address: address)" Casberi/Casberi/Screens/MailSubscriptionViews.swift \
@@ -236,4 +248,4 @@ grep -q "case .reminder, .edited, .list, .unsubscribe: return true" Casberi/Shar
 grep -q "mail-subscriptions-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-echo "✓ mail subscriptions: keys, doors, cadence, compose, file, arrivals, candidates, 12 mutations"
+echo "✓ mail subscriptions: keys, doors, cadence, compose, file, arrivals, candidates, search, 13 mutations"

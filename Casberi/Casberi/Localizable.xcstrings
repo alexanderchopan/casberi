@@ -6083,6 +6083,34 @@
         }
       }
     },
+    "From your mail" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De tu correo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのメールから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 메일에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自你的邮件"
+          }
+        }
+      }
+    },
     "Heading" : {
       "localizations" : {
         "es" : {
@@ -6783,6 +6811,34 @@
         }
       }
     },
+    "No mail matches" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún correo coincide"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一致するメールはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일치하는 메일이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有匹配的邮件"
+          }
+        }
+      }
+    },
     "Not traded, so there's nothing to follow" : {
       "localizations" : {
         "es" : {
@@ -7315,6 +7371,62 @@
         }
       }
     },
+    "Search mail" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buscar en el correo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メールを検索"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일 검색"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索邮件"
+          }
+        }
+      }
+    },
+    "Search mail for anyone who wrote before" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca en el correo a quien te escribió antes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以前に届いたメールの送信者を検索"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이전에 메일을 보낸 사람을 메일에서 검색하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在邮件中搜索以前写信给你的人"
+          }
+        }
+      }
+    },
     "Search your things for “%@”" : {
       "localizations" : {
         "es" : {
@@ -7843,6 +7955,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "代币 · 保存在已关注的钱包中"
+          }
+        }
+      }
+    },
+    "Try a name or an address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Prueba con un nombre o una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前かアドレスで試してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름이나 주소로 찾아보세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "试试名字或地址"
           }
         }
       }
@@ -8487,34 +8627,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "带有文件的邮件"
-          }
-        }
-      }
-    },
-    "Mail with no list header shows here" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Aquí aparece el correo sin encabezado de lista"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "リストヘッダーのないメールがここに表示されます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "목록 헤더가 없는 메일이 여기에 표시됩니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "没有列表标头的邮件会显示在这里"
           }
         }
       }
@@ -83303,34 +83415,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "按名称或代码搜索，或粘贴任意链上的合约地址。"
-          }
-        }
-      }
-    },
-    "Search who writes to you" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Buscar quién te escribe"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "送信者を検索"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "보낸 사람 검색"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "搜索给你发信的人"
           }
         }
       }
