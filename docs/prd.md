@@ -64619,3 +64619,11 @@ The cost, accepted: switching apps inside a room is two taps (face, app), not on
 ### §1133a — The tray's You row says You (user, 2026-10-06: "in the tray it says the user name, but it shoudl say You (b/c it's shorter and wont' truncate)")
 
 The row's word is "You", never the name you gave the app: a name truncated in the tray's word column ("Alexande…"). The screen's title keeps your name (`HomeScope.title`, §1129).
+
+### §1133b — The tray shows every app; the folder is deleted (user, 2026-10-06: "i'm not sure the expanding folders in the tray is the ansewr. b/c when you expand a category you see the icons repeat … a user also has to open the folder many times if they have a bunch of apps connected. i think we have to go back to tray and display all the apps"; "we want to wrap the tiles too so they go underneath the cateogry on their secon rows")
+
+Every row draws its whole run: the category's disc (Home's for You), the room's act second (§1107), then every app and account, the one showing ringed in pink. Four stand beside the name; the rest wrap UNDER it, six to a line at the card's full width, whose columns are the first line's four plus two (the card is sized for You's six, §1123). "+N", the folder and its names are deleted. You's row is "You" and its six places, two lines. The cost, accepted: a category with many apps makes the tray taller (the demo's Wallet runs five lines).
+
+### §1133c — Each row's name on its own line, its icons under it six across (user, 2026-10-06: "maybe no wrapping, just each category starts on the line below the cateogry, so You's six tiles all fit on one row"; "build b", from three mockups)
+
+Amends §1133b's layout: a row is its name on a line of its own (the touch floor tall, the word at its foot), then its whole run — the disc, the room's act, every app and account — six to a line at the card's full width. The App Library's grammar: every line the same six columns, You's six places on one line, a long category simply running on. Four-beside-the-name is deleted.

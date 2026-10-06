@@ -337,12 +337,12 @@ grep -q "if let showing { crown(showing) }" "$CHROME" \
   || fail "drift: Watch a wallet is not handed to the Accounts pill, or no longer raises the Watch tray (prd §1107, §1090)"
 [[ "$chrome_fn" != *"verbs:"* ]] \
   || fail "drift: the wallet hands the chrome verb tiles again — Watch is the Accounts list's first row (prd §1107)"
-# Since prd §1133 the pill is deleted and the act leads the room's FOLDER in
-# the rooms tray: drawn before every account, and the Wallet's raised from any
+# Since prd §1133 the pill is deleted and the act leads the room's run in
+# the rooms tray (its folder until §1133b): drawn before every account, and the Wallet's raised from any
 # room through `walletFollowPending`, which the Wallet room answers.
 tray_bare=$(sed -e 's://.*$::' Casberi/Casberi/Shell/RoomsTray.swift)
-act_at=$(print -r -- "$tray_bare" | grep -n "if let action = folder.action {" | head -1 | cut -d: -f1 || true)
-rows_at=$(print -r -- "$tray_bare" | grep -n "ForEach(folder.items) { item in" | head -1 | cut -d: -f1 || true)
+act_at=$(print -r -- "$tray_bare" | grep -n "if let action = folder.action { cells.append(.action(action)) }" | head -1 | cut -d: -f1 || true)
+rows_at=$(print -r -- "$tray_bare" | grep -n "cells += folder.items.map(RunCell.item)" | head -1 | cut -d: -f1 || true)
 [[ -n "$act_at" && -n "$rows_at" ]] && (( act_at < rows_at )) \
   || fail "drift: the folder no longer leads with its act — Follow sinks under a long list (prd §1107, §1133)"
 grep -q "chrome.walletFollowPending = true" Casberi/Casberi/Shell/RoomsTray.swift \
