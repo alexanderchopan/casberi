@@ -19,7 +19,7 @@ enum MediaScope: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     var summary: String {
         switch self {
-        case .all:           return String(localized: "Everything you follow, play and listen to")
+        case .all:           return String(localized: "Everything you watch, play and listen to")
         case .subscriptions: return String(localized: "Every channel and show you follow")
         }
     }

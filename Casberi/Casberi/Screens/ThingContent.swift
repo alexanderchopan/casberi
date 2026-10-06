@@ -1087,7 +1087,7 @@ private struct YouTubeVideoContent: View {
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s3)
-            DSDoorRow(icon: "play.rectangle", label: "Follow on YouTube") {
+            DSDoorRow(icon: "play.rectangle", label: "Watch on YouTube") {
                 openURL(url)
             }
             .padding(.horizontal, DS.Space.s4)
@@ -1153,7 +1153,7 @@ private struct TelegramVideoContent: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
             }
-            DSDoorRow(icon: "paperplane", label: "Follow in Telegram") {
+            DSDoorRow(icon: "paperplane", label: "Watch in Telegram") {
                 openURL(post)
             }
             .padding(.horizontal, DS.Space.s4)

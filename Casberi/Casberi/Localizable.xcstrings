@@ -617,6 +617,34 @@
         }
       }
     },
+    "%@ acts on its own account — not the wallets you follow here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ actúa en su propia cuenta, no en las carteras que sigues aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は自身のアカウントで実行します。ここでフォローしているウォレットではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@은(는) 자체 계정에서 실행합니다. 여기서 팔로우하는 지갑이 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 使用自己的账户操作，而不是你在这里关注的钱包。"
+          }
+        }
+      }
+    },
     "%@ cap" : {
       "localizations" : {
         "es" : {
@@ -757,6 +785,90 @@
         }
       }
     },
+    "%@ in gas since you started following, plus %@ somebody else paid for you." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en gas desde que empezaste a seguirlo, más %@ que pagó otra persona por ti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローを開始してから%@のガス代、さらに他の人があなたのために支払った%@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 시작 이후 가스비 %@, 그리고 다른 사람이 대신 지불한 %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自你开始关注以来花费了 %@ 的 gas 费，另外还有 %@ 是别人替你支付的。"
+          }
+        }
+      }
+    },
+    "%@ in gas since you started following." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en gas desde que empezaste a seguirlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローを開始してから%@のガス代。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 시작 이후 가스비 %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自你开始关注以来花费了 %@ 的 gas 费。"
+          }
+        }
+      }
+    },
+    "%@ is already followed." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ya se está siguiendo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@はすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@은(는) 이미 팔로우 중입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已在关注中。"
+          }
+        }
+      }
+    },
     "%@ liquidity" : {
       "localizations" : {
         "es" : {
@@ -869,6 +981,34 @@
         }
       }
     },
+    "%@ since you followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ desde que lo sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー開始から%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 후 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注以来 %@"
+          }
+        }
+      }
+    },
     "%@ since you watched" : {
       "localizations" : {
         "es" : {
@@ -949,6 +1089,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%1$@ · %2$@编辑"
+          }
+        }
+      }
+    },
+    "%@ · not following long enough to compare" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · lo sigues desde hace muy poco para comparar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 比較できるほど長くフォローしていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 비교할 만큼 오래 팔로우하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 关注时间不足，无法比较"
           }
         }
       }
@@ -1093,6 +1261,34 @@
         }
       }
     },
+    "%@ — not rated is not yet examined, never a verdict.\n\nAs of %@; followed wallets are read live." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ — sin calificar significa aún sin examinar, nunca un veredicto.\n\nA fecha de %@; las carteras seguidas se leen en vivo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ — 未評価は「まだ調べていない」という意味で、判定ではありません。\n\n%@ 時点。フォロー中のウォレットはライブで読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ — 미평가는 아직 검토하지 않았다는 뜻이며 판정이 아닙니다.\n\n%@ 기준. 팔로우하는 지갑은 실시간으로 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ — 未评级表示尚未检查，并非结论。\n\n截至 %@；关注的钱包为实时读取。"
+          }
+        }
+      }
+    },
     "%@%@" : {
       "localizations" : {
         "es" : {
@@ -1233,6 +1429,174 @@
         }
       }
     },
+    "%lld addresses followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld direcciones seguidas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件のアドレスをフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소 %lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 个地址"
+          }
+        }
+      }
+    },
+    "%lld also by mail" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld también por correo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件はメールでも"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개는 메일로도 받음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个也通过邮件"
+          }
+        }
+      }
+    },
+    "%lld followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld seguidos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 项"
+          }
+        }
+      }
+    },
+    "%lld following" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 팔로잉"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 个"
+          }
+        }
+      }
+    },
+    "%lld following in Work" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld en Work"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Workで%lld件をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Work에서 %lld개 팔로잉"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Work 中正在关注 %lld 个"
+          }
+        }
+      }
+    },
+    "%lld landed so far. Following yours adds where its keys are made, and who sees your addresses." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld hasta ahora. Seguir el tuyo añade dónde se crean sus claves y quién ve tus direcciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これまでに %lld 件到着しました。自分のアカウントをフォローすると、鍵がどこで作られたか、誰があなたのアドレスを見ているかが加わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금까지 %lld개가 도착했습니다. 내 계정을 팔로우하면 키가 만들어진 위치와 누가 내 주소를 보는지가 추가됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前已落地 %lld 条。关注你自己的账户，会显示其密钥的创建位置，以及谁能看到你的地址。"
+          }
+        }
+      }
+    },
     "%lld mails" : {
       "localizations" : {
         "es" : {
@@ -1345,6 +1709,62 @@
         }
       }
     },
+    "%lld metric followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld métrica seguida"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件の指標をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지표 %lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 项指标"
+          }
+        }
+      }
+    },
+    "%lld more followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld más seguidos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "さらに%lld件をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 더 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还有 %lld 个在关注中"
+          }
+        }
+      }
+    },
     "%lld more in %@" : {
       "localizations" : {
         "es" : {
@@ -1397,6 +1817,286 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 项需要你现在处理"
+          }
+        }
+      }
+    },
+    "%lld new a month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld nuevos al mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "月に%lld件の新着"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "월 %lld개 신규"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每月 %lld 条新内容"
+          }
+        }
+      }
+    },
+    "%lld on record %@. Following yours adds who can stop your transactions, and how long you'd have to get out." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld registrados %@. Seguir el tuyo añade quién puede detener tus transacciones y cuánto tiempo tendrías para salir."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "記録は %1$lld 件 %2$@ です。自分のアカウントをフォローすると、誰が取引を止められるか、逃げる猶予がどれくらいあるかが加わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기록상 %1$lld개 %2$@. 내 계정을 팔로우하면 누가 내 거래를 중지할 수 있는지와 빠져나갈 시간이 얼마나 되는지가 추가됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "记录中有 %1$lld 个 %2$@。关注你自己的账户，会显示谁能阻止你的交易，以及你有多长时间可以撤出。"
+          }
+        }
+      }
+    },
+    "%lld posts a month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld publicaciones al mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "月に%lld件の投稿"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "월 게시물 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每月 %lld 篇文章"
+          }
+        }
+      }
+    },
+    "%lld reclaimed before you followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld recuperados antes de que lo siguieras"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローを始める前に%lld件が引き出されています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하기 전에 %lld건이 회수되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你开始关注之前已取回 %lld 笔"
+          }
+        }
+      }
+    },
+    "%lld subscriptions in Media" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld suscripciones en Media"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mediaのサブスクリプション%lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Media 구독 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Media 中有 %lld 个订阅"
+          }
+        }
+      }
+    },
+    "%lld subscriptions in Reading" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld suscripciones en Reading"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Readingのサブスクリプション%lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reading 구독 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reading 中有 %lld 个订阅"
+          }
+        }
+      }
+    },
+    "%lld updates" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld actualizaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件の更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "업데이트 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 条更新"
+          }
+        }
+      }
+    },
+    "%lld updates a month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld actualizaciones al mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "月に%lld件の更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "월 업데이트 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每月 %lld 条更新"
+          }
+        }
+      }
+    },
+    "%lld validator followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld validador seguido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のバリデーターをフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검증인 %lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 个验证者"
+          }
+        }
+      }
+    },
+    "1 address followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 dirección seguida"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 件のアドレスをフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소 1개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 1 个地址"
           }
         }
       }
@@ -1513,6 +2213,90 @@
         }
       }
     },
+    "1 post" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 publicación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1件の投稿"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "게시물 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 篇文章"
+          }
+        }
+      }
+    },
+    "1 post a month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 publicación al mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "月に1件の投稿"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "월 게시물 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每月 1 篇文章"
+          }
+        }
+      }
+    },
+    "1 reclaimed before you followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 recuperado antes de que lo siguieras"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローを始める前に1件が引き出されています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하기 전에 1건이 회수되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你开始关注之前已取回 1 笔"
+          }
+        }
+      }
+    },
     "1 token" : {
       "localizations" : {
         "es" : {
@@ -1541,6 +2325,118 @@
         }
       }
     },
+    "1 update" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 actualización"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1件の更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "업데이트 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 条更新"
+          }
+        }
+      }
+    },
+    "1 update a month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 actualización al mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "月に1件の更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "월 업데이트 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每月 1 条更新"
+          }
+        }
+      }
+    },
+    "@handle or channel link" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@usuario o enlace del canal"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@ハンドルまたはチャンネルのリンク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@핸들 또는 채널 링크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@用户名或频道链接"
+          }
+        }
+      }
+    },
+    "A Radicle repo id" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un id de repo de Radicle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "RadicleのリポジトリID"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Radicle 저장소 ID"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Radicle 仓库 ID"
+          }
+        }
+      }
+    },
     "A Safe signature, a delegate, a token approval, or a transfer made to fool you." : {
       "localizations" : {
         "es" : {
@@ -1565,6 +2461,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Safe 签名、委托、代币授权，或用来骗你的转账。"
+          }
+        }
+      }
+    },
+    "A token held by an account you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un token de una cuenta que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローしているアカウントが保有するトークン。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 계정이 보유한 토큰입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的账户持有的代币。"
+          }
+        }
+      }
+    },
+    "A username or board link" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un usuario o enlace de tablero"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ユーザー名またはボードのリンク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사용자 이름 또는 보드 링크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用户名或图板链接"
           }
         }
       }
@@ -1967,6 +2919,286 @@
         }
       }
     },
+    "Already following" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya en seguimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すでにフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在关注"
+          }
+        }
+      }
+    },
+    "Already following %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya sigues %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@はすでにフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 %@ 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在关注 %@"
+          }
+        }
+      }
+    },
+    "Already following @%@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya estás siguiendo a @%@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@はすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@ 님을 이미 팔로우하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已经在关注 @%@。"
+          }
+        }
+      }
+    },
+    "Already following that account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya estás siguiendo esa cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのアカウントはすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "해당 계정을 이미 팔로우하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已经在关注该账户。"
+          }
+        }
+      }
+    },
+    "Already following that address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya estás siguiendo esa dirección."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのアドレスはすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 팔로우하고 있는 주소예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已经在关注那个地址了。"
+          }
+        }
+      }
+    },
+    "Already following that key's account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya estás siguiendo la cuenta de esa clave."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのキーのアカウントはすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "해당 키의 계정을 이미 팔로우하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已经在关注该密钥的账户。"
+          }
+        }
+      }
+    },
+    "Already following that node." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya sigues ese nodo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのノードはすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 해당 노드를 팔로우하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在关注该节点。"
+          }
+        }
+      }
+    },
+    "Already following that repo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya sigues ese repo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのリポジトリはすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 그 저장소를 팔로우하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在关注该仓库。"
+          }
+        }
+      }
+    },
+    "Already following those." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya estás siguiendo esos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それらはすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 팔로우하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已经在关注这些了。"
+          }
+        }
+      }
+    },
+    "Already following validator #%lld." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya estás siguiendo el validador #%lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "バリデーター #%lldはすでにフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검증인 #%lld을(를) 이미 팔로우하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已经在关注验证者 #%lld。"
+          }
+        }
+      }
+    },
     "Already on your watchlist" : {
       "localizations" : {
         "es" : {
@@ -2019,6 +3251,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已经在关注该密钥的账户。"
+          }
+        }
+      }
+    },
+    "An author on Hugging Face" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un autor en Hugging Face"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hugging Faceの作成者"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hugging Face의 작성자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hugging Face 上的作者"
           }
         }
       }
@@ -2303,6 +3563,34 @@
         }
       }
     },
+    "Channels, shows and boards you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Canales, programas y tableros que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のチャンネル、番組、ボード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 채널, 프로그램, 보드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的频道、节目和图板"
+          }
+        }
+      }
+    },
     "Checked on this phone when iOS lets Casberi refresh. No server watches for you." : {
       "localizations" : {
         "es" : {
@@ -2327,6 +3615,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 iOS 允许 Casberi 刷新时于本机检查，没有服务器替你盯盘。"
+          }
+        }
+      }
+    },
+    "Choose what to follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige qué seguir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローする項目を選択"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우할 항목 선택"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "选择要关注的内容"
           }
         }
       }
@@ -2359,6 +3675,90 @@
         }
       }
     },
+    "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was followed." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectado, pero la sesión no se pudo cerrar — abre tu wallet y desconecta Casberi. No se siguió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "接続はしましたが、セッションを終了できませんでした — ウォレットを開いてCasberiとの接続を解除してください。何もフォローされていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "연결되었지만 세션을 종료할 수 없었습니다 — 지갑을 열어 Casberi 연결을 해제하세요. 아무것도 팔로우하지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已连接，但会话无法关闭——请打开你的钱包并断开 Casberi 的连接。未关注任何内容。"
+          }
+        }
+      }
+    },
+    "Couldn't find %@'s price to follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se encontró el precio de %@ para seguirlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローする%@の価格が見つかりませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우할 %@의 가격을 찾을 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "找不到 %@ 的价格，无法关注。"
+          }
+        }
+      }
+    },
+    "Couldn't find @%@ on Telegram" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se encontró a @%@ en Telegram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegramで@%@が見つかりませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에서 @%@을(를) 찾을 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Telegram 上找不到 @%@"
+          }
+        }
+      }
+    },
     "Couldn't find it on an exchange" : {
       "localizations" : {
         "es" : {
@@ -2383,6 +3783,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在交易所中未找到"
+          }
+        }
+      }
+    },
+    "Couldn't find that on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se encontró eso en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で見つかりませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 찾을 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上找不到该内容"
+          }
+        }
+      }
+    },
+    "Couldn't reach %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar con %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@に接続できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 연결할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 %@"
+          }
+        }
+      }
+    },
+    "Couldn't reach %@ just now. Your addresses are followed — the room fills in as soon as a read lands." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar con %@ ahora mismo. Ya sigues tus direcciones: la sala se completa en cuanto llegue una lectura."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ただいま%@に接続できませんでした。アドレスはフォロー中です — 読み取りが届き次第、ルームが埋まります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금은 %@에 연결할 수 없었습니다. 주소는 계속 팔로우 중입니다 — 읽기가 도착하는 대로 룸이 채워집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此刻无法连接 %@。你的地址仍在关注中 — 一旦读取到数据，房间就会填充。"
           }
         }
       }
@@ -2523,6 +4007,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "删除提醒"
+          }
+        }
+      }
+    },
+    "Deposits are read off the wallets you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los depósitos se leen a partir de los wallets que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デポジットは、あなたがフォローしているウォレットから読み取られます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "예치 내역은 팔로우하는 지갑에서 읽어옵니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "存款信息读取自你所关注的钱包。"
           }
         }
       }
@@ -2695,6 +4207,34 @@
         }
       }
     },
+    "Every channel and show you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada canal y programa que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のすべてのチャンネルと番組"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 모든 채널과 프로그램"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的所有频道和节目"
+          }
+        }
+      }
+    },
     "Every company behind every app" : {
       "localizations" : {
         "es" : {
@@ -2723,6 +4263,62 @@
         }
       }
     },
+    "Every repo, package and model you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada repo, paquete y modelo que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のすべてのリポジトリ、パッケージ、モデル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 모든 저장소, 패키지, 모델"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的所有仓库、软件包和模型"
+          }
+        }
+      }
+    },
+    "Every site you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada sitio que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のすべてのサイト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 모든 사이트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的所有网站"
+          }
+        }
+      }
+    },
     "Every two weeks" : {
       "localizations" : {
         "es" : {
@@ -2747,6 +4343,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每两周"
+          }
+        }
+      }
+    },
+    "Everything you watch, play and listen to" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todo lo que ves, juegas y escuchas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "観る・遊ぶ・聴くものすべて"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보고, 플레이하고, 듣는 모든 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你观看、游玩和收听的一切"
           }
         }
       }
@@ -2919,6 +4543,34 @@
         }
       }
     },
+    "Find something to follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca algo que seguir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローするものを探す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우할 항목 찾기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "寻找要关注的内容"
+          }
+        }
+      }
+    },
     "Find something to watch" : {
       "localizations" : {
         "es" : {
@@ -3059,6 +4711,1098 @@
         }
       }
     },
+    "Follow %@ on Telegram" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir %@ en Telegram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegramで%@をフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에서 %@ 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Telegram 上关注 %@"
+          }
+        }
+      }
+    },
+    "Follow %@ — you've connected with it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir %@: te has conectado con él"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ をフォロー — 接続したことがあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 팔로우 — 연결한 적이 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注 %@ — 你曾与它连接"
+          }
+        }
+      }
+    },
+    "Follow %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件をフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注 %lld 个"
+          }
+        }
+      }
+    },
+    "Follow a Safe, or a wallet that signs for one." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue un Safe, o una cartera que firme para uno."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe、またはその署名を行うウォレットをフォローしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 또는 Safe에 서명하는 지갑을 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一个 Safe，或为其签名的钱包。"
+          }
+        }
+      }
+    },
+    "Follow a feed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir un feed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フィードをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "피드 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注订阅源"
+          }
+        }
+      }
+    },
+    "Follow a wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir un wallet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一个钱包"
+          }
+        }
+      }
+    },
+    "Follow an account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir una cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注账户"
+          }
+        }
+      }
+    },
+    "Follow an address, follow an account, or connect Contacts, and they land here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue una dirección o una cuenta, o conecta Contactos, y aparecerán aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスやアカウントをフォローするか、連絡先を接続すると、ここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소나 계정을 팔로우하거나 연락처를 연결하면 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注地址、关注账户或连接通讯录，它们就会出现在这里。"
+          }
+        }
+      }
+    },
+    "Follow something" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir algo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "何かをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "무언가 팔로우하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一些内容"
+          }
+        }
+      }
+    },
+    "Follow the chains you use" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue las cadenas que usas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利用しているチェーンをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사용하는 체인 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注你使用的链"
+          }
+        }
+      }
+    },
+    "Follow the wallet apps you use" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue las apps de monedero que usas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使っているウォレットアプリをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사용하는 지갑 앱 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注你使用的钱包应用"
+          }
+        }
+      }
+    },
+    "Follow this address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir esta dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアドレスをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 주소 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注此地址"
+          }
+        }
+      }
+    },
+    "Follow this chain" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir esta cadena"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このチェーンをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 체인 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注此链"
+          }
+        }
+      }
+    },
+    "Follow this token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir este token"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このトークンをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 토큰 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注此代币"
+          }
+        }
+      }
+    },
+    "Follow this wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir este monedero"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このウォレットをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 지갑 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注这个钱包"
+          }
+        }
+      }
+    },
+    "Followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已关注"
+          }
+        }
+      }
+    },
+    "Following %@, tap to stop" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %@; toca para dejar de seguir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@をフォロー中。タップで停止"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 팔로우 중, 탭하여 중지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %@，点按可停止"
+          }
+        }
+      }
+    },
+    "Following %lld %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@を%1$lld件フォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ %1$lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %1$lld 个%2$@"
+          }
+        }
+      }
+    },
+    "Following %lld %@. No %@ seen yet — it lands here the day one is." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld %@. Todavía no se ha visto %@ — aparecerá aquí el día que lo haya."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld 件の %2$@ をフォロー中。%3$@ はまだ見つかっていません — 見つかった日にここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld개의 %2$@ 팔로우 중. %3$@은(는) 아직 발견되지 않았습니다 — 발견되는 날 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %1$lld 个 %2$@。尚未发现 %3$@ — 一旦出现将显示于此。"
+          }
+        }
+      }
+    },
+    "Following %lld Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のSafeをフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe %lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 个 Safe"
+          }
+        }
+      }
+    },
+    "Following %lld Safe — a pending signature lands in your feed the moment it's proposed." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld Safe — una firma pendiente llega a tu feed en cuanto se propone."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のSafeをフォロー中 — 保留中の署名は提案された瞬間にフィードに届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe %lld개 팔로우 중 — 대기 중인 서명은 제안되는 즉시 피드에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 个 Safe — 待签名一经提出，就会立即出现在你的动态中。"
+          }
+        }
+      }
+    },
+    "Following %lld address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のアドレスをフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소 %lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 个地址"
+          }
+        }
+      }
+    },
+    "Following %lld already" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya siguiendo %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すでに%lld件をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 %lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在关注 %lld 个"
+          }
+        }
+      }
+    },
+    "Following %lld card" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld tarjeta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のカードをフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "카드 %lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 张卡"
+          }
+        }
+      }
+    },
+    "Following %lld metrics" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld métricas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件の指標をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지표 %lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld 项指标"
+          }
+        }
+      }
+    },
+    "Following %lld more accounts." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld cuentas más."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "他に%lld件のアカウントをフォロー中。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 %lld개를 더 팔로우합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注另外 %lld 个账户。"
+          }
+        }
+      }
+    },
+    "Following %lld more addresses." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld direcciones más."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "さらに %lld 件のアドレスをフォロー中。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소 %lld개를 더 팔로우합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "另外关注 %lld 个地址。"
+          }
+        }
+      }
+    },
+    "Following %lld of %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld de %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld 件中 %1$lld 件をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld개 중 %1$lld개 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %2$lld 个中的 %1$lld 个"
+          }
+        }
+      }
+    },
+    "Following %lld of %lld — couldn't find %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld de %lld: no se pudo encontrar %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld / %lld をフォロー中 — %@が見つかりませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld/%lld 팔로우 중 — %@을(를) 찾을 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %lld / %lld——未找到 %@"
+          }
+        }
+      }
+    },
+    "Following %lld/%lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld/%lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld/%2$lld をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld/%2$lld 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 %1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "Following 1 more account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo 1 cuenta más."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "他に1件のアカウントをフォロー中。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 1개를 더 팔로우합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注另外 1 个账户。"
+          }
+        }
+      }
+    },
+    "Following 1 more wallet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo 1 monedero más."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "さらに1件のウォレットをフォロー中。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 1개를 더 팔로우합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注另外 1 个钱包。"
+          }
+        }
+      }
+    },
+    "Following @%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo a @%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@ 팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 @%@"
+          }
+        }
+      }
+    },
+    "Following @%@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo a @%@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@をフォロー中。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@ 팔로우 중."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注 @%@。"
+          }
+        }
+      }
+    },
+    "Following a wallet is all it takes." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Basta con seguir un wallet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットをフォローするだけで有効になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 하나만 팔로우하면 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只需关注一个钱包即可。"
+          }
+        }
+      }
+    },
+    "Following validator #%lld — %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo el validador n.º %lld — %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "バリデータ #%lld をフォロー中 — %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검증인 #%lld 팔로우 중 — %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注验证者 #%lld — %@"
+          }
+        }
+      }
+    },
+    "Following works once you leave the demo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir funciona al salir de la demo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローはデモを終了すると使えます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우는 데모를 나가면 사용할 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示后即可关注"
+          }
+        }
+      }
+    },
+    "Following · %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo · %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中 · %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로잉 · %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注中 · %lld"
+          }
+        }
+      }
+    },
+    "Following — tap to stop" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo: toca para dejar de seguir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中 · タップで解除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 중 — 탭하면 해제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注中——点按取消"
+          }
+        }
+      }
+    },
     "Format" : {
       "localizations" : {
         "es" : {
@@ -3083,6 +5827,146 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "格式"
+          }
+        }
+      }
+    },
+    "Found at %lld of %lld addresses you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontrado en %lld de %lld direcciones que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中の %2$lld 件のアドレスのうち %1$lld 件で見つかりました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 주소 %2$lld개 중 %1$lld개에서 발견됨."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你关注的 %2$lld 个地址中，有 %1$lld 个发现了此内容。"
+          }
+        }
+      }
+    },
+    "Found at all %lld addresses you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontrado en las %lld direcciones que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中の %lld 件のアドレスすべてで見つかりました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 주소 %lld개 모두에서 발견됨."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你关注的全部 %lld 个地址中均已发现。"
+          }
+        }
+      }
+    },
+    "Found at the address you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontrado en la dirección que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のアドレスで見つかりました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 주소에서 발견됨."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你关注的地址中已发现。"
+          }
+        }
+      }
+    },
+    "Found automatically. Follow an address that holds %@ and it lands here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontrado automáticamente. Sigue una dirección que tenga %@ y aparecerá aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自動的に見つかりました。%@ を保有するアドレスをフォローすると、ここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자동으로 발견됨. %@을(를) 보유한 주소를 팔로우하면 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自动发现。关注一个持有 %@ 的地址，它就会出现在这里。"
+          }
+        }
+      }
+    },
+    "Found on a wallet you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontrado en una wallet que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローしているウォレットで見つかりました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 지갑에서 발견됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你关注的钱包中发现"
           }
         }
       }
@@ -3139,6 +6023,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "标题"
+          }
+        }
+      }
+    },
+    "Hegotá Frames was relaunched from genesis, so everything it held is gone. Your key and the addresses you follow are still yours." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hegotá Frames se reinició desde génesis, así que todo lo que contenía ha desaparecido. Tu clave y las direcciones que sigues siguen siendo tuyas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hegotá Frames はジェネシスから再起動されたため、保持していたものはすべて消えました。あなたのキーとフォロー中のアドレスはそのままです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hegotá Frames가 제네시스부터 다시 시작되어 보관하던 모든 것이 사라졌습니다. 키와 팔로우하는 주소는 그대로입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hegotá Frames 已从创世块重新启动，其中的所有内容都已清空。你的密钥和关注的地址仍归你所有。"
           }
         }
       }
@@ -3395,6 +6307,34 @@
         }
       }
     },
+    "It can't see the wallets you follow here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No puede ver las carteras que sigues aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここでフォローしているウォレットは見えません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서 팔로우하는 지갑은 볼 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它看不到你在这里关注的钱包。"
+          }
+        }
+      }
+    },
     "Italic" : {
       "localizations" : {
         "es" : {
@@ -3587,6 +6527,1546 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Lightning"
+          }
+        }
+      }
+    },
+    "New in Media" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nuevo en Media"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mediaの新着"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Media의 새 항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Media 新内容"
+          }
+        }
+      }
+    },
+    "No account followed yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no sigues ninguna cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだフォロー中のアカウントはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 팔로우하는 계정이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未关注任何账户。"
+          }
+        }
+      }
+    },
+    "No gas of your own since you started following — %@ was sponsored for you." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No has pagado gas propio desde que empezaste a seguirlo — %@ fue patrocinado para ti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローを開始してから自己負担のガス代はありません — %@はスポンサーされました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 시작 이후 직접 낸 가스비가 없습니다 — %@가 대신 후원되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自你开始关注以来，你没有自付过 Gas 费——%@ 由他人代付。"
+          }
+        }
+      }
+    },
+    "No gas spent since you started following." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se gastó gas desde que empezaste a seguirlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローを開始してからガス代の支出はありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 시작 이후 가스비를 지출한 적이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自你开始关注以来没有花费过 Gas 费。"
+          }
+        }
+      }
+    },
+    "Not traded, so there's nothing to follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No cotiza, así que no hay nada que seguir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非上場のためフォローできません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비상장이라 팔로우할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未上市，无可关注"
+          }
+        }
+      }
+    },
+    "Nothing followed on Logos yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no sigues nada en Logos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logosでフォロー中のものはまだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 Logos에서 팔로우하는 항목이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未在 Logos 上关注任何内容"
+          }
+        }
+      }
+    },
+    "Nothing followed on this chain yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no sigues nada en esta cadena"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このチェーンでまだ何もフォローしていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 체인에서 아직 팔로우하는 항목이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此链上尚未关注任何内容"
+          }
+        }
+      }
+    },
+    "Nothing followed yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no sigues nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ何もフォローしていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 팔로우하는 항목이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未关注任何内容"
+          }
+        }
+      }
+    },
+    "Nothing in your wallet yet — follow an address from Apps → Wallet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todavía no hay nada en tu wallet — sigue una dirección desde Apps → Wallet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットにはまだ何もありません — アプリ → ウォレットからアドレスをフォローしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑에는 아직 아무것도 없습니다 — 앱 → 지갑에서 주소를 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包中还没有任何内容 — 请在应用 → 钱包中关注一个地址。"
+          }
+        }
+      }
+    },
+    "Nothing to read yet — follow an address from Apps → Wallet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todavía no hay nada que leer — sigue una dirección desde Apps → Wallet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ読めるものがありません — アプリ → ウォレットからアドレスをフォローしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 읽을 내용이 없습니다 — 앱 → 지갑에서 주소를 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还没有可读取的内容 — 请在应用 → 钱包中关注一个地址。"
+          }
+        }
+      }
+    },
+    "Open something you follow to set an alert." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre algo que sigas para crear una alerta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中の銘柄を開いてアラートを設定します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 항목을 열어 알림을 설정하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开你关注的内容来设置提醒。"
+          }
+        }
+      }
+    },
+    "Pick what to follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige qué seguir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローするものを選ぶ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우할 항목 선택"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "选择要关注的内容"
+          }
+        }
+      }
+    },
+    "Posts in Reading" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Publicaciones en Reading"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Readingの投稿"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reading의 게시물"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reading 中的文章"
+          }
+        }
+      }
+    },
+    "Public channel" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Canal público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開チャンネル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 채널"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公开频道"
+          }
+        }
+      }
+    },
+    "Read off the wallets you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leído de las carteras que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のウォレットから読み取りました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 지갑에서 읽었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "读取自你关注的钱包。"
+          }
+        }
+      }
+    },
+    "Read-only — following can never move funds." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo lectura — seguir nunca puede mover fondos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取り専用 — フォローだけでは資金を動かせません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽기 전용 — 팔로우만으로는 자금을 이동할 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只读——关注绝不会转移资金。"
+          }
+        }
+      }
+    },
+    "Read-only — following can never trade or move funds. Activity is public, read across chains directly on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo lectura — seguir nunca puede operar ni mover fondos. La actividad es pública, y se lee directamente en las cadenas en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取り専用 — フォローは取引や資金移動を一切行いません。アクティビティは公開されており、%@上で各チェーンから直接読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽기 전용 — 팔로우는 거래하거나 자금을 이동할 수 없습니다. 활동은 공개되어 있으며, %@에서 여러 체인에 걸쳐 직접 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只读——关注绝不会交易或转移资金。活动是公开的，直接在 %@ 上跨链读取。"
+          }
+        }
+      }
+    },
+    "Reads a followed address's balance and its frame transactions — what each frame did, what it spent of its gas budget, and who paid for it — on the Frames devnet, the public test network for EIP-8141 frame transactions." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lee el saldo de una dirección seguida y sus transacciones de frames — qué hizo cada frame, cuánto gastó de su presupuesto de gas y quién lo pagó — en la devnet de Frames, la red pública de pruebas para transacciones de frames EIP-8141."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のアドレスの残高と、そのフレームトランザクション（各フレームが何をし、ガス予算をどれだけ使い、誰が支払ったか）を、EIP-8141 フレームトランザクション向けの公開テストネットワーク Frames devnet で読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 주소의 잔액과 프레임 트랜잭션 — 각 프레임이 무엇을 했고, 가스 예산을 얼마나 썼으며, 누가 지불했는지 — 을 EIP-8141 프레임 트랜잭션용 공개 테스트 네트워크인 Frames 데브넷에서 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Frames 开发网（EIP-8141 帧交易的公开测试网络）上读取所关注地址的余额及其帧交易 — 每个帧做了什么、用掉了多少燃料预算、由谁支付。"
+          }
+        }
+      }
+    },
+    "Recently followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguidos recientemente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近フォローしたもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 팔로우한 항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近关注的"
+          }
+        }
+      }
+    },
+    "Recorded incidents arrive here. Following the chains you use adds a risk assessment of each." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los incidentes registrados llegan aquí. Seguir las cadenas que usas añade una evaluación de riesgo de cada una."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "記録済みのインシデントはここに届きます。使用しているチェーンをフォローすると、それぞれのリスク評価が加わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기록된 사건이 여기에 표시됩니다. 사용 중인 체인을 팔로우하면 각각의 위험 평가가 추가됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已记录的事件会显示在此处。关注你所使用的链，会为每条链添加一份风险评估。"
+          }
+        }
+      }
+    },
+    "Repos, packages and models you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Repos, paquetes y modelos que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のリポジトリ、パッケージ、モデル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 저장소, 패키지, 모델"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的仓库、软件包和模型"
+          }
+        }
+      }
+    },
+    "Room for %lld more — %lld of these can't be followed until you unfollow something." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Espacio para %lld más — %lld de estas no se pueden seguir hasta que dejes de seguir alguna."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あと%1$lld件分の空きがあります — このうち%2$lld件は、何かのフォローをやめるまで追加できません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld개 더 추가할 수 있습니다 — 이 중 %2$lld개는 다른 항목을 팔로우 취소해야 팔로우할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还可以再添加 %1$lld 个 — 其中 %2$lld 个需要先取消关注其他项才能添加。"
+          }
+        }
+      }
+    },
+    "Search a show" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca un programa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "番組を検索"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "프로그램 검색"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索节目"
+          }
+        }
+      }
+    },
+    "Security incidents arrive here. Following the wallet you use adds a review of it too." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los incidentes de seguridad llegan aquí. Seguir la wallet que usas añade también una revisión de ella."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "セキュリティインシデントはここに届きます。使用しているウォレットをフォローすると、そのレビューも加わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보안 사건이 여기에 표시됩니다. 사용 중인 지갑을 팔로우하면 그것에 대한 검토도 추가됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "安全事件会显示在此处。关注你所使用的钱包，也会为其添加一份审查。"
+          }
+        }
+      }
+    },
+    "Since you started following" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desde que empezaste a seguirlo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローを開始してから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 시작 이후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自你开始关注以来"
+          }
+        }
+      }
+    },
+    "Sites you follow, and how often they post" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sitios que sigues y con qué frecuencia publican"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のサイトと投稿頻度"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 사이트와 게시 빈도"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的网站及其更新频率"
+          }
+        }
+      }
+    },
+    "Stop following" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejar de seguir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローをやめる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取消关注"
+          }
+        }
+      }
+    },
+    "Stop following %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejar de seguir %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@のフォローをやめる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 팔로우 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取消关注 %@"
+          }
+        }
+      }
+    },
+    "Stop following it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejar de seguirlo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローをやめる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取消关注"
+          }
+        }
+      }
+    },
+    "Stopped following %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejaste de seguir %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のフォローをやめました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 팔로우 취소됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取消关注 %@"
+          }
+        }
+      }
+    },
+    "Stopped following %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejaste de seguir %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@のフォローをやめました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 팔로우를 취소했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取消关注 %@。"
+          }
+        }
+      }
+    },
+    "Stopped following your node." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejaste de seguir tu nodo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードのフォローをやめました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드 팔로우를 취소했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取消关注你的节点。"
+          }
+        }
+      }
+    },
+    "Stopped following · %@ is still in your book" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejaste de seguir · %@ sigue en tu libreta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローをやめました · %@ はまだアドレス帳にあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 취소됨 · %@은(는) 여전히 주소록에 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取消关注 · %@ 仍保留在你的地址簿中"
+          }
+        }
+      }
+    },
+    "That's a public key. Following its account, %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Es una clave pública. Siguiendo su cuenta, %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これは公開鍵です。そのアカウント %@ をフォロー中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 키입니다. 해당 계정 %@을(를) 팔로우합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是公钥。正在关注其账户 %@。"
+          }
+        }
+      }
+    },
+    "The Logos testnet was reset, so every account on it starts empty. Your key and the accounts you follow are still yours." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La testnet de Logos se reinició, así que todas sus cuentas empiezan vacías. Tu clave y las cuentas que sigues siguen siendo tuyas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos テストネットがリセットされ、すべてのアカウントが空になりました。鍵とフォロー中のアカウントはそのままです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 테스트넷이 초기화되어 모든 계정이 비어 있습니다. 키와 팔로우하는 계정은 그대로입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 测试网已重置，所有账户都从零开始。你的密钥和关注的账户仍然保留。"
+          }
+        }
+      }
+    },
+    "Through" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A través de"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "経由"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "경유"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过"
+          }
+        }
+      }
+    },
+    "Token · held in a followed wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Token · en una wallet seguida"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークン · フォロー中のウォレットで保有"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰 · 팔로우하는 지갑에서 보유 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代币 · 保存在已关注的钱包中"
+          }
+        }
+      }
+    },
+    "Updates in Work" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Actualizaciones en Work"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Workの更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Work의 업데이트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Work 中的更新"
+          }
+        }
+      }
+    },
+    "What it brought in goes with it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que trajo se va con él."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これを通じて追加されたものも一緒に削除されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이것으로 가져온 항목도 함께 사라집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它带来的内容也会一并移除。"
+          }
+        }
+      }
+    },
+    "What you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的内容"
+          }
+        }
+      }
+    },
+    "What you watch, play and listen to lands here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que ves, juegas y escuchas llega aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "観る・遊ぶ・聴くものがここに届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보고, 플레이하고, 듣는 것이 여기에 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你观看、游玩和收听的内容会出现在这里"
+          }
+        }
+      }
+    },
+    "When you follow one" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuando sigues una"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローすると"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하나를 팔로우하면"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当你关注某一项时"
+          }
+        }
+      }
+    },
+    "Who @%@ follows. Pick any — their posts land like any followed account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A quién sigue @%@. Elige a cualquiera: sus publicaciones llegan como las de cualquier cuenta seguida."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@がフォローしている人。誰でも選べます — 投稿は他のフォロー中のアカウントと同じように届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@ 님이 팔로우하는 계정입니다. 아무나 선택하세요 — 다른 팔로우 계정처럼 게시물이 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@ 关注的人。任选其一——他们的帖子会像其他已关注账户一样出现。"
+          }
+        }
+      }
+    },
+    "You follow this" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigues esto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在关注"
+          }
+        }
+      }
+    },
+    "You followed at %@, so it's %@ since %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Empezaste a seguirlo en %@, así que va %@ (desde %@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ でフォローを開始したので、%@ です（%@ 以降）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 팔로우를 시작했으므로 %@입니다(%@ 이후)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在 %@ 开始关注，所以是 %@（自 %@ 起）。"
+          }
+        }
+      }
+    },
+    "You started following here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Empezaste a seguirlo aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここからフォロー開始"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서 팔로우 시작"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你从这里开始关注"
+          }
+        }
+      }
+    },
+    "You're following %lld already — the cap. Unfollow one first; naming an address stays free." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya sigues %lld — el límite. Deja de seguir uno primero; nombrar una dirección sigue siendo gratis."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すでに%lld件をフォロー中です — 上限です。まず1件のフォローをやめてください。アドレスに名前を付けるのは引き続き無制限です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 %lld개를 팔로우 중입니다 — 상한입니다. 먼저 하나를 팔로우 취소하세요. 주소에 이름을 붙이는 것은 계속 무제한입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你已关注 %lld 个 — 已达上限。请先取消关注一个；为地址命名仍然不限量。"
+          }
+        }
+      }
+    },
+    "Your account and %lld addresses followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta y %lld direcciones seguidas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントとフォロー中の %lld 件のアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정과 팔로우하는 주소 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户及关注的 %lld 个地址"
+          }
+        }
+      }
+    },
+    "Your account and 1 address followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta y 1 dirección seguida"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントとフォロー中の 1 件のアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정과 팔로우하는 주소 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户及关注的 1 个地址"
+          }
+        }
+      }
+    },
+    "Your wallet shared %lld addresses. Following is read-only — it can never trade or move funds." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu monedero compartió %lld direcciones. Seguir es solo lectura — nunca puede operar ni mover fondos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが%lld件のアドレスを共有しました。フォローは読み取り専用です — 取引や資金の移動は一切できません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 주소 %lld개를 공유했습니다. 팔로우는 읽기 전용이며 — 거래하거나 자금을 옮길 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包共享了 %lld 个地址。关注为只读 — 永远无法交易或转移资金。"
+          }
+        }
+      }
+    },
+    "Your wallet shared %lld addresses. Saving names them in your book — nothing is followed or read." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu wallet compartió %lld direcciones. Guardarlas les da nombre en tu libreta — nada se sigue ni se lee."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが%lld件のアドレスを共有しました。保存するとアドレス帳に名前が付きます — フォローも読み取りも行われません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑에서 주소 %lld개를 공유했습니다. 저장하면 주소록에 이름이 지정됩니다 — 팔로우하거나 읽는 것은 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包分享了 %lld 个地址。保存会在通讯录中为它们命名——不会关注或读取任何内容。"
+          }
+        }
+      }
+    },
+    "Your wallet shared 1 address. Following is read-only — it can never trade or move funds." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu monedero compartió 1 dirección. Seguir es solo lectura — nunca puede operar ni mover fondos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが1件のアドレスを共有しました。フォローは読み取り専用です — 取引や資金の移動は一切できません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 주소 1개를 공유했습니다. 팔로우는 읽기 전용이며 — 거래하거나 자금을 옮길 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包共享了 1 个地址。关注为只读 — 永远无法交易或转移资金。"
+          }
+        }
+      }
+    },
+    "Your wallet shared 1 address. Saving names it in your book — nothing is followed or read." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu wallet compartió 1 dirección. Guardarla le da nombre en tu libreta — nada se sigue ni se lee."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが1件のアドレスを共有しました。保存するとアドレス帳に名前が付きます — フォローも読み取りも行われません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑에서 주소 1개를 공유했습니다. 저장하면 주소록에 이름이 지정됩니다 — 팔로우하거나 읽는 것은 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包分享了 1 个地址。保存会在通讯录中为它命名——不会关注或读取任何内容。"
+          }
+        }
+      }
+    },
+    "also by mail" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "también por correo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メールでも"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일로도 받음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "也通过邮件"
+          }
+        }
+      }
+    },
+    "following for activity." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "siguiendo la actividad."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アクティビティをフォローしています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "활동을 팔로우하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注动态。"
           }
         }
       }
@@ -165510,6 +169990,34 @@
         }
       }
     },
+    "owner/repo or a person" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "propietario/repo o una persona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "owner/repo または人"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "owner/repo 또는 사람"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "owner/repo 或某个人"
+          }
+        }
+      }
+    },
     "paid for" : {
       "localizations" : {
         "es" : {
@@ -167477,6 +171985,34 @@
         }
       }
     },
+    "reposted by an account you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "republicado por una cuenta que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のアカウントがリポストしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 중인 계정이 리포스트함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由你关注的账号转发"
+          }
+        }
+      }
+    },
     "reposted by an account you watch" : {
       "localizations" : {
         "es" : {
@@ -168906,6 +173442,34 @@
         }
       }
     },
+    "since followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "desde que lo sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー開始以来"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 이후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自关注以来"
+          }
+        }
+      }
+    },
     "since then" : {
       "localizations" : {
         "es" : {
@@ -169944,6 +174508,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今天晚上"
+          }
+        }
+      }
+    },
+    "this month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "este mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今月"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이번 달"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "本月"
           }
         }
       }
@@ -171863,6 +176455,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你"
+          }
+        }
+      }
+    },
+    "you followed at %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "seguiste en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ でフォローを開始しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 팔로우 시작함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在 %@ 开始关注"
           }
         }
       }

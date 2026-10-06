@@ -32,7 +32,7 @@ struct WalletWidget: Widget {
                 .containerBackground(for: .widget) { WidgetField() }
         }
         .configurationDisplayName("Wallet")
-        .description("What your watched addresses are worth.")
+        .description("What your followed addresses are worth.")
         // No large family: a curve and one figure cannot fill it, and the
         // composition strip that COULD is a live protocol read the extension
         // can neither afford nor make.

@@ -23,7 +23,7 @@ extension FeedScreen {
         } else if !heroShown {
             Section {
                 emptyLeadRow(headline: DSProse.text("Nothing yet"),
-                             words: Text("What you follow, play and listen to lands here"))
+                             words: Text("What you watch, play and listen to lands here"))
             }
         }
         Section {

@@ -1897,6 +1897,34 @@
         }
       }
     },
+    "What your followed addresses are worth.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lo que valen las direcciones que sigues."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フォロー中のアドレスの価値。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "팔로우하는 주소의 가치."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你关注的地址的价值。"
+          }
+        }
+      }
+    },
     "What your watched addresses are worth.": {
       "localizations": {
         "es": {
