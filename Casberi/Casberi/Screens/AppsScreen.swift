@@ -745,20 +745,24 @@ struct AppsScreen: View {
     /// **THE CATEGORIES ARE THE BOX (prd §1138, user, 2026-10-06: "we could
     /// have the 9 or so categories in apps be in the box tho").** Each is how
     /// many you have there (connected or broken, never paused), over its
-    /// word, A–Z; pressed, the list below is that category,
-    /// and pressing the picked one again is everything. No All tile: the box
-    /// is the overview. A category holding a broken seat says so in its
-    /// word. Replaces the search row's Added chip and the category bar.
+    /// word, A–Z, after an A–Z tile that is every app; pressed, the list
+    /// below is that category, and pressing the picked one again is A–Z.
+    /// A category holding a broken seat says so in its word. Replaces the
+    /// search row's Added chip and the category bar.
     private var categoryBox: some View {
-        let cats = scopes.filter { $0.name != nil }
-        let have = Dictionary(grouping: rankedAll.filter(isAdded)) { category(of: $0.offer) }
+        // A–Z leads (user: "if we wanted to fill it you could give an a-z
+        // button first"): every app, A to Z, counting all you have; nine
+        // categories and it make ten, two even rows of five.
+        let cats = scopes
+        let added = rankedAll.filter(isAdded)
+        let have = Dictionary(grouping: added) { category(of: $0.offer) }
         let troubled = troubledScopes
         let columns = min(5, max(3, (cats.count + 1) / 2))
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columns),
                          spacing: DS.Space.s2) {
             ForEach(cats) { cat in
-                let name = cat.name ?? ""
-                DSCountTile(count: have[name]?.count ?? 0, label: cat.label, glyph: cat.glyph,
+                let count = cat.name.map { have[$0]?.count ?? 0 } ?? added.count
+                DSCountTile(count: count, label: cat.name ?? String(localized: "A–Z"), glyph: cat.glyph,
                             isOn: scope == cat, wants: troubled.contains(cat)) {
                     withAnimation(DS.Motion.standard) {
                         scope = scope == cat ? CatalogScope(name: nil) : cat
