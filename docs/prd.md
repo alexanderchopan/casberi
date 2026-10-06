@@ -64495,3 +64495,14 @@ The swap is every on-screen string (274 lines in 98 files): labels, toasts, foot
 Same terms as §1062: only at the root (no pushed screen), only while the tray is shut, and the rubber band during the drag is unchanged. The tray still grows out of the face's bottom-left corner; the swipe and the corner do not point the same way here, and that is accepted, because the end of the walk is the reason to open it, not the direction. A room outside the walk (a deep link, a seat not yet synced) is appended at its end (`neighbour`), so a swipe left there opens the tray too.
 
 **Not seen.** The app was not built in this session (a Linux container, no Xcode); the change is one condition in `MainSurface.step(_:)`.
+
+## §1126 — Reading's Subscriptions count no posts (user, 2026-10-06: "in the reading list let's remove the count of articles. nobody cares that there has been N articles by a source you follow especially when you can't get back to those specific articles"; amends §1118 items 2 and 4 for Reading)
+
+**Why.** A feed's row said "8 posts" and its sheet "8 posts this month", but nothing opened those eight: the figure counted what you could not reach from it.
+
+1. **A Reading row draws no trailing figure** (`Following.Room.figure` is nil for Reading). Its line keeps the app, the cadence ("About weekly"), "Last Oct 4" and the mail and plan words.
+2. **The box states what you follow**: "5 subscriptions", then "3 also by mail" when some are, then the calendar looking back. "N posts a month" goes.
+3. **A feed's sheet** leads with its cadence when there is one and with no statement otherwise; the "This month" fact goes.
+4. **Media and Work keep their figures** ("13 new", "3 updates"): not asked.
+
+**Not seen.** No simulator in this session (a Linux container); the change is unbuilt and unseen.

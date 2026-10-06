@@ -30,19 +30,23 @@ extension Following.Room {
         String(localized: "Stop following")
     }
 
-    /// "16 posts a month" — the box's statement.
-    func statement(_ month: Int) -> String {
+    /// "13 new a month" — the box's statement. Reading counts no posts
+    /// (user, 2026-10-06: "nobody cares that there has been N articles by a
+    /// source you follow especially when you can't get back to those
+    /// specific articles"), so its box states what you follow.
+    func statement(_ month: Int, following: Int) -> String {
         switch self {
-        case .reading: month == 1 ? String(localized: "1 post a month") : String(localized: "\(month) posts a month")
+        case .reading: count(following)
         case .media:   String(localized: "\(month) new a month")
         case .work:    month == 1 ? String(localized: "1 update a month") : String(localized: "\(month) updates a month")
         }
     }
 
-    /// "8 posts" — a row's figure, thirty days.
-    func figure(_ count: Int) -> String {
+    /// "8 updates" — a row's figure, thirty days. nil in Reading, which
+    /// counts no posts.
+    func figure(_ count: Int) -> String? {
         switch self {
-        case .reading: count == 1 ? String(localized: "1 post") : String(localized: "\(count) posts")
+        case .reading: nil
         case .media:   String(localized: "\(count) new")
         case .work:    count == 1 ? String(localized: "1 update") : String(localized: "\(count) updates")
         }
@@ -73,14 +77,17 @@ struct FollowingFigure: View {
     var body: some View {
         let month = items.reduce(0) { $0 + $1.lastMonth }
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(verbatim: room.statement(month))
+            Text(verbatim: room.statement(month, following: items.count))
                 .dsText(.heading24).monospacedDigit().foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            Text(verbatim: Self.line(room, items))
-                .foregroundStyle(DS.textTertiary)
-                .dsText(.subhead12)
-                .lineLimit(1)
+            let line = Self.line(room, items)
+            if !line.isEmpty {
+                Text(verbatim: line)
+                    .foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead12)
+                    .lineLimit(1)
+            }
             Spacer(minLength: DS.Space.s1)
             WalletCalendar(marks: Self.marks(items), looksBack: true)
         }
@@ -88,9 +95,10 @@ struct FollowingFigure: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// "12 subscriptions · 3 also by mail".
+    /// "12 subscriptions · 3 also by mail"; Reading's statement already
+    /// says the count.
     static func line(_ room: Following.Room, _ items: [Following.Item]) -> String {
-        var parts = [room.count(items.count)]
+        var parts = room == .reading ? [] : [room.count(items.count)]
         let mailed = items.filter { FollowingReading.shared.links[$0.id]?.listID != nil }.count
         if mailed > 0 { parts.append(String(localized: "\(mailed) also by mail")) }
         return parts.joined(separator: " · ")
@@ -114,9 +122,11 @@ struct FollowingRow: View {
 
     var body: some View {
         SubscriptionRow(name: item.name, line: Text(verbatim: Self.line(room, item)), face: item.avatar) {
-            Text(verbatim: room.figure(item.lastMonth))
-                .dsText(.price17).monospacedDigit()
-                .foregroundStyle(item.lastMonth > 0 ? DS.textPrimary : DS.textTertiary)
+            if let figure = room.figure(item.lastMonth) {
+                Text(verbatim: figure)
+                    .dsText(.price17).monospacedDigit()
+                    .foregroundStyle(item.lastMonth > 0 ? DS.textPrimary : DS.textTertiary)
+            }
         }
     }
 
@@ -182,7 +192,8 @@ struct FollowingSheet: View {
         if let cadence = MailSubscriptions.cadenceWords(item.cadenceDays) {
             return SubscriptionStatement(figure: cadence)
         }
-        return SubscriptionStatement(figure: room.figure(item.lastMonth), word: String(localized: "this month"))
+        guard let figure = room.figure(item.lastMonth) else { return nil }
+        return SubscriptionStatement(figure: figure, word: String(localized: "this month"))
     }
 
     private func facts(_ item: Following.Item) -> [SubscriptionFact] {
@@ -193,7 +204,7 @@ struct FollowingSheet: View {
         if let since = item.since {
             out.append(.init(String(localized: "Since"), since.formatted(.dateTime.month(.wide).year())))
         }
-        out.append(.init(String(localized: "This month"), room.figure(item.lastMonth)))
+        if let figure = room.figure(item.lastMonth) { out.append(.init(String(localized: "This month"), figure)) }
         out.append(.init(String(localized: "Through"), item.seat))
         if let site = item.site { out.append(.init(String(localized: "From"), SubscriptionWords.host(site))) }
         return out
