@@ -64615,3 +64615,7 @@ Pushed screens keep their `DSScreenHead`.
 The cost, accepted: switching apps inside a room is two taps (face, app), not one.
 
 **Seen** on an iPhone 17 Pro simulator of this session's own: the tray with Search and You's "+3", the Wallet folder (Follow a wallet, four addresses, its apps), a pick landing on "Wallet · Savings", You's folder with Settings lit, "You · Settings".
+
+### §1133a — The tray's You row says You (user, 2026-10-06: "in the tray it says the user name, but it shoudl say You (b/c it's shorter and wont' truncate)")
+
+The row's word is "You", never the name you gave the app: a name truncated in the tray's word column ("Alexande…"). The screen's title keeps your name (`HomeScope.title`, §1129).

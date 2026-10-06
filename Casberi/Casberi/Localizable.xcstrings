@@ -3619,6 +3619,34 @@
         }
       }
     },
+    "Checking Threads…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprobando Threads…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threadsを確認しています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads 확인 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在检查 Threads…"
+          }
+        }
+      }
+    },
     "Choose what to follow" : {
       "localizations" : {
         "es" : {
@@ -3951,6 +3979,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接到你钱包的中继 — 请检查你的网络。"
+          }
+        }
+      }
+    },
+    "Couldn't read Threads — if it asked you to confirm a sign-in, open Instagram and confirm, then try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer Threads — si te pidió confirmar un inicio de sesión, abre Instagram, confírmalo y vuelve a intentarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threadsを読み込めませんでした — サインインの確認を求められた場合は、Instagramを開いて確認してから、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads를 읽을 수 없습니다 — 로그인 확인을 요청받았다면 Instagram을 열어 확인한 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取 Threads——如果它要求你确认登录，请打开 Instagram 确认后重试。"
           }
         }
       }
@@ -6587,6 +6643,34 @@
         }
       }
     },
+    "Likes, replies and follows" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Me gusta, respuestas y seguidores"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "いいね、返信、フォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "좋아요, 답글, 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "赞、回复和关注"
+          }
+        }
+      }
+    },
     "New in Media" : {
       "localizations" : {
         "es" : {
@@ -7259,6 +7343,62 @@
         }
       }
     },
+    "Sign in to Threads" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inicia sesión en Threads"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threadsにサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录 Threads"
+          }
+        }
+      }
+    },
+    "Signed in as @%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada como @%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@ としてサインイン中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "@%@(으)로 로그인됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已以 @%@ 登录"
+          }
+        }
+      }
+    },
     "Since you started following" : {
       "localizations" : {
         "es" : {
@@ -7563,6 +7703,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Logos 测试网已重置，所有账户都从零开始。你的密钥和关注的账户仍然保留。"
+          }
+        }
+      }
+    },
+    "Threads asked us to slow down — it reads again in a few minutes." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads nos pidió ir más despacio — vuelve a leer en unos minutos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threadsから頻度を下げるよう求められました — 数分後にもう一度読み込みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads가 속도를 늦추라고 요청했습니다 — 몇 분 후에 다시 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads 要求我们放慢速度——几分钟后会再次读取。"
+          }
+        }
+      }
+    },
+    "Threads signed this app out — tap Connect to sign in again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads cerró la sesión de esta app — toca Conectar para volver a iniciar sesión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threadsがこのアプリをサインアウトしました — 「接続」をタップしてもう一度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads가 이 앱을 로그아웃했습니다 — 연결을 탭하여 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Threads 已将此 App 退出登录——轻点“连接”重新登录。"
           }
         }
       }

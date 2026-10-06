@@ -432,7 +432,8 @@ struct RoomsTray: View {
     private func youRow(gap: CGFloat) -> some View {
         // **A ROW LIKE EVERY OTHER, AND A FOLDER (prd §1133, user: "should
         // the 'You' row also be a folder like wallet etc … b/c now we can do
-        // that").** Its name (yours, else You), Home's disc where a
+        // that").** Its name, You — never yours, which truncated here
+        // (§1133a; the screen's title keeps it) — Home's disc where a
         // category's own stands, the two places you open most, and "+N" for
         // the folder of all six. One grammar for the whole tray.
         let doors = youDoors
@@ -441,7 +442,7 @@ struct RoomsTray: View {
         let more = doors.count - 1 - shown.count
         return HStack(spacing: DS.Space.s3) {
             Button(action: home.act) {
-                Text(verbatim: HomeScope.title)
+                Text("You")
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)

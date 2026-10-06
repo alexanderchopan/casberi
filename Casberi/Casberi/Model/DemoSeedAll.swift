@@ -1483,6 +1483,7 @@ enum DemoSeedAll {
         out += xNotices()
         out += instagram()
         out += igNotices()
+        out += threadsNotices()
         out += tiktok()
         out += tiktokNotices()
         out += snapchat()
@@ -1871,6 +1872,29 @@ enum DemoSeedAll {
                     t.imageURLs = [art("ig-notice-\(i)")]
                     t.previewImageURL = art("ig-notice-\(i)")
                 }
+            }
+        }
+    }
+
+    /// THREADS' LIVE NOTICES (prd §1131, §1133a) — `ThreadsLive.thing(from:)`'s
+    /// shape: `.link`, the person who acted as the face (§707), the post's
+    /// link, no `quote` (the inbox never carries the post's words). The same
+    /// people as Instagram's, because Social's faces are people across
+    /// networks (§1079). No pictures: no imageset is drawn for them.
+    private static func threadsNotices() -> [Thing] {
+        // (text, actor, days ago, hour, is a follow)
+        let rows: [(String, String, Double, Int, Bool)] = [
+            ("tomas replied: \"same, every single time\"", "tomas", 1, 20, false),
+            ("lena liked your thread.", "lena", 1, 16, false),
+            ("ines followed you.", "ines", 2, 11, true),
+        ]
+        return rows.enumerated().map { i, n in
+            row(.link, n.0, source: "Threads", ref: ThreadsLiveFeed.refPrefix + "demo-\(i)",
+                days: n.2, hour: n.3,
+                content: "https://www.threads.com/@you/post/demo\(i)") { t in
+                t.authorHandle = n.1
+                t.authorAvatarURL = avatarArt(n.1)
+                if n.4 { t.socialContext = "follow" }
             }
         }
     }
@@ -5273,6 +5297,7 @@ enum DemoSeedAll {
         // demo lands both (prd §832).
         ("X", "Synced 8m ago · 412 posts imported", "Reads your notifications and the archive you exported."),
         ("Instagram", "Synced 10m ago · 336 items imported", "Reads your notifications and the export you pointed at."),
+        ("Threads", "Synced 9m ago", "Reads your notifications."),
         ("TikTok", "Synced 14m ago · 276 items imported", "Reads your activity and the export you pointed at."),
         ("Snapchat", "Imported 248 items", "Holds the export you pointed at."),
         ("Telegram", "4 channels · imported 214 items", "Follows public channels, read-only."),
