@@ -68,7 +68,8 @@ struct AddressesScreen: View {
             .padding(.top, DS.Space.s2)
             .padding(.bottom, DS.Space.s4)
         }
-        .dsScopeDock(sections: query.isEmpty ? scopes : [], active: scope) { picked in
+        .dsScopeDock(sections: query.isEmpty ? scopes : [], active: scope,
+                     clearance: 0) { picked in
             withAnimation(DS.Motion.standard) { scope = picked }
         }
         .scrollIndicators(.hidden)

@@ -165,8 +165,10 @@ struct AppsScreen: View {
                 // (prd §960): a capsule beside the seat. Down while a search
                 // is up — the hits are not a catalogue, and the strip never
                 // stood over them either.
+                // A place in You stands where a room does, down to the safe
+                // area, so the bar centres on the seat (prd §1136e's fix).
                 .dsScopeDock(sections: query.isEmpty ? scopes : [],
-                             active: scope, attention: troubledScopes) { picked in
+                             active: scope, attention: troubledScopes, clearance: 0) { picked in
                     withAnimation(DS.Motion.standard) {
                         scope = picked
                         proxy.scrollTo(Self.topAnchor, anchor: .top)

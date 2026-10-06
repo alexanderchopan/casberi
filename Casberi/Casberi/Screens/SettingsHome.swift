@@ -149,7 +149,7 @@ struct SettingsHome: View {
             chrome.landingFollowing = .reading
             chrome.sourceRequest = RoomAccounts.readingRoom
         case .newsletters:
-            // Day's Subscriptions tile, whose Track tray adds a sender.
+            // Day's Subscriptions tile, whose Track tray adds a mailing list.
             chrome.dayScope = .subscriptions
             chrome.sourceRequest = RoomAccounts.dayRoom
         case .calendars:
@@ -191,7 +191,7 @@ struct SettingsHome: View {
             (connectedApps.count, String(localized: "Apps")),
             (CalendarSubscriptionStore.shared.calendars.count, String(localized: "Calendars")),
             (feeds.count, String(localized: "Feeds")),
-            (MailSubscriptionsReading.shared.items.count, String(localized: "Newsletters")),
+            (MailSubscriptionsReading.shared.items.count, String(localized: "Mailing lists")),
             (people, String(localized: "People")),
             (SubscriptionsReading.shared.items.count, String(localized: "Subscriptions")),
         ]
@@ -384,7 +384,7 @@ struct SettingsHome: View {
                 section(String(localized: "Calendars"),
                         CalendarSubscriptionStore.shared.calendars.filter { hit($0.displayName) }) { calendarRow($0) }
                 section(String(localized: "Feeds"), feeds.filter { hit($0.name) || hit($0.seat) }) { feedRow($0) }
-                section(String(localized: "Newsletters"),
+                section(String(localized: "Mailing lists"),
                         MailSubscriptionsReading.shared.items.filter { hit($0.name) || hit($0.address ?? "") }) { newsletterRow($0) }
                 section(String(localized: "Subscriptions"),
                         SubscriptionsReading.shared.items.filter { hit($0.name) }) { subscriptionRow($0) }
@@ -436,7 +436,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apps:          return String(localized: "Apps")
         case .calendars:     return String(localized: "Calendars")
         case .feeds:         return String(localized: "Feeds")
-        case .newsletters:   return String(localized: "Newsletters")
+        case .newsletters:   return String(localized: "Mailing lists")
         case .people:        return String(localized: "People")
         case .subscriptions: return String(localized: "Subscriptions")
         case .new:           return String(localized: "Add")
