@@ -218,8 +218,10 @@ grep -q "MailMIME.listHeaders" Casberi/Casberi/Model/IMAPClient.swift \
   || fail "drift: the IMAP client no longer reads the list headers off the fetched bytes"
 grep -q "MailSubscriptions.compose(mails, now: now)" Casberi/Casberi/Model/MailSubscriptionsReading.swift \
   || fail "drift: the reading no longer composes through MailSubscriptions.compose"
-grep -q "MailSubscriptions.file(landed, added: MailSubscriptionStore.shared.addresses)" \
-  Casberi/Casberi/Model/MailSubscriptionsReading.swift \
+{ grep -q "MailSubscriptions.file(landed, added: MailSubscriptionStore.shared.addresses)" \
+    Casberi/Casberi/Model/MailSubscriptionsReading.swift \
+  || { grep -q "let added = MailSubscriptionStore.shared.addresses" Casberi/Casberi/Model/MailSubscriptionsReading.swift \
+       && grep -q "MailSubscriptions.file(landed, added: added)" Casberi/Casberi/Model/MailSubscriptionsReading.swift; }; } \
   || fail "drift: the reading no longer files through MailSubscriptions.file with the added senders"
 grep -q "MailSubscriptionStore.shared.add(address: address, name: name)" Casberi/Casberi/Screens/ThingSheetView.swift \
   || fail "drift: a mail's sheet no longer adds its sender (prd §1115)"

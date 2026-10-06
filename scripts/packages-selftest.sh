@@ -121,9 +121,13 @@ absent_in_code "$SCREEN" 'authorHandle' \
 absent_in_code "$PKG" 'authorHandle' \
   "the ingest stamps authorHandle now — either drop it, or the screen may read it"
 # One parser, shared, or a prune and a count disagree about which rows are whose.
-for use in 'PackageShape.name(fromRef: $0.sourceRef' 'PackageShape.name(fromRef: thing.sourceRef'; do
-  grep -qF "$use" "$SCREEN" \
-    || { echo "✗ the screen no longer reads its rows through PackageShape.name(fromRef:)"; exit 1; }
+# The watched list, its counts and its stop live in Work's Following tile since
+# prd §1119 (`FollowingReading`): the stop prunes through the parser, and the
+# demo's list is read back through it.
+FOLLOWING="Casberi/Casberi/Model/FollowingReading.swift"
+for use in 'PackageShape.name(fromRef: thing.sourceRef' 'PackageShape.name(fromRef: post.ref'; do
+  grep -qF "$use" "$FOLLOWING" \
+    || { echo "✗ the Following list no longer reads package rows through PackageShape.name(fromRef:)"; exit 1; }
 done
 
 TMP=$(mktemp -d /tmp/packages-selftest.XXXXXX)
