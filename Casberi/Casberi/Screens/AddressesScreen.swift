@@ -35,10 +35,11 @@ struct AddressesSection: View {
     /// is scroll content, and a capsule on it would sit at the list's end).
     @Binding var scope: AddressScope
     /// The scopes this list holds, handed up for that capsule.
-    var onScopes: ([AddressScope]) -> Void = { _ in }
     /// Opens a biller's subscription over the screen that holds this list
-    /// (Settings, prd §1143), instead of leaving for the Wallet.
+    /// (Settings, prd §1143), instead of leaving for the Wallet. Declared
+    /// before `onScopes`, so a trailing closure still means `onScopes`.
     var openPlan: ((String) -> Void)? = nil
+    var onScopes: ([AddressScope]) -> Void = { _ in }
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var opened: Contact?
     /// The wallet the naming alert is naming — a `Not named yet` row's own
