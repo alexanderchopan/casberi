@@ -24,9 +24,10 @@ struct AppsScreen: View {
     @State private var trackPick: TrackPick?
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var query = ""
-    /// The Added filter (prd §1111): the one list narrowed to what you have.
-    @State private var addedOnly = false
     @FocusState private var searchFocused: Bool
+    /// The bar's Search (prd §1138): the field stands under the box once
+    /// asked for, and folds away when it closes empty.
+    @State private var searchOpen = false
     /// The connect payoff (delight): every Connect on this screen — story
     /// card OR shelf capsule — ends the same way the product page's does,
     /// the app's hue blooming over the page (the shared `.connectBloom`).
@@ -104,10 +105,13 @@ struct AppsScreen: View {
     /// The whole catalogue, connected rows included (prd §1033, retiring
     /// §812's split): Manage is deleted, so an account you hold stands in the
     /// directory wearing its state, and managing it is the room's own door.
-    private var ranked: [Ranked] { addedOnly ? rankedAll.filter(isAdded) : rankedAll }
+    private var ranked: [Ranked] { rankedAll }
 
     private var rankedAll: [Ranked] {
+        // Markets is a place in You, not an app category (prd §1123, §1138):
+        // it is opened from its tile there, never listed here.
         BridgeCatalog.offers.compactMap { offer in
+            guard BridgeCatalog.category(of: offer) != HomeScope.markets else { return nil }
             let bridge = store.bridges.first { $0.name == offer.name }
             let tier: Int
             if let bridge, bridge.status == .attention { tier = 0 }
@@ -146,12 +150,14 @@ struct AppsScreen: View {
                         // top") — a visible slab, not the nav bar's
                         // pull-down `.searchable` field, which the App Store
                         // shape hid a scroll below the fold.
-                        // Search alone under the name (prd §1033): the
-                        // Connect | Manage switcher is deleted, and the
-                        // catalogue is the one list.
-                        HStack(spacing: DS.Space.s2) {
+                        // The categories ARE the box (prd §1138): what you
+                        // have in each, pressed to filter the list. Search
+                        // rides the bar and opens its field under the box;
+                        // the Added chip is deleted, Sources lists what you
+                        // have.
+                        categoryBox
+                        if searchShown {
                             searchField
-                            addedChip
                         }
                         sections(proxy)
                     }
@@ -167,12 +173,13 @@ struct AppsScreen: View {
                 // stood over them either.
                 // A place in You stands where a room does, down to the safe
                 // area, so the bar centres on the seat (prd §1136e's fix).
-                .dsScopeDock(sections: query.isEmpty ? scopes : [],
-                             active: scope, attention: troubledScopes, clearance: 0) { picked in
-                    withAnimation(DS.Motion.standard) {
-                        scope = picked
-                        proxy.scrollTo(Self.topAnchor, anchor: .top)
-                    }
+                .dsScopeDock(sections: query.isEmpty && !searchFocused ? [AppsBarScope.search] : [],
+                             active: AppsBarScope.search, verbs: [.search], clearance: 0) { _ in
+                    withAnimation(DS.Motion.standard) { searchOpen = true }
+                    searchFocused = true
+                }
+                .onChange(of: searchFocused) { _, focused in
+                    if !focused, query.isEmpty { searchOpen = false }
                 }
                 #if DEBUG
                 .onAppear {
@@ -193,7 +200,7 @@ struct AppsScreen: View {
                         NSLog("appsShelf: %@ %@ (%d apps)", name,
                               live ? "picked" : "NO SUCH CHIP — still A–Z",
                               listSections.reduce(0) { $0 + $1.apps.count })
-                        proxy.scrollTo(Self.scopeAnchor, anchor: .top)
+                        proxy.scrollTo(Self.topAnchor, anchor: .top)
                     }
                 }
                 .onAppear {
@@ -240,7 +247,6 @@ struct AppsScreen: View {
         if !query.isEmpty {
             searchResults
         } else {
-            scopeStrip(proxy)
             catalogList
         }
     }
@@ -635,34 +641,12 @@ struct AppsScreen: View {
 
     // MARK: - Search field (prd §200 — leads the page, not a nav-bar pull-down)
 
-    /// **ADDED (prd §1111).** One filter on the one list: off, the screen is
-    /// every app A to Z with what you have marked; on, the same list narrowed
-    /// to what you have, combining with the category bar. Drawn only once
-    /// something is added — a filter that narrows to nothing is §83's dead
-    /// control.
-    @ViewBuilder
-    private var addedChip: some View {
-        let count = addedCount
-        if count > 0 {
-            Button {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { addedOnly.toggle() }
-            } label: {
-                Chip(text: String(localized: "Added"), count: count, selected: addedOnly)
-            }
-            .buttonStyle(PressSpring())
-            .accessibilityAddTraits(addedOnly ? .isSelected : [])
-        }
-    }
-
     /// What you have: connected or broken, never paused (`connectedNames`'s
-    /// rule, so the chip's census and the list it narrows to agree).
+    /// rule, so the box's counts and Sources' agree).
     private func isAdded(_ entry: Ranked) -> Bool {
         guard let bridge = entry.bridge else { return false }
         return bridge.status != .paused
     }
-
-    private var addedCount: Int { rankedAll.filter(isAdded).count }
 
     private var searchField: some View {
         // The slab rung, spelled as itself. It used to say
@@ -725,9 +709,6 @@ struct AppsScreen: View {
         }()
     }
 
-    /// The strip's scroll anchor: a pick pulls the CONTROL to the top, so the
-    /// chips stay reachable and the list below them is the thing that changed.
-    private static let scopeAnchor = "catalog-scope"
     /// The page's top: on the phone the chips ride the bottom capsule (prd
     /// §960), and a pick there scrolls the list back to its start.
     private static let topAnchor = "catalog-top"
@@ -738,12 +719,13 @@ struct AppsScreen: View {
     /// an empty list is the dead control §83 bans, and a strip is the one place
     /// on this screen where that stays invisible until somebody taps it.
     private var scopes: [CatalogScope] {
-        // All, then the person's own category order (prd §1050j, amending
-        // 2026-09-17's A to Z): the tray and every glass category bar read the
-        // one order Settings › Dock order sets.
-        [CatalogScope(name: nil)] + CategoryOrder.sorted(Self.categories
+        // All, then the categories A–Z (prd §1138, user: "we should
+        // alphabetize them"): they are the box's counts now, and a room's
+        // tiles read A–Z (§995), not the dock's order (§1050j).
+        [CatalogScope(name: nil)] + Self.categories
             .filter { cat in ranked.contains { category(of: $0.offer) == cat.name } }
-            .map(\.name))
+            .map(\.name)
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
             .map { CatalogScope(name: $0) }
     }
 
@@ -760,28 +742,39 @@ struct AppsScreen: View {
                   .map { CatalogScope(name: category(of: $0.offer)) })
     }
 
-    /// The category filter: the dock's own tiles, glyph over word, in one
-    /// scrolling row (user, 2026-09-17). It was TEXT chips so a strip of
-    /// brand marks would not stand over a list of brand marks (prd §518); a
-    /// category glyph is not a brand mark, so that reason still holds.
-    ///
-    /// Hidden below two categories, where a filter narrows nothing.
-    @ViewBuilder
-    private func scopeStrip(_ proxy: ScrollViewProxy) -> some View {
-        let all = scopes
-        // On the phone the tiles ride the capsule at the bottom (prd §960)
-        // and nothing stands here — a zero-height anchor still cost the
-        // stack's spacing twice, a band of air over the list.
-        if !DSScopeDock<CatalogScope>.atBottom(sizeClass), all.count > 2 {
-            DSScopeTiles(sections: all, active: scope,
-                         attention: troubledScopes, strip: true) { picked in
-                withAnimation(DS.Motion.standard) {
-                    scope = picked
-                    proxy.scrollTo(Self.scopeAnchor, anchor: .top)
+    /// **THE CATEGORIES ARE THE BOX (prd §1138, user, 2026-10-06: "we could
+    /// have the 9 or so categories in apps be in the box tho").** Each is how
+    /// many you have there (connected or broken, never paused), over its
+    /// word, A–Z; pressed, the list below is that category,
+    /// and pressing the picked one again is everything. No All tile: the box
+    /// is the overview. A category holding a broken seat says so in its
+    /// word. Replaces the search row's Added chip and the category bar.
+    private var categoryBox: some View {
+        let cats = scopes.filter { $0.name != nil }
+        let have = Dictionary(grouping: rankedAll.filter(isAdded)) { category(of: $0.offer) }
+        let troubled = troubledScopes
+        let columns = min(5, max(3, (cats.count + 1) / 2))
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columns),
+                         spacing: DS.Space.s2) {
+            ForEach(cats) { cat in
+                let name = cat.name ?? ""
+                DSCountTile(count: have[name]?.count ?? 0, label: cat.label, glyph: cat.glyph,
+                            isOn: scope == cat, wants: troubled.contains(cat)) {
+                    withAnimation(DS.Motion.standard) {
+                        scope = scope == cat ? CatalogScope(name: nil) : cat
+                    }
                 }
             }
-            .id(Self.scopeAnchor)
         }
+        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
+               maxHeight: DSRoomChassis.leadBox)
+        .dsRoomHeadBlock()
+    }
+
+    /// Search on the phone is the bar's verb; where the rail stands there is
+    /// no bar, so the field stands under the box.
+    private var searchShown: Bool {
+        !DSScopeDock<AppsBarScope>.atBottom(sizeClass) || searchOpen || !query.isEmpty
     }
 
     /// A one-shot entrance — a tile fades and rises into place, staggered by
@@ -1250,4 +1243,13 @@ struct AppsScreen: View {
 
 extension String: @retroactive Identifiable {
     public var id: String { self }
+}
+
+/// The Apps catalogue's bar: Search alone, its filters being the box's
+/// categories (prd §1138).
+enum AppsBarScope: String, Identifiable, Hashable, Sendable {
+    case search
+    var id: String { rawValue }
+    var label: String { String(localized: "Search") }
+    var summary: String { String(localized: "Find an app by name") }
 }

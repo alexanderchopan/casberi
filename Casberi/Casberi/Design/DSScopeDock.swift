@@ -48,15 +48,26 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
             + DSDock.agentSize(fold: chrome.fold) / 2 - Self.height / 2
     }
 
+    /// Every tile a verb: the place's filters are elsewhere (Sources' and
+    /// Apps' counts in the box, prd §1138), so the bar holds only acts.
+    private var onlyVerbs: Bool {
+        !sections.isEmpty && sections.allSatisfy { verbs.contains($0) }
+    }
+
     func body(content: Content) -> some View {
         content.overlay(alignment: .bottomLeading) {
-            if sizeClass == .compact, sections.count > 2, !chrome.keyboardUp {
+            if sizeClass == .compact, sections.count > 2 || onlyVerbs, !chrome.keyboardUp {
                 DSScopeTiles(sections: sections, active: active,
                              attention: attention, strip: true, verbs: verbs, hold: hold, onPick: onPick)
                     .padding(.horizontal, DS.Space.s1)
                     .frame(height: Self.height)
+                    // A bar of verbs alone (Sources' Add · Search, Apps'
+                    // Search, prd §1138) is as wide as its tiles and stands
+                    // at the trailing edge: there is nothing to scroll.
+                    .fixedSize(horizontal: onlyVerbs, vertical: false)
                     .clipShape(Capsule())
                     .dsGlass(cornerRadius: Self.height / 2)
+                    .frame(maxWidth: .infinity, alignment: onlyVerbs ? .trailing : .leading)
                     .padding(.leading, DSDock.agentSeat(minimized: false))
                     .padding(.trailing, DS.Space.s4)
                     // The overlay rides the screen, whose bottom is the TOP

@@ -1,0 +1,165 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counts as buttons</title>
+<style>
+:root{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--page:#000;--box:#1c1c1e;--tile:#1c1c1e;--sel:#1e6fe6;--text:#fff;--text2:#ebebf599;--text3:#ebebf566;
+  --pink:#ff2d87;--confirm:#30d158;--attention:#ff9f0a;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header,section,.verdict{max-width:1240px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)}
+h2{font:700 22px/28px var(--rounded);margin-top:48px}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:860px;margin-top:6px}
+.stage{display:flex;gap:28px;flex-wrap:wrap;margin-top:20px;align-items:flex-start}
+figure{width:393px;max-width:100%}
+figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:12px 6px 0}
+figcaption b{color:var(--ink)}
+.tag{display:inline-block;font:600 12px var(--rounded);color:var(--ink2);background:#ffffff14;border-radius:99px;padding:3px 9px;margin-bottom:8px}
+.tag.new{color:#fff;background:var(--pink)}
+
+/* the phone */
+.phone{background:var(--page);color:var(--text);border-radius:48px;height:852px;overflow:hidden;position:relative;outline:1px solid #ffffff14;box-shadow:0 24px 70px #0008;padding:62px 16px 0}
+.phone.sheetbg{background:#0e0e10;padding:0}
+.sheet{position:absolute;inset:44px 0 0;background:var(--page);border-radius:38px 38px 0 0;padding:20px 16px 0;overflow:hidden}
+.grab{width:36px;height:5px;border-radius:3px;background:#ffffff40;margin:-12px auto 14px}
+.title{font:700 34px/41px var(--rounded);margin-bottom:12px;white-space:nowrap}
+.title .p{color:var(--pink)} .title .dot{color:var(--text3);font-weight:400}
+.box{background:var(--box);border-radius:26px;height:236px;padding:16px;position:relative}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.tile{height:58px;border-radius:16px;background:var(--tile);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:600}
+.tile .g{font-size:19px;line-height:20px}
+.tile.on{background:var(--sel)}
+
+/* counts */
+.counts{display:grid;height:100%;align-content:center;gap:10px}
+.c3{grid-template-columns:repeat(3,1fr)}
+.c5{grid-template-columns:repeat(5,1fr);gap:8px 4px}
+.cell{border-radius:16px;padding:10px 10px;position:relative}
+.c5 .cell{padding:8px 4px;text-align:center}
+.num{font:700 28px/32px var(--rounded);font-variant-numeric:tabular-nums}
+.c5 .num{font-size:24px;line-height:28px}
+.lab{font-size:12px;line-height:16px;color:var(--text2);white-space:nowrap}
+.cg{font-size:16px;line-height:20px;color:var(--text2);height:20px}
+.press .cell{background:#ffffff0a}
+.press .cell.on{background:var(--sel)}
+.press .cell.on .lab,.press .cell.on .cg{color:#fff}
+.cell.zero .num,.cell.zero .cg{color:var(--text3)}
+.cell .warn{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--attention)}
+.c5 .cell .warn{right:9px}
+
+/* list */
+.list{margin-top:18px}
+.hd{font:700 20px/25px var(--rounded);color:var(--pink);margin:16px 0 4px}
+.sub{font-size:13px;line-height:18px;color:var(--text2);margin:14px 0 2px}
+.row{display:flex;align-items:center;gap:12px;min-height:56px}
+.mark{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font:700 15px var(--rounded);color:#fff;flex:none}
+.mark.disc{border-radius:50%;background:#2a2a2d;color:var(--pink)}
+.b{flex:1;min-width:0}
+.n{font-size:17px;line-height:22px}
+.s{font-size:13px;line-height:18px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s .ok{color:var(--confirm)} .s .att{color:var(--attention)}
+.v{font-size:15px;font-weight:600;color:#fff;background:#ffffff1a;border-radius:99px;padding:6px 14px}
+.chev{color:var(--text3);font-size:18px}
+.srch{display:flex;align-items:center;gap:8px;height:42px;border-radius:12px;background:#ffffff14;padding:0 12px;color:var(--text2);font-size:17px}
+.srch .q{flex:1}
+.chip{font:600 13px var(--rounded);background:#ffffff14;color:var(--text2);border-radius:99px;padding:8px 12px;white-space:nowrap}
+
+/* bottom band: the face, then the floating bar */
+.band{position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(transparent,var(--page) 45%);display:flex;align-items:center;gap:10px;padding:26px 16px 0}
+.face{width:58px;height:58px;border-radius:20px;background:#2a2a2d;display:grid;place-items:center;font-size:30px;flex:none}
+.cap{height:54px;border-radius:27px;background:#2c2c2ecc;backdrop-filter:blur(10px);display:flex;align-items:center;gap:4px;padding:0 7px;overflow:hidden;outline:1px solid #ffffff12}
+.cap.fill{flex:1;mask-image:linear-gradient(90deg,#000 84%,transparent)}
+.cap i{font-style:normal;font-size:14px;font-weight:600;padding:9px 13px;border-radius:99px;color:var(--text2);white-space:nowrap}
+.cap i.on{background:var(--sel);color:#fff}
+.cap i.verb{color:#fff}
+.cap.short{margin-left:auto}
+.edge{position:absolute;right:16px;bottom:31px;height:54px;width:66px;border-radius:0 27px 27px 0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;background:#2c2c2e}
+
+.verdict{margin-top:40px;font-size:15px;line-height:23px;color:var(--ink2)}
+.verdict b{color:var(--ink)}
+.verdict li{margin:6px 0 0 20px}
+</style>
+
+<header>
+  <h1>Counts as buttons: Sources and Apps</h1>
+  <p class="desc">Each screen is shown as it is today, then with the counts in the box as the filter. The box keeps its size and position on every screen (§1136f); pressing a count changes only the list below it. Demo data. The glyphs stand in for the real SF Symbols.</p>
+</header>
+
+<section>
+<h2>1 · Sources</h2>
+<div class="stage">
+  <figure><span class="tag">Today</span><div class="phone" id="s0"></div>
+    <figcaption><b>Six counts, then the same six again on a bar that scrolls.</b> The counts can't be pressed (§1136 item 4). The bar holds the filter, and Add sits past "Subs", off the edge.</figcaption></figure>
+  <figure><span class="tag new">Proposed</span><div class="phone" id="s1"></div>
+    <figcaption><b>The counts are the filter.</b> Apps is selected and its list shows below. A dot marks the kind with a broken connection. The bar shrinks to Add and Search, so nothing scrolls, and Add adds the kind you're on, as it does today.</figcaption></figure>
+</div>
+</section>
+
+<section>
+<h2>2 · Apps (the catalogue, from Add)</h2>
+<div class="stage">
+  <figure><span class="tag">Today</span><div class="phone sheetbg"><div class="sheet" id="a0"></div></div>
+    <figcaption><b>Search, then one long catalogue, with eleven categories on a bar that scrolls.</b> A broken connection shows only as a dot on its category, if that category is in view on the bar.</figcaption></figure>
+  <figure><span class="tag new">Proposed</span><div class="phone sheetbg"><div class="sheet" id="a1"></div></div>
+    <figcaption><b>The ten categories in the box, five across, in your Dock order.</b> Each count is how many you've connected there. Work is selected. Testnets shows a dimmed 0, and Social's dot is a broken connection. With no All, pressing the selected category again shows everything. The bar becomes Search alone.</figcaption></figure>
+</div>
+</section>
+
+<div class="verdict">
+  <b>What this asks of the rulings</b>
+  <ul>
+    <li><b>§1136 item 4</b> ("not buttons") and <b>§1136h</b> (six kinds on the bar) are amended for Sources. Its reason, that a count which pressed would be a second way to the same filter, no longer holds once the six leave the bar.</li>
+    <li><b>Apps is a sheet</b> since §1136, so it's the one sheet with a box. Its box sits higher than on the You places because a sheet has no You tiles. The alternative is to make Apps a place again.</li>
+    <li><b>Search returns to Sources</b>, on the bar this time. That reverses §1136f's "we have to remove search".</li>
+    <li><b>Five across is tight on the smallest phones.</b> At 320pt the longest label ("Testnets") still fits at 12pt, but only just. If a category is ever added, the grid goes to 4-4-3 and the box keeps its height.</li>
+  </ul>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const C=["#0052ff","#ff9500","#7b3fe4","#00d395","#f3ba2f","#e6007a","#30d158","#ff3b30","#5e6ad2","#5ac8fa","#ff2d55","#a78bfa","#e60023","#627eea","#ff6f00","#24292f"];
+const mk=(name,k)=>`<div class="mark" style="background:${C[k%C.length]}">${name[0]}</div>`;
+const row=(name,sub,k,trail='<span class="chev">›</span>')=>`<div class="row">${mk(name,k)}<div class="b"><div class="n">${name}</div><div class="s">${sub}</div></div>${trail}</div>`;
+const title=(a,b)=>`<div class="title"><span class="p">${a}</span> <span class="dot">·</span> ${b}</div>`;
+const youTiles=`<div class="tiles"><div class="tile"><span class="g">⌂</span>Home</div><div class="tile"><span class="g">↗</span>Markets</div><div class="tile"><span class="g">▤</span>Notes</div><div class="tile on"><span class="g">⛓︎</span>Sources</div></div>`;
+const face='<div class="face">🐙</div>';
+
+// Sources
+const kinds=[["31","Apps",1],["2","Calendars"],["14","Feeds"],["9","Mailing lists"],["48","People"],["12","Subscriptions"]];
+const countsBox=press=>`<div class="box"><div class="counts c3 ${press?'press':''}">${kinds.map(([n,l,w],i)=>`<div class="cell ${press&&i===0?'on':''}">${press&&w?'<span class="warn"></span>':''}<div class="num">${n}</div><div class="lab">${l}</div></div>`).join('')}</div></div>`;
+const sourcesList=`<div class="list">
+ <div class="row"><div class="mark disc">✳︎</div><div class="b"><div class="n">Casberi</div><div class="s">Settings · iCloud sync on</div></div><span class="chev">›</span></div>
+ <div class="hd">Wallet</div>
+ ${row("Coinbase","<span class=ok>Connected</span> · read 4 min ago",0)}
+ ${row("Rocket Money","<span class=att>Sign in again</span>",1)}
+ <div class="hd">Work</div>
+ ${row("GitHub","<span class=ok>Connected</span> · read 2 min ago",15)}
+ ${row("Linear","<span class=ok>Connected</span> · read 9 min ago",8)}
+</div>`;
+$('s0').innerHTML=title("Alex","Sources")+countsBox(false)+youTiles+sourcesList+
+ `<div class="band">${face}<div class="cap fill"><i class="on">Apps</i><i>Calendars</i><i>Feeds</i><i>Lists</i><i>People</i><i>Subs</i><i class="verb">＋ Add</i></div></div>`;
+$('s1').innerHTML=title("Alex","Sources")+countsBox(true)+youTiles+sourcesList+
+ `<div class="band">${face}<div class="cap short"><i class="verb">＋ Add</i><i>⌕ Search</i></div></div>`;
+
+// Apps
+const cats=[["$","Wallet",20],["↗","Markets",1],["⚗︎","Testnets",0],["⌨︎","Work",19],["▦","Day",4],["☺︎","Life",7],["›_","Agents",8],["▶︎","Media",6],["❞","Social",4,1],["▯","Reading",3]];
+const catBox=`<div class="box"><div class="counts c5 press">${cats.map(([g,l,n,w])=>`<div class="cell ${l==='Work'?'on':''} ${n===0?'zero':''}">${w?'<span class="warn"></span>':''}<div class="cg">${g}</div><div class="num">${n}</div><div class="lab">${l}</div></div>`).join('')}</div></div>`;
+const conn='<span class="ok">Connected</span>';
+const get='<span class="v">Connect</span>';
+const workList=`<div class="list">
+ <div class="hd">Work</div>
+ ${row("GitHub",conn,15,'')}
+ ${row("Linear",conn,8,'')}
+ ${row("Slack",conn,5,'')}
+ ${row("Notion","Pages you edit",4,get)}
+ ${row("Figma","Files you're in",11,get)}
+</div>`;
+$('a0').innerHTML=`<div class="grab"></div>`+title("Alex","Apps")+
+ `<div style="display:flex;gap:8px;align-items:center"><div class="srch" style="flex:1"><span>⌕</span><span class="q">Search</span></div><span class="chip">Added · 74</span></div>
+ <div class="list"><div class="hd">Wallet</div>
+ ${row("Coinbase",conn,0,'')}${row("Kraken",conn,3,'')}${row("Rocket Money","<span class=att>Sign in again</span>",1,'<span class="v">Fix</span>')}${row("Acorns","Your round-ups",6,get)}${row("Wise","Balances and transfers",9,get)}
+ <div class="hd">Markets</div>${row("Markets",conn,13,'')}</div>
+ <div class="band">${face}<div class="cap fill"><i class="on">All</i><i>Wallet</i><i>Markets</i><i>Testnets</i><i>Work</i><i>Day</i><i>Life</i><i>Agents</i></div></div>`;
+$('a1').innerHTML=`<div class="grab"></div>`+title("Alex","Apps")+catBox+workList+
+ `<div class="band">${face}<div class="cap short"><i>⌕ Search</i></div></div>`;
+</script>

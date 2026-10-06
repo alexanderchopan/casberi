@@ -26,6 +26,9 @@ struct SettingsHome: View {
     @State private var casberiOpen = false
     @State private var query = ""
     @FocusState private var searchFocused: Bool
+    /// The bar's Search (prd §1138): a field over the kind you're on. People
+    /// draws its own field always, as Addresses did.
+    @State private var searchOpen = false
     @State private var peopleScope = AddressScope(name: nil)
     @State private var people = 0
     @State private var calendarAdd = false
@@ -50,8 +53,15 @@ struct SettingsHome: View {
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
                     if !DSScopeDock<SettingsScope>.atBottom(sizeClass), !casberiOpen {
-                        DSScopeTiles(sections: SettingsScope.allCases, active: scope,
+                        DSScopeTiles(sections: SettingsScope.bar, active: scope,
                                      strip: true, verbs: SettingsScope.verbs) { pick($0) }
+                    }
+                    if !casberiOpen, scope != .people, searchOpen || !query.isEmpty {
+                        DSSlabField(placeholder: String(localized: "Search \(scope.label)"),
+                                    text: $query, actionLabel: "",
+                                    focus: $searchFocused,
+                                    glyph: "magnifyingglass", clearable: true,
+                                    size: .slab, submitLabel: .search, action: {})
                     }
                     if casberiOpen {
                         casberiOptions
@@ -61,18 +71,18 @@ struct SettingsHome: View {
                             casberiRow
                             appsList
                         case .calendars:
-                            kindList(CalendarSubscriptionStore.shared.calendars,
+                            kindList(CalendarSubscriptionStore.shared.calendars.filter { hit($0.displayName) },
                                      empty: "Subscribe to a calendar and its dates show in Coming up.") { calendarRow($0) }
                         case .feeds:
-                            kindList(feeds, empty: "Follow a feed and it lands here.") { feedRow($0) }
+                            kindList(feeds.filter { hit($0.name) }, empty: "Follow a feed and it lands here.") { feedRow($0) }
                         case .newsletters:
-                            kindList(MailSubscriptionsReading.shared.items,
+                            kindList(MailSubscriptionsReading.shared.items.filter { hit($0.name) },
                                      empty: "Lists that write to your mail land here.") { newsletterRow($0) }
                         case .people:        peopleList
                         case .subscriptions:
-                            kindList(SubscriptionsReading.shared.items,
+                            kindList(SubscriptionsReading.shared.items.filter { hit($0.name) },
                                      empty: "Track a subscription and it lands here.") { subscriptionRow($0) }
-                        case .new:           EmptyView()
+                        case .new, .search:  EmptyView()
                         }
                     }
                 }
@@ -87,7 +97,7 @@ struct SettingsHome: View {
                 .listRowSeparator(.hidden)
         }
         .dsRoomList()
-        .dsScopeDock(sections: casberiOpen || searchFocused ? [] : SettingsScope.allCases,
+        .dsScopeDock(sections: casberiOpen || searchFocused ? [] : SettingsScope.bar,
                      active: scope, verbs: SettingsScope.verbs,
                      // A place in You stands where a room does, down to the
                      // safe area, so the bar centres on the seat as Markets' does.
@@ -120,6 +130,10 @@ struct SettingsHome: View {
         .sheet(isPresented: $calendarAdd) {
             CalendarSubscribeSheet()
         }
+        // A search closed with nothing in it folds its field away.
+        .onChange(of: searchFocused) { _, focused in
+            if !focused, query.isEmpty { searchOpen = false }
+        }
         .onChange(of: chrome.settingsPeopleQuery, initial: true) { _, asked in
             // The tray's search found a person (prd §1136 item 3): land on
             // People with their name in the field.
@@ -138,10 +152,21 @@ struct SettingsHome: View {
             add(scope)
             return
         }
+        if picked == .search {
+            withAnimation(DS.Motion.standard) { searchOpen = true }
+            searchFocused = true
+            return
+        }
         withAnimation(DS.Motion.standard) {
             scope = picked
             query = ""
+            searchOpen = false
         }
+    }
+
+    /// The bar's search, over the kind you're on.
+    private func hit(_ name: String) -> Bool {
+        query.isEmpty || name.localizedCaseInsensitiveContains(query)
     }
 
     /// What + Add adds: the kind you're on (prd §1136 item 5), each through
@@ -149,7 +174,7 @@ struct SettingsHome: View {
     private func add(_ kind: SettingsScope) {
         DSHaptic.selection()
         switch kind {
-        case .apps, .new:
+        case .apps, .new, .search:
             route.present(.apps)
         case .calendars:
             calendarAdd = true
@@ -188,44 +213,44 @@ struct SettingsHome: View {
 
     // MARK: - The box
 
+    /// Markets is a place in You, not an app (prd §1123, §1138).
     private var connectedApps: [BridgeApp] {
-        bridges.bridges.filter { $0.status != .paused }
+        bridges.bridges.filter {
+            $0.status != .paused && BridgeCatalog.category(forSource: $0.name) != HomeScope.markets
+        }
     }
 
     private var feeds: [Following.Item] {
         Following.Room.allCases.flatMap { FollowingReading.shared.items(for: $0) }
     }
 
-    /// Six counts, no headline, not buttons (prd §1136 item 4): what you're
-    /// connected to over what sends you things. Plain figures — the bar below
-    /// filters, so a square that pressed would be a second door to it.
+    /// Six counts, no headline, and THEY ARE THE FILTER (prd §1138, amending
+    /// §1136 item 4 and §1136h; user, 2026-10-06: "ok lets do it"): what
+    /// you're connected to over what sends you things, A–Z. Pressing one
+    /// lists that kind below; the box never moves. The bar keeps the verbs.
     private var countsBox: some View {
-        // A–Z, the order the bar's tiles stand in (§995), so a count and its
-        // filter sit in the same place (user: "those should be on the capsule").
-        let counts: [(Int, String)] = [
-            (connectedApps.count, String(localized: "Apps")),
-            (CalendarSubscriptionStore.shared.calendars.count, String(localized: "Calendars")),
-            (feeds.count, String(localized: "Feeds")),
-            (MailSubscriptionsReading.shared.items.count, String(localized: "Mailing lists")),
-            (people, String(localized: "People")),
-            (SubscriptionsReading.shared.items.count, String(localized: "Subscriptions")),
+        let counts: [(SettingsScope, Int, String)] = [
+            (.apps, connectedApps.count, String(localized: "Apps")),
+            (.calendars, CalendarSubscriptionStore.shared.calendars.count, String(localized: "Calendars")),
+            (.feeds, feeds.count, String(localized: "Feeds")),
+            (.newsletters, MailSubscriptionsReading.shared.items.count, String(localized: "Mailing lists")),
+            (.people, people, String(localized: "People")),
+            (.subscriptions, SubscriptionsReading.shared.items.count, String(localized: "Subscriptions")),
         ]
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s3, alignment: .leading), count: 3),
-                         alignment: .leading, spacing: DS.Space.s4) {
-            ForEach(counts, id: \.1) { n, label in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(n.formatted())
-                        .dsText(.heading28)
-                        .foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                    Text(label)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
+        // A broken connection says so in its kind's WORD (the tiles' rule,
+        // never a dot), so it shows from every other kind too.
+        let troubled: Set<SettingsScope> = connectedApps.contains { $0.status == .attention } ? [.apps] : []
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .leading), count: 3),
+                         alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(counts, id: \.0) { kind, n, label in
+                DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
+                            wants: troubled.contains(kind)) {
+                    if casberiOpen { casberiOpen = false }
+                    pick(kind)
                 }
-                .accessibilityElement(children: .combine)
             }
         }
-        .padding(.horizontal, DS.Space.s4)
+        .padding(.horizontal, DS.Space.s2)
         .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
                maxHeight: DSRoomChassis.leadBox, alignment: .leading)
         .dsRoomHeadBlock()
@@ -259,31 +284,57 @@ struct SettingsHome: View {
 
     // MARK: - Apps
 
-    /// Your apps under category headers (prd §1136 item 5), in the dock's
-    /// order; each opens its own account page — its settings.
+    /// Your apps under category headers (prd §1136 item 5), A–Z; each opens its own account page — its settings.
+    ///
+    /// **Every category ends in what you don't have yet (prd §1138):** "12 more
+    /// in Work ›" opens the catalogue on Work, and a category you have nothing
+    /// in still stands, as its header and that link alone. A search lists
+    /// only what you have.
     @ViewBuilder
     private var appsList: some View {
-        let apps = connectedApps
-        if apps.isEmpty {
-            DSEmptyState(headline: DSProse.text("No apps yet"),
-                         words: Text("Add an app and it lands here."),
+        let apps = connectedApps.filter { hit($0.name) }
+        let searching = !query.isEmpty
+        if apps.isEmpty, searching {
+            DSEmptyState(headline: DSProse.text("No apps"),
+                         words: Text("Nothing you've added matches."),
                          scale: .list(rows: 3))
         } else {
-            let order = chrome.chipOrder
-            let byCategory = Dictionary(grouping: apps) { BridgeCatalog.category(forSource: $0.name) ?? String(localized: "Other") }
-            let categories = byCategory.keys.sorted {
-                let a = order.firstIndex(of: $0) ?? .max, b = order.firstIndex(of: $1) ?? .max
-                return a == b ? $0 < $1 : a < b
+            let other = String(localized: "Other")
+            let byCategory = Dictionary(grouping: apps) { BridgeCatalog.category(forSource: $0.name) ?? other }
+            let more = searching ? [:] : Self.moreByCategory(have: Set(connectedApps.map(\.name)))
+            // A–Z, as the catalogue's box reads (prd §1138), Other last.
+            let categories = Set(byCategory.keys).union(more.keys).sorted {
+                if ($0 == other) != ($1 == other) { return $1 == other }
+                return $0.localizedStandardCompare($1) == .orderedAscending
             }
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 ForEach(categories, id: \.self) { category in
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                         Text(category).dsText(.heading17).foregroundStyle(DS.brandInk)
                         ForEach(byCategory[category] ?? []) { appRow($0) }
+                        if let n = more[category] {
+                            DSMoreLink(title: Text("\(n) more in \(category)")) {
+                                route.openCategory = category
+                                route.present(.apps)
+                            }
+                            .padding(.top, DS.Space.s1)
+                        }
                     }
                 }
             }
         }
+    }
+
+    /// How many of each category's catalogue apps you haven't added, by the
+    /// catalogue's own category rule. A category with none left draws no link.
+    private static func moreByCategory(have: Set<String>) -> [String: Int] {
+        var out: [String: Int] = [:]
+        for offer in BridgeCatalog.offers where !have.contains(offer.name) {
+            let category = BridgeCatalog.category(of: offer)
+            guard category != HomeScope.markets else { continue }
+            out[category, default: 0] += 1
+        }
+        return out
     }
 
     private func appRow(_ app: BridgeApp) -> some View {
@@ -372,17 +423,18 @@ struct SettingsHome: View {
     }
 }
 
-/// Sources' own filters, on the floating bar (prd §1136h): the box's six
-/// kinds A–Z, then Add — the bar scrolls (user: "it's life. it'll just have
-/// to scroll"), Add pinned at its end.
+/// Sources' six kinds, picked by pressing their counts in the box, and the
+/// bar's two verbs (prd §1138, amending §1136h's scrolling bar of kinds).
 /// No All: the box is the overview of all of it (user: "the sources screen
-/// IS that list"). Add adds the kind you're on.
+/// IS that list"). Add adds the kind you're on; Search searches it.
 enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case apps, calendars, feeds, newsletters, people, subscriptions, new
+    case apps, calendars, feeds, newsletters, people, subscriptions, new, search
 
     var id: String { rawValue }
 
-    static let verbs: Set<SettingsScope> = [.new]
+    static let verbs: Set<SettingsScope> = [.new, .search]
+    /// What the floating bar holds: the verbs alone.
+    static let bar: [SettingsScope] = [.new, .search]
 
     var label: String {
         switch self {
@@ -395,6 +447,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .people:        return String(localized: "People")
         case .subscriptions: return String(localized: "Subs")
         case .new:           return String(localized: "Add")
+        case .search:        return String(localized: "Search")
         }
     }
 
@@ -407,6 +460,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .people:        return String(localized: "The people behind your accounts")
         case .subscriptions: return String(localized: "What you pay for")
         case .new:           return String(localized: "Add one of the kind you're on")
+        case .search:        return String(localized: "Find one of the kind you're on")
         }
     }
 }

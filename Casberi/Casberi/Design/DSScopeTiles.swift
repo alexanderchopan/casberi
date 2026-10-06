@@ -131,7 +131,16 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     }
 
     var body: some View {
-        if sections.count > 1, strip {
+        if strip, !sections.isEmpty, sections.allSatisfy({ verbs.contains($0) }) {
+            // VERBS ALONE (prd §1138): Sources' Add · Search and Apps' Search,
+            // whose filters are the counts in the box. Nothing scrolls.
+            HStack(spacing: DS.Space.s1) {
+                ForEach(sections) { section in
+                    tile(section)
+                        .frame(width: Self.stripTileWidth)
+                }
+            }
+        } else if sections.count > 1, strip {
             // A VERB STANDS STILL AT THE STRIP'S END (prd §1081): the scopes
             // scroll, and a verb (Markets' Add) is pinned after them, so it
             // is never off the edge of a long row — a verb nobody can see is

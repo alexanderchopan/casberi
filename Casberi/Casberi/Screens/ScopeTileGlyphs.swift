@@ -257,7 +257,17 @@ extension SettingsScope: DSTileScope {
         case .people:        return ScopeTileGlyph.people
         case .subscriptions: return ScopeTileGlyph.subscriptions
         case .new:           return ScopeTileGlyph.new
+        case .search:        return ScopeTileGlyph.search
         }
     }
 }
 
+
+/// The Apps catalogue's one verb (prd §1138).
+extension AppsBarScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .search: return ScopeTileGlyph.search
+        }
+    }
+}
