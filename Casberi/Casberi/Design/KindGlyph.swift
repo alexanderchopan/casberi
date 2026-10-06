@@ -194,6 +194,7 @@ enum BridgeGlyph {
         case "x", "twitter": return "bookmark"
         case "instagram": return "camera"
         case "tiktok":    return "music.note"
+        case "threads":   return "at"
         case "youtube":   return "play.rectangle"
         case "substack":  return "doc.text.image"
         case "podcasts":  return "mic"

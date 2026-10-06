@@ -1634,6 +1634,10 @@ harness "Telegram pure-logic self-test" "Telegram pure-logic self-test" "scripts
 # session is a 200 whose body says "Login expired", and the notices' prefix must
 # sit inside `tiktok:` and in Corpus.liveRefPrefixes.
 harness "TikTok live self-test" "TikTok live self-test" "scripts/tiktok-live-selftest.sh" "the TikTok live self-test failed — run scripts/tiktok-live-selftest.sh"
+# Threads' live door (prd §1131): a read never sends the page's mark-seen
+# mutation, a stale query id is found again rather than read as a refusal, and
+# only a refusal clears the session.
+harness "Threads live self-test" "Threads live self-test" "scripts/threads-live-selftest.sh" "the Threads live self-test failed — run scripts/threads-live-selftest.sh"
 # X's notices carry their own time and a landed aggregate is rewritten when its
 # sentence grows (prd §741): every magnitude a time can arrive in, and the rule
 # for when a stored notice moves. A notice stamped with the sweep's clock reads

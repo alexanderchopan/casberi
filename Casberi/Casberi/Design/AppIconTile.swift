@@ -239,6 +239,8 @@ extension DS {
         // flat fill has to pick one. The magenta carries the brand where the
         // cyan reads as any tech blue. Moot once `brand-tiktok` is bundled.
         case "tiktok":              return Color.fixed("#ee1d52")
+        // Threads' mark is white on black, and `brand-threads` is bundled.
+        case "threads":             return Color.fixed("#000000")
         case "youtube":             return Color.fixed("#ff0000")
         case "substack":            return Color.fixed("#ff6719")
         // Their brand green, read off nerdwallet.com itself (2026-09-15) — the

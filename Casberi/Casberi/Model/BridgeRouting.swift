@@ -95,6 +95,9 @@ enum BridgeRouter {
         /// 2026-02-06 and there is no keyless read left at any price worth
         /// taking. The archive is the only door (prd §280).
         case x
+        /// Threads (prd §1131): a sign-in inside this app, Instagram's live
+        /// door on threads.com, with no export act.
+        case threads
         case pinterest
         case steam
         case obsidian
@@ -267,7 +270,7 @@ enum BridgeRouter {
         /// deciding you were done. Those stay up until they're closed.
         var finishesOnConnect: Bool {
             switch self {
-            case .token, .steam, .obsidian, .files, .dropbox, .spotify, .duolingo, .privy, .twitch, .slack,
+            case .token, .steam, .obsidian, .files, .dropbox, .spotify, .threads, .duolingo, .privy, .twitch, .slack,
                  .icloudMail, .gmail, .exchange,
                  // Grok is `OpenRouterSetupScreen` structurally (its own
                  // doc-comment says so) and was missed here when it landed
@@ -333,6 +336,7 @@ enum BridgeRouter {
             case .instagram:      "instagram"
             case .snapchat:       "snapchat"
             case .x:              "x"
+            case .threads:        "threads"
             case .tiktok:         "tiktok"
             case .pinterest:      "pinterest"
             case .steam:          "steam"
@@ -452,6 +456,7 @@ enum BridgeRouter {
         Row(offer: "Snapchat",  id: "snapchat", destination: .snapchat),
         Row(offer: "TikTok",    id: "tiktok",   destination: .tiktok),
         Row(offer: "X",         id: "x",        destination: .x),
+        Row(offer: "Threads",   id: "threads",  destination: .threads),
         Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
         Row(offer: "Steam",     id: "steam",  destination: .steam),
         Row(offer: "Obsidian",  id: "obsidian", destination: .obsidian),
@@ -641,6 +646,7 @@ struct BridgeDestinationView: View {
         case .snapchat:       SnapchatImportScreen()
         case .tiktok:         TikTokImportScreen()
         case .x:              XArchiveImportScreen()
+        case .threads:        ThreadsScreen()
         case .pinterest:      HandleSetupScreen(bridge: .pinterest)
         case .steam:          SteamScreen()
         case .obsidian:       ObsidianScreen()

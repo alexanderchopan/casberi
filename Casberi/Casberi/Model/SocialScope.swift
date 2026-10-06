@@ -52,7 +52,7 @@ enum SocialToYou {
 
     /// Whether a row is addressed to you: a reply to you, a new follower, a
     /// mention naming one of your own handles, or a live notice from X,
-    /// Instagram or TikTok that is about your post or your account.
+    /// Instagram, TikTok or Threads that is about your post or your account.
     ///
     /// `myHandles` are your accounts' handles, lower-cased, no `@`. A mention
     /// is landed for any watched account with mentions on, so it is yours
@@ -67,6 +67,8 @@ enum SocialToYou {
         }
         guard let ref = row.sourceRef else { return false }
         if ref.hasPrefix("ig-live:notif:") || ref.hasPrefix("tiktok:live:notif:") { return true }
+        // A Threads notice is to you unless Threads was recommending a post.
+        if ref.hasPrefix("threads-live:notif:") { return row.socialContext != "suggested" }
         if ref.hasPrefix("x-live:notif:") {
             return !followFeedNotices.contains { row.title.hasPrefix($0) }
         }

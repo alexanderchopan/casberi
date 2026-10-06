@@ -167,6 +167,14 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "TikTok"),
                  purpose: "Reads your likes, comments and follows, using your OWN TikTok sign-in inside this app. The requests carry the session cookies from that sign-in and nothing else, and never mark anything read.",
                  hosts: ["www.tiktok.com"]),
+        // And for Threads (prd §1131), keyed by the catalogue name for the same
+        // reason. The page's own scripts are read only when Threads stops
+        // knowing the feed's query id, to find the new one; the CDN hosts are
+        // the faces and post pictures a notice carries.
+        Endpoint(service: "Threads live",
+                 reach: .whenConnected(bridge: "Threads"),
+                 purpose: "Reads your likes, replies and follows, using your OWN Threads sign-in inside this app. The requests carry the session cookies from that sign-in and nothing else, and never mark anything seen.",
+                 hosts: ["www.threads.com", "static.cdninstagram.com", "cdninstagram.com", "fbcdn.net"]),
         Endpoint(service: "Snapchat Memories",
                  reach: .whenConnected(bridge: "snapchat"),
                  purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture.",

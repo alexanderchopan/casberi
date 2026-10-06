@@ -590,6 +590,12 @@ enum BridgeCatalog {
         // over your saves and isn't.
         Offer(name: "Instagram",   tagline: "Notifications and saves, as they happen", group: "Network", connectable: true,
               needsSetup: true, added: day(2026, 7, 31)),
+        // Instagram's live door on threads.com (prd §1130, §1131). Meta's
+        // Threads API needs a server and App Review and carries no
+        // notifications, so this signs in on the web the way Instagram does.
+        // No export act: the live read is the whole seat.
+        Offer(name: "Threads",     tagline: "Likes, replies and follows, as they happen", group: "Network", connectable: true,
+              needsSetup: true, added: day(2026, 10, 5)),
         // The second import-grade social seat, beside Instagram (2026-07-31, prd
         // §246). Snapchat has no keyless read either — and less than no read:
         // Login Kit's entire scope list is a display name, a Bitmoji avatar
@@ -1041,7 +1047,7 @@ enum BridgeSetupMode {
     /// X, Instagram and TikTok sign in since §701/§726/§731 — each keeps its
     /// export as a second act, but the word on the catalogue is the first door.
     static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X", "Spotify",
-        "Instagram", "TikTok", "Duolingo", "Acorns", "Rocket Money", "Bankr", "Privy"]
+        "Instagram", "TikTok", "Threads", "Duolingo", "Acorns", "Rocket Money", "Bankr", "Privy"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed

@@ -325,6 +325,16 @@ enum BridgeRefresh {
                 _ = await sweepTimed("tiktok.live") { await TikTokLive.refresh(context: context) }
             }
         }
+        // Threads' live door (prd §1131), Instagram's terms: Meta flags a busy
+        // session, so the same ten-minute throttle and the same by-name pause.
+        let threadsPaused = store.bridges.contains { $0.id == "threads" && $0.status == .paused }
+        if ThreadsLiveAuth.connected, !threadsPaused,
+           force || BridgeRefresh.dueForHeal("threads.live") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("threads.live") { await ThreadsLive.refresh(context: context) }
+            }
+        }
         // X's live door (prd §701), swept like the two above since prd §737.
         // §701 shipped the read with ONE caller, the account page's own sync
         // button, so notifications updated only while the person was looking

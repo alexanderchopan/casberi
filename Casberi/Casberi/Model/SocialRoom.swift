@@ -68,8 +68,8 @@ enum SocialRoom {
         /// Whether NOTHING leads the room but its newest thing (prd §821, user:
         /// "it should just show newest notification"): no topic map, no
         /// distribution, no mosaic, no year heatmap, and a picture grid never
-        /// declines the cover. The three rooms with a live door (X, Instagram,
-        /// TikTok). Their imports are dated in the past, so with the door
+        /// declines the cover. The rooms with a live door (X, Instagram,
+        /// TikTok, Threads). Their imports are dated in the past, so with the door
         /// connected the newest row — and the cover — is the newest
         /// notification, by date and by no rule of its own.
         var leadsWithNewest: Bool = false
@@ -88,6 +88,7 @@ enum SocialRoom {
         "Instagram": Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true),
         "Telegram":  Facts(foldsThreads: false, hasRoster: false),
         "TikTok":    Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true),
+        "Threads":   Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true),
         "Snapchat":  Facts(foldsThreads: false, hasRoster: false),
     ]
 
@@ -283,6 +284,14 @@ enum SocialRoom {
             if row.tags.contains("Comment") { return .excerpt(lines: 3) }
             if row.kind == "link" { return .reading }
             return .band
+
+        // A ROOM OF NOTICES (prd §1131). Every Threads row is a live notice:
+        // Threads' own sentence and a face, never the post's words (the feed
+        // does not carry them), so a post card would print a handle over
+        // nothing. A follow is a person, and reads as one.
+        case "Threads":
+            if row.socialContext == "follow" { return .band }
+            return .excerpt(lines: 2)
 
         // Snapchat's room is memories and saved chats — already split into a
         // grid and rows by §247, and holding no post. Listed in the table so

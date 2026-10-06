@@ -161,6 +161,7 @@ enum CompanyPacks {
             "Instagram": meta,
             "Snapchat": ("Snap", .stock("SNAP")),
             "Telegram": own("Telegram"),
+            "Threads": meta,
             "TikTok": own("ByteDance"),
             "X": own("X"),
             // Reading

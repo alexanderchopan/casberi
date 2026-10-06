@@ -240,6 +240,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-snapchat  { background: #fffc00; }   /* their yellow — the mark rides it in BLACK, since a white ghost on this field is invisible */
 .ai-x         { background: #000; }      /* their black — the mark is a white glyph and needs the field */
 .ai-tiktok    { background: #000; }      /* their black — the mark is two offset inks (cyan/magenta) and only reads on this field */
+.ai-threads   { background: #000; }      /* their black — the mark is white on it */
 .ai-strava    { background: #fc4c02; font-size: 18px; }
 /* Garmin's tile is the Connect app icon itself — full-bleed square artwork
    carrying its own graphite field, the same treatment PostHog and Stripe get

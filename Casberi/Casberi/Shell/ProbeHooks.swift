@@ -38,6 +38,8 @@ enum ProbeHooks {
         "-igLiveSession",
         // A TikTok web session's whole cookie header (prd §731).
         "-tiktokLiveSession",
+        // A Threads web session's whole cookie header (prd §1131).
+        "-threadsLiveSession",
         // A Rocket Money bearer — a live session over linked bank accounts.
         "-rocketSession",
         // An Acorns bearer — a live BROKERAGE session. The most sensitive
@@ -856,6 +858,29 @@ enum ProbeHooks {
         // a comment, a follow.
         Hook(key: "tiktokLiveProbe") { _, _ in
             Task { @MainActor in await TikTokLive.diagnose() }
+        },
+        // `-threadsLiveSession "<cookie header>"` — store a threads.com session
+        // lifted from a signed-in browser, exactly as the in-app sign-in would
+        // (prd §1131). Refused unless it holds `sessionid` and `ds_user_id`.
+        // On `secretArgKeys`.
+        Hook(key: "threadsLiveSession") { spec, _ in
+            let jar = spec.split(separator: ";").compactMap { part -> (name: String, value: String)? in
+                let kv = part.split(separator: "=", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+                return kv.count == 2 ? (name: kv[0], value: kv[1]) : nil
+            }
+            guard let header = ThreadsLiveFeed.cookieHeader(jar) else {
+                NSLog("[Casberi] threadsLive| -threadsLiveSession wants a cookie header holding sessionid and ds_user_id")
+                return
+            }
+            ThreadsLiveAuth.store(cookieHeader: header)
+            NSLog("[Casberi] threadsLive| session stored (%d cookies)", jar.count)
+        },
+        // `-threadsLiveProbe YES` — the Threads live read, link by link (prd
+        // §1131): cookie names / page status, token and viewer / query status
+        // and outcome / rows parsed / first three / one raw row. The measure
+        // tool for the notice shapes no account here has shown yet.
+        Hook(key: "threadsLiveProbe") { _, _ in
+            Task { @MainActor in await ThreadsLive.diagnose() }
         },
         // `-xPersonProbe <handle>` — your years with one person (2026-08-18,
         // prd §396), line by line: one `xPerson|` per year, then the card's

@@ -22,7 +22,7 @@ enum SocialSheetSource {
     /// `Network` seat fails the build rather than silently losing its anatomy.
     static let sources: Set<String> = [
         "Bluesky", "X", "Instagram", "TikTok", "Snapchat",
-        "Telegram",
+        "Telegram", "Threads",
     ]
 
     static func isSocial(_ source: String) -> Bool { sources.contains(source) }
