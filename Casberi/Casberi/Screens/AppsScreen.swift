@@ -820,7 +820,7 @@ struct AppsScreen: View {
             if let picked = scope.name, picked != cat.name { return nil }
             let apps = ranked
                 .filter { category(of: $0.offer) == cat.name }
-                .sorted { $0.offer.name.localizedStandardCompare($1.offer.name) == .orderedAscending }
+                .sorted { Self.azBefore($0.offer.name, $1.offer.name) }
             return apps.isEmpty ? nil : (cat.name, apps)
         }
     }
@@ -859,7 +859,16 @@ struct AppsScreen: View {
     /// category's own headed section (`categorySection`) — the browse-by-kind
     /// question ("what's in Wallet") is answered THERE now, not under All.
     private var allAppsSorted: [Ranked] {
-        ranked.sorted { $0.offer.name.localizedStandardCompare($1.offer.name) == .orderedAscending }
+        ranked.sorted { Self.azBefore($0.offer.name, $1.offer.name) }
+    }
+
+    /// A–Z, with a name that starts with a digit AFTER Z, as Contacts files
+    /// it under "#" (user, 2026-10-05: "0xBow Privacy Pools" led the list
+    /// only because a digit sorts before every letter).
+    nonisolated static func azBefore(_ a: String, _ b: String) -> Bool {
+        let aDigit = a.first?.isNumber == true, bDigit = b.first?.isNumber == true
+        if aDigit != bDigit { return bDigit }
+        return a.localizedStandardCompare(b) == .orderedAscending
     }
 
     /// The three a first run leads with (user, 2026-09-20): the one-tap grant

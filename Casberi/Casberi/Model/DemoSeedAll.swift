@@ -5325,24 +5325,22 @@ enum DemoSeedAll {
         ("Apple Wallet", "Synced 6m ago", "Reads Apple Card, Cash and Savings."),
         ("Privacy", "Synced 2h ago", "Reads your virtual-card purchases."),
         ("Bitrefill", "Synced 4h ago", "Reads your orders and refills."),
-        // Wise (prd §778, 2026-09-16). The proof line states the BALANCES,
-        // which is what `WiseWatch.registerBridge` really composes from
-        // `WiseShape.balanceLine` — not a "Synced Nm ago", which this seat
-        // never says.
-        ("Wise", "£1,240 · €310", "Reads your balances and transfers."),
+        // Wise (prd §778, 2026-09-16). The proof line counts the balances,
+        // which is what `WiseWatch.registerBridge` really composes — never
+        // their money, which is the Wallet's alone (prd §1111).
+        ("Wise", "2 balances", "Reads your balances and transfers."),
         // Splits (prd §820): what `SplitsWatch.proof` composes — never a total.
         ("Splits", "Northwind Labs · 2 accounts", "Reads your team's accounts and payments."),
         // Lightning (prd §1098): what `LightningWatch` composes.
         ("Lightning", "Connected", "Reads your Lightning balance and payments."),
-        // Privy (prd §803g) — the room states what it holds and how many apps
-        // made a wallet, which is what its own page says.
-        ("Privy", "$412 · 6 apps", "Reads which apps made you a wallet."),
+        // Privy (prd §803g) — how many apps made a wallet and how many are
+        // funded, what `PrivyScreen.signedInLine` composes.
+        ("Privy", "6 apps · 2 funded", "Reads which apps made you a wallet."),
         // The three finance seats of §780b/§780c. Each proof line says what
-        // that seat really composes: Acorns and Rocket Money state a reading
-        // (their pages never say "Synced Nm ago" while a session is live),
-        // NerdWallet counts what landed.
-        ("Acorns", "$4,812 · 3 accounts", "Reads your accounts and balances."),
-        ("Rocket Money", "12 subscriptions · $184/mo", "Reads your subscriptions and recurring bills."),
+        // that seat really composes: Acorns and Rocket Money count what the
+        // last read landed, never money (prd §1111), NerdWallet its sync.
+        ("Acorns", "3 new", "Reads your accounts and balances."),
+        ("Rocket Money", "12 new", "Reads your subscriptions and recurring bills."),
         ("NerdWallet", "Synced 20m ago", "Reads NerdWallet's public feed."),
         ("Stripe", "Synced 10m ago", "Reads what your money did."),
         // Furnished 2026-08-31 (prd §484's check G). All three shipped on

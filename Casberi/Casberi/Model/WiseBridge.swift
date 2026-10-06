@@ -661,7 +661,11 @@ enum WiseWatch {
             return
         }
         let standing = WiseState.standing
-        let proof = WiseShape.balanceLine(standing)
+        // No money in the line: it is drawn in Apps, and money is the
+        // Wallet's alone (prd §1111). How many currencies it holds proves the
+        // read as well.
+        let held = standing.balances.count
+        let proof = (held > 0 ? String(localized: "\(held) balances") : nil)
             ?? standing.profileName
             ?? String(localized: "Connected")
         store.registerConnected(
