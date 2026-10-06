@@ -732,28 +732,45 @@ struct MainSurface: View {
     private func pushedRoom(_ node: HomeRoute.Node) -> some View {
         switch node {
         case .apps:
-            // NO ZOOM SOURCE since prd §798: the transition grew out of the
-            // catalogue door's glyph ("appsDoor"), and that door is deleted.
-            // The face opens this screen now, and it is a fixed seat that
-            // stays put on top of what it opens — a zoom out of a mark that
-            // does not move would be a flourish about nothing.
-            //
-            // **Two columns wherever the shell has a pane (prd §876).** The
-            // list keeps the feed's column and what a row opens is drawn
-            // beside it (`HomeRoute.accountsPane`) — the same split the feed
-            // makes for a thing, at the same widths.
-            if showsPane {
-                HStack(spacing: 0) {
-                    AppsScreen()
-                        .frame(maxWidth: .infinity)
-                    accountsPane
-                        .frame(width: PadLayout.paneWidth(for: surfaceWidth))
-                }
-            } else {
-                AppsScreen()
-            }
+            // A door, never pushed since prd §1129 (`HomeRoute.present`).
+            appsPlace
         default:
             leafRoom(node)
+        }
+    }
+
+    /// **APPS, ADDRESSES AND SETTINGS ARE PLACES IN YOU (prd §1129).** They
+    /// stand where a room stands, under the You title row each draws
+    /// (`YouHead`), so a pick from the pill or the tray cuts to them like
+    /// Notes: no push, no back door. The demo's pill reserves its band, as a
+    /// pushed screen's did, because these have no lead well to absorb it.
+    @ViewBuilder
+    private func youPlace(_ place: HomeScope.Place) -> some View {
+        Group {
+            switch place {
+            case .apps: appsPlace
+            case .addresses: AddressesScreen()
+            case .settings: SettingsScreen()
+            }
+        }
+        .dsDemoMarkClearance()
+    }
+
+    /// Apps, and its pane wherever the shell has one. **Two columns (prd
+    /// §876):** the list keeps the feed's column and what a row opens is
+    /// drawn beside it (`HomeRoute.accountsPane`) — the same split the feed
+    /// makes for a thing, at the same widths.
+    @ViewBuilder
+    private var appsPlace: some View {
+        if showsPane {
+            HStack(spacing: 0) {
+                AppsScreen()
+                    .frame(maxWidth: .infinity)
+                accountsPane
+                    .frame(width: PadLayout.paneWidth(for: surfaceWidth))
+            }
+        } else {
+            AppsScreen()
         }
     }
 
@@ -2068,6 +2085,19 @@ struct MainSurface: View {
         // A room asking to move to another room — the Markets switcher. See
         // `ShellChrome.sourceRequest` for why it takes this hop instead of
         // writing the filter itself.
+        // A You place asked for through the route (prd §1129): Apps,
+        // Addresses or Settings land as a room does, cut, never pushed — and
+        // "All" leaves one, for the face's second press.
+        .onChange(of: route.placeRequest, initial: true) { _, request in
+            guard let request else { return }
+            route.placeRequest = nil
+            go(to: request, landNow: true)
+        }
+        // The route keeps the place on screen, for the face's toggle and the
+        // Apps pane, which only this surface can tell it.
+        .onChange(of: filter.source, initial: true) { _, source in
+            route.shownPlace = HomeScope.Place(source: source)
+        }
         .onChange(of: chrome.sourceRequest) { _, request in
             guard let request else { return }
             chrome.sourceRequest = nil
@@ -2675,16 +2705,20 @@ struct MainSurface: View {
                 // the drag — the neighbour is not pre-built, for the §258
                 // reason recorded below.
                 PagerDrag {
-                    FeedScreen(source: shownRoom,
-                               hostRoom: shownRoom == filter.source ? nil : filter.source,
-                               isActive: true, nearActive: true,
-                               // Only the room the swipe is going TO — see
-                               // `swipeBudgetSource`.
-                               rowBudget: swipeBudgetSource == filter.source ? swipeRowBudget : nil)
-                        // See `FeedScreen: Equatable` — this is what stops a
-                        // MainSurface render from rebuilding the whole feed
-                        // (measured 15 body builds → 2).
-                        .equatable()
+                    if let place = HomeScope.Place(source: shownRoom) {
+                        youPlace(place)
+                    } else {
+                        FeedScreen(source: shownRoom,
+                                   hostRoom: shownRoom == filter.source ? nil : filter.source,
+                                   isActive: true, nearActive: true,
+                                   // Only the room the swipe is going TO — see
+                                   // `swipeBudgetSource`.
+                                   rowBudget: swipeBudgetSource == filter.source ? swipeRowBudget : nil)
+                            // See `FeedScreen: Equatable` — this is what stops a
+                            // MainSurface render from rebuilding the whole feed
+                            // (measured 15 body builds → 2).
+                            .equatable()
+                    }
                 }
                     // A pick that changes the screen a merged room shows
                     // remounts it, as a room change does (prd §1050k).

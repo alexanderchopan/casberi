@@ -41,7 +41,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Every `Button` wears `RowPress` (a row or a word) or `PressSpring` (a disc, chip, face, tile or slab), never `.plain`. Exceptions are ratcheted in the audit (§965).
 - Becoming the pick is a crossfade on `DS.Motion.standard`, built into the template (§966).
 - A status word takes the ink (`attentionInk`/`confirmInk`/`destructiveInk`). A glyph, dot or fill keeps the hue (§1004).
-- The brand is pink; orange was declined (§899). The day header and the room's title pill are the two lines of type in `DS.brandInk` (§740, §742, §1128), the day header at `heading20` (§1006).
+- The brand is pink; orange was declined (§899). The day header and the category's name are the two lines of type in `DS.brandInk` (§740, §742, §1129), the day header at `heading20` (§1006).
 - Every pour is ink (`DS.pourInk`); hue never says where something came from (§524).
 - A mark packs, a word tiles: source maps are circle packs (§917). Wallet holdings are §939's treemap (Wallet section below).
 - A deadline is a bar with ticks, never a thumb (§1006).
@@ -51,8 +51,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The tray is one grid of five columns. Every button is 46pt. Headers are a bare glyph over a `heading17` word. A Recent line holds the five rooms you last landed in. No badges, no collapsing (§1013).
 - The tray is solid black (`DS.surfaceSheet`), never glass. You doors not standing fill with `DS.surfaceRaised`. The first column sits on the face's axis (§1014).
 - The tray's search narrows the grid in place. The search and the You row stay pinned above the scroll (§1015). A mark has no hold menu (§1033).
-- You doors, in this order: Home, Notes, Markets, Apps, Addresses, Settings (§1012, §1111, §1123). While the tray is up, the face shows the octopus (§1009). Home's title row carries the same six as a glass pill that says You (§1127).
-- Notes and Markets are places in Home, not in the walk: the swipe is Home, then the categories. Picked, the title stays Home and the pill names them; a swipe from either walks from Home's place (§1127).
+- You doors, in this order: Home, Notes, Markets, Apps, Addresses, Settings (§1012, §1111, §1123). While the tray is up, the face shows the octopus (§1009). You's title row carries the same six as a glass pill beside your name, else You; the pill names the place (§1127, §1129).
+- Notes, Markets, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title stays and the pill names the place; a swipe from any walks from Home's place (§1127, §1129).
 - A category shows in the tray only while it holds a connected seat (§977).
 - No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). No room draws an account door; an app's settings open from its row in Apps (§1050f).
 - On a pushed screen the dock's seat is the back door. The system back button is hidden at the resolver, and the edge swipe goes through `DSSwipeBack` (§767). Content comes to rest clear of the seat via `.dsSeatClearance()` (§829).
@@ -156,7 +156,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 
 ### 13. Notes and voice
 - Notes is a place in Home, reached through two always-drawn doors, the tray's and Home's You pill (§1127). Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
-- Tiles: All · Folders · Voice · New · Search (§1127 over §1099, §995, §980). Voice lists the voice notes you spoke; the title row is Home's You pill (§1127). A thing sits in at most one folder. A folder opens in place (§980).
+- Tiles: All · Folders · Voice · New · Search (§1127 over §1099, §995, §980). Voice lists the voice notes you spoke; the title row is You's (§1127, §1129). A thing sits in at most one folder. A folder opens in place (§980).
 - Pinned leads All, and the rest stand under "Notes" (§985). The long press holds five actions: Pin, Move, Lock, Share, Delete (§983).
 - A note of yours is ONE page: a tap opens it read, its items tick, a tap on the words types; a voice note's page is its player over its words (§1099, superseding §983's three keys). Writing is title over words, four tools on a glass capsule over the keyboard (§983); the words are one editor that reads and writes, its list keys act at the cursor, a ticked item sinks, lines indent and move, `[[` links, a pasted address takes its page's title, and the page saves as you type and dates an edit (§1100). The Aa key formats without markdown: heading, bold, italic, strikethrough, lists and quote, written as markdown and drawn with the marks hidden (§1101). A dash makes a bullet (§1099). A list in the box ticks in place (§1099).
 - Deleting asks for confirmation, then archives on this device for 30 days in Recently deleted (§985).
@@ -221,7 +221,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1262 of 1323 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1263 of 1324 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1271,7 +1271,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §930 — The dock is a tray behind the face: one button, every room, and the room names itself (amended by §932, §937, §1128)
 - §931 — The Wallet review, first round: the marks the read already named, the ribbons' one ink and the faces' names, and one…
 - §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (part superseded by §1014, §1058)
-- §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage (amended by §1050g)
+- §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage (amended by §1050g, §1129)
 - §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused…
 - §935 — The room's faces and venues sit BESIDE the face, not under it (amended by §1044)
 - §936 — The wallet family's tiles speak one grammar: one number over one caption, bars for "how many of each", one accent and… (part superseded by §944, §952)
@@ -1414,7 +1414,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1063 — The Wallet category wears the dollar sign
 - §1064 — In the demo, no pick opens an empty page
 - §1065 — Every app in the demo has something behind it, and an app picked in a merged room keeps its page
-- §1066 — The account picker is a glass pill in the title row (amended by §1127, §1128)
+- §1066 — The account picker is a glass pill in the title row (amended by §1127, §1128, §1129)
 - §1067 — The room sweep
 - §1068 — Social is one room
 - §1069 — A Safe leads with its balance
@@ -1483,8 +1483,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1124 — Privy's apps are a group in Holdings
 - §1125 — The last room's swipe left opens the tray
 - §1126 — Reading's Subscriptions count no posts
-- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128)
-- §1128 — The pill is the room's title
+- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128, §1129)
+- §1128 — The pill is the room's title (amended by §1129)
+- §1129 — The category's name comes back, in pink, and You's doors are places
 
 ## Dead rulings → what replaced them (generated)
 

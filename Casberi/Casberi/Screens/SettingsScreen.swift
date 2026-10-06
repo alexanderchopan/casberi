@@ -16,12 +16,15 @@ struct SettingsScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 // Casberi's own settings, and only them (prd §1111): the
                 // tray's Settings door opens this page again, and the apps
-                // are their own door, Apps.
-                DSScreenHead(title: Text("Settings"))
+                // are their own door, Apps. A place in You (prd §1129).
+                YouHead(place: .settings)
                 SettingsRows()
             }
             .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s4)
+            // The You row stands where a feed's title stands (prd §1129):
+            // the feed's `s2` above it, so a switch moves nothing.
+            .padding(.top, DS.Space.s2)
+            .padding(.bottom, DS.Space.s4)
         }
         .scrollIndicators(.hidden)
         .dsAdaptiveContentWidth(.reading)
@@ -34,7 +37,7 @@ struct SettingsScreen: View {
     }
 }
 
-/// Addresses, its own pushed screen (prd §933): a directory of the parties
+/// Addresses, its own screen (prd §933; a place in You, not a push, since §1129): a directory of the parties
 /// behind the accounts, the way Contacts is its own app. It was Accounts'
 /// fourth section since §916's amendment, for §796's reason, and leaves for
 /// §933's. The search field is the section's own filter (§916: it filters the
@@ -50,7 +53,8 @@ struct AddressesScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                DSScreenHead(title: Text("Addresses"))
+                // A place in You (prd §1129): the category's row, not a name.
+                YouHead(place: .addresses)
                 DSSlabField(placeholder: String(localized: "Search"),
                             text: $query, actionLabel: "",
                             focus: $searchFocused,
@@ -59,7 +63,10 @@ struct AddressesScreen: View {
                 AddressesSection(query: query, scope: $scope) { scopes = $0 }
             }
             .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s4)
+            // The You row stands where a feed's title stands (prd §1129):
+            // the feed's `s2` above it, so a switch moves nothing.
+            .padding(.top, DS.Space.s2)
+            .padding(.bottom, DS.Space.s4)
         }
         .dsScopeDock(sections: query.isEmpty ? scopes : [], active: scope) { picked in
             withAnimation(DS.Motion.standard) { scope = picked }

@@ -9,8 +9,8 @@ import SwiftUI
 // column, and scrolls with the feed. They pick a PERSON whose own face, and
 // the ring saying they posted since you looked, is the news: a row of faces
 // (`FaceScopeRail`, standing alone). iPad and Mac keep the shell's rail. A
-// merged room picks its app from the pill that is its title (`roomTitlePill`,
-// prd §1066, §1127). (GitHub's and Pinterest's
+// merged room picks its app from the pill beside its title (`roomPickPill`,
+// prd §1066, §1127, §1129). (GitHub's and Pinterest's
 // pull-downs left with their rooms, prd §1060.)
 extension FeedScreen {
     /// The phone. Everywhere the shell's rail stands, the band keeps the faces.
@@ -31,14 +31,15 @@ extension FeedScreen {
         chrome.personScope != nil && (SocialRoom.hasRoster(source) || socialPeopleRoom)
     }
 
-    /// **THE ROOM'S TITLE IS ITS PILL (prd §1128, amends §1066).** A merged
+    /// **THE PILL BESIDE THE ROOM'S NAME (prd §1066, §1129).** A merged
     /// room's apps, or the wallet family's accounts from the rail its chrome
     /// publishes (`ShellChrome.accountRail`) — the Testnets room hosts a
     /// network's chrome, so its rail is a network's source, not the room's.
-    /// Home, Notes and Markets wear Home's You pill (prd §1127). Where there
-    /// is nothing to pick between, the pill draws the room's name bare.
+    /// You's feeds (Home, Notes, Markets) wear the You pill (prd §1127).
+    /// Nothing where there is nothing to pick between: the title already
+    /// names the room, and a pill that opens nothing is §83's dead control.
     @ViewBuilder
-    var roomTitlePill: some View {
+    var roomPickPill: some View {
         if HomeScope.contains(source) {
             youPill
         } else if mergedMenuDraws {
@@ -49,10 +50,8 @@ extension FeedScreen {
             // A rail with an act draws even over one account (prd §1107): the
             // act is how the second one gets here.
             let showing = rail.slots.first { $0.isShowing(rail.scope) } ?? first
-            DSScopeMenu(slots: rail.slots, showing: showing, title: roomName,
+            DSScopeMenu(slots: rail.slots, showing: showing,
                         action: rail.action, onPick: rail.onPick)
-        } else {
-            DSTitlePill(word: roomName)
         }
     }
 

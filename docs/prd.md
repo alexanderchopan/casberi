@@ -64533,3 +64533,15 @@ Same terms as §1062: only at the root (no pushed screen), only while the tray i
 Pushed screens keep their `DSScreenHead`.
 
 **Not seen.** No Xcode in this session (a Linux container): unbuilt, and no simulator pass.
+
+## §1129 — The category's name comes back, in pink, and You's doors are places (user, 2026-10-06: "when i switch to settings or apps it swipes the screen and has a back button but that's not how it should work anymore … the screen changes, but it doesn't move"; "home should say You, and 'home' is what is selected"; "it's weird to not see the category name"; "i meant for ONLY the category to be in pink"; "the user does set their name tho … it can be 'you' if they don't set a name"; amends §1128, §1127, §1066 and §933)
+
+**Why.** §1128 took the room's title away and made the pill the title. Without the category's name, the screen did not say where you were, and Home's pill read "Home" in a category the tray calls You. Apps, Addresses and Settings, You's other three doors, still pushed: a slide and a back door, where Notes and Markets beside them cut in place.
+
+1. **Every room draws its category's name again** (`DSRoomTitleRow`, `heading34`), and it is the one pink in the row (`DS.brandInk`, the day divider's ink, both saying where you are). A pushed screen's name stays primary (`DSScreenHead.ink`).
+2. **The pill sits beside it, plain glass, and names what is showing**: "All" while everything shows, the pick's name once one is picked (`DSScopeMenu.allLabel`). It never names a kind, so §1128's "Accounts" tension stays solved. A room with nothing to pick draws no pill; `DSTitlePill` is deleted.
+3. **You's title is your name, else You** (`HomeScope.title`, read off `ProfileStore.name`, which never leaves the device). Apple's own Settings card names you the same way. A long name shrinks to stay on the pill's line, and the You pill reserves its widest pick's width so the name keeps one size whichever place is showing.
+4. **Apps, Addresses and Settings are places in You** (`HomeScope.Place`, sources `you:apps`, `you:addresses`, `you:settings`). `HomeRoute.present` and `toggle` land them as a room lands, cut, never pushed: no slide, no back door, the dock's face stays the tray's door. Each screen draws the You row where its name stood (`YouHead`), at the feed's top inset, so a switch moves nothing in the row. The pill, the tray's You row, `casberi://apps`, `casberi://settings`, ⌘, and every other door take the same path. A swipe from a place walks as Home does.
+5. **Going deeper still pushes.** An app's account page, a Settings detail and the reach screen keep their back door: that is a step in, not a switch. Apps keeps its pane where the shell has one (§876), keyed on the place on screen (`HomeRoute.shownPlace`) instead of the stack.
+
+**Seen** on the iPhone 17 Pro simulator: You · Home, You · Settings and You · Apps with the row at one height, the name at one size, and no back door; Day and Wallet with their names and an "All" pill.

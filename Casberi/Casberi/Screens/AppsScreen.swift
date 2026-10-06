@@ -135,11 +135,11 @@ struct AppsScreen: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.s6) {
-                        // The screen's name, in the content (prd §767).
                         // APPS (prd §1111): everything you can connect, what
                         // you have marked; Casberi's settings left for their
-                        // own door.
-                        DSScreenHead(title: Text("Apps"))
+                        // own door. A place in You since prd §1129, so the
+                        // category's row stands where the screen's name did.
+                        YouHead(place: .apps)
                             .id(Self.topAnchor)
                         // The search field leads the page (user ruling,
                         // 2026-07-23: "make sure the search bar is at the
@@ -156,7 +156,10 @@ struct AppsScreen: View {
                         sections(proxy)
                     }
                     .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s4)
+                    // The You row stands where a feed's title stands (prd §1129):
+                    // the feed's `s2` above it, so a switch moves nothing.
+                    .padding(.top, DS.Space.s2)
+                    .padding(.bottom, DS.Space.s4)
                 }
                 // The category tiles within the thumb's reach on the phone
                 // (prd §960): a capsule beside the seat. Down while a search

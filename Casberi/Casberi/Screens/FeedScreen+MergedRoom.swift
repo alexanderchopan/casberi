@@ -19,7 +19,7 @@ extension FeedScreen {
 
     var mergedMenuDraws: Bool { !mergedMenuSeats.isEmpty }
 
-    /// The menu, the glass pill that is the room's title (prd §1066, §1128),
+    /// The menu, the glass pill beside the room's title (prd §1066, §1129),
     /// as the Wallet's is.
     @ViewBuilder
     var mergedAccountsPill: some View {
@@ -33,7 +33,7 @@ extension FeedScreen {
         let picked = selectedSeat.map(RoomAccounts.scopeID)
         let showing = slots.first { !$0.id.isEmpty && $0.id == picked } ?? all
         let room = source
-        DSScopeMenu(slots: slots, showing: showing, title: roomName,
+        DSScopeMenu(slots: slots, showing: showing,
                     spoken: { String(localized: "Showing: \($0)") },
                     onPick: { id in
                         withAnimation(DS.Motion.standard) {

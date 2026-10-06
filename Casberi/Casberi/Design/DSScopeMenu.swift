@@ -5,7 +5,7 @@ import SwiftUI
 /// slot in a pull-down with a check on the current one.
 ///
 /// The wallet family's and the merged rooms' account picker, drawn by
-/// `FeedScreen.roomTitlePill` in the room's title's place (§1128). The social rooms
+/// `FeedScreen.roomPickPill` beside the room's name (§1129). The social rooms
 /// keep a row of faces instead (§959): there the face and its ring ARE the
 /// news, and a menu would hide both behind a tap.
 ///
@@ -16,10 +16,11 @@ struct DSScopeMenu: View {
     /// The slot showing — the caller resolves it, because the wallet family
     /// and the source rooms speak different scopes.
     let showing: DSAccountSlot
-    /// The pill's word while everything shows: the room's name, because the
-    /// pill IS the room's title (prd §1128). The rows say what they list
-    /// ("All apps", "All accounts"), so the control never names a kind.
-    let title: String
+    /// The pill's word while everything shows: "All" (prd §1129), or Home
+    /// in You, whose first door is a place and not everything. The rows say
+    /// what they list ("All apps", "All accounts"); the pill never names a
+    /// kind, so it cannot name the wrong one (§1128's tension).
+    var allLabel: String = String(localized: "All")
     /// What VoiceOver says: "Account: …" in the wallet family, "Showing: …"
     /// where the pick is a source rather than one of yours.
     var spoken: (String) -> String = { String(localized: "Account: \($0)") }
@@ -198,13 +199,27 @@ struct DSScopeMenu: View {
     static let listMaxHeight: CGFloat = 480
     static let faceSize: CGFloat = DS.Face.row
 
-    /// **THE PILL IS THE ROOM'S TITLE (prd §1128, amends §1066; user: "we
-    /// have tension where we say accounts and apps … replace the 'accounts'
-    /// in the pill w the name of the room … we could make it pink"; "we
-    /// would remove the title"; "the pill would be the title").** The room's
-    /// name while everything shows, the pick's name once one is picked.
+    /// **A GLASS PILL BESIDE THE ROOM'S NAME (prd §1066, §1129; §1128 made
+    /// it the title, and the user: "it's weird to not see the category
+    /// name").** The title names the category, in pink; the pill, plain,
+    /// names what is showing in it.
     private var pillLabel: some View {
-        DSTitlePill(word: showing.id.isEmpty ? title : showing.name, chooses: true)
+        HStack(spacing: DS.Space.s1) {
+            Text(showing.id.isEmpty ? allLabel : showing.name)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .dsGlyph(.caption)
+                .foregroundStyle(DS.textSecondary)
+        }
+        .padding(.horizontal, DS.Space.s3)
+        .frame(height: Self.pillHeight)
+        .dsGlass(cornerRadius: Self.pillHeight / 2)
+        // The hand gets the full 44pt; the row does not (user: "the glass
+        // pill should not touch the card"). A 44pt frame made the title row
+        // taller than its title, and the drawn pill sat on the box below.
+        .contentShape(Rectangle().inset(by: -(DS.Hit.min - Self.pillHeight) / 2))
     }
 
     static let pillHeight: CGFloat = 32
@@ -215,39 +230,6 @@ struct DSScopeMenu: View {
             seen.append(group)
         }
         return seen
-    }
-}
-
-/// **THE ROOM'S TITLE, A GLASS PILL (prd §1128).** `DSScopeMenu` draws it
-/// with a chevron where the room picks between apps, accounts or kinds; a
-/// room with nothing to pick draws it bare, no chevron and no press, so a
-/// pill that opens nothing never looks like it would (§83).
-struct DSTitlePill: View {
-    let word: String
-    var chooses: Bool = false
-
-    var body: some View {
-        HStack(spacing: DS.Space.s1) {
-            Text(word)
-                .dsText(.heading17)
-                // The room's name speaks in the app's own hue, as the day
-                // divider does (§740): both say where you are.
-                .foregroundStyle(DS.brandInk)
-                .lineLimit(1)
-            if chooses {
-                Image(systemName: "chevron.down")
-                    .dsGlyph(.caption)
-                    .foregroundStyle(DS.textSecondary)
-            }
-        }
-        .padding(.horizontal, DS.Space.s3)
-        .frame(height: DSScopeMenu.pillHeight)
-        .dsGlass(cornerRadius: DSScopeMenu.pillHeight / 2)
-        // The hand gets the full 44pt; the row does not (user: "the glass
-        // pill should not touch the card"). A 44pt frame made the title row
-        // taller than its title, and the drawn pill sat on the box below.
-        .contentShape(Rectangle().inset(by: -(DS.Hit.min - DSScopeMenu.pillHeight) / 2))
-        .accessibilityAddTraits(.isHeader)
     }
 }
 

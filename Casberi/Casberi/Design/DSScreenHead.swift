@@ -17,12 +17,37 @@ import SwiftUI
 /// screen does.
 struct DSScreenHead: View {
     let title: Text
+    /// A category's name is pink (prd §1129, user: "i meant for ONLY the
+    /// category to be in pink"); a pushed screen's stays primary.
+    var ink: Color = DS.textPrimary
 
     var body: some View {
         title
             .dsText(.heading34)
-            .foregroundStyle(DS.textPrimary)
+            .foregroundStyle(ink)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// **A CATEGORY'S TITLE ROW (prd §1129).** Its name in pink at the leading
+/// edge and the pill that picks what it shows at the trailing edge, on one
+/// axis. Every room draws it first in its list, and You's three screens
+/// (Apps, Addresses, Settings) draw it in place of their own heads, so the
+/// row never moves when the pick does.
+struct DSRoomTitleRow<Pill: View>: View {
+    let title: String
+    @ViewBuilder let pill: () -> Pill
+
+    var body: some View {
+        HStack(alignment: .center, spacing: DS.Space.s3) {
+            DSScreenHead(title: Text(verbatim: title), ink: DS.brandInk)
+                // A name you gave the app can run 24 characters; it shrinks
+                // to stay on the pill's line rather than wrap under it.
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Spacer(minLength: 0)
+            pill()
+        }
     }
 }

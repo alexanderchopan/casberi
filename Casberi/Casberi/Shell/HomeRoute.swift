@@ -35,6 +35,10 @@ final class HomeRoute {
         /// APPS (prd §1111): one list of every app, connected or not, with
         /// the Added filter. §1050g folded Settings into it for four days;
         /// §1111 gave Settings its own door back.
+        ///
+        /// `.apps`, `.casberi` and `.addresses` are DOORS, never pushed since
+        /// prd §1129: `present` and `toggle` land them as places in You
+        /// (`HomeScope.Place`), so the screen changes and nothing slides.
         case apps
         /// SETTINGS: Casberi's own (theme, iCloud sync, the Data tray, What
         /// this app reaches, Diagnostics), the tray's Settings door and
@@ -80,10 +84,37 @@ final class HomeRoute {
         /// rows raise their sheets, as they always have.
         case settingsPage(SettingsPage)
     }
-    var path: [Node] = [] {
-        // Leaving Accounts takes its pane with it, so the next visit opens
-        // on the list rather than on a page chosen last week.
-        didSet { if !path.contains(.apps) { accountsPane = [] } }
+    var path: [Node] = []
+
+    /// The You place on screen (prd §1129), written by `MainSurface` from the
+    /// source it shows. Leaving Apps takes its pane with it, so the next
+    /// visit opens on the list rather than on a page chosen last week.
+    var shownPlace: HomeScope.Place? {
+        didSet { if shownPlace != .apps { accountsPane = [] } }
+    }
+
+    /// A place asked for (or "All", Home, to leave one), handed to
+    /// `MainSurface`, which owns the source switch, as `ShellChrome.sourceRequest`
+    /// is. Read once and cleared.
+    var placeRequest: String?
+
+    /// The door that opens a place — the inverse of `place(_:)`.
+    static func door(for place: HomeScope.Place) -> Node {
+        switch place {
+        case .apps: .apps
+        case .addresses: .addresses
+        case .settings: .casberi
+        }
+    }
+
+    /// The place a door names, or nil for a screen that pushes.
+    static func place(_ door: Node) -> HomeScope.Place? {
+        switch door {
+        case .apps: .apps
+        case .addresses: .addresses
+        case .casberi: .settings
+        default: nil
+        }
     }
 
     /// **Accounts is two columns where the shell has a pane (prd §876).** The
@@ -99,7 +130,7 @@ final class HomeRoute {
     var accountsSplit = false
 
     /// True while pushes land in the Accounts pane rather than on `path`.
-    var paneHostsPushes: Bool { accountsSplit && path.last == .apps }
+    var paneHostsPushes: Bool { accountsSplit && path.isEmpty && shownPlace == .apps }
 
     /// The frame the person is actually looking at: the pane's top while it
     /// hosts pushes, else the stack's. `ConnectPushWatcher` asks this, so a
@@ -129,8 +160,16 @@ final class HomeRoute {
     /// replacing whatever was on the stack, not stacking a second door on
     /// top of one already there.
 
+    ///
+    /// A You place (Apps, Addresses, Settings) lands in place instead (prd
+    /// §1129): the stack empties and the shell cuts to it.
     @MainActor func present(_ door: Node) {
-        path = [door]
+        if let place = Self.place(door) {
+            path = []
+            placeRequest = place.source
+        } else {
+            path = [door]
+        }
     }
 
     /// The avatar's own door: press it once to land on `door`, press it again
@@ -148,7 +187,9 @@ final class HomeRoute {
     /// having replaced the path means the top frame is the only one this can
     /// match anyway.
     @MainActor func toggle(_ door: Node) {
-        if path.last == door {
+        if let place = Self.place(door), path.isEmpty, shownPlace == place {
+            placeRequest = "All"
+        } else if path.last == door {
             path.removeLast()
         } else {
             present(door)

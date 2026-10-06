@@ -1464,15 +1464,15 @@ struct FeedScreen: View {
     /// The room's title — the true top a scope change returns to.
     private static let roomTitleAnchor = "roomTitle"
 
-    /// What the room's head says (prd §930): the All room is Home — the word
-    /// the rooms tray's You row gives its door — Pinned is Pinned, and a
-    /// source room wears its catalog name, so an aliased seat ("Privacy
-    /// Pools") reads as the app you connected.
+    /// What the room's head says (prd §930): a source room wears its catalog
+    /// name, so an aliased seat ("Privacy Pools") reads as the app you
+    /// connected.
     ///
-    /// Notes and Markets are places in Home (prd §1127): the room's name is
-    /// Home, and the You pill that is its title names the pick (§1128).
+    /// Home, Notes and Markets are places in You (prd §1127, §1129): the
+    /// category's name is yours, else You (`HomeScope.title`), and the You
+    /// pill beside it names the place.
     var roomName: String {
-        if HomeScope.contains(source) { return String(localized: "Home") }
+        if HomeScope.contains(source) { return HomeScope.title }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
 
@@ -1500,15 +1500,13 @@ struct FeedScreen: View {
         // PERF 2026-08-21), which is what makes one binding enough.
         let rows = visible
         return List {
-            // THE ROOM NAMES ITSELF (prd §930), and since §1128 its name IS
-            // the pill that picks what it shows: one glass pill at the
-            // leading edge, in the list, so it scrolls with the rows and
-            // reserves nothing. NO ROOM DRAWS A SLIDERS DISC (prd §1050f,
-            // amending §1033): an app's settings open from its row in Apps.
-            HStack(spacing: 0) {
-                roomTitlePill
-                Spacer(minLength: 0)
-            }
+            // THE ROOM NAMES ITSELF (prd §930): its category's name in pink
+            // and the pill that picks what it shows beside it (§1129, which
+            // brought the name back from §1128's pill), in the list, so it
+            // scrolls with the rows and reserves nothing. NO ROOM DRAWS A
+            // SLIDERS DISC (prd §1050f, amending §1033): an app's settings
+            // open from its row in Apps.
+            DSRoomTitleRow(title: roomName) { roomPickPill }
                 // THE TOP OF THE ROOM IS ITS TITLE (user: "the wallet buttons
                 // still move"). A scope change scrolled to the head BELOW the
                 // title, so every tile tap slid the title off and the tiles up

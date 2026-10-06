@@ -281,10 +281,11 @@ struct RoomsTray: View {
     /// stand apart from the categories, larger, each with its word under it
     /// — five destinations nobody should have to recognise by glyph alone.
     private var youDoors: [Door] {
-        doors(home: filter.source == "All" && route.path.isEmpty,
-              notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty,
-              markets: HomeScope.isMarkets(filter.source) && route.path.isEmpty,
-              apps: route.path.first == .apps)
+        let place = route.path.isEmpty ? HomeScope.Place(source: filter.source) : nil
+        return doors(home: filter.source == "All" && route.path.isEmpty,
+                     notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty,
+                     markets: HomeScope.isMarkets(filter.source) && route.path.isEmpty,
+                     place: place)
     }
 
     /// The You row's doors, in order.
@@ -296,7 +297,7 @@ struct RoomsTray: View {
     }
 
     private func doors(home: Bool = false, notes: Bool = false, markets: Bool = false,
-                       apps: Bool = false) -> [Door] {
+                       place: HomeScope.Place? = nil) -> [Door] {
         [
             Door(word: String(localized: "Home"), glyph: home ? "house.fill" : "house",
                  lit: home) { pick("All") },
@@ -312,10 +313,13 @@ struct RoomsTray: View {
             // APPS AND SETTINGS ARE TWO DOORS AGAIN (prd §1111, reversing
             // §1050g): Apps is everything you can connect, what you have
             // marked; Settings is Casberi's own options and nothing else.
+            // Places in You since prd §1129: the door lands, nothing pushes.
             Door(word: String(localized: "Apps"), glyph: ScopeTileGlyph.apps,
-                 lit: apps) { screen(.apps) },
-            Door(word: String(localized: "Addresses"), glyph: "at") { screen(.addresses) },
-            Door(word: String(localized: "Settings"), glyph: "gearshape") { screen(.casberi) },
+                 lit: place == .apps) { screen(.apps) },
+            Door(word: String(localized: "Addresses"), glyph: "at",
+                 lit: place == .addresses) { screen(.addresses) },
+            Door(word: String(localized: "Settings"), glyph: "gearshape",
+                 lit: place == .settings) { screen(.casberi) },
         ]
     }
 
