@@ -2475,8 +2475,15 @@ struct MainSurface: View {
             // "there is nothing to swipe right onto"; user: "ok").** Home is
             // the one screen with nothing before it, and the tray grows out
             // of the bottom-left corner, so pulling right from Home pulls it
-            // out. Every other end of the walk still springs home.
-            if delta < 0, filter.source == "All", route.path.isEmpty, !chrome.roomsTray {
+            // out.
+            //
+            // **…and so does the last room's right edge (prd §1125, user:
+            // "if you get to the last swipe of rooms the last swipe left
+            // brings up the tray").** The walk's far end has nothing after
+            // it either, so a swipe left there opens the tray instead of
+            // springing home. Both ends of the walk now lead somewhere.
+            let atEnd = delta > 0 || filter.source == "All"
+            if atEnd, route.path.isEmpty, !chrome.roomsTray {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.folder) { chrome.roomsTray = true }
             }

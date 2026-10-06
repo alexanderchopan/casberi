@@ -64487,3 +64487,11 @@ The swap is every on-screen string (274 lines in 98 files): labels, toasts, foot
 4. **Unchanged.** Home still carries each app's row on the day it made you a wallet, and the Privy pick's box still draws the balance (§1069), or Privy's head with no money.
 
 **Checked:** `wallet-section-selftest.sh`'s Holdings order guard now names the Apps group between Positions and NFTs (run by hand on Linux: the script needs macOS `mktemp` and `swiftc`); the liveness, query-read, row-cost, ds-template, dead-closure, feed-row-skeleton, footnote, hide-balances, tile-glyph and wallet-total audits pass. **Not built or seen:** no Xcode in this session, so no iOS or Catalyst build and no simulator pass.
+
+## §1125 — The last room's swipe left opens the tray (user, 2026-10-06: "let's make it so that if you get to the last swipe of rooms the last swipe left brings up the tray"; amends §1062) — BUILT
+
+§1062 gave the walk's first end a door: a swipe right on Home opens the rooms tray. The far end still rubber-banded and sprang back — the last room in the dock's order (§663) had nothing after it, so a swipe left there answered the hand and did nothing. It now opens the tray once the swipe commits, the same as Home's left edge.
+
+Same terms as §1062: only at the root (no pushed screen), only while the tray is shut, and the rubber band during the drag is unchanged. The tray still grows out of the face's bottom-left corner; the swipe and the corner do not point the same way here, and that is accepted, because the end of the walk is the reason to open it, not the direction. A room outside the walk (a deep link, a seat not yet synced) is appended at its end (`neighbour`), so a swipe left there opens the tray too.
+
+**Not seen.** The app was not built in this session (a Linux container, no Xcode); the change is one condition in `MainSurface.step(_:)`.
