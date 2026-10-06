@@ -317,13 +317,19 @@ for net in ["Bluesky"] {
     check("\(net): a follower landed as a link is not one either",
           kind(Row(source: net, kind: "link", socialContext: "follow")) == .band)
 }
-// The point of the whole pass, stated as one assertion: a network is not a
-// special case, it is the same room.
-check("Farcaster's rows are byte-identical to Bluesky's, row for row",
-      [cast("Farcaster"), Row(source: "Farcaster", kind: "link"), cast("Farcaster", context: "follow")]
-        .map { kind($0) }
-      == [cast("Bluesky"), Row(source: "Bluesky", kind: "link"), cast("Bluesky", context: "follow")]
-        .map { kind($0) })
+// This was "Farcaster's rows are byte-identical to Bluesky's": a network is
+// not a special case, it is the same room. With Nostr and Farcaster gone
+// (prd §1109, §1110) Bluesky has no peer to be identical to, so the check
+// guards the other side of the same seam: a retired network's row — a synced
+// straggler before `SourceRename` sweeps it — is outside the room, drawing
+// neither the live network's anatomy nor any post at all.
+for gone in ["Nostr", "Farcaster"] {
+    check("\(gone)'s rows fall to the band, never Bluesky's anatomy (prd §1109, §1110)",
+          [cast(gone), Row(source: gone, kind: "link"), cast(gone, context: "follow")]
+            .allSatisfy { kind($0) == .band && kind($0, replies: true) == .band })
+    check("\(gone) draws no posts and folds no threads",
+          !SocialRoom.drawsPosts(gone) && !SocialRoom.foldsThreads(gone))
+}
 
 print("")
 print("X — an archive of somebody's own writing")
@@ -421,8 +427,10 @@ check("a Telegram channel picture stands alone",
                                  hasPreviewImage: true)))
 check("an X post still does",
       SocialRoom.standsAlone(Row(source: "X", kind: "note")))
-check("a Farcaster post does",
-      SocialRoom.standsAlone(cast("Farcaster")))
+check("a Bluesky post does",
+      SocialRoom.standsAlone(cast("Bluesky")))
+check("a retired network's cast does not (prd §1110)",
+      !SocialRoom.standsAlone(cast("Farcaster")))
 // A deliberate change: `.social` used to return true for EVERY row, so a
 // shared article and a follow notification each got a card of their own.
 check("a shared article no longer takes a card of its own",
@@ -598,6 +606,11 @@ mutate "an import room claims a roster" \
 mutate "Instagram claims it can fold threads" \
   '"Instagram": Facts(foldsThreads: false, hasRoster: false, leadsWithNewest: true)' \
   '"Instagram": Facts(foldsThreads: true,  hasRoster: false, leadsWithNewest: true)'
+# A retired network back in the table (prd §1110): its synced stragglers
+# would draw as a social room's rows again, ahead of the sweep that drops them.
+mutate "Farcaster re-enters the social table" \
+  '"Bluesky":   Facts(foldsThreads: true,  hasRoster: true),' \
+  '"Bluesky":   Facts(foldsThreads: true,  hasRoster: true), "Farcaster": Facts(foldsThreads: false, hasRoster: false),'
 # Snapchat's rows re-entering the post switch, which would put its memories and
 # saved chats through an anatomy built for casts.
 mutate "Snapchat is treated as a post room" \
