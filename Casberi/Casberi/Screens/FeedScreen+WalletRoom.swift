@@ -575,7 +575,11 @@ extension FeedScreen {
     /// scope there explains itself (§611).
     func walletInertSections(visible: [Thing], upcoming: [Thing]) -> Set<WalletSection> {
         var out: Set<WalletSection> = [.security]
-        if walletScopeIsEmpty(.holdings) { out.insert(.holdings) }
+        // Privy's apps are Holdings' too (§1124), with money or without.
+        if walletScopeIsEmpty(.holdings),
+           !visible.live.contains(where: { $0.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true }) {
+            out.insert(.holdings)
+        }
         if SubscriptionsReading.shared.items(in: walletSubscriptionSources).isEmpty {
             out.insert(.subscriptions)
         }
@@ -942,6 +946,40 @@ extension FeedScreen {
     /// (prd §449).
     var hasLendingCard: Bool {
         !walletLive.positions.isEmpty || !walletLive.morpho.isEmpty
+    }
+
+    /// **THE APPS THAT HOLD A WALLET FOR YOU, IN HOLDINGS (prd §1124, user:
+    /// "the app list should be in holdings").** Privy's room led with its apps
+    /// (§803e); the merge (§1048) put that head behind an app pick, and an app
+    /// pick with money draws the balance in its place (§1069), so the list
+    /// drew nowhere. It is Holdings' third group: the apps holding money by
+    /// value, then the ones used lately, newest use first. Read off the rows,
+    /// not `PrivyHomeStore`, so the hide and show-empty choices hold (`shows`)
+    /// and the demo, whose store is never filled, draws it too.
+    func walletAppRows(_ things: [Thing]) -> [FeedRow] {
+        let store = PrivyHomeStore.shared
+        let apps = things.filter { $0.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true }
+        return apps.map { thing -> (row: FeedRow, usd: Double, used: Date) in
+            let ref = thing.sourceRef ?? ""
+            return (FeedRow.single(thing), store.usd(ref) ?? 0,
+                    store.byRef[ref]?.lastActiveAt ?? thing.capturedAt)
+        }
+        .sorted { $0.usd == $1.usd ? $0.used > $1.used : $0.usd > $1.usd }
+        .map(\.row)
+    }
+
+    @ViewBuilder
+    func walletAppsSection(_ rows: [FeedRow], nextEventID: UUID?) -> some View {
+        if !rows.isEmpty {
+            Section {
+                DSGroupHeader(word: String(localized: "Apps"))
+                ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
+                    if case .single(let item) = row.kind, let thing = item.live {
+                        shapedListRow(thing, index: i, nextEventID: nextEventID)
+                    }
+                }
+            }
+        }
     }
 
     /// **POSITIONS, UNDER THE TOKENS IN HOLDINGS (prd §1107).** Positions was

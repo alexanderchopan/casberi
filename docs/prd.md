@@ -64476,3 +64476,14 @@ The swap is every on-screen string (274 lines in 98 files): labels, toasts, foot
 4. **Only the tray moves it.** The dock's order, the swipe between rooms and ⌘1–9 keep Markets as a category.
 
 **Seen** on a private iPhone 17 Pro simulator, light, demo: six pink doors with no word, the columns under them, Markets' door landing in Markets. **Not seen:** a 375pt phone, dark theme, a fresh install's door to the page, the Mac.
+
+## §1124 — Privy's apps are a group in Holdings (user, 2026-10-06: "the Privy room lost its list of apps in some of our recent designs. the app list should be in holdings"; amends §1107 item 3, restores §803e's list)
+
+**Why.** Privy's room led with its apps: the ones holding money by value, then the ones used lately (§803e). The merge (§1048) put that head behind the Wallet menu's Privy pick, and an app pick that holds money draws its balance in the box instead of its head (§1069), so on an account with money in any app wallet the list drew nowhere. Holdings is where the money those apps hold is already counted (§1048), so the apps stand there.
+
+1. **Holdings is Tokens · Positions · Apps · NFTs.** "Apps" is a `DSGroupHeader` over one `PrivyAppRow` per app (logo, when it was last used, what it holds), most money first, then latest use (`FeedScreen.walletAppRows`, `walletAppsSection`). A tap opens the app's row, as the head's did.
+2. **Read off the rows, not `PrivyHomeStore`.** Privy's display choices hold (a hidden app, an empty app nobody uses, `PrivyHomeStore.shows`), and the demo, whose store is never filled, draws its six apps.
+3. **Where it draws.** On All and on the Privy pick; an address pick or another app's pick has no Privy rows, so no group. On the Privy pick Holdings is no longer inert while an app is listed, with money or without.
+4. **Unchanged.** Home still carries each app's row on the day it made you a wallet, and the Privy pick's box still draws the balance (§1069), or Privy's head with no money.
+
+**Checked:** `wallet-section-selftest.sh`'s Holdings order guard now names the Apps group between Positions and NFTs (run by hand on Linux: the script needs macOS `mktemp` and `swiftc`); the liveness, query-read, row-cost, ds-template, dead-closure, feed-row-skeleton, footnote, hide-balances, tile-glyph and wallet-total audits pass. **Not built or seen:** no Xcode in this session, so no iOS or Catalyst build and no simulator pass.

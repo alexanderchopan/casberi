@@ -420,16 +420,19 @@ extension FeedScreen {
                 // the person builds the list up, then every plan.
                 walletSubscriptionsSections
             case .holdings:
+                let apps = walletAppRows(all)
                 if portfolio?.isEmpty ?? true, !hasLendingCard, walletLive.uniswap.isEmpty,
-                   walletLive.hyperliquid.positions.isEmpty {
+                   walletLive.hyperliquid.positions.isEmpty, apps.isEmpty {
                     walletSkeletonRowsSection
                 }
                 // **TOKENS, THEN POSITIONS (prd §1107, user: "tokens then
                 // positions").** Positions' tile folded in, the loan risk with
-                // it; NFTs still read under them (prd §1048).
+                // it; then the apps that hold a wallet for you (§1124); NFTs
+                // still read under them (prd §1048).
                 walletTokenListSection
                 walletStaleReadingsSection
                 walletPositionsSections
+                walletAppsSection(apps, nextEventID: nextEventID)
                 // An app the menu picked holds no collections (prd §1048b).
                 if !seatPicked {
                     if nftShelfEntry == nil {

@@ -463,12 +463,13 @@ guard FeedScreen.swift "!SubscriptionsSource.isBill(\$0, now: now)" \
 guard FeedScreen.swift ".union(visible.filter { SubscriptionsSource.isBill(\$0) }" \
   "Home's stream lists a repeating bill again — it belongs to Subscriptions (prd §1105)"
 
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings is not tokens, then Positions, then NFTs (prd §1048, §1107)"
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings is not tokens, then Positions, then Privy's apps, then NFTs (prd §1048, §1107, §1124)"
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r"case \.holdings:\n(.*?)case \.security:", src, re.S)
 body = m.group(1) if m else ""
-order = [body.find(k) for k in ("walletTokenListSection", "walletPositionsSections", "walletNFTListSection")]
+order = [body.find(k) for k in ("walletTokenListSection", "walletPositionsSections",
+                                "walletAppsSection(apps", "walletNFTListSection")]
 sys.exit(0 if all(i >= 0 for i in order) and order == sorted(order) else 1)
 PY
 # A long tail is ONE row (prd §1107): the list draws the fold's shown tokens,
