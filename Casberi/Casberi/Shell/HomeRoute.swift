@@ -84,7 +84,41 @@ final class HomeRoute {
         /// rows raise their sheets, as they always have.
         case settingsPage(SettingsPage)
     }
-    var path: [Node] = []
+    /// The pushed stack — the Mac's only, since prd §1132: on the phone and
+    /// the iPad nothing pushes, and every step `place` takes rises in `sheet`.
+    /// Emptying it means "back to the room", so it closes the sheet too: the
+    /// fifteen doors that end by writing `path = []` (a landing after a
+    /// connect, a deep link, a Spotlight hit) leave whatever is raised.
+    var path: [Node] = [] {
+        didSet { if path.isEmpty, sheet != nil { closeSheet() } }
+    }
+
+    /// **NOTHING PUSHES ON THE PHONE (prd §1132, user: "agree no pushes").**
+    /// Places switch in place (§1129); anything you open to look at or act on
+    /// rises here: an account page, the wallet's history, What this app
+    /// reaches, a directory, a project. A step deeper from inside stacks in
+    /// the sheet's own stack (`sheetPath`), the way Apple's sheets do. So the
+    /// face is always the tray's door and never a back door. The connect form
+    /// (§218) is this same sheet, rooted at `.connect`.
+    var sheet: SheetRoot?
+
+    /// The steps taken inside the sheet, under its root.
+    var sheetPath: [Node] = []
+
+    /// What the one sheet is rooted at.
+    enum SheetRoot: Hashable, Identifiable {
+        /// A connect form, with its own rule: a one-shot form leaves once its
+        /// key lands (`ConnectFormSheet`).
+        case connect(BridgeRouter.Destination)
+        /// Any screen that used to push.
+        case node(Node)
+        var id: Self { self }
+    }
+
+    func closeSheet() {
+        sheet = nil
+        sheetPath = []
+    }
 
     /// The You place on screen (prd §1129), written by `MainSurface` from the
     /// source it shows. Leaving Apps takes its pane with it, so the next
@@ -130,12 +164,17 @@ final class HomeRoute {
     var accountsSplit = false
 
     /// True while pushes land in the Accounts pane rather than on `path`.
-    var paneHostsPushes: Bool { accountsSplit && path.isEmpty && shownPlace == .apps }
+    var paneHostsPushes: Bool { accountsSplit && path.isEmpty && sheet == nil && shownPlace == .apps }
 
     /// The frame the person is actually looking at: the pane's top while it
     /// hosts pushes, else the stack's. `ConnectPushWatcher` asks this, so a
     /// finished connect form closes where it was drawn.
-    var topNode: Node? { paneHostsPushes && !accountsPane.isEmpty ? accountsPane.last : path.last }
+    var topNode: Node? {
+        if paneHostsPushes && !accountsPane.isEmpty { return accountsPane.last }
+        if let last = sheetPath.last { return last }
+        if case .node(let root)? = sheet { return root }
+        return path.last
+    }
 
     /// Set only for the length of a call from the Accounts LIST, so a row
     /// REPLACES what the pane shows while a push from inside a page stacks.
@@ -152,8 +191,23 @@ final class HomeRoute {
     /// Every push goes through here, so the pane cannot be skipped by one
     /// caller that spelled `path.append` itself.
     @MainActor private func place(_ node: Node) {
-        guard paneHostsPushes else { path.append(node); return }
+        guard paneHostsPushes else { stack(node); return }
         if paneReplaces { accountsPane = [node] } else { accountsPane.append(node) }
+    }
+
+    /// A step deeper: the Mac pushes; everywhere else it rises, or stacks in
+    /// the sheet already up (prd §1132).
+    @MainActor private func stack(_ node: Node) {
+        #if targetEnvironment(macCatalyst)
+        path.append(node)
+        #else
+        if sheet == nil {
+            sheetPath = []
+            sheet = .node(node)
+        } else {
+            sheetPath.append(node)
+        }
+        #endif
     }
 
     /// Open a shell door (Apps / Settings) so it lands there fresh —
@@ -166,9 +220,15 @@ final class HomeRoute {
     @MainActor func present(_ door: Node) {
         if let place = Self.place(door) {
             path = []
+            closeSheet()
             placeRequest = place.source
         } else {
+            #if targetEnvironment(macCatalyst)
             path = [door]
+            #else
+            sheetPath = []
+            sheet = .node(door)
+            #endif
         }
     }
 
@@ -215,6 +275,9 @@ final class HomeRoute {
             accountsPane.removeLast()
             return
         }
+        // A step inside the sheet first, then the sheet itself (prd §1132).
+        if !sheetPath.isEmpty { sheetPath.removeLast(); return }
+        if sheet != nil { closeSheet(); return }
         guard !path.isEmpty else { return }
         path.removeLast()
     }
@@ -236,7 +299,20 @@ final class HomeRoute {
     /// page all behave identically — and so the form itself is never a second
     /// copy of anything: it's the bridge's own setup screen, rendered by the
     /// same `BridgeDestinationView` the pushed route uses.
-    var connectForm: BridgeRouter.Destination?
+    ///
+    /// Since prd §1132 it is the one sheet rooted at `.connect`; this reads
+    /// and writes that root so the form's callers keep their word.
+    var connectForm: BridgeRouter.Destination? {
+        get { if case .connect(let dest)? = sheet { dest } else { nil } }
+        set {
+            if let newValue {
+                sheetPath = []
+                sheet = .connect(newValue)
+            } else if connectForm != nil {
+                closeSheet()
+            }
+        }
+    }
 
     /// Where an offer's Connect goes: **it raises** (prd §219). Connecting is
     /// one act — paste a key, type a handle, pick a file — so it happens over
@@ -254,7 +330,9 @@ final class HomeRoute {
     /// Peer and the pools is their own screen rather than the wallet manager
     /// their Connect leads to.
     @MainActor func openAccount(_ dest: BridgeRouter.Destination) {
-        if dest.raisedByConnect {
+        // A connect asked for from inside a sheet stacks in it rather than
+        // raising a second sheet over the first, which SwiftUI drops.
+        if dest.raisedByConnect, sheet == nil {
             connectForm = dest
         } else {
             place(.bridge(dest))
@@ -266,7 +344,9 @@ final class HomeRoute {
     /// Feed"), which would otherwise move the world under a sheet still
     /// sitting on top of it.
     @MainActor func closeConnectForm() {
-        connectForm = nil
+        // Whatever is raised, since §1132 made every account page a sheet:
+        // the screen calling this is about to move the world behind it.
+        closeSheet()
     }
 
     /// An offer whose product page should open once the catalog lands — set

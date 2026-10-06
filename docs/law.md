@@ -221,7 +221,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1264 of 1325 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1265 of 1326 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -475,9 +475,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §215 — Find gets a door, the widget stops counting, and the dead-Thing rule stops being remembered (amended by §1047)
 - §216 — The holdings read gets a freshness window — and the news does not
 - §217 — Onboarding forks — "Try it", then three verbs instead of forty apps (amended by §424, §527)
-- §218 — The All feed says what things are
+- §218 — The All feed says what things are (amended by §1132)
 - §218b — Connect stops being a page you read on the way to the page you use
-- §219 — The media feeds stop being squares (part superseded by §832)
+- §219 — The media feeds stop being squares (amended by §1132; part superseded by §832)
 - §219b — Connect raises, Open pushes — §218's split was the wrong axis
 - §220 — A step that was already on screen twice
 - §221 — A like of a post you already have
@@ -1074,7 +1074,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §764 — One row anatomy in every room: regular titles, a 12pt line, 24pt sections (part superseded by §796)
 - §765 — The section tiles land at one height on every page, because the chrome draws the figure
 - §766 — Every room's lead is one well: a statement, a body, and a foot pinned to the bottom (amended by §905; part superseded by §914)
-- §767 — The shell around the rows speaks the rooms' grammar: the dock's seat is the way back, a pushed screen names itself in…
+- §767 — The shell around the rows speaks the rooms' grammar: the dock's seat is the way back, a pushed screen names itself in… (amended by §1132)
 - §768 — The load screen says hello
 - §769 — An empty scope draws its own figure as a skeleton, its short state centred on it, and its list as skeleton rows (amended by §771)
 - §770 — Notifications are one digest, twice a day at most, with one switch per category (part superseded by §809, §870)
@@ -1208,7 +1208,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §873 — A wider window widens the detail pane, not the list
 - §874 — The Mac honours the app's Theme, and every tray has a way out
 - §875 — Where the rail stands, the dock's seat is only the way back
-- §876 — Accounts and Settings open in the pane
+- §876 — Accounts and Settings open in the pane (amended by §1132)
 - §878 — The phone's perf readout, read: launch is solved, and three of its instruments were lying
 - §879 — Things get their faces, and "Since you left" tells the truth about itself
 - §880 — "Since you left" wears the primary ink; the days inside it keep the pink
@@ -1487,6 +1487,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1128 — The pill is the room's title (amended by §1129)
 - §1129 — The category's name comes back, in pink, and You's doors are places
 - §1130 — Threads can have notifications the way Instagram does, through its own sign-in; Meta's Threads API cannot give them
+- §1132 — Nothing pushes on the phone: what you open rises as one sheet
 
 ## Dead rulings → what replaced them (generated)
 

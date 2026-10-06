@@ -695,8 +695,12 @@ struct BridgeDestinationView: View {
 /// `BridgeStore` already records the exact moment a connection becomes real,
 /// and it's the same record the product page's proof pill and
 /// `BridgeDetailScreen` read.
-struct ConnectFormSheet: View {
+struct ConnectFormSheet<Deeper: View>: View {
     let destination: BridgeRouter.Destination
+    /// The steps taken inside the sheet (`HomeRoute.sheetPath`, prd §1132):
+    /// an account page's own doors stack here instead of pushing behind it.
+    @Binding var path: [HomeRoute.Node]
+    @ViewBuilder let deeper: (HomeRoute.Node) -> Deeper
     @Environment(BridgeStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
@@ -708,13 +712,14 @@ struct ConnectFormSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             BridgeDestinationView(destination: destination)
                 // "Done", not "Close" (prd §560, 2026-09-01) — this was the
                 // one site in the family with the other word. A connect form
                 // is finished rather than abandoned: you either connected or
                 // you did not, and both are done.
                 .dsSheetDismiss { dismiss() }
+                .navigationDestination(for: HomeRoute.Node.self) { deeper($0) }
         }
         // THE GRABBER WENT WITH THE WORD (prd §560, 2026-09-01). A
         // `presentationDragIndicator(.visible)` was here, and this was the
@@ -799,14 +804,10 @@ private struct ConnectPushWatcher: ViewModifier {
 }
 
 extension View {
-    /// Mac only — see `ConnectPushWatcher`. A no-op elsewhere, where the same
-    /// behaviour is `ConnectFormSheet`'s.
-    @ViewBuilder
+    /// See `ConnectPushWatcher`: the Mac's pushed form, and since prd §1132
+    /// a form stacked inside the phone's one sheet. A form at the sheet's
+    /// root is `ConnectFormSheet`, which owns the same rule itself.
     func connectPushWatcher(_ destination: BridgeRouter.Destination) -> some View {
-        #if targetEnvironment(macCatalyst)
         modifier(ConnectPushWatcher(destination: destination))
-        #else
-        self
-        #endif
     }
 }

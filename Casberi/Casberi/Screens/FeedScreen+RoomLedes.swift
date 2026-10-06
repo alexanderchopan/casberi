@@ -173,7 +173,13 @@ extension FeedScreen {
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
                                               bottom: 0, trailing: DS.Space.s4))
                     .environment(\.genProjectTap) { name in
+                        // The Mac pushes it, zooming out of the tile; the
+                        // phone raises it as the one sheet (prd §1132).
+                        #if targetEnvironment(macCatalyst)
                         openProject = ProjectRoute(name: name)
+                        #else
+                        route.push(.project(name))
+                        #endif
                     }
                 // The fold anchor — the line the list opens settled at, so
                 // everything above it (the card) sits above the fold. Zero

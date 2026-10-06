@@ -1943,7 +1943,13 @@ struct FeedScreen: View {
         // one door this change had to keep intact.
         .onChange(of: chrome.personRequest) { _, person in
             guard let person else { return }
+            // The phone raises the person room (prd §1132: nothing pushes);
+            // the Mac keeps the push.
+            #if targetEnvironment(macCatalyst)
             openPerson = person
+            #else
+            feedSheet = .person(source: person.source, handle: person.handle)
+            #endif
             chrome.personRequest = nil
         }
         // **A PAYMENT REQUEST A LINK OPENED (prd §728c).** `initial: true`

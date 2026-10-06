@@ -2742,7 +2742,8 @@ struct RootShell: View {
                 // the same screen the feed's Themes treemap opens (this wrote
                 // a `HomeRoute.openTag` nothing consumed after the board
                 // retired, so the tile was silently inert until 2026-07-22).
-                sceneState.route.path = [.project(name)]
+                // A sheet on the phone, a push on the Mac (prd §1132).
+                sceneState.route.present(.project(name))
             }
     }
 
@@ -2761,7 +2762,7 @@ struct RootShell: View {
         switch intent {
         case .tag(let name):
             sceneState.filter.source = "All"
-            sceneState.route.path = [.project(name)]
+            sceneState.route.present(.project(name))
         case .source(let source):
             sceneState.filter.source = source
             sceneState.filter.tag = "All"

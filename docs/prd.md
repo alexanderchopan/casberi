@@ -64570,3 +64570,15 @@ Pushed screens keep their `DSScreenHead`.
 4. Declare `threads.com`, `www.threads.com` (and the media CDNs `cdninstagram.com`, `fbcdn.net`, already Instagram's) in `NetworkReach` under "Threads live", and land the seat on the website the same session.
 
 **UNMEASURED.** The measured account had only Threads' own notices (`text_post_app_unconnected_daily_digest`, `threads_app_daily_digest`, `text_post_app_insights`, `text_post_app_unified_settings_link`). No like, reply, mention or follow was seen, so their `notif_name`s and whether `ufi_media` is filled for them are unknown. How often the `doc_id` rotates is unknown.
+
+## §1132 — Nothing pushes on the phone: what you open rises as one sheet (user, 2026-10-06: "re 3. agree no pushes"; builds §1129, amends §218, §219's "Open pushes", §767 and §876's fallback)
+
+**Why.** After §1129 places cut in place, but an account page (the wallet's, Peer's, the pools'), the wallet's history and connection, an NFT collection, What this app reaches, the Walletbeat and L2BEAT directories, a project and a person room still pushed. So the dock's face was two controls: the tray's door at rest, a back door on a pushed screen.
+
+1. **One sheet** (`HomeRoute.sheet`, rooted at `.connect` for a connect form or `.node` for anything that pushed). Every step `HomeRoute.place` takes rises there on iPhone and iPad; a step from inside stacks in the sheet's own stack (`sheetPath`), as Apple's sheets do. The face is always the tray's door.
+2. **The connect form is that sheet** (`connectForm` reads and writes its root), keeping its rule: a one-shot form leaves once its key lands. A form stacked inside the sheet keeps it through `ConnectPushWatcher`, on every platform now.
+3. **Emptying `path` closes the sheet**, so every door that ends by writing `path = []` (a landing after a connect, a deep link, Spotlight) leaves whatever is raised, and `closeConnectForm` closes any sheet.
+4. **The Mac keeps pushing** with ⌘[ and the rail (§631, the rail is the Mac's navigation); `raisedByConnect` and the dock's back door stand there unchanged. The iPad's Apps pane (§876) is unchanged; narrowed past its floor, its page rises as the sheet.
+5. What this app reaches shows its bar in a sheet, with no title in it, so its Done stands; on the Mac it stays hidden.
+
+**Seen** on the iPhone 17 Pro simulator: What this app reaches and the Wallet's account page, both raised with Done, the face wearing the octopus.

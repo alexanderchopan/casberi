@@ -245,7 +245,7 @@ guard 'rotationSlice' "$TMP/bridge.nc" \
   "the rotating milestone walk is gone — the incident feed would only ever refresh on an app update"
 
 # ---- §234: a browse is mounted by the ROOM ------------------------------------------------
-guard 'route.path.append(.l2beatDirectory)' "$FEED" \
+guard 'route.push(.l2beatDirectory)' "$FEED" \
   "the room's browse no longer opens the directory directly"
 guard 'case l2beatDirectory' "$ROUTE" \
   "the directory lost its own route node — the room can only reach it via the catalog"

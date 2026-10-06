@@ -865,22 +865,22 @@ extension FeedScreen {
                 // and the lookup happens here, against the live corpus.
                 openBySourceRef(ref, in: visible)
             } onBrowse: {
-                // Pushed, not raised: this is navigation to a place, not a
-                // connect act (§219 — Connect raises, Open pushes). Straight to
+                // A step, not a connect act (§219), so it rises as the one
+                // sheet on the phone and pushes on the Mac (§1132). Straight to
                 // the directory, never via the connect screen: §234's ruling is
                 // that a browse is mounted by the room, and routing through the
                 // setup screen made reading the list a trip into the catalog
                 // plus a second tap (prd §421).
-                route.path.append(.walletbeatDirectory)
+                route.push(.walletbeatDirectory)
             }
         case .l2beat(let room):
             L2beatRoomCard(room: room) { ref in
                 openBySourceRef(ref, in: visible)
             } onBrowse: {
-                // Pushed, not raised (§219 — Connect raises, Open pushes), and
-                // straight to the directory rather than via the connect screen
+                // A step (§219, §1132), and straight to the directory rather
+                // than via the connect screen
                 // (§234 — a browse is mounted by the room).
-                route.path.append(.l2beatDirectory)
+                route.push(.l2beatDirectory)
             }
         case .peer(let room):
             PeerRoomCard(room: room) { rail in

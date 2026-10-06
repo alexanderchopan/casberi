@@ -791,9 +791,9 @@ struct MainSurface: View {
             SettingsPageView(page: page)
         case .bridge(let dest):
             // Mac's connect form is PUSHED, not raised (see
-            // `Destination.raisedByConnect`), so the one behaviour the sheet
-            // owned — a one-shot form leaving once its key lands — rides here
-            // instead. No-op on touch, where the sheet still owns it.
+            // `Destination.raisedByConnect`), and the phone's can stack inside
+            // the one sheet (prd §1132), so the one behaviour the sheet's root
+            // owns — a one-shot form leaving once its key lands — rides here.
             BridgeDestinationView(destination: dest)
                 .connectPushWatcher(dest)
         case .project(let name):
@@ -802,6 +802,28 @@ struct MainSurface: View {
             WalletbeatDirectoryScreen()
         case .l2beatDirectory:
             L2beatDirectoryScreen()
+        }
+    }
+
+    /// **THE ONE SHEET (prd §1132).** A connect form keeps its own rule
+    /// (`ConnectFormSheet` leaves once a one-shot key lands); any other root
+    /// is the screen that used to push, with Done and the sheet's own stack
+    /// for a step deeper.
+    @ViewBuilder
+    private func raisedSheet(_ root: HomeRoute.SheetRoot) -> some View {
+        @Bindable var route = route
+        switch root {
+        case .connect(let destination):
+            ConnectFormSheet(destination: destination, path: $route.sheetPath) { node in
+                leafRoom(node)
+            }
+        case .node(let node):
+            NavigationStack(path: $route.sheetPath) {
+                leafRoom(node)
+                    .dsSheetDismiss { route.closeSheet() }
+                    .navigationDestination(for: HomeRoute.Node.self) { leafRoom($0) }
+            }
+            .dsNavSheet()
         }
     }
 
@@ -1958,8 +1980,10 @@ struct MainSurface: View {
             // narrow past the pane's floor pushes whatever the pane held.
             route.accountsSplit = now
             if !now, !route.accountsPane.isEmpty {
-                route.path.append(contentsOf: route.accountsPane)
+                // A step, so the phone's sheet takes it as it takes any (§1132).
+                let held = route.accountsPane
                 route.accountsPane = []
+                held.forEach { route.push($0) }
             }
             // Rotating a mini into a shape that can't hold a pane must
             // not strand a selection nothing renders. On Mac this same
@@ -2117,7 +2141,8 @@ struct MainSurface: View {
         // menu item holding a bare Return or ↓ would take those keys from
         // them. This surface owns the stack, so it is the one honest reporter
         // of how deep it is. See `ShellChrome.canWalk`.
-        .onChange(of: route.path.isEmpty, initial: true) { _, atRoot in
+        .onChange(of: route.path.isEmpty && route.sheet == nil, initial: true) { _, atRoot in
+            // The one sheet covers the pager as a push did (prd §1132).
             chrome.walkInPushedRoom = !atRoot
         }
         // Re-sort the strip on the way back IN, never while you're in it
@@ -3106,7 +3131,7 @@ struct MainSurface: View {
         // product page too. Every Connect in the app routes through
         // `HomeRoute.openSetup`, so a tile, a peek preview and a product page
         // can't drift into three different presentations of one act.
-        .sheet(item: $route.connectForm) { destination in
+        .sheet(item: $route.sheet) { root in
             // RE-INJECTED, and this is `rootPresented`'s rule reaching the one
             // presentation that never went through it (App Store review
             // 2.1(a) on the Mac build, crash reproduced 2026-08-18).
@@ -3129,9 +3154,16 @@ struct MainSurface: View {
             // it deliberately — see its doc: "any new shell-wide environment
             // object gets added HERE, not to individual sheets", which now
             // means both places.
-            ConnectFormSheet(destination: destination)
+            //
+            // Since prd §1132 this is the ONE sheet: everything that used to
+            // push on the phone rises here, and the route is re-injected too,
+            // because every page in it moves the route.
+            raisedSheet(root)
                 .environment(store)
                 .environment(chrome)
+                .environment(route)
+                .environment(filter)
+                .environment(detail)
                 .environment(\.locale, LanguageStore.shared.locale)
         }
         // The rail (2026-08-10) — see `body` and `railInset`. On the STACK,

@@ -193,7 +193,7 @@ guard 'newsSummary(incidents' "$TMP/src.nc" \
   "the room no longer summarises the incidents — the followed head has nothing to say"
 # §234's ruling: a browse is mounted by the ROOM, "never by a setup screen". Routing
 # through the connect screen is what made reading the list a trip into the catalog.
-guard 'route.path.append(.walletbeatDirectory)' "$FEED" \
+guard 'route.push(.walletbeatDirectory)' "$FEED" \
   "the room's browse no longer opens the directory directly"
 guard 'case walletbeatDirectory' "$ROUTE" \
   "the directory lost its own route node — the room can only reach it via the catalog"

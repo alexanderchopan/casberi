@@ -294,9 +294,15 @@ struct NetworkReachScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         // The claim is in the content and the way back is the dock's seat, so
-        // nothing stands at the top edge (prd §767).
+        // nothing stands at the top edge (prd §767) — on the Mac, which still
+        // pushes it. The phone raises it as a sheet (prd §1132), and a sheet
+        // leaves by its Done, so the bar stands there with no title in it.
         .navigationTitle(Text("What this app reaches"))
+        #if targetEnvironment(macCatalyst)
         .toolbar(.hidden, for: .navigationBar)
+        #else
+        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
+        #endif
         // The ledger is read on appear, never in a body (§628): a snapshot
         // flushes and walks the store.
         .onAppear {
