@@ -348,7 +348,10 @@ struct RoomsTray: View {
                  lit: markets, key: Self.markets) {
                 if marketsHasRoom { pickCategory(Self.markets) } else { setup(Self.markets) }
             },
-            Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
+            // The Notes tile's own glyph (`ScopeTileGlyph.notes`), lit or not: the
+            // bare `note` read as an empty window (user, 2026-10-06), and the
+            // white disc already says which place is standing.
+            Door(word: String(localized: "Notes"), glyph: ScopeTileGlyph.notes,
                  lit: notes, key: Pinboard.room) { pick(Pinboard.room) },
             Door(word: String(localized: "Sources"), glyph: ScopeTileGlyph.sources,
                  lit: place == .settings || place == .apps || place == .addresses,
