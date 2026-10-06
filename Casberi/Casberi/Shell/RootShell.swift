@@ -2235,7 +2235,7 @@ struct RootShell: View {
             // `if` can animate the panel in and out. `rootPresented` for
             // §394a's reason: a layer here sits above the shell's environment
             // injections and must be handed them.
-            rootPresented(RoomsTray())
+            rootPresented(RoomsTray(railInset: padShell.railInset))
                 .environment(sceneState.route)
                 .environment(sceneState.filter)
 
@@ -2300,19 +2300,14 @@ struct RootShell: View {
                     // dead control — so it is not mounted at all.
                     if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
                         DockDoors(onAccounts: {
-                                      // ON THE PHONE THE FACE OPENS THE ROOMS
-                                      // TRAY (prd §930): one button, every
-                                      // room, and its doors to Accounts inside.
-                                      // Pressed again it closes (§705). Where
-                                      // the rail stands the seat is only ever
-                                      // the way back (§875), so the Accounts
-                                      // toggle below is the rail's own door.
-                                      if padShell.railInset == 0 {
-                                          withAnimation(DS.Motion.standard) {
-                                              chrome.roomsTray.toggle()
-                                          }
-                                      } else {
-                                          sceneState.route.toggle(.apps)
+                                      // THE FACE OPENS THE ROOMS TRAY (prd
+                                      // §930), on every layout since §1133f:
+                                      // one button, every room, app, place and
+                                      // the search. Pressed again it closes
+                                      // (§705). The rail's own face does the
+                                      // same, so the two seats are one door.
+                                      withAnimation(DS.Motion.standard) {
+                                          chrome.roomsTray.toggle()
                                       }
                                   },
                                   onBack: sceneState.route.path.isEmpty

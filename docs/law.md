@@ -53,7 +53,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The tray's search narrows the grid in place. The search and the You row stay pinned above the scroll (§1015). A mark has no hold menu (§1033).
 - You doors, in this order: Home, Notes, Markets, Apps, Addresses, Settings (§1012, §1111, §1123). While the tray is up, the face shows the octopus (§1009). In the tray You is a row like the others: your name, else You (§1133d), Home's disc and the other five places on one line (§1133, §1133c).
 - Notes, Markets, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title reads "You · <place>"; a swipe from any walks from Home's place (§1127, §1129, §1133).
-- Two controls: the face's tray says where (a category, or any app or account in its row, which shows them all, the name on its own line and the icons six across under it; the room's act second; Search leads it and filters the tray as you type, then hands the words to Find, §1133b, §1133c, §1133e), the tiles say what. No room draws a pill; the title is a label, the category pink, " · " and the pick (§1133). Nothing pushes on the phone: what you open rises as one sheet (§1132).
+- Two controls: the face's tray says where (a category, or any app or account in its row, which shows them all, the name on its own line and the icons six across under it; the room's act second; Search leads it and filters the tray as you type, then hands the words to Find, §1133b, §1133c, §1133e), the tiles say what. No room draws a pill; the title is a label, the category pink, " · " and the pick (§1133). Nothing pushes on the phone: what you open rises as one sheet (§1132). The rail's face opens the same tray on the iPad and the Mac (§1133f).
 - A category shows in the tray only while it holds a connected seat (§977).
 - No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). No room draws an account door; an app's settings open from its row in Apps (§1050f).
 - On a pushed screen the dock's seat is the back door. The system back button is hidden at the resolver, and the edge swipe goes through `DSSwipeBack` (§767). Content comes to rest clear of the seat via `.dsSeatClearance()` (§829).
@@ -1492,7 +1492,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1132 — Nothing pushes on the phone: what you open rises as one sheet
 - §1133 — Two controls: the face says where, the tiles say what [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
-- §1135 — An unwatched wallet's rows leave, under the name it was watched by too
+- §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

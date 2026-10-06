@@ -344,15 +344,18 @@ grep -q 'AvatarChip(' "$TMP/doors.nc" \
 # opens, so a second press that re-presents the same screen is a control that
 # looks live and does nothing — §83's dead control. Both seats (the phone's
 # fixed dock seat and the iPad rail's own avatar) must route through
-# `HomeRoute.toggle`, never `present`. The screen it opens is ACCOUNTS since
+# `HomeRoute.toggle`, never `present`. It opened ACCOUNTS since
 # prd §796 (user, 2026-09-17: "what if the avatar icon was for apps and we put
 # a settings button"); it was Settings from §700 to then.
-grep -q 'route.toggle(.apps)' "$TMP/root.nc" \
-  || { echo "✗ the dock's face no longer TOGGLES Accounts (prd §705, §796) — pressing it"; \
-       echo "  a second time must close the screen it opened, not re-present it."; fail=1; }
-grep -q 'route.toggle(.apps)' "$TMP/main.nc" \
-  || { echo "✗ the iPad rail's avatar no longer toggles Accounts — the two seats are"; \
-       echo "  one door and must behave identically."; fail=1; }
+# Since prd §1133f both seats TOGGLE the rooms tray, which holds every room,
+# app, place and the search; a rail face that opened Apps left the iPad and
+# the Mac no way to a room's apps once §1133 deleted the title pill.
+grep -q 'chrome.roomsTray.toggle()' "$TMP/root.nc" \
+  || { echo "✗ the dock's face no longer TOGGLES the rooms tray (prd §705, §930, §1133f) —"; \
+       echo "  pressing it a second time must close what it opened."; fail=1; }
+grep -q 'chrome.roomsTray.toggle()' "$TMP/main.nc" \
+  || { echo "✗ the iPad rail's face no longer toggles the rooms tray (prd §1133f) — the two"; \
+       echo "  seats are one door and must behave identically."; fail=1; }
 strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
 # NO switcher since prd §1033: Manage is deleted, Apps is the one catalogue,
 # and a connected row with a room is a status (its room's own door manages it).

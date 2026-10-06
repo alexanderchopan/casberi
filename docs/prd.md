@@ -64655,3 +64655,9 @@ The field says Search mail, and it searches every sender kept whose mail carried
 **Guards.** `address-book-selftest.sh` asserts the unfollow calls the new prune; `delete-guard-audit.py` names it with its reason; `fetch-bound-audit.py` drops `removeWallet`'s allowance, since the fetch is now predicated on `walletAddress != nil`.
 
 **Not seen.** Written in a Linux container with no Swift toolchain: not compiled, not run on a simulator.
+
+### §1133f — The rail's face opens the tray too (user, 2026-10-06: "ok", to the iPad and Mac fix)
+
+§1133 deleted the title pill, and on the iPad and the Mac the rail's face opened Apps, not the tray, so a merged room's apps, Testnets' networks and You's places (Notes, Markets, Addresses, Settings) had no door there. Both seats now toggle the rooms tray on every layout (`dock-selftest.sh`). Beside the rail the card hangs from the top-left, by the face, under the status bar and the demo's pill (`RoomsTray.railInset`); on the phone it still grows out of the face's bottom corner. One navigation on every device: the rail or the swipe for categories, the tray for everything in them.
+
+**Seen** on an iPad Pro 13-inch simulator of this session's own: the tray beside the rail with every row, You · Settings landing from it.

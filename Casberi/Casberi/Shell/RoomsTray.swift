@@ -28,6 +28,11 @@ import SwiftUI
 /// glyph and says so. **Every pick is `ShellChrome.sourceRequest`**, the hop
 /// every room-to-room door takes.
 struct RoomsTray: View {
+    /// The rail's width where the shell draws one (iPad, Mac), else 0. With a
+    /// rail the face stands at its top, so the card opens beside it from the
+    /// top-left corner (prd §1133f); on the phone it grows out of the face's
+    /// corner at the bottom.
+    var railInset: CGFloat = 0
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
     @Environment(FeedFilter.self) private var filter
@@ -84,7 +89,7 @@ struct RoomsTray: View {
 
     var body: some View {
         GeometryReader { geo in
-            ZStack(alignment: .bottomLeading) {
+            ZStack(alignment: corner) {
                 if chrome.roomsTray {
                     // The catcher: a tap anywhere else closes the menu — a
                     // real control, so it is a Button. It BLURS the room, as
@@ -105,14 +110,15 @@ struct RoomsTray: View {
                     .highPriorityGesture(DragGesture(minimumDistance: 12).onEnded { _ in close() })
                     .accessibilityLabel(Text("Close rooms"))
                     .transition(.opacity)
-                    panel(screen: geo.size)
+                    panel(screen: geo.size, top: geo.safeAreaInsets.top)
                         // Out of the face's corner and back into it (§932).
                         .transition(reduceMotion
                             ? .opacity
-                            : .scale(scale: 0.06, anchor: .bottomLeading).combined(with: .opacity))
+                            : .scale(scale: 0.06, anchor: railInset > 0 ? .topLeading : .bottomLeading)
+                                .combined(with: .opacity))
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: corner)
         }
         .allowsHitTesting(chrome.roomsTray)
         .animation(liftMotion, value: chrome.roomsTray)
@@ -137,11 +143,14 @@ struct RoomsTray: View {
 
     // MARK: - The card
 
-    private func panel(screen: CGSize) -> some View {
+    private func panel(screen: CGSize, top safeTop: CGFloat = 0) -> some View {
         let width = min(screen.width * Self.widthShare, Self.maxWidth)
         // Searching, the card stands at its full height, so its field stays
         // above the keyboard however few results there are (prd §1133e).
-        let full = screen.height * Self.heightShare
+        // Beside the rail the card hangs from the top, under the status bar
+        // and the demo's pill (§1133f).
+        let railTopInset = railInset > 0 ? safeTop + DSDemoMark.screenClearance + Self.railTop : 0
+        let full = (screen.height - railTopInset) * Self.heightShare
         let height = (searching || !query.isEmpty) ? full : min(contentHeight, full)
         let gap = Self.gap(inner: width - 2 * DS.Space.s4)
         return ScrollView {
@@ -172,10 +181,22 @@ struct RoomsTray: View {
         .frame(width: width, height: max(height, 1))
         .dsGlass(cornerRadius: Self.radius)
         // Above the face, in its column: the menu grows out of the button
-        // that raised it, as Messages' grows out of its plus.
-        .padding(.leading, DSRoomChassis.inset)
-        .padding(.bottom, DSDock.seatClearance)
+        // that raised it, as Messages' grows out of its plus. Beside the
+        // rail's face on the iPad and the Mac (§1133f), clear of the Mac's
+        // window buttons.
+        .padding(.leading, railInset > 0 ? railInset + DS.Space.s2 : DSRoomChassis.inset)
+        .padding(.bottom, railInset > 0 ? 0 : DSDock.seatClearance)
+        .padding(.top, railTopInset)
         .accessibilityAddTraits(.isModal)
+    }
+
+    /// Where the card stands: by the face's corner.
+    private var corner: Alignment { railInset > 0 ? .topLeading : .bottomLeading }
+
+    /// The card's top beside the rail's face: under the Mac's window buttons
+    /// (the rail clears them by `s8`), a step down on the iPad.
+    static var railTop: CGFloat {
+        ProcessInfo.processInfo.isMacCatalystApp ? DS.Space.s8 + DS.Space.s2 : DS.Space.s4
     }
 
     // MARK: - Rows

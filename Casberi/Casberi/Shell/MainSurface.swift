@@ -1657,7 +1657,14 @@ struct MainSurface: View {
                     axis: axis,
                     categoryVenues: chips.venues,
                     minimized: chrome.minimized,
-                    onAccounts: { route.toggle(.apps) },
+                    // The rail's face opens the rooms tray, as the phone's
+                    // does (prd §1133f): since §1133 deleted the title pill,
+                    // the tray is the only place a room's apps, You's places
+                    // and search live, and a rail whose face opened Apps left
+                    // the iPad and the Mac no way to them.
+                    onAccounts: {
+                        withAnimation(DS.Motion.standard) { chrome.roomsTray.toggle() }
+                    },
                     refreshSpin: chrome.refreshPulse) { label in
             // Compared against the CHIP, not the source: re-tapping the folded
             // Social chip while standing in Bluesky is a re-tap of the chip
