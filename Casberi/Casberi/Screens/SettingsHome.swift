@@ -115,6 +115,10 @@ struct SettingsHome: View {
         // first and `SettingsRows`' own hook raises the sheet.
         .onAppear {
             if UserDefaults.standard.string(forKey: "accountDetail") != nil { casberiOpen = true }
+            // `-settingsScope <kind>` lands on one of the box's counts (prd
+            // §1138) with no tap, for the store captures the Mac cannot tap.
+            if let raw = UserDefaults.standard.string(forKey: "settingsScope"),
+               let s = SettingsScope(rawValue: raw) { scope = s }
         }
         #endif
         .confirmationDialog(Text("Unsubscribe from this calendar?"),

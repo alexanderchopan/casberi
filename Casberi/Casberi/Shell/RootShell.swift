@@ -932,7 +932,19 @@ struct RootShell: View {
             // are their own door, Apps), so `-accountDetail`, read in
             // `SettingsRows`, stands on the screen this presents.
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                sceneState.route.present(.casberi)
+                // `-openDelay <s>` (DEBUG) holds this and `-openRoom` until a
+                // demo poured in the same launch has landed: the Mac's store
+                // captures pour into a fresh scratch store every launch, and a
+                // screen opened at mount reads it empty.
+                let wait = UserDefaults.standard.double(forKey: "openDelay")
+                if wait > 0 {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(wait))
+                        sceneState.route.present(.casberi)
+                    }
+                } else {
+                    sceneState.route.present(.casberi)
+                }
             }
             if UserDefaults.standard.bool(forKey: "openAddresses") {
                 sceneState.route.present(.addresses)
@@ -957,7 +969,14 @@ struct RootShell: View {
             // this already-enormous view expression past the type-checker's
             // budget ("unable to type-check this expression in reasonable
             // time"), which is a compile FAILURE rather than a slow build.
-            openRoomIfRequested()
+            if UserDefaults.standard.double(forKey: "openDelay") > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(UserDefaults.standard.double(forKey: "openDelay")))
+                    openRoomIfRequested()
+                }
+            } else {
+                openRoomIfRequested()
+            }
             // **`-openSources` IS DELETED with the folder it opened (prd §697),
             // and `-openAddressBook` went with the screen (prd §691).** Both
             // sides of a rebase conflict landed on main unresolved — the

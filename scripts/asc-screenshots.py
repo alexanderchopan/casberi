@@ -4,6 +4,7 @@
   asc-screenshots.py read                          every set on the editable iOS version
   asc-screenshots.py replace --iphone DIR --ipad DIR          (dry run)
   asc-screenshots.py replace --iphone DIR --ipad DIR --yes    (delete old, upload new)
+  asc-screenshots.py replace --mac DIR [--yes]               (the Mac version, APP_DESKTOP)
 
 Built for the 2.0 resubmission (prd §1077, the 4.1(a) rejection): the old sets
 carried an icon pile and a logo grid, and Apple's only remedy is new pictures.
@@ -24,7 +25,7 @@ APP_ID = "6788637831"
 KEY_ID = os.environ.get("ASC_KEY_ID", "TR287WZD72")
 ISSUER_ID = os.environ.get("ASC_ISSUER_ID", "2152ec98-0a7c-477a-9c4a-e1c478a3a106")
 EDITABLE = {"PREPARE_FOR_SUBMISSION", "REJECTED", "DEVELOPER_REJECTED", "METADATA_REJECTED"}
-SETS = {"iphone": "APP_IPHONE_65", "ipad": "APP_IPAD_PRO_3GEN_129"}
+SETS = {"iphone": "APP_IPHONE_65", "ipad": "APP_IPAD_PRO_3GEN_129", "mac": "APP_DESKTOP"}
 
 
 class ASC:
@@ -56,12 +57,12 @@ class ASC:
             raise SystemExit(f"✗ {method} {path} → HTTP {e.code}: {detail[:400]}")
 
 
-def editable_version(asc):
-    vs = asc.call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]=IOS&limit=20")["data"]
+def editable_version(asc, platform="IOS"):
+    vs = asc.call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]={platform}&limit=20")["data"]
     for v in vs:
         if v["attributes"]["appStoreState"] in EDITABLE:
             return v
-    raise SystemExit("✗ no editable iOS version (" +
+    raise SystemExit(f"✗ no editable {platform} version (" +
                      ", ".join(f'{v["attributes"]["versionString"]} {v["attributes"]["appStoreState"]}' for v in vs) + ")")
 
 
@@ -99,13 +100,16 @@ def upload(asc, set_id, path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("verb", choices=["read", "replace"])
-    ap.add_argument("--iphone"); ap.add_argument("--ipad"); ap.add_argument("--yes", action="store_true")
+    ap.add_argument("--iphone"); ap.add_argument("--ipad"); ap.add_argument("--mac"); ap.add_argument("--yes", action="store_true")
     a = ap.parse_args()
     asc = ASC(os.environ.get("ASC_KEY_PATH", "/tmp/asc.p8"))
-    v = editable_version(asc)
+    platform = "MAC_OS" if a.mac else "IOS"
+    if a.mac and (a.iphone or a.ipad):
+        raise SystemExit("✗ --mac is its own version: run it apart from --iphone/--ipad")
+    v = editable_version(asc, platform)
     loc = localization(asc, v["id"])
     have = sets_by_type(asc, loc["id"])
-    print(f'iOS {v["attributes"]["versionString"]} ({v["attributes"]["appStoreState"]}), en-US')
+    print(f'{platform} {v["attributes"]["versionString"]} ({v["attributes"]["appStoreState"]}), en-US')
     for t, s in sorted(have.items()):
         print(f"  {t}: {len(shots(asc, s['id']))} screenshot(s)")
     if a.verb == "read":
