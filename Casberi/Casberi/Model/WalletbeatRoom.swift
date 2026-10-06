@@ -235,9 +235,9 @@ struct WalletbeatRoom: Equatable {
 	/// the note spends its whole line on what following does not cover.
 	static func newsNote(_ room: WalletbeatRoom) -> String {
 		guard let news = room.news, news.total > 0 else {
-			return String(localized: "Security incidents arrive here. Watching the wallet you use adds a review of it too.")
+			return String(localized: "Security incidents arrive here. Following the wallet you use adds a review of it too.")
 		}
-		return String(localized: "\(news.total) landed so far. Watching yours adds where its keys are made, and who sees your addresses.")
+		return String(localized: "\(news.total) landed so far. Following yours adds where its keys are made, and who sees your addresses.")
 	}
 
 	/// What the room's one button says.
@@ -256,9 +256,9 @@ struct WalletbeatRoom: Equatable {
 			return String(localized: "Every wallet Walletbeat rates")
 		}
 		if let name = room.connectedName {
-			return String(localized: "Watch \(name) — you've connected with it")
+			return String(localized: "Follow \(name) — you've connected with it")
 		}
-		return String(localized: "Watch the wallet apps you use")
+		return String(localized: "Follow the wallet apps you use")
 	}
 
 	static func coverageNote(_ room: WalletbeatRoom) -> String? {

@@ -656,7 +656,7 @@ struct SocialProfileCard: View {
                     .foregroundStyle(DS.confirm)
                     .frame(width: 18, alignment: .center)
                     .accessibilityHidden(true)
-                Text("Watching")
+                Text("Following")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                 Spacer(minLength: 0)
             }
@@ -682,7 +682,7 @@ struct SocialProfileCard: View {
             // shape. §524 already drew this line — colour says what is
             // happening, not where it came from — and a Watch tile is the same
             // act on every network.
-            DSActVerb(title: String(localized: "Watch"), glyph: "eye") {
+            DSActVerb(title: String(localized: "Follow"), glyph: "eye") {
                 watch()
             }
         }
@@ -690,12 +690,12 @@ struct SocialProfileCard: View {
 
     private func watch() {
         guard SocialPeople.watch(shown) else {
-            chrome?.flash(String(localized: "Already watching @\(shown.shortHandle)."))
+            chrome?.flash(String(localized: "Already following @\(shown.shortHandle)."))
             watched = true
             return
         }
         watched = true
-        chrome?.flash(String(localized: "Watching @\(shown.shortHandle)."), tone: .success)
+        chrome?.flash(String(localized: "Following @\(shown.shortHandle)."), tone: .success)
         Task { await SocialPeople.sync(source: shown.source, context: modelContext) }
     }
 }

@@ -164,7 +164,7 @@ struct TokenSetupScreen: View {
         } else if bridge == .github {
             DSSlabField(placeholder: AccountPageShape.findPlaceholder(
                             String(localized: "a repo or person")),
-                        text: $watchQuery, actionLabel: String(localized: "Watch"),
+                        text: $watchQuery, actionLabel: String(localized: "Follow"),
                         busy: watching || watchingPerson, action: watchEither)
             BridgeSyncStatusRows(syncing: watching || watchingPerson,
                                  syncingLine: watchingPerson

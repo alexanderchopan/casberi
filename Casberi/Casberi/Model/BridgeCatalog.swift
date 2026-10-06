@@ -486,7 +486,7 @@ enum BridgeCatalog {
         // test coins, never joined to the wallet total, and the network has
         // been reset from genesis before. Keyless (the LEZ sequencer answers
         // anyone), so it is a no-account seat in the Radicle grade.
-        Offer(name: "Logos", tagline: "Watch accounts on the Logos testnet", group: "Testnets", connectable: true,
+        Offer(name: "Logos", tagline: "Follow accounts on the Logos testnet", group: "Testnets", connectable: true,
               needsSetup: true, added: day(2026, 9, 29)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               needsSetup: true),

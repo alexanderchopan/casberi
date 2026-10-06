@@ -732,7 +732,7 @@ struct RowVerbMenu: View {
             Button(role: .destructive) {
                 onUnwatch(thing)
             } label: {
-                Label("Stop watching", systemImage: "star.slash")
+                Label("Stop following", systemImage: "star.slash")
             }
         } else {
             standardMenu(note: note)

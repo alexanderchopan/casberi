@@ -241,14 +241,14 @@ enum TokenWatch {
         let source = Self.source
         let count = (try? context.fetchCount(FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == source }))) ?? 0
-        let proof = String(localized: "\(count) watched")
+        let proof = String(localized: "\(count) followed")
         if let existing = store.bridges.first(where: { $0.id == "tokens" }) {
             store.reconnect(existing.id, proof: proof)
         } else {
             store.bridges.append(BridgeApp(
                 id: "tokens", name: source, status: .connected,
                 statusLine: proof,
-                can: ["Watches the stocks and tokens you add.", "Read-only — public price data only."]
+                can: ["Follows the stocks and tokens you add.", "Read-only — public price data only."]
             ))
             // No haptic here — every caller already fires its own on the
             // watch that triggered this (first-ever) registration; buzzing

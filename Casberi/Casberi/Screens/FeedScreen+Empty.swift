@@ -195,7 +195,7 @@ extension FeedScreen {
     /// is watched — the empty state itself stops rendering.
     @ViewBuilder private var tryItChip: some View {
         if shape == .tokens {
-            tryItButton(label: "Watch ETH") {
+            tryItButton(label: "Follow ETH") {
                 guard let resolved = await TokenWatch.resolve("ETH") else { return }
                 TokenWatch.add(resolved, context: modelContext)
                 TokenWatch.registerBridge(store: bridges, context: modelContext)

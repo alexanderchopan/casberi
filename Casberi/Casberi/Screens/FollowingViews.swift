@@ -8,7 +8,7 @@ import SwiftData
 extension Following.Room {
     /// The tile's name: what is listed. Work watches; the rest subscribe.
     var tileWord: String {
-        self == .work ? String(localized: "Watching") : String(localized: "Subscriptions")
+        self == .work ? String(localized: "Following") : String(localized: "Subscriptions")
     }
 
     /// The first row's words, and its tray's title (prd §1120): what the
@@ -20,14 +20,14 @@ extension Following.Room {
         // One verb in both rooms (user, 2026-10-05: "follow a feed … we can
         // use it in both places"): a channel and a show are feeds too.
         case .reading, .media: String(localized: "Follow a feed")
-        case .work:    String(localized: "Watch something")
+        case .work:    String(localized: "Follow something")
         }
     }
 
-    /// The verb's undo: Follow pairs with Stop following, Watch with Stop
-    /// watching (§1117's Track keeps Stop tracking).
+    /// The verb's undo, in every room (prd §1121); §1117's Track keeps
+    /// Stop tracking.
     var stopWord: String {
-        self == .work ? String(localized: "Stop watching") : String(localized: "Stop following")
+        String(localized: "Stop following")
     }
 
     /// "16 posts a month" — the box's statement.
@@ -50,7 +50,7 @@ extension Following.Room {
 
     /// "12 subscriptions" / "7 watching" — the box's line.
     func count(_ n: Int) -> String {
-        self == .work ? String(localized: "\(n) watching") : String(localized: "\(n) subscriptions")
+        self == .work ? String(localized: "\(n) following") : String(localized: "\(n) subscriptions")
     }
 
     /// The empty box's words.
@@ -58,7 +58,7 @@ extension Following.Room {
         switch self {
         case .reading: String(localized: "Sites you follow, and how often they post")
         case .media:   String(localized: "Channels, shows and boards you follow")
-        case .work:    String(localized: "Repos, packages and models you watch")
+        case .work:    String(localized: "Repos, packages and models you follow")
         }
     }
 }
@@ -268,7 +268,7 @@ struct FollowListDoor: View {
         switch room {
         case .reading: String(localized: "\(count) subscriptions in Reading")
         case .media:   String(localized: "\(count) subscriptions in Media")
-        case .work:    String(localized: "\(count) watching in Work")
+        case .work:    String(localized: "\(count) following in Work")
         }
     }
 }

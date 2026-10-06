@@ -102,11 +102,11 @@ guard 'case L2beatRoomSource.source:' "$FEED" \
 guard 'case "L2BEAT":              self = .l2beat' "$FEED" \
   "the L2BEAT source no longer maps to its own room shape — it would fall back to plain bands"
 guard 'L2beatChainRow(thing: thing)' "$FEED" \
-  "a watched chain no longer draws its assessment row"
+  "a followed chain no longer draws its assessment row"
 guard 'L2beatNewsRow(thing: thing, watchedChains: l2beatWatchedIDs)' "$FEED" \
-  "the milestone rows no longer get the watch list — no row could say 'you watch this'"
+  "the milestone rows no longer get the follow list — no row could say 'you follow this'"
 guard 'L2beatWatch.chainID(from: $0)' "$FEED" \
-  "the feed's watch list is no longer derived from the room's own rows"
+  "the feed's follow list is no longer derived from the room's own rows"
 
 # ---- Never a composite ------------------------------------------------------------------
 # The rule §419 had to enforce by refusal and this one satisfies by citation: L2BEAT
@@ -218,23 +218,23 @@ guard 'L2beatFetch.milestones(projectID: $0)' "$TMP/bridge.nc" \
 # Every one of these guards a failure that is SILENT: the seat simply goes quiet, which
 # from outside is indistinguishable from L2BEAT having recorded nothing (§311).
 guard 'guard L2beatWatch.following || !watched.isEmpty' "$TMP/bridge.nc" \
-  "the sync is gated on the watch list — following alone would read nothing, silently"
+  "the sync is gated on the follow list — following alone would read nothing, silently"
 guard 'guard following || count > 0' "$TMP/bridge.nc" \
   "the seat no longer registers for a follower — no seat means BridgeRefresh never sweeps it"
 guard 'following = true' "$TMP/bridge.nc" \
-  "watching no longer implies following — the incidents would stop arriving for a watcher"
+  "following no longer implies following — the incidents would stop arriving for a watcher"
 guard 'following = false' "$TMP/bridge.nc" \
   "disconnect no longer clears the follow flag — the seat would re-register itself"
 guard '!watches.isEmpty || !milestones.isEmpty' "$TMP/src.nc" \
-  "the room head demands a watched chain again — a follower's incidents would head nothing"
+  "the room head demands a followed chain again — a follower's incidents would head nothing"
 guard 'isWatched || milestone.kind.isIncident' "$TMP/bridge.nc" \
   "every milestone lands for every chain — a follower's feed becomes 274 launches and upgrades"
 guard 'case .stage: return true' "$TMP/bridge.nc" \
   "a stage move no longer lands for an unwatched chain — the one piece of ecosystem news this data produces"
 guard 'case .risk: return watched' "$TMP/bridge.nc" \
-  "risk revisions land for every chain — 105 chains of them in the feed of somebody who watches none"
+  "risk revisions land for every chain — 105 chains of them in the feed of somebody who follows none"
 guard 'l2beatFollow' "$PROBES" \
-  "-l2beatFollow is gone; following with nothing watched has no headless door"
+  "-l2beatFollow is gone; following with nothing followed has no headless door"
 
 # ---- The bundled baseline -------------------------------------------------------------------
 guard 'L2beatDirectory.seededIncidents' "$TMP/bridge.nc" \
@@ -258,7 +258,7 @@ fi
 
 # ---- A row must not fetch --------------------------------------------------------------------
 if grep -qE 'FetchDescriptor|modelContext' "$ROWS"; then
-  echo "✗ an L2BEAT row fetches — the watch list is handed in precisely so it cannot"
+  echo "✗ an L2BEAT row fetches — the follow list is handed in precisely so it cannot"
   exit 1
 fi
 
@@ -843,7 +843,7 @@ check("an unread row says so rather than claiming nothing was found",
 check("a clean row counts the checks", L2beatRoom.leadLine(item("A", risks: clean)).contains("5"))
 
 print("")
-print("The news-led head (following, nothing watched)")
+print("The news-led head (following, nothing followed)")
 
 let followed = room([], news: .init(total: 12, recent: 2, chains: 7))
 check("the followed headline counts the recent ones",
@@ -868,7 +868,7 @@ let nothing = room([])
 check("nothing landed reads as the read not having run",
       L2beatRoom.headline(nothing).contains("Reading"))
 check("nothing landed offers the upgrade anyway",
-      L2beatRoom.newsNote(nothing).contains("Watching the chains you use"))
+      L2beatRoom.newsNote(nothing).contains("Following the chains you use"))
 check("a room with no items and no news has no coverage note",
       L2beatRoom.coverageNote(nothing) == nil)
 check("a capped room says how many it is showing",

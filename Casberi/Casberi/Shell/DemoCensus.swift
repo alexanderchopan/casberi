@@ -242,7 +242,7 @@ enum DemoCensus {
                 : .empty("tokens=\(p.tokenCount) wallets=\(p.walletCount) — not a combined map")
         })
         out.append(Surface(name: "wallet.history", gate: .required) {
-            guard let first = WalletStore.shared.addresses.first else { return .empty("no watched wallet") }
+            guard let first = WalletStore.shared.addresses.first else { return .empty("no followed wallet") }
             let n = WalletStore.shared.valueSamples(forAddress: first.address).count
             return n >= 2 ? .ok("\(n) samples") : .empty("\(n) samples — the curve cannot draw")
         })
@@ -277,7 +277,7 @@ enum DemoCensus {
             return legs > 0 ? .ok(first) : .empty(first)
         })
         out.append(Surface(name: "wallet.nftShelf", gate: .required) {
-            guard let first = WalletStore.shared.addresses.first else { return .empty("no watched wallet") }
+            guard let first = WalletStore.shared.addresses.first else { return .empty("no followed wallet") }
             let pieces = await WalletNFTShelf.pieces(for: first.address, book: WalletNFTStore.shared.book)
             return pieces.isEmpty ? .empty("no pieces") : .ok("\(pieces.count) pieces")
         })

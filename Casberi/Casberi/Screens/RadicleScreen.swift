@@ -74,7 +74,7 @@ struct RadicleScreen: View {
             }
             DSSlabField(placeholder: String(localized: "Repo id, or a name to find"),
                         text: $repoField,
-                        actionLabel: String(localized: "Watch"),
+                        actionLabel: String(localized: "Follow"),
                         focus: $fieldFocused,
                         isArmed: RadicleWire.normalizeRID(repoField) != nil,
                         secondaryLabel: String(localized: "Find"),
@@ -150,7 +150,7 @@ struct RadicleScreen: View {
             return
         }
         guard radicle.add(id) else {
-            lastResult = .says(String(localized: "Already watching that repo."))
+            lastResult = .says(String(localized: "Already following that repo."))
             repoField = ""
             return
         }
@@ -223,7 +223,7 @@ struct RadicleScreen: View {
                     : String(localized: "Synced just now")
                 store.registerConnected(
                     id: "radicle", name: "Radicle", proof: proof,
-                    can: ["Reads patches and issues from the repos you watch, on the seed you name.",
+                    can: ["Reads patches and issues from the repos you follow, on the seed you name.",
                           "Read-only — the gateway has no credential and no way to write."])
             } else {
                 lastResult = .failed(String(localized: "Couldn't reach \(radicle.seed) — check your connection."))

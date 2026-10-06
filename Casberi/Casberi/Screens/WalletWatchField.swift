@@ -135,7 +135,7 @@ struct WalletWatchField: View {
         }
         .animation(DS.Motion.standard, value: draft.isEmpty)
         .task(id: draft) { await resolvePreview() }
-        .alert("Watching \(WalletStore.watchLimit) already", isPresented: $watchCapHit) {
+        .alert("Following \(WalletStore.watchLimit) already", isPresented: $watchCapHit) {
             Button("OK", role: .cancel) { }
         } message: {
             Text("That's the cap. Remove one first; its name stays in your book.")
@@ -231,7 +231,7 @@ struct WalletWatchField: View {
     }
 
     private func previewFact(address: String, known: AddressBook.Entry?) -> String {
-        if let known, isWatched(known) { return String(localized: "Already watching") }
+        if let known, isWatched(known) { return String(localized: "Already following") }
         var parts: [String] = []
         if address != draft { parts.append(WalletStore.shortAddress(address)) }
         if known != nil { parts.append(String(localized: "already in your book")) }
@@ -313,7 +313,7 @@ struct WalletWatchField: View {
             store.reconcileWalletSeats()
         case .alreadyWatching:
             resultIsError = true
-            result = String(localized: "Already watching that address.")
+            result = String(localized: "Already following that address.")
             return
         case .limitReached:
             watchCapHit = true

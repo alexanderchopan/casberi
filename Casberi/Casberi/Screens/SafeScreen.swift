@@ -204,7 +204,7 @@ struct SafeScreen: View {
     @ViewBuilder private var connectBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if hasWallets {
-                DSSlabDoor(title: String(localized: "Watching \(walletCount) address"),
+                DSSlabDoor(title: String(localized: "Following \(walletCount) address"),
                            detail: String(localized: "Manage"),
                            systemImage: "eye") {
                     route.pushBridge(.wallet)
@@ -222,8 +222,8 @@ struct SafeScreen: View {
             // lede says the same thing with the part that matters — where
             // signing actually happens — in both states.
             DSSlabNote(text: safeCount > 0
-                ? String(localized: "Watching \(safeCount) Safe — a pending signature lands in your feed the moment it's proposed.")
-                : String(localized: "Watch a Safe, or a wallet that signs for one."),
+                ? String(localized: "Following \(safeCount) Safe — a pending signature lands in your feed the moment it's proposed.")
+                : String(localized: "Follow a Safe, or a wallet that signs for one."),
                        plain: true)
         }
     }

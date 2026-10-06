@@ -170,20 +170,20 @@ final class BridgeStore {
     private static let walletSeats: [WalletSeat] = [
         WalletSeat(id: "peer", name: "Peer",
                    count: { PeerBridge.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads Peer fills for the wallets you watch, from the public chain.",
+                   can: ["Reads Peer fills for the wallets you follow, from the public chain.",
                          "Read-only — never starts, signs, or settles a trade."]),
         WalletSeat(id: "privacypools", name: "0xBow Privacy Pools",
                    count: { PrivacyPoolsBridge.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads Privacy Pools deposits and their screening status for the wallets you watch, from public sources.",
+                   can: ["Reads Privacy Pools deposits and their screening status for the wallets you follow, from public sources.",
                          "Read-only — never deposits, withdraws, or moves funds."]),
         WalletSeat(id: "railgun", name: "Railgun",
                    count: { RailgunBridge.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads what you shield into Railgun and what comes back out, for the wallets you watch, from the public chain.",
+                   can: ["Reads what you shield into Railgun and what comes back out, for the wallets you follow, from the public chain.",
                          "Never sees inside the pool — an unshield never names its sender, and relayer sends leave no public trace.",
                          "Read-only — never shields, unshields, or moves funds."]),
         WalletSeat(id: "gnosispay", name: "Gnosis Pay",
                    count: { GnosisPayBridge.evidence.count(in: $0) }, noun: "card",
-                   can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you watch.",
+                   can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you follow.",
                          "Amounts and timing only — the merchant never reaches the chain.",
                          "Read-only — never spends, tops up, or freezes a card."]),
         // Counted in CARDS like Gnosis Pay, not wallets: one watched wallet is
@@ -193,12 +193,12 @@ final class BridgeStore {
         // MetaMask), so a person reading this row must not expect a statement.
         WalletSeat(id: "metamaskcard", name: "MetaMask Card",
                    count: { MetaMaskCardBridge.evidence.count(in: $0) }, noun: "card",
-                   can: ["Reads your MetaMask Card spending from Linea, for the wallets you watch.",
+                   can: ["Reads your MetaMask Card spending from Linea, for the wallets you follow.",
                          "Amounts and timing only — the merchant never reaches the chain.",
                          "Read-only — never spends, tops up, or changes a spending cap."]),
         WalletSeat(id: "safe", name: "Safe",
                    count: { _ in SafeBridge.detectedCount() }, noun: "Safe",
-                   can: ["Reads the pending signature queue for any Safe you watch, or that watches you as a signer.",
+                   can: ["Reads the pending signature queue for any Safe you follow, or that follows you as a signer.",
                          "Alerts on a change to a Safe's owners, threshold, or modules.",
                          "Read-only — signing always happens in your own Safe app."]),
         // ONE ether.fi seat, not two (user ruling 2026-07-31). The unstake
@@ -224,7 +224,7 @@ final class BridgeStore {
                            .union(EtherFiCash.evidence.addresses)
                            .filter { watched.contains($0) }.count
                    }, noun: "wallet",
-                   can: ["Reads your unstake requests from Ethereum and your Cash spending from Optimism, for the wallets you watch.",
+                   can: ["Reads your unstake requests from Ethereum and your Cash spending from Optimism, for the wallets you follow.",
                          "Tells you the moment queued ETH becomes claimable.",
                          "Lands each card purchase, and warns when the credit line nears its limit.",
                          "Read-only — never stakes, claims, spends, or borrows."]),
@@ -299,10 +299,10 @@ final class BridgeStore {
             // that fills this list says `Follow address`. The seat key stays
             // "wallet" because that is the seat's own noun; only the words a
             // person reads change.
-            case "wallet": String(localized: "Watching \(n) address")
-            case "card":   String(localized: "Watching \(n) card")
-            case "Safe":   String(localized: "Watching \(n) Safe")
-            default:       String(localized: "Watching \(n) \(seat.noun)")
+            case "wallet": String(localized: "Following \(n) address")
+            case "card":   String(localized: "Following \(n) card")
+            case "Safe":   String(localized: "Following \(n) Safe")
+            default:       String(localized: "Following \(n) \(seat.noun)")
             }
             registerConnected(id: seat.id, name: seat.name,
                               proof: proof,
@@ -448,8 +448,8 @@ struct BridgeApp: Identifiable, Codable {
               can: ["Reads your wallet's activity.", "Read-only — never trades or moves funds."]),
         // Markets: stock and token watching on public price data. Read-only —
         // no wallet, no keys, no trading.
-        .init(id: "tokens", name: "Markets", status: .connected, statusLine: "6 watched",
-              can: ["Watches the stocks and tokens you add.", "Read-only — public price data only."]),
+        .init(id: "tokens", name: "Markets", status: .connected, statusLine: "6 followed",
+              can: ["Follows the stocks and tokens you add.", "Read-only — public price data only."]),
     ]
         // Every other room the demo corpus furnishes (2026-08-07). Seats and
         // things are seeded together or the Apps catalog contradicts the feed:

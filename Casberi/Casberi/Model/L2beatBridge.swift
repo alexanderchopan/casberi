@@ -134,7 +134,7 @@ enum L2beatWatch {
 		// The proof says which TIER is on, because "connected" covering both would leave
 		// someone who only follows unable to tell whether their watches took.
 		let proof = count > 0
-			? String(localized: "\(count) watched")
+			? String(localized: "\(count) followed")
 			: String(localized: "Following the ecosystem")
 		store.registerConnected(
 			id: seatID,

@@ -25,7 +25,7 @@
 #     not stable, or that heads its Quiet half with a label over nothing
 #   · a note that stored "" and now counts as a note, or a Notes row that
 #     no longer shows on the page what was typed into it (§708)
-#   · a second removal verb ("Unfollow", "Stop watching") creeping back onto
+#   · a second removal verb ("Unfollow", "Stop following") creeping back onto
 #     a migrated screen, or a slab section drawn on the page that ruled them
 #     out ("looks like a SaaS tool")
 #   · a reader filter wired at the candidates and not at the tool snapshot,
@@ -96,7 +96,7 @@ done
 
 # 2. ONE removal verb, "Remove", on every migrated screen and on the chassis.
 for f in "$TMP/page-bare.swift" "$TMP/token-bare.swift" "$TMP/handle-bare.swift" "$TMP/detail-bare.swift"; do
-  grep -qE '"(Unfollow|Unwatch|Stop watching|Stop following)"' "$f" \
+  grep -qE '"(Unfollow|Unfollow|Stop following|Stop following)"' "$f" \
     && { echo "✗ ${f:t} carries a second removal verb — §639: the verb is Remove, everywhere"; exit 1; }
 done
 grep -q 'Label("Remove", systemImage: "minus.circle")' "$TMP/page-bare.swift" \
@@ -313,7 +313,7 @@ let split = S.split(rows)
 check("active first, in the caller's order", split.active.map(\.id) == ["b", "d", "e"])
 check("quiet after, in the caller's order", split.quiet.map(\.id) == ["a", "c"])
 check("equal counts never swap (stable)", S.split(rows).active.map(\.id) == split.active.map(\.id))
-check("labels", S.watchingLabel(5) == "Watching · 5" && S.quietLabel(2) == "Quiet · 2")
+check("labels", S.watchingLabel(5) == "Following · 5" && S.quietLabel(2) == "Quiet · 2")
 
 // ── ONE BAR, TWO JOBS (§639 amendment) ───────────────────────────────────
 // The field is the add verb AND the roster's filter, and the words have to

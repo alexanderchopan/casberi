@@ -145,7 +145,7 @@ guard 'walletbeatHead(walletbeatShape)' "$SHEETVIEW" \
 guard '&& walletbeatShape == nil' "$SHEETVIEW" \
   "the Walletbeat arm is not subtracted from contentShown — the body would draw twice"
 guard 'WalletbeatReportCard(walletID:' "$SHEETVIEW" \
-  "a watched wallet's sheet no longer draws its report card"
+  "a followed wallet's sheet no longer draws its report card"
 
 # §308 facets, and the rule that they only narrow behind a named source.
 guard '"Incident")' "$RETRIEVER" \
@@ -178,17 +178,17 @@ fi
 # was gated on the watch list while the incidents themselves were never filtered by it.
 # --------------------------------------------------------------------------------------
 guard 'guard WalletbeatWatch.following || !watched.isEmpty' "$TMP/bridge.nc" \
-  "the sync is gated on the watch list again — following alone would read nothing, silently"
+  "the sync is gated on the follow list again — following alone would read nothing, silently"
 guard 'guard following || count > 0' "$TMP/bridge.nc" \
   "the seat no longer registers for a follower — no seat means BridgeRefresh never sweeps it"
 guard 'following = true' "$TMP/bridge.nc" \
-  "watching no longer implies following — the incidents would stop arriving for a watcher"
+  "following no longer implies following — the incidents would stop arriving for a watcher"
 guard 'following = false' "$TMP/bridge.nc" \
   "disconnect no longer clears the follow flag — the seat would re-register itself"
 # The room composes for EITHER tier. Demanding a watch here is the same silent gate one
 # file over: incidents land, the chip appears, and the head returns nil above them.
 guard '!watches.isEmpty || !incidents.isEmpty' "$TMP/src.nc" \
-  "the room head demands a watched wallet again — a follower's incidents would head nothing"
+  "the room head demands a followed wallet again — a follower's incidents would head nothing"
 guard 'newsSummary(incidents' "$TMP/src.nc" \
   "the room no longer summarises the incidents — the followed head has nothing to say"
 # §234's ruling: a browse is mounted by the ROOM, "never by a setup screen". Routing
@@ -204,7 +204,7 @@ if grep -qF 'route.path.append(.bridge(.walletbeat))' "$FEED"; then
   exit 1
 fi
 guard 'walletbeatFollow' "$PROBES" \
-  "-walletbeatFollow is gone; following with nothing watched has no headless door"
+  "-walletbeatFollow is gone; following with nothing followed has no headless door"
 
 # --------------------------------------------------------------------------------------
 # Whether a row is about a wallet YOU use, and whether a wallet has an open incident
@@ -219,15 +219,15 @@ guard 'walletbeatFollow' "$PROBES" \
 guard 'WalletbeatIncidentBook.facts(ref: thing.sourceRef)' "$ROWS" \
   "the news row no longer reads the incident book — a multi-wallet incident would lose its marker"
 guard 'var watchedWallets: Set<String> = []' "$ROWS" \
-  "the news row no longer takes the watch list; it would have to fetch, which a row must never do"
+  "the news row no longer takes the follow list; it would have to fetch, which a row must never do"
 guard 'watchedWallets: walletbeatWatchedIDs' "$FEED" \
-  "FeedScreen no longer hands the room's watch list to its incident rows"
+  "FeedScreen no longer hands the room's follow list to its incident rows"
 guard 'WalletbeatWatch.walletID(from: $0)' "$FEED" \
-  "the feed's watch list is no longer derived from the room's own rows"
+  "the feed's follow list is no longer derived from the room's own rows"
 # A row must not fetch. The whole reason the set is handed in is that the room already
 # holds the watch rows a fetch would go looking for.
 if grep -qE 'FetchDescriptor|modelContext' "$ROWS"; then
-  echo "✗ a Walletbeat row fetches — the watch list is handed in precisely so it cannot"
+  echo "✗ a Walletbeat row fetches — the follow list is handed in precisely so it cannot"
   exit 1
 fi
 guard 'openIncidents.contains(entry.id)' "$DIRSCREEN" \
@@ -320,7 +320,7 @@ fi
 guard 'connectedName: connectedName' "$TMP/src.nc" \
   "the room source no longer carries the connected wallet through — the button can never name one"
 guard 'watched: watches.compactMap { WalletbeatWatch.walletID(from: $0) }' "$TMP/src.nc" \
-  "the head's offer no longer excludes on the rows it is holding — it could offer a wallet it draws as watched"
+  "the head's offer no longer excludes on the rows it is holding — it could offer a wallet it draws as followed"
 guard 'walletbeatConnectedApp' "$PROBES" \
   "-walletbeatConnectedApp is gone; a sighting has no headless door and no simulator can make one"
 
@@ -784,7 +784,7 @@ let capped = WalletbeatRoom(items: [rabby, ledger], total: 5, snapshotDay: "2026
 check("a folded tail is named", WalletbeatRoom.coverageNote(capped)?.contains("2 of 5") == true)
 
 print("")
-print("The followed head — no wallet watched (prd §421)")
+print("The followed head — no wallet followed (prd §421)")
 
 func newsRoom(total: Int, open: Int = 0, recent: Int = 0) -> WalletbeatRoom {
     WalletbeatRoom(items: [], total: 0, snapshotDay: "2026-08-20",
@@ -834,11 +834,11 @@ check("no incident landed never claims a quiet window",
 
 // The second line is always the upgrade — what following does NOT cover. THE REASON,
 // NOT THE VERB (2026-08-29): the button one line below is the instruction, and the note
-// carried it too, in a different word ("Name" against the button's "Watch").
+// carried it too, in a different word ("Name" against the button's "Follow").
 check("the followed note says what the upgrade adds",
       WalletbeatRoom.note(openOne).contains("where its keys are made"))
 check("the followed note before anything lands still names the upgrade",
-      WalletbeatRoom.note(nothingRead).contains("Watching the wallet you use"))
+      WalletbeatRoom.note(nothingRead).contains("Following the wallet you use"))
 check("the followed note leaves the verb to the button",
       !WalletbeatRoom.note(openOne).contains("Name the wallet apps"))
 
@@ -857,7 +857,7 @@ check("a followed room is empty of wallets", openOne.isEmpty)
 // the wallet you named outranks the ecosystem.
 let watchedWithNews = WalletbeatRoom(items: [rabby], total: 1, snapshotDay: "2026-08-20",
                                      news: WalletbeatRoom.News(total: 9, open: 2, recent: 3))
-check("a watched wallet still leads its own head",
+check("a followed wallet still leads its own head",
       WalletbeatRoom.headline(watchedWithNews).contains("Rabby"))
 
 print("")
@@ -868,7 +868,7 @@ func facts(_ ref: String?, source: String = "Walletbeat",
     WalletbeatSheet.Facts(source: source, sourceRef: ref, isImportReceipt: receipt)
 }
 
-check("a watch ref draws the wallet anatomy",
+check("a follow ref draws the wallet anatomy",
       WalletbeatSheet.shape(facts("walletbeat:wallet:rabby")) == .wallet)
 check("a news ref draws the incident anatomy",
       WalletbeatSheet.shape(facts("walletbeat:news:some-slug")) == .incident)
@@ -1058,7 +1058,7 @@ check("the most recent handshake leads",
       WalletbeatMatch.suggestions(apps: apps, watched: [], entries: real) == ["metamask", "rabby"])
 check("a wallet Walletbeat does not rate is not offered",
       WalletbeatMatch.suggestions(apps: apps, watched: [], entries: real).contains("trust") == false)
-check("a wallet already watched is not offered",
+check("a wallet already followed is not offered",
       WalletbeatMatch.suggestions(apps: apps, watched: ["metamask"], entries: real) == ["rabby"])
 check("nothing to offer is an empty list, not a nil",
       WalletbeatMatch.suggestions(apps: apps, watched: ["metamask", "rabby"], entries: real).isEmpty)
@@ -1076,7 +1076,7 @@ print("The room's one button")
 let noWatches = WalletbeatRoom(items: [], total: 0, snapshotDay: "2026-08-20",
                                news: WalletbeatRoom.News(total: 3, open: 0, recent: 1),
                                connectedName: "Rabby")
-check("with nothing watched it names the wallet you connected with",
+check("with nothing followed it names the wallet you connected with",
       WalletbeatRoom.browseLabel(noWatches).contains("Rabby"))
 let noWatchesNoApp = WalletbeatRoom(items: [], total: 0, snapshotDay: "2026-08-20",
                                     news: WalletbeatRoom.News(total: 3, open: 0, recent: 1))
@@ -1092,7 +1092,7 @@ let watching = WalletbeatRoom(
                                 lead: .noFailures(judged: 24, applicable: 29),
                                 openIncidents: 0, recentIncidents: 0, read: true)],
     total: 1, snapshotDay: "2026-08-20", news: nil, connectedName: "Rabby")
-check("a watched room stops naming a wallet on its button",
+check("a followed room stops naming a wallet on its button",
       WalletbeatRoom.browseLabel(watching).contains("Rabby") == false)
 
 print("")
@@ -1311,7 +1311,7 @@ mutate "open must outrank recent" room \
 mutate "the recent window must be reported" room \
   'if news.recent > 0 {' 'if news.recent > 99 {'
 mutate "the followed note must carry the upgrade" room \
-  "Watching yours adds where its keys are made, and who sees your addresses" \
+  "Following yours adds where its keys are made, and who sees your addresses" \
   "Walletbeat publishes these on their own schedule"
 mutate "a followed room must still attribute" room \
   "Walletbeat's reading, not ours · every wallet they cover" \
@@ -1340,7 +1340,7 @@ mutate "an ambiguous key must resolve to nothing" match \
   'return claims.compactMapValues { $0.first }'
 
 # The three rules the offer list keeps.
-mutate "a wallet already watched must not be offered" match \
+mutate "a wallet already followed must not be offered" match \
   'guard !already.contains(id), seen.insert(id).inserted else { continue }' \
   'guard seen.insert(id).inserted else { continue }'
 mutate "one wallet reached twice is one offer" match \
@@ -1351,7 +1351,7 @@ mutate "the most recent handshake must lead" match \
   'for app in apps {'
 
 # The button names a wallet only while nothing is watched — otherwise it is a nag.
-mutate "a watched room must stop naming a wallet" room \
+mutate "a followed room must stop naming a wallet" room \
   '		guard room.items.isEmpty else {' \
   '		guard true else {'
 

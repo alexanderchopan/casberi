@@ -279,13 +279,13 @@ struct L2beatDirectoryScreen: View {
 			// Watch is the verb on every row; a chain already watched says so instead of
 			// offering a control that would do nothing.
 			if watching {
-				Text(String(localized: "Watching"))
+				Text(String(localized: "Following"))
 					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 					.frame(width: 58, alignment: .trailing)
 			} else {
 				Button(action: { watch(project) }) {
-					Text(String(localized: "Watch"))
+					Text(String(localized: "Follow"))
 						.dsText(.label12)
 						.foregroundStyle(DS.tint)
 						.frame(width: 58, alignment: .trailing)

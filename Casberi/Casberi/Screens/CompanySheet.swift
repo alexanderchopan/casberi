@@ -68,10 +68,10 @@ struct CompanySheet: View {
         if company.listing == .unlisted {
             EmptyView()
         } else if watched {
-            DSStamp(word: String(localized: "Watching"), weight: .good, glyph: "star.fill")
+            DSStamp(word: String(localized: "Following"), weight: .good, glyph: "star.fill")
                 .frame(maxWidth: .infinity, minHeight: DSSlab.height)
         } else {
-            DSSlabButton(title: String(localized: "Watch \(company.name)"), systemImage: "star") {
+            DSSlabButton(title: String(localized: "Follow \(company.name)"), systemImage: "star") {
                 guard !working else { return }
                 working = true
                 Task {
@@ -81,7 +81,7 @@ struct CompanySheet: View {
                     case .success:
                         watched = true
                         DSHaptic.success()
-                        chrome?.flash(String(localized: "Watching \(company.name)"))
+                        chrome?.flash(String(localized: "Following \(company.name)"))
                     case .failure(let why):
                         failure = why.message
                         DSHaptic.failure()

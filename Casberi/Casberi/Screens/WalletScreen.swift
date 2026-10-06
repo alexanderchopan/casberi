@@ -177,7 +177,7 @@ struct WalletScreen: View {
                    systemImage: "network") {
             route.pushBridge(.walletConnection)
         }
-        DSSlabNote(text: String(localized: "Read-only — watching can never move funds."),
+        DSSlabNote(text: String(localized: "Read-only — following can never move funds."),
                    plain: true)
     }
 

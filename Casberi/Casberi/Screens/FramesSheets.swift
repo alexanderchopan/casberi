@@ -581,7 +581,7 @@ struct FramesMoveSheet: View {
                     Task { await FramesLiveState.shared.refresh() }
                 }
             } label: {
-                Text(String(localized: "Watch \(WalletStore.shortAddress(address))"))
+                Text(String(localized: "Follow \(WalletStore.shortAddress(address))"))
                     .dsText(.body17).foregroundStyle(DS.tint)
             }
             .buttonStyle(RowPress())
@@ -1236,7 +1236,7 @@ struct FramesPayerSheet: View {
                     Task { await FramesLiveState.shared.refresh() }
                 }
             } label: {
-                Text(String(localized: "Watch \(WalletStore.shortAddress(payer.address))"))
+                Text(String(localized: "Follow \(WalletStore.shortAddress(payer.address))"))
                     .dsText(.body17).foregroundStyle(DS.tint)
             }
             .buttonStyle(RowPress())
@@ -1418,7 +1418,7 @@ struct FramesAccountSheet: View {
                     FramesBridge.registerBridge(store: store)
                     Task { await FramesLiveState.shared.refresh() }
                 } label: {
-                    Text(String(localized: "Stop watching"))
+                    Text(String(localized: "Stop following"))
                         .dsText(.body17).foregroundStyle(DS.textTertiary)
                 }
                 .buttonStyle(RowPress())
@@ -1430,7 +1430,7 @@ struct FramesAccountSheet: View {
                         Task { await FramesLiveState.shared.refresh() }
                     }
                 } label: {
-                    Text(String(localized: "Watch this address"))
+                    Text(String(localized: "Follow this address"))
                         .dsText(.body17).foregroundStyle(DS.tint)
                 }
                 .buttonStyle(RowPress())

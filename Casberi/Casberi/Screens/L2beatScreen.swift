@@ -149,7 +149,7 @@ struct L2beatScreen: View {
 			DSSlabField(
 				placeholder: String(localized: "Chain name"),
 				text: $queryField,
-				actionLabel: String(localized: "Watch"),
+				actionLabel: String(localized: "Follow"),
 				focus: $fieldFocused,
 				action: watchTyped)
 

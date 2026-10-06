@@ -96,7 +96,7 @@ struct BankrSetupScreen: View {
             // opposite reading. Unnumbered: facts, not steps (§220).
             BridgeStepLines(steps: [
                 String(localized: "Bankr answers from its own wallet, not yours."),
-                String(localized: "It can't see the wallets you watch here."),
+                String(localized: "It can't see the wallets you follow here."),
             ], numbered: false)
             DSSlabButton(title: "Connect",
                          detail: String(localized: "Sign in to Bankr"),

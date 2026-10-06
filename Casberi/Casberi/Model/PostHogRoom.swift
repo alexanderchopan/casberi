@@ -111,9 +111,9 @@ struct PostHogRoom: Equatable {
             return String(localized: "\(silent.count) metrics have stopped firing")
         }
         if room.metrics.count == 1 {
-            return String(localized: "Watching \(room.metrics[0].event)")
+            return String(localized: "Following \(room.metrics[0].event)")
         }
-        return String(localized: "Watching \(room.metrics.count) metrics")
+        return String(localized: "Following \(room.metrics.count) metrics")
     }
 
     /// The line under it — the next rung for the leading metric, which is the
@@ -147,7 +147,7 @@ struct PostHogRoom: Equatable {
     /// drawn over everything.
     static func coverageNote(shown: Int, total: Int, unread: Int) -> String? {
         var parts: [String] = []
-        if total > shown { parts.append(String(localized: "\(total - shown) more watched")) }
+        if total > shown { parts.append(String(localized: "\(total - shown) more followed")) }
         if unread > 0 { parts.append(String(localized: "\(unread) not read yet")) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }

@@ -3479,7 +3479,7 @@ enum WalletIngest {
     /// a probe that asked differently than the real read would prove nothing.
     static func holdingsWindowRead() async -> String {
         let watched = WalletStore.shared.addresses.map(\.address)
-        guard !watched.isEmpty else { return "no watched address" }
+        guard !watched.isEmpty else { return "no followed address" }
         let addresses = await resolvedAddresses(watched)
         guard let tokens = await fetchHeldTokens(addresses: addresses) else {
             return "nothing reached"
@@ -3490,7 +3490,7 @@ enum WalletIngest {
     static func holdingsDiagnostic() async -> [String] {
         var out: [String] = []
         let watched = WalletStore.shared.addresses.map(\.address)
-        guard !watched.isEmpty else { return ["No watched address"] }
+        guard !watched.isEmpty else { return ["No followed address"] }
         let addresses = await resolvedAddresses(watched)
         let evm = evmOnly(addresses)
         out.append("Resolved \(addresses.count)/\(watched.count) address(es) — \(evm.count) EVM, \(addresses.count - evm.count) Solana")
@@ -3504,7 +3504,7 @@ enum WalletIngest {
         let routed = addresses.map { (address: $0, networks: networks(for: $0).filter(alchemyNetworks.contains)) }
                               .filter { !$0.networks.isEmpty }
         guard !routed.isEmpty else {
-            out.append("FAIL every watched address's chains are switched off")
+            out.append("FAIL every followed address's chains are switched off")
             return out
         }
         let url = "https://api.g.alchemy.com/data/v1/\(IngestSupport.alchemyKey)/assets/tokens/by-address"

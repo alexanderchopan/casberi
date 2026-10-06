@@ -1087,7 +1087,7 @@ private struct YouTubeVideoContent: View {
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s3)
-            DSDoorRow(icon: "play.rectangle", label: "Watch on YouTube") {
+            DSDoorRow(icon: "play.rectangle", label: "Follow on YouTube") {
                 openURL(url)
             }
             .padding(.horizontal, DS.Space.s4)
@@ -1153,7 +1153,7 @@ private struct TelegramVideoContent: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
             }
-            DSDoorRow(icon: "paperplane", label: "Watch in Telegram") {
+            DSDoorRow(icon: "paperplane", label: "Follow in Telegram") {
                 openURL(post)
             }
             .padding(.horizontal, DS.Space.s4)
@@ -2586,7 +2586,7 @@ private struct TokenChartContent: View {
             // The settled state is a FACT, so a stamp (prd §746) — it wore a
             // full-width faint capsule. It keeps the slab's height, so watching
             // doesn't snap the layout, and it stays a label, not a control.
-            DSStamp(word: String(localized: "Watching"),
+            DSStamp(word: String(localized: "Following"),
                     weight: .good, glyph: "checkmark")
                 .frame(maxWidth: .infinity, minHeight: DSSlab.height)
         } else if let resolved {
@@ -2598,7 +2598,7 @@ private struct TokenChartContent: View {
             // own comment called it "the one verb", which is exactly what
             // `DSSlabButton` IS, so it says the same thing in the app's words:
             // the glyph disc, the left-anchored verb, one radius.
-            DSSlabButton(title: String(localized: "Watch this token"),
+            DSSlabButton(title: String(localized: "Follow this token"),
                          systemImage: "eye") {
                 DSHaptic.tap()
                 if let watched = TokenWatch.add(resolved, context: modelContext) {

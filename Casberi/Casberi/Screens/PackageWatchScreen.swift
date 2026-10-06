@@ -63,7 +63,7 @@ struct PackageWatchScreen: View {
                 FollowListDoor(room: .work, count: watched.count)
             } else {
                 DSSlabField(placeholder: placeholder, text: $nameField,
-                            actionLabel: String(localized: "Watch"),
+                            actionLabel: String(localized: "Follow"),
                             focus: $fieldFocused, action: watch)
             }
             BridgeSyncStatusRows(syncing: syncing,
@@ -100,7 +100,7 @@ struct PackageWatchScreen: View {
         let name = registry.normalize(nameField)
         guard !name.isEmpty else { return }
         guard packages.add(registry, name) else {
-            lastResult = .says(String(localized: "Already watching \(name)."))
+            lastResult = .says(String(localized: "Already following \(name)."))
             nameField = ""
             return
         }
@@ -134,7 +134,7 @@ struct PackageWatchScreen: View {
                     : String(localized: "Synced just now")
                 store.registerConnected(
                     id: registry.bridgeID, name: registry.displayName, proof: proof,
-                    can: ["Reads the current version of the packages you watch.",
+                    can: ["Reads the current version of the packages you follow.",
                           "Read-only — it never installs, publishes, or signs in."])
             } else {
                 lastResult = .failed(String(localized: "Couldn't reach \(registry.displayName) — check your connection."))

@@ -261,7 +261,7 @@ struct AddressBookRow: View {
                         Image(systemName: "eye.fill")
                             .dsGlyph(.caption)
                             .foregroundStyle(DS.tint)
-                            .accessibilityLabel(Text("Watching"))
+                            .accessibilityLabel(Text("Following"))
                     }
                 }
             }
@@ -276,8 +276,8 @@ struct AddressBookRow: View {
                         .dsTapTarget()
                 }
                 .buttonStyle(PressSpring())
-                .accessibilityLabel(Text(watched ? "Watching \(shownName), tap to stop"
-                                                 : "Watch \(shownName)"))
+                .accessibilityLabel(Text(watched ? "Following \(shownName), tap to stop"
+                                                 : "Follow \(shownName)"))
             } else if let activity, activity.count > 0,
                       let when = AddressBookShape.lastPhrase(activity.lastAt) {
                 // WHEN, down the trailing edge (prd §462) — the slot the star
@@ -993,7 +993,7 @@ struct AddressCard: View {
     /// neither is a thing to act on, which is the bar `DSSheetHead` sets for
     /// spending `DS.attention` on a stamp.
     private var identityStamp: String? {
-        if isWatched { return String(localized: "Watching") }
+        if isWatched { return String(localized: "Following") }
         // "Not kept" is a state an ADDRESS can be in — you met it and have not
         // named it. A contact or a social profile is never "kept" and is not
         // meant to be (`AddressBookPeople`: they are shown, not stored), so the
@@ -1064,7 +1064,7 @@ struct AddressCard: View {
             if isWatched {
                 Button(role: .destructive) {
                     WalletUnwatch.perform(current, context: modelContext, chrome: chrome)
-                } label: { Label("Stop watching", systemImage: "eye.slash") }
+                } label: { Label("Stop following", systemImage: "eye.slash") }
             } else if WalletStore.shared.canWatchMore, !current.kind.isMonogram {
                 Button {
                     // The BOOK's address, which is the resolved form — the same

@@ -150,7 +150,7 @@ extension FeedScreen {
             var price = thing.flatMap { TokenPulse.shared.pulse(for: $0)?.price }
             if thing == nil || price == nil {
                 guard let resolved = await TokenWatch.search(r.address).first(where: { $0.id == r.id }) else {
-                    chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to watch."))
+                    chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to follow."))
                     return
                 }
                 if thing == nil {
@@ -160,7 +160,7 @@ extension FeedScreen {
                 price = resolved.priceUsd.flatMap(Double.init)
             }
             guard let thing, thing.isLive, let ref = thing.sourceRef, let price, price > 0 else {
-                chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to watch."))
+                chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to follow."))
                 return
             }
             let alert = PriceAlert(ref: ref, name: position.symbol, kind: template.kind,
@@ -262,7 +262,7 @@ extension FeedScreen {
                 onPickAccount: { picked in
                     withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
                 },
-                accountAction: .init(title: String(localized: "Watch a wallet"),
+                accountAction: .init(title: String(localized: "Follow a wallet"),
                                      symbol: "plus") { feedSheet = .walletFollow },
                 crown: { slot in
                     // **THE BOX IS BACK ON HOME (prd §760, reversing §757's

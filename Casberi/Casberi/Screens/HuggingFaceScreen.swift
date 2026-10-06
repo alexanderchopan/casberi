@@ -51,7 +51,7 @@ struct HuggingFaceScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if hf.authors.isEmpty {
                 DSSlabField(placeholder: String(localized: "Org or username"),
-                            text: $authorField, actionLabel: String(localized: "Watch"),
+                            text: $authorField, actionLabel: String(localized: "Follow"),
                             focus: $fieldFocused, action: watch)
             } else {
                 FollowListDoor(room: .work, count: hf.authors.count)
@@ -89,7 +89,7 @@ struct HuggingFaceScreen: View {
         let name = HuggingFaceStore.normalize(authorField)
         guard !name.isEmpty else { return }
         guard hf.add(name) else {
-            lastResult = .says(String(localized: "Already watching \(name)."))
+            lastResult = .says(String(localized: "Already following \(name)."))
             authorField = ""
             return
         }
@@ -133,7 +133,7 @@ struct HuggingFaceScreen: View {
             ? String(localized: "\(added) in")
             : String(localized: "Synced just now")
                 store.registerConnected(id: "huggingface", name: "Hugging Face", proof: proof,
-                                        can: ["Reads new models, datasets and Spaces from the authors you watch.",
+                                        can: ["Reads new models, datasets and Spaces from the authors you follow.",
                                               "Read-only — never publishes, stars, or downloads weights."])
             } else {
                 lastResult = .failed(String(localized: "Couldn't reach Hugging Face — check your connection."))

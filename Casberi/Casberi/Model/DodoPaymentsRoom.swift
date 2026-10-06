@@ -491,7 +491,7 @@ struct DodoPaymentsRoom: Equatable {
         if lead.prior == nil {
             // Said out loud rather than left blank: "no comparison" and "no
             // change" look identical on a card, and only one is a measurement.
-            return String(localized: "\(paymentsLabel(lead.payments)) · not watching long enough to compare")
+            return String(localized: "\(paymentsLabel(lead.payments)) · not following long enough to compare")
         }
         return String(localized: "\(paymentsLabel(lead.payments)) · about the same as the \(windowDays) days before")
     }

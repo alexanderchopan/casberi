@@ -205,7 +205,7 @@ enum AccountPageShape {
     }
 
     static func watchingLabel(_ count: Int) -> String {
-        String(localized: "Watching · \(count)")
+        String(localized: "Following · \(count)")
     }
 
     /// The named-only tier's header, beside "Watching · N".

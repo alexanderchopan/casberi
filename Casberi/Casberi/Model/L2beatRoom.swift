@@ -239,12 +239,12 @@ struct L2beatRoom: Equatable {
 	/// the note spends its whole line on what following does not cover.
 	static func newsNote(_ room: L2beatRoom) -> String {
 		guard let news = room.news, news.total > 0 else {
-			return String(localized: "Recorded incidents arrive here. Watching the chains you use adds a risk assessment of each.")
+			return String(localized: "Recorded incidents arrive here. Following the chains you use adds a risk assessment of each.")
 		}
 		let across = news.chains == 1
 			? String(localized: "on one chain")
 			: String(localized: "across \(news.chains) chains")
-		return String(localized: "\(news.total) on record \(across). Watching yours adds who can stop your transactions, and how long you'd have to get out.")
+		return String(localized: "\(news.total) on record \(across). Following yours adds who can stop your transactions, and how long you'd have to get out.")
 	}
 
 	/// The small print. States the snapshot's own age, because a directory bundled with the

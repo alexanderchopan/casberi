@@ -486,7 +486,7 @@ enum PostHogWatch {
         let project = PostHogAccount.projectName
         store.registerConnected(
             id: TokenBridge.posthog.bridgeID, name: source,
-            proof: String(localized: "\(count) metric watched")
+            proof: String(localized: "\(count) metric followed")
                 + (project.isEmpty ? "" : " · \(project)"))
     }
 }

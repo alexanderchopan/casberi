@@ -148,7 +148,7 @@ extension FeedScreen {
                 DSSkeletonRows(label: Text("No alerts yet."))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                DSFootnote(Text("Open something you watch to set an alert."))
+                DSFootnote(Text("Open something you follow to set an alert."))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset,
@@ -272,7 +272,7 @@ extension FeedScreen {
                         Button {
                             watchAllCompanies(unwatched)
                         } label: {
-                            Text("Watch all \(unwatched.count)").dsText(.body17)
+                            Text("Follow all \(unwatched.count)").dsText(.body17)
                                 .foregroundStyle(DS.tint)
                                 .frame(minHeight: 44)
                                 .contentShape(Rectangle())
@@ -320,14 +320,14 @@ extension FeedScreen {
         if watched {
             MarketsWatch.unwatch(company, context: modelContext)
             DSHaptic.tap()
-            chrome.flash(String(localized: "Stopped watching \(company.name)"))
+            chrome.flash(String(localized: "Stopped following \(company.name)"))
             return
         }
         Task {
             switch await MarketsWatch.watch(company, context: modelContext) {
             case .success:
                 DSHaptic.success()
-                chrome.flash(String(localized: "Watching \(company.name)"),
+                chrome.flash(String(localized: "Following \(company.name)"),
                              action: .init(label: String(localized: "Undo")) {
                                  MarketsWatch.unwatch(company, context: modelContext)
                              })
@@ -346,8 +346,8 @@ extension FeedScreen {
             }
             DSHaptic.success()
             chrome.flash(landed == companies.count
-                         ? String(localized: "Watching \(landed)")
-                         : String(localized: "Watching \(landed) of \(companies.count)"))
+                         ? String(localized: "Following \(landed)")
+                         : String(localized: "Following \(landed) of \(companies.count)"))
         }
     }
 
@@ -434,7 +434,7 @@ extension FeedScreen {
         modelContext.delete(thing)
         modelContext.saveHonestly()
         DSHaptic.tap()
-        chrome.flash(String(localized: "Stopped watching \(title)"))
+        chrome.flash(String(localized: "Stopped following \(title)"))
     }
 
     /// Moves a row to the top of "My order", switching to it (prd §1081): a

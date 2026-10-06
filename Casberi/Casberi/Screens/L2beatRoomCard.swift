@@ -42,7 +42,7 @@ struct L2beatRoomCard: View {
 			DSRoomChassis.Block {
 				DSRoomChassis.HeadLink(
 					title: room.items.isEmpty
-						? String(localized: "Watch the chains you use")
+						? String(localized: "Follow the chains you use")
 						: String(localized: "Every chain L2BEAT covers"),
 					action: onBrowse)
 			}

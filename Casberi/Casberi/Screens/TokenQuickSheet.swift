@@ -64,7 +64,7 @@ struct TokenQuickSheet: View {
                 DSSheetHead(disc: {
                     BridgeIcon(name: TokenWatch.source, size: DS.Face.shelf, circular: true)
                 },
-                            lead: String(localized: "Token · held in a watched wallet"),
+                            lead: String(localized: "Token · held in a followed wallet"),
                             title: headerTitle)
                 TokenChartView(chain: route.chain, address: route.address) {
                     // No pool anywhere (dead/illiquid) — say so; the door out
@@ -155,7 +155,7 @@ struct TokenQuickSheet: View {
                     .dsGlyph(.body, weight: .regular)
                     .foregroundStyle(DS.confirm)
                     .frame(width: 26, alignment: .center)
-                Text("Watching \(watchedTitle)")
+                Text("Following \(watchedTitle)")
                     .dsText(.heading17).foregroundStyle(DS.textPrimary)
                 Spacer()
             }
@@ -177,7 +177,7 @@ struct TokenQuickSheet: View {
                         .dsGlyph(.body, weight: .regular)
                         .foregroundStyle(DS.textSecondary)
                         .frame(width: 26, alignment: .center)
-                    Text("Watch this token")
+                    Text("Follow this token")
                         .dsText(.heading17).foregroundStyle(DS.textPrimary)
                     Spacer()
                 }

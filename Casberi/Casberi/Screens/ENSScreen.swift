@@ -142,7 +142,7 @@ struct ENSScreen: View {
             BridgeSearchResultRow(
                 imageURL: nil, fallbackIcon: "ENS",
                 title: name,
-                subtitle: String(localized: "Found on a wallet you watch"),
+                subtitle: String(localized: "Found on a wallet you follow"),
                 action: { follow(name) })
         }
     }

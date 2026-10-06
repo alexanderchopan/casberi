@@ -90,21 +90,21 @@ enum WalletSeatStanding {
     static func line(id: String, watched: Int, seen: Int) -> String? {
         guard let seat = seat(id: id) else { return nil }
         if watched <= 0 {
-            return String(localized: "Found automatically. Watch an address that holds \(article(seat.thing)) and it lands here.")
+            return String(localized: "Found automatically. Follow an address that holds \(article(seat.thing)) and it lands here.")
         }
         // Belt to `WalletSeatEvidence.count(in:)`'s braces: a mark can outlive
         // its watch, and "seen at 9 of 7 addresses" is the kind of sentence
         // that makes a person stop believing the rest of the screen.
         let found = min(max(seen, 0), watched)
         if found <= 0 {
-            return String(localized: "Watching \(watched) \(addresses(watched)). No \(seat.thing) seen yet — it lands here the day one is.")
+            return String(localized: "Following \(watched) \(addresses(watched)). No \(seat.thing) seen yet — it lands here the day one is.")
         }
         if found == watched {
             return watched == 1
-                ? String(localized: "Found at the address you watch.")
-                : String(localized: "Found at all \(watched) addresses you watch.")
+                ? String(localized: "Found at the address you follow.")
+                : String(localized: "Found at all \(watched) addresses you follow.")
         }
-        return String(localized: "Found at \(found) of \(watched) addresses you watch.")
+        return String(localized: "Found at \(found) of \(watched) addresses you follow.")
     }
 
     /// "a Safe" / "an ether.fi stake" — English, not a claim, but a page that

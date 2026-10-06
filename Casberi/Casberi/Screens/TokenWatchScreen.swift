@@ -171,7 +171,7 @@ struct TokenWatchScreen: View {
     @ViewBuilder private var addBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
         DSSlabField(placeholder: String(localized: "Company, ticker, token, or address"),
-                    text: $queryField, actionLabel: String(localized: "Watch"),
+                    text: $queryField, actionLabel: String(localized: "Follow"),
                     focus: $fieldFocused, action: watch)
         ForEach(displayStockHits) { stock in
             BridgeSearchResultRow(
@@ -342,14 +342,14 @@ struct TokenWatchScreen: View {
             if watchedCount == 0 {
                 result = .failed(String(localized: "Couldn't find any of those — try tickers or contract addresses."))
             } else if failed.isEmpty {
-                result = .says(String(localized: "Watching \(watchedCount)"))
+                result = .says(String(localized: "Following \(watchedCount)"))
                 DSHaptic.success()
             } else {
                 // Mixed outcome is a FAILURE, and the type now says so where a
                 // separate `resultIsError` flag once had to be remembered three
                 // branches earlier. The shared row's shake and failure haptic
                 // cover it — no success buzz to compete with them.
-                result = .failed(String(localized: "Watching \(watchedCount) of \(queries.count) — couldn't find \(failed.joined(separator: ", "))"))
+                result = .failed(String(localized: "Following \(watchedCount) of \(queries.count) — couldn't find \(failed.joined(separator: ", "))"))
             }
         }
     }
@@ -364,7 +364,7 @@ struct TokenWatchScreen: View {
 
     private func add(_ token: TokenWatch.Resolved) {
         if let thing = TokenWatch.add(token, context: modelContext) {
-            result = .says(String(localized: "Watching \(thing.title)"))
+            result = .says(String(localized: "Following \(thing.title)"))
             DSHaptic.success()
             queryField = ""
             hits = []
@@ -384,7 +384,7 @@ struct TokenWatchScreen: View {
 
     private func addStock(_ stock: StockWatch.Resolved) {
         if let thing = StockWatch.add(stock, context: modelContext) {
-            result = .says(String(localized: "Watching \(thing.title)"))
+            result = .says(String(localized: "Following \(thing.title)"))
             DSHaptic.success()
             queryField = ""
             hits = []

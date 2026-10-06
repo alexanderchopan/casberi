@@ -15,7 +15,7 @@ enum WorkScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:      return String(localized: "All")
         case .comingUp: return String(localized: "Coming up")
-        case .watch:    return String(localized: "Watching")
+        case .watch:    return String(localized: "Following")
         }
     }
 
@@ -23,7 +23,7 @@ enum WorkScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all:      return String(localized: "Everything about what you build")
         case .comingUp: return String(localized: "Deadlines, soonest first")
-        case .watch:    return String(localized: "Every repo, package and model you watch")
+        case .watch:    return String(localized: "Every repo, package and model you follow")
         }
     }
 

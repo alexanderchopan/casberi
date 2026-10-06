@@ -935,7 +935,7 @@ check("a slice's id is stable enough to key a ForEach",
 check("the unknown row is NAMED, not left blank",
       PrivacyPoolsRoom.name(.unknown) == "Unknown")
 let ppAct = PrivacyPoolsRoom.activityNote(pools, now: t0) ?? ""
-check("orphan reclaims are named", ppAct.contains("1 reclaimed before you watched"))
+check("orphan reclaims are named", ppAct.contains("1 reclaimed before you followed"))
 check("a room of pre-tag deposits gets an honest headline",
       PrivacyPoolsRoom.headline(PrivacyPoolsRoom.compose(rows: [
           pp("privacypools:dep:1"), pp("privacypools:dep:2")]))
@@ -1200,7 +1200,7 @@ check("the prior total is carried when it is knowable",
 let young = CardSpendRoom.compose(spends: [spend(10, "EUR", at: day(-2))], now: t0)
 check("a young room carries no prior at all", young.lead?.prior == nil)
 check("and says so out loud rather than leaving a blank",
-      CardSpendRoom.note(young).contains("not watching long enough to compare"))
+      CardSpendRoom.note(young).contains("not following long enough to compare"))
 
 print("")
 print("Gnosis Pay — the change")
@@ -1577,7 +1577,7 @@ check("a guard on the only Safe needs no name",
       SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 1,
                                           guardSafes: ["Treasury"]))
         == "A guard checks every transaction on this Safe")
-check("…and IS named once more than one Safe is watched",
+check("…and IS named once more than one Safe is followed",
       SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 3,
                                           guardSafes: ["Treasury"]))?
         .contains("Treasury") == true)
@@ -1657,13 +1657,13 @@ let safeRoomModule = SafeRoom.compose(entries: [], safeCount: 1,
                                       moduleSafes: [.init(label: "treasury.eth", count: 1)])
 check("a module warning is stated even with nothing pending — the highest-stakes fact this bridge can carry",
       SafeRoom.note(safeRoomModule)?.contains("without a signature") == true)
-check("with only one Safe watched there is nothing to disambiguate, so the name would be noise",
+check("with only one Safe followed there is nothing to disambiguate, so the name would be noise",
       SafeRoom.note(safeRoomModule)?.contains("treasury.eth") == false)
 // Naming it is the whole point once there is more than one: "1 module can move
 // funds without a signature" says a drain is possible and not WHERE.
 let safeRoomModuleNamed = SafeRoom.compose(entries: [], safeCount: 3,
                                            moduleSafes: [.init(label: "treasury.eth", count: 1)])
-check("with several Safes watched the module warning names the one it means",
+check("with several Safes followed the module warning names the one it means",
       SafeRoom.note(safeRoomModuleNamed)?.contains("treasury.eth") == true)
 let safeRoomModulesSpread = SafeRoom.compose(
     entries: [], safeCount: 3,

@@ -91,7 +91,7 @@ struct WalletbeatDirectoryScreen: View {
 			}
 
 			Section {
-				DSFootnote(prose: String(localized: "\(WalletbeatCopy.attribution) — not rated is not yet examined, never a verdict.\n\nAs of \(WalletbeatDirectory.generated); watched wallets are read live."))
+				DSFootnote(prose: String(localized: "\(WalletbeatCopy.attribution) — not rated is not yet examined, never a verdict.\n\nAs of \(WalletbeatDirectory.generated); followed wallets are read live."))
 			}
 			.listRowSeparator(.hidden)
 			.listRowBackground(Color.clear)
@@ -157,13 +157,13 @@ struct WalletbeatDirectoryScreen: View {
 			// Watch is the verb on every row; a wallet already watched says so instead of
 			// offering a control that would do nothing.
 			if watching {
-				Text(String(localized: "Watching"))
+				Text(String(localized: "Following"))
 					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
 					.frame(width: 58, alignment: .trailing)
 			} else {
 				Button(action: { watch(entry) }) {
-					Text(String(localized: "Watch"))
+					Text(String(localized: "Follow"))
 						.dsText(.label12)
 						.foregroundStyle(DS.tint)
 						.frame(width: 58, alignment: .trailing)

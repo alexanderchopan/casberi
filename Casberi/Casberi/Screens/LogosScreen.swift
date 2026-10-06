@@ -194,7 +194,7 @@ struct LogosScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             DSSlabField(placeholder: Self.placeholder,
                         text: $field,
-                        actionLabel: String(localized: "Watch"),
+                        actionLabel: String(localized: "Follow"),
                         keyboard: .URL,
                         focus: $fieldFocused,
                         isArmed: LogosWire.arms(LogosWire.entry(field))
@@ -285,18 +285,18 @@ struct LogosScreen: View {
             // its account, and say so, since the roster shows the account's
             // id rather than what was pasted (prd §1034).
             guard logos.add(id) == .added else {
-                lastResult = .says(String(localized: "Already watching that key's account."))
+                lastResult = .says(String(localized: "Already following that key's account."))
                 field = ""
                 return
             }
-            note = String(localized: "That's a public key. Watching its account, \(LogosWire.short(id)).")
+            note = String(localized: "That's a public key. Following its account, \(LogosWire.short(id)).")
         case .privateAccount:
             // Not a typo: a real account this door cannot read.
             lastResult = .says(String(localized: "A private account is readable only with its owner's consent."))
             return
         case .node(let base):
             guard base != logos.node else {
-                lastResult = .says(String(localized: "Already watching that node."))
+                lastResult = .says(String(localized: "Already following that node."))
                 field = ""
                 return
             }
@@ -318,7 +318,7 @@ struct LogosScreen: View {
             return
         case .account(let id):
             guard logos.add(id) == .added else {
-                lastResult = .says(String(localized: "Already watching that account."))
+                lastResult = .says(String(localized: "Already following that account."))
                 field = ""
                 return
             }
@@ -341,14 +341,14 @@ struct LogosScreen: View {
             FollowPrune.remove(source: "Logos", context: modelContext) {
                 $0.sourceRef?.hasPrefix("logos:node:") == true
             }
-            lastResult = .says(String(localized: "Stopped watching your node."))
+            lastResult = .says(String(localized: "Stopped following your node."))
         } else {
             logos.remove(id)
             // Its rows leave with it (prd §286); every ref carries the id.
             FollowPrune.remove(source: "Logos", context: modelContext) {
                 $0.sourceRef?.contains(":\(id):") == true
             }
-            lastResult = .says(String(localized: "Stopped watching \(LogosWire.short(id))."))
+            lastResult = .says(String(localized: "Stopped following \(LogosWire.short(id))."))
         }
         DSHaptic.tap()
         countWeek()
@@ -378,7 +378,7 @@ struct LogosScreen: View {
                     : String(localized: "Synced just now")
                 store.registerConnected(
                     id: "logos", name: "Logos", proof: proof,
-                    can: ["Reads the balance and activity of the public LEZ accounts you watch, on the Logos testnet.",
+                    can: ["Reads the balance and activity of the public LEZ accounts you follow, on the Logos testnet.",
                           "Reads your own node's sync state, peers, mining and reward vouchers, at the address you give it.",
                           "Sends test coins from an account made on this phone, signed with a key that never leaves it."])
             } else {

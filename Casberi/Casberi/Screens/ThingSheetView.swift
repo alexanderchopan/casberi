@@ -3184,7 +3184,7 @@ struct ThingSheetView: View {
                 // A verb, so the door row's face (prd §746) — it was a faint
                 // capsule, the one pill on the receipt.
                 DSDoorRowLabel(icon: tracking ? "bell.badge.slash" : "bell.badge",
-                               title: tracking ? Text("Stop watching it")
+                               title: tracking ? Text("Stop following it")
                                                : Text("Watch it from the lock screen"))
             }
             .buttonStyle(RowPress())

@@ -98,8 +98,8 @@ struct WalletbeatReportCard: View {
 	var watchVerb: some View {
 		Button(action: toggleWatch) {
 			Text(watching
-				? String(localized: "Watching — tap to stop")
-				: String(localized: "Watch this wallet"))
+				? String(localized: "Following — tap to stop")
+				: String(localized: "Follow this wallet"))
 				.dsText(.subhead12)
 				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
 		}

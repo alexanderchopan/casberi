@@ -2779,7 +2779,7 @@ struct WatchlistLede: View {
                 Text("24h")
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             } else {
-                Text("\(watched) watched")
+                Text("\(watched) followed")
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
         }

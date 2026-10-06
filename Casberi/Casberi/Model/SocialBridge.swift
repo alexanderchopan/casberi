@@ -218,7 +218,7 @@ enum SocialThread {
         // whichever WATCHED account amplified it, which is usually not you.
         // The thing carries no recaster handle, so the phrase says exactly
         // what's known and no more.
-        case "recast":  return String(localized: "reposted by an account you watch")
+        case "recast":  return String(localized: "reposted by an account you follow")
         case "mention": return String(localized: "mentions you")
         case "reply":   return String(localized: "replied to you")
         case "follow":  return String(localized: "started following you")

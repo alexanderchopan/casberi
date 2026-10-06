@@ -134,7 +134,7 @@ struct L2beatNewsRow: View {
 			if mine || isIncident || !tags.isEmpty {
 				HStack(spacing: DS.Space.s2) {
 					if mine {
-						Text(String(localized: "You watch this"))
+						Text(String(localized: "You follow this"))
 							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}

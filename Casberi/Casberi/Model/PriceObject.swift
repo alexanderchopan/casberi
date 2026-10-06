@@ -248,7 +248,7 @@ enum PriceCommentary {
         let direction = change > 0
             ? String(localized: "up \(PriceObject.percent(change).dropFirst())")
             : String(localized: "down \(PriceObject.percent(change).dropFirst())")
-        return String(localized: "You watched at \(money(watched.price)), so it's \(direction) since \(when).")
+        return String(localized: "You followed at \(money(watched.price)), so it's \(direction) since \(when).")
     }
 
     /// The price ramp, restated here so this file needs no view import. Kept

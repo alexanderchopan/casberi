@@ -110,7 +110,7 @@ enum AskSubject {
         switch ground {
         case .ownAccount:
             let name = agent ?? String(localized: "This agent")
-            return String(localized: "\(name) acts on its own account — not the wallets you watch here.")
+            return String(localized: "\(name) acts on its own account — not the wallets you follow here.")
         case .corpus, .search:
             return nil
         }

@@ -58,7 +58,7 @@ extension FeedScreen {
                 // account, a key, a node or an Observer link is read.
                 accountAction: LogosSection.canCreate(keyAccount: logosKeyAccount(roster))
                     ? .init(title: String(localized: "New account"), symbol: "plus") { logosCreate() }
-                    : .init(title: String(localized: "Watch an account"), symbol: "plus") {
+                    : .init(title: String(localized: "Follow an account"), symbol: "plus") {
                         if let destination = BridgeRouter.destination(forOffer: LogosRoom.source) {
                             route.openAccount(destination)
                         }
@@ -88,7 +88,7 @@ extension FeedScreen {
             id: "",
             name: String(localized: "All accounts"),
             sub: roster.isEmpty
-                ? String(localized: "Nothing watched on Logos yet")
+                ? String(localized: "Nothing followed on Logos yet")
                 : ListFormatter.localizedString(byJoining: roster.map(LogosRoom.name(for:))),
             faces: roster.prefix(2).map { .wallet(address: $0) })
         return [all] + roster.map { id in

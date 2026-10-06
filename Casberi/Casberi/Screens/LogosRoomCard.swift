@@ -57,7 +57,7 @@ struct LogosRoomFigure: View {
             if head.accounts.isEmpty {
                 Text(head.nodeWatched
                      ? LogosWire.nodeLine(head.node)
-                     : String(localized: "No account watched yet."))
+                     : String(localized: "No account followed yet."))
                     .dsText(.heading24)
                     .fixedSize(horizontal: false, vertical: true)
             } else if head.series.count > 1 {

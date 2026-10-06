@@ -13,7 +13,7 @@ enum TokenWatchSortMode: String, CaseIterable {
         switch self {
         case .movers: String(localized: "Movers first")
         case .manual: String(localized: "My order")
-        case .recent: String(localized: "Recently watched")
+        case .recent: String(localized: "Recently followed")
         }
     }
 }

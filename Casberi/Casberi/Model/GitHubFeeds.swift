@@ -33,7 +33,7 @@ enum GitHubFeed: String, CaseIterable, Identifiable {
         case .releases:      "New releases"
         case .gists:         "Gists"
         case .contributions: "Contributions"
-        case .following:     "Watched repos"
+        case .following:     "Followed repos"
         }
     }
 
@@ -46,7 +46,7 @@ enum GitHubFeed: String, CaseIterable, Identifiable {
         case .releases:      "New releases from repos you star."
         case .gists:         "Your gists, as notes."
         case .contributions: "Your own recent public activity on GitHub."
-        case .following:     "Repositories you watch."
+        case .following:     "Repositories you follow."
         }
     }
 

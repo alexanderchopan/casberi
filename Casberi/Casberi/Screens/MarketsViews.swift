@@ -48,7 +48,7 @@ struct WatchHeatBox: View {
 
     @ViewBuilder private var summary: some View {
         if up + down == 0 {
-            Text("\(watched) watched")
+            Text("\(watched) followed")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
         } else {
             HStack(spacing: 0) {
@@ -187,7 +187,7 @@ struct WatchRow: View {
         case .holding(let value):
             return Text("You hold \(value)")
         case .sinceWatched(let move):
-            return Text("\(TokenChartStyle.changeText(move)) since you watched")
+            return Text("\(TokenChartStyle.changeText(move)) since you followed")
                 .foregroundStyle(move > 0 ? DS.confirmInk : DS.destructiveInk)
         case .facts(let facts):
             return Text(verbatim: facts)
@@ -406,8 +406,8 @@ struct IndexRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressSpring())
-                .accessibilityLabel(Text(watched ? String(localized: "Stop watching \(company.name)")
-                                                 : String(localized: "Watch \(company.name)")))
+                .accessibilityLabel(Text(watched ? String(localized: "Stop following \(company.name)")
+                                                 : String(localized: "Follow \(company.name)")))
                 .accessibilityAddTraits(watched ? .isSelected : [])
             }
         }

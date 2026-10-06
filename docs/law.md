@@ -220,7 +220,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1254 of 1315 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1255 of 1316 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1361,7 +1361,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1027 — An entry field's placeholder wraps, and its well spans the column
 - §1029 — A connect LANDS YOU IN THE ROOM, on every account page
 - §1030 — GitHub's next step after a connect is a tray, and watching stands in the room (amended by §1031)
-- §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is
+- §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is (part superseded by §1121)
 - §1032 — An account page's commit is a check INSIDE the well, where Paste is
 - §1033 — A room's account door stands beside its name, Accounts is Apps with no Manage, and a tray mark has no hold (amended by §1036, §1040, §1045, §1050g; part superseded by §1050f)
 - §1034 — Logos: the field reads what people actually paste, and turns a public key into its account
@@ -1457,7 +1457,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1103b — Under an app header a picture rides the right as a thumbnail, and the item's words start under the app's name
 - §1103c — Under an app header, the person a thing is by wears a small face before its title
 - §1104 — An old install is told a newer one is out, and every older TestFlight build expires on ship
-- §1105 — The Wallet's Cards tile becomes Subscriptions, Coming up and Subscriptions share one calendar box, and Follow is Watch (amended by §1106b, §1107, §1111, §1113, §1117)
+- §1105 — The Wallet's Cards tile becomes Subscriptions, Coming up and Subscriptions share one calendar box, and Follow is Watch (amended by §1106b, §1107, §1111, §1113, §1117; part superseded by §1121)
 - §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a, §1114)
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
@@ -1473,9 +1473,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1115 — A mail's sheet adds its sender to Day's Subscriptions (amended by §1117)
 - §1116 — Apps wears four squares
 - §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120)
-- §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin… (amended by §1119, §1120)
+- §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin… (amended by §1119, §1120, §1121)
 - §1119 — An app that needs only a name opens its Track tray over Apps, and every follow app's page keeps what only it can do (amended by §1120)
-- §1120 — The verb is Follow a feed, and the leftovers of the follow sweep
+- §1120 — The verb is Follow a feed, and the leftovers of the follow sweep (amended by §1121)
+- §1121 — Two verbs: Follow for everything you keep up with, Track for subscriptions
 
 ## Dead rulings → what replaced them (generated)
 

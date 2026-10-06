@@ -3207,7 +3207,7 @@ struct RootShell: View {
                 // status (honesty rule). Say which nothing this is.
                 let watchesNothing = TokensAsk.watched(modelContext).isEmpty
                 return proseDoc(watchesNothing
-                    ? "Nothing watched yet — add one from Apps."
+                    ? "Nothing followed yet — add one from Apps."
                     : "Couldn't read your watchlist's prices right now — check your connection.")
             }
             // TokenChip rows alongside the summary — `KeptAskComposers.watchlistDoc`.
@@ -3224,7 +3224,7 @@ struct RootShell: View {
             // live reads were out) went with the kept asks (2026-10-01).
             let corpus = keptCorpus(for: "wallet")
             guard let line = await WalletAsk.answer() else {
-                return proseDoc(String(localized: "Nothing in your wallet yet — watch an address from Apps → Wallet."))
+                return proseDoc(String(localized: "Nothing in your wallet yet — follow an address from Apps → Wallet."))
             }
             // The real holdings treemap alongside the summary, plus the
             // landed approvals + latest activity — shared with the kept-ask
@@ -3316,7 +3316,7 @@ struct RootShell: View {
         if WalletDeFiAsk.matches(query) {
             lastAnswerHits = []
             guard let line = await WalletDeFiAsk.answer() else {
-                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+                return proseDoc(String(localized: "Nothing to read yet — follow an address from Apps → Wallet."))
             }
             return proseDoc(line)
         }
@@ -3327,7 +3327,7 @@ struct RootShell: View {
         if UniswapAsk.matches(query) {
             lastAnswerHits = []
             guard let line = await UniswapAsk.answer() else {
-                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+                return proseDoc(String(localized: "Nothing to read yet — follow an address from Apps → Wallet."))
             }
             return proseDoc(line)
         }
@@ -3335,7 +3335,7 @@ struct RootShell: View {
         if WalletGasAsk.matches(query) {
             lastAnswerHits = []
             guard let line = await WalletGasAsk.answer() else {
-                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+                return proseDoc(String(localized: "Nothing to read yet — follow an address from Apps → Wallet."))
             }
             return proseDoc(line)
         }
@@ -3343,7 +3343,7 @@ struct RootShell: View {
         if SafeAsk.matches(query) {
             lastAnswerHits = []
             guard let line = await SafeAsk.answer() else {
-                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+                return proseDoc(String(localized: "Nothing to read yet — follow an address from Apps → Wallet."))
             }
             return proseDoc(line)
         }

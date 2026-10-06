@@ -512,7 +512,7 @@ struct CardSpendRoom: Equatable {
             // Said out loud rather than left blank: "no comparison" and "no
             // change" look identical on a card, and only one of them is a
             // measurement.
-            return String(localized: "\(spendsLabel(lead.spends)) · not watching long enough to compare")
+            return String(localized: "\(spendsLabel(lead.spends)) · not following long enough to compare")
         }
         return String(localized: "\(spendsLabel(lead.spends)) · about the same as the 30 days before")
     }

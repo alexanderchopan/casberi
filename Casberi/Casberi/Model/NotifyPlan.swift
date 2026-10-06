@@ -717,9 +717,9 @@ enum NotifyDevnet {
         let body: String
         switch r.seat {
         case .frames:
-            body = String(localized: "Hegotá Frames was relaunched from genesis, so everything it held is gone. Your key and the addresses you watch are still yours.")
+            body = String(localized: "Hegotá Frames was relaunched from genesis, so everything it held is gone. Your key and the addresses you follow are still yours.")
         case .logos:
-            body = String(localized: "The Logos testnet was reset, so every account on it starts empty. Your key and the accounts you watch are still yours.")
+            body = String(localized: "The Logos testnet was reset, so every account on it starts empty. Your key and the accounts you follow are still yours.")
         }
         return NotifyPlan(id: "devnet:reset:\(r.seat.rawValue):\(r.key)",
                           kind: .chainReset,

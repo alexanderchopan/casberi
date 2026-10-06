@@ -152,11 +152,11 @@ grep -q 'static func summaries(in context: ModelContext)' "$ACTIVITY" \
 # the room's Follow tray both call, so a paste is answered one way wherever it
 # is typed. The field must still reach it; nothing else may word a watch.
 grep -q 'WalletFollow.follow(' "$TMP/field-bare.swift" \
-  || { echo "✗ nothing watches anything — WalletWatchField no longer follows through WalletFollow (§461/§466/§1090)"; exit 1; }
+  || { echo "✗ nothing follows anything — WalletWatchField no longer follows through WalletFollow (§461/§466/§1090)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/screen-bare.swift" \
   && { echo "✗ WalletScreen calls outcome(ofAdding:) directly again — that call belongs to WalletWatchField alone, or the setup screen and the book answer a paste two different ways (§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/unwatch-bare.swift" \
-  && { echo "✗ the unwatch file words a refusal itself — that door belongs to WalletWatchField (§466)"; exit 1; }
+  && { echo "✗ the unfollow file words a refusal itself — that door belongs to WalletWatchField (§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/views-bare.swift" \
   && { echo "✗ the address card words a refusal itself — see above (§461/§466)"; exit 1; }
 
@@ -182,15 +182,15 @@ count_of() { python3 -c "import sys;print(open(sys.argv[1]).read().count(sys.arg
 # are answered in words rather than swallowed. §511's row menu stays on the
 # shared row in $VIEWS (counted below). Nothing else may watch.
 [[ "$(count_of "$TMP/follow-bare.swift" 'outcome(ofAdding:')" == "1" ]] \
-  || { echo "✗ WalletFollow has other than exactly one watch door (§498/§690/§1090)"; exit 1; }
+  || { echo "✗ WalletFollow has other than exactly one follow door (§498/§690/§1090)"; exit 1; }
 [[ "$(count_of "$TMP/field-bare.swift" 'WalletFollow.follow(')" == "1" ]] \
-  || { echo "✗ the Wallet page's field has other than exactly one watch door (§498/§690)"; exit 1; }
+  || { echo "✗ the Wallet page's field has other than exactly one follow door (§498/§690)"; exit 1; }
 [[ "$(count_of "$TMP/tray-bare.swift" 'WalletFollow.follow(')" == "1" ]] \
-  || { echo "✗ the Wallet's Follow tray has other than exactly one watch door (§1090)"; exit 1; }
+  || { echo "✗ the Wallet's Follow tray has other than exactly one follow door (§1090)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/field-bare.swift" "$TMP/tray-bare.swift" \
   && { echo "✗ a follow door calls outcome(ofAdding:) itself — the wording belongs to WalletFollow (§1090)"; exit 1; }
 [[ "$(count_of "$TMP/views-bare.swift" 'WalletStore.shared.add(')" == "1" ]] \
-  || { echo "✗ the address card has other than exactly one watch door — §511 allows the overflow menu's Watch row and nothing else"; exit 1; }
+  || { echo "✗ the address card has other than exactly one follow door — §511 allows the overflow menu's Follow row and nothing else"; exit 1; }
 # The card may only ADD. Stopping a watch carries a corpus prune, §511's
 # keep-or-fold decision and an undo, and a second copy of that is two answers to
 # one question.
@@ -199,7 +199,7 @@ grep -q 'outcome(ofAdding:' "$TMP/field-bare.swift" "$TMP/tray-bare.swift" \
 # owes a sentence and an undo for both, and a second copy would get one of those
 # subtly differently.
 grep -q 'WalletUnwatch.perform(' "$TMP/views-bare.swift" \
-  || { echo "✗ the address card cannot stop a watch — a plain tap is the discoverable door §511 added (§511)"; exit 1; }
+  || { echo "✗ the address card cannot stop a follow — a plain tap is the discoverable door §511 added (§511)"; exit 1; }
 
 # ── §511: ONE CONSEQUENCE, ONE WORD ─────────────────────────────────────────
 #
@@ -207,8 +207,8 @@ grep -q 'WalletUnwatch.perform(' "$TMP/views-bare.swift" \
 # destructive verb and the book's were both spelled "Remove" and meant two
 # different things, so unwatching read as a delete that had failed. Each failure
 # below renders as a perfectly ordinary menu.
-grep -q 'Label("Stop watching"' "$TMP/views-bare.swift" \
-  || { echo "✗ the address card's watch verb is not 'Stop watching' (§511)"; exit 1; }
+grep -q 'Label("Stop following"' "$TMP/views-bare.swift" \
+  || { echo "✗ the address card's follow verb is not 'Stop following' (§511)"; exit 1; }
 grep -qE 'Label\("Remove", ' "$TMP/views-bare.swift" \
   && { echo "✗ the address card says the bare 'Remove' again (§511)"; exit 1; }
 
@@ -218,16 +218,16 @@ grep -qE 'Label\("Remove", ' "$TMP/views-bare.swift" \
 # screen's own and nothing above can test it — and this decision DELETES a book
 # entry, so an untested version of it silently discards names.
 grep -q 'AddressBookShape.unwatchKeepsEntry(' "$TMP/unwatch-bare.swift" \
-  || { echo "✗ the unwatch decides for itself whether it keeps the name — that decision deletes book entries and belongs in AddressBookShape, where it can be tested (§511)"; exit 1; }
+  || { echo "✗ the unfollow decides for itself whether it keeps the name — that decision deletes book entries and belongs in AddressBookShape, where it can be tested (§511)"; exit 1; }
 # An unwatch that keeps the name DEMOTES the row into a lettered section that is
 # usually scrolled off screen. Silently, that is indistinguishable from a delete
 # that failed — which is exactly how it was reported.
 grep -q 'chrome.flash(' "$TMP/unwatch-bare.swift" \
-  || { echo "✗ an unwatch says nothing — it deletes landed rows and can delete the book entry with them (§511)"; exit 1; }
+  || { echo "✗ an unfollow says nothing — it deletes landed rows and can delete the book entry with them (§511)"; exit 1; }
 grep -q 'action: .init(label:' "$TMP/unwatch-bare.swift" \
-  || { echo "✗ the unwatch toast carries no Undo (§511)"; exit 1; }
+  || { echo "✗ the unfollow toast carries no Undo (§511)"; exit 1; }
 grep -q 'FollowPrune.removeWallet' "$TMP/unwatch-bare.swift" \
-  || { echo "✗ an unwatch no longer prunes the wallet's landed rows (§387)"; exit 1; }
+  || { echo "✗ an unfollow no longer prunes the wallet's landed rows (§387)"; exit 1; }
 # The discoverable door. §461 made these rows bare, which is right for the
 # resting state and left unwatching reachable only by two gestures nothing on
 # screen mentions.
@@ -237,7 +237,7 @@ grep -q 'FollowPrune.removeWallet' "$TMP/unwatch-bare.swift" \
 # and never the star: a star is a CONTROL on a row, which is exactly what §461
 # deleted.
 grep -q '"eye.fill"' "$TMP/views-bare.swift" \
-  || { echo "✗ a watched row is indistinguishable from every other row (§511)"; exit 1; }
+  || { echo "✗ a followed row is indistinguishable from every other row (§511)"; exit 1; }
 grep -q 'Button(action: onToggleWatch)' "$VIEWS" \
   || { echo "✗ the row's star is gone entirely — the parameter is what keeps every caller on one anatomy (§461)"; exit 1; }
 # …and the row's own star is drawn only when a caller passes the closure, so
@@ -245,7 +245,7 @@ grep -q 'Button(action: onToggleWatch)' "$VIEWS" \
 # caller still gets one anatomy, and a parameter nobody passes is what makes
 # that safe.
 grep -q 'onToggleWatch' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" \
-  && { echo "✗ a screen passes a watch toggle to its rows — §511 merged the lists and did NOT bring the star back (§461)"; exit 1; }
+  && { echo "✗ a screen passes a follow toggle to its rows — §511 merged the lists and did NOT bring the star back (§461)"; exit 1; }
 # The flight overlay is DELETED (2026-10-01): nothing had mounted
 # `AddressFlightOverlay` since the book screen went (prd §690), so its anchors
 # published into a preference nobody read. A feature deleted from the surface
@@ -287,7 +287,7 @@ grep -q 'SocialUnfollow.perform(' "$TMP/views-bare.swift" \
 # caption, the feed's wallet tags and a self-transfer's title all read. The book
 # would show the new name and every place money is described the old one.
 grep -q 'store.rename(watch.id, to: name)' "$TMP/views-bare.swift" \
-  || { echo "✗ renaming a watched wallet no longer updates the roster label — the book and the feed would disagree about its name (§511)"; exit 1; }
+  || { echo "✗ renaming a followed wallet no longer updates the roster label — the book and the feed would disagree about its name (§511)"; exit 1; }
 # ONE ACT: the row IS the watch, so unfollowing must take the posts with it —
 # §286's path, never a copy of it.
 grep -q 'HandleBridge(rawValue: pair.source)?.removeName(' "$TMP/unfollow-bare.swift" \
@@ -437,7 +437,7 @@ grep -q 'AddressBookScreen()' "$SHELL_MAIN" \
 # that motivated the original cap-only rule still applies at fewer slots: two
 # trailing doors plus five faces plus All is 402pt against a 393pt phone.
 grep -q 'addTitle: nil,' "$SHELL_MAIN" \
-  || { echo "✗ the wallet rail's add slot is back — watching a new wallet and seeing the roster are the same screen now (§466)"; exit 1; }
+  || { echo "✗ the wallet rail's add slot is back — following a new wallet and seeing the roster are the same screen now (§466)"; exit 1; }
 grep -q 'addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil' "$SHELL_MAIN" \
   && { echo "✗ the wallet rail's add slot came back cap-gated — §466 removed it outright, not just at five of five"; exit 1; }
 # THE WAY ONWARD (§460). The roster is a connect page and was the one screen in
@@ -645,7 +645,7 @@ check("name is alphabetical",
       AddressBookShape.ordered(mixed, order: .name).map(\.id) == ["a", "m", "z"])
 // §433's surviving half: a star is the person's own statement that a row
 // matters more, so recency honours it.
-check("recent hoists the watched, then newest-named",
+check("recent hoists the followed, then newest-named",
       AddressBookShape.ordered(mixed, order: .recent).map(\.id) == ["m", "z", "a"])
 check("activity is most-dealt-with first",
       AddressBookShape.ordered(mixed, order: .activity).map(\.id) == ["z", "m", "a"])
@@ -801,32 +801,32 @@ check("the line claims a reading, not a write",
 // its label carries the cap the deleted block used to state, and `watched`
 // travels beside `kind` rather than inside it — §461's ruling in the type
 // system, and the reason no row can ever toggle it.
-check("the watching chip needs a roster",
+check("the following chip needs a roster",
       AddressBookShape.availableFilters(kinds: ["wallet"], watching: 0) == [.all, .wallets])
-check("the watching chip appears with one watched address",
+check("the following chip appears with one followed address",
       AddressBookShape.availableFilters(kinds: ["wallet"], watching: 1)
         == [.all, .watching, .wallets])
-check("watching leads the narrowing chips",
+check("following leads the narrowing chips",
       AddressBookShape.availableFilters(kinds: ["social", "wallet"], watching: 2)
         == [.all, .watching, .wallets, .social])
-check("watching takes a watched row of any kind",
+check("following takes a followed row of any kind",
       Filter.watching.matches(kind: "contract", watched: true))
-check("watching refuses an unwatched wallet",
+check("following refuses an unwatched wallet",
       !Filter.watching.matches(kind: "wallet", watched: false))
-check("no other chip reads watched",
+check("no other chip reads followed",
       Filter.wallets.matches(kind: "wallet", watched: false)
         && Filter.wallets.matches(kind: "wallet", watched: true))
-check("a watching selection whose roster emptied falls back to all",
+check("a following selection whose roster emptied falls back to all",
       AddressBookShape.settledFilter(.watching, kinds: ["wallet"], watching: 0) == .all)
 check("the chip label carries the cap",
       AddressBookShape.watchingLabel(3, limit: 5).contains("3")
         && AddressBookShape.watchingLabel(3, limit: 5).contains("5"))
 
 print("")
-print("Unwatching — keep the name, or take it with the watch (prd §511)")
+print("Unwatching — keep the name, or take it with the follow (prd §511)")
 // The ordinary case, and the whole reason the fold exists: a bare pasted
 // address whose book entry is the placeholder `WalletStore.add` minted.
-check("a placeholder name with nothing else leaves with the watch",
+check("a placeholder name with nothing else leaves with the follow",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true) == false)
 check("a name somebody typed keeps the row",
       AddressBookShape.unwatchKeepsEntry(isPlaceholderName: false))
@@ -924,7 +924,7 @@ mutate "activity ties stop falling through to the name" \
   'if $0.activity != $1.activity { return $0.activity > $1.activity }
                 return byName($0, $1)' \
   'return $0.activity > $1.activity'
-mutate "recency stops hoisting the watched" \
+mutate "recency stops hoisting the followed" \
   'if $0.watched != $1.watched { return $0.watched }' \
   'if false { return $0.watched }'
 # A run of rows split into one section per row, each with its own heading.
@@ -1035,15 +1035,15 @@ mutate "the fold keeps everything, so the second gesture is back" \
   'if true { return true }'
 
 # ── §511: the Watching chip ─────────────────────────────────────────────────
-mutate "the Watching chip is offered over an empty roster" \
+mutate "the Following chip is offered over an empty roster" \
   'if filter == .watching { return watching > 0 }' \
   'if filter == .watching { return true }'
-mutate "watching stops being separate from kind" \
+mutate "following stops being separate from kind" \
   'case .watching: return watched' \
   'case .watching: return kind == "wallet"'
 mutate "the chip label drops the cap" \
-  'String(localized: "Watching \(count)/\(limit)")' \
-  'String(localized: "Watching \(count)")'
+  'String(localized: "Following \(count)/\(limit)")' \
+  'String(localized: "Following \(count)")'
 
 mutate "the fan swings wide enough to clip" \
   'private static let tilts: [Double] = [-6, 3, -2, 5, -4]' \

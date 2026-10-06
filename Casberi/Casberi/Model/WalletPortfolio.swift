@@ -453,7 +453,7 @@ enum WalletRange: String, CaseIterable {
         switch self {
         case .week:    return String(localized: "7d")
         case .month:   return String(localized: "30d")
-        case .watched: return String(localized: "Watched")
+        case .watched: return String(localized: "Followed")
         }
     }
 
@@ -464,7 +464,7 @@ enum WalletRange: String, CaseIterable {
         switch self {
         case .week:    return String(localized: "This week")
         case .month:   return String(localized: "This month")
-        case .watched: return String(localized: "Since you started watching")
+        case .watched: return String(localized: "Since you started following")
         }
     }
 
@@ -477,7 +477,7 @@ enum WalletRange: String, CaseIterable {
         case .week:  return String(localized: "7 days")
         case .month: return String(localized: "30 days")
         case .watched:
-            guard let first else { return String(localized: "since watched") }
+            guard let first else { return String(localized: "since followed") }
             let thisYear = Calendar.current.isDate(first, equalTo: .now, toGranularity: .year)
             let day = thisYear
                 ? first.formatted(.dateTime.month(.abbreviated).day())

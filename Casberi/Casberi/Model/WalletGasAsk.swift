@@ -35,14 +35,14 @@ enum WalletGasAsk {
         guard let total = read else {
             if let sponsored {
                 return String(localized:
-                    "No gas of your own since you started watching — \(TokenStats.compact(sponsored)) was sponsored for you.")
+                    "No gas of your own since you started following — \(TokenStats.compact(sponsored)) was sponsored for you.")
             }
-            return String(localized: "No gas spent since you started watching.")
+            return String(localized: "No gas spent since you started following.")
         }
         if let sponsored {
             return String(localized:
-                "\(TokenStats.compact(total)) in gas since you started watching, plus \(TokenStats.compact(sponsored)) somebody else paid for you.")
+                "\(TokenStats.compact(total)) in gas since you started following, plus \(TokenStats.compact(sponsored)) somebody else paid for you.")
         }
-        return String(localized: "\(TokenStats.compact(total)) in gas since you started watching.")
+        return String(localized: "\(TokenStats.compact(total)) in gas since you started following.")
     }
 }

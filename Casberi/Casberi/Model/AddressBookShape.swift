@@ -216,7 +216,7 @@ enum AddressBookShape {
         var label: String {
             switch self {
             case .all:      return String(localized: "All")
-            case .watching: return String(localized: "Watching")
+            case .watching: return String(localized: "Following")
             case .wallets:  return String(localized: "Wallets")
             case .keys:     return String(localized: "Keys")
             case .contacts: return String(localized: "Contacts")
@@ -283,7 +283,7 @@ enum AddressBookShape {
     /// and nothing else — so this is a fact printed on a control, never a
     /// disabled one.
     static func watchingLabel(_ count: Int, limit: Int) -> String {
-        String(localized: "Watching \(count)/\(limit)")
+        String(localized: "Following \(count)/\(limit)")
     }
 
     /// The filter that should stand, given the one selected and what the book

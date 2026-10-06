@@ -35,7 +35,7 @@ struct WatchAddSheet: View {
     private static let recentsKey = "markets.add.recents"
 
     var body: some View {
-        DSTray(title: String(localized: "Watch"), height: 640, detents: [.large]) {
+        DSTray(title: String(localized: "Follow"), height: 640, detents: [.large]) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if query.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -275,8 +275,8 @@ struct WatchAddSheet: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())
-            .accessibilityLabel(Text(on ? String(localized: "Stop watching \(label)")
-                                        : String(localized: "Watch \(label)")))
+            .accessibilityLabel(Text(on ? String(localized: "Stop following \(label)")
+                                        : String(localized: "Follow \(label)")))
             .accessibilityAddTraits(on ? .isSelected : [])
         }
         .frame(minHeight: 64)
@@ -338,7 +338,7 @@ struct WatchAddSheet: View {
         remember(query)
         if let store { TokenWatch.registerBridge(store: store, context: modelContext) }
         let name = TokensAsk.name(of: thing.title)
-        chrome?.flash(String(localized: "Watching \(name)"),
+        chrome?.flash(String(localized: "Following \(name)"),
                       action: .init(label: String(localized: "Undo")) { [key] in remove(ref: key) })
     }
 

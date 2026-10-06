@@ -156,7 +156,7 @@ struct ConnectWalletRow: View {
                     : String(localized: "The connection link expired — tap Connect for a fresh one."), true)
                 pairingURI = nil
             case .failure(WalletConnectBridge.ConnectError.tearDownFailed):
-                onNote(String(localized: "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was watched."), true)
+                onNote(String(localized: "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was followed."), true)
             case .failure(WalletConnectBridge.ConnectError.keychainUnavailable(let status)):
                 onNote(String(localized: "This device's keychain refused the handshake (code \(status)) — paste the address instead."), true)
             case .failure:

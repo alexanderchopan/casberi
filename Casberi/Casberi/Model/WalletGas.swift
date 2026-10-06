@@ -205,7 +205,7 @@ enum WalletGas {
     @MainActor
     static func probe() async -> String {
         let watched = WalletStore.shared.addresses
-        guard !watched.isEmpty else { return "no wallets watched" }
+        guard !watched.isEmpty else { return "no wallets followed" }
         var lines: [String] = []
         for w in watched {
             let perChain = totals(address: w.address)

@@ -157,7 +157,7 @@ final class DevnetReader {
     /// person's act succeeded and only the network's did not.
     var proof: BridgeProof? {
         unreachable
-            ? .failed(String(localized: "Couldn't reach \(name) just now. Your addresses are watched — the room fills in as soon as a read lands."))
+            ? .failed(String(localized: "Couldn't reach \(name) just now. Your addresses are followed — the room fills in as soon as a read lands."))
             : nil
     }
 
@@ -249,14 +249,14 @@ struct DevnetAccountRow: View {
 
     @ViewBuilder private var verb: some View {
         if watching {
-            Label(String(localized: "Watching"), systemImage: "checkmark")
+            Label(String(localized: "Following"), systemImage: "checkmark")
                 .labelStyle(.titleAndIcon)
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
                 .lineLimit(1)
                 .fixedSize()
         } else {
-            Text(String(localized: "Watch"))
+            Text(String(localized: "Follow"))
                 .dsText(.label12)
                 .foregroundStyle(tint)
                 .lineLimit(1)
@@ -352,7 +352,7 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             DSSlabField(placeholder: placeholder,
                         text: $typed,
-                        actionLabel: String(localized: "Watch"),
+                        actionLabel: String(localized: "Follow"),
                         focus: $focused,
                         isArmed: previewAddress != nil,
                         // The paste FILLS the field; the preview and the
@@ -446,7 +446,7 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
                         .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                    Text(watch.isWatching(address) ? String(localized: "Already watching")
+                    Text(watch.isWatching(address) ? String(localized: "Already following")
                                                    : (fact(for: address) ?? String(localized: "New address")))
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)
@@ -467,7 +467,7 @@ struct DevnetAccountsAct<W: DevnetWatchList>: View {
         }
         DSHaptic.tap()
         guard watch.add(address) else {
-            result = .says(String(localized: "Already watching that address."))
+            result = .says(String(localized: "Already following that address."))
             typed = ""
             return
         }

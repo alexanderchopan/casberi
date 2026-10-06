@@ -905,8 +905,8 @@ struct PrivacyPoolsRoom: Equatable {
         var parts: [String] = []
         if room.unattachedReclaims > 0 {
             parts.append(room.unattachedReclaims == 1
-                         ? String(localized: "1 reclaimed before you watched")
-                         : String(localized: "\(room.unattachedReclaims) reclaimed before you watched"))
+                         ? String(localized: "1 reclaimed before you followed")
+                         : String(localized: "\(room.unattachedReclaims) reclaimed before you followed"))
         }
         if let reviewDays = room.reviewDays {
             parts.append(reviewDays == 0

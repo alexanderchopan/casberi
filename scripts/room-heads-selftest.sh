@@ -303,9 +303,9 @@ check("several silent metrics are counted",
       PostHogRoom.headline(PostHogRoom(metrics: [stopped, metric("x", [0], silent: true)], unread: 0))
         == "2 metrics have stopped firing")
 check("a single healthy metric is named",
-      PostHogRoom.headline(PostHogRoom(metrics: [busy], unread: 0)) == "Watching signed_up")
+      PostHogRoom.headline(PostHogRoom(metrics: [busy], unread: 0)) == "Following signed_up")
 check("several healthy metrics are counted",
-      PostHogRoom.headline(PostHogRoom(metrics: [busy, quiet], unread: 0)) == "Watching 2 metrics")
+      PostHogRoom.headline(PostHogRoom(metrics: [busy, quiet], unread: 0)) == "Following 2 metrics")
 // Never read is not never happened.
 check("a device that has read nothing says so",
       PostHogRoom.note(PostHogRoom(metrics: [metric("a", [], total: 0)], unread: 2),
@@ -322,7 +322,7 @@ check("compact reaches millions", PostHogRoom.compact(2_000_000) == "2M")
 check("small numbers stay plain", PostHogRoom.compact(940) == "940")
 check("a full roster says nothing", PostHogRoom.coverageNote(shown: 3, total: 3, unread: 0) == nil)
 check("undrawn and unread are named separately",
-      PostHogRoom.coverageNote(shown: 4, total: 6, unread: 2) == "2 more watched · 2 not read yet")
+      PostHogRoom.coverageNote(shown: 4, total: 6, unread: 2) == "2 more followed · 2 not read yet")
 
 print("")
 print("RoomQuiet — what an empty room says")

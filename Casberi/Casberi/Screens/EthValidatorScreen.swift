@@ -80,7 +80,7 @@ struct EthValidatorScreen: View {
     @ViewBuilder private var addBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             DSSlabField(placeholder: String(localized: "Validator index"),
-                        text: $indexField, actionLabel: String(localized: "Watch"),
+                        text: $indexField, actionLabel: String(localized: "Follow"),
                         focus: $fieldFocused, action: watch)
             BridgeSyncStatusRows(syncing: working,
                                  syncingLine: String(localized: "Checking the validator…"),
@@ -134,11 +134,11 @@ struct EthValidatorScreen: View {
                 // ways across the family (red here and in RSS, green in
                 // PostHog/Stocktwits, gray in Open Food Facts); settled as
                 // not-an-error, 2026-07-31.
-                result = .says(String(localized: "Already watching validator #\(index)."))
+                result = .says(String(localized: "Already following validator #\(index)."))
                 return
             }
             positions[index] = position
-            result = .says(String(localized: "Watching validator #\(index) — \(WalletValue.token(position.eth, "ETH"))"))
+            result = .says(String(localized: "Following validator #\(index) — \(WalletValue.token(position.eth, "ETH"))"))
             indexField = ""
             EthValidatorRead.registerBridge(store: store)
         }

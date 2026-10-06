@@ -44,8 +44,8 @@ struct TokensScope: DSTileScope {
     var summary: String {
         if self == .alerts { return String(localized: "The price alerts you set") }
         if self == .everything { return String(localized: "Every company behind every app") }
-        if self == .search { return String(localized: "Find something to watch") }
-        guard let category else { return String(localized: "What you watch") }
+        if self == .search { return String(localized: "Find something to follow") }
+        guard let category else { return String(localized: "What you follow") }
         return String(localized: "The companies behind \(category)")
     }
 

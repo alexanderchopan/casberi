@@ -192,10 +192,10 @@ final class WorldIDSource {
             addresses = [asked]
         } else {
             addresses = WalletStore.shared.addresses.map(\.address).filter(ENS.isHexAddress)
-            lines.append("no address given — reading the \(addresses.count) watched wallet(s)")
+            lines.append("no address given — reading the \(addresses.count) followed wallet(s)")
         }
         guard !addresses.isEmpty else {
-            lines.append("nothing to read: watch a wallet, or pass a 0x address")
+            lines.append("nothing to read: follow a wallet, or pass a 0x address")
             return lines
         }
         let source = WorldIDSource.shared

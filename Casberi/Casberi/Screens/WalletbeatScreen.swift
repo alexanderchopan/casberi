@@ -161,7 +161,7 @@ struct WalletbeatScreen: View {
 			DSSlabField(
 				placeholder: String(localized: "Wallet name"),
 				text: $queryField,
-				actionLabel: String(localized: "Watch"),
+				actionLabel: String(localized: "Follow"),
 				focus: $fieldFocused,
 				action: watchTyped)
 
@@ -234,7 +234,7 @@ struct WalletbeatScreen: View {
 						// offering the same verb the directory's rows offer, and one act
 						// spelled two ways across two screens is the drift `WalletbeatCopy`
 						// exists to stop.
-						Text(String(localized: "Watch"))
+						Text(String(localized: "Follow"))
 							.dsText(.label12)
 							.foregroundStyle(DS.tint)
 					}

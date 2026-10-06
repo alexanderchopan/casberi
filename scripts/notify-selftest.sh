@@ -140,17 +140,17 @@ guard "only high and critical alarm" \
       'severity >= \.high' "$SWEEP"
 guard "a resolved incident never alarms" \
       'facts\.status\.isOpen' "$SWEEP"
-guard "the incident must name a wallet the person actually watches" \
+guard "the incident must name a wallet the person actually follows" \
       'facts\.wallets\.contains\(where: \{ watchedWallets\.contains\(\$0\) \}\)' "$SWEEP"
 # The watch list comes from the CORPUS (§419's watch-is-a-Thing decision), so it
 # can never disagree with the rows in the feed. A version that read a store
 # instead would be one more thing to keep in step.
-guard "the watch list is derived from the rows the sweep already holds" \
+guard "the follow list is derived from the rows the sweep already holds" \
       'live\.compactMap \{ WalletbeatWatch\.walletID\(from: \$0\) \}' "$SWEEP"
 # FOLLOWING ALONE MUST NEVER ALARM. The empty default is what makes that true
 # for any caller that forgets, and it is the difference between this feature
 # and a security-news firehose pointed at a lock screen.
-guard "an unspecified watch list defaults to empty, so nothing alarms" \
+guard "an unspecified follow list defaults to empty, so nothing alarms" \
       'watchedWallets: Set<String> = \[\]' "$SWEEP"
 # A rating revision is Walletbeat changing its own mind, not something that
 # happened to you — the same test that keeps a card spend quiet (§313).
@@ -515,8 +515,8 @@ ok(dr1.cls == .alarm && !dr1.isTimeSensitive,
 // Logos (prd §1084) joins with its own words, under its own source.
 let lr = NotifyDevnet.plan(reset: reset(.logos), now: dnow)!
 ok(lr.source == "Logos", "the Logos reset carries the Logos source (LogosRoom.source)")
-ok(lr.body.contains("Logos") && lr.body.contains("accounts you watch"),
-   "the Logos body names the testnet and says the watched accounts survive")
+ok(lr.body.contains("Logos") && lr.body.contains("accounts you follow"),
+   "the Logos body names the testnet and says the followed accounts survive")
 ok(lr.id != dr1.id, "a Logos reset and a Frames reset are two ids")
 ok(NotifyKind.nodeDown.cls == .alarm && NotifyKind.nodeDown.severity > NotifyKind.runningLow.severity
    && NotifyKind.nodeDown.severity < NotifyKind.priceRose.severity && !NotifyKind.nodeDown.isTimeSensitive,
@@ -955,7 +955,7 @@ mutate "a wallet incident claims the Focus-breaking level" \
 # ── the devnet (prd §522, §728) ─────────────────────────────────────────────
 # Every one of these renders as a perfectly ordinary notification — or as
 # silence, which is worse, because silence here is also the healthy answer.
-mutate "a devnet reset alarms someone who watches nothing on it" \
+mutate "a devnet reset alarms someone who follows nothing on it" \
        's/guard r\.watching > 0 else \{ return nil \}//'
 mutate "a reset stays news forever, long after the room stops explaining it" \
        's/static let resetWindow: TimeInterval = 7 \* 86_400/static let resetWindow: TimeInterval = 3650 * 86_400/'
@@ -1236,7 +1236,7 @@ func runFixtures() {
 
     ok(NotifySweep.classify(incident("a", .critical, .ongoing, ["ledger"]),
                             now: now, watchedWallets: watched) == .walletIncident,
-       "a critical, ongoing incident naming a watched wallet alarms")
+       "a critical, ongoing incident naming a followed wallet alarms")
     ok(NotifySweep.classify(incident("b", .high, .mitigated, ["rabby"]),
                             now: now, watchedWallets: watched) == .walletIncident,
        "MITIGATED is still open — contained is not fixed, and your data is still out")
@@ -1271,7 +1271,7 @@ func runFixtures() {
     // Walletbeat changing its own mind.
     ok(NotifySweep.classify(row(ref: "walletbeat:wallet:ledger", source: "Walletbeat"),
                             now: now, watchedWallets: watched) == nil,
-       "a watched-wallet row is not an incident")
+       "a followed-wallet row is not an incident")
     ok(NotifySweep.classify(row(ref: "walletbeat:rev:ledger:keyStorage:FAIL:2026-08-20",
                                 source: "Walletbeat", tags: ["Rating"]),
                             now: now, watchedWallets: watched) == nil,

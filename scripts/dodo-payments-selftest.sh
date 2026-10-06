@@ -425,7 +425,7 @@ check("when a dispute leads, the note carries the money",
 check("when money leads, the note does NOT repeat it",
       DodoPaymentsRoom.note(quiet, locale: en).contains("49") == false)
 check("when money leads with no comparison, the note says so out loud",
-      DodoPaymentsRoom.note(quiet).contains("not watching long enough"))
+      DodoPaymentsRoom.note(quiet).contains("not following long enough"))
 let comparable = compose([pay(150, "USD", -3), pay(100, "USD", -40), pay(1, "USD", -70)])
 check("a real change replaces the payment count in the note",
       DodoPaymentsRoom.note(comparable).contains("more than"))

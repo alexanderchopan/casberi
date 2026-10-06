@@ -55,7 +55,7 @@ struct WalletConnectPickerSheet: View {
     @State private var picked: Set<String> = []
 
     var body: some View {
-        DSTray(title: mode == .watch ? String(localized: "Choose what to watch")
+        DSTray(title: mode == .watch ? String(localized: "Choose what to follow")
                                      : String(localized: "Choose what to save"), height: 660) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(blurb).dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -93,12 +93,12 @@ struct WalletConnectPickerSheet: View {
         let n = shared.count
         if mode == .name {
             return n == 1
-                ? String(localized: "Your wallet shared 1 address. Saving names it in your book — nothing is watched or read.")
-                : String(localized: "Your wallet shared \(n) addresses. Saving names them in your book — nothing is watched or read.")
+                ? String(localized: "Your wallet shared 1 address. Saving names it in your book — nothing is followed or read.")
+                : String(localized: "Your wallet shared \(n) addresses. Saving names them in your book — nothing is followed or read.")
         }
         return n == 1
-            ? String(localized: "Your wallet shared 1 address. Watching is read-only — it can never trade or move funds.")
-            : String(localized: "Your wallet shared \(n) addresses. Watching is read-only — it can never trade or move funds.")
+            ? String(localized: "Your wallet shared 1 address. Following is read-only — it can never trade or move funds.")
+            : String(localized: "Your wallet shared \(n) addresses. Following is read-only — it can never trade or move funds.")
     }
 
     /// The cap, in words, whenever it constrains anything. Nil the rest of the
@@ -106,10 +106,10 @@ struct WalletConnectPickerSheet: View {
     private var capLine: String? {
         let plan = self.plan
         if plan.roomLeft == 0 {
-            return String(localized: "You're watching \(WalletStore.watchLimit) already — the cap. Unwatch one first; naming an address stays free.")
+            return String(localized: "You're following \(WalletStore.watchLimit) already — the cap. Unfollow one first; naming an address stays free.")
         }
         if plan.overflow > 0 {
-            return String(localized: "Room for \(plan.roomLeft) more — \(plan.overflow) of these can't be watched until you unwatch something.")
+            return String(localized: "Room for \(plan.roomLeft) more — \(plan.overflow) of these can't be followed until you unfollow something.")
         }
         return nil
     }
@@ -188,7 +188,7 @@ struct WalletConnectPickerSheet: View {
                 }
                 Spacer(minLength: 0)
                 if row.alreadyWatching {
-                    Text(mode == .watch ? String(localized: "Watching")
+                    Text(mode == .watch ? String(localized: "Following")
                                         : String(localized: "In your book"))
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                 } else if blocked {
@@ -245,9 +245,9 @@ struct WalletConnectPickerSheet: View {
         let closing = plan.selectionCeiling == 0
         return DSSlabButton(
             title: closing ? String(localized: "Done")
-                           : (n == 0 ? (mode == .watch ? String(localized: "Pick what to watch")
+                           : (n == 0 ? (mode == .watch ? String(localized: "Pick what to follow")
                                                        : String(localized: "Pick what to save"))
-                                     : (mode == .watch ? String(localized: "Watch \(n)")
+                                     : (mode == .watch ? String(localized: "Follow \(n)")
                                                        : String(localized: "Save \(n)"))),
             enabled: n > 0 || closing
         ) {
@@ -326,8 +326,8 @@ struct WalletConnectPickerSheet: View {
             return String(localized: "Nothing was added.")
         }
         let core = added == 1
-            ? String(localized: "Watching 1 more wallet.")
-            : String(localized: "Watching \(added) more addresses.")
+            ? String(localized: "Following 1 more wallet.")
+            : String(localized: "Following \(added) more addresses.")
         guard refused > 0 else { return core }
         return core + " " + String(localized: "\(refused) wouldn't fit.")
     }

@@ -71,7 +71,7 @@ struct WalletConnectionScreen: View {
                 Text("Bitcoin")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Spacer()
-                Text("When you watch one")
+                Text("When you follow one")
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             }
             .frame(minHeight: AccountFactRow.height)
@@ -83,7 +83,7 @@ struct WalletConnectionScreen: View {
             // The promise, and the only thing left on this page that is not a
             // chain — the Disconnect that used to sit under it belongs to the
             // account page's exits (see this file's doc).
-            DSFootnote("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on \(DS.device).")
+            DSFootnote("Read-only — following can never trade or move funds. Activity is public, read across chains directly on \(DS.device).")
                 .padding(.top, DS.Space.s3)
                 .plainAccountRow()
         }

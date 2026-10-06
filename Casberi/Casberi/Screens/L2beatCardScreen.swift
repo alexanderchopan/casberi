@@ -93,8 +93,8 @@ struct L2beatRiskCard: View {
 	var watchVerb: some View {
 		Button(action: toggleWatch) {
 			Text(watching
-				? String(localized: "Watching — tap to stop")
-				: String(localized: "Watch this chain"))
+				? String(localized: "Following — tap to stop")
+				: String(localized: "Follow this chain"))
 				.dsText(.subhead12)
 				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
 		}

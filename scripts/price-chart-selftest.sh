@@ -110,9 +110,9 @@ grep -q 'ThingChart.kind(for: thing) != nil' "$SHEET" \
 # The symbol is a STAMPED field. Falling back to splitting the title is
 # allowed and documented; making it the only path is not.
 grep -q 'thing.authorHandle = token.symbol' "Casberi/Casberi/Model/TokenWatch.swift" \
-  || { echo "✗ a watched token no longer stamps its symbol — the object would have to parse prose"; exit 1; }
+  || { echo "✗ a followed token no longer stamps its symbol — the object would have to parse prose"; exit 1; }
 grep -q 'thing.authorHandle = stock.symbol' "Casberi/Casberi/Model/StockWatch.swift" \
-  || { echo "✗ a watched stock no longer stamps its symbol"; exit 1; }
+  || { echo "✗ a followed stock no longer stamps its symbol"; exit 1; }
 
 # The chip label is NOT the persistence key. Collapsing them orphans every
 # stored range preference silently — no crash, everyone just quietly back on
@@ -297,16 +297,16 @@ do {
     let anchored = PriceCommentary.anchor(
         closes: rising,
         watched: (price: 50.0, date: Date(timeIntervalSince1970: 1_750_000_000)))
-    check(anchored?.contains("You watched at") == true, "the anchor clause fires")
+    check(anchored?.contains("You followed at") == true, "the anchor clause fires")
     check(anchored?.contains("up") == true, "and names its direction")
     // A move that rounds away is not worth a clause.
     check(PriceCommentary.anchor(closes: [50.0, 50.0],
                                  watched: (price: 50.0, date: .now)) == nil,
-          "a flat move since watching says nothing")
+          "a flat move since following says nothing")
     // A nonsense anchor is refused rather than divided by.
     check(PriceCommentary.anchor(closes: rising,
                                  watched: (price: 0, date: .now)) == nil,
-          "a zero watch price is refused, never divided by")
+          "a zero follow price is refused, never divided by")
 
     // 7. The percent formatter: no direction for a change that rounds away.
     check(PriceObject.percent(0.0004) == "0.0%", "a flat change prints no sign")
@@ -455,7 +455,7 @@ mutateObj "the minimum-closes floor is dropped" \
 
 # A zero watch price divided by — a confident infinity on the one clause that
 # is about the person's own record.
-mutateObj "a nonsense watch anchor is divided by instead of refused" \
+mutateObj "a nonsense follow anchor is divided by instead of refused" \
   'guard let watched, watched.price > 0, let last = closes.last, last > 0' \
   'guard let watched, let last = closes.last, last > 0'
 

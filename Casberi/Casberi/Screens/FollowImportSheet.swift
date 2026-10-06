@@ -94,7 +94,7 @@ struct FollowImportSheet: View {
     }
 
     private var blurb: String {
-        String(localized: "Who @\(SocialThread.shortHandle(handle)) follows. Pick any — their posts land like any watched account.")
+        String(localized: "Who @\(SocialThread.shortHandle(handle)) follows. Pick any — their posts land like any followed account.")
     }
 
     private func note(_ text: String) -> some View {
@@ -172,7 +172,7 @@ struct FollowImportSheet: View {
                     // Already watched: the row states it and does nothing.
                     // No checkbox to tap that would mean nothing (no dead
                     // controls) — picking them again isn't a second connect.
-                    Text("Watching").dsText(.label12).foregroundStyle(DS.textTertiary)
+                    Text("Following").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } else {
                     Image(systemName: "checkmark")
                         .dsGlyph(.subhead, weight: .bold)
@@ -237,9 +237,9 @@ struct FollowImportSheet: View {
         // 0 gets its own line — the plural branch would have reported an import
         // that didn't happen ("Watching 0 more accounts").
         switch added {
-        case 0:  chrome.flash(String(localized: "Already watching those."), tone: .success)
-        case 1:  chrome.flash(String(localized: "Watching 1 more account."), tone: .success)
-        default: chrome.flash(String(localized: "Watching \(added) more accounts."), tone: .success)
+        case 0:  chrome.flash(String(localized: "Already following those."), tone: .success)
+        case 1:  chrome.flash(String(localized: "Following 1 more account."), tone: .success)
+        default: chrome.flash(String(localized: "Following \(added) more accounts."), tone: .success)
         }
         onImport(added)
         dismiss()

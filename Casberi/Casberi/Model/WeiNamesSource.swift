@@ -177,10 +177,10 @@ enum WeiNamesSource {
         if ENS.isHexAddress(asked) { addresses = [asked] }
         else {
             addresses = WalletStore.shared.addresses.map(\.address).filter(ENS.isHexAddress)
-            lines.append("no name or address given — reading the \(addresses.count) watched wallet(s)")
+            lines.append("no name or address given — reading the \(addresses.count) followed wallet(s)")
         }
         guard !addresses.isEmpty else {
-            lines.append("nothing to read: watch a wallet, or pass a name or 0x address")
+            lines.append("nothing to read: follow a wallet, or pass a name or 0x address")
             return lines
         }
         for address in addresses {

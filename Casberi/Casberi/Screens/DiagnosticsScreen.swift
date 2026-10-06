@@ -379,7 +379,7 @@ struct DiagnosticsScreen: View {
         //   tile — pinning is per-app, not per-token.)
         let pinnedTokens = all.filter { TokenChart.route(from: $0.content) != nil }
         if pinnedTokens.isEmpty {
-            log("No token thing (nothing watched has a resolvable token link)")
+            log("No token thing (nothing followed has a resolvable token link)")
         }
         for t in pinnedTokens.prefix(2) {
             let route = TokenChart.route(from: t.content)!

@@ -432,7 +432,7 @@ struct TokenChartPlot: View {
                             .background(Circle().fill(DS.surfaceSheet))
                             .frame(width: 11, height: 11)
                             .position(x: plot.minX + x, y: plot.minY + y)
-                            .accessibilityLabel(Text("You started watching here"))
+                            .accessibilityLabel(Text("You started following here"))
                     }
                 }
                 if !marks.isEmpty, let plotAnchor = proxy.plotFrame {
@@ -859,7 +859,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
             HStack(spacing: DS.Space.s2) {
                 TokenDeltaPill(change: change,
                                label: "since \(since.date.formatted(.dateTime.month(.abbreviated).day()))")
-                Text("you watched at \(TokenChartStyle.priceText(since.price))")
+                Text("you followed at \(TokenChartStyle.priceText(since.price))")
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }

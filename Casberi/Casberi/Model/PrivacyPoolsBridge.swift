@@ -528,7 +528,7 @@ enum PrivacyPoolsBridge {
         let parts = entries.map { e in
             "\(e["amount"] ?? "?") \(e["symbol"] ?? "?")=\(e["status"]?.isEmpty == false ? e["status"]! : "unpolled")"
         }
-        return "\(entries.count) watched: " + parts.joined(separator: ", ")
+        return "\(entries.count) followed: " + parts.joined(separator: ", ")
     }
 
     // MARK: - Landing deposits

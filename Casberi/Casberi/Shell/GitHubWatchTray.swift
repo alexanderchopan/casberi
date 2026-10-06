@@ -32,17 +32,17 @@ enum GitHubWatchAdd {
                 return Outcome(proof: .failed(String(localized: "Couldn't find that repo on GitHub.")))
             }
             guard let thing = GitHubRepoWatch.add(resolved, context: context) else {
-                return Outcome(proof: .failed(String(localized: "\(resolved.fullName) is already watched.")))
+                return Outcome(proof: .failed(String(localized: "\(resolved.fullName) is already followed.")))
             }
-            return Outcome(proof: .says(String(localized: "Watching \(thing.title)")), added: true)
+            return Outcome(proof: .says(String(localized: "Following \(thing.title)")), added: true)
         }
         guard let resolved = await GitHubPersonWatch.resolve(q, token: token) else {
             return Outcome(proof: .failed(String(localized: "No such account on GitHub — a username, or a link to a profile.")))
         }
         guard let thing = GitHubPersonWatch.add(resolved, context: context) else {
-            return Outcome(proof: .failed(String(localized: "\(resolved.login) is already watched.")))
+            return Outcome(proof: .failed(String(localized: "\(resolved.login) is already followed.")))
         }
-        return Outcome(proof: .says(String(localized: "Watching \(thing.title)")),
+        return Outcome(proof: .says(String(localized: "Following \(thing.title)")),
                        faces: [resolved.avatarURL].compactMap { $0 }, added: true)
     }
 }
@@ -77,7 +77,7 @@ struct GitHubWatchTray: View {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     DSSlabField(placeholder: AccountPageShape.findPlaceholder(
                                     String(localized: "a repo or person")),
-                                text: $query, actionLabel: String(localized: "Watch"),
+                                text: $query, actionLabel: String(localized: "Follow"),
                                 busy: busy, action: watch)
                     BridgeSyncStatusRows(syncing: busy,
                                          syncingLine: TokenSetupScreen.looksLikeRepo(query)

@@ -491,7 +491,7 @@ extension FeedScreen {
             id: "",
             name: String(localized: "All accounts"),
             sub: roster.isEmpty
-                ? String(localized: "Nothing watched on this chain yet")
+                ? String(localized: "Nothing followed on this chain yet")
                 : ListFormatter.localizedString(
                     byJoining: roster.map { FramesWatch.shared.name(for: $0.address)
                         ?? WalletStore.shortAddress($0.address) }),

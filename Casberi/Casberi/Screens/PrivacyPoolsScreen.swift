@@ -73,7 +73,7 @@ struct PrivacyPoolsScreen: View {
     /// would put the same list on two pages with one Remove between them.
     @ViewBuilder private var actBlock: some View {
         if hasWallets {
-            DSSlabDoor(title: String(localized: "Watching \(walletCount) address"),
+            DSSlabDoor(title: String(localized: "Following \(walletCount) address"),
                        detail: String(localized: "Manage"),
                        systemImage: "eye") {
                 route.pushBridge(.wallet)
@@ -88,7 +88,7 @@ struct PrivacyPoolsScreen: View {
                              proof: lastResult)
         DSSlabNote(text: hasWallets
             ? String(localized: "On automatically — tells you the moment screening clears a deposit.")
-            : String(localized: "Deposits are read off the wallets you watch."),
+            : String(localized: "Deposits are read off the wallets you follow."),
             plain: true)
     }
 

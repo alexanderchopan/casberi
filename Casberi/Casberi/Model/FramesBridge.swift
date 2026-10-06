@@ -242,12 +242,12 @@ enum FramesBridge {
             if addresses.isEmpty { return String(localized: "An account on this phone") }
             if hasKey {
                 return addresses.count == 1
-                    ? String(localized: "Your account and 1 address watched")
-                    : String(localized: "Your account and \(addresses.count) addresses watched")
+                    ? String(localized: "Your account and 1 address followed")
+                    : String(localized: "Your account and \(addresses.count) addresses followed")
             }
             return addresses.count == 1
-                ? String(localized: "1 address watched")
-                : String(localized: "\(addresses.count) addresses watched")
+                ? String(localized: "1 address followed")
+                : String(localized: "\(addresses.count) addresses followed")
         }()
 
         store.registerConnected(
@@ -255,7 +255,7 @@ enum FramesBridge {
             name: FramesIdentity.source,
             proof: proof,
             can: [
-                String(localized: "Reads a watched address's balance and its frame transactions — what each frame did, what it spent of its gas budget, and who paid for it — on the Frames devnet, the public test network for EIP-8141 frame transactions."),
+                String(localized: "Reads a followed address's balance and its frame transactions — what each frame did, what it spent of its gas budget, and who paid for it — on the Frames devnet, the public test network for EIP-8141 frame transactions."),
                 String(localized: "Reading needs no key. Sending signs with a key held on this device — a plain scalar, not the Secure Enclave, because the money here has no value and the network says it may be reset without notice."),
             ])
     }

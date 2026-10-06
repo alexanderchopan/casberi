@@ -72,7 +72,7 @@ enum GitHubRowTag {
             // reaches here: since prd §909 its URL is the object's own, and
             // the URL is read first.
             case .activity:    return String(localized: "Activity")
-            case .watching:    return String(localized: "Watching")
+            case .watching:    return String(localized: "Following")
             }
         }
     }

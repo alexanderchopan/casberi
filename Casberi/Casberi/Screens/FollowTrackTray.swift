@@ -192,23 +192,23 @@ struct FollowTrackTray: View {
         } else if let registry = target.registry {
             name = registry.normalize(raw)
             guard !name.isEmpty, PackageStore.shared.add(registry, name) else {
-                failure = String(localized: "Already watching \(raw)")
+                failure = String(localized: "Already following \(raw)")
                 return
             }
             added = await PackageIngest.refresh(registry, context: modelContext)
             store?.registerConnected(
                 id: registry.bridgeID, name: registry.displayName, proof: String(localized: "Synced just now"),
-                can: ["Reads the current version of the packages you watch.",
+                can: ["Reads the current version of the packages you follow.",
                       "Read-only — it never installs, publishes, or signs in."])
         } else if target == .huggingFace {
             name = HuggingFaceStore.normalize(raw)
             guard !name.isEmpty, HuggingFaceStore.shared.add(name) else {
-                failure = String(localized: "Already watching \(raw)")
+                failure = String(localized: "Already following \(raw)")
                 return
             }
             added = await HuggingFaceIngest.refresh(context: modelContext)
             store?.registerConnected(id: "huggingface", name: "Hugging Face", proof: String(localized: "Synced just now"),
-                                     can: ["Reads new models, datasets and Spaces from the authors you watch.",
+                                     can: ["Reads new models, datasets and Spaces from the authors you follow.",
                                            "Read-only — never publishes, stars, or downloads weights."])
         } else if target == .radicle {
             guard let rid = RadicleWire.normalizeRID(raw) else {
@@ -216,14 +216,14 @@ struct FollowTrackTray: View {
                 return
             }
             guard RadicleStore.shared.add(rid) else {
-                failure = String(localized: "Already watching that repo.")
+                failure = String(localized: "Already following that repo.")
                 return
             }
             name = RadicleStore.shared.name(for: rid) ?? rid
             added = await RadicleIngest.refresh(context: modelContext)
             store?.registerConnected(
                 id: "radicle", name: "Radicle", proof: String(localized: "Synced just now"),
-                can: ["Reads patches and issues from the repos you watch, on the seed you name.",
+                can: ["Reads patches and issues from the repos you follow, on the seed you name.",
                       "Read-only — the gateway has no credential and no way to write."])
         } else {
             return
@@ -250,7 +250,7 @@ struct FollowTrackTray: View {
     /// Says so, and closes onto the list the follow joined.
     private func landed(_ name: String) {
         DSHaptic.success()
-        chrome?.flash(room == .work ? String(localized: "Watching \(name)")
+        chrome?.flash(room == .work ? String(localized: "Following \(name)")
                                     : String(localized: "Following \(name)"), tone: .success)
         dismiss()
         onTracked?()

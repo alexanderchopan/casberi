@@ -203,7 +203,7 @@ struct PostHogScreen: View {
     @ViewBuilder private var watchBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             DSSlabField(placeholder: String(localized: "Event or metric name"),
-                        text: $queryField, actionLabel: String(localized: "Watch"),
+                        text: $queryField, actionLabel: String(localized: "Follow"),
                         focus: $fieldFocused, action: watchTyped)
             ForEach(displayHits) { event in
                 BridgeSearchResultRow(
@@ -344,10 +344,10 @@ struct PostHogScreen: View {
     private func watch(_ event: String) {
         DSHaptic.tap()
         guard PostHogWatch.add(event, context: modelContext) != nil else {
-            result = .says(String(localized: "\(event) is already watched."))
+            result = .says(String(localized: "\(event) is already followed."))
             return
         }
-        result = .says(String(localized: "Watching \(event)"))
+        result = .says(String(localized: "Following \(event)"))
         queryField = ""
         hits = []
         load()

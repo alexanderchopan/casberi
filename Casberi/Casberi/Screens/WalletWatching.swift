@@ -88,8 +88,8 @@ enum WalletUnwatch {
                                  stillWatched: wallet.addresses.map(\.address),
                                  context: context)
         chrome.flash(keepsEntry
-                     ? String(localized: "Stopped watching · \(name) is still in your book")
-                     : String(localized: "Stopped watching \(name)"),
+                     ? String(localized: "Stopped following · \(name) is still in your book")
+                     : String(localized: "Stopped following \(name)"),
                      action: .init(label: String(localized: "Undo")) {
                          undo(gone, label: label, context: context)
                      },
@@ -155,7 +155,7 @@ struct WalletWatchSyncSection: View {
             } else if nothingFound && wallet.addresses.count == 1 {
                 result = .says(String(localized: "No activity found on your chains yet — double-check the address, or give it a moment."))
             } else {
-                result = .connected(String(localized: "watching for activity."))
+                result = .connected(String(localized: "following for activity."))
             }
             let proof = added > 0
                 ? String(localized: "\(added) new")

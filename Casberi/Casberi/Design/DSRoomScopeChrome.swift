@@ -196,7 +196,7 @@ extension DSAccountSlot {
         let accounts = slots.filter { !$0.id.isEmpty }.map { slot -> (DSAccountSlot, Bool) in
             var slot = slot
             let held = onPhone(slot.id)
-            slot.group = held ? String(localized: "On this phone") : String(localized: "Watching")
+            slot.group = held ? String(localized: "On this phone") : String(localized: "Following")
             return (slot, held)
         }
         return slots.filter { $0.id.isEmpty }

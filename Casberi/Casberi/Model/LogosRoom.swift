@@ -84,7 +84,7 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
 
     var emptyBody: String? {
         switch self {
-        case .holdings: return String(localized: "A token held by an account you watch.")
+        case .holdings: return String(localized: "A token held by an account you follow.")
         case .node:     return String(localized: "Give the Logos page your node's address.")
         case .rewards:  return String(localized: "Mine with your own Logos node, added on the Logos page.")
         case .home: return nil
