@@ -64582,3 +64582,17 @@ Pushed screens keep their `DSScreenHead`.
 5. What this app reaches shows its bar in a sheet, with no title in it, so its Done stands; on the Mac it stays hidden.
 
 **Seen** on the iPhone 17 Pro simulator: What this app reaches and the Wallet's account page, both raised with Done, the face wearing the octopus.
+
+## §1133 — Two controls: the face says where, the tiles say what (user, 2026-10-06: "i feel like there must be a simpler way"; "ok, i like this direction"; "B"; "should the 'You' row also be a folder like wallet etc … b/c now we can do that"; amends §1066, §1107, §1127–§1129, §1015 and §1061's "+N")
+
+**Why.** After §1129 three controls did two jobs: the tray and the title's pill both picked WHERE (a category, then an app or account in it), and the tiles picked WHAT. Mail has one control per job: the mailbox list holds both groups and accounts, the page's filter picks the view, and the title only names the place.
+
+1. **The pill is deleted from every room**, You's included (`DSScopeMenu`, `YouPill`, `mergedAccountsPill`, `roomPickPill`). The title row is a label (`DSRoomTitleRow(title:pick:)`): the category's name in pink and, once something is picked, " · " and the pick in the primary ink ("Wallet · Savings", "You · Settings"; You always names its place, Home being one). One line at one height picked or not; a long pair shrinks to fit. It presses nothing.
+2. **The tray picks where.** "+N" opens the row in place as a Home Screen folder: every app and account the category holds, each icon over its name on one line, five across, the one showing ringed in pink, the room's act first (§1107: Follow a wallet, New account). The Wallet's folder is read off the store so it is whole from any room (your addresses round, then its apps); a standing room that publishes accounts (a devnet) shows those; any other category shows its apps. With nothing hidden, the act stands in "+N"'s place as a plus.
+3. **You is a row like the others**: its name (yours, else You), Home's disc where a category's own stands, the two places you open most (`ChipMemory`, which now counts landings on Apps, Addresses and Settings), "+N" for the folder of all six.
+4. **Search leads the tray** again, as the door to Find (the composer); §1015's reason for deleting it ("a list this short is read, not searched") ended when the tray began holding every account.
+5. **The tiles pick what**, unchanged, one tap on the page. `DSScopeMenu.Action` is `DSRoomAction`.
+
+The cost, accepted: switching apps inside a room is two taps (face, app), not one.
+
+**Seen** on an iPhone 17 Pro simulator of this session's own: the tray with Search and You's "+3", the Wallet folder (Follow a wallet, four addresses, its apps), a pick landing on "Wallet · Savings", You's folder with Settings lit, "You · Settings".

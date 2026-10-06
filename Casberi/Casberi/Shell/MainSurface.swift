@@ -2116,6 +2116,9 @@ struct MainSurface: View {
             guard let request else { return }
             route.placeRequest = nil
             go(to: request, landNow: true)
+            // Counted like any landing, so the tray's You row leads with the
+            // places you open most (prd §1133).
+            ChipMemory.visited(request)
         }
         // The route keeps the place on screen, for the face's toggle and the
         // Apps pane, which only this surface can tell it.

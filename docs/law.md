@@ -51,8 +51,9 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The tray is one grid of five columns. Every button is 46pt. Headers are a bare glyph over a `heading17` word. A Recent line holds the five rooms you last landed in. No badges, no collapsing (§1013).
 - The tray is solid black (`DS.surfaceSheet`), never glass. You doors not standing fill with `DS.surfaceRaised`. The first column sits on the face's axis (§1014).
 - The tray's search narrows the grid in place. The search and the You row stay pinned above the scroll (§1015). A mark has no hold menu (§1033).
-- You doors, in this order: Home, Notes, Markets, Apps, Addresses, Settings (§1012, §1111, §1123). While the tray is up, the face shows the octopus (§1009). You's title row carries the same six as a glass pill beside your name, else You; the pill names the place (§1127, §1129).
-- Notes, Markets, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title stays and the pill names the place; a swipe from any walks from Home's place (§1127, §1129).
+- You doors, in this order: Home, Notes, Markets, Apps, Addresses, Settings (§1012, §1111, §1123). While the tray is up, the face shows the octopus (§1009). In the tray You is a row like the others: your name (else You), Home's disc, the two places you open most, "+N" for a folder of all six (§1133).
+- Notes, Markets, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title reads "You · <place>"; a swipe from any walks from Home's place (§1127, §1129, §1133).
+- Two controls: the face's tray says where (a category, or an app or account in its "+N" folder, the room's act first; Search leads it), the tiles say what. No room draws a pill; the title is a label, the category pink, " · " and the pick (§1133). Nothing pushes on the phone: what you open rises as one sheet (§1132).
 - A category shows in the tray only while it holds a connected seat (§977).
 - No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). No room draws an account door; an app's settings open from its row in Apps (§1050f).
 - On a pushed screen the dock's seat is the back door. The system back button is hidden at the resolver, and the edge swipe goes through `DSSwipeBack` (§767). Content comes to rest clear of the seat via `.dsSeatClearance()` (§829).
@@ -155,7 +156,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Logos: watch a public LEZ account, keyless, forward from the watch. Never in the wallet total (§988). Your own node is read at the address you give, through GETs only (§989). The room is Home · Node · Rewards, then Explorer, a verb tile (§991, §1016, §1039). Tickets are a count, and the phone never mines (§1016). A pasted public key resolves to its account (§1034). A reset is detected by block 1's hash and stated once (§1035).
 
 ### 13. Notes and voice
-- Notes is a place in Home, reached through two always-drawn doors, the tray's and Home's You pill (§1127). Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
+- Notes is a place in Home, reached through the tray's You row and its folder, always drawn (§1127, §1133). Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
 - Tiles: All · Folders · Voice · New · Search (§1127 over §1099, §995, §980). Voice lists the voice notes you spoke; the title row is You's (§1127, §1129). A thing sits in at most one folder. A folder opens in place (§980).
 - Pinned leads All, and the rest stand under "Notes" (§985). The long press holds five actions: Pin, Move, Lock, Share, Delete (§983).
 - A note of yours is ONE page: a tap opens it read, its items tick, a tap on the words types; a voice note's page is its player over its words (§1099, superseding §983's three keys). Writing is title over words, four tools on a glass capsule over the keyboard (§983); the words are one editor that reads and writes, its list keys act at the cursor, a ticked item sinks, lines indent and move, `[[` links, a pasted address takes its page's title, and the page saves as you type and dates an edit (§1100). The Aa key formats without markdown: heading, bold, italic, strikethrough, lists and quote, written as markdown and drawn with the marks hidden (§1101). A dash makes a bullet (§1099). A list in the box ticks in place (§1099).
@@ -221,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1265 of 1326 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1266 of 1327 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1347,7 +1348,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1012 — The tray's You doors are a labelled row across the top, and every mark is 28pt (amended by §1013, §1050g)
 - §1013 — The tray is one grid: headers above, every button the face's size, and a Recent line (amended by §1014, §1015, §1016a, §1050l, §1093; part superseded by §1050j)
 - §1014 — The tray is solid black, its doors the room head's charcoal, and its first column is the face's axis
-- §1015 — The tray searches in place, pins the You row, and a hold is Manage account (part superseded by §1033)
+- §1015 — The tray searches in place, pins the You row, and a hold is Manage account (amended by §1133; part superseded by §1033)
 - §1016 — Logos: a Rewards tile, mining read off your node, and the app's first own symbol
 - §1017 — One circle size: every mark and face is the face button's 46pt, and the row breathes
 - §1018 — The share sheet's link is `public.url` bytes, never a proxied `URL`
@@ -1409,12 +1410,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu (amended by §1122)
 - §1059 — The folded rooms' own views are deleted: the kind tiles, Reminders' and Mail's tiles, the Calendar agenda, and every…
 - §1060 — The rest of the folded rooms' controls are deleted: GitHub's and Pinterest's scope rails and Privacy Pools' tiles, wh… (amended by §1072)
-- §1061 — The tray's rows are a name and a run of icons: the category's own disc first, its three most-opened apps, "+N"; You i… (amended by §1094, §1122, §1123)
+- §1061 — The tray's rows are a name and a run of icons: the category's own disc first, its three most-opened apps, "+N"; You i… (amended by §1094, §1122, §1123, §1133)
 - §1062 — A swipe right on Home opens the tray (a user: on Home "there is nothing to swipe right onto", wishing it raised the t… (amended by §1125)
 - §1063 — The Wallet category wears the dollar sign
 - §1064 — In the demo, no pick opens an empty page
 - §1065 — Every app in the demo has something behind it, and an app picked in a merged room keeps its page
-- §1066 — The account picker is a glass pill in the title row (amended by §1127, §1128, §1129)
+- §1066 — The account picker is a glass pill in the title row (amended by §1127, §1128, §1129, §1133)
 - §1067 — The room sweep
 - §1068 — Social is one room
 - §1069 — A Safe leads with its balance
@@ -1462,7 +1463,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a, §1114)
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
-- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124)
+- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133)
 - §1107a — Security's checkup is the six counts alone, and the two fakes get their own glyphs
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 - §1109 — The Nostr seat is removed; Lightning keeps the relay client (amended by §1110)
@@ -1483,11 +1484,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1124 — Privy's apps are a group in Holdings
 - §1125 — The last room's swipe left opens the tray
 - §1126 — Reading's Subscriptions count no posts
-- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128, §1129)
+- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128, §1129, §1133)
 - §1128 — The pill is the room's title (amended by §1129)
 - §1129 — The category's name comes back, in pink, and You's doors are places
 - §1130 — Threads can have notifications the way Instagram does, through its own sign-in; Meta's Threads API cannot give them
 - §1132 — Nothing pushes on the phone: what you open rises as one sheet
+- §1133 — Two controls: the face says where, the tiles say what
 
 ## Dead rulings → what replaced them (generated)
 

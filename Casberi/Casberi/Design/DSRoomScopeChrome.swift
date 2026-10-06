@@ -14,8 +14,8 @@ import SwiftUI
 ///      (prd §765, §936);
 ///   2. **the tiles** — the four scopes, Home first then A–Z
 ///      (`DSScopeTiles.alphabetical`), and no verb (prd §1107, §1108);
-///   3. **the account menu** (`DSScopeMenu`, prd §936) — the pick the deleted
-///      Accounts tiles duplicated;
+///   3. **the account pick** (prd §936), published as `ShellChrome.accountRail`
+///      and drawn in the rooms tray's folder since prd §1133 deleted the pill;
 ///   4. **the list** — the room's own, drawn by the room under this chrome:
 ///      on Home, what moved (the deleted Activity tile's list).
 ///
@@ -46,7 +46,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     let scope: String?
     let onPickAccount: (String?) -> Void
     /// An act the Accounts pill's list leads with (prd §1107).
-    var accountAction: DSScopeMenu.Action? = nil
+    var accountAction: DSRoomAction? = nil
 
     @ViewBuilder let crown: (DSAccountSlot) -> Crown
     /// The section's own drawing, off Home. Drawn HERE, in the box the crown

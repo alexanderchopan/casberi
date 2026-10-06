@@ -12,9 +12,10 @@ import SwiftUI
 /// a rounded square since §1122, in columns under a blurred room):
 /// You's four doors (Home, Notes, Addresses, Settings) lead, then each
 /// category in the person's Dock order (§1050j) — its own disc, its two
-/// most-opened apps, "+N". No grabber, no detents and no search
-/// (§1015's field is deleted with the full-width sheet it led): a list this
-/// short is read, not searched. Glass on the floating layer is the design
+/// most-opened apps, "+N". No grabber and no detents. Since prd §1133 it
+/// holds EVERY way to move: Search leads it (the door to Find), You is a row
+/// like the others, and "+N" opens a row in place as a folder of every app
+/// and account; the pill that picked them in the title row is deleted. Glass on the floating layer is the design
 /// law's own place for it; §1014's solid black answered a dense wall of
 /// marks, which the tray no longer draws (§1050l).
 ///
@@ -74,6 +75,10 @@ struct RoomsTray: View {
     static let dealStep: Double = 0.02
 
     @State private var contentHeight: CGFloat = 0
+    /// The row whose folder is open (a category, or `Self.youRowID`), one at
+    /// a time; closing the tray shuts it.
+    @State private var openFolder: String?
+    static let youRowID = "you:row"
     @State private var dealt = false
     @State private var bounceTick = 0
 
@@ -128,6 +133,7 @@ struct RoomsTray: View {
             // they are simply there.
             dealt = up
             if up && !reduceMotion { bounceTick += 1 }
+            if !up { openFolder = nil }
         }
     }
 
@@ -139,9 +145,12 @@ struct RoomsTray: View {
         let gap = Self.gap(inner: width - 2 * DS.Space.s4)
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                searchField
                 youRow(gap: gap)
+                if openFolder == Self.youRowID { folderGrid(youFolder) }
                 ForEach(Array(categories.enumerated()), id: \.element) { index, category in
                     categoryRow(category, index: index + 1, gap: gap)
+                    if openFolder == category { folderGrid(folder(for: category)) }
                 }
             }
             .padding(.vertical, DS.Space.s3)
@@ -293,6 +302,8 @@ struct RoomsTray: View {
         let word: String
         let glyph: String
         var lit = false
+        /// What `ChipMemory` counts a landing on this place as.
+        var key: String = ""
         let act: () -> Void
     }
 
@@ -300,14 +311,14 @@ struct RoomsTray: View {
                        place: HomeScope.Place? = nil) -> [Door] {
         [
             Door(word: String(localized: "Home"), glyph: home ? "house.fill" : "house",
-                 lit: home) { pick("All") },
+                 lit: home, key: "All") { pick("All") },
             Door(word: String(localized: "Notes"), glyph: notes ? "note.text" : "note",
-                 lit: notes) { pick(Pinboard.room) },
+                 lit: notes, key: Pinboard.room) { pick(Pinboard.room) },
             // Markets (prd §1123): its room once something is watched, else
             // the page where the first stock or token is added — the door
             // its Apps row opens — so the door is always drawn (§969).
             Door(word: String(localized: "Markets"), glyph: CategoryFold.glyph(for: Self.markets),
-                 lit: markets) {
+                 lit: markets, key: Self.markets) {
                 if marketsHasRoom { pickCategory(Self.markets) } else { setup(Self.markets) }
             },
             // APPS AND SETTINGS ARE TWO DOORS AGAIN (prd §1111, reversing
@@ -315,11 +326,11 @@ struct RoomsTray: View {
             // marked; Settings is Casberi's own options and nothing else.
             // Places in You since prd §1129: the door lands, nothing pushes.
             Door(word: String(localized: "Apps"), glyph: ScopeTileGlyph.apps,
-                 lit: place == .apps) { screen(.apps) },
+                 lit: place == .apps, key: HomeScope.Place.apps.source) { screen(.apps) },
             Door(word: String(localized: "Addresses"), glyph: "at",
-                 lit: place == .addresses) { screen(.addresses) },
+                 lit: place == .addresses, key: HomeScope.Place.addresses.source) { screen(.addresses) },
             Door(word: String(localized: "Settings"), glyph: "gearshape",
-                 lit: place == .settings) { screen(.casberi) },
+                 lit: place == .settings, key: HomeScope.Place.settings.source) { screen(.casberi) },
         ]
     }
 
@@ -337,7 +348,8 @@ struct RoomsTray: View {
         let needsYou = broken(category)
         let apps = rowApps(in: category)
         let shown = Array(apps.prefix(Self.appsShown))
-        let more = apps.count - shown.count
+        let folder = folder(for: category)
+        let more = folder.items.count - shown.count
         return HStack(spacing: DS.Space.s3) {
             Button {
                 pickCategory(category)
@@ -379,20 +391,7 @@ struct RoomsTray: View {
                     .contentShape(Rectangle().inset(by: -Self.iconGap / 2))
                     .accessibilityLabel(Text(app.name))
                 }
-                if more > 0 {
-                    Button {
-                        pickCategory(category)
-                    } label: {
-                        // Plain words, not a disc: a count is not a place.
-                        Text(verbatim: "+\(more)")
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textSecondary)
-                            .frame(width: Self.icon, height: Self.icon)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityLabel(Text("\(more) more in \(category)"))
-                }
+                folderKey(category, more: more, action: folder.action)
             }
             .frame(width: Self.runWidth(gap: gap), alignment: .leading)
         }
@@ -431,28 +430,286 @@ struct RoomsTray: View {
     /// Addresses, Settings — the glyphs in the brand pink (§976a), the standing door's
     /// disc white behind the same glyph (§1053).
     private func youRow(gap: CGFloat) -> some View {
-        // No word since §1123: six doors fill the row, and the pink already
-        // says these are yours. Trailing, so their last four stand over the
-        // category runs' columns on any width; VoiceOver still hears "You".
-        HStack(spacing: 0) {
-            Spacer(minLength: 0)
+        // **A ROW LIKE EVERY OTHER, AND A FOLDER (prd §1133, user: "should
+        // the 'You' row also be a folder like wallet etc … b/c now we can do
+        // that").** Its name (yours, else You), Home's disc where a
+        // category's own stands, the two places you open most, and "+N" for
+        // the folder of all six. One grammar for the whole tray.
+        let doors = youDoors
+        let home = doors[0]
+        let shown = Array(rankedYouDoors(Array(doors.dropFirst())).prefix(Self.appsShown))
+        let more = doors.count - 1 - shown.count
+        return HStack(spacing: DS.Space.s3) {
+            Button(action: home.act) {
+                Text(verbatim: HomeScope.title)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, minHeight: Self.rowHeight, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .accessibilityLabel(Text("You"))
             HStack(spacing: gap) {
-                ForEach(Array(youDoors.enumerated()), id: \.offset) { _, door in
+                ForEach(Array(([home] + shown).enumerated()), id: \.offset) { _, door in
                     Button(action: door.act) {
                         roundIcon(door.glyph, ink: DS.brand,
                                   fill: door.lit ? Color.white : DS.surfaceRaised,
                                   bounces: door.lit)
                     }
                     .buttonStyle(PressSpring())
+                    .dsTapTarget()
+                    .contentShape(Rectangle().inset(by: -Self.iconGap / 2))
                     .accessibilityLabel(Text(door.word))
                     .accessibilityAddTraits(door.lit ? .isSelected : [])
                 }
+                folderKey(Self.youRowID, more: more, action: nil)
+            }
+            .frame(width: Self.runWidth(gap: gap), alignment: .leading)
+        }
+        .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
+    }
+
+    /// You's places after Home, the ones you open most first (`ChipMemory`
+    /// counts every landing), the tray's order after that.
+    private func rankedYouDoors(_ doors: [Door]) -> [Door] {
+        let weights = ChipMemory.snapshot()
+        return doors.enumerated().sorted { a, b in
+            let wa = ChipMemory.weight(for: a.element.key, counts: weights.counts, lastVisit: weights.lastVisit)
+            let wb = ChipMemory.weight(for: b.element.key, counts: weights.counts, lastVisit: weights.lastVisit)
+            return wa != wb ? wa > wb : a.offset < b.offset
+        }.map(\.element)
+    }
+
+    // MARK: - Search (prd §1133)
+
+    /// **ONE SEARCH, AT THE TOP OF THE TRAY (prd §1133, user: "i like the
+    /// search tho").** §1015's field left with the full-width sheet it led;
+    /// it returns as the door to Find, the composer that searches everything
+    /// you keep, so the tray holds every way to move.
+    private var searchField: some View {
+        Button {
+            DSHaptic.selection()
+            close()
+            chrome.openComposer()
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "magnifyingglass")
+                    .dsGlyph(.body)
+                Text("Search")
+                    .dsText(.body17)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(DS.textSecondary)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(height: Self.searchHeight)
+            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .padding(.bottom, DS.Space.s2)
+        .accessibilityLabel(Text("Search"))
+        .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
+    }
+
+    static let searchHeight: CGFloat = 40
+
+    // MARK: - Folders (prd §1133)
+
+    /// **A ROW OPENS LIKE A HOME SCREEN FOLDER (prd §1133, user: "B").**
+    /// "+N" opens it in place: every app and account the category holds,
+    /// each icon with its name under it, five across, the one showing
+    /// ringed; the room's act (Follow a wallet, New account) first, as it
+    /// led the deleted pill's list (§1107). The tray reads name-left,
+    /// icons-right, and a folder is more icons, so the grammar holds.
+    private struct Folder {
+        var items: [FolderItem]
+        var action: DSRoomAction?
+    }
+
+    private struct FolderItem: Identifiable {
+        enum Face { case app(String), wallet(String), place(String) }
+        let id: String
+        let name: String
+        let face: Face
+        let lit: Bool
+        let act: () -> Void
+    }
+
+    /// What a category's folder holds. The Wallet's is read off the store,
+    /// so it is whole from any room: your addresses, then its apps, and
+    /// Follow a wallet. A room standing on screen that publishes its
+    /// accounts (a devnet's) shows those; otherwise a category's apps.
+    private func folder(for category: String) -> Folder {
+        let standing = standingCategory == category
+        let room = mergedRoom(in: category)
+        if room == CategoryFold.walletRoom {
+            let scope = standing ? chrome.walletScope : nil
+            let addresses = WalletStore.shared.addresses.map { addr in
+                FolderItem(id: addr.address,
+                           name: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label,
+                           face: .wallet(addr.address),
+                           lit: scope?.caseInsensitiveCompare(addr.address) == .orderedSame) {
+                    chrome.walletScope = addr.address
+                    pick(CategoryFold.walletRoom)
+                }
+            }
+            let apps = rowApps(in: category).map { seat in
+                let id = RoomAccounts.scopeID(seat)
+                return FolderItem(id: id, name: seat.name, face: .app(seat.mark), lit: scope == id) {
+                    pick(seat.source ?? seat.name)
+                }
+            }
+            let follow = DSRoomAction(title: String(localized: "Follow a wallet"), symbol: "plus") {
+                chrome.walletFollowPending = true
+                pick(CategoryFold.walletRoom)
+            }
+            return Folder(items: addresses + apps, action: follow)
+        }
+        if standing, let rail = chrome.accountRail,
+           rail.source == filter.source || filter.source == RoomAccounts.testnetsRoom {
+            let items = rail.slots.filter { !$0.id.isEmpty }.map { slot in
+                FolderItem(id: slot.id, name: slot.name, face: Self.face(slot),
+                           lit: slot.isShowing(rail.scope)) {
+                    DSHaptic.selection()
+                    close()
+                    rail.onPick(slot.id)
+                }
+            }
+            let action = rail.action.map { act in
+                DSRoomAction(title: act.title, symbol: act.symbol) { close(); act.run() }
+            }
+            return Folder(items: items, action: action)
+        }
+        let scope = room.flatMap { chrome.mergedScope[$0] }
+        let items = rowApps(in: category).map { seat in
+            let id = RoomAccounts.scopeID(seat)
+            let lit = standing && (room != nil ? scope == id : filter.source == seat.source)
+            return FolderItem(id: id, name: seat.name, face: .app(seat.mark), lit: lit) {
+                pick(seat.source ?? seat.name)
             }
         }
-        .frame(minHeight: Self.rowHeight)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("You"))
-        .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
+        return Folder(items: items, action: nil)
+    }
+
+    /// You's folder: the six places, the one you stand in ringed.
+    private var youFolder: Folder {
+        Folder(items: youDoors.map { door in
+            FolderItem(id: door.key, name: door.word, face: .place(door.glyph),
+                       lit: door.lit, act: door.act)
+        }, action: nil)
+    }
+
+    private static func face(_ slot: DSAccountSlot) -> FolderItem.Face {
+        switch slot.faces.first {
+        case .wallet(let address)?: .wallet(address)
+        case .mark(_, let source)?, .avatar(_, let source)?: .app(source)
+        case nil: slot.symbol.map { .place($0) } ?? .app(slot.name)
+        }
+    }
+
+    /// The last slot of a row's run: "+N" opens the folder (a chevron closes
+    /// it); with nothing hidden, the room's act stands there as a plus.
+    @ViewBuilder
+    private func folderKey(_ row: String, more: Int, action: DSRoomAction?) -> some View {
+        if more > 0 {
+            let open = openFolder == row
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { openFolder = open ? nil : row }
+            } label: {
+                Group {
+                    if open {
+                        Image(systemName: "chevron.up").dsGlyph(.body)
+                    } else {
+                        // Plain words, not a disc: a count is not a place.
+                        Text(verbatim: "+\(more)").dsText(.body17)
+                    }
+                }
+                .foregroundStyle(DS.textSecondary)
+                .frame(width: Self.icon, height: Self.icon)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressSpring())
+            .accessibilityLabel(open ? Text("Close folder") : Text("\(more) more"))
+        } else if let action {
+            Button {
+                DSHaptic.selection()
+                action.run()
+            } label: {
+                roundIcon(action.symbol, ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
+            }
+            .buttonStyle(PressSpring())
+            .dsTapTarget()
+            .accessibilityLabel(Text(action.title))
+        }
+    }
+
+    private func folderGrid(_ folder: Folder) -> some View {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s1, alignment: .top),
+                            count: Self.folderColumns)
+        return LazyVGrid(columns: columns, spacing: DS.Space.s3) {
+            if let action = folder.action {
+                folderCell(name: action.title, face: .place(action.symbol), lit: false,
+                           ink: DS.textPrimary, phrase: true) {
+                    DSHaptic.selection()
+                    action.run()
+                }
+            }
+            ForEach(folder.items) { item in
+                folderCell(name: item.name, face: item.face, lit: item.lit, ink: DS.brand) {
+                    item.act()
+                }
+            }
+        }
+        .padding(.vertical, DS.Space.s3)
+        .padding(.horizontal, DS.Space.s1)
+        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.bottom, DS.Space.s2)
+        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+    }
+
+    static let folderColumns = 5
+
+    private func folderCell(name: String, face: FolderItem.Face, lit: Bool, ink: Color,
+                            phrase: Bool = false, act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            VStack(spacing: DS.Space.s1) {
+                Group {
+                    switch face {
+                    case .app(let mark):
+                        BridgeIcon(name: mark, size: Self.icon)
+                            .overlay {
+                                if lit {
+                                    RoundedRectangle(cornerRadius: Self.icon * 0.26, style: .continuous)
+                                        .stroke(DS.brand, lineWidth: 2).padding(-3)
+                                }
+                            }
+                    case .wallet(let address):
+                        WalletFace(address: address, size: Self.icon, circular: true)
+                            .overlay { if lit { Circle().stroke(DS.brand, lineWidth: 2).padding(-3) } }
+                    case .place(let glyph):
+                        roundIcon(glyph, ink: ink, fill: lit ? Color.white : DS.surfaceRaised, bounces: false)
+                    }
+                }
+                .frame(width: Self.icon, height: Self.icon)
+                // One line, as a Home Screen folder's names are: two lines
+                // broke names mid-word ("MetaMas / k Card"). The act alone
+                // takes two, being a phrase, not a name.
+                Text(verbatim: name)
+                    .dsText(.label12)
+                    .foregroundStyle(lit ? DS.brandInk : DS.textSecondary)
+                    .lineLimit(phrase ? 2 : 1)
+                    .minimumScaleFactor(phrase ? 1 : 0.85)
+                    .truncationMode(.tail)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text(verbatim: name))
+        .accessibilityAddTraits(lit ? .isSelected : [])
     }
 
     // MARK: - Pieces

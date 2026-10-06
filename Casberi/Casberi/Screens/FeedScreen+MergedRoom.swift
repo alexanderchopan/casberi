@@ -19,31 +19,6 @@ extension FeedScreen {
 
     var mergedMenuDraws: Bool { !mergedMenuSeats.isEmpty }
 
-    /// The menu, the glass pill beside the room's title (prd §1066, §1129),
-    /// as the Wallet's is.
-    @ViewBuilder
-    var mergedAccountsPill: some View {
-        let seats = mergedMenuSeats
-        let all = DSAccountSlot(id: "", name: String(localized: "All apps"), sub: nil,
-                                faces: seats.prefix(2).map { .mark(url: nil, source: $0.mark) })
-        let slots = [all] + seats.map { seat in
-            DSAccountSlot(id: RoomAccounts.scopeID(seat), name: seat.name, sub: nil,
-                          faces: [.mark(url: nil, source: seat.mark)])
-        }
-        let picked = selectedSeat.map(RoomAccounts.scopeID)
-        let showing = slots.first { !$0.id.isEmpty && $0.id == picked } ?? all
-        let room = source
-        DSScopeMenu(slots: slots, showing: showing,
-                    spoken: { String(localized: "Showing: \($0)") },
-                    onPick: { id in
-                        withAnimation(DS.Motion.standard) {
-                            chrome.mergedScope[room] = (id?.isEmpty ?? true) ? nil : id
-                            // A person is picked from the app's faces; another
-                            // app's row may not hold them (prd §1079).
-                            if room == RoomAccounts.socialRoom { chrome.personScope = nil }
-                        }
-                    })
-    }
 }
 
 // MARK: - Day (prd §1049, built §1056)

@@ -1500,13 +1500,16 @@ struct FeedScreen: View {
         // PERF 2026-08-21), which is what makes one binding enough.
         let rows = visible
         return List {
-            // THE ROOM NAMES ITSELF (prd §930): its category's name in pink
-            // and the pill that picks what it shows beside it (§1129, which
-            // brought the name back from §1128's pill), in the list, so it
+            // THE ROOM NAMES ITSELF (prd §930): its category's name in pink,
+            // and what is picked in it after a dot (§1129, §1133; picked in
+            // the rooms tray, never here), in the list, so it
             // scrolls with the rows and reserves nothing. NO ROOM DRAWS A
             // SLIDERS DISC (prd §1050f, amending §1033): an app's settings
             // open from its row in Apps.
-            DSRoomTitleRow(title: roomName) { roomPickPill }
+            DSRoomTitleRow(title: roomName, pick: roomPick)
+                #if DEBUG
+                .background { notesProbeHook }
+                #endif
                 // THE TOP OF THE ROOM IS ITS TITLE (user: "the wallet buttons
                 // still move"). A scope change scrolled to the head BELOW the
                 // title, so every tile tap slid the title off and the tiles up

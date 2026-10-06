@@ -337,13 +337,19 @@ grep -q "if let showing { crown(showing) }" "$CHROME" \
   || fail "drift: Watch a wallet is not handed to the Accounts pill, or no longer raises the Watch tray (prd §1107, §1090)"
 [[ "$chrome_fn" != *"verbs:"* ]] \
   || fail "drift: the wallet hands the chrome verb tiles again — Watch is the Accounts list's first row (prd §1107)"
-menu_bare=$(sed -e 's://.*$::' Casberi/Casberi/Design/DSScopeMenu.swift)
-act_at=$(print -r -- "$menu_bare" | grep -n "if let action { actionRow(action) }" | head -1 | cut -d: -f1 || true)
-rows_at=$(print -r -- "$menu_bare" | grep -n "ForEach(ordered) { slot in row(slot) }" | head -1 | cut -d: -f1 || true)
+# Since prd §1133 the pill is deleted and the act leads the room's FOLDER in
+# the rooms tray: drawn before every account, and the Wallet's raised from any
+# room through `walletFollowPending`, which the Wallet room answers.
+tray_bare=$(sed -e 's://.*$::' Casberi/Casberi/Shell/RoomsTray.swift)
+act_at=$(print -r -- "$tray_bare" | grep -n "if let action = folder.action {" | head -1 | cut -d: -f1 || true)
+rows_at=$(print -r -- "$tray_bare" | grep -n "ForEach(folder.items) { item in" | head -1 | cut -d: -f1 || true)
 [[ -n "$act_at" && -n "$rows_at" ]] && (( act_at < rows_at )) \
-  || fail "drift: the Accounts list no longer leads with its act — Watch sinks under a long list (prd §1107)"
-grep -q "action: rail.action" Casberi/Casberi/Screens/FeedScreen+RoomScope.swift \
-  || fail "drift: the title pill drops the rail's act — Watch a wallet is unreachable (prd §1107)"
+  || fail "drift: the folder no longer leads with its act — Follow sinks under a long list (prd §1107, §1133)"
+grep -q "chrome.walletFollowPending = true" Casberi/Casberi/Shell/RoomsTray.swift \
+  && grep -q "chrome.walletFollowPending = false" Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift \
+  || fail "drift: the tray's Follow a wallet no longer reaches the Wallet room (prd §1133)"
+grep -q "rail.action.map" Casberi/Casberi/Shell/RoomsTray.swift \
+  || fail "drift: the folder drops a standing room's act — New account is unreachable (prd §1107, §1133)"
 
 # ── §757: the rows stand on nothing, and Home reserves no box ────────────────
 # **THE PLATES** (user, 2026-09-15: "they should not have cards"). Actions and

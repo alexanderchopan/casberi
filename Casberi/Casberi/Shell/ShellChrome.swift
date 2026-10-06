@@ -364,6 +364,11 @@ final class ShellChrome {
     /// there would blank the rail one swipe in two.
     var accountRail: AccountRail?
 
+    /// Follow a wallet, asked for by the rooms tray's Wallet folder (prd
+    /// §1133) from whatever room was showing; the Wallet raises its tray
+    /// once it stands, and clears this.
+    var walletFollowPending = false
+
     struct AccountRail: Equatable {
         let source: String
         let slots: [DSAccountSlot]
@@ -374,7 +379,7 @@ final class ShellChrome {
         let onPick: (String?) -> Void
         /// An act the pill's list leads with (prd §1107: the Wallet's "Watch
         /// a wallet"). Compared by its word: the closure has no identity.
-        var action: DSScopeMenu.Action? = nil
+        var action: DSRoomAction? = nil
 
         static func == (a: AccountRail, b: AccountRail) -> Bool {
             a.source == b.source && a.slots == b.slots && a.scope == b.scope

@@ -9,8 +9,7 @@ import SwiftUI
 // column, and scrolls with the feed. They pick a PERSON whose own face, and
 // the ring saying they posted since you looked, is the news: a row of faces
 // (`FaceScopeRail`, standing alone). iPad and Mac keep the shell's rail. A
-// merged room picks its app from the pill beside its title (`roomPickPill`,
-// prd §1066, §1127, §1129). (GitHub's and Pinterest's
+// merged room's app is picked in the rooms tray's folder since prd §1133. (GitHub's and Pinterest's
 // pull-downs left with their rooms, prd §1060.)
 extension FeedScreen {
     /// The phone. Everywhere the shell's rail stands, the band keeps the faces.
@@ -29,30 +28,6 @@ extension FeedScreen {
     /// Whether a person scope narrows this room's rows.
     var personScoped: Bool {
         chrome.personScope != nil && (SocialRoom.hasRoster(source) || socialPeopleRoom)
-    }
-
-    /// **THE PILL BESIDE THE ROOM'S NAME (prd §1066, §1129).** A merged
-    /// room's apps, or the wallet family's accounts from the rail its chrome
-    /// publishes (`ShellChrome.accountRail`) — the Testnets room hosts a
-    /// network's chrome, so its rail is a network's source, not the room's.
-    /// You's feeds (Home, Notes, Markets) wear the You pill (prd §1127).
-    /// Nothing where there is nothing to pick between: the title already
-    /// names the room, and a pill that opens nothing is §83's dead control.
-    @ViewBuilder
-    var roomPickPill: some View {
-        if HomeScope.contains(source) {
-            youPill
-        } else if mergedMenuDraws {
-            mergedAccountsPill
-        } else if let rail = chrome.accountRail, rail.slots.count > 1 || rail.action != nil,
-                  rail.source == source || source == RoomAccounts.testnetsRoom,
-                  let first = rail.slots.first {
-            // A rail with an act draws even over one account (prd §1107): the
-            // act is how the second one gets here.
-            let showing = rail.slots.first { $0.isShowing(rail.scope) } ?? first
-            DSScopeMenu(slots: rail.slots, showing: showing,
-                        action: rail.action, onPick: rail.onPick)
-        }
     }
 
     /// The control, as its own List section. Draws nothing where the room

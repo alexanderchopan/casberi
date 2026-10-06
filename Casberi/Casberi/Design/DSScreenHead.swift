@@ -30,24 +30,28 @@ struct DSScreenHead: View {
     }
 }
 
-/// **A CATEGORY'S TITLE ROW (prd §1129).** Its name in pink at the leading
-/// edge and the pill that picks what it shows at the trailing edge, on one
-/// axis. Every room draws it first in its list, and You's three screens
-/// (Apps, Addresses, Settings) draw it in place of their own heads, so the
-/// row never moves when the pick does.
-struct DSRoomTitleRow<Pill: View>: View {
+/// **A CATEGORY'S TITLE ROW (prd §1129, §1133).** Its name in pink, and
+/// once something in it is picked, the pick after a dot in the primary ink:
+/// "Wallet · Coinbase", "You · Settings". A label that presses nothing (§1133:
+/// the face says where, the tiles say what), on one line at one height
+/// picked or not, so nothing under it moves; a long pair shrinks to fit.
+/// Every room draws it first in its list, and You's three screens (Apps,
+/// Addresses, Settings) draw it in place of their own heads.
+struct DSRoomTitleRow: View {
     let title: String
-    @ViewBuilder let pill: () -> Pill
+    var pick: String? = nil
 
     var body: some View {
-        HStack(alignment: .center, spacing: DS.Space.s3) {
-            DSScreenHead(title: Text(verbatim: title), ink: DS.brandInk)
-                // A name you gave the app can run 24 characters; it shrinks
-                // to stay on the pill's line rather than wrap under it.
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            Spacer(minLength: 0)
-            pill()
-        }
+        DSScreenHead(title: label, ink: DS.brandInk)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .accessibilityLabel(Text(verbatim: pick.map { "\(title), \($0)" } ?? title))
+    }
+
+    private var label: Text {
+        guard let pick else { return Text(verbatim: title) }
+        return Text(verbatim: title)
+            + Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+            + Text(verbatim: pick).foregroundStyle(DS.textPrimary)
     }
 }
