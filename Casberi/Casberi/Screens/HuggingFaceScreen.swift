@@ -23,9 +23,6 @@ struct HuggingFaceScreen: View {
 
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
-    /// This week's rows per watched author, for the roster's subline and its
-    /// active/quiet split.
-    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
 
     var body: some View {
         AccountPage(
@@ -33,9 +30,8 @@ struct HuggingFaceScreen: View {
             state: AccountPageState.of(name: "Hugging Face", seatID: "huggingface",
                                        connected: hf.connected, store: store),
             mode: .noAccount,
-            rows: rows,
-            query: authorField,
-            onRemoveRow: unwatch,
+            // The authors you watch are Work's Watching list now (prd §1119).
+            rows: [],
             teardown: { HuggingFaceStore.shared.disconnect() },
             sheet: $sheet,
             act: { addBlock },
@@ -43,48 +39,23 @@ struct HuggingFaceScreen: View {
             keySheet: { EmptyView() }
         )
         .onAppear {
-            countWeek()
             // Opening the page doesn't connect — watching an author or
             // switching papers on does. Viewing is not consent.
             if hf.connected { Task { await sync() } }
         }
-        .onChange(of: hf.authors) { _, _ in countWeek() }
     }
-
-    // MARK: - The roster
-
-    /// One row per watched author. The square-marked "Watching N" list with
-    /// its own Remove is the chassis's now — the subline says what the author
-    /// published this week rather than repeating the URL the name already is.
-    private var rows: [AccountPageShape.Row] {
-        hf.authors.map { author in
-            let counted = weekly[author.lowercased()] ?? (week: 0, new: false)
-            return AccountPageShape.Row(
-                id: author, title: author,
-                subline: AccountPageShape.subline(nouns: String(localized: "models, datasets, Spaces"),
-                                                  weekCount: counted.week),
-                weekCount: counted.week, hasNew: counted.new,
-                isYou: false, avatarURL: nil)
-        }
-    }
-
-    /// This week's rows per author — `HuggingFaceIngest` stamps the owner as
-    /// the thing's `authorHandle`.
-    private func countWeek() {
-        weekly = AccountWeek.counts(source: "Hugging Face", seatID: "huggingface",
-                                    context: modelContext) { $0.authorHandle }
-    }
-
 
     // MARK: - Sections
 
     @ViewBuilder private var addBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSSlabField(placeholder: hf.connected
-                            ? AccountPageShape.findPlaceholder(String(localized: "an org or person"))
-                            : String(localized: "Org or username"),
-                        text: $authorField, actionLabel: String(localized: "Watch"),
-                        focus: $fieldFocused, action: watch)
+            if hf.authors.isEmpty {
+                DSSlabField(placeholder: String(localized: "Org or username"),
+                            text: $authorField, actionLabel: String(localized: "Watch"),
+                            focus: $fieldFocused, action: watch)
+            } else {
+                FollowListDoor(room: .work, count: hf.authors.count)
+            }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading the hub…"),
                                  proof: lastResult)
@@ -124,20 +95,6 @@ struct HuggingFaceScreen: View {
         }
         authorField = ""
         fieldFocused = false
-        DSHaptic.tap()
-        countWeek()
-        Task { await sync() }
-    }
-
-    private func unwatch(_ author: String) {
-        hf.remove(author)
-        // Its rows leave with it (prd §286). Every release ref carries the
-        // owner as its `id`'s prefix — matched on `authorHandle`, which the
-        // ingest stamps, rather than by parsing the ref back apart. Papers
-        // are Hugging Face's list, not this author's, so they stay.
-        FollowPrune.remove(source: "Hugging Face", context: modelContext) {
-            $0.authorHandle?.caseInsensitiveCompare(author) == .orderedSame
-        }
         DSHaptic.tap()
         Task { await sync() }
     }

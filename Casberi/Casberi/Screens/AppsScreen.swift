@@ -21,6 +21,7 @@ struct AppsScreen: View {
     /// Compact is the phone, where the category tiles ride the capsule
     /// beside the seat (`DSScopeDock`, prd §960) instead of standing under
     /// the search field.
+    @State private var trackPick: TrackPick?
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var query = ""
     /// The Added filter (prd §1111): the one list narrowed to what you have.
@@ -248,6 +249,16 @@ struct AppsScreen: View {
         // user ruling: berry rain is pull-to-refresh's payoff alone. The
         // bloom + tile promote carry the moment.)
         .connectBloom(hue: connectHue, token: connectToken)
+        // The Track tray of an app that needs only a name (prd §1119). The
+        // environment is handed on: a Catalyst sheet does not inherit it
+        // (prd §872).
+        .sheet(item: $trackPick) { pick in
+            trackTray(pick)
+                .environment(chrome)
+                .environment(store)
+                .environment(route)
+                .environment(\.modelContext, modelContext)
+        }
         .onAppear {
             // Seed the connect-count milestone to the highest already-passed
             // threshold so arriving past one never fires a late toast.
@@ -369,6 +380,13 @@ struct AppsScreen: View {
                       raises ? "raising" : "pushing", name)
                 route.openSetup(forOffer: name)
             }
+            // `-appsTrack "<Offer name>"` — the row tap of an app that needs
+            // only a name (prd §1119): its Track tray over the catalogue.
+            if let name = UserDefaults.standard.string(forKey: "appsTrack"),
+               let room = FollowingReading.trackRoom(forSeat: name) {
+                NSLog("[Casberi] appsTrack| %@ → %@ tray", name, room.rawValue)
+                trackPick = TrackPick(room: room, seat: name)
+            }
             if let name = UserDefaults.standard.string(forKey: "openSetup") {
                 route.pushBridge(BridgeRouter.destination(forOffer: name))
             }
@@ -475,6 +493,33 @@ struct AppsScreen: View {
     /// One-tap connect (a system-permission bridge) fired from the store, with
     /// the shared payoff on success. Setup bridges never reach here — Connect
     /// opens their setup screen, where the connect (and its proof) happens.
+    /// The app a Track tray opened on (prd §1119).
+    struct TrackPick: Identifiable {
+        let room: Following.Room
+        let seat: String
+        var id: String { seat }
+    }
+
+    @ViewBuilder
+    private func trackTray(_ pick: TrackPick) -> some View {
+        let landed = { landAfterTrack(pick.room) }
+        if pick.room == .reading {
+            ReadingFindSheet(mode: .follow, onTracked: landed)
+        } else {
+            FollowTrackTray(room: pick.room, seat: pick.seat, onTracked: landed)
+        }
+    }
+
+    /// The follow landed: leave the catalogue for the room that now lists it.
+    private func landAfterTrack(_ room: Following.Room) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            route.closeConnectForm()
+            route.path = []
+            chrome.landOnFollowing(room)
+        }
+    }
+
     private func attemptConnect(_ offer: BridgeCatalog.Offer) {
         BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
             if ok { celebrateConnect(offer) }
@@ -966,6 +1011,15 @@ struct AppsScreen: View {
         }
         switch entry.tier {
         case 1:
+            // **AN APP THAT NEEDS ONLY A NAME OPENS ITS TRAY, HERE (prd
+            // §1119).** RSS, YouTube, npm: nothing to sign in to, so a first
+            // follow IS the connect, and a page asking "what to follow?" was
+            // a detour. The tray rises over the catalogue with the app
+            // picked; a follow lands the person in the room that lists it.
+            if let room = FollowingReading.trackRoom(forSeat: entry.offer.name) {
+                let seat = entry.offer.name
+                return { DSHaptic.tap(); trackPick = TrackPick(room: room, seat: seat) }
+            }
             // **AN APP NOT CONNECTED OPENS ITS PAGE TOO (prd §1050h)**, the
             // page its Connect stands on; a one-tap seat with no page still
             // fires the system ask where it stands.

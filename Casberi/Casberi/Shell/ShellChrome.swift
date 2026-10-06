@@ -1028,15 +1028,30 @@ final class ShellChrome {
                 dayScope = .subscriptions
                 sourceRequest = RoomAccounts.dayRoom
             case .followed(_, let room):
-                let name = Self.roomName(room)
-                mergedScope[name] = nil
-                switch room {
-                case .reading: readingScope = .subscriptions
-                case .media:   mediaScope = .subscriptions
-                case .work:    workScope = .watch
-                }
-                sourceRequest = name
+                landOnFollowing(room)
             }
+        }
+    }
+
+    /// Land on a room's list of what you follow, on All (prd §1118). A room
+    /// change resets these rooms' tiles to All (`MainSurface`), so the pick
+    /// waits there as `landingFollowing` and is applied after the reset.
+    func landOnFollowing(_ room: Following.Room) {
+        let name = Self.roomName(room)
+        mergedScope[name] = nil
+        pickFollowing(room)
+        landingFollowing = room
+        sourceRequest = name
+    }
+
+    /// A room's follow list waiting for its room to arrive.
+    var landingFollowing: Following.Room?
+
+    func pickFollowing(_ room: Following.Room) {
+        switch room {
+        case .reading: readingScope = .subscriptions
+        case .media:   mediaScope = .subscriptions
+        case .work:    workScope = .watch
         }
     }
 

@@ -2059,6 +2059,11 @@ struct MainSurface: View {
             chrome.readingScope = .all
             chrome.mediaScope = .all
             chrome.socialScope = .all
+            // Unless a door asked for the room's follow list (prd §1118).
+            if let room = chrome.landingFollowing, ShellChrome.roomName(room) == source {
+                chrome.pickFollowing(room)
+            }
+            chrome.landingFollowing = nil
             // And the Tokens room's packs.
             chrome.tokensScope = .watchlist
             chrome.freshHandles = []

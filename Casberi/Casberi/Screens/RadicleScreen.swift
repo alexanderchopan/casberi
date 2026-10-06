@@ -32,8 +32,6 @@ struct RadicleScreen: View {
 
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
-    /// This week's rows per watched repo.
-    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
 
     var body: some View {
         AccountPage(
@@ -41,9 +39,9 @@ struct RadicleScreen: View {
             state: AccountPageState.of(name: "Radicle", seatID: "radicle",
                                        connected: radicle.connected, store: store),
             mode: .noAccount,
-            rows: rows,
-            query: repoField,
-            onRemoveRow: unwatch,
+            // The repos you watch are Work's Watching list now (prd §1119);
+            // finding one by name on the seed stays here.
+            rows: [],
             teardown: { RadicleStore.shared.disconnect() },
             sheet: $sheet,
             act: {
@@ -55,42 +53,10 @@ struct RadicleScreen: View {
         )
         .onAppear {
             seedField = radicle.seed
-            countWeek()
             // Opening the page doesn't connect — watching a repo does.
             if radicle.connected { Task { await sync() } }
         }
-        .onChange(of: radicle.repos) { _, _ in countWeek() }
     }
-
-    // MARK: - The roster
-
-    /// One row per watched repo — its name where the seed gave one, its id
-    /// otherwise, and what landed from it this week.
-    private var rows: [AccountPageShape.Row] {
-        radicle.repos.map { rid in
-            let counted = weekly[rid.lowercased()] ?? (week: 0, new: false)
-            return AccountPageShape.Row(
-                id: rid, title: radicle.name(for: rid) ?? rid,
-                subline: AccountPageShape.subline(nouns: String(localized: "patches, issues"),
-                                                  weekCount: counted.week),
-                weekCount: counted.week, hasNew: counted.new,
-                isYou: false, avatarURL: nil)
-        }
-    }
-
-    /// This week's rows per repo. Nothing stamps the repo id in a field of
-    /// its own — every ref carries it as a component — so a row is matched
-    /// back to the repo it belongs to the same way `unwatch` prunes: on the
-    /// ref, which is exact where a display name two repos can share is not.
-    private func countWeek() {
-        let watched = radicle.repos
-        weekly = AccountWeek.counts(source: "Radicle", seatID: "radicle",
-                                    context: modelContext) { thing in
-            guard let ref = thing.sourceRef else { return nil }
-            return watched.first { ref.contains(":\($0):") }
-        }
-    }
-
 
     /// One field, two verbs. WATCH takes an id straight; FIND asks the seed to
     /// turn a name into one.
@@ -103,6 +69,9 @@ struct RadicleScreen: View {
     /// by name and reachable by id.
     @ViewBuilder private var addBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if radicle.connected {
+                FollowListDoor(room: .work, count: radicle.repos.count)
+            }
             DSSlabField(placeholder: String(localized: "Repo id, or a name to find"),
                         text: $repoField,
                         actionLabel: String(localized: "Watch"),
@@ -189,21 +158,6 @@ struct RadicleScreen: View {
         found = []
         fieldFocused = false
         DSHaptic.tap()
-        Task { await sync() }
-    }
-
-    private func unwatch(_ rid: String) {
-        let name = radicle.name(for: rid) ?? rid
-        radicle.remove(rid)
-        // Its rows leave with it (prd §286). Every ref carries the RID as its
-        // third component, so the prefix is exact — matched on `sourceRef`
-        // rather than on a display name, which two repos can share.
-        FollowPrune.remove(source: "Radicle", context: modelContext) {
-            $0.sourceRef?.contains(":\(rid):") == true
-        }
-        lastResult = .says(String(localized: "Stopped watching \(name)."))
-        DSHaptic.tap()
-        countWeek()
         Task { await sync() }
     }
 

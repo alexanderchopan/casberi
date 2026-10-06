@@ -118,11 +118,13 @@ extension SubscriptionPage where Tail == EmptyView {
 struct SubscriptionRow<Figure: View>: View {
     let name: String
     let line: Text
+    /// Its own picture, where it has one (a followed feed's mark, prd §1118).
+    var face: String? = nil
     @ViewBuilder var figure: Figure
 
     var body: some View {
         DSFeedRow(name: name, line: line) {
-            SubscriptionFace(name: name)
+            SubscriptionFace(name: name, url: face)
         } trailing: {
             figure
         }

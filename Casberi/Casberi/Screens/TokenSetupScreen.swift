@@ -119,10 +119,10 @@ struct TokenSetupScreen: View {
             // sign-in, the other twenty-three take a pasted token).
             mode: deviceFlowOffered ? .signIn : .pasteKey,
             keyed: true,
-            rows: rows,
-            query: bridge == .github ? watchQuery : "",
-            onRemoveRow: removeWatch,
-            onOpenRow: bridge == .github ? openWatch : nil,
+            // The repos and people you watch are Work's Watching list now
+            // (prd §1119); this page keeps the field that adds one, and a
+            // door to the list.
+            rows: [],
             teardown: {
                 TokenVault.delete(bridge.tokenKey)
                 bridge.onRemove()
@@ -173,6 +173,7 @@ struct TokenSetupScreen: View {
                                  proof: watchResult,
                                  faces: watchFaces, faceFallback: bridge.rawValue)
             DSSlabNote(text: "Private to \(DS.device) — nobody is followed or notified, and nothing shows on your GitHub account.")
+            if !rows.isEmpty { FollowListDoor(room: .work, count: rows.count) }
         } else {
             DSSlabField(placeholder: String(localized: "Paste a new token"), text: $tokenField,
                         actionLabel: String(localized: "Replace"),
@@ -663,28 +664,6 @@ struct TokenSetupScreen: View {
         // active one.
         if week > 0 { parts.append(String(localized: "\(week) this week")) }
         return parts.joined(separator: " · ")
-    }
-
-    /// Removing a watch deletes its row — the watch IS the thing.
-    private func removeWatch(_ ref: String) {
-        let r = ref
-        let doomed = (try? modelContext.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.sourceRef == r }))) ?? []
-        SpotlightIndex.remove(ids: doomed.map(\.id))
-        for thing in doomed { modelContext.delete(thing) }
-        modelContext.saveHonestly()
-        readRows()
-    }
-
-    /// A watched repo or person opens on GitHub — its page is the profile.
-    private func openWatch(_ ref: String) {
-        let r = ref
-        guard let thing = (try? modelContext.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.sourceRef == r })))?.first, thing.isLive,
-              let url = URL(string: thing.content.trimmingCharacters(in: .whitespacesAndNewlines)),
-              url.scheme?.hasPrefix("http") == true
-        else { return }
-        openURL(url)
     }
 
     private func connect() {

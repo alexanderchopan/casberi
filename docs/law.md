@@ -220,7 +220,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1252 of 1313 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1253 of 1314 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -228,7 +228,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §5 — How it works today — Bob
 - §6 — How it works today — Alice (amended by §1113)
 - §7 — Outcomes — Bob (amended by §1100)
-- §8 — Outcomes — Alice
+- §8 — Outcomes — Alice (amended by §1119)
 - §9 — Problems
 - §10 — Solutions
 - §11 — Bob vs Alice, per feature
@@ -1391,7 +1391,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050d — Reading's menu lists apps, and the music shelf's orders are dropped
 - §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it (part superseded by §1050f)
 - §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's… (amended by §1050g)
-- §1050h — Settings is one list: Casberi first, then every app in its category, connected or not (part superseded by §1111)
+- §1050h — Settings is one list: Casberi first, then every app in its category, connected or not (amended by §1119; part superseded by §1111)
 - §1050i — Settings as one door and one list, built
 - §1050j — The rooms tray is a list of rooms with no counts and no Recent, and every glass category bar follows Dock order (amended by §1050l)
 - §1050k — Testnets is one room, built: it shows one network at a time, and the account menu crosses to the other
@@ -1473,7 +1473,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1115 — A mail's sheet adds its sender to Day's Subscriptions (amended by §1117)
 - §1116 — Apps wears four squares
 - §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track
-- §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin…
+- §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin… (amended by §1119)
+- §1119 — An app that needs only a name opens its Track tray over Apps, and every follow app's page keeps what only it can do
 
 ## Dead rulings → what replaced them (generated)
 

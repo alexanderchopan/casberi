@@ -157,9 +157,13 @@ struct WalletCalendar: View {
 struct SubscriptionFace: View {
     let name: String
     var size: CGFloat = DS.Face.row
+    /// The thing's own picture, where it has one (a feed's mark, prd §1118).
+    var url: String? = nil
 
     var body: some View {
-        if BridgeIcon.hasMark(name) {
+        if let url {
+            WatchFace(url: url, lettered: name, size: size)
+        } else if BridgeIcon.hasMark(name) {
             BridgeIcon(name: name, size: size, circular: true)
         } else {
             Text(verbatim: String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())

@@ -52,6 +52,9 @@ struct FollowTrackTray: View {
     let room: Following.Room
     /// GitHub's own tray, raised by the room once this one has closed.
     var onGitHub: (() -> Void)? = nil
+    /// After a follow landed and the tray closed: Apps takes the person to
+    /// the room that now lists it (prd §1119); a room is already there.
+    var onTracked: (() -> Void)? = nil
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -65,10 +68,13 @@ struct FollowTrackTray: View {
     @State private var failure: String?
     @FocusState private var fieldFocused: Bool
 
-    init(room: Following.Room, onGitHub: (() -> Void)? = nil) {
+    init(room: Following.Room, seat: String? = nil, onGitHub: (() -> Void)? = nil,
+         onTracked: (() -> Void)? = nil) {
         self.room = room
         self.onGitHub = onGitHub
-        _target = State(initialValue: Target.of(room).first ?? .youtube)
+        self.onTracked = onTracked
+        let picked = seat.flatMap(Target.init(rawValue:)).flatMap { Target.of(room).contains($0) ? $0 : nil }
+        _target = State(initialValue: picked ?? Target.of(room).first(where: { $0 != .github }) ?? .youtube)
     }
 
     var body: some View {
@@ -246,5 +252,6 @@ struct FollowTrackTray: View {
         DSHaptic.success()
         chrome?.flash(String(localized: "Tracking \(name)"), tone: .success)
         dismiss()
+        onTracked?()
     }
 }

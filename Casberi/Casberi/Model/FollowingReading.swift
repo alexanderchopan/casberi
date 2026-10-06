@@ -48,6 +48,18 @@ final class FollowingReading {
         return nil
     }
 
+    /// The room whose Track tray follows through this app, for an app that
+    /// needs nothing but a name to start (prd §1119): no account, no key, so
+    /// its first follow IS its connect. Twitch and GitHub sign in first.
+    nonisolated static func trackRoom(forSeat seat: String) -> Following.Room? {
+        switch seat {
+        case "RSS", "Substack": .reading
+        case "YouTube", "Podcasts", "Pinterest": .media
+        case PackageRegistry.npm.displayName, PackageRegistry.pypi.displayName, "Hugging Face", "Radicle": .work
+        default: nil
+        }
+    }
+
     /// The apps each room reads what you follow from.
     nonisolated static func seats(_ room: Following.Room) -> [String] {
         switch room {
@@ -261,11 +273,12 @@ final class FollowingReading {
         var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { seats.contains($0.source) },
                                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         d.fetchLimit = 4_000
-        d.propertiesToFetch = [\.source, \.authorHandle, \.sourceRef, \.capturedAt, \.content]
+        d.propertiesToFetch = [\.source, \.authorHandle, \.sourceRef, \.capturedAt, \.content,
+                               \.authorAvatarURL]
         return ((try? context.fetch(d)) ?? []).compactMap { thing in
             guard thing.isLive else { return nil }
             return Following.Post(source: thing.source, handle: thing.authorHandle, ref: thing.sourceRef,
-                                  link: thing.content, at: thing.capturedAt)
+                                  link: thing.content, avatar: thing.authorAvatarURL, at: thing.capturedAt)
         }
     }
 }

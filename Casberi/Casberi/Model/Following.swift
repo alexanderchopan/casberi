@@ -56,6 +56,8 @@ enum Following {
         var handle: String?
         var ref: String?
         var link: String? = nil
+        /// The row's face (a feed's mark, a channel's avatar).
+        var avatar: String? = nil
         var at: Date
     }
 
@@ -75,6 +77,8 @@ enum Following {
         /// When each row arrived, newest first: the days the box's calendar
         /// puts its face on.
         var arrivals: [Date]
+        /// The face its newest row wears.
+        var avatar: String? = nil
         var removeKey: String?
         var removable: Bool { removeKey != nil }
     }
@@ -102,9 +106,11 @@ enum Following {
     /// with zero.
     static func compose(_ followed: [Followed], posts: [Post], now: Date = .now) -> [Item] {
         var dates = Array(repeating: [Date](), count: followed.count)
+        var faces = Array(repeating: (at: Date.distantPast, url: String?.none), count: followed.count)
         for post in posts {
             guard let index = owner(of: post, in: followed) else { continue }
             dates[index].append(post.at)
+            if let url = post.avatar, !url.isEmpty, post.at > faces[index].at { faces[index] = (post.at, url) }
         }
         let monthStart = now.addingTimeInterval(-windowDays * 86_400)
         let items = followed.enumerated().map { index, f -> Item in
@@ -113,7 +119,7 @@ enum Following {
                         count: sorted.count,
                         lastMonth: sorted.filter { $0 >= monthStart && $0 <= now }.count,
                         cadenceDays: cadence(sorted), last: sorted.first, since: sorted.last,
-                        arrivals: sorted, removeKey: f.removeKey)
+                        arrivals: sorted, avatar: faces[index].url, removeKey: f.removeKey)
         }
         return items.sorted {
             if $0.lastMonth != $1.lastMonth { return $0.lastMonth > $1.lastMonth }

@@ -23,6 +23,9 @@ struct ReadingFindSheet: View {
     let mode: Mode
     /// Opens a found row in the room's own sheet.
     var onOpen: ((Thing) -> Void)? = nil
+    /// After a follow landed and the tray closed (prd §1119): Apps takes the
+    /// person to Reading's Subscriptions.
+    var onTracked: (() -> Void)? = nil
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -59,6 +62,12 @@ struct ReadingFindSheet: View {
             // `-readingQuery "<text>"` fills the field (prd §1085): a
             // simctl-booted simulator draws no keyboard to type with.
             if let q = UserDefaults.standard.string(forKey: "readingQuery") { query = q }
+            // `-readingFollowNow YES` presses Follow on the typed site (prd
+            // §1119): the whole first follow, headless, from Apps to the room.
+            if mode == .follow, UserDefaults.standard.bool(forKey: "readingFollowNow"),
+               let site = ReadingRoom.site(in: query) {
+                Task { await follow(site) }
+            }
             #endif
         }
     }
@@ -269,6 +278,7 @@ struct ReadingFindSheet: View {
     private func landOnSubscriptions() {
         chrome?.readingScope = .subscriptions
         dismiss()
+        onTracked?()
     }
 
     // MARK: - Reading

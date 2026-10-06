@@ -99,7 +99,7 @@ struct FollowingRow: View {
     let item: Following.Item
 
     var body: some View {
-        SubscriptionRow(name: item.name, line: Text(verbatim: Self.line(room, item))) {
+        SubscriptionRow(name: item.name, line: Text(verbatim: Self.line(room, item)), face: item.avatar) {
             Text(verbatim: room.figure(item.lastMonth))
                 .dsText(.price17).monospacedDigit()
                 .foregroundStyle(item.lastMonth > 0 ? DS.textPrimary : DS.textTertiary)
@@ -222,6 +222,34 @@ extension Following {
         case .reading: "Posts in Reading"
         case .media:   "New in Media"
         case .work:    "Updates in Work"
+        }
+    }
+}
+
+/// **WHERE THE LIST WENT (prd §1118, §1119).** On a follow app's settings
+/// page, once something is followed: one door to the room that lists it,
+/// in place of the roster and its field. The page keeps what only it can
+/// do — import, export, disconnect.
+struct FollowListDoor: View {
+    let room: Following.Room
+    let count: Int
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(HomeRoute.self) private var route
+
+    var body: some View {
+        DSDoorRow(icon: room == .work ? ScopeTileGlyph.watch : ScopeTileGlyph.subscriptions,
+                  title: Text(verbatim: Self.words(room, count))) {
+            route.closeConnectForm()
+            route.path = []
+            chrome.landOnFollowing(room)
+        }
+    }
+
+    static func words(_ room: Following.Room, _ count: Int) -> String {
+        switch room {
+        case .reading: String(localized: "\(count) subscriptions in Reading")
+        case .media:   String(localized: "\(count) subscriptions in Media")
+        case .work:    String(localized: "\(count) watching in Work")
         }
     }
 }

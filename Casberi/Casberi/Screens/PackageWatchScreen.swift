@@ -30,8 +30,6 @@ struct PackageWatchScreen: View {
 
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
-    /// This week's releases per watched package.
-    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
 
     var body: some View {
         AccountPage(
@@ -42,9 +40,9 @@ struct PackageWatchScreen: View {
             state: AccountPageState.of(name: registry.displayName, seatID: registry.bridgeID,
                                        connected: connected, store: store),
             mode: .noAccount,
-            rows: rows,
-            query: nameField,
-            onRemoveRow: unwatch,
+            // What you watch is Work's Watching list now (prd §1119): this
+            // page starts the first watch, and disconnects.
+            rows: [],
             teardown: { PackageStore.shared.disconnect(registry) },
             sheet: $sheet,
             act: { addBlock },
@@ -52,61 +50,28 @@ struct PackageWatchScreen: View {
             keySheet: { EmptyView() }
         )
         .onAppear {
-            countWeek()
             // Opening the page doesn't connect — watching a package does.
             if connected { Task { await sync() } }
         }
-        .onChange(of: watched) { _, _ in countWeek() }
     }
-
-    // MARK: - The roster
-
-    /// One row per watched package. The version last seen is the one fact that
-    /// makes a row worth more than an echo of what was typed, so it leads the
-    /// subline; "Watching" stands until the first read lands, rather than a
-    /// blank or a guessed version.
-    private var rows: [AccountPageShape.Row] {
-        watched.map { name in
-            let counted = weekly[name.lowercased()] ?? (week: 0, new: false)
-            let version = packages.version(registry, name)
-            let released = AccountPageShape.subline(nouns: String(localized: "releases"),
-                                                    weekCount: counted.week)
-            return AccountPageShape.Row(
-                id: name, title: name,
-                subline: version.map { "\($0) · \(released)" } ?? String(localized: "Watching"),
-                weekCount: counted.week, hasNew: counted.new,
-                isYou: false, avatarURL: nil)
-        }
-    }
-
-    /// This week's releases per package, keyed off each row's REF (prd §659).
-    ///
-    /// The ingest stamps no `authorHandle` — a package is not a person — so
-    /// the identity is read back out of `sourceRef`, which carries the
-    /// lowercased name by construction (`PackageShape.name(fromRef:)`, the
-    /// same parser `unwatch` prunes with). Radicle, the other keyless watch
-    /// list with nothing author-shaped to stamp, reads its rows the same way.
-    private func countWeek() {
-        weekly = AccountWeek.counts(source: registry.displayName, seatID: registry.bridgeID,
-                                    context: modelContext) {
-            PackageShape.name(fromRef: $0.sourceRef, registry: registry)
-        }
-    }
-
 
     // MARK: - Sections
 
     @ViewBuilder private var addBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSSlabField(placeholder: placeholder, text: $nameField,
-                        actionLabel: String(localized: "Watch"),
-                        focus: $fieldFocused, action: watch)
+            if connected {
+                FollowListDoor(room: .work, count: watched.count)
+            } else {
+                DSSlabField(placeholder: placeholder, text: $nameField,
+                            actionLabel: String(localized: "Watch"),
+                            focus: $fieldFocused, action: watch)
+            }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading the registry…"),
                                  proof: lastResult)
             // Names the accepted shapes, because pasting a package page is
             // how a lot of people will arrive (`normalize` takes the name).
-            DSSlabNote(text: note, plain: true)
+            if !connected { DSSlabNote(text: note, plain: true) }
         }
     }
 
@@ -141,20 +106,6 @@ struct PackageWatchScreen: View {
         }
         nameField = ""
         fieldFocused = false
-        DSHaptic.tap()
-        Task { await sync() }
-    }
-
-    private func unwatch(_ name: String) {
-        packages.remove(registry, name)
-        // Its rows leave with it (prd §286). Every ref carries the registry
-        // and the lowercased package name, which is what makes this matchable
-        // without parsing a title — one parser, shared with `countWeek`, so a
-        // prune and a count can never disagree about which rows are whose.
-        let needle = name.lowercased()
-        FollowPrune.remove(source: registry.displayName, context: modelContext) { thing in
-            PackageShape.name(fromRef: thing.sourceRef, registry: registry) == needle
-        }
         DSHaptic.tap()
         Task { await sync() }
     }

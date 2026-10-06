@@ -23,8 +23,6 @@ import UniformTypeIdentifiers
 struct RSSScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @Environment(ShellChrome.self) private var chrome
-    @Environment(HomeRoute.self) private var route
     @Bindable private var rss = RSSStore.shared
     @State private var newFeed = ""
     @State private var syncing = false
@@ -103,15 +101,8 @@ struct RSSScreen: View {
                             text: $newFeed, actionLabel: String(localized: "Follow"),
                             keyboard: .URL, focus: $fieldFocused, action: addFeed)
             } else {
-                // Where the list went (prd §1118): Reading's Subscriptions,
-                // with Track a subscription first.
-                DSDoorRow(icon: ScopeTileGlyph.subscriptions,
-                          title: Text("\(rss.feeds.count) subscriptions in Reading")) {
-                    route.closeConnectForm()
-                    route.path = []
-                    chrome.readingScope = .subscriptions
-                    chrome.sourceRequest = RoomAccounts.readingRoom
-                }
+                // Where the list went (prd §1118): Reading's Subscriptions.
+                FollowListDoor(room: .reading, count: rss.feeds.count)
             }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading your feeds…"),

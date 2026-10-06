@@ -70,6 +70,10 @@ enum HandleBridge: String {
         }
     }
 
+    /// The room that lists what you follow here (prd §1118, §1119): the feed
+    /// seats' lists moved there; Bluesky's and Telegram's stay on this page.
+    var followRoom: Following.Room? { FollowingReading.trackRoom(forSeat: rawValue) }
+
     /// Every bridge here watches a LIST — a small following feed, not just one
     /// mirror. Pinterest was the single one until it learned to follow boards
     /// (prd §819).
@@ -412,7 +416,7 @@ struct HandleSetupScreen: View {
             // here connects on a public name alone, which is the fact that
             // decides whether somebody starts.
             mode: .noAccount,
-            rows: rows,
+            rows: bridge.followRoom == nil ? rows : [],
             query: query,
             onRemoveRow: removeRow,
             onOpenRow: bridge.isRichSocial ? openRow : nil,
@@ -600,8 +604,14 @@ struct HandleSetupScreen: View {
         // under the field is gone with §639 — the header's intro says it
         // before connecting, and after connecting the reach row and the
         // readers row say it as facts.
-        DSSlabField(placeholder: fieldPlaceholder, text: $query,
-                    actionLabel: omniButtonLabel, action: omniSubmit)
+        if let room = bridge.followRoom, !bridge.names.isEmpty {
+            // Where the list went (prd §1119): the room's Subscriptions,
+            // with Track a subscription first.
+            FollowListDoor(room: room, count: bridge.names.count)
+        } else {
+            DSSlabField(placeholder: fieldPlaceholder, text: $query,
+                        actionLabel: omniButtonLabel, action: omniSubmit)
+        }
         if !omniHits.isEmpty {
             Text(AccountPageShape.onLabel(bridge.rawValue))
                 .dsText(.subhead12).foregroundStyle(DS.textTertiary)

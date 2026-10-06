@@ -134,7 +134,7 @@ CHECKS = [
     # follow is listed in Reading, read by `FollowingReading`, pinned below.)
     (
         "Casberi/Casberi/Model/FollowingReading.swift",
-        "d.propertiesToFetch = [\\.source, \\.authorHandle, \\.sourceRef, \\.capturedAt, \\.content]",
+        "\\.capturedAt, \\.content,\n                               \\.authorAvatarURL]",
         None,
         "the follow tiles' read realizing every column of four thousand rows (prd §722, §1118)",
         "run on every refresh of three rooms' tiles and every Subscriptions "
@@ -369,7 +369,7 @@ def self_test():
         ("the follow tiles' read stops naming its columns",
          "Casberi/Casberi/Model/FollowingReading.swift",
          lambda t: t.replace(
-             "        d.propertiesToFetch = [\\.source, \\.authorHandle, \\.sourceRef, \\.capturedAt, \\.content]\n", "")),
+             "        d.propertiesToFetch = [\\.source, \\.authorHandle, \\.sourceRef, \\.capturedAt, \\.content,\n                               \\.authorAvatarURL]\n", "")),
         ("the OPML export is built and written on the main thread again",
          "Casberi/Casberi/Screens/RSSScreen.swift",
          lambda t: t.replace(
