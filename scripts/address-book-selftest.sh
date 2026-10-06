@@ -226,7 +226,7 @@ grep -q 'chrome.flash(' "$TMP/unwatch-bare.swift" \
   || { echo "✗ an unfollow says nothing — it deletes landed rows and can delete the book entry with them (§511)"; exit 1; }
 grep -q 'action: .init(label:' "$TMP/unwatch-bare.swift" \
   || { echo "✗ the unfollow toast carries no Undo (§511)"; exit 1; }
-grep -q 'FollowPrune.removeWallet' "$TMP/unwatch-bare.swift" \
+grep -q 'FollowPrune.pruneUnwatchedWallets' "$TMP/unwatch-bare.swift" \
   || { echo "✗ an unfollow no longer prunes the wallet's landed rows (§387)"; exit 1; }
 # The discoverable door. §461 made these rows bare, which is right for the
 # resting state and left unwatching reachable only by two gestures nothing on

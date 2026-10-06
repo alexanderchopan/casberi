@@ -84,9 +84,7 @@ enum WalletUnwatch {
             wallet.remove(at: IndexSet(integer: i))
             if !keepsEntry { AddressBook.shared.remove(entry.address) }
         }
-        FollowPrune.removeWallet(address: gone,
-                                 stillWatched: wallet.addresses.map(\.address),
-                                 context: context)
+        FollowPrune.pruneUnwatchedWallets(context: context)
         chrome.flash(keepsEntry
                      ? String(localized: "Stopped following · \(name) is still in your book")
                      : String(localized: "Stopped following \(name)"),

@@ -740,26 +740,34 @@ enum FollowPrune {
     /// NOT scoped to one source. `walletAddress` is stamped by sixteen
     /// different files (plain transfers and approvals, but also Peer fills,
     /// Privacy Pools deposits, Gnosis Pay spends, Aerodrome locks, Uniswap
-    /// positions, EtherFi, Bitcoin), so a source-scoped prune would leave
-    /// most of an unwatched wallet's history sitting in the feed.
+    /// positions, EtherFi, Bitcoin, the Safe queue), so a source-scoped prune
+    /// would leave most of an unwatched wallet's history sitting in the feed.
     ///
-    /// `stillWatched` is checked first: removing one entry must not clear a
-    /// wallet the list still holds.
+    /// The spellings come from `WalletStore.unwatchedForms()`, typed AND
+    /// resolved (prd §1135): rows carry the resolved hex, so a prune handed
+    /// "vitalik.eth" matched nothing and every row stayed. A spelling the
+    /// list still holds, under either form, keeps its rows.
     @MainActor
     @discardableResult
-    static func removeWallet(address: String, stillWatched: [String],
-                             context: ModelContext) -> Int {
-        let target = address.trimmingCharacters(in: .whitespaces)
-        guard !target.isEmpty else { return 0 }
-        guard !stillWatched.contains(where: { sameAddress($0, target) }) else { return 0 }
-
-        let descriptor = FetchDescriptor<Thing>()
-        var removedIDs: [UUID] = []
-        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
-            guard sameAddress(thing.walletAddress, target) else { continue }
-            removedIDs.append(thing.id)
-            context.delete(thing)
+    static func pruneUnwatchedWallets(context: ModelContext) -> Int {
+        let store = WalletStore.shared
+        let forms = store.unwatchedForms()
+        guard !forms.isEmpty else { return 0 }
+        let watched = store.addresses.map(\.address)
+        let gone = forms.filter { form in
+            !watched.contains { store.scopeMatches(form, scope: $0) }
         }
+        var removedIDs: [UUID] = []
+        if !gone.isEmpty {
+            let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.walletAddress != nil })
+            guard let things = try? context.fetch(descriptor) else { return 0 }
+            for thing in things where thing.isLive {
+                guard gone.contains(where: { sameAddress(thing.walletAddress, $0) }) else { continue }
+                removedIDs.append(thing.id)
+                context.delete(thing)
+            }
+        }
+        store.forgetUnwatched(forms)
         guard !removedIDs.isEmpty else { return 0 }
         context.saveHonestly()
         SpotlightIndex.remove(ids: removedIDs)

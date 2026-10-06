@@ -140,11 +140,6 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "sits past it survives forever. Bounded the only way that IS available: "
         "`propertiesToFetch` narrows it to id/sourceRef/createdAt, so it walks "
         "rows without materialising any text.",
-    ("Model/IngestSupport.swift", "removeWallet"):
-        "Unwatching a wallet must reach EVERY row that named it, or the feed "
-        "keeps most of an unwatched wallet's history. `walletAddress` is "
-        "compared through `sameAddress`, a Swift function no `#Predicate` can "
-        "call, so there is no narrower fetch to make.",
 
     # --- Settings, connect and disconnect flows ------------------------------
     ("Screens/AccountDetailSheet.swift", "buildExport"):

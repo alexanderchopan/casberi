@@ -121,9 +121,10 @@ KNOWN_SAFE = {
     ("MailBridge.swift", "heal"):
         "`healRunning` is a re-entrancy flag (`Set<MailProvider>`), not an "
         "upstream read — `!healRunning.contains(provider)` is single-flight.",
-    ("IngestSupport.swift", "removeWallet"):
-        "`stillWatched` confirms a wallet the person UNWATCHED is really gone "
-        "from the watch list; deleting its rows is the requested action.",
+    ("IngestSupport.swift", "pruneUnwatchedWallets"):
+        "deletes the rows of spellings `WalletStore.addresses.didSet` queued "
+        "as UNWATCHED, minus any the list still holds; an empty queue returns "
+        "before the fetch, and deleting those rows is the requested action.",
     ("DropboxBridge.swift", "refresh"):
         "deletes on Dropbox's own explicit `\".tag\" == \"deleted\"` delta "
         "entry, never on absence — that is what the delta cursor is for.",

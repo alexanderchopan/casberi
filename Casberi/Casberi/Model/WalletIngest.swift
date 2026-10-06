@@ -386,6 +386,10 @@ enum WalletIngest {
     /// reached at all (offline / bad key).
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
+        // A wallet unwatched where no context was at hand (an iCloud merge),
+        // or before the prune compared the resolved hex, leaves here (prd
+        // §1135). Ahead of the empty guard: the last unwatch empties the list.
+        FollowPrune.pruneUnwatchedWallets(context: context)
         let watched = WalletStore.shared.addresses.map(\.address)
         guard !watched.isEmpty, !running else { return watched.isEmpty ? nil : 0 }
         running = true

@@ -260,6 +260,11 @@ final class WalletStore {
                 // every teardown above is equally owed to a watch that ended on
                 // another device.
                 WalletStoreSync.shared.noteRemoval(Self.mirrorKey(old.address))
+                // Its landed rows are owed the same way (prd §1135): queued
+                // here under both spellings, taken by
+                // `FollowPrune.pruneUnwatchedWallets`, which needs a context
+                // this observer does not have.
+                noteUnwatched([old.address] + [self.resolvedForm(of: old.address)].compactMap { $0 })
             }
             WalletStoreSync.shared.push()
         }
@@ -713,6 +718,51 @@ final class WalletStore {
 
     func resolvedForm(of watched: String) -> String? {
         resolutions[watched]
+    }
+
+    // MARK: - Unwatched, rows still landed (prd §1135)
+
+    /// Every spelling of a wallet that stopped being watched, until
+    /// `FollowPrune.pruneUnwatchedWallets` takes its rows. Filled in
+    /// `addresses.didSet`, the one door every removal passes: the book's
+    /// unfollow, the account page's swipe and its disconnect, and an iCloud
+    /// merge. Only the first of those pruned before, and it compared the
+    /// TYPED spelling against rows stamped with the resolved hex, so a wallet
+    /// watched as "vitalik.eth" kept every row, its Safe queue included.
+    private static let unwatchedKey = "wallet.unwatched.pending"
+
+    private func noteUnwatched(_ forms: [String]) {
+        var pending = ScratchDefaults.standard.stringArray(forKey: Self.unwatchedKey) ?? []
+        for form in forms where !pending.contains(form) { pending.append(form) }
+        ScratchDefaults.standard.set(pending, forKey: Self.unwatchedKey)
+    }
+
+    /// The spellings whose rows should leave: the queue, plus every name this
+    /// device resolved and no longer watches, with its hex. The second half
+    /// clears the rows the old prune left behind; it converges, because
+    /// `forgetUnwatched` drops those names once their rows are gone.
+    func unwatchedForms() -> [String] {
+        var forms = ScratchDefaults.standard.stringArray(forKey: Self.unwatchedKey) ?? []
+        let watched = Set(addresses.map(\.address))
+        for (name, hex) in resolutions where !watched.contains(name) {
+            for form in [name, hex] where !forms.contains(form) { forms.append(form) }
+        }
+        return forms
+    }
+
+    /// After the prune: the queue empties, and an unwatched name's resolution
+    /// goes with it. A name watched again keeps its resolution.
+    func forgetUnwatched(_ forms: [String]) {
+        let taken = Set(forms)
+        let left = (ScratchDefaults.standard.stringArray(forKey: Self.unwatchedKey) ?? [])
+            .filter { !taken.contains($0) }
+        ScratchDefaults.standard.set(left, forKey: Self.unwatchedKey)
+        let watched = Set(addresses.map(\.address))
+        let before = resolutions.count
+        resolutions = resolutions.filter { watched.contains($0.key) || !taken.contains($0.key) }
+        if resolutions.count != before {
+            ScratchDefaults.standard.set(resolutions, forKey: "wallet.resolutions")
+        }
     }
 
     /// Does a landed thing's stamped address belong to the given scope?

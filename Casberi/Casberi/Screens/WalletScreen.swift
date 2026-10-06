@@ -44,6 +44,7 @@ struct WalletScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(HomeRoute.self) private var route
     @Environment(ShellChrome.self) private var chrome
+    @Environment(\.modelContext) private var modelContext
     /// The page's one presentation (`AccountPage.sheet`) — the connect
     /// picker rides `.card`, which is what that case exists for.
     @State private var sheet: AccountPageSheet?
@@ -96,6 +97,7 @@ struct WalletScreen: View {
             // had. The address BOOK is untouched.
             teardown: {
                 wallet.remove(at: IndexSet(wallet.addresses.indices))
+                FollowPrune.pruneUnwatchedWallets(context: modelContext)
             },
             disconnectNote: String(localized: "The names you filed stay."),
             sheet: $sheet,
@@ -165,6 +167,7 @@ struct WalletScreen: View {
     private func forget(_ id: String) {
         if let i = wallet.addresses.firstIndex(where: { AddressBook.key(for: $0.address) == id }) {
             wallet.remove(at: IndexSet(integer: i))
+            FollowPrune.pruneUnwatchedWallets(context: modelContext)
         } else if let entry = AddressBook.shared.entry(for: id) {
             AddressBook.shared.remove(entry.address)
         }

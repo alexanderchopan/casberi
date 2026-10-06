@@ -64645,3 +64645,13 @@ The field says Search mail, and it searches every sender kept whose mail carried
 **Guards.** `mail-subscriptions-selftest.sh` (13 mutations): searched, a sender from outside the month is offered; the search held to the month is caught; the reading and the tray are wired.
 
 **Not seen.** Written in a Linux container with no Swift toolchain: not compiled, not run on a simulator.
+
+## §1135 — An unwatched wallet's rows leave, under the name it was watched by too (user, 2026-10-06: "i removed vitalik but still see his safe signatures in my wallet list"; repairs §286's second follow-up)
+
+**What was wrong.** §286 made an unwatch take every row that named the wallet, through `FollowPrune.removeWallet`. It was handed the address as WATCHED, and every ingest stamps `walletAddress` with the RESOLVED hex, so a wallet watched as "vitalik.eth" matched nothing and kept all its rows: transfers, approvals, and the Safe queue that `SafeBridge` stamps with the owner's hex. Two of the four ways a watch ends never pruned at all: the account page's swipe and its disconnect. An iCloud merge that drops a wallet did not either.
+
+**What it does now.** `WalletStore.addresses.didSet`, the one door every removal passes, queues the wallet's spellings, typed and resolved (`noteUnwatched`). `FollowPrune.pruneUnwatchedWallets` takes them, plus every name this device resolved and no longer watches, and deletes each row whose `walletAddress` matches one, unless the list still holds that wallet under either spelling. Then the queue empties and the unwatched names' resolutions go (`forgetUnwatched`), so the sweep converges. It runs at the book's unfollow, the account page's swipe and disconnect, and the top of `WalletIngest.refresh`, ahead of its empty-list guard; that last one clears what a merge dropped and the rows the old prune left, vitalik's included.
+
+**Guards.** `address-book-selftest.sh` asserts the unfollow calls the new prune; `delete-guard-audit.py` names it with its reason; `fetch-bound-audit.py` drops `removeWallet`'s allowance, since the fetch is now predicated on `walletAddress != nil`.
+
+**Not seen.** Written in a Linux container with no Swift toolchain: not compiled, not run on a simulator.
