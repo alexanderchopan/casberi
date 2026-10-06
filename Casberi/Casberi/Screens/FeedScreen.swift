@@ -1469,9 +1469,9 @@ struct FeedScreen: View {
     /// source room wears its catalog name, so an aliased seat ("Privacy
     /// Pools") reads as the app you connected.
     ///
-    /// Notes and Markets are places in Home (prd §1127): the title says Home
-    /// and the You pill beside it names the pick.
-    private var roomName: String {
+    /// Notes and Markets are places in Home (prd §1127): the room's name is
+    /// Home, and the You pill that is its title names the pick (§1128).
+    var roomName: String {
         if HomeScope.contains(source) { return String(localized: "Home") }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
@@ -1500,17 +1500,14 @@ struct FeedScreen: View {
         // PERF 2026-08-21), which is what makes one binding enough.
         let rows = visible
         return List {
-            // THE ROOM NAMES ITSELF (prd §930). Until the strip folded into
-            // the rooms tray the dock's lit tile said which room this was;
-            // now the room says so, first in its list, on the screen-head
-            // rung a pushed screen already uses (§767, §915), in the list, so
-            // it scrolls with the name and reserves nothing.
-            HStack(alignment: .center, spacing: DS.Space.s3) {
-                DSScreenHead(title: Text(roomName))
-                // NO ROOM DRAWS A SLIDERS DISC (prd §1050f, amending §1033): an
-                // app's settings open from its row in Apps, the one door.
+            // THE ROOM NAMES ITSELF (prd §930), and since §1128 its name IS
+            // the pill that picks what it shows: one glass pill at the
+            // leading edge, in the list, so it scrolls with the rows and
+            // reserves nothing. NO ROOM DRAWS A SLIDERS DISC (prd §1050f,
+            // amending §1033): an app's settings open from its row in Apps.
+            HStack(spacing: 0) {
+                roomTitlePill
                 Spacer(minLength: 0)
-                titleAccountsPill
             }
                 // THE TOP OF THE ROOM IS ITS TITLE (user: "the wallet buttons
                 // still move"). A scope change scrolled to the head BELOW the

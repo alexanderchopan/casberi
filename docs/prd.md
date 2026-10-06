@@ -64519,3 +64519,17 @@ Same terms as §1062: only at the root (no pushed screen), only while the tray i
 6. **Notes' kind pill becomes a Voice tile.** The title row is the You pill's, so Notes' tiles are All · Folders · Voice · New · Search; Voice lists the voice notes you spoke, and New under it records. The written-only pick is deleted, with `NotesKind` and `ShellChrome.notesKind`; `-notesKind` goes and `-notesScope voice` lands on Voice.
 
 **Not seen.** No simulator in this session (a Linux container, no Xcode); the change is unbuilt and unseen. Run `scripts/verify.sh` before shipping.
+
+## §1128 — The pill is the room's title (user, 2026-10-06: "we have tension where we say accounts and apps. but which is it and why and when. we should standardize. on alternative is to replace the 'accounts' in the pill w the name of the room. so you land on it and it is Day for example and we could make it pink"; "we would remove the title"; "the pill would be the title"; amends §1066, §1127 item 1, §930's title and §742)
+
+**Why.** The pill said "Accounts" in every room, and its list started with "All apps" in Day, Work, Reading, Media, Life, Agents and Social, and with "All accounts" in the Wallet, Frames and Logos. The control named a kind, and the kind was wrong in most rooms.
+
+1. **The room's title is gone, and the pill stands where it stood**, at the leading edge of the first row, scrolling with the list (`FeedScreen.roomTitlePill`). It reads the room's name ("Day") while everything shows and the pick's name ("Calendar", "Coinbase") once one is picked. The list's first row takes you back.
+2. **The word "Accounts" leaves the control.** The rows name what they list: "All apps" where the room picks apps, "All accounts" where it picks wallets and exchanges (§483). `DSScopeMenu.allLabel` is deleted; its `title` is the room's name.
+3. **Home's You pill (§1127) reads "Home"**, not "You": with the title gone, "You" would leave Home unnamed. Picked, it names the pick ("Notes", "Markets"), as §1127 had it. Its list is unchanged.
+4. **Every room draws the pill.** A room with nothing to pick (one app, Social with its faces) draws it bare (`DSTitlePill`): no chevron, no press, so it never looks like a control that opens nothing (§83).
+5. **The name is pink**, `DS.brandInk` at `heading17` on glass. §742's "the one line of type in the brand pink" now has two: the room's name and the day divider, both saying where you are.
+
+Pushed screens keep their `DSScreenHead`.
+
+**Not seen.** No Xcode in this session (a Linux container): unbuilt, and no simulator pass.

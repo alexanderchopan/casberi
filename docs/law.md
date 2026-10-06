@@ -41,7 +41,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Every `Button` wears `RowPress` (a row or a word) or `PressSpring` (a disc, chip, face, tile or slab), never `.plain`. Exceptions are ratcheted in the audit (§965).
 - Becoming the pick is a crossfade on `DS.Motion.standard`, built into the template (§966).
 - A status word takes the ink (`attentionInk`/`confirmInk`/`destructiveInk`). A glyph, dot or fill keeps the hue (§1004).
-- The brand is pink; orange was declined (§899). The day header is the one line of type in `DS.brandInk` (§740, §742), at `heading20` (§1006).
+- The brand is pink; orange was declined (§899). The day header and the room's title pill are the two lines of type in `DS.brandInk` (§740, §742, §1128), the day header at `heading20` (§1006).
 - Every pour is ink (`DS.pourInk`); hue never says where something came from (§524).
 - A mark packs, a word tiles: source maps are circle packs (§917). Wallet holdings are §939's treemap (Wallet section below).
 - A deadline is a bar with ticks, never a thumb (§1006).
@@ -221,7 +221,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1261 of 1322 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1262 of 1323 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1048,7 +1048,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §739 — Hover goes through `AutomaticHoverEffect()`, because the iOS 27 SDK linked a conformance no older OS has
 - §740 — The day divider wears the brand pink
 - §741 — An X notice carries X's time, and a landed aggregate is rewritten when it grows
-- §742 — The day divider's pink is one notch softer than the mark's
+- §742 — The day divider's pink is one notch softer than the mark's (amended by §1128)
 - §743 — Every feed row stands on a plate, at the darkest step the app has
 - §744 — Every feed row is one anatomy: a 26pt lead, the name and the time, one line, and whatever is its content below (part superseded by §1017)
 - §745 — Every source room's head composes `DSRoomChassis`; the twenty-two hand-drawn heads are one template, and what they dr… (amended by §760; part superseded by §758)
@@ -1268,7 +1268,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §927 — Risk loses its line: the crown's reading, the floor as the floor, and a press that reads one position
 - §928 — The UTXO coins are a pack (part superseded by §1038)
 - §929 — The Privacy ring stands under the crown's reading (part superseded by §1038)
-- §930 — The dock is a tray behind the face: one button, every room, and the room names itself (amended by §932, §937)
+- §930 — The dock is a tray behind the face: one button, every room, and the room names itself (amended by §932, §937, §1128)
 - §931 — The Wallet review, first round: the marks the read already named, the ribbons' one ink and the faces' names, and one…
 - §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (part superseded by §1014, §1058)
 - §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage (amended by §1050g)
@@ -1414,7 +1414,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1063 — The Wallet category wears the dollar sign
 - §1064 — In the demo, no pick opens an empty page
 - §1065 — Every app in the demo has something behind it, and an app picked in a merged room keeps its page
-- §1066 — The account picker is a glass pill in the title row (amended by §1127)
+- §1066 — The account picker is a glass pill in the title row (amended by §1127, §1128)
 - §1067 — The room sweep
 - §1068 — Social is one room
 - §1069 — A Safe leads with its balance
@@ -1483,7 +1483,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1124 — Privy's apps are a group in Holdings
 - §1125 — The last room's swipe left opens the tray
 - §1126 — Reading's Subscriptions count no posts
-- §1127 — Home wears a You pill, and Notes and Markets are places in Home
+- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128)
+- §1128 — The pill is the room's title
 
 ## Dead rulings → what replaced them (generated)
 

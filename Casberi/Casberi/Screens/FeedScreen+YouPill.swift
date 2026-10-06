@@ -3,14 +3,15 @@ import SwiftUI
 // HOME'S YOU PILL (prd §1127, user: "i think home should have the pill that
 // says You and each of the pink icons are in it").
 //
-// The tray's You row, as the glass pill every merged room wears in its title
-// row (§1066): Home · Notes · Markets · Apps · Addresses · Settings, each on
-// its pink disc. Notes and Markets are Home's scopes, so the title keeps
-// "Home" and the pill names the pick; Apps, Addresses and Settings push their
-// screens, as the tray's doors do. The tray keeps its row too.
+// The tray's You row, as the glass pill every room wears as its title
+// (§1066, §1128): Home · Notes · Markets · Apps · Addresses · Settings, each
+// on its pink disc. Notes and Markets are Home's scopes, so the pill reads
+// "Home" on Home and names the pick on either; Apps, Addresses and Settings
+// push their screens, as the tray's doors do. The tray keeps its row too.
 extension FeedScreen {
     /// The six doors, in the tray's order. Home is the "All" slot (`id` ""),
-    /// so the pill reads You while Home's own feed shows.
+    /// so the pill reads the room's name, Home, while Home's own feed shows
+    /// (§1128; it read You under §1127, beside a title that is gone).
     private var youSlots: [DSAccountSlot] {
         func door(_ id: String, _ name: String, _ glyph: String) -> DSAccountSlot {
             DSAccountSlot(id: id, name: name, sub: nil, faces: [], symbol: glyph, brandDisc: true)
@@ -30,9 +31,8 @@ extension FeedScreen {
         let showingID = Pinboard.isPinnedRoom(source) ? "notes"
             : HomeScope.isMarkets(source) ? "markets" : ""
         let showing = slots.first { $0.id == showingID } ?? slots[0]
-        return DSScopeMenu(slots: slots, showing: showing,
+        return DSScopeMenu(slots: slots, showing: showing, title: roomName,
                            spoken: { String(localized: "You: \($0)") },
-                           allLabel: String(localized: "You"),
                            onPick: { id in openYouDoor(id ?? "") })
         #if DEBUG
         .task { if Pinboard.isPinnedRoom(source) { notesProbe() } }

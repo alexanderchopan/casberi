@@ -157,8 +157,8 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     }
 
     @ViewBuilder
-    /// **THE PICKER MOVED TO THE TITLE ROW (prd §1066)**: a glass pill beside
-    /// the room's name, drawn by `FeedScreen.titleAccountsPill` from the rail
+    /// **THE PICKER MOVED TO THE TITLE ROW (prd §1066)**: the glass pill that
+    /// is the room's title (§1128), drawn by `FeedScreen.roomTitlePill` from the rail
     /// this chrome publishes. What stays under the tiles is the one thing the
     /// pill cannot say: a picked address, one tap from copying. A slot id is
     /// the address; "All" is "" and an app (`seat:`, prd §1048b) is not an
