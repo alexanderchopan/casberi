@@ -200,7 +200,8 @@ final class FollowingReading {
             GitHubWatchStore.shared.refresh(context: context)
             let github = GitHubWatchStore.shared.watches.map { watch in
                 Following.Followed(id: watch.ref, name: watch.title, seat: "GitHub",
-                                   handles: ["scope:\(watch.ref)"], removeKey: watch.ref)
+                                   handles: ["scope:\(watch.ref)"], page: Self.githubPage(watch.ref),
+                                   removeKey: watch.ref)
             }
             let packages = PackageRegistry.allCases.flatMap { registry in
                 (PackageStore.shared.watched[registry] ?? []).map { name in
@@ -208,12 +209,12 @@ final class FollowingReading {
                         id: "\(registry.rawValue):\(name.lowercased())", name: name, seat: registry.displayName,
                         refPrefixes: ["\(registry.rawValue):release:\(name.lowercased()):",
                                       "\(registry.rawValue):deprecated:\(name.lowercased())"],
-                        removeKey: name)
+                        page: registry.pageURL(name), removeKey: name)
                 }
             }
             let authors = HuggingFaceStore.shared.authors.map { author in
                 Following.Followed(id: "hf:\(author.lowercased())", name: author, seat: "Hugging Face",
-                                   handles: [author], removeKey: author)
+                                   handles: [author], page: "https://huggingface.co/\(author)", removeKey: author)
             }
             let radicle = RadicleStore.shared.repos.map { rid in
                 Following.Followed(id: "radicle:\(rid)", name: RadicleStore.shared.names[rid] ?? rid,
@@ -253,6 +254,14 @@ final class FollowingReading {
         }
         if room == .work { out += followed(.work, context: context).filter { $0.seat == "GitHub" } }
         return out
+    }
+
+    /// A GitHub watch's page: the repo's, or the person's.
+    private static func githubPage(_ ref: String) -> String? {
+        if let login = GitHubLinks.personLogin(fromRef: ref) { return "https://github.com/\(login)" }
+        let prefix = "gh:watchrepo:"
+        guard ref.hasPrefix(prefix) else { return nil }
+        return "https://github.com/\(ref.dropFirst(prefix.count))"
     }
 
     private static func entries(_ store: FeedFollowStore, seat: String) -> [Following.Followed] {

@@ -44,7 +44,7 @@ struct ReadingFindSheet: View {
     private static let resultCap = 20
 
     var body: some View {
-        DSTray(title: mode == .follow ? SubscriptionWords.track : String(localized: "Search"),
+        DSTray(title: mode == .follow ? Following.Room.reading.verb : String(localized: "Search"),
                height: 640, detents: [.large]) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {

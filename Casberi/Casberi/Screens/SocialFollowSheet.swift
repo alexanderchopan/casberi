@@ -8,7 +8,9 @@ import SwiftData
 /// that network (`SocialToYou.suggestions`): who followed you or replied to
 /// you, newest first, then who your feed keeps naming. As you type, people on
 /// Bluesky, through the keyless typeahead the setup screens
-/// already ride (`UserSearch`). A follow is a private watch — the app never
+/// already ride (`UserSearch`), and a public Telegram channel when what was
+/// typed is clearly one — a t.me link or an @name with no dot (prd §1120;
+/// its posts land in this room, and its page had been the only way in). A follow is a private watch — the app never
 /// writes to a network (§801) — and the sheet stays open, so you can keep
 /// several.
 ///
@@ -17,6 +19,7 @@ import SwiftData
 struct SocialFollowSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome: ShellChrome?
+    @Environment(BridgeStore.self) private var store: BridgeStore?
 
     /// A person a row can follow, with the face the app already holds.
     struct Candidate: Identifiable {
@@ -34,6 +37,7 @@ struct SocialFollowSheet: View {
     @State private var searching = false
     @State private var watched: [String: Set<String>] = [:]
     @State private var justFollowed: String? = nil
+    @State private var channelBusy = false
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -49,7 +53,14 @@ struct SocialFollowSheet: View {
         }
         .task { load() }
         .task(id: query) { await search() }
-        .onAppear { fieldFocused = true }
+        .onAppear {
+            fieldFocused = true
+            #if DEBUG
+            // `-socialQuery "<text>"` fills the field: a simctl-booted
+            // simulator draws no keyboard (the `-readingQuery` precedent).
+            if let q = UserDefaults.standard.string(forKey: "socialQuery") { query = q }
+            #endif
+        }
     }
 
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -78,7 +89,77 @@ struct SocialFollowSheet: View {
                 }
             }
         }
-        if DemoMode.isActive || (!searching && found.isEmpty) { footnote }
+        if let channel = Self.channel(in: trimmed) {
+            DSTrayHead("Telegram")
+            channelRow(channel)
+        }
+        if DemoMode.isActive || (!searching && found.isEmpty && Self.channel(in: trimmed) == nil) { footnote }
+    }
+
+    /// A public Telegram channel the field names, or nil: only a t.me link or
+    /// an @name with no dot (a Bluesky handle has one), never a plain word,
+    /// which would offer a channel for every name searched.
+    static func channel(in raw: String) -> String? {
+        let lower = raw.lowercased()
+        let link = lower.contains("t.me/") || lower.contains("telegram.me/")
+        let at = raw.hasPrefix("@") && !raw.contains(".")
+        guard link || at else { return nil }
+        let handle = TelegramChannel.normalizeHandle(raw)
+        return TelegramChannel.isValidHandle(handle) ? handle : nil
+    }
+
+    private func channelRow(_ handle: String) -> some View {
+        let on = FeedFollowStore.telegram.inputs.contains { $0.caseInsensitiveCompare(handle) == .orderedSame }
+        return HStack(spacing: DS.Space.s3) {
+            BridgeIcon(name: "Telegram", size: DS.Face.rowCircle, circular: true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: "@\(handle)").dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                Text(on ? "Following" : "Public channel")
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+            }
+            Spacer(minLength: DS.Space.s2)
+            if channelBusy {
+                DSSpinner(size: .small).frame(minWidth: 44, minHeight: 44)
+            } else {
+                Button {
+                    Task { await followChannel(handle) }
+                } label: {
+                    Image(systemName: on ? "checkmark" : "plus")
+                        .dsGlyph(.title, weight: .regular)
+                        .foregroundStyle(on ? DS.textTertiary : DS.tint)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .disabled(on)
+                .accessibilityLabel(Text(on ? String(localized: "Following \(handle)")
+                                            : String(localized: "Follow \(handle) on Telegram")))
+            }
+        }
+        .frame(minHeight: 64)
+        .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// Through Telegram's own list and read (`HandleBridge.telegram`, the
+    /// seat page's add): a channel that does not answer is taken back out.
+    private func followChannel(_ handle: String) async {
+        guard !DemoMode.isActive else {
+            chrome?.flash(String(localized: "Following works once you leave the demo."))
+            return
+        }
+        let bridge = HandleBridge.telegram
+        channelBusy = true
+        bridge.addName(handle)
+        let added = await bridge.refresh(context: modelContext)
+        channelBusy = false
+        guard added != nil else {
+            bridge.removeName(handle, context: modelContext)
+            chrome?.flash(String(localized: "Couldn't find @\(handle) on Telegram"), tone: .failure)
+            return
+        }
+        store?.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
+                                 proof: String(localized: "Synced just now"), can: [bridge.canLine])
+        chrome?.flash(String(localized: "Following @\(handle)"), tone: .success)
     }
 
     private var footnote: some View {

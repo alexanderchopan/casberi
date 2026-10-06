@@ -52,10 +52,17 @@ extension FeedScreen {
                     if !pickHostedNetwork(picked) { logosPickAccount(picked) }
                 },
                 // A key whose account is no longer watched offers it again,
-                // which watches it (`LogosSend.create`).
+                // which watches it (`LogosSend.create`). Once this phone holds
+                // its account, the menu's first row watches someone else's,
+                // as the Wallet's does (prd §1120): Logos' page, where an
+                // account, a key, a node or an Observer link is read.
                 accountAction: LogosSection.canCreate(keyAccount: logosKeyAccount(roster))
                     ? .init(title: String(localized: "New account"), symbol: "plus") { logosCreate() }
-                    : nil,
+                    : .init(title: String(localized: "Watch an account"), symbol: "plus") {
+                        if let destination = BridgeRouter.destination(forOffer: LogosRoom.source) {
+                            route.openAccount(destination)
+                        }
+                    },
                 crown: { slot in
                     Group {
                         if slot.isShowing(chrome.logosScope) {

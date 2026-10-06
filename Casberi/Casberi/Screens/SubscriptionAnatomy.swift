@@ -49,6 +49,8 @@ struct SubscriptionStatement {
 /// ground, so "no such subscription any more" still draws a solid sheet.
 struct SubscriptionPage<Tail: View>: View {
     let name: String
+    /// Its own picture, where it has one (a followed feed's mark, prd §1118).
+    var face: String? = nil
     let statement: SubscriptionStatement?
     let facts: [SubscriptionFact]
     let doors: [SubscriptionDoor]
@@ -57,7 +59,7 @@ struct SubscriptionPage<Tail: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             HStack(spacing: DS.Space.s3) {
-                SubscriptionFace(name: name, size: DS.Face.rowCircle)
+                SubscriptionFace(name: name, size: DS.Face.rowCircle, url: face)
                 Text(verbatim: name)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)
                     .lineLimit(2)
@@ -104,9 +106,9 @@ struct SubscriptionPage<Tail: View>: View {
 }
 
 extension SubscriptionPage where Tail == EmptyView {
-    init(name: String, statement: SubscriptionStatement?, facts: [SubscriptionFact],
+    init(name: String, face: String? = nil, statement: SubscriptionStatement?, facts: [SubscriptionFact],
          doors: [SubscriptionDoor]) {
-        self.init(name: name, statement: statement, facts: facts, doors: doors) {
+        self.init(name: name, face: face, statement: statement, facts: facts, doors: doors) {
             EmptyView()
         }
     }

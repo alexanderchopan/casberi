@@ -11,9 +11,23 @@ extension Following.Room {
         self == .work ? String(localized: "Watching") : String(localized: "Subscriptions")
     }
 
-    /// The first row's words, the verb the room already used.
+    /// The first row's words, and its tray's title (prd §1120): what the
+    /// act really is. A feed is followed — nothing exists until you add it,
+    /// so there is nothing to "track", and "subscribe" reads as signing up
+    /// with the publisher or paying. Work watches.
     var verb: String {
-        self == .work ? String(localized: "Watch something") : SubscriptionWords.track
+        switch self {
+        // One verb in both rooms (user, 2026-10-05: "follow a feed … we can
+        // use it in both places"): a channel and a show are feeds too.
+        case .reading, .media: String(localized: "Follow a feed")
+        case .work:    String(localized: "Watch something")
+        }
+    }
+
+    /// The verb's undo: Follow pairs with Stop following, Watch with Stop
+    /// watching (§1117's Track keeps Stop tracking).
+    var stopWord: String {
+        self == .work ? String(localized: "Stop watching") : String(localized: "Stop following")
     }
 
     /// "16 posts a month" — the box's statement.
@@ -148,9 +162,9 @@ struct FollowingSheet: View {
             await ServiceLinks.shared.refresh(modelContext, seats: store.bridges.map(\.name))
             FollowingReading.shared.refresh(room, context: modelContext)
         }
-        .confirmationDialog(Text("Stop tracking \(item?.name ?? "")?"), isPresented: $confirmingStop,
+        .confirmationDialog(Text(verbatim: "\(room.stopWord) \(item?.name ?? "")?"), isPresented: $confirmingStop,
                             titleVisibility: .visible) {
-            Button("Stop tracking", role: .destructive) {
+            Button(room.stopWord, role: .destructive) {
                 if let item { FollowingReading.shared.stop(item, context: modelContext) }
                 dismiss()
             }
@@ -160,7 +174,8 @@ struct FollowingSheet: View {
     }
 
     private func content(_ item: Following.Item) -> some View {
-        SubscriptionPage(name: item.name, statement: statement(item), facts: facts(item), doors: doors(item))
+        SubscriptionPage(name: item.name, face: item.avatar, statement: statement(item),
+                         facts: facts(item), doors: doors(item))
     }
 
     private func statement(_ item: Following.Item) -> SubscriptionStatement? {
@@ -205,8 +220,12 @@ struct FollowingSheet: View {
             out.append(.init(id: "site", icon: SubscriptionWords.wayOutGlyph,
                              title: Text("Open \(SubscriptionWords.host(site))")) { openURL(url) })
         }
+        if item.site == nil, let page = item.page, let url = URL(string: page) {
+            out.append(.init(id: "page", icon: SubscriptionWords.wayOutGlyph,
+                             title: Text("Open on \(SubscriptionWords.host(page))")) { openURL(url) })
+        }
         if item.removable {
-            out.append(.init(id: "stop", icon: "trash", title: Text("Stop tracking"), role: .destructive) {
+            out.append(.init(id: "stop", icon: "trash", title: Text(verbatim: room.stopWord), role: .destructive) {
                 confirmingStop = true
             })
         }

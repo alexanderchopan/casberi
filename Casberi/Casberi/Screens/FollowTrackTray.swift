@@ -250,7 +250,8 @@ struct FollowTrackTray: View {
     /// Says so, and closes onto the list the follow joined.
     private func landed(_ name: String) {
         DSHaptic.success()
-        chrome?.flash(String(localized: "Tracking \(name)"), tone: .success)
+        chrome?.flash(room == .work ? String(localized: "Watching \(name)")
+                                    : String(localized: "Following \(name)"), tone: .success)
         dismiss()
         onTracked?()
     }

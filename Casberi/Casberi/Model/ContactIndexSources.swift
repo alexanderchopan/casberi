@@ -92,6 +92,13 @@ enum ContactIndexSources {
                              avatar: thing.authorAvatarURL, since: thing.capturedAt))
         }
 
+        // ENS names you follow (prd §1120): a name is a party, as a wallet
+        // is, so following one files it where wallets and people are. The
+        // names a watched wallet resolves to arrive as verified links below.
+        for name in ENSWatch.followed(context: context) {
+            out.append(.init(Identity.make(.ens, name), name: name))
+        }
+
         // What the person saved by hand (`ContactBook`, section 2.6): a
         // sender, a login, a poster, a feed — each a TYPED name, so it names
         // the contact over any seat's display name.

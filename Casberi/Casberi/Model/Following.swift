@@ -44,6 +44,9 @@ enum Following {
         /// A piece of the address its rows open (a GitHub repo's releases
         /// carry only a release id in their ref, never the repo).
         var linkFragments: [String] = []
+        /// Its own page, where it has one and no site: a repo, a package, an
+        /// author (prd §1120). The sheet's way out.
+        var page: String? = nil
         /// What a remove hands back to the store (an RSS feed's address, a
         /// Substack's input, a package's name). nil when the list is read
         /// from an account and cannot be edited here (Twitch's follows).
@@ -79,6 +82,7 @@ enum Following {
         var arrivals: [Date]
         /// The face its newest row wears.
         var avatar: String? = nil
+        var page: String? = nil
         var removeKey: String?
         var removable: Bool { removeKey != nil }
     }
@@ -119,7 +123,7 @@ enum Following {
                         count: sorted.count,
                         lastMonth: sorted.filter { $0 >= monthStart && $0 <= now }.count,
                         cadenceDays: cadence(sorted), last: sorted.first, since: sorted.last,
-                        arrivals: sorted, avatar: faces[index].url, removeKey: f.removeKey)
+                        arrivals: sorted, avatar: faces[index].url, page: f.page, removeKey: f.removeKey)
         }
         return items.sorted {
             if $0.lastMonth != $1.lastMonth { return $0.lastMonth > $1.lastMonth }
