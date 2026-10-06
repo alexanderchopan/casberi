@@ -29,6 +29,7 @@ struct SettingsHome: View {
     @State private var peopleScope = AddressScope(name: nil)
     @State private var people = 0
     @State private var calendarAdd = false
+    @State private var addingSub = false
     @State private var unsubscribing: CalendarSubscriptionStore.Entry?
 
 
@@ -60,11 +61,8 @@ struct SettingsHome: View {
                         case .apps:
                             casberiRow
                             appsList
-                        case .calendars:     calendarsList
-                        case .feeds:         feedsList
-                        case .newsletters:   newslettersList
                         case .people:        peopleList
-                        case .subscriptions: subscriptionsList
+                        case .subscriptions: subsSections
                         case .new:           EmptyView()
                         }
                     }
@@ -100,6 +98,9 @@ struct SettingsHome: View {
             }
         } message: { entry in
             Text("Its events leave Coming up and Day.")
+        }
+        .confirmationDialog(Text("Add"), isPresented: $addingSub, titleVisibility: .hidden) {
+            subChoices
         }
         .sheet(isPresented: $calendarAdd) {
             CalendarSubscribeSheet()
@@ -139,20 +140,31 @@ struct SettingsHome: View {
             chrome.walletFollowPending = true
             chrome.sourceRequest = CategoryFold.walletRoom
         case .subscriptions:
-            chrome.walletScope = nil
-            chrome.walletSection = .subscriptions
-            chrome.sourceRequest = CategoryFold.walletRoom
-        case .feeds:
+            // Four kinds live under Subs, so Add asks which.
+            addingSub = true
+        }
+    }
+
+    /// What + Add adds on Subs: each kind through the door that already
+    /// adds it (prd §1136 item 5, §1136g).
+    @ViewBuilder
+    private var subChoices: some View {
+        Button("Subscribe to a calendar") { calendarAdd = true }
+        Button("Follow a feed") {
             // The room's follow list, through the landing's own door
             // (prd §1118), which a landing's tile reset honours.
             chrome.landingFollowing = .reading
             chrome.sourceRequest = RoomAccounts.readingRoom
-        case .newsletters:
-            // Day's Subscriptions tile, whose Track tray adds a mailing list.
+        }
+        Button("Track a mailing list") {
+            // Day's Subscriptions tile, whose Track tray adds a list.
             chrome.dayScope = .subscriptions
             chrome.sourceRequest = RoomAccounts.dayRoom
-        case .calendars:
-            calendarAdd = true
+        }
+        Button("Track a subscription") {
+            chrome.walletScope = nil
+            chrome.walletSection = .subscriptions
+            chrome.sourceRequest = CategoryFold.walletRoom
         }
     }
 
@@ -298,32 +310,32 @@ struct SettingsHome: View {
         DSEmptyState(headline: DSProse.text("Nothing yet"), words: Text(words), scale: .list(rows: 3))
     }
 
+    /// Subs (prd §1136g): the four kinds that send you things, A–Z as the
+    /// box counts them, each under its name; a kind with nothing shows
+    /// nothing, and all four empty show what would fill them.
     @ViewBuilder
-    private var subscriptionsList: some View {
-        let items = SubscriptionsReading.shared.items
-        if items.isEmpty { empty("Track a subscription and it lands here.") }
-        rows(items) { subscriptionRow($0) }
+    private var subsSections: some View {
+        let calendars = CalendarSubscriptionStore.shared.calendars
+        let lists = MailSubscriptionsReading.shared.items
+        let paid = SubscriptionsReading.shared.items
+        if calendars.isEmpty, feeds.isEmpty, lists.isEmpty, paid.isEmpty {
+            empty("Subscribe to a calendar, follow a feed or track a subscription, and it lands here.")
+        }
+        named(String(localized: "Calendars"), calendars) { calendarRow($0) }
+        named(String(localized: "Feeds"), feeds) { feedRow($0) }
+        named(String(localized: "Mailing lists"), lists) { newsletterRow($0) }
+        named(String(localized: "Subscriptions"), paid) { subscriptionRow($0) }
     }
 
     @ViewBuilder
-    private var feedsList: some View {
-        let items = feeds
-        if items.isEmpty { empty("Follow a feed and it lands here.") }
-        rows(items) { feedRow($0) }
-    }
-
-    @ViewBuilder
-    private var newslettersList: some View {
-        let items = MailSubscriptionsReading.shared.items
-        if items.isEmpty { empty("Lists that write to your mail land here.") }
-        rows(items) { newsletterRow($0) }
-    }
-
-    @ViewBuilder
-    private var calendarsList: some View {
-        let items = CalendarSubscriptionStore.shared.calendars
-        if items.isEmpty { empty("Subscribe to a calendar and its dates show in Coming up.") }
-        rows(items) { calendarRow($0) }
+    private func named<Item: Identifiable, Row: View>(_ title: String, _ items: [Item],
+                                                      @ViewBuilder row: @escaping (Item) -> Row) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(title).dsText(.heading17).foregroundStyle(DS.brandInk)
+                rows(items, row: row)
+            }
+        }
     }
 
     private func subscriptionRow(_ item: Subscriptions.Item) -> some View {
@@ -377,13 +389,14 @@ struct SettingsHome: View {
     }
 }
 
-/// Sources' own filters, on the floating bar (prd §1136d–f): the box's six
-/// kinds, then Add — the tiles read A–Z, verbs last (§995). Search left the
-/// bar (§1136f): eight did not fit, and the tray's search finds a source.
+/// Sources' own filters, on the floating bar (prd §1136g): Apps · People ·
+/// Subs · Add — four, the most the bar shows without scrolling, since a tile
+/// is 52pt whatever its word. Subs holds the four kinds that send you
+/// things; the box still counts all six.
 /// No All: the box is the overview of all of it (user: "the sources screen
 /// IS that list"). Add adds the kind you're on.
 enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case apps, calendars, feeds, newsletters, people, subscriptions, new
+    case apps, people, subscriptions, new
 
     var id: String { rawValue }
 
@@ -392,11 +405,8 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var label: String {
         switch self {
         case .apps:          return String(localized: "Apps")
-        case .calendars:     return String(localized: "Calendars")
-        case .feeds:         return String(localized: "Feeds")
-        case .newsletters:   return String(localized: "Mailing lists")
         case .people:        return String(localized: "People")
-        case .subscriptions: return String(localized: "Subscriptions")
+        case .subscriptions: return String(localized: "Subs")
         case .new:           return String(localized: "Add")
         }
     }
@@ -404,11 +414,8 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .apps:          return String(localized: "Your apps, by category")
-        case .calendars:     return String(localized: "The calendars you subscribe to")
-        case .feeds:         return String(localized: "Sites, channels and repos you follow")
-        case .newsletters:   return String(localized: "The lists that write to your mail")
         case .people:        return String(localized: "The people behind your accounts")
-        case .subscriptions: return String(localized: "What you pay for")
+        case .subscriptions: return String(localized: "Calendars, feeds, mailing lists and subscriptions")
         case .new:           return String(localized: "Add one of the kind you're on")
         }
     }

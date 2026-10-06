@@ -91,10 +91,6 @@ enum ScopeTileGlyph {
     static let people       = "person.crop.circle"
     /// Sources' Calendars (prd §1136e, §1137): the calendars you subscribe to.
     static let calendars    = "calendar"
-    /// Sources' Feeds (prd §1136e): sites, channels and repos you follow.
-    static let feeds        = "dot.radiowaves.up.forward"
-    /// Sources' Newsletters (prd §1136e): the lists that write to your mail.
-    static let newsletters  = "newspaper"
 }
 
 /// The Work room's tiles (prd §1057).
@@ -251,9 +247,6 @@ extension SettingsScope: DSTileScope {
     var glyph: String {
         switch self {
         case .apps:          return ScopeTileGlyph.apps
-        case .calendars:     return ScopeTileGlyph.calendars
-        case .feeds:         return ScopeTileGlyph.feeds
-        case .newsletters:   return ScopeTileGlyph.newsletters
         case .people:        return ScopeTileGlyph.people
         case .subscriptions: return ScopeTileGlyph.subscriptions
         case .new:           return ScopeTileGlyph.new

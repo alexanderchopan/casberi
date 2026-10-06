@@ -64713,3 +64713,7 @@ The title, the box and the tiles are the same three list rows on every screen �
 ### §1137a — No calendar is added for you (user, 2026-10-06: "what if someone never adds a calendar, do we give them a default casberi calendar"; "ok", to doors instead)
 
 Coming up reads every app's dates, so it is not empty for anyone with an app connected, and the Calendar connect already brings the phone's own Holidays. No default calendar is subscribed: it would reach a host the person never chose and fill the week with dates nobody asked for. An empty Coming up shows what would fill it (§769) as two doors: Connect Calendar (while the Calendar app is not connected) and Subscribe to a calendar.
+
+### §1136g — Sources' bar is four tiles (user, 2026-10-06: "ok", to Apps · People · Subs · Add; amends §1136e and §1136f)
+
+A bar tile is 52pt whatever its word, so a bar beside the face shows four without scrolling; six kinds and Add scrolled. The bar is **Apps · People · Subs · Add**. Subs is the four kinds that send you things — Calendars, Feeds, Mailing lists, Subscriptions — each under its name, A–Z; Add on Subs asks which of the four. The box still counts all six, A–Z.
