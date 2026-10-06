@@ -1522,11 +1522,7 @@ struct FeedScreen: View {
                 // §1005, closing §946's "found, not fixed"): the well absorbed
                 // it under §919, but §930 put the title first, so the pill sat
                 // on the room's name and over the well's top edge.
-                .listRowInsets(.init(top: DS.Space.s2 + DSDemoMark.screenClearance,
-                                     leading: DSRoomChassis.inset,
-                                     bottom: 0, trailing: DSRoomChassis.inset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+                .dsRoomTitleListRow()
             roomHead
                 .id(Self.roomTopAnchor)
             roomBody(rows)

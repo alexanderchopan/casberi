@@ -556,13 +556,9 @@ extension FeedScreen {
                    minHeight: DSRoomChassis.leadBox,
                    maxHeight: DSRoomChassis.leadBox)
             .dsRoomHeadBlock()
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            // The cover row's own insets (`ledeListRow`), so an empty room's
+            // The cover row's own row (`ledeListRow`), so an empty room's
             // tiles stand where a full room's do (prd §1102).
-            .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
-                                      bottom: DSRoomChassis.leadGap,
-                                      trailing: DSRoomChassis.inset))
+            .dsRoomLeadListRow()
     }
 
     /// THE NEWEST THING, LIFTED OUT OF A MIXED ROOM (prd §821).
@@ -736,13 +732,17 @@ extension FeedScreen {
         }
         if let tiles {
             Section {
-                tiles
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: leadHeld ? 0 : DS.Space.s2,
-                                              leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.leadGap,
-                                              trailing: DSRoomChassis.inset))
+                if leadHeld {
+                    tiles.dsRoomTilesListRow()
+                } else {
+                    tiles
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: DS.Space.s2,
+                                                  leading: DSRoomChassis.inset,
+                                                  bottom: DSRoomChassis.leadGap,
+                                                  trailing: DSRoomChassis.inset))
+                }
             }
         }
     }

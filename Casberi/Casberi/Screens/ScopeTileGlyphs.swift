@@ -257,7 +257,6 @@ extension SettingsScope: DSTileScope {
         case .people:        return ScopeTileGlyph.people
         case .subscriptions: return ScopeTileGlyph.subscriptions
         case .new:           return ScopeTileGlyph.new
-        case .search:        return ScopeTileGlyph.search
         }
     }
 }

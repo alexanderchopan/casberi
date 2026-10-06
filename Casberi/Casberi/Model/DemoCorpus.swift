@@ -259,7 +259,7 @@ enum DemoCorpus {
             // A FUTURE event (negative ago) — the agenda shape emphasizes the
             // next upcoming row (mock C2), so the demo needs one ahead of now.
             Thing(kind: .event, title: "Evening run",
-                  content: "6:30 PM · with Alex", source: "Calendar",
+                  content: "6:30 PM · with Mira", source: "Calendar",
                   capturedAt: ago(hours: -0.75), tags: ["Fitness"]),
             Thing(kind: .file, title: "receipt-lyft-0630.png",
                   content: "$18.40", source: "You", capturedAt: ago(hours: 42),

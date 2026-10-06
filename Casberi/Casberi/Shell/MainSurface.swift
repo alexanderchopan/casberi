@@ -746,15 +746,14 @@ struct MainSurface: View {
     /// pushed screen's did, because these have no lead well to absorb it.
     @ViewBuilder
     private func youPlace(_ place: HomeScope.Place) -> some View {
-        Group {
-            switch place {
-            case .apps: appsPlace
-            case .addresses: AddressesScreen()
-            // The master list of everything connected (prd §1136 item 3).
-            case .settings: SettingsHome()
-            }
+        switch place {
+        case .apps: appsPlace.dsDemoMarkClearance()
+        case .addresses: AddressesScreen().dsDemoMarkClearance()
+        // The master list of everything connected (prd §1136 item 3). It
+        // draws through the room's frame (prd §1136f), whose title row
+        // already reserves the demo's band, as every room's does.
+        case .settings: SettingsHome()
         }
-        .dsDemoMarkClearance()
     }
 
     /// Apps, and its pane wherever the shell has one. **Two columns (prd

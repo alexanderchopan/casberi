@@ -40,12 +40,26 @@ struct DSScreenHead: View {
 struct DSRoomTitleRow: View {
     let title: String
     var pick: String? = nil
+    @Environment(\.sizeCategory) private var sizeCategory
 
     var body: some View {
         DSScreenHead(title: label, ink: DS.brandInk)
             .lineLimit(1)
             .minimumScaleFactor(0.6)
+            // ONE HEIGHT, whatever the name (prd §1136f, user: "the box should
+            // never move down!"): a long pair shrinks to fit, and the row used
+            // to shrink with it, so the box and the tiles under it moved with
+            // the length of your name. The row is the rung's full line, always.
+            .frame(height: Self.height, alignment: .leading)
             .accessibilityLabel(Text(verbatim: pick.map { "\(title), \($0)" } ?? title))
+    }
+
+    /// The rung's line at its full size, scaled for Dynamic Type as the
+    /// words are.
+    static var height: CGFloat {
+        let style = DSTextStyle.heading34
+        return UIFontMetrics(forTextStyle: style.relative)
+            .scaledValue(for: style.lineHeight * style.platformSize / style.size)
     }
 
     private var label: Text {

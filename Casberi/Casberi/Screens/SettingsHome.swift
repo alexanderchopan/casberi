@@ -31,59 +31,60 @@ struct SettingsHome: View {
     @State private var calendarAdd = false
     @State private var unsubscribing: CalendarSubscriptionStore.Entry?
 
-    /// Where the feed's list draws the box under the title, and the tiles
-    /// under the box (`ledeListRow`'s and the tiles' row insets), so a place
-    /// drawn in a scroll view lines up with the rooms drawn in a `List`.
-    static let titleToBox: CGFloat = 38.0 / 3.0
-    static let boxToTiles: CGFloat = 18
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                // THE SAME FRAME AS EVERY PLACE IN YOU (user: "needs to be the
-                // same"): title, box and tiles stand where the feed's list
-                // rows put them on Home, Notes and Markets — measured off the
-                // simulator at 3x, the box's top 38/3pt under the title and
-                // the tiles 18pt under the box.
-                VStack(alignment: .leading, spacing: 0) {
-                    YouHead(place: .settings)
-                    countsBox
-                        .padding(.top, Self.titleToBox)
-                    YouTilesRow(active: .sources)
-                        .padding(.top, Self.boxToTiles)
-                }
-                if !DSScopeDock<SettingsScope>.atBottom(sizeClass), !casberiOpen {
-                    DSScopeTiles(sections: SettingsScope.allCases, active: scope,
-                                 strip: true, verbs: SettingsScope.verbs) { pick($0) }
-                }
-                if casberiOpen {
-                    casberiOptions
-                } else {
-                    switch scope {
-                    case .apps:
-                        casberiRow
-                        appsList
-                    case .calendars:     calendarsList
-                    case .feeds:         feedsList
-                    case .newsletters:   newslettersList
-                    case .people:        peopleList
-                    case .subscriptions: subscriptionsList
-                    case .search:        searchList
-                    case .new:           EmptyView()
+        // THE ROOM'S FRAME (prd §1136f): title, box and tiles as the same
+        // three list rows every room draws, so they stand where Home's,
+        // Notes' and Markets' do on every screen, by construction.
+        List {
+            YouHead(place: .settings)
+                .dsRoomTitleListRow()
+            Section {
+                countsBox
+                    .dsRoomLeadListRow()
+            }
+            Section {
+                YouTilesRow(active: .sources)
+                    .dsRoomTilesListRow()
+            }
+            Section {
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    if !DSScopeDock<SettingsScope>.atBottom(sizeClass), !casberiOpen {
+                        DSScopeTiles(sections: SettingsScope.allCases, active: scope,
+                                     strip: true, verbs: SettingsScope.verbs) { pick($0) }
+                    }
+                    if casberiOpen {
+                        casberiOptions
+                    } else {
+                        switch scope {
+                        case .apps:
+                            casberiRow
+                            appsList
+                        case .calendars:     calendarsList
+                        case .feeds:         feedsList
+                        case .newsletters:   newslettersList
+                        case .people:        peopleList
+                        case .subscriptions: subscriptionsList
+                        case .new:           EmptyView()
+                        }
                     }
                 }
+                .listRowInsets(.init(top: DS.Space.s2, leading: DS.Space.s4,
+                                     bottom: DS.Space.s4, trailing: DS.Space.s4))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
-            .padding(.horizontal, DS.Space.s4)
-            // The You row stands where a feed's title stands (prd §1129).
-            .padding(.top, DS.Space.s2)
-            .padding(.bottom, DS.Space.s4)
+            // Room for the floating bar, as every room leaves it.
+            Color.clear.frame(height: ShellMetrics.bottomInset - 40)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
         }
+        .dsRoomList()
         .dsScopeDock(sections: casberiOpen || searchFocused ? [] : SettingsScope.allCases,
                      active: scope, verbs: SettingsScope.verbs,
                      // A place in You stands where a room does, down to the
                      // safe area, so the bar centres on the seat as Markets' does.
                      clearance: 0) { pick($0) }
-        .scrollIndicators(.hidden)
         .dsAdaptiveContentWidth(.reading)
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -125,8 +126,6 @@ struct SettingsHome: View {
             scope = picked
             query = ""
         }
-        // Search lights and raises its field with the keyboard up.
-        if picked == .search { searchFocused = true }
     }
 
     /// What + Add adds: the kind you're on (prd §1136 item 5), each through
@@ -134,7 +133,7 @@ struct SettingsHome: View {
     private func add(_ kind: SettingsScope) {
         DSHaptic.selection()
         switch kind {
-        case .apps, .search, .new:
+        case .apps, .new:
             route.present(.apps)
         case .people:
             chrome.walletFollowPending = true
@@ -365,48 +364,6 @@ struct SettingsHome: View {
         }
     }
 
-    // MARK: - Search
-
-    /// Search (prd §1136e): one field over every kind, the matches under
-    /// each kind's name, people through the book's own search.
-    @ViewBuilder
-    private var searchList: some View {
-        DSSlabField(placeholder: String(localized: "Search sources"),
-                    text: $query, actionLabel: "",
-                    focus: $searchFocused,
-                    glyph: "magnifyingglass", clearable: true,
-                    size: .slab, submitLabel: .search, action: {})
-        let q = query.trimmingCharacters(in: .whitespaces)
-        if !q.isEmpty {
-            let hit: (String) -> Bool = { $0.localizedStandardContains(q) }
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                section(String(localized: "Apps"), connectedApps.filter { hit($0.name) }) { appRow($0) }
-                section(String(localized: "Calendars"),
-                        CalendarSubscriptionStore.shared.calendars.filter { hit($0.displayName) }) { calendarRow($0) }
-                section(String(localized: "Feeds"), feeds.filter { hit($0.name) || hit($0.seat) }) { feedRow($0) }
-                section(String(localized: "Mailing lists"),
-                        MailSubscriptionsReading.shared.items.filter { hit($0.name) || hit($0.address ?? "") }) { newsletterRow($0) }
-                section(String(localized: "Subscriptions"),
-                        SubscriptionsReading.shared.items.filter { hit($0.name) }) { subscriptionRow($0) }
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    Text("People").dsText(.heading17).foregroundStyle(DS.brandInk)
-                    AddressesSection(query: q, scope: $peopleScope)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func section<Item: Identifiable, Row: View>(_ title: String, _ items: [Item],
-                                                         @ViewBuilder row: @escaping (Item) -> Row) -> some View {
-        if !items.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(title).dsText(.heading17).foregroundStyle(DS.brandInk)
-                ForEach(items) { row($0) }
-            }
-        }
-    }
-
     private func room(of item: Following.Item) -> Following.Room {
         Following.Room.allCases.first { FollowingReading.shared.items(for: $0).contains { $0.id == item.id } } ?? .reading
     }
@@ -420,16 +377,17 @@ struct SettingsHome: View {
     }
 }
 
-/// Sources' own filters, on the floating bar (prd §1136d, §1136e): the box's
-/// six kinds, then Add and Search — the tiles read A–Z, verbs last (§995).
+/// Sources' own filters, on the floating bar (prd §1136d–f): the box's six
+/// kinds, then Add — the tiles read A–Z, verbs last (§995). Search left the
+/// bar (§1136f): eight did not fit, and the tray's search finds a source.
 /// No All: the box is the overview of all of it (user: "the sources screen
 /// IS that list"). Add adds the kind you're on.
 enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case apps, calendars, feeds, newsletters, people, subscriptions, new, search
+    case apps, calendars, feeds, newsletters, people, subscriptions, new
 
     var id: String { rawValue }
 
-    static let verbs: Set<SettingsScope> = [.new, .search]
+    static let verbs: Set<SettingsScope> = [.new]
 
     var label: String {
         switch self {
@@ -440,7 +398,6 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .people:        return String(localized: "People")
         case .subscriptions: return String(localized: "Subscriptions")
         case .new:           return String(localized: "Add")
-        case .search:        return String(localized: "Search")
         }
     }
 
@@ -453,7 +410,6 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .people:        return String(localized: "The people behind your accounts")
         case .subscriptions: return String(localized: "What you pay for")
         case .new:           return String(localized: "Add one of the kind you're on")
-        case .search:        return String(localized: "Find a source")
         }
     }
 }

@@ -36,9 +36,18 @@ enum HomeScope {
     /// user: "the user does set their name tho"; "it can be 'you' if they
     /// don't set a name"). Apple's own top-of-Settings card names you the
     /// same way. The name never leaves the device (`ProfileStore`).
+    ///
+    /// The demo is one person's life (prd §1026), and that person is Alex
+    /// (user, 2026-10-06: "for the demo don't have my name … that's too long
+    /// just have Alex"): the device's own name never titles somebody else's
+    /// things, and a short one keeps "Alex · Sources" on one line.
     static var title: String {
-        ProfileStore.shared.name ?? String(localized: "You")
+        if DemoMode.isActive { return demoName }
+        return ProfileStore.shared.name ?? String(localized: "You")
     }
+
+    /// The demo person's name.
+    static let demoName = "Alex"
 
     /// The Markets category, which is a You door and not a room in the walk.
     static let markets = "Markets"

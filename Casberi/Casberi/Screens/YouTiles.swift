@@ -53,11 +53,7 @@ extension FeedScreen {
     func youTilesSection(_ active: YouTile) -> some View {
         Section {
             YouTilesRow(active: active)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                          bottom: DSRoomChassis.leadGap,
-                                          trailing: DSRoomChassis.inset))
+                .dsRoomTilesListRow()
         }
     }
 }
