@@ -3,7 +3,7 @@
 # (prd §1081):
 #
 #   Casberi/Casberi/Model/PriceAlert.swift  (compiled whole)
-#   Casberi/Casberi/Model/WatchLine.swift   (compiled whole: the row's line, the heat map)
+#   Casberi/Casberi/Model/WatchLine.swift   (compiled whole: the row's line)
 #
 # WHY A HARNESS. Every failure here renders calmly. An alert that fires every
 # read buzzes a phone all day; one that never fires is a promise broken in
@@ -31,8 +31,6 @@ grep -q 'safeSignatureNeeded, .priceAlert:' Casberi/Casberi/Model/NotifyPlan.swi
   || { echo "✗ a price alert no longer stands alone — the digest would deliver it hours late"; exit 1; }
 grep -q 'WatchLine.pick(' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ the watchlist rows no longer pick their line through WatchLine"; exit 1; }
-grep -q 'WatchHeat.frames(count:' Casberi/Casberi/Screens/MarketsViews.swift \
-  || { echo "✗ the heat map no longer lays out through WatchHeat.frames"; exit 1; }
 grep -q 'MarketsIndex.sections(' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ the index no longer splits into your apps, everything else and not traded"; exit 1; }
 grep -q 'MarketsIndex.search(' Casberi/Casberi/Screens/WatchAddSheet.swift \
@@ -107,37 +105,6 @@ check(WatchLine.pick(alertTarget: nil, holding: nil, sinceWatched: 0.004, facts:
 check(WatchLine.pick(alertTarget: nil, holding: nil, sinceWatched: nil, facts: "") == nil, "nothing to say, no line")
 check(abs((WatchLine.since(anchor: 100, price: 141) ?? 0) - 0.41) < 1e-9, "since you watched is price over anchor")
 check(WatchLine.since(anchor: 0, price: 141) == nil, "no anchor, no claim")
-
-// ── The heat map ─────────────────────────────────────────────────────
-let tiles = WatchHeat.tiles([("a", "A", 0.02), ("b", "B", -0.08), ("c", "C", 0.0001), ("d", "D", 0.04)])
-check(tiles.map(\.id) == ["b", "d", "a", "c"], "tiles run by size of move (got \(tiles.map(\.id)))")
-check(tiles[0].strength == 1, "the biggest move is the full colour")
-check(abs(tiles[1].strength - 0.5) < 1e-9, "the rest by their move against the biggest")
-check(tiles[3].flat && tiles[3].strength == 0, "a move that rounds to zero carries no colour")
-let many = (0..<12).map { (id: "t\($0)", symbol: "T\($0)", change: Double($0) / 100) }
-check(WatchHeat.tiles(many).count == WatchHeat.cap, "the board holds at most \(WatchHeat.cap)")
-
-for n in 1...WatchHeat.cap {
-    let frames = WatchHeat.frames(count: n)
-    check(frames.count == n, "\(n) tiles get \(n) frames")
-    let area = frames.reduce(0) { $0 + $1.width * $1.height }
-    check(abs(area - 1) < 1e-9, "\(n) tiles fill the box (area \(area))")
-    for f in frames {
-        check(f.minX >= -1e-9 && f.minY >= -1e-9 && f.maxX <= 1 + 1e-9 && f.maxY <= 1 + 1e-9,
-              "\(n) tiles stay inside the box")
-    }
-    for i in frames.indices {
-        for j in frames.indices where j > i {
-            let overlap = frames[i].intersection(frames[j])
-            check(overlap.isNull || overlap.width * overlap.height < 1e-9, "\(n) tiles never overlap")
-        }
-    }
-    if n > 1 {
-        let lead = frames[0].width * frames[0].height
-        check(frames.dropFirst().allSatisfy { $0.width * $0.height <= lead + 1e-9 }, "\(n): the lead is the biggest tile")
-    }
-}
-check(WatchHeat.frames(count: 0).isEmpty, "no tiles, no frames")
 
 // ── The index ────────────────────────────────────────────────────────
 let msft = MarketsIndex.Entry(name: "Microsoft", ticker: "MSFT", apps: ["GitHub", "npm"])

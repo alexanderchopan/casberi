@@ -9,14 +9,6 @@ extension FeedScreen {
         visible.live.filter { !PriceAlertStore.isAlertRow($0) }
     }
 
-    /// A watched row's move for the span the box is on: the day from the
-    /// pulse or quote every row already reads, a week or a month from
-    /// `WatchRanges` once read.
-    func marketsChange(_ thing: Thing) -> Double? {
-        guard watchSpan != .day else { return Self.watchChange(thing) }
-        return thing.sourceRef.flatMap { WatchRanges.shared.change(ref: $0, span: watchSpan) }
-    }
-
     /// THE BOX IS THE TILES (prd §1138): Watchlist and Alerts, then the
     /// categories A–Z, a glyph and a name each, no figure and no colour
     /// (user: "the categories w/ no numbers, just their glyph and name").
@@ -337,8 +329,8 @@ extension FeedScreen {
                            logo: marketsLogo(thing),
                            lettered: thing.authorHandle ?? TokensAsk.name(of: thing.title),
                            price: price,
-                           change: marketsChange(thing),
-                           closes: watchSpan == .day ? (pulse?.closes ?? []) : [],
+                           change: Self.watchChange(thing),
+                           closes: pulse?.closes ?? [],
                            line: marketsLine(thing, price: price, quoteCap: quote?.marketCap,
                                              pulse: pulse, stock: stock),
                            isStock: stock != nil)

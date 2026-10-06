@@ -6,34 +6,6 @@ import SwiftData
 // FeedScreen.swift (prd §718). Nothing here changed but the file it lives
 // in and, where another file reads a member, its access level.
 extension FeedScreen {
-    /// Tokens' lede: the watchlist's 24h at a glance — from the SAME cached
-    /// pulses the rows wear, so the summary can never disagree with the rows.
-    /// One watched token is enough since prd §911: it used to take two ("one
-    /// token's row already says everything"), which left the room with no
-    /// lead at all — a token pulse declines the cover — and every room's lead
-    /// is the box (§906). Flat stays flat: "1 up" is said only of a rise.
-    @ViewBuilder
-    func watchlistLedeSection(_ visible: [Thing]) -> some View {
-        let live = visible.live
-        // Stocks answer from the same quotes their rows wear (`StockWatchRow`).
-        let changes = live.compactMap { Self.watchChange($0) }
-        if !live.isEmpty {
-            // Flat (exactly 0) is neither up nor down — "2 up" for two
-            // stablecoins would claim a gain that didn't happen (honesty).
-            // With no pulse cached yet the lede says how many are watched
-            // and no 24h claim at all (§83).
-            // The day's biggest moves fill the box (prd §1067): the line
-            // alone left a fixed-size box empty under one sentence.
-            let movers = live.compactMap { t in Self.watchChange(t).map { (name: TitleSeam.split(t.title).name, change: $0) } }
-                .sorted { abs($0.change) > abs($1.change) }
-            ledeSection(WatchlistLede(
-                up: changes.filter { $0 > 0 }.count,
-                down: changes.filter { $0 < 0 }.count,
-                watched: live.count, read: !changes.isEmpty,
-                movers: Array(movers.prefix(WatchlistLede.moverCap))))
-        }
-    }
-
     /// The Tokens room's tiles where the rail stands (iPad, Mac); on the phone
     /// they ride the glass capsule beside the seat (`dsScopeDock`, the
     /// Addresses and What-this-app-reaches control) and nothing stands here.
@@ -85,7 +57,7 @@ extension FeedScreen {
         // The span the box is on orders "Movers" too (prd §1081).
         let ordered = TokenWatchOrder.shared.apply(
             visible, sourceRef: \.sourceRef,
-            change24h: { marketsChange($0) })
+            change24h: { Self.watchChange($0) })
         // One flat run: pulsed tokens wear the fat TokenRow and stand alone
         // (standsAlone), so merging only ever joins the still-unpulsed rows.
         let positions = cardRunPositions(count: ordered.count,

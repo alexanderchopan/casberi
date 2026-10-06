@@ -243,8 +243,9 @@ struct HoldingsTreemap: View {
     private func fill(_ id: String, lit isLit: Bool, widest: Double) -> Color {
         if isLit { return DS.tint }
         guard let m = move(id), abs(m) >= 0.0005, widest > 0 else { return DS.fillFaint }
-        return WatchHeatBox.fill(WatchHeat.Tile(id: id, symbol: id, change: m,
-                                                strength: min(1, abs(m) / widest)))
+        // The move's hue at its strength: the biggest move is the full colour.
+        let strength = min(1, abs(m) / widest)
+        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.22 + 0.58 * strength)
     }
 
     @ViewBuilder

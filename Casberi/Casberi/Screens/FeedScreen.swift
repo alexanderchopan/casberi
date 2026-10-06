@@ -873,8 +873,6 @@ struct FeedScreen: View {
     /// Work's and Reading's object keys, by row (prd §1079): computed off the
     /// main actor in `.task(id: objectFoldKey)`, read by `objectFolded`.
     @State var objectKeys: [UUID: String] = [:]
-    /// Markets' span (prd §1081): the box and the rows' moves, 1D · 1W · 1M.
-    @State var watchSpan: WatchRanges.Span = .day
     /// The Subscriptions tile's pressed category, keyed on the set of
     /// subscriptions it was pressed over, so a different set clears it.
     @State var subscriptionsPick: SubscriptionsPick?
