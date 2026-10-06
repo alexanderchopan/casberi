@@ -74,6 +74,9 @@ struct RoomsTray: View {
     static let dealStep: Double = 0.02
 
     @State private var contentHeight: CGFloat = 0
+    /// What the tray's search holds (prd §1133e); cleared when it closes.
+    @State private var query = ""
+    @FocusState private var searching: Bool
     @State private var dealt = false
     @State private var bounceTick = 0
 
@@ -128,6 +131,7 @@ struct RoomsTray: View {
             // they are simply there.
             dealt = up
             if up && !reduceMotion { bounceTick += 1 }
+            if !up { query = ""; searching = false }
         }
     }
 
@@ -135,14 +139,21 @@ struct RoomsTray: View {
 
     private func panel(screen: CGSize) -> some View {
         let width = min(screen.width * Self.widthShare, Self.maxWidth)
-        let height = min(contentHeight, screen.height * Self.heightShare)
+        // Searching, the card stands at its full height, so its field stays
+        // above the keyboard however few results there are (prd §1133e).
+        let full = screen.height * Self.heightShare
+        let height = (searching || !query.isEmpty) ? full : min(contentHeight, full)
         let gap = Self.gap(inner: width - 2 * DS.Space.s4)
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 searchField
-                youRow(gap: gap)
-                ForEach(Array(categories.enumerated()), id: \.element) { index, category in
-                    categoryRow(category, index: index + 1, gap: gap)
+                if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                    youRow(gap: gap)
+                    ForEach(Array(categories.enumerated()), id: \.element) { index, category in
+                        categoryRow(category, index: index + 1, gap: gap)
+                    }
+                } else {
+                    searchResults
                 }
             }
             .padding(.vertical, DS.Space.s3)
@@ -157,6 +168,7 @@ struct RoomsTray: View {
         }
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.interactively)
         .frame(width: width, height: max(height, 1))
         .dsGlass(cornerRadius: Self.radius)
         // Above the face, in its column: the menu grows out of the button
@@ -404,9 +416,11 @@ struct RoomsTray: View {
     /// Addresses, Settings — the glyphs in the brand pink (§976a), the standing door's
     /// disc white behind the same glyph (§1053).
     private func youRow(gap: CGFloat) -> some View {
-        // **A ROW LIKE EVERY OTHER (prd §1133, §1133c).** "You" (never your
-        // name, which truncated here, §1133a), then Home's disc where a
-        // category's own stands and the other five places, one line of six.
+        // **A ROW LIKE EVERY OTHER (prd §1133, §1133c).** Your name, else You
+        // (`HomeScope.title`, the screen title's word; §1133d: the name line
+        // runs the card's width now, so the truncation §1133a answered is
+        // gone), then Home's disc where a category's own stands and the other
+        // five places, one line of six.
         let doors = youDoors
         let home = doors[0]
         let rest = Folder(items: doors.dropFirst().map { door in
@@ -415,7 +429,7 @@ struct RoomsTray: View {
         }, action: nil)
         return wrapped(rest, gap: gap) {
             Button(action: home.act) {
-                Text("You")
+                Text(verbatim: HomeScope.title)
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
@@ -439,33 +453,148 @@ struct RoomsTray: View {
 
     // MARK: - Search (prd §1133)
 
-    /// **ONE SEARCH, AT THE TOP OF THE TRAY (prd §1133, user: "i like the
-    /// search tho").** §1015's field left with the full-width sheet it led;
-    /// it returns as the door to Find, the composer that searches everything
-    /// you keep, so the tray holds every way to move.
+    /// **ONE SEARCH, AT THE TOP OF THE TRAY (prd §1133, §1133e, user: "i
+    /// like the search tho"; "fix 1").** It filters the tray as you type, as
+    /// the App Library's does: every app, account, place and category whose
+    /// name holds the words, each saying where it lives, and last a row that
+    /// searches your THINGS for the same words in Find. It opened Find
+    /// directly until §1133e, which found everything but the apps the tray
+    /// had just grown to hold.
     private var searchField: some View {
-        Button {
-            DSHaptic.selection()
-            close()
-            chrome.openComposer()
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: "magnifyingglass")
-                    .dsGlyph(.body)
-                Text("Search")
-                    .dsText(.body17)
-                Spacer(minLength: 0)
+        HStack(spacing: DS.Space.s2) {
+            Image(systemName: "magnifyingglass")
+                .dsGlyph(.body)
+                .foregroundStyle(DS.textSecondary)
+            TextField(String(localized: "Search"), text: $query)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .focused($searching)
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .onSubmit { searchThings() }
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .dsGlyph(.body)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .buttonStyle(PressSpring())
+                .dsTapTarget()
+                .accessibilityLabel(Text("Clear"))
             }
-            .foregroundStyle(DS.textSecondary)
-            .padding(.horizontal, DS.Space.s3)
-            .frame(height: Self.searchHeight)
-            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .contentShape(Rectangle())
         }
-        .buttonStyle(RowPress())
+        .padding(.horizontal, DS.Space.s3)
+        .frame(height: Self.searchHeight)
+        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .padding(.bottom, DS.Space.s2)
-        .accessibilityLabel(Text("Search"))
         .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
+    }
+
+    /// One thing the search can land on.
+    private struct Hit: Identifiable {
+        let id: String
+        let name: String
+        /// Where it lives ("Wallet", "You"), nil for a category itself.
+        let place: String?
+        let face: FolderItem.Face?
+        let glyph: String?
+        let act: () -> Void
+    }
+
+    /// Everything the tray holds, as hits: You's places, each category and
+    /// every app and account in it — the same items and the same acts the
+    /// rows draw, so a hit lands where its icon would.
+    private var allHits: [Hit] {
+        var hits = youDoors.map { door in
+            Hit(id: "you:" + door.key, name: door.word, place: String(localized: "You"),
+                face: .place(door.glyph), glyph: nil, act: door.act)
+        }
+        for category in categories {
+            hits.append(Hit(id: "cat:" + category, name: category, place: nil, face: nil,
+                            glyph: CategoryFold.glyph(for: category)) { pickCategory(category) })
+            for item in folder(for: category).items {
+                hits.append(Hit(id: category + ":" + item.id, name: item.name, place: category,
+                                face: item.face, glyph: nil, act: item.act))
+            }
+        }
+        return hits
+    }
+
+    @ViewBuilder
+    private var searchResults: some View {
+        let words = query.trimmingCharacters(in: .whitespaces)
+        // A name that STARTS with the words first ("co": Coinbase before
+        // Acorns), then any word in it, then anywhere; the tray's order within.
+        let hits = allHits.enumerated()
+            .compactMap { i, hit -> (Int, Int, Hit)? in
+                guard hit.name.localizedStandardContains(words) else { return nil }
+                let name = hit.name.lowercased(), w = words.lowercased()
+                let rank = name.hasPrefix(w) ? 0 : name.contains(" " + w) ? 1 : 2
+                return (rank, i, hit)
+            }
+            .sorted { $0.0 != $1.0 ? $0.0 < $1.0 : $0.1 < $1.1 }
+            .map(\.2)
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(hits) { hit in
+                Button(action: hit.act) {
+                    HStack(spacing: DS.Space.s3) {
+                        Group {
+                            if let face = hit.face {
+                                itemFace(FolderItem(id: hit.id, name: hit.name, face: face,
+                                                    lit: false, act: hit.act))
+                            } else if let glyph = hit.glyph {
+                                roundIcon(glyph, ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
+                            }
+                        }
+                        .frame(width: Self.icon, height: Self.icon)
+                        Text(verbatim: hit.name)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: DS.Space.s2)
+                        if let place = hit.place {
+                            Text(verbatim: place)
+                                .dsText(.body17)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(minHeight: Self.resultHeight)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityLabel(hit.place.map { Text(verbatim: "\(hit.name), \($0)") }
+                                    ?? Text(verbatim: hit.name))
+            }
+            // Your things, through Find: the one search over everything kept.
+            Button(action: searchThings) {
+                HStack(spacing: DS.Space.s3) {
+                    roundIcon("magnifyingglass", ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
+                    Text("Search your things for “\(words)”")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                }
+                .frame(minHeight: Self.resultHeight)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+        }
+    }
+
+    static let resultHeight: CGFloat = 56
+
+    /// Hand the words to Find and close the tray.
+    private func searchThings() {
+        let words = query.trimmingCharacters(in: .whitespaces)
+        guard !words.isEmpty else { return }
+        DSHaptic.selection()
+        close()
+        chrome.openFind(words)
     }
 
     static let searchHeight: CGFloat = 40

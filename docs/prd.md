@@ -64627,3 +64627,11 @@ Every row draws its whole run: the category's disc (Home's for You), the room's 
 ### §1133c — Each row's name on its own line, its icons under it six across (user, 2026-10-06: "maybe no wrapping, just each category starts on the line below the cateogry, so You's six tiles all fit on one row"; "build b", from three mockups)
 
 Amends §1133b's layout: a row is its name on a line of its own (the touch floor tall, the word at its foot), then its whole run — the disc, the room's act, every app and account — six to a line at the card's full width. The App Library's grammar: every line the same six columns, You's six places on one line, a long category simply running on. Four-beside-the-name is deleted.
+
+### §1133d — The tray's You row names you again (user, 2026-10-06: "now that we have gone to having the tiles on the second line we should have You be the name bc now we have room"; "ok")
+
+Reverses §1133a: the row's word is your name, else You (`HomeScope.title`), as the screen's title is. §1133a's reason was truncation beside the icons; since §1133c the name stands on a line of its own the card's width. You's places stay round and pink, Home included: a circle is a place and a squircle an app (§1122).
+
+### §1133e — The tray's search searches the tray (user, 2026-10-06: "fix 1", of "Search doesn't search apps")
+
+The field at the tray's top is a real search now, not a door: it filters as you type, as the App Library's does. Every app, account, place and category whose name holds the words, a name starting with them first, each saying where it lives ("Coinbase · Wallet"); a hit does what its icon does. The last row, and Return, search your THINGS for the same words in Find (`ShellChrome.openFind`, consumed by the composer, which fills and runs Find). While searching, the card stands at its full height so the field stays above the keyboard.

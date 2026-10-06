@@ -960,6 +960,7 @@ struct Composer: View {
                 #endif
             }
             await consumeAskRequest()
+            consumeFindRequest()
             await autoSendIfProbed()
             await pushIfProbed()
         }
@@ -1502,6 +1503,15 @@ struct Composer: View {
     /// week synthesis, prd 54): consume it once the bubble is up and send
     /// through the real answer path. fillDraft keeps the paste heuristic
     /// from reading the programmatic set as a capture.
+    /// The rooms tray's "Search your things" (prd §1133e): the words typed
+    /// there, filled and found, the same Find a typed query and Return run.
+    private func consumeFindRequest() {
+        guard isOpen, let query = chrome.findRequest else { return }
+        chrome.findRequest = nil
+        fillDraft(query)
+        runFind()
+    }
+
     private func consumeAskRequest() async {
         guard isOpen, let query = chrome.askRequest else { return }
         // Take the hold BEFORE clearing the request, or `handingOff` reads

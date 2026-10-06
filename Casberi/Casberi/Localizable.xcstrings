@@ -7315,6 +7315,34 @@
         }
       }
     },
+    "Search your things for “%@”" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buscar en tus cosas «%@»"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのものから「%@」を検索"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 항목에서 “%@” 검색"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你的内容中搜索“%@”"
+          }
+        }
+      }
+    },
     "Security incidents arrive here. Following the wallet you use adds a review of it too." : {
       "localizations" : {
         "es" : {

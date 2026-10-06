@@ -726,6 +726,15 @@ final class ShellChrome {
     var composerRequest = 0
     func openComposer() { composerRequest += 1 }
 
+    /// A Find the rooms tray's search hands on (prd §1133e): the words typed
+    /// there, searched through your things the moment the composer opens.
+    /// Read once and cleared by the composer.
+    var findRequest: String?
+    func openFind(_ query: String) {
+        findRequest = query
+        openComposer()
+    }
+
     // `sourcesRequest` / `openSources()` are DELETED (prd §697) — the tray
     // they raised became the octopus's folder, and the folder is gone.
 
