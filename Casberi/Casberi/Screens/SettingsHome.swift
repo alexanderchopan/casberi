@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import EventKit
 
 /// SOURCES, THE MASTER LIST (prd §1136 items 3–6, user: "i do feel some
 /// master list … is lacking"; "people can 'add' in these settings"; then "lets
@@ -32,6 +33,9 @@ struct SettingsHome: View {
     @State private var peopleScope = AddressScope(name: nil)
     @State private var people = 0
     @State private var calendarAdd = false
+    /// The phone's own calendars Casberi reads through Calendar (prd §1150),
+    /// read on the screen's task, never in a body (§628).
+    @State private var phoneCalendars: [PhoneCalendar] = []
     /// WHAT A ROW OR ADD OPENS, OVER SETTINGS (prd §1143, user: "there is no
     /// way to get back"): a subscription, a list, a follow or an add tray
     /// rises here, so a swipe down is Settings again. They used to land in
@@ -77,8 +81,7 @@ struct SettingsHome: View {
                             casberiRow
                             appsList
                         case .calendars:
-                            kindList(CalendarSubscriptionStore.shared.calendars.filter { hit($0.displayName) },
-                                     empty: "Subscribe to a calendar and its dates show in Coming up.") { calendarRow($0) }
+                            calendarsList
                         case .feeds:
                             kindList(feeds.filter { hit($0.name) }, empty: "Follow a feed and it lands here.") { feedRow($0) }
                         case .newsletters:
@@ -206,6 +209,7 @@ struct SettingsHome: View {
     }
 
     private func read() async {
+        phoneCalendars = PhoneCalendar.readable()
         await SubscriptionsReading.shared.refresh(context)
         MailSubscriptionsReading.shared.refresh(context)
         for room in Following.Room.allCases { FollowingReading.shared.refresh(room, context: context) }
@@ -239,7 +243,8 @@ struct SettingsHome: View {
     private var countsBox: some View {
         let counts: [(SettingsScope, Int, String)] = [
             (.apps, connectedApps.count, String(localized: "Apps")),
-            (.calendars, CalendarSubscriptionStore.shared.calendars.count, String(localized: "Calendars")),
+            (.calendars, phoneCalendars.count + CalendarSubscriptionStore.shared.calendars.count,
+             String(localized: "Calendars")),
             (.feeds, feeds.count, String(localized: "Feeds")),
             (.newsletters, MailSubscriptionsReading.shared.items.count, String(localized: "Mailing lists")),
             (.people, people, String(localized: "People")),
@@ -400,6 +405,35 @@ struct SettingsHome: View {
         } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
     }
 
+    /// EVERY CALENDAR CASBERI READS (prd §1150, user: "it should show every
+    /// calendar read"): the phone's, by account, each opening Calendar's page
+    /// in Casberi, then the ones subscribed by link, each with Unsubscribe.
+    @ViewBuilder
+    private var calendarsList: some View {
+        let phone = phoneCalendars.filter { hit($0.title) }
+        let subscribed = CalendarSubscriptionStore.shared.calendars.filter { hit($0.displayName) }
+        if phone.isEmpty && subscribed.isEmpty {
+            if query.isEmpty {
+                empty("Connect Calendar or subscribe to one, and its dates show in Coming up.")
+            } else {
+                empty("Nothing matches.")
+            }
+        } else {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                ForEach(phone) { cal in
+                    DSPushRow(title: Text(verbatim: cal.title), subtitle: Text(verbatim: cal.account)) {
+                        route.openSetup(forOffer: "Calendar")
+                    } leading: {
+                        Circle().fill(cal.color)
+                            .frame(width: 14, height: 14)
+                            .frame(width: DS.Face.row, height: DS.Face.row)
+                    }
+                }
+                ForEach(subscribed) { calendarRow($0) }
+            }
+        }
+    }
+
     private func calendarRow(_ entry: CalendarSubscriptionStore.Entry) -> some View {
         DSPushRow(title: Text(verbatim: entry.displayName),
                   subtitle: Text(calendarLine(entry)), opens: false) {
@@ -463,7 +497,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .apps:          return String(localized: "Your apps, by category")
-        case .calendars:     return String(localized: "The calendars you subscribe to")
+        case .calendars:     return String(localized: "Every calendar Casberi reads")
         case .feeds:         return String(localized: "Sites, channels and repos you follow")
         case .newsletters:   return String(localized: "The lists that write to your mail")
         case .people:        return String(localized: "The people behind your accounts")
@@ -529,5 +563,31 @@ enum SettingsSheet: Identifiable, Hashable {
         case .followAdd:                  "followAdd"
         case .walletFollow:               "walletFollow"
         }
+    }
+}
+
+/// One of the phone's calendars Casberi reads (prd §1150): every event
+/// calendar EventKit holds, as `ScheduleIngest` reads them all.
+struct PhoneCalendar: Identifiable {
+    let id: String
+    let title: String
+    let account: String
+    let color: Color
+
+    /// Empty without full Calendar access: nothing is read then.
+    @MainActor
+    static func readable() -> [PhoneCalendar] {
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return [] }
+        return EKEventStore().calendars(for: .event)
+            .map { cal in
+                PhoneCalendar(id: cal.calendarIdentifier, title: cal.title,
+                              account: cal.source?.title ?? "",
+                              color: Color(cgColor: cal.cgColor))
+            }
+            .sorted {
+                $0.account == $1.account
+                    ? $0.title.localizedStandardCompare($1.title) == .orderedAscending
+                    : $0.account.localizedStandardCompare($1.account) == .orderedAscending
+            }
     }
 }

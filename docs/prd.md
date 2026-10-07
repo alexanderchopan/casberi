@@ -64788,3 +64788,7 @@ Frames Devnet became Hegotá Frames (`Corpus.renamedSources`), but the launch sw
 ## §1149 — A connected app's line reads grey everywhere; a selected count stays blue (user, 2026-10-06: "we can do the green to gray"; then, on a grey selected count, "go back to blue"; reverses §811's green for connected rows)
 
 A connected app's status line in the catalogue (its search results, since §1142) reads grey, as Settings' rows already do; only a word that needs you takes a hue (`AppsScreen.sublineColor`). A selected count in the box keeps the app's one selection colour, blue, for cohesion: a grey fill was tried and reverted. Tighter rows and a larger profile card were declined: rows match Home's, and Settings' Casberi row already sits under the box.
+
+## §1150 — Calendars counts every calendar Casberi reads (user, 2026-10-06: "it shows 0 for calendars even tho i have my calendar connected"; "fix the calendar count too pls. it should show every calendar read")
+
+Settings' Calendars count and list held only calendars subscribed by link (§1137), so a connected Calendar read 0. They now hold every event calendar EventKit gives Casberi with full access (`PhoneCalendar.readable`, what `ScheduleIngest` reads), sorted by account then name, each with its colour and account and opening Calendar's page, then the subscribed ones with Unsubscribe. Read on the screen's task. Without access and with nothing subscribed, the list offers both ways in.
