@@ -82,6 +82,13 @@ actor ChipWalker {
             else { continue }
             out.append((name, newest.capturedAt))
         }
+        // MARKETS IS ALWAYS A ROOM (prd §1167, user: "it shouldn't be an app
+        // to connect anymore it should just be auto"): its index of the
+        // companies behind the catalogue needs nothing watched, so it stands
+        // with no row of its own, oldest, as Notes' door always does (§969).
+        if !out.contains(where: { $0.0 == HomeScope.markets }) {
+            out.append((HomeScope.markets, .distantPast))
+        }
         let ordered = out.sorted { $0.1 > $1.1 }.map(\.0)
         // The Notes room's door is always drawn (prd §969), so the walk no
         // longer asks whether anything is pinned.

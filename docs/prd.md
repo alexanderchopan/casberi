@@ -65008,3 +65008,15 @@ Home's sections are categories since §1152, and Day is one of them, its name a 
 ### §1166a — Settings' bar is Search alone (user, 2026-10-07: "agree we don't need it now", of the bar's Add; amends §1138 item 2, §1136 item 5)
 
 Add opened the catalogue on Apps, a second copy of the All apps list now drawn under Start here, and on every other kind ran the act that kind's first row already runs (§1166 item 6). Two doors to one place, so it is deleted from the bar and from the model (`SettingsScope.new`, §723's rule); the bar is Search, as the catalogue's has been since §1138. **Seen** on a fresh simulator: the bar holding Search alone beside the seat.
+
+## §1167 — Markets is automatic: always a room, never an app to connect, and its box is two across (user, 2026-10-07: "why doesn't it start populated!", "it shouldn't be an app to connect anymore it should just be auto", "organize the markets header in same way you did settings eg two columns", of a Popular list "i think empty watchlist is fine"; supersedes §1123 item 1's page-before-a-watch, amends §1138 item 6)
+
+**Why.** Markets only became a room once a watched row landed (`ChipWalker` gives a room to a source with rows), so its tile and tray door opened its account page, "Not connected · No account" over a search field, as though Markets were an app. Everything in the room but the Watchlist (the category index of the companies behind the catalogue, §1082, and their keyless quotes) needs nothing from you.
+
+**The ruling.**
+1. **Markets is always a room** (`ChipWalker` stands it with no row, oldest, as Notes' door always stands, §969); You's tile and the tray's door open it, never its page (`YouTilesRow.open`, `RoomsTray`'s `setup` deleted).
+2. **Empty, it keeps its own box and tiles** (`keepsChromeWhenEmpty` and both arms of `roomBody`), never the generic empty state.
+3. **An empty Watchlist is one line, "Nothing watched yet."** No starter list and nothing added for you; a Popular section was built and taken out the same hour (user: "i think empty watchlist is fine").
+4. **The box is two across** (`DSCountTile(inline:)` with a glyph where Settings' figure stands): Watchlist, Alerts, then the eight categories A–Z, five rows.
+
+**Seen** on a fresh iPhone 17 Pro simulator, light, nothing watched: Today's Markets tile landing in the room, the 2×5 box, "Nothing watched yet.", and Work's index with live quotes (Amazon, Apple, Atlassian, Cloudflare, GitLab, Microsoft). **Not seen:** the Mac, dark, the tray's door tapped.

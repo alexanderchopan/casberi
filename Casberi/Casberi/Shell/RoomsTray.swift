@@ -226,11 +226,6 @@ struct RoomsTray: View {
     /// Home, out of the swipe and the dock's order, like Notes.
     static let markets = HomeScope.markets
 
-    /// Whether Markets has a room yet — it does once something is watched.
-    private var marketsHasRoom: Bool {
-        !(chrome.categoryVenues[Self.markets] ?? []).isEmpty
-    }
-
     /// The category the room you are standing in belongs to.
     private var standingCategory: String? {
         let label = CategoryFold.chipLabel(for: filter.source, folded: chrome.chipOrder)
@@ -346,7 +341,8 @@ struct RoomsTray: View {
             // is always drawn (§969).
             Door(word: String(localized: "Markets"), glyph: CategoryFold.glyph(for: Self.markets),
                  lit: markets, key: Self.markets) {
-                if marketsHasRoom { pickCategory(Self.markets) } else { setup(Self.markets) }
+                // Always its room (prd §1167): Markets is no app to connect.
+                pickCategory(Self.markets)
             },
             // The Notes tile's own glyph (`ScopeTileGlyph.notes`), lit or not: the
             // bare `note` read as an empty window (user, 2026-10-06), and the
@@ -923,13 +919,6 @@ struct RoomsTray: View {
         if !route.path.isEmpty { route.path = [] }
         chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
         chrome.sourceRequest = target
-    }
-
-    /// Open an app's page to start it — Markets before anything is watched.
-    private func setup(_ offer: String) {
-        DSHaptic.selection()
-        close()
-        route.openSetup(forOffer: offer)
     }
 
     /// Open a screen of its own — Apps, Addresses or Settings (§933, §1111).

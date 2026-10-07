@@ -35,11 +35,19 @@ struct DSCountTile: View {
             action()
         } label: {
             if inline {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text((count ?? 0).formatted())
-                        .dsText(.heading24)
-                        .monospacedDigit()
-                        .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textPrimary)
+                HStack(alignment: glyph == nil ? .firstTextBaseline : .center, spacing: DS.Space.s2) {
+                    if let glyph {
+                        // Markets' tiles: a glyph where Settings' figure stands.
+                        Image(systemName: glyph)
+                            .dsGlyph(.body, weight: .regular)
+                            .frame(width: 24)
+                            .foregroundStyle(isOn ? Color.white : DS.textSecondary)
+                    } else {
+                        Text((count ?? 0).formatted())
+                            .dsText(.heading24)
+                            .monospacedDigit()
+                            .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textPrimary)
+                    }
                     Text(label)
                         .dsText(.body17)
                         .lineLimit(1)

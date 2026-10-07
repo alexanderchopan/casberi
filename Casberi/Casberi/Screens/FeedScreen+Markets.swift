@@ -15,16 +15,19 @@ extension FeedScreen {
     /// Pressing one lists it below; the box never moves. It replaced the
     /// watchlist's heat map (§1081) and the category bar.
     var marketsTilesSection: some View {
+        // Two across, each glyph and its word on one line, as Settings'
+        // counts stand (prd §1167, user: "organize the markets header in
+        // same way you did settings").
         let tiles = TokensScope.box
-        let columns = min(5, max(3, (tiles.count + 1) / 2))
         return Section {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columns),
-                      spacing: DS.Space.s2) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .leading), count: 2),
+                      alignment: .leading, spacing: 2) {
                 ForEach(tiles) { tile in
                     DSCountTile(count: nil, label: tile.label, glyph: tile.glyph,
-                                isOn: tile == chrome.tokensScope) { pickTokensScope(tile) }
+                                isOn: tile == chrome.tokensScope, inline: true) { pickTokensScope(tile) }
                 }
             }
+            .padding(.horizontal, DS.Space.s2)
             .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
                    maxHeight: DSRoomChassis.leadBox)
             .dsRoomHeadBlock()
@@ -85,6 +88,19 @@ extension FeedScreen {
         youTilesSection(.markets)
         tokensInlineTiles
         if watches.count > 1 { marketsListHead }
+        // An empty Watchlist says so in one line (prd §1167, user: "i think
+        // empty watchlist is fine"); the category tiles above are the index.
+        if watches.isEmpty {
+            Section {
+                Text("Nothing watched yet.")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                              bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
         watchlistSection(watches, nextEventID: nextEventID)
             .task(id: watches.count) {
                 held = await WalletIngest.lastKnownHeld()

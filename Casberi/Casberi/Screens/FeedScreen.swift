@@ -1157,7 +1157,8 @@ struct FeedScreen: View {
         // tile is how an empty one stops being empty, and the generic state
         // told a first-time writer to open the catalog instead.
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
-            && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome && source != "All" {
+            && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome && source != "All"
+            && !HomeScope.isMarkets(source) {
             // An empty Home still names what stopped (prd §1162): an app
             // that broke before anything landed is the likeliest reason the
             // feed is empty at all.
@@ -1239,7 +1240,7 @@ struct FeedScreen: View {
         // exact shape — it is why Frames and Logos each have an arm above
         // rather than a flag.
         } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
-                    || walletKeepsChrome || source == "All" {
+                    || walletKeepsChrome || source == "All" || HomeScope.isMarkets(source) {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
@@ -1324,6 +1325,8 @@ struct FeedScreen: View {
             // box holds the day, You's tiles stand under it, and the day says
             // it holds nothing yet.
             || source == "All"
+            // Nor is Markets (prd §1167): its tiles and index need no watch.
+            || HomeScope.isMarkets(source)
     }
 
     /// **THE WALLET IS NEVER REPLACED WHILE IT WATCHES AN ADDRESS** (2026-10-03,

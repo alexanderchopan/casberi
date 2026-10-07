@@ -23,9 +23,6 @@ struct YouTilesRow: View {
         switch tile {
         case .settings:
             route.present(.casberi)
-        case .markets where (chrome.categoryVenues[HomeScope.markets] ?? []).isEmpty:
-            // Markets' own page until something is watched (prd §1123).
-            route.openSetup(forOffer: HomeScope.markets)
         default:
             if !route.path.isEmpty { route.path = [] }
             chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate

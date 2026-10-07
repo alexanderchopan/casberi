@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1297 of 1361 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1298 of 1362 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1480,7 +1480,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1120 — The verb is Follow a feed, and the leftovers of the follow sweep (amended by §1121)
 - §1121 — Two verbs: Follow for everything you keep up with, Track for subscriptions
 - §1122 — The tray lines its icons up in columns over a blurred room, an app is a rounded square and a person a circle, in the… (amended by §1123)
-- §1123 — Markets is a You door: pink, in the top row, and the word "You" goes (amended by §1127, §1136)
+- §1123 — Markets is a You door: pink, in the top row, and the word "You" goes (amended by §1127, §1136; part superseded by §1167)
 - §1124 — Privy's apps are a group in Holdings
 - §1125 — The last room's swipe left opens the tray
 - §1126 — Reading's Subscriptions count no posts
@@ -1495,7 +1495,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
 - §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
-- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166) [+1 sub-entries]
+- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
 - §1142 — The catalogue is what you could add, rises as a sheet, and names its categories without figures
 - §1143 — What Settings opens rises over Settings
@@ -1521,6 +1521,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
 - §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,…
 - §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app [+1 sub-entries]
+- §1167 — Markets is automatic: always a room, never an app to connect, and its box is two across
 
 ## Dead rulings → what replaced them (generated)
 
