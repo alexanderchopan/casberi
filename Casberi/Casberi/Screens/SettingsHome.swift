@@ -36,7 +36,7 @@ struct SettingsHome: View {
     /// The phone's own calendars Casberi reads through Calendar (prd §1150),
     /// read on the screen's task, never in a body (§628).
     @State private var phoneCalendars: [PhoneCalendar] = []
-    /// People's letters, for the A–Z strip on the trailing edge (prd §1152).
+    /// People's letters, for the A–Z strip on the trailing edge (prd §1153).
     @State private var peopleLetters: [String] = []
     /// WHAT A ROW OR ADD OPENS, OVER SETTINGS (prd §1143, user: "there is no
     /// way to get back"): a subscription, a list, a follow or an add tray
@@ -69,7 +69,7 @@ struct SettingsHome: View {
                         DSScopeTiles(sections: SettingsScope.bar, active: scope,
                                      strip: true, verbs: SettingsScope.verbs) { pick($0) }
                     }
-                    // ONE SEARCH OVER EVERY KIND (prd §1152, user: "build 3 and
+                    // ONE SEARCH OVER EVERY KIND (prd §1153, user: "build 3 and
                     // 4"): the bar's Search opens it on any kind, People's own
                     // field included, and what it finds is grouped by kind.
                     if !casberiOpen, searchOpen || !query.isEmpty {
@@ -114,7 +114,7 @@ struct SettingsHome: View {
                 .listRowSeparator(.hidden)
         }
         .dsRoomList()
-        // PEOPLE'S A–Z STRIP (prd §1152): Contacts' index on the trailing
+        // PEOPLE'S A–Z STRIP (prd §1153): Contacts' index on the trailing
         // edge, a letter tapped or slid to jumps the list to its header.
         // Above the floating bar, under the box: the list's own column.
         .overlay(alignment: .bottomTrailing) {
@@ -395,7 +395,7 @@ struct SettingsHome: View {
     }
 
     /// What one search finds, by kind, each kind only when it has a hit, in
-    /// the box's order (prd §1152).
+    /// the box's order (prd §1153).
     @ViewBuilder
     private var searchEverything: some View {
         let apps = connectedApps.filter { hit($0.name) }
@@ -664,7 +664,7 @@ struct PhoneCalendar: Identifiable {
     }
 }
 
-/// Contacts' index (prd §1152): the letters a list files under, stacked on
+/// Contacts' index (prd §1153): the letters a list files under, stacked on
 /// its trailing edge; a tap or a slide jumps to the letter under the finger,
 /// a tick each time it changes. "Not named yet" draws as a dot.
 struct LetterIndex: View {

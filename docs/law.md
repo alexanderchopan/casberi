@@ -1508,7 +1508,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1150 — Calendars counts every calendar Casberi reads
 - §1151 — The default order is the day first: Day, Social, Work, Wallet, Reading, Life, Media, Agents, Testnets
 - §1152 — Home is by category, in your dock order
-- §1152 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind
+- §1153 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind
 
 ## Dead rulings → what replaced them (generated)
 
