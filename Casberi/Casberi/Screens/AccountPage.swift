@@ -167,7 +167,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// Whether the page is still on screen when the landing's beat ends —
     /// a person who left in that beat is not pulled back.
     @State private var onScreen = false
-    /// Whose account this is (prd §1164), read in `onAppear` and on change —
+    /// Whose account this is (prd §1162), read in `onAppear` and on change —
     /// never in the body.
     @State private var identity: String?
 
@@ -344,7 +344,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
-            // WHOSE ACCOUNT (prd §1164): "acme" under GitHub, as Settings draws
+            // WHOSE ACCOUNT (prd §1162): "acme" under GitHub, as Settings draws
             // an Apple Account's email under its name. Only once connected —
             // a name left from a disconnected key would describe nothing here.
             if state.connected, let identity {

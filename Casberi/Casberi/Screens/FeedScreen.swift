@@ -1158,7 +1158,7 @@ struct FeedScreen: View {
         // told a first-time writer to open the catalog instead.
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
             && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome {
-            // An empty Home still names what stopped (prd §1164): an app
+            // An empty Home still names what stopped (prd §1162): an app
             // that broke before anything landed is the likeliest reason the
             // feed is empty at all.
             if source == "All" { reconnectSection }
