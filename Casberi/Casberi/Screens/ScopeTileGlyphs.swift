@@ -36,9 +36,13 @@ enum ScopeTileGlyph {
     /// `CategoryFold.glyph(for:)`'s fallback is never drawn
     /// (`category-fold-selftest.sh`).
     static let apps        = "square.grid.2x2"
-    /// Every room's All (prd §815): the dock's own All glyph, read from its
-    /// one table rather than retyped.
-    static var all: String { CategoryFold.glyph(for: "All") }
+    /// Every room's All (prd §815), a stack since prd §1169 (user: "do we
+    /// have 'All' elsewhere in the app b/c it needs to be same icon"): the
+    /// inbox tray it wore is Today's alone now.
+    static let all         = "square.stack"
+    /// You's Today (prd §1168): the dock's own All glyph, the inbox tray,
+    /// read from its one table rather than retyped. Today IS the "All" source.
+    static var feed: String { CategoryFold.glyph(for: "All") }
     /// Work's Watch verb (prd §1031, §1057) — the app's watch glyph wherever a
     /// person follows something privately (Follow address, the address
     /// book's Watch, Markets' Watchlist).
@@ -237,8 +241,7 @@ extension FramesSection: DSTileScope {
 extension YouTile: DSTileScope {
     var glyph: String {
         switch self {
-        // Today is the "All" source (prd §1168): the dock's inbox tray.
-        case .feed:     return ScopeTileGlyph.all
+        case .feed:     return ScopeTileGlyph.feed
         case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
         case .notes:    return ScopeTileGlyph.notes
         case .settings: return ScopeTileGlyph.settings

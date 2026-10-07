@@ -331,7 +331,7 @@ struct RoomsTray: View {
     private func doors(home: Bool = false, notes: Bool = false, markets: Bool = false,
                        place: HomeScope.Place? = nil) -> [Door] {
         [
-            Door(word: String(localized: "Today"), glyph: home ? "tray.full.fill" : ScopeTileGlyph.all,
+            Door(word: String(localized: "Today"), glyph: home ? "tray.full.fill" : ScopeTileGlyph.feed,
                  lit: home, key: "All") { pick("All") },
             // You's four places, in the tiles' order (prd §1136 item 1):
             // Home, then A–Z. Apps and Addresses are filters inside Sources

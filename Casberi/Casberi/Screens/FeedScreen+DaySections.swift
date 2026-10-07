@@ -290,7 +290,9 @@ extension FeedScreen {
         // holding today's one thing IS today.
         if source == "All", groups.isEmpty,
            !(homeCover.map { $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt) } ?? false) {
-            nothingYetToday
+            // With nothing connected, a preview of what Today becomes (prd
+            // §1169); the first connect takes it all away.
+            if bridges.connectedCount == 0 { todayPreview } else { nothingYetToday }
         }
         ForEach(groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
@@ -413,8 +415,38 @@ extension FeedScreen {
                 emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
                              words: Text(Date.now.formatted(.dateTime.month(.wide).day())),
                              note: bridges.connectedCount == 0
-                                 ? Text("Your apps’ newest, today. Connect one in Settings.") : nil)
+                                 ? Text("Each app’s newest, today, under its category. Connect apps in Settings.") : nil)
             }
+        }
+    }
+
+    /// TODAY, PREVIEWED (prd §1169, user: "i think the preview option 2 is
+    /// good. and when someone adds something all the preview parts go
+    /// away"): your categories in dock order, each name in grey over one grey
+    /// row, the shape a full Today takes. Nothing here is tappable and nothing
+    /// asks: no plus, no chip, no second door to what Settings does. A filled
+    /// Today only names a category with something in it (§1152), so one you
+    /// never use never appears.
+    @ViewBuilder
+    var todayPreview: some View {
+        let categories = CategoryOrder.current.filter { $0 != "Testnets" && $0 != HomeScope.markets }
+        ForEach(categories, id: \.self) { category in
+            Section {
+                Text(category)
+                    .dsText(.heading20)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.leading, DSRoomChassis.rowInset)
+                    .padding(.top, DS.Space.s3)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                DSSkeletonRows(count: 1)
+                    .padding(.horizontal, DSRoomChassis.rowInset)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            .accessibilityHidden(true)
         }
     }
 

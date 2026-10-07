@@ -62,7 +62,6 @@ ALIASES = {
     # Social's Follow (prd §1086) watches a person privately: the same meaning.
     ("SocialScope", "follow"): "watch",
     # You's Today (prd §1168) IS the "All" source, the dock's inbox tray.
-    ("YouTile", "feed"): "all",
 }
 
 # Symbols the user named as one meaning's own (2026-09-18; the Wallet's
@@ -71,7 +70,8 @@ RESERVED = [("building.columns", "positions"), ("dollarsign", "wallet"),
             ("checkmark.shield", "review"),
             ("shield", "risk"), ("key", "permissions")]
 
-ALL_READ = 'static var all: String { CategoryFold.glyph(for: "All") }'
+# Today reads the dock's All (prd §1168, §1169); every room's All is a stack.
+ALL_READ = 'static var feed: String { CategoryFold.glyph(for: "All") }'
 
 
 def strip_comments(text: str) -> str:
@@ -212,7 +212,7 @@ def audit(root: Path):
 
     # ── F. All reads the dock, and every constant is worn ──────────────────
     if ALL_READ not in glyphs:
-        fails.append("F ScopeTileGlyph.all retypes the dock's All glyph instead of reading CategoryFold")
+        fails.append("F ScopeTileGlyph.feed retypes the dock's All glyph instead of reading CategoryFold")
     names = [n for n, _ in constants] + re.findall(r"static var (\w+)\s*:\s*String", table)
     elsewhere = glyphs.replace(table, "") + "".join(v for p, v in sources.items() if p != glyphs_path)
     for name in names:
@@ -228,8 +228,9 @@ enum ScopeTileGlyph {
     static let home        = "chart.xyaxis.line"
     static let positions   = "building.columns"
     static let review      = "checkmark.shield"
+    static let all         = "square.stack"
     /// The dock's own "tray.full", read, never retyped.
-    static var all: String { CategoryFold.glyph(for: "All") }
+    static var feed: String { CategoryFold.glyph(for: "All") }
     static let watch       = "eye"
     static let new         = "plus"
 }
@@ -266,7 +267,7 @@ extension SocialScope: DSTileScope {
 extension YouTile: DSTileScope {
     var glyph: String {
         switch self {
-        case .feed: return ScopeTileGlyph.all
+        case .feed: return ScopeTileGlyph.feed
         }
     }
 }
@@ -314,8 +315,8 @@ MUTATIONS = [
     ("a reserved symbol takes another meaning",
      "glyphs", 'static let home        = "chart.xyaxis.line"', 'static let home        = "dollarsign"', "E"),
     ("All retypes the dock's glyph",
-     "glyphs", 'static var all: String { CategoryFold.glyph(for: "All") }',
-     'static var all: String { "tray.full" }', "F"),
+     "glyphs", 'static var feed: String { CategoryFold.glyph(for: "All") }',
+     'static var feed: String { "tray.full" }', "F"),
     ("a constant nothing wears",
      "scope", "Image(systemName: ScopeTileGlyph.review)", 'Image(systemName: "checkmark")', "F"),
 ]
