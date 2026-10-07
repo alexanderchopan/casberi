@@ -125,6 +125,18 @@ final class BridgeStore {
     /// record per name (prd §1147): the first that is not paused, else the
     /// first. Writes `bridges` once, and only when something changed.
     func convergeNames(_ current: (String) -> String) {
+        guard let out = Self.converged(bridges, current: current) else { return }
+        for old in bridges where current(old.name) != old.name {
+            BridgeHealth.rename(old.name, to: current(old.name))
+        }
+        bridges = out
+    }
+
+    /// The pure half of `convergeNames`, nil when nothing would change. A test
+    /// calls this, never the store: the test host is the app, and a store write
+    /// there replaces the simulator's saved records.
+    nonisolated static func converged(_ bridges: [BridgeApp],
+                                      current: (String) -> String) -> [BridgeApp]? {
         var out: [BridgeApp] = []
         var changed = false
         for old in bridges {
@@ -134,7 +146,6 @@ final class BridgeStore {
                 app = BridgeApp(id: old.id, name: name, status: old.status,
                                 statusLine: old.statusLine, can: old.can)
                 app.askBeforeActing = old.askBeforeActing
-                BridgeHealth.rename(old.name, to: name)
                 changed = true
             }
             if let i = out.firstIndex(where: { $0.name == app.name }) {
@@ -145,7 +156,7 @@ final class BridgeStore {
             }
             out.append(app)
         }
-        if changed { bridges = out }
+        return changed ? out : nil
     }
 
     func remove(_ id: String) {

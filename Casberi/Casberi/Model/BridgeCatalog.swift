@@ -117,10 +117,10 @@ enum BridgeCatalog {
     /// ever existed, unfiltered by platform. `offers` (below) is what every
     /// screen actually reads.
     static let allOffers: [Offer] = [
-        Offer(name: "Photos",      tagline: "Screenshots, straight to your feed",            group: "Photos",    connectable: true),
-        Offer(name: "Calendar",    tagline: "Events join your things",               group: "Schedule",  connectable: true),
-        Offer(name: "Reminders",   tagline: "Lists stay in reach",                   group: "Schedule",  connectable: true),
-        Offer(name: "Wallet",      tagline: "Any address — holdings and moves",          group: "Wallet",    connectable: true,
+        Offer(name: "Photos",      tagline: "",            group: "Photos",    connectable: true),
+        Offer(name: "Calendar",    tagline: "",               group: "Schedule",  connectable: true),
+        Offer(name: "Reminders",   tagline: "",                   group: "Schedule",  connectable: true),
+        Offer(name: "Wallet",      tagline: "",          group: "Wallet",    connectable: true,
               alsoReads: ["Aave", "Morpho", "Uniswap", "Hyperliquid", "Aerodrome", "Spark"],
               needsSetup: true),
         // Wallet group by ruling (user, 2026-07-21, prd §162). Privacy Pools
@@ -149,7 +149,7 @@ enum BridgeCatalog {
         // holding them does. Walletbeat is an independent, MIT-licensed registry.
         Offer(name: "Walletbeat", tagline: "How your wallet apps actually behave", group: "Reading", connectable: true,
               needsSetup: true, added: day(2026, 8, 20)),
-        Offer(name: "ENS",         tagline: "Follow a name, know when it expires", group: "Wallet", connectable: true,
+        Offer(name: "ENS",         tagline: "", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 8, 29)),
         // WALLET group (user ruling, 2026-08-20, prd §420). Settled twice the
         // same afternoon: first to Shopping on §222's receipts-vs-account
@@ -166,7 +166,7 @@ enum BridgeCatalog {
         // — measured, all five of their tools answer "-32001" for a free
         // account — and a tile that discovered that after the tap is the §83
         // dead control.
-        Offer(name: "CardPointers", tagline: "Unused card offers — needs CardPointers+", group: "Wallet", connectable: true,
+        Offer(name: "CardPointers", tagline: "Needs CardPointers+", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 8, 20)),
         // Wallet group by ruling (prd §222, 2026-07-26): a Gnosis Pay account
         // IS a Safe holding your own balance, so it belongs beside the wallets
@@ -176,7 +176,7 @@ enum BridgeCatalog {
         // names (they never reach the chain) and no refunds (they settle off
         // it) — because the obvious expectation of a card feed is that it
         // reads like a statement, and this one can't.
-        Offer(name: "Gnosis Pay",  tagline: "Card spending, straight off the chain", group: "Wallet",    connectable: true,
+        Offer(name: "Gnosis Pay",  tagline: "", group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 26)),
         // MetaMask Card (2026-09-20) — the same object as Gnosis Pay one chain
         // over, so the same group for the same reason: the money is in your own
@@ -192,7 +192,7 @@ enum BridgeCatalog {
         // thing `KindGlyph`'s ether.fi/Gnosis Pay comment forbids in the other
         // direction. So this one names its own chain. `alsoReads` carries Linea
         // and Baanx so a search for either finds the seat that really reads it.
-        Offer(name: "MetaMask Card", tagline: "Every swipe, straight off the chain", group: "Wallet", connectable: true,
+        Offer(name: "MetaMask Card", tagline: "", group: "Wallet", connectable: true,
               alsoReads: ["Linea", "Base", "Baanx"], needsSetup: true, added: day(2026, 9, 20)),
         // Apple Wallet (prd §313, 2026-08-06) — FinanceKit, granted by Apple
         // for this bundle id on request QVDBMBPMJU. Wallet group beside Gnosis
@@ -222,21 +222,21 @@ enum BridgeCatalog {
         // The two finance seats of §780b. Wallet group, beside Apple Wallet and
         // Gnosis Pay — this shelf is where money lives, and Reading would
         // promise reading rather than an account.
-        Offer(name: "Acorns", tagline: "Round-ups, savings and investments", group: "Wallet", connectable: true,
+        Offer(name: "Acorns", tagline: "", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 15)),
-        Offer(name: "Rocket Money", tagline: "Subscriptions and bills, before they hit", group: "Wallet", connectable: true,
+        Offer(name: "Rocket Money", tagline: "", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 15)),
         // Privy (prd §803c) — every app that made you a wallet through Privy,
         // with what the chain says is in each. Wallet group: the unit is an
         // app, but the subject is money you hold.
-        Offer(name: "Privy", tagline: "Every app wallet you've made, in one place", group: "Wallet", connectable: true,
+        Offer(name: "Privy", tagline: "Every app wallet you've made", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 17)),
         // Wise (prd §778, 2026-09-16) — balances and transfers over a
         // read-only personal token. The tagline names BOTH halves because the
         // seat is honestly two things, and neither alone would be worth a
         // tile: a balance with no movement is a number, and a transfer list
         // with no balance has no context.
-        Offer(name: "Wise",        tagline: "What you hold, and what you sent", group: "Wallet", connectable: true,
+        Offer(name: "Wise",        tagline: "", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 16)),
         // Splits (prd §820, 2026-09-18) — a team's self-custodied accounts
         // over a Read-scoped key: the accounts, what they hold, and what
@@ -246,44 +246,44 @@ enum BridgeCatalog {
         // Lightning (prd §1098, 2026-10-03) — any Lightning wallet over Nostr
         // Wallet Connect: the balance into the total, settled payments as
         // rows, and a connection that can pay refused on save.
-        Offer(name: "Lightning",   tagline: "Your Lightning wallet, read-only", group: "Wallet", connectable: true,
+        Offer(name: "Lightning",   tagline: "", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 10, 3)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which was where things you
         // watched rather than owned lived until that category was deleted
         // (2026-09-06, prd §638).
-        Offer(name: "Coinbase",    tagline: "Coinbase balances",  group: "Wallet",    connectable: true,
+        Offer(name: "Coinbase",    tagline: "",  group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 21)),
-        Offer(name: "Kraken",      tagline: "Kraken balances",  group: "Wallet",    connectable: true,
+        Offer(name: "Kraken",      tagline: "",  group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 21)),
-        Offer(name: "Binance",     tagline: "Binance balances",  group: "Wallet",    connectable: true,
+        Offer(name: "Binance",     tagline: "",  group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
         // "Gemini Exchange", not "Gemini" — the catalog already has an offer
         // named "Gemini" (the Google AI chat importer), an unrelated company
         // that happens to share the word. Named fully everywhere it's
         // user-facing (this tile, the venue's display name, the website) so
         // the two are never confused for one another.
-        Offer(name: "Gemini Exchange", tagline: "Gemini balances", group: "Wallet", connectable: true,
+        Offer(name: "Gemini Exchange", tagline: "", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
         // A validator can't be FOUND from a wallet address the way a Solana
         // stake account can (see EthValidatorWatch.swift) — the only free
         // path is asking for the index directly, which is why this is a
         // named watch-list like Tokens rather than something that
         // rides a watched wallet automatically.
-        Offer(name: "ETH Validators", tagline: "Validator balances", group: "Wallet", connectable: true,
+        Offer(name: "ETH Validators", tagline: "", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
-        Offer(name: "Gmail",       tagline: "Your Gmail inbox",                  group: "Mail",      connectable: true,
+        Offer(name: "Gmail",       tagline: "",                  group: "Mail",      connectable: true,
               needsSetup: true),
-        Offer(name: "iCloud Mail", tagline: "Your iCloud inbox",      group: "Mail",      connectable: true,
+        Offer(name: "iCloud Mail", tagline: "",      group: "Mail",      connectable: true,
               needsSetup: true),
-        Offer(name: "ChatGPT",     tagline: "Your ChatGPT conversations", group: "Agent",     connectable: true,
+        Offer(name: "ChatGPT",     tagline: "", group: "Agent",     connectable: true,
               needsSetup: true),
-        Offer(name: "Claude",      tagline: "Your Claude conversations", group: "Agent",     connectable: true,
+        Offer(name: "Claude",      tagline: "", group: "Agent",     connectable: true,
               needsSetup: true),
-        Offer(name: "Claude Code", tagline: "Your coding sessions", group: "Agent", connectable: true,
+        Offer(name: "Claude Code", tagline: "", group: "Agent", connectable: true,
               needsSetup: true, added: day(2026, 8, 8)),
-        Offer(name: "Gemini",      tagline: "Your Gemini conversations", group: "Agent",     connectable: true,
+        Offer(name: "Gemini",      tagline: "", group: "Agent",     connectable: true,
               needsSetup: true),
         // MARKETS IS DELETED (user ruling 2026-09-06, prd §638: "i want to get
         // away from crypto bullshit but wallets and the other stuff in them
@@ -301,7 +301,7 @@ enum BridgeCatalog {
         // One watchlist of stocks and tokens, and a company pack per
         // catalogue category (`CompanyPacks`). An offer, never a category:
         // the Markets CATEGORY stays deleted (prd §638).
-        Offer(name: "Markets",     tagline: "Track any stock or token",              group: "Markets",    connectable: true,
+        Offer(name: "Markets",     tagline: "",              group: "Markets",    connectable: true,
               needsSetup: true),
         // Wallet, not Markets (2026-07-25, prd §210 — amending the 2026-07-17
         // ruling below, kept for the record). A Peer fill is the person's OWN
@@ -316,7 +316,7 @@ enum BridgeCatalog {
         // settle into the person's own wallet, so the seat is a switch over
         // the watched list. That mechanism argument is now Wallet's own
         // argument too — it no longer distinguishes the two groups.)
-        Offer(name: "Peer",        tagline: "Your trades, as they settle",      group: "Wallet",    connectable: true,
+        Offer(name: "Peer",        tagline: "Fiat to crypto trades, as they settle",      group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 17)),
         // Wallet group, beside Peer/Privacy Pools/Gnosis Pay (2026-07-30): a
         // Safe multisig is your own account too, and the seat rides the
@@ -382,14 +382,14 @@ enum BridgeCatalog {
         // Wallet (prd §1049, §1051a): the last Shopping seat once Deals and
         // Shopify left, and money you spend from a balance you hold — so it
         // folds into the One Wallet, and the Shopping category goes with it.
-        Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Wallet",  connectable: true,
+        Offer(name: "Bitrefill",   tagline: "",             group: "Wallet",  connectable: true,
               needsSetup: true, added: day(2026, 7, 17)),
         // Shopping, beside Bitrefill: Privacy.com is your own card-spending
         // record — receipts across every merchant — not a market you watch.
         // Honesty note (2026-07-22): Privacy's key is NOT scoped read-only, so
         // the summary says plainly that the read-only promise is kept by
         // conduct, not by the credential (unlike every other keyed bridge).
-        Offer(name: "Privacy",     tagline: "Your card purchases, in reach",         group: "Wallet",  connectable: true,
+        Offer(name: "Privacy",     tagline: "",         group: "Wallet",  connectable: true,
               needsSetup: true, added: day(2026, 7, 22)),
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               needsSetup: true),
@@ -406,7 +406,7 @@ enum BridgeCatalog {
         // chat most people will have. Named for what people recognise; never
         // "Siri", which it is not, and never Apple's logo, which we may not
         // draw (`BridgeGlyph` uses the system's `apple.intelligence` symbol).
-        Offer(name: "Apple Intelligence", tagline: "Ask your things — no key needed", group: "Agent", connectable: true,
+        Offer(name: "Apple Intelligence", tagline: "No key needed", group: "Agent", connectable: true,
               needsSetup: true, added: day(2026, 9, 19), needsPrivateCloud: true),
         // 1Claw (the agents' vault, 2026-07-17, prd 111) left the catalog on
         // 2026-09-06 with the Markets seats (prd §638).
@@ -432,28 +432,28 @@ enum BridgeCatalog {
         // reasonably expect the same here and be wrong. Same shape as
         // Privacy.com's "Requires a paid Privacy plan" — a cost precondition
         // belongs in the offer, not discovered after connecting.
-        Offer(name: "Grok",        tagline: "Try it with your own key",            group: "Agent",     connectable: true,
+        Offer(name: "Grok",        tagline: "With your own key",            group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "NEAR AI",     tagline: "Answers it can prove it wrote",       group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 9, 20)),
         Offer(name: "Muse",        tagline: "Meta's model, on your key",           group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 9, 20)),
-        Offer(name: "GitHub",      tagline: "Your work, and what you follow", group: "Work",      connectable: true,
+        Offer(name: "GitHub",      tagline: "", group: "Work",      connectable: true,
               needsSetup: true),
-        Offer(name: "GitLab",      tagline: "The issues and MRs assigned to you",     group: "Work",      connectable: true,
+        Offer(name: "GitLab",      tagline: "",     group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 8)),
         // Work, not Agent (2026-08-03): the Agent group is BYO-key seats that
         // answer a question. This one publishes nothing and answers nothing —
         // it's a release feed for the hub AI ships on, which is the GitHub
         // seat's job three rows up, so it sits beside it.
-        Offer(name: "Hugging Face", tagline: "What the AI world just shipped",       group: "Work",      connectable: true,
+        Offer(name: "Hugging Face", tagline: "",       group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 3)),
         // Peer-to-peer Git (prd §400). Work, beside GitHub and Hugging Face —
         // it is the same "what happened to the code" read pointed at a network
         // with no central host in it. Keyless in the strongest grade here:
         // `radicle-httpd` has no credential at all, so unlike GitHub's
         // read-only token there is nothing to mint and nothing to leak.
-        Offer(name: "Radicle", tagline: "Peer-to-peer Git, as it happens", group: "Work", connectable: true,
+        Offer(name: "Radicle", tagline: "Peer-to-peer Git", group: "Work", connectable: true,
               needsSetup: true, added: day(2026, 8, 18)),
         // The frame-transaction devnet (prd §548, user, 2026-09-01: "this one
         // is for Frames specifically"). This chain implements no keyed
@@ -486,52 +486,52 @@ enum BridgeCatalog {
         // test coins, never joined to the wallet total, and the network has
         // been reset from genesis before. Keyless (the LEZ sequencer answers
         // anyone), so it is a no-account seat in the Radicle grade.
-        Offer(name: "Logos", tagline: "Follow accounts on the Logos testnet", group: "Testnets", connectable: true,
+        Offer(name: "Logos", tagline: "Accounts on the Logos testnet", group: "Testnets", connectable: true,
               needsSetup: true, added: day(2026, 9, 29)),
-        Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
+        Offer(name: "Linear",      tagline: "",             group: "Work",      connectable: true,
               needsSetup: true),
-        Offer(name: "Notion",      tagline: "Pages join your things",                group: "Work",      connectable: true,
+        Offer(name: "Notion",      tagline: "",                group: "Work",      connectable: true,
               needsSetup: true),
-        Offer(name: "PostHog",     tagline: "The numbers behind what you ship",      group: "Work",      connectable: true,
+        Offer(name: "PostHog",     tagline: "",      group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
-        Offer(name: "Slack",       tagline: "Never miss a mention",                  group: "Work",      connectable: true,
+        Offer(name: "Slack",       tagline: "",                  group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 7, 28)),
-        Offer(name: "Trello",      tagline: "The cards you're carrying",             group: "Work",      connectable: true,
+        Offer(name: "Trello",      tagline: "",             group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 3)),
-        Offer(name: "Jira",        tagline: "The issues assigned to you",            group: "Work",      connectable: true,
+        Offer(name: "Jira",        tagline: "",            group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 8)),
-        Offer(name: "Cloudflare",  tagline: "The dates behind the sites you run",    group: "Work",      connectable: true,
+        Offer(name: "Cloudflare",  tagline: "",    group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 3)),
-        Offer(name: "Sentry",      tagline: "The errors your users really hit",     group: "Work",      connectable: true,
+        Offer(name: "Sentry",      tagline: "",     group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 4)),
-        Offer(name: "Vercel",      tagline: "What shipped, and what broke",         group: "Work",      connectable: true,
+        Offer(name: "Vercel",      tagline: "",         group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 4)),
-        Offer(name: "PagerDuty",   tagline: "What caught fire, and for how long",   group: "Work",      connectable: true,
+        Offer(name: "PagerDuty",   tagline: "",   group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 4)),
-        Offer(name: "npm",         tagline: "Your dependencies, when they ship",    group: "Work",      connectable: true,
+        Offer(name: "npm",         tagline: "",    group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 4)),
-        Offer(name: "PyPI",        tagline: "Your Python packages, on release",     group: "Work",      connectable: true,
+        Offer(name: "PyPI",        tagline: "",     group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 4)),
-        Offer(name: "App Store Connect", tagline: "How your app is doing",           group: "Work",      connectable: true,
+        Offer(name: "App Store Connect", tagline: "",           group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 6)),
-        Offer(name: "AWS",         tagline: "What needs you, on your infrastructure", group: "Work",      connectable: true,
+        Offer(name: "AWS",         tagline: "", group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 30)),
-        Offer(name: "Stripe",      tagline: "What your money did today",             group: "Work",      connectable: true,
+        Offer(name: "Stripe",      tagline: "",             group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "Polar",       tagline: "Sales and subscribers",             group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 30)),
         // WORK (prd §1049, built §1057): a merchant's sales, beside Stripe
         // and Polar, never the One Wallet's money.
-        Offer(name: "Dodo Payments", tagline: "Every payment, the moment it lands", group: "Work",      connectable: true,
+        Offer(name: "Dodo Payments", tagline: "", group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 8, 30)),
-        Offer(name: "YouTube",     tagline: "Follow any channel",                    group: "Watching",  connectable: true,
+        Offer(name: "YouTube",     tagline: "",                    group: "Watching",  connectable: true,
               needsSetup: true),
-        Offer(name: "Apple Music", tagline: "What you play stays in reach",          group: "Listening", connectable: true),
-        Offer(name: "Spotify",     tagline: "What you recently played",             group: "Listening", connectable: true,
+        Offer(name: "Apple Music", tagline: "",          group: "Listening", connectable: true),
+        Offer(name: "Spotify",     tagline: "",             group: "Listening", connectable: true,
               needsSetup: true),
-        Offer(name: "Apple Health", tagline: "Workouts land in your feed",           group: "Fitness",   connectable: true,
+        Offer(name: "Apple Health", tagline: "",           group: "Fitness",   connectable: true,
               unavailableOnMac: true),
-        Offer(name: "Strava",      tagline: "Every activity, one record",            group: "Fitness",   connectable: true,
+        Offer(name: "Strava",      tagline: "",            group: "Fitness",   connectable: true,
               unavailableOnMac: true),
         // Garmin rides Apple Health exactly as Strava does (2026-09-06), and
         // for a harder reason: Garmin's own Health/Activity API is a partner
@@ -541,28 +541,28 @@ enum BridgeCatalog {
         // thing to promise. Its tagline is deliberately NOT Strava's: two
         // seats in one shelf saying the same six words is the collision
         // prd §518 removed from the catalog, arriving from the other side.
-        Offer(name: "Garmin",      tagline: "Watch activities, in your feed",        group: "Fitness",   connectable: true,
+        Offer(name: "Garmin",      tagline: "",        group: "Fitness",   connectable: true,
               added: day(2026, 9, 6), unavailableOnMac: true),
         // Duolingo (2026-09-16, prd §776) — the first seat in "Learning", and
         // its own group rather than a lodger in Fitness: a practice day is a
         // habit, but a shelf that files a language course under exercise says
         // something untrue about both. The group joins the Life category, so
         // nothing about the dock, its glyphs or the website's categories moves.
-        Offer(name: "Duolingo",    tagline: "Every day you practise",                group: "Learning",  connectable: true,
+        Offer(name: "Duolingo",    tagline: "",                group: "Learning",  connectable: true,
               needsSetup: true, added: day(2026, 9, 16)),
-        Offer(name: "Cal.com",     tagline: "Bookings land in your feed",            group: "Schedule",  connectable: true,
+        Offer(name: "Cal.com",     tagline: "",            group: "Schedule",  connectable: true,
               needsSetup: true),
-        Offer(name: "Calendly",    tagline: "Meetings join your things",             group: "Schedule",  connectable: true,
+        Offer(name: "Calendly",    tagline: "",             group: "Schedule",  connectable: true,
               needsSetup: true),
-        Offer(name: "Todoist",     tagline: "Tasks beside your lists",               group: "Schedule",  connectable: true,
+        Offer(name: "Todoist",     tagline: "",               group: "Schedule",  connectable: true,
               needsSetup: true),
-        Offer(name: "Pinterest",   tagline: "Your pins, and boards you follow",       group: "Images",    connectable: true,
+        Offer(name: "Pinterest",   tagline: "",       group: "Images",    connectable: true,
               needsSetup: true),
-        Offer(name: "Raindrop",    tagline: "Bookmarks and collections",             group: "Saves",     connectable: true,
+        Offer(name: "Raindrop",    tagline: "",             group: "Saves",     connectable: true,
               needsSetup: true),
-        Offer(name: "Readwise",    tagline: "Highlights stay with you",              group: "Reading",   connectable: true,
+        Offer(name: "Readwise",    tagline: "",              group: "Reading",   connectable: true,
               needsSetup: true),
-        Offer(name: "Apple Journal", tagline: "Your journal entries",              group: "Notes",     connectable: true,
+        Offer(name: "Apple Journal", tagline: "",              group: "Notes",     connectable: true,
               needsSetup: true),
         Offer(name: "Day One",     tagline: "Import your journal",                   group: "Notes",     connectable: true,
               needsSetup: true),
@@ -575,9 +575,9 @@ enum BridgeCatalog {
         // reads the way Substack does, with no server and no MTProto. The
         // export import is the second door, and the reason the two share one
         // seat rather than two tiles.
-        Offer(name: "Telegram",    tagline: "Follow public channels",                group: "Network",   connectable: true,
+        Offer(name: "Telegram",    tagline: "",                group: "Network",   connectable: true,
               needsSetup: true, added: day(2026, 8, 23)),
-        Offer(name: "Bluesky",     tagline: "Any account — posts, feeds, likes",             group: "Network",   connectable: true,
+        Offer(name: "Bluesky",     tagline: "",             group: "Network",   connectable: true,
               needsSetup: true),
         // Network, beside the open protocols — and the opposite of them
         // (2026-07-31, prd §245). Bluesky connects with a name
@@ -588,13 +588,13 @@ enum BridgeCatalog {
         // what you TAPPED arrives as a named link. Saying that here is the
         // honesty rule — the alternative is a seat that reads as full search
         // over your saves and isn't.
-        Offer(name: "Instagram",   tagline: "Notifications and saves, as they happen", group: "Network", connectable: true,
+        Offer(name: "Instagram",   tagline: "", group: "Network", connectable: true,
               needsSetup: true, added: day(2026, 7, 31)),
         // Instagram's live door on threads.com (prd §1130, §1131). Meta's
         // Threads API needs a server and App Review and carries no
         // notifications, so this signs in on the web the way Instagram does.
         // No export act: the live read is the whole seat.
-        Offer(name: "Threads",     tagline: "Likes, replies and follows, as they happen", group: "Network", connectable: true,
+        Offer(name: "Threads",     tagline: "", group: "Network", connectable: true,
               needsSetup: true, added: day(2026, 10, 5)),
         // The second import-grade social seat, beside Instagram (2026-07-31, prd
         // §246). Snapchat has no keyless read either — and less than no read:
@@ -616,7 +616,7 @@ enum BridgeCatalog {
         // AND the one thing this import does that Instagram's can't — TikTok's
         // oEmbed endpoint is live and keyless, so a bare saved link can be
         // given back its caption, its creator and its cover.
-        Offer(name: "TikTok",      tagline: "Likes, comments and follows, as they happen", group: "Network", connectable: true,
+        Offer(name: "TikTok",      tagline: "", group: "Network", connectable: true,
               needsSetup: true, added: day(2026, 8, 2)),
         // The fourth import-grade social seat, and the one with the least
         // choice behind it (2026-08-02, prd §280). Instagram and TikTok at
@@ -640,11 +640,11 @@ enum BridgeCatalog {
         // seat to hold, they have never been in the export, and an offer that
         // let "your saves" imply them would be selling something it can't
         // deliver. §245's rule, applied to the one absence that matters here.
-        Offer(name: "X",           tagline: "Your posts and likes, searchable",     group: "Network",   connectable: true,
+        Offer(name: "X",           tagline: "",     group: "Network",   connectable: true,
               needsSetup: true, added: day(2026, 8, 2)),
-        Offer(name: "Steam",       tagline: "What you play, in your feed",           group: "Games",     connectable: true,
+        Offer(name: "Steam",       tagline: "",           group: "Games",     connectable: true,
               needsSetup: true),
-        Offer(name: "Obsidian",    tagline: "Your vault, beside your things",        group: "Notes",     connectable: true,
+        Offer(name: "Obsidian",    tagline: "",        group: "Notes",     connectable: true,
               needsSetup: true),
         // Any folder, not just an Obsidian vault (2026-07-27) — Files
         // generalizes the same "point at a folder" mechanism past Markdown to
@@ -665,11 +665,11 @@ enum BridgeCatalog {
         // link, never "shared with me" — the reasoning the user gave for
         // building this at all: a stranger sharing something with you can
         // never make it appear here.
-        Offer(name: "Dropbox",     tagline: "Your files, without the notifications", group: "Storage", connectable: true,
+        Offer(name: "Dropbox",     tagline: "", group: "Storage", connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),
-        Offer(name: "Twitch",      tagline: "Live follows land in your feed",        group: "Watching",  connectable: true,
+        Offer(name: "Twitch",      tagline: "",        group: "Watching",  connectable: true,
               needsSetup: true),
-        Offer(name: "Substack",    tagline: "Follow any publication",                group: "Reading",   connectable: true,
+        Offer(name: "Substack",    tagline: "",                group: "Reading",   connectable: true,
               needsSetup: true),
         Offer(name: "Kindle",      tagline: "Import your highlights",                group: "Reading",   connectable: true,
               needsSetup: true),
@@ -677,7 +677,7 @@ enum BridgeCatalog {
         // has no dollar figure, so it cannot sit in the One Wallet, and
         // finance is its topic, not its kind. See `NerdWalletBridge` for why
         // it is one switch and not a follow list.
-        Offer(name: "NerdWallet",  tagline: "Personal-finance news, as it lands", group: "Reading",  connectable: true,
+        Offer(name: "NerdWallet",  tagline: "Personal-finance news", group: "Reading",  connectable: true,
               needsSetup: true, added: day(2026, 9, 15)),
         // Reading group, beside Kindle (2026-07-28, prd §224, corrected same
         // day from an initial Notes placement) — both are import-only, no
@@ -687,11 +687,11 @@ enum BridgeCatalog {
         // Format), so one offer, one parser, one screen covers both —
         // Safari's Reading List rides along as a folder inside that same
         // file, for free.
-        Offer(name: "Bookmarks",   tagline: "Safari and Chrome, imported",                 group: "Reading",   connectable: true,
+        Offer(name: "Bookmarks",   tagline: "Import from Safari and Chrome",                 group: "Reading",   connectable: true,
               needsSetup: true, added: day(2026, 7, 28)),
-        Offer(name: "Podcasts",    tagline: "Follow any show",                       group: "Listening", connectable: true,
+        Offer(name: "Podcasts",    tagline: "",                       group: "Listening", connectable: true,
               needsSetup: true),
-        Offer(name: "Contacts",    tagline: "The people you know",         group: "People",    connectable: true),
+        Offer(name: "Contacts",    tagline: "",         group: "People",    connectable: true),
     ]
 
     /// What every screen actually reads (Apps page, Home tile count, the

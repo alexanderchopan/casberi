@@ -1044,16 +1044,20 @@ struct AppsScreen: View {
                         // count-up so the proof arrives rather than sitting
                         // (the same grammar the setup screen's result wears).
                         // The other tiers stay plain, localizable copy.
-                        Group {
-                            if entry.tier == 2 {
-                                CountUpText(text: subline(entry))
-                            } else {
-                                Text(LocalizedStringKey(subline(entry)))
+                        // No line when an addable app has nothing the name
+                        // doesn't already say (prd §1148).
+                        if !subline(entry).isEmpty {
+                            Group {
+                                if entry.tier == 2 {
+                                    CountUpText(text: subline(entry))
+                                } else {
+                                    Text(LocalizedStringKey(subline(entry)))
+                                }
                             }
+                            .dsText(.subhead12)
+                            .foregroundStyle(sublineColor(entry))
+                            .lineLimit(1)
                         }
-                        .dsText(.subhead12)
-                        .foregroundStyle(sublineColor(entry))
-                        .lineLimit(1)
                     }
                     Spacer(minLength: DS.Space.s2)
                     // THE VERB IS THE ROW'S LAST WORD (prd §746) — the

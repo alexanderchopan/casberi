@@ -4,39 +4,30 @@ import Testing
 
 /// **A renamed app's records converge to ONE row under its current name**
 /// (prd §1147): two "Frames Devnet" records drew as two rows in Settings ›
-/// Apps after the seat became Hegotá Frames.
-@MainActor
+/// Apps after the seat became Hegotá Frames. Pure: `BridgeStore.converged`,
+/// never a store, whose write would replace the simulator's saved records.
 struct BridgeConvergeTests {
 
-    @Test func twinsUnderAnOldNameBecomeOneUnderTheNewName() {
-        let store = BridgeStore(bridges: [
-            BridgeApp(id: "frames", name: "Frames Devnet", status: .connected, statusLine: "A", can: []),
-            BridgeApp(id: "frames", name: "Frames Devnet", status: .connected, statusLine: "B", can: []),
-            BridgeApp(id: "github", name: "GitHub", status: .connected, statusLine: "", can: []),
-        ])
-        store.convergeNames(Corpus.canonicalSource)
-        let names = store.bridges.map(\.name)
-        #expect(names.filter { $0 == "Hegotá Frames" }.count == 1)
-        #expect(!names.contains("Frames Devnet"))
-        #expect(names.contains("GitHub"))
-        #expect(store.bridges.count == 2)
+    private static func app(_ name: String, _ status: BridgeApp.Status = .connected) -> BridgeApp {
+        BridgeApp(id: "x", name: name, status: status, statusLine: "", can: [])
     }
 
-    @Test func aLiveTwinWinsOverAPausedOne() {
-        let store = BridgeStore(bridges: [
-            BridgeApp(id: "frames", name: "Hegotá Frames", status: .paused, statusLine: "", can: []),
-            BridgeApp(id: "frames", name: "Frames Devnet", status: .connected, statusLine: "", can: []),
-        ])
-        store.convergeNames(Corpus.canonicalSource)
-        #expect(store.bridges.count == 1)
-        #expect(store.bridges.first?.status == .connected)
+    @Test func twinsUnderAnOldNameBecomeOneUnderTheNewName() throws {
+        let out = try #require(BridgeStore.converged(
+            [Self.app("Frames Devnet"), Self.app("Frames Devnet"), Self.app("GitHub")],
+            current: Corpus.canonicalSource))
+        #expect(out.map(\.name) == ["Hegotá Frames", "GitHub"])
     }
 
-    @Test func nothingToDoLeavesTheStoreAlone() {
-        let store = BridgeStore(bridges: [
-            BridgeApp(id: "github", name: "GitHub", status: .connected, statusLine: "", can: []),
-        ])
-        store.convergeNames(Corpus.canonicalSource)
-        #expect(store.bridges.map(\.name) == ["GitHub"])
+    @Test func aLiveTwinWinsOverAPausedOne() throws {
+        let out = try #require(BridgeStore.converged(
+            [Self.app("Hegotá Frames", .paused), Self.app("Frames Devnet")],
+            current: Corpus.canonicalSource))
+        #expect(out.count == 1)
+        #expect(out.first?.status == .connected)
+    }
+
+    @Test func nothingToDoIsNil() {
+        #expect(BridgeStore.converged([Self.app("GitHub")], current: Corpus.canonicalSource)?.count == nil)
     }
 }
