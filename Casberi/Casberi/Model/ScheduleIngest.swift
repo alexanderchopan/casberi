@@ -236,10 +236,8 @@ enum ScheduleIngest {
 
     @MainActor
     private static func ingestReminders(store: EKEventStore, context: ModelContext) async -> Int? {
-        let predicate = store.predicateForReminders(in: nil)
-        let reminders: [EKReminder] = await withCheckedContinuation { cont in
-            store.fetchReminders(matching: predicate) { cont.resume(returning: $0 ?? []) }
-        }
+        let read = await allReminders(in: store)
+        let reminders = read ?? []
 
         let existing = IngestSupport.thingsByRef(context, source: "Reminders")
         var seen = Set<String>()
@@ -288,8 +286,27 @@ enum ScheduleIngest {
             context.insert(thing)
             added += 1
         }
-        reconcileReminders(seen: seen, context: context)
+        if read != nil { reconcileReminders(seen: seen, context: context) }
         return added
+    }
+
+    /// Every reminder on the account, completed ones included, or nil when
+    /// EventKit could not say. `fetchReminders` answers nil on a failed read,
+    /// and that nil was folded into `[]`, so the reconcile could not tell a
+    /// failure from an account with no reminders left and refused both (user
+    /// report 2026-10-06: "Try cloaks", deleted in Reminders, stayed). An
+    /// empty answer is believed only while the account still has a list: no
+    /// lists at all is iCloud signed out or not yet loaded, not "you deleted
+    /// everything".
+    @MainActor
+    private static func allReminders(in store: EKEventStore) async -> [EKReminder]? {
+        let predicate = store.predicateForReminders(in: nil)
+        let reminders: [EKReminder]? = await withCheckedContinuation { cont in
+            store.fetchReminders(matching: predicate) { cont.resume(returning: $0) }
+        }
+        guard let reminders else { return nil }
+        if reminders.isEmpty, store.calendars(for: .reminder).isEmpty { return nil }
+        return reminders
     }
 
     /// The delete half alone, for a device where the seat is NOT connected
@@ -314,11 +331,7 @@ enum ScheduleIngest {
         var probe = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
         probe.fetchLimit = 1
         guard ((try? context.fetchCount(probe)) ?? 0) > 0 else { return nil }
-        let store = EKEventStore()
-        let predicate = store.predicateForReminders(in: nil)
-        let reminders: [EKReminder] = await withCheckedContinuation { cont in
-            store.fetchReminders(matching: predicate) { cont.resume(returning: $0 ?? []) }
-        }
+        guard let reminders = await allReminders(in: EKEventStore()) else { return nil }
         let seen = Set(reminders.map { "ekreminder:\($0.calendarItemIdentifier)" })
         return reconcileReminders(seen: seen, context: context)
     }
@@ -333,13 +346,12 @@ enum ScheduleIngest {
     /// `ekreminder:` rows are candidates; a row without that ref did not come
     /// from this read and its absence says nothing.
     ///
-    /// NEVER ON AN EMPTY READ (`delete-guard-audit.py`). The read returns
-    /// completed reminders too, so empty means every list on the account is
-    /// empty, or EventKit answered nil — and this now runs on every device
-    /// with access, each of which would wipe the rows off all of them.
+    /// NEVER ON A FAILED READ (`delete-guard-audit.py`): both callers reach
+    /// here only with `allReminders`' non-nil answer. An EMPTY one is trusted
+    /// — it returns completed reminders too, so empty means the person's
+    /// lists hold nothing, and the last reminder they deleted goes too.
     @MainActor @discardableResult
     private static func reconcileReminders(seen: Set<String>, context: ModelContext) -> Int {
-        guard !seen.isEmpty else { return 0 }
         let source = "Reminders"
         let rows = (try? context.fetch(FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == source }))) ?? []

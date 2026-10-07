@@ -104,6 +104,13 @@ KNOWN_SAFE = {
         "walk never reaches the reconcile; an empty book really is empty.",
          'try store.enumerateContacts'),
 
+    ("ScheduleIngest.swift", "reconcileReminders"):
+        ("both callers reach it only with `allReminders`' non-nil answer: "
+         "EventKit's nil read and an account with no reminder lists return "
+         "nil and never reconcile; an empty answer over existing lists means "
+         "the last reminder was deleted (user report 2026-10-06).",
+         'store.calendars(for: .reminder).isEmpty { return nil }'),
+
     # Empty is MEANINGFUL here, and pruning on it is the intended behaviour —
     # the opposite of the rule this audit enforces, which is why they are
     # named rather than made to fake a guard.
