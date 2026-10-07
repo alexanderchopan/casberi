@@ -4297,6 +4297,18 @@ enum ProbeHooks {
                       item.byYou ? "byYou" : "header")
             }
         },
+        // `-subscriptionTrack "<Name>:<monthly price>"` — track a subscription
+        // by hand, as the Track tray's form does, so its sheet's Edit can be
+        // driven headlessly; logs `subscriptionTrack:` with the stored entry.
+        Hook(key: "subscriptionTrack") { spec, context in
+            let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
+            guard let name = parts.first, let amount = Double(parts.count > 1 ? parts[1] : "0") else { return }
+            let entry = SubscriptionStore.shared.add(name: name, amount: amount, yearly: false,
+                                                     anchor: SubscriptionAddTray.firstRenewal(yearly: false),
+                                                     paysWith: nil, site: nil)
+            NSLog("[Casberi] subscriptionTrack: %@ | %@", entry?.name ?? "refused", entry?.id ?? "")
+            Task { await SubscriptionsReading.shared.refresh(context) }
+        },
         // `-addressBook "<Name>:<address>[,<Name>:<address>…]"|clear` — seed the
         // address book headlessly (prd §169). `clear` empties it. Splits each
         // pair on the LAST colon so a name may carry its own.

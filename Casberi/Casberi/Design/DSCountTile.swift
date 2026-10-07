@@ -22,6 +22,10 @@ struct DSCountTile: View {
     /// across, prd §1166), so every word stands whole, as Reminders' and
     /// Passwords' grids draw theirs.
     var inline: Bool = false
+    /// The widest figure in the box, inline only: every figure stands in a
+    /// column that wide, right-aligned, so every word starts at one edge
+    /// (user: "need to make indentation even", of "13 Apps" over "0 Cards").
+    var widest: Int? = nil
     let action: () -> Void
 
     private var shape: RoundedRectangle {
@@ -43,10 +47,16 @@ struct DSCountTile: View {
                             .frame(width: 24)
                             .foregroundStyle(isOn ? Color.white : DS.textSecondary)
                     } else {
-                        Text((count ?? 0).formatted())
-                            .dsText(.heading24)
-                            .monospacedDigit()
-                            .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textPrimary)
+                        ZStack(alignment: .trailing) {
+                            // The column: the widest figure, unseen.
+                            if let widest {
+                                Text(widest.formatted()).dsText(.heading24).monospacedDigit().hidden()
+                            }
+                            Text((count ?? 0).formatted())
+                                .dsText(.heading24)
+                                .monospacedDigit()
+                                .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textPrimary)
+                        }
                     }
                     Text(label)
                         .dsText(.body17)
@@ -54,7 +64,9 @@ struct DSCountTile: View {
                         .minimumScaleFactor(0.8)
                         .foregroundStyle(isOn ? Color.white : wants ? DS.attentionInk : DS.textPrimary)
                 }
-                .padding(.horizontal, DS.Space.s3)
+                // s2, not s3: the figure column leaves "Subscriptions" room to
+                // stand whole beside a two-digit count.
+                .padding(.horizontal, DS.Space.s2)
                 .padding(.vertical, DS.Space.s1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background { shape.fill(isOn ? DS.tint : Color.clear) }

@@ -292,11 +292,12 @@ struct SettingsHome: View {
         // A broken connection says so in its kind's WORD (the tiles' rule,
         // never a dot), so it shows from every other kind too.
         let troubled: Set<SettingsScope> = connectedApps.contains { $0.status == .attention } ? [.apps] : []
+        let widest = counts.map(\.1).max()
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .leading), count: 2),
                          alignment: .leading, spacing: DS.Space.s1) {
             ForEach(counts, id: \.0) { kind, n, label in
                 DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
-                            wants: troubled.contains(kind), inline: true) {
+                            wants: troubled.contains(kind), inline: true, widest: widest) {
                     if casberiOpen { casberiOpen = false }
                     pick(kind)
                 }

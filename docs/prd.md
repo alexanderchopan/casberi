@@ -65064,3 +65064,12 @@ Every row in Settings leads with a `DS.Mark.notice` (38pt) icon, Today's (§1157
 3. **The box is the eight categories, two across** (`TokensScope.box`), as Settings' eight counts stand. Pressing the picked one again is still the watchlist.
 
 **Seen** on a private simulator over the demo: the watchlist with Watchlist lit on the bar and the box's eight categories; Work picked, lit in the box, its companies listed. **Not seen:** the iPad and Mac strip, Alerts.
+
+## §1172 — Four small fixes: the box's figures share a column, a subscription in your head, Edit on a subscription, and Alerts' footnote goes (user, 2026-10-07: "need to make indentation even look how people is not indented where feeds and rest of words are same w/ apps"; of the Track tray, "need a way here to add a new subscription. like if one is in my head"; "need a way to edit subscriptions in the thing sheet"; of "Checked on this phone when iOS lets Casberi refresh. No server watches for you.", "get rid of this.")
+
+1. **Every figure in Settings' box stands in one column** as wide as the widest count, right-aligned (`DSCountTile.widest`), so every word starts at one edge; the inline tile's sides are `s2`, so "Subscriptions" stands whole beside two digits.
+2. **What you type leads the Track tray** ("Track “Gym”", Any other name) and the field says it: "Search, or type any name". It was the last row, under five apps, and the field said only Name.
+3. **A subscription you added has Edit** on its sheet, before Stop tracking: the Track tray opens on its form, filled (price, Month or Year, next renewal, what pays it, website), and Save replaces it, under a new name if you gave one (the sheet then closes, its id gone). A plan found only on a card has no Edit: there is nothing of yours to change. Where you added one a card also shows, the card's price leads (§1105) and yours reads as "Up from".
+4. **Alerts' footnote is deleted** (`AlertsSection`): how alerts are checked is not something the controls need explained.
+
+`-subscriptionTrack "<Name>:<price>"` tracks one by hand, for driving Edit headlessly. **Seen** on a private simulator over the demo: the box's figures in one column; Notion's sheet with Edit, its form filled, Save closing back to the sheet. **Not seen:** the Track tray's typed row (a simulator with no keyboard), a rename.

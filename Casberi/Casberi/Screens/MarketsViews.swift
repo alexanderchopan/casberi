@@ -131,7 +131,6 @@ struct WatchAlertsSection: View {
                 alertRow(alert)
             }
             addMenu
-            DSFootnote(Text("Checked on this phone when iOS lets Casberi refresh. No server watches for you."))
         }
         .alert(Text("Alert at a price"), isPresented: $customOpen) {
             TextField(String(localized: "Price in dollars"), text: $customText)

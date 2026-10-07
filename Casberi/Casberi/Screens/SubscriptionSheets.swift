@@ -20,6 +20,9 @@ struct SubscriptionSheet: View {
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
     @State private var confirmingRemove = false
+    /// What you added, opened in the Track tray to change (user: "need a way
+    /// to edit subscriptions in the thing sheet").
+    @State private var editing: Subscriptions.Manual?
 
     private var item: Subscriptions.Item? {
         SubscriptionsReading.shared.items.first { $0.id == id }
@@ -49,6 +52,17 @@ struct SubscriptionSheet: View {
             }
         } message: {
             Text("Only what you added goes. A charge a card shows stays.")
+        }
+        // Renamed in the editor, the plan is under another id: this page has
+        // nothing left to show, so it closes onto the list that holds it.
+        .onChange(of: item == nil) { _, gone in if gone { dismiss() } }
+        .sheet(item: $editing) { manual in
+            SubscriptionAddTray(editing: manual)
+                // A Catalyst sheet does not inherit the presenter's
+                // environment (prd §872).
+                .environment(chrome)
+                .environment(store)
+                .environment(\.modelContext, modelContext)
         }
     }
 
@@ -124,6 +138,10 @@ struct SubscriptionSheet: View {
             out.append(.init(id: "manage", icon: SubscriptionWords.wayOutGlyph,
                              title: Text("Manage on \(site)")) { openURL(url) })
         }
+        if let manualID = item.manualID,
+           let manual = SubscriptionStore.shared.entries[manualID] {
+            out.append(.init(id: "edit", icon: "pencil", title: Text("Edit")) { editing = manual })
+        }
         if item.manualID != nil {
             out.append(.init(id: "stop", icon: "trash", title: Text("Stop tracking"), role: .destructive) {
                 confirmingRemove = true
@@ -166,12 +184,30 @@ struct SubscriptionSheet: View {
 struct SubscriptionAddTray: View {
     /// Opens on this pick's price instead of the list.
     let prefill: Pick?
+    /// A subscription you added, opened on its form to change: Save replaces
+    /// it, under its new name if you gave one.
+    let editing: Subscriptions.Manual?
 
     init(prefill: Pick? = nil) {
         self.prefill = prefill
+        self.editing = nil
         // On the price from the first frame, never the list for one.
         _picked = State(initialValue: prefill)
         _site = State(initialValue: prefill?.site ?? "")
+    }
+
+    init(editing manual: Subscriptions.Manual) {
+        let pick = Pick(name: manual.name, site: manual.site)
+        self.prefill = pick
+        self.editing = manual
+        _picked = State(initialValue: pick)
+        _site = State(initialValue: manual.site ?? "")
+        _price = State(initialValue: manual.amount.formatted(.number.grouping(.never).precision(.fractionLength(0...2))))
+        _yearly = State(initialValue: manual.yearly)
+        _renews = State(initialValue: manual.anchor)
+        _renewsTouched = State(initialValue: true)
+        _paysWith = State(initialValue: manual.paysWith)
+        _more = State(initialValue: true)
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -202,11 +238,12 @@ struct SubscriptionAddTray: View {
     }
 
     var body: some View {
-        DSTray(title: SubscriptionWords.track, height: 640, detents: [.large]) {
+        DSTray(title: editing == nil ? SubscriptionWords.track : String(localized: "Edit"),
+               height: 640, detents: [.large]) {
             if let picked { form(picked) } else { list }
         }
         .task {
-            if prefill != nil, picked != nil { focus = .price }
+            if prefill != nil, picked != nil, editing == nil { focus = .price }
             await SubscriptionsReading.shared.refresh(modelContext)
         }
     }
@@ -240,6 +277,16 @@ struct SubscriptionAddTray: View {
         let apps = Self.apps(matching: typed).filter { !SubscriptionPlans.isTracked($0.name, among: above) }
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
+                // ONE IN YOUR HEAD (user: "need a way here to add a new
+                // subscription. like if one is in my head"): what you typed
+                // leads, so a name no list holds is the first row, not the
+                // last under five apps.
+                if !typed.isEmpty, !apps.contains(where: { $0.name.caseInsensitiveCompare(typed) == .orderedSame }) {
+                    pickRow(typed, title: String(localized: "Track \u{201C}\(typed)\u{201D}"),
+                            line: Text("Any other name")) {
+                        choose(Pick(name: typed, site: nil))
+                    }
+                }
                 if !suggestions.isEmpty {
                     DSTrayHead(String(localized: "From your cards"))
                     ForEach(suggestions) { suggestionRow($0) }
@@ -262,18 +309,12 @@ struct SubscriptionAddTray: View {
                         }
                     }
                 }
-                if !typed.isEmpty, !apps.contains(where: { $0.name.caseInsensitiveCompare(typed) == .orderedSame }) {
-                    pickRow(typed, title: String(localized: "Track \u{201C}\(typed)\u{201D}"),
-                            line: Text("Any other name")) {
-                        choose(Pick(name: typed, site: nil))
-                    }
-                }
             }
             .padding(.bottom, 96)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
-            DSTraySearchField(placeholder: String(localized: "Name"), text: $query,
+            DSTraySearchField(placeholder: String(localized: "Search, or type any name"), text: $query,
                               focus: $searchFocused, capitalization: .words, submitLabel: .next,
                               onSubmit: {
                                   guard !trimmedQuery.isEmpty else { return }
@@ -419,8 +460,13 @@ struct SubscriptionAddTray: View {
                     }
                     .padding(.vertical, DS.Space.s2)
                 }
-                DSSlabButton(title: String(localized: "Track \(pick.name)"), enabled: amount != nil) {
+                DSSlabButton(title: editing == nil ? String(localized: "Track \(pick.name)") : String(localized: "Save"),
+                             enabled: amount != nil) {
                     guard let amount else { return }
+                    if let editing {
+                        save(over: editing, name: pick.name, amount: amount)
+                        return
+                    }
                     add(name: pick.name, amount: amount, currency: "USD", yearly: yearly,
                         anchor: renews, paysWith: paysWith, site: site)
                 }
@@ -469,6 +515,17 @@ struct SubscriptionAddTray: View {
         self.site = ""
         self.more = false
         self.focus = nil
+    }
+
+    /// Replaces what you added: a new name keeps one record, not two.
+    private func save(over old: Subscriptions.Manual, name: String, amount: Double) {
+        if Subscriptions.key(name) != old.id { SubscriptionStore.shared.remove(old.id) }
+        guard SubscriptionStore.shared.add(name: name, amount: amount, currency: old.currency, yearly: yearly,
+                                           anchor: renews, paysWith: paysWith, site: site) != nil else { return }
+        DSHaptic.selection()
+        chrome.flash(String(localized: "Saved \(name)"))
+        Task { await SubscriptionsReading.shared.refresh(modelContext) }
+        dismiss()
     }
 
     /// Month or Year, and the renewal follows it until the person sets one.
