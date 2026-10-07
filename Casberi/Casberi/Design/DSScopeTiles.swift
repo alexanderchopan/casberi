@@ -145,21 +145,35 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             // scroll, and a verb (Markets' Add) is pinned after them, so it
             // is never off the edge of a long row — a verb nobody can see is
             // a verb nobody can find.
-            HStack(spacing: DS.Space.s1) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: DS.Space.s1) {
-                        ForEach(sections.filter { !verbs.contains($0) }) { section in
-                            tile(section)
-                                .frame(width: Self.stripTileWidth)
-                        }
+            //
+            // A row that FITS is as wide as its tiles (prd §1177, user: "make
+            // this capsule shorter and get rid of the empty space between
+            // voice and new"): the scroll view took every point it was
+            // offered, so Notes' New stood at the far edge of an empty run.
+            // Only a row too long for the bar scrolls.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DS.Space.s1) {
+                    ForEach(sections.filter { !verbs.contains($0) } + sections.filter { verbs.contains($0) }) { section in
+                        tile(section)
+                            .frame(width: Self.stripTileWidth)
                     }
                 }
-                // With a verb pinned after it, the scopes clip where the verb
-                // begins, or they slide under it.
-                .scrollClipDisabled(verbs.isEmpty)
-                ForEach(sections.filter { verbs.contains($0) }) { section in
-                    tile(section)
-                        .frame(width: Self.stripTileWidth)
+                HStack(spacing: DS.Space.s1) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: DS.Space.s1) {
+                            ForEach(sections.filter { !verbs.contains($0) }) { section in
+                                tile(section)
+                                    .frame(width: Self.stripTileWidth)
+                            }
+                        }
+                    }
+                    // With a verb pinned after it, the scopes clip where the verb
+                    // begins, or they slide under it.
+                    .scrollClipDisabled(verbs.isEmpty)
+                    ForEach(sections.filter { verbs.contains($0) }) { section in
+                        tile(section)
+                            .frame(width: Self.stripTileWidth)
+                    }
                 }
             }
         } else if sections.count > 1 {

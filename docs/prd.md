@@ -65106,3 +65106,12 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 4. **Beside the rail (iPad, Mac) the field still leads the card** (`searchField`): the face is at the top there, so the top is the near edge.
 
 **Seen** on the simulator over the demo: the tray at rest with the capsule beside the face, and `-traySearch "ca"` with results above it. **Not seen:** the typing layout, because a headless simulator draws no software keyboard. **Note:** the code landed inside b36774d3 (§1175), whose whole-file add swept this session's uncommitted hunks; this entry is its record.
+
+## §1177 — A room's bar is as wide as its tiles, and the tray's search takes its slot (user, 2026-10-07, of Notes' bar: "we nee to make this capsule shorter and get rid of the empty space between voice and new", and "how should we think about the search bar interaction when this is visible?"; amends §1081's strip and §1176 item 1)
+
+**Why.** The strip's scroll view took every point the bar offered it, so Notes' four tiles stood in a capsule the width of the screen with New pinned at the far end of an empty run. And §1176's search capsule opened beside the face, exactly where a room's bar already stood, with the bar blurred under it.
+
+1. **A strip that fits is as wide as its tiles** (`DSScopeTiles`, `ViewThatFits`): scopes then verbs in one run, nothing pinned apart. Only a row too long for the bar scrolls, its verb pinned after it as §1081 ruled. Every room bar on the phone hugs (Notes, Markets).
+2. **The tray's search takes the bar's slot**: the capsule starts at `DSDock.agentSeat`, the bar's own leading edge, at the bar's height, and the bar steps out while the tray is up (`DSScopeDock`, `!chrome.roomsTray`). Opening the tray reads as the room's bar turning into search; closing it brings the bar back.
+
+**Seen** on the simulator over the demo: Notes' bar as All · Folders · Voice · New with no gap, and the tray over Notes with the bar gone and Search in its place. **Not seen:** a strip long enough to scroll, and the bar coming back as the tray closes.

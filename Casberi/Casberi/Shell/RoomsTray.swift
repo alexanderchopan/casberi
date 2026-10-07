@@ -564,10 +564,9 @@ struct RoomsTray: View {
     private func searchCapsule(screen: CGSize) -> some View {
         let width = min(screen.width * Self.widthShare, Self.maxWidth)
         let typing = chrome.keyboardUp
-        // The face's column: its centre is the rows' lead centre, and the
-        // capsule starts a step past its unfolded edge.
-        let beside = typing ? DSRoomChassis.inset
-            : DSRoomChassis.rowLeadCentre + DSDock.agentSize(minimized: false) / 2 + DS.Space.s3
+        // The room bar's slot (`DSScopeDock`), which fades while the tray
+        // is up, so the search takes the bar's place (prd §1177).
+        let beside = typing ? DSRoomChassis.inset : DSDock.agentSeat(minimized: false)
         // Typing, the unfolded seat's row, so the card above keeps its gap.
         let height = typing ? DSDock.agentSize(minimized: false) : DSDock.agentSize(fold: chrome.fold)
         let bottom = typing ? DSDock.agentBottomInset(minimized: false) : DSDock.agentBottomInset(fold: chrome.fold)

@@ -53,7 +53,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The tray's search narrows the grid in place. The search and the You row stay pinned above the scroll (§1015). A mark has no hold menu (§1033).
 - You doors, in this order: Home, Notes, Markets, Apps, Addresses, Settings (§1012, §1111, §1123). While the tray is up, the face shows the octopus (§1009). In the tray You is a row like the others: your name, else You (§1133d), Home's disc and the other five places on one line (§1133, §1133c).
 - Notes, Markets, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title reads "You · <place>"; a swipe from any walks from Home's place (§1127, §1129, §1133).
-- Two controls: the face's tray says where (a category, or any app or account in its row, which shows them all, the name on its own line and the icons six across under it; the room's act second; Search filters the tray as you type, then hands the words to Find, §1133b, §1133c, §1133e; on the phone it is its own capsule beside the face and the card grows up from it, beside the rail it leads the card, §1176), the tiles say what. No room draws a pill; the title is a label, the category pink, " · " and the pick (§1133). Nothing pushes on the phone: what you open rises as one sheet (§1132). The rail's face opens the same tray on the iPad and the Mac (§1133f).
+- Two controls: the face's tray says where (a category, or any app or account in its row, which shows them all, the name on its own line and the icons six across under it; the room's act second; Search filters the tray as you type, then hands the words to Find, §1133b, §1133c, §1133e; on the phone it is its own capsule in the room bar's slot beside the face, the bar stepping out while the tray is up, and the card grows up from it, beside the rail it leads the card, §1176, §1177), the tiles say what. No room draws a pill; the title is a label, the category pink, " · " and the pick (§1133). Nothing pushes on the phone: what you open rises as one sheet (§1132). The rail's face opens the same tray on the iPad and the Mac (§1133f).
 - A category shows in the tray only while it holds a connected seat (§977).
 - No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). No room draws an account door; an app's settings open from its row in Apps (§1050f).
 - On a pushed screen the dock's seat is the back door. The system back button is hidden at the resolver, and the edge swipe goes through `DSSwipeBack` (§767). Content comes to rest clear of the seat via `.dsSeatClearance()` (§829).
@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1307 of 1371 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1308 of 1372 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1430,7 +1430,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1078 — The One Wallet, five changes: your own moves are one row, Holdings dates a stored reading and the total names a card… (amended by §1105)
 - §1079 — Work and Reading show one row per object, Work's box is its newest event, and Social gets its threads and faces back (amended by §1080, §1109)
 - §1080 — Work's Coming up leads with what needs you, then what is due
-- §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082)
+- §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082, §1177)
 - §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the…
 - §1083 — The cover says "Here's a demo." in words
 - §1084 — Logos: tokens named, Holdings, Create and Send from this phone, and a stopped node or a reset notifies
@@ -1530,7 +1530,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1173 — The demo has three calendars
 - §1174 — A chart's windows are tiles, and the hour is one of them
 - §1175 — Pin is deleted
-- §1176 — The tray's search is its own capsule beside the face
+- §1176 — The tray's search is its own capsule beside the face (amended by §1177)
+- §1177 — A room's bar is as wide as its tiles, and the tray's search takes its slot
 
 ## Dead rulings → what replaced them (generated)
 
