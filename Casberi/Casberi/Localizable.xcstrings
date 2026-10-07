@@ -74211,6 +74211,34 @@
         }
       }
     },
+    "Forgot %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se olvidó %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を削除しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 항목을 삭제했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已移除 %@。"
+          }
+        }
+      }
+    },
     "Found a time: %@" : {
       "localizations" : {
         "es" : {
@@ -103400,6 +103428,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "确定"
+          }
+        }
+      }
+    },
+    "Observer · nothing Casberi shows" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer · nada que Casberi muestre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer · Casberi で表示する項目なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer · Casberi에서 표시할 항목 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer · 没有 Casberi 显示的内容"
+          }
+        }
+      }
+    },
+    "Observer · reads your chats" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer · lee tus chats"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer · チャットを読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer · 채팅을 읽음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer · 读取你的聊天"
           }
         }
       }

@@ -6,52 +6,75 @@ import UIKit
 /// beside the node and answers a paired device's reads over pinned TLS 1.3,
 /// each request signed with a per-device HMAC key, so the node's own API
 /// (writes included) never has to face the network. The wire is
-/// `LogosObserverWire`; this file is the connection, the key and the pairing.
+/// `LogosObserverWire`; this file is the connections, the keys and the pairings.
 ///
-/// **One pairing at a time**, as there is one node at a time
-/// (`LogosStore.node`). When paired, the node's base is the Observer's own
-/// address and port, over TLS, and `LogosIngest.readNode` reads through here.
+/// **Several Observers, routed by scope (prd §1155a).** A person can run one
+/// beside the node (a NUC) and another beside Basecamp (their Mac), so Casberi
+/// keeps every pairing and each tile reads through the newest Observer granted
+/// its scope: Node through `node.status.read`, Chat through `chat.read`
+/// (`LogosObserverWire.pick`). Pairing an Observer at an address already paired
+/// replaces that pairing. When the node pairing exists, the node's base is that
+/// Observer's address, and `LogosIngest.readNode` reads through here.
 ///
-/// **What drops the pairing.** Only the Observer saying `revoked`, or the
-/// person forgetting the node. A skewed clock, a bad signature or a lost
-/// replay race keeps the key and takes no reading, so it never lands a "your
-/// node stopped" row for a node that is fine.
+/// **What drops a pairing.** Only that Observer saying `revoked`, or the
+/// person forgetting it. A skewed clock, a bad signature or a lost replay race
+/// keeps the key and takes no reading, so it never lands a "your node
+/// stopped" row for a node that is fine.
 @MainActor @Observable
 final class LogosObserver {
     static let shared = LogosObserver()
 
-    struct Paired: Codable, Equatable {
+    struct Paired: Codable, Equatable, Identifiable {
         var base: String
         var pin: String
         var name: String
         var deviceID: String
         var granted: [String]
         var pairedAt: Date
+        var id: String { deviceID }
+        var grantsNode: Bool { granted.contains(LogosObserverWire.nodeScope) }
+        var grantsChat: Bool { granted.contains(LogosObserverWire.chatScope) }
     }
 
-    private static let pairedKey = "logos.observer.v1"
+    /// The one pairing §1095 kept, read once and moved into the list.
+    private static let legacyKey = "logos.observer.v1"
+    private static let pairingsKey = "logos.observers.v2"
     private static let service = "casberi-logos-observer"
 
-    private(set) var paired: Paired? {
+    private(set) var pairings: [Paired] = [] {
         didSet {
-            if let paired, let data = try? JSONEncoder().encode(paired) {
-                DefaultsWrite.set(data, forKey: Self.pairedKey)
-            } else {
-                DefaultsWrite.remove(Self.pairedKey)
+            if let data = try? JSONEncoder().encode(pairings) {
+                DefaultsWrite.set(data, forKey: Self.pairingsKey)
             }
         }
     }
 
-    /// The last thing the Observer refused, in words, for the page to show.
+    /// The last thing an Observer refused, in words, for the page to show.
     private(set) var notice: String?
 
     private init() {
-        paired = UserDefaults.standard.data(forKey: Self.pairedKey)
-            .flatMap { try? JSONDecoder().decode(Paired.self, from: $0) }
+        let defaults = UserDefaults.standard
+        if let data = defaults.data(forKey: Self.pairingsKey),
+           let list = try? JSONDecoder().decode([Paired].self, from: data) {
+            pairings = list
+        } else if let data = defaults.data(forKey: Self.legacyKey),
+                  let one = try? JSONDecoder().decode(Paired.self, from: data) {
+            // §1095 kept one key under the account "hmac": move it under the
+            // device id, so every pairing has its own.
+            if let key = Self.readKey(account: "hmac"), Self.storeKey(key, account: one.deviceID) {
+                Self.deleteKey(account: "hmac")
+                pairings = [one]
+            }
+            DefaultsWrite.remove(Self.legacyKey)
+        }
     }
 
-    /// Whether this node base is the paired Observer.
-    func serves(_ base: String?) -> Bool { base != nil && paired?.base == base }
+    /// The Observer Node reads through, and the one Chat reads through.
+    var nodePairing: Paired? { LogosObserverWire.pick(pairings, granted: \.granted, scope: LogosObserverWire.nodeScope) }
+    var chatPairing: Paired? { LogosObserverWire.pick(pairings, granted: \.granted, scope: LogosObserverWire.chatScope) }
+
+    /// Whether this node base is read through a paired Observer.
+    func serves(_ base: String?) -> Bool { base != nil && nodePairing?.base == base }
 
     // MARK: - Pairing
 
@@ -85,12 +108,19 @@ final class LogosObserver {
                 return .refused(Self.pairRefusal(code))
             }
             guard let pairing = LogosObserverWire.pairing(json, requested: scopes),
-                  Self.storeKey(pairing.key)
+                  Self.storeKey(pairing.key, account: pairing.deviceID)
             else { return .refused(String(localized: "The Observer's answer didn't make sense. Try again.")) }
-            paired = Paired(base: offer.baseURL, pin: offer.pin, name: offer.name,
-                            deviceID: pairing.deviceID, granted: pairing.granted, pairedAt: Date())
+            // The same Observer paired again replaces its old pairing.
+            for old in pairings where old.base == offer.baseURL && old.deviceID != pairing.deviceID {
+                Self.deleteKey(account: old.deviceID)
+            }
+            pairings.removeAll { $0.base == offer.baseURL }
+            let fresh = Paired(base: offer.baseURL, pin: offer.pin, name: offer.name,
+                               deviceID: pairing.deviceID, granted: pairing.granted, pairedAt: Date())
+            pairings.append(fresh)
             notice = nil
-            LogosStore.shared.useNode(offer.baseURL)
+            if fresh.grantsNode { LogosStore.shared.useNode(offer.baseURL) }
+            if fresh.grantsChat { chat = .loading }
             return .paired
         }
     }
@@ -136,12 +166,12 @@ final class LogosObserver {
 
     // MARK: - Reading
 
-    /// One reading of the node through the Observer. nil when the Observer
+    /// One reading of the node through its Observer. nil when the Observer
     /// answered but refused (skew, signature, replay): no reading, no rows.
     /// An Observer that does not answer at all reads as an unreachable node,
     /// as the node's own silence did before.
     func reading() async -> LogosWire.NodeSnapshot? {
-        guard let paired, let key = Self.readKey() else { return nil }
+        guard let paired = nodePairing, let key = Self.readKey(account: paired.deviceID) else { return nil }
         for attempt in 0..<2 {
             switch await signed("GET", "/v2/status", paired: paired, key: key) {
             case .pinMismatch:
@@ -157,8 +187,8 @@ final class LogosObserver {
                 let refusal = LogosObserverWire.refusal(status: code, json: json) ?? .other
                 if refusal == .replay, attempt == 0 { continue }   // a fresh nonce, once
                 if refusal.dropsCredential {
-                    forgetLocally()
-                    LogosStore.shared.useNode(nil)
+                    drop(paired)
+                    if LogosStore.shared.node == paired.base { LogosStore.shared.useNode(nil) }
                     notice = String(localized: "Your Observer removed this device. Pair it again to keep reading your node.")
                 } else if refusal == .clockSkew {
                     notice = String(localized: "This phone's clock and your Observer's disagree, so it refused the read.")
@@ -177,7 +207,8 @@ final class LogosObserver {
     /// pairing: decrypted messages never reach the library or iCloud.
     enum ChatState: Equatable {
         case notPaired
-        /// Paired without `chat.read`: pairing again is the only way to grant it.
+        /// Paired, but no Observer granted `chat.read`: pairing again is the
+        /// only way to grant it.
         case notGranted
         /// Basecamp's Chat app has not started `chat_module` on that machine.
         case notStarted
@@ -188,15 +219,13 @@ final class LogosObserver {
 
     private(set) var chat: ChatState = .notPaired
 
-    var grantsChat: Bool { paired?.granted.contains("chat.read") == true }
-
-    /// Reads the conversation list. Nothing is read without `chat.read`.
+    /// Reads the conversation list through the Observer granted `chat.read`.
     func readChat() async {
         // The demo shows what a paired Chat looks like (prd §1155): sample
         // conversations, nothing read and nothing sent.
         if DemoMode.isActive { chat = .ready(DemoChat.conversations()); return }
-        guard let paired, let key = Self.readKey() else { chat = .notPaired; return }
-        guard grantsChat else { chat = .notGranted; return }
+        guard let paired = chatPairing else { chat = pairings.isEmpty ? .notPaired : .notGranted; return }
+        guard let key = Self.readKey(account: paired.deviceID) else { chat = .notPaired; return }
         if case .ready = chat {} else { chat = .loading }
         switch await signed("GET", "/v2/chat/conversations", paired: paired, key: key) {
         case .answered(200, let json):
@@ -211,8 +240,10 @@ final class LogosObserver {
             }
         case .answered(let code, let json):
             if LogosObserverWire.refusal(status: code, json: json)?.dropsCredential == true {
-                forgetLocally()
-                LogosStore.shared.useNode(nil)
+                drop(paired)
+                if LogosStore.shared.node == paired.base { LogosStore.shared.useNode(nil) }
+                chat = chatPairing == nil ? (pairings.isEmpty ? .notPaired : .notGranted) : .loading
+                return
             }
             chat = code == 403 ? .notGranted : .unreachable
         case .failed, .pinMismatch:
@@ -223,7 +254,7 @@ final class LogosObserver {
     /// One conversation's messages, oldest first; nil when they could not be read.
     func messages(in convo: String) async -> [LogosObserverWire.ChatMessage]? {
         if DemoMode.isActive { return DemoChat.messages(in: convo) }
-        guard let paired, grantsChat, let key = Self.readKey() else { return nil }
+        guard let paired = chatPairing, let key = Self.readKey(account: paired.deviceID) else { return nil }
         guard case .answered(200, let json) = await signed(
             "GET", LogosObserverWire.messagesTarget(convo: convo), paired: paired, key: key)
         else { return nil }
@@ -232,19 +263,24 @@ final class LogosObserver {
 
     // MARK: - Forgetting
 
-    /// Revoke this device on the Observer, then forget it here whatever the
+    /// Revoke this device on one Observer, then forget it here whatever the
     /// Observer said: an unreachable Observer cannot keep the phone paired.
-    func forget() async {
-        if let paired, let key = Self.readKey() {
+    func forget(_ paired: Paired) async {
+        if let key = Self.readKey(account: paired.deviceID) {
             _ = await signed("DELETE", "/v2/device", paired: paired, key: key)
         }
-        forgetLocally()
+        drop(paired)
     }
 
-    func forgetLocally() {
-        paired = nil
-        chat = .notPaired
-        Self.deleteKey()
+    /// Every pairing, revoked and forgotten (the Logos page's teardown).
+    func forgetAll() async {
+        for paired in pairings { await forget(paired) }
+    }
+
+    private func drop(_ paired: Paired) {
+        pairings.removeAll { $0.deviceID == paired.deviceID }
+        Self.deleteKey(account: paired.deviceID)
+        if chatPairing == nil { chat = pairings.isEmpty ? .notPaired : .notGranted }
     }
 
     // MARK: - The signed request
@@ -263,14 +299,14 @@ final class LogosObserver {
         return await PinnedSession(pin: paired.pin).send(request)
     }
 
-    // MARK: - The key (device-only Keychain)
+    // MARK: - The keys (device-only Keychain, one per pairing)
 
-    private static func storeKey(_ key: Data) -> Bool {
-        deleteKey()
+    private static func storeKey(_ key: Data, account: String) -> Bool {
+        deleteKey(account: account)
         let add: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: "hmac",
+            kSecAttrAccount as String: account,
             kSecValueData as String: key,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
             kSecAttrSynchronizable as String: false,
@@ -278,11 +314,11 @@ final class LogosObserver {
         return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
     }
 
-    private static func readKey() -> Data? {
+    private static func readKey(account: String) -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: "hmac",
+            kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
@@ -292,10 +328,11 @@ final class LogosObserver {
         return data
     }
 
-    private static func deleteKey() {
+    private static func deleteKey(account: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
             kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ]
         SecItemDelete(query as CFDictionary)

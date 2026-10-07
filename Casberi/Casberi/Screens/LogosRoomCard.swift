@@ -155,7 +155,7 @@ struct LogosRoomFigure: View {
         chatReading
             // The box always draws, where the list's section does not while
             // it is empty: the read starts here, on every visit and pairing.
-            .task(id: LogosObserver.shared.paired?.deviceID) { await LogosObserver.shared.readChat() }
+            .task(id: LogosObserver.shared.chatPairing?.deviceID) { await LogosObserver.shared.readChat() }
     }
 
     @ViewBuilder private var chatReading: some View {

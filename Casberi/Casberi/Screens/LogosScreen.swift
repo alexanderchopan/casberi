@@ -40,6 +40,9 @@ struct LogosScreen: View {
     /// The roster row's id for the node. Node refs are `logos:node:<kind>:…`,
     /// so `countWeek`'s `:<id>:` match finds them by it.
     private static let nodeRowID = "node"
+    /// An Observer paired for something other than the node — the Mac beside
+    /// Basecamp, read for chats (prd §1155a) — is its own row.
+    private static let observerRowPrefix = "observer:"
 
     var body: some View {
         AccountPage(
@@ -58,7 +61,7 @@ struct LogosScreen: View {
             // no id to name.
             rowMenu: { id in
                 AnyView(Group {
-                    if id != Self.nodeRowID {
+                    if id != Self.nodeRowID && !id.hasPrefix(Self.observerRowPrefix) {
                         Button {
                             nameDraft = AddressBook.shared.name(for: id) ?? ""
                             namingID = id
@@ -71,7 +74,7 @@ struct LogosScreen: View {
             },
             teardown: {
                 LogosStore.shared.disconnect()
-                Task { await LogosObserver.shared.forget() }
+                Task { await LogosObserver.shared.forgetAll() }
             },
             sheet: $sheet,
             act: { addBlock },
@@ -133,7 +136,20 @@ struct LogosScreen: View {
 
     /// The accounts, then your node — the room's order, Accounts before Node.
     private var rows: [AccountPageShape.Row] {
-        accountRows + nodeRow
+        accountRows + nodeRow + observerRows
+    }
+
+    /// Every paired Observer the node does not read through: what it reads,
+    /// and a Forget of its own (prd §1155a).
+    private var observerRows: [AccountPageShape.Row] {
+        let observer = LogosObserver.shared
+        return observer.pairings.filter { $0.deviceID != observer.nodePairing?.deviceID }.map { p in
+            AccountPageShape.Row(
+                id: Self.observerRowPrefix + p.deviceID, title: p.name,
+                subline: p.grantsChat ? String(localized: "Observer · reads your chats")
+                                      : String(localized: "Observer · nothing Casberi shows"),
+                weekCount: 0, hasNew: false, isYou: false, avatarURL: nil)
+        }
     }
 
     /// One row per watched account: its short id and what landed this week,
@@ -172,7 +188,7 @@ struct LogosScreen: View {
         let counted = weekly[Self.nodeRowID] ?? (week: 0, new: false)
         return [AccountPageShape.Row(
             id: Self.nodeRowID, title: String(localized: "Your node"),
-            subline: LogosObserver.shared.paired.map {
+            subline: LogosObserver.shared.nodePairing.map {
                 String(localized: "Through \($0.name) · \(LogosWire.nodeLine(logos.nodeSnapshot))")
             } ?? LogosWire.nodeLine(logos.nodeSnapshot),
             weekCount: counted.week, hasNew: counted.new,
@@ -331,9 +347,18 @@ struct LogosScreen: View {
     }
 
     private func unwatch(_ id: String) {
+        if id.hasPrefix(Self.observerRowPrefix) {
+            let deviceID = String(id.dropFirst(Self.observerRowPrefix.count))
+            if let paired = LogosObserver.shared.pairings.first(where: { $0.deviceID == deviceID }) {
+                Task { await LogosObserver.shared.forget(paired) }
+                lastResult = .says(String(localized: "Forgot \(paired.name)."))
+            }
+            DSHaptic.tap()
+            return
+        }
         if id == Self.nodeRowID {
-            if LogosObserver.shared.serves(logos.node) {
-                Task { await LogosObserver.shared.forget() }
+            if LogosObserver.shared.serves(logos.node), let paired = LogosObserver.shared.nodePairing {
+                Task { await LogosObserver.shared.forget(paired) }
             }
             logos.useNode(nil)
             FollowPrune.remove(source: "Logos", context: modelContext) {

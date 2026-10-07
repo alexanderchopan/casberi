@@ -25,6 +25,17 @@ enum LogosObserverWire {
     static let readScopes = ["node.status.read", "network.status.read",
                              "mining.status.read", "rewards.status.read"]
 
+    static let nodeScope = "node.status.read"
+    static let chatScope = "chat.read"
+
+    /// Which pairing a scope reads through (prd §1155a): the newest one that
+    /// was granted it. A NUC paired for the node and a Mac paired for chat
+    /// each serve their own tile; pairing a newer one for the same scope moves
+    /// that tile to it.
+    static func pick<T>(_ pairings: [T], granted: (T) -> [String], scope: String) -> T? {
+        pairings.last { granted($0).contains(scope) }
+    }
+
     /// What a scope lets the device read, in the words the consent tray shows.
     static func scopeLabel(_ scope: String) -> String {
         switch scope {

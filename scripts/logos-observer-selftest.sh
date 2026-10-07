@@ -197,6 +197,18 @@ check(W.messagesTarget(convo: "a b/c?d") == "/v2/chat/messages?convo=a%20b%2Fc%3
       "the conversation id is percent-encoded once, in the signed target")
 check(W.messagesTarget(convo: "c1", sinceMs: 42) == "/v2/chat/messages?convo=c1&since_ms=42", "since_ms rides the target")
 
+print("Several Observers, routed by scope (prd §1155a)")
+struct P { let id: String; let granted: [String] }
+let nuc = P(id: "nuc", granted: ["node.status.read", "network.status.read"])
+let mac = P(id: "mac", granted: ["chat.read"])
+let both = P(id: "both", granted: ["node.status.read", "chat.read"])
+check(W.pick([nuc, mac], granted: \.granted, scope: W.nodeScope)?.id == "nuc", "Node reads through the NUC")
+check(W.pick([nuc, mac], granted: \.granted, scope: W.chatScope)?.id == "mac", "Chat reads through the Mac")
+check(W.pick([nuc, mac, both], granted: \.granted, scope: W.nodeScope)?.id == "both"
+      && W.pick([nuc, mac, both], granted: \.granted, scope: W.chatScope)?.id == "both",
+      "the newest pairing granted a scope wins it")
+check(W.pick([mac], granted: \.granted, scope: W.nodeScope) == nil, "no node pairing, no node read")
+
 print(failures == 0 ? "✓ all Observer checks" : "✗ \(failures) failure(s)")
 exit(failures == 0 ? 0 : 1)
 
