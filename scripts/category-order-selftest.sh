@@ -90,6 +90,8 @@ block = re.search(r'static let categories:.*?^    \]', catalog, re.S | re.M)
 if not block:
     sys.exit("✗ BridgeCatalog.categories not found — this guard is testing nothing")
 names = re.findall(r'^\s*\("([^"]+)",', block.group(0), re.M)
+# Markets is a place in You (prd §1123), never a slot in the order (§1151).
+names = [n for n in names if n != "Markets"]
 if len(names) < 5:
     sys.exit("✗ parsed only %d catalog categories — the guard's regex has drifted" % len(names))
 listed = re.search(r'static let defaultOrder: \[String\] = \[(.*?)\]', order, re.S)
@@ -206,23 +208,23 @@ func rawStored() -> [String]? { UserDefaults.standard.stringArray(forKey: "chips
 // became a note of yours with no source of its own (§972). Pinned as a count
 // AND as the absences, so either slot creeping back fails here rather than
 // drawing a folder for a band nothing fills.
-check("the default order is the 2026-08-11 ruling minus Voice (§972) and Shopping (§1051a), plus Markets and Testnets (§1050)", d.count == 10)
-check("Markets and Testnets follow Wallet (§1050)", Array(d.prefix(3)) == ["Wallet", "Markets", "Testnets"])
-check("a stored order keeps its Markets slot again (§1050)",
-      CategoryOrder.reconcile(["Wallet", "Markets", "Work"]).contains("Markets"))
+check("nine slots: every catalogue category but Markets, a place in You (§1123, §1151)", d.count == 9)
+check("Markets is not a slot (§1151)", !d.contains("Markets"))
+check("Testnets closes the order (§1151)", d.last == "Testnets")
+check("a stored order sheds its Markets slot (§1151)",
+      !CategoryOrder.reconcile(["Wallet", "Markets", "Work"]).contains("Markets"))
 check("Voice is not a slot (no source carries it, §972)", !d.contains("Voice"))
 check("a stored order from before §972 sheds its Voice slot",
       !CategoryOrder.reconcile(["Notes", "Voice", "Wallet"]).contains("Voice"))
 check("no duplicate slot", Set(d).count == d.count)
-check("Wallet leads (user: 'more important to users')", d.first == "Wallet")
-// §1050's tray order (user: "ok. i agree"), built §1056: Day then Life after
-// Work, Social after Media; it replaced 2026-08-11's Social-before-Media.
-check("Day, then Life, follow Work (§1050)",
-      d.firstIndex(of: "Work")! + 1 == d.firstIndex(of: "Day")!
-      && d.firstIndex(of: "Day")! + 1 == d.firstIndex(of: "Life")!)
-check("Social sits after Media and before Reading (§1050)",
-      d.firstIndex(of: "Media")! < d.firstIndex(of: "Social")!
-      && d.firstIndex(of: "Social")! < d.firstIndex(of: "Reading")!)
+// §1151 (user: "have day first instead of wallet"): the day, then the feeds.
+check("Day leads (§1151)", d.first == "Day")
+check("Social, Work and the Wallet follow Day (§1151)",
+      Array(d[1...3]) == ["Social", "Work", "Wallet"])
+check("Reading follows the Wallet (§1151)",
+      d[d.firstIndex(of: "Wallet")! + 1] == "Reading")
+check("Media follows Life (§1151, user: 'lets have media after Life')",
+      d[d.firstIndex(of: "Life")! + 1] == "Media")
 check("Notes is not a slot (no category, §1056)", !d.contains("Notes"))
 check("All is not a category slot", !d.contains("All"))
 check("Pinned is not a category slot", !d.contains("Pinned"))
@@ -267,7 +269,7 @@ check("…at the tail, in default order",
       Array(older.suffix(2)) == d.filter { $0 == "Testnets" || $0 == "Reading" })
 
 // --- rank -------------------------------------------------------------------
-check("rank follows the order given", CategoryOrder.rank(of: "Wallet", in: d) == 0)
+check("rank follows the order given", CategoryOrder.rank(of: d[0], in: d) == 0)
 check("…and reads the ORDER, not the default",
       CategoryOrder.rank(of: "Media", in: ["Media", "Wallet"]) == 0)
 // The whole point of Int.max: a label with no slot keeps its learned position
@@ -282,7 +284,7 @@ check("…so it really does sort behind a category",
 let mixed = ["Reading", "Gopher", "Wallet", "Media"]
 let sorted = mixed.sorted { CategoryOrder.rank(of: $0, in: d) < CategoryOrder.rank(of: $1, in: d) }
 check("the strip's own sort puts categories in order and strangers last",
-      sorted == ["Wallet", "Media", "Reading", "Gopher"])
+      sorted == ["Wallet", "Reading", "Media", "Gopher"])
 
 // --- set / reset / isCustom -------------------------------------------------
 CategoryOrder.reset()

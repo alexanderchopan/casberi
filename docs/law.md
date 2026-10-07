@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1282 of 1344 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1283 of 1345 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -585,7 +585,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §319 — The agent economy, watchable [+1 sub-entries]
 - §320 — The vault that stopped at a hundred notes
 - §321 — Work leads the catalog, second
-- §322 — The whole wall order, dictated (amended by §1050a; part superseded by §638) [+2 sub-entries]
+- §322 — The whole wall order, dictated (amended by §1050a, §1151; part superseded by §638) [+2 sub-entries]
 - §323 — The half of shipping that happens on somebody else's desk [+1 sub-entries]
 - §324 — Where the app stands, not just what happened
 - §325 — The mail servers nobody had disclosed
@@ -1386,7 +1386,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room…
 - §1048f — One Wallet: Rocket Money's next charges and Peer's settling sales reach Coming up; Bitrefill folds in
 - §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a, §1111, §1118; part superseded by §1050e)
-- §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a)
+- §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a, §1151)
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
 - §1050b — Photos moves from Life to Media
 - §1050c — Life is one list by day, with no tiles
@@ -1506,6 +1506,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1148 — A catalogue row says something only when its name can't
 - §1149 — A connected app's line reads grey everywhere; a selected count stays blue
 - §1150 — Calendars counts every calendar Casberi reads
+- §1151 — The default order is the day first: Day, Social, Work, Wallet, Reading, Life, Media, Agents, Testnets
 
 ## Dead rulings → what replaced them (generated)
 

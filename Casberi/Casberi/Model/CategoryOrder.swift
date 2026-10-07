@@ -70,10 +70,16 @@ enum CategoryOrder {
     /// itself; `reconcile` drops it from any stored order the same way it
     /// drops every name the catalog has stopped answering to.
     static let defaultOrder: [String] = [
-        // Markets and Testnets follow Wallet (prd §1050); Day, then Life,
-        // after Work, and Notes is no category (§1049, built §1056).
-        "Wallet", "Markets", "Testnets", "Work", "Day", "Life", "Agents",
-        "Media", "Social", "Reading",
+        // THE DAY, THEN THE FEEDS (prd §1151, user: "have day first instead
+        // of wallet, b/c a new user won't think to go in settings"): Day
+        // (calendar, mail, subscriptions) leads, then Social, Work and the
+        // Wallet (user: "have work and wallet before reading"), then Reading,
+        // Life, Media (user: "lets have media after Life"), Agents, and
+        // Testnets last. Markets is a place in You (§1123), never a slot
+        // (user: "Markets is not longer in those categories"). A stored order
+        // keeps its own.
+        "Day", "Social", "Work", "Wallet", "Reading", "Life",
+        "Media", "Agents", "Testnets",
     ]
 
     /// The order in force — the stored one reconciled against `defaultOrder`,
