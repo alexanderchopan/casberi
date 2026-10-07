@@ -182,6 +182,8 @@ check(convos.map(\.id) == ["new", "old"], "newest activity first; a conversation
 check(convos[0].title == "Terricola" && convos[1].title == "LEZ testers" && convos[0].direct && !convos[1].direct,
       "title is nickname, then name; kind decides direct")
 check(convos[1].historyOnly, "history_only survives")
+check(W.conversations(parse(#"{"available":true,"conversations":[{"convo_id":"raw","kind":"direct"}]}"#))?.first?.id == "raw",
+      "chat_module's own convo_id is read when id is absent")
 let msgs = W.messages(parse("""
 {"available":true,"messages":[
  {"from_self":false,"sender":"0xabc","content":"two","timestamp_ms":2000},

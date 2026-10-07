@@ -360,7 +360,9 @@ enum LogosObserverWire {
             (d[k] as? String).flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
         }
         return list.compactMap { d -> Conversation? in
-            guard let id = text(d, "id") else { return nil }
+            // `id` per the contract; `convo_id` is chat_module's own name for
+            // it, accepted so a pass-through Observer still reads.
+            guard let id = text(d, "id") ?? text(d, "convo_id") else { return nil }
             let ms = (d["last_activity_ms"] as? NSNumber)?.doubleValue
             return Conversation(id: id, direct: (d["kind"] as? String) != "group",
                                 name: text(d, "name"), nickname: text(d, "nickname"),
