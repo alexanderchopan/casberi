@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1293 of 1356 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1294 of 1357 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -541,7 +541,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §273 — The Mac wears the rail: the source chips go vertical
 - §275 — The verb that opened nothing: a screenshot's picture becomes reachable
 - §276 — Web search and Tor: both assessed, both declined in their general form
-- §277 — Five privacy passes: the credential tripwire, device-only keys, network receipts, clipboard etiquette, and what sync…
+- §277 — Five privacy passes: the credential tripwire, device-only keys, network receipts, clipboard etiquette, and what sync… (amended by §1162)
 - §278 — Bank accounts: Plaid is closed by construction, FinanceKit is closed by category
 - §279 — TikTok, imported: the expiry is the argument FOR it (amended by §731)
 - §280 — X: the free door is one endpoint wide, and the archive is the rest of it (part superseded by §701)
@@ -563,7 +563,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §296 — Cloudflare: the dates behind a site you run [+1 sub-entries]
 - §297 — Every visualization draws itself, and the crown stops pouring where it says nothing
 - §298 — The rooms that hold numbers and drew nothing [+2 sub-entries]
-- §299 — The design system gets a mechanical check, and a quiet room learns to speak
+- §299 — The design system gets a mechanical check, and a quiet room learns to speak (amended by §1162)
 - §300 — The receipts screen reads itself: what it actually reached, as one number
 - §301 — Treemaps and the brief stay blue
 - §302 — The transfer stage is a ledger, not a tableau
@@ -1361,7 +1361,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1025 — Addresses gets smarter: four more suggestion rules, a named author, the first transfer, a book anchor, and Shortcuts
 - §1026 — The demo is one person's life, not one subject in every room
 - §1027 — An entry field's placeholder wraps, and its well spans the column
-- §1029 — A connect LANDS YOU IN THE ROOM, on every account page
+- §1029 — A connect LANDS YOU IN THE ROOM, on every account page (amended by §1162)
 - §1030 — GitHub's next step after a connect is a tray, and watching stands in the room (amended by §1031)
 - §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is (part superseded by §1121)
 - §1032 — An account page's commit is a check INSIDE the well, where Paste is
@@ -1517,6 +1517,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1159 — An app's icon in the rooms tray long-presses to Settings, its account page
 - §1160 — Day's Subscriptions fills from the mail already here, and a list that went quiet stands under Stopped
 - §1161 — Track a subscription is one tap: the cards offer what they charged twice, a typed name finds the app, and the price i…
+- §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,…
 
 ## Dead rulings → what replaced them (generated)
 

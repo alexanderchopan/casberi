@@ -786,6 +786,24 @@ struct RootShell: View {
             ProbeHooks.runAll(context: modelContext)
             #endif
             #if DEBUG
+            // `-seatAttention "<App>"` — mark an app's seat broken, adding the
+            // seat first if it has none (prd §1162), so Home's reconnect rows
+            // and the empty screen's door can be seen without a real key going
+            // bad. Here, not in `ProbeHooks`, for `-demoEnter`'s reason: it
+            // needs THE live `BridgeStore` — a second instance's write is
+            // saved over by the first mutation of this one. The status line is
+            // not `BridgeHealth`'s own, whose reconcile clears only its own.
+            if let name = UserDefaults.standard.string(forKey: "seatAttention"), !name.isEmpty {
+                let id = TokenBridge(rawValue: name)?.bridgeID ?? name.lowercased()
+                if !bridges.bridges.contains(where: { $0.name == name }) {
+                    bridges.registerConnected(id: id, name: name, proof: "Seeded")
+                }
+                let seatID = bridges.bridges.first { $0.name == name }?.id ?? id
+                bridges.markAttention(seatID, statusLine: "Seeded break (-seatAttention)")
+                NSLog("seatAttention: %@ marked", name)
+            }
+            #endif
+            #if DEBUG
             // `-demoEnter YES` — enter the demo headlessly, without walking
             // onboarding, for the screenshot pipeline and the screen-audit
             // skill (2026-08-07). Lives HERE rather than in `ProbeHooks`

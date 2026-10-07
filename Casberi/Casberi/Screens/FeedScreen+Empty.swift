@@ -21,21 +21,39 @@ extension FeedScreen {
     /// which is the only place the two vocabularies meet.
     private var quietWords: RoomQuiet.Words? {
         guard source != "All" else { return nil }
-        // Through the catalog — see `activeSourceBridge`. A bare `==` resolved
-        // the wallet-riding rooms to no seat at all, so `.none` won the switch
-        // below and they fell back to the generic "connect an app" invitation:
-        // §299's own failure, in the rooms it was written for.
-        let seatName = BridgeCatalog.seatName(forSource: source)
-        let seat = bridges.bridges.first { $0.name == seatName }
+        let seat = quietSeat
+        let seatName = seat?.name ?? source
         let mapped: RoomQuiet.Seat = switch seat?.status {
         case .connected: .connected
         case .attention: .attention
         case .paused:    .paused
         case nil:        .none
         }
-        return RoomQuiet.words(source: source, seat: mapped,
+        return RoomQuiet.words(source: seatName, seat: mapped,
                                statusLine: seat?.statusLine ?? "",
-                               emptyRead: TokenBridge(rawValue: source)?.emptyReadNote)
+                               emptyRead: TokenBridge(rawValue: seatName)?.emptyReadNote)
+    }
+
+    /// The seat an empty screen speaks for (prd §1162).
+    ///
+    /// Through the catalog — see `activeSourceBridge`. A bare `==` resolved
+    /// the wallet-riding rooms to no seat at all, so `.none` won the switch
+    /// and they fell back to the generic "connect an app" invitation: §299's
+    /// own failure, in the rooms it was written for.
+    ///
+    /// **And through the picked app in a merged room.** Work, Day and the rest
+    /// are not seats, so the catalog lookup found none there either — and a
+    /// first connect LANDS in that room with its app picked (§1029,
+    /// `chrome.pickSeat`). Someone who had just connected GitHub was shown
+    /// "One inbox for all your apps" and Browse apps, the screen for having
+    /// connected nothing.
+    private var quietSeat: BridgeApp? {
+        if let picked = selectedSeat?.name,
+           let seat = bridges.bridges.first(where: { $0.name == picked }) {
+            return seat
+        }
+        let seatName = BridgeCatalog.seatName(forSource: source)
+        return bridges.bridges.first { $0.name == seatName }
     }
 
     /// The empty room.
@@ -67,8 +85,10 @@ extension FeedScreen {
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s2)
                 .settleIn(delay: 0.05)
-            if words.offersDoor {
-                emptyDoor(String(localized: "Open \(source)"))
+            if words.offersDoor, let seat = quietSeat {
+                emptyDoor(String(localized: "Open \(seat.name)"), glyph: "slider.horizontal.3") {
+                    route.openSetup(forOffer: seat.name)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,12 +112,15 @@ extension FeedScreen {
     /// rungs. It is also what keeps `hero-tint-audit.py`'s one-tile-per-file
     /// rule true of the file that draws both.
     ///
-    /// The destination is unchanged and is the CATALOG in both states, which is
-    /// what `route.present(.apps)` has always done here — including under the
-    /// "Open \(source)" wording, whose door has never gone to that source.
-    private func emptyDoor(_ title: String) -> some View {
-        DSActVerb(title: title, glyph: "square.grid.2x2") {
-            route.present(.apps)
+    /// The invitation's door is the CATALOG. A broken or paused screen's door
+    /// is that app's own page (prd §1162): until then it was the catalog too,
+    /// under the words "Open <app>" — and the catalog hides an app you have
+    /// already added, so the one fix this screen offered led somewhere the
+    /// broken app was not listed.
+    private func emptyDoor(_ title: String, glyph: String = "square.grid.2x2",
+                           action: (() -> Void)? = nil) -> some View {
+        DSActVerb(title: title, glyph: glyph) {
+            if let action { action() } else { route.present(.apps) }
         }
         .padding(.top, DS.Space.s4)
         .settleIn(delay: 0.1)

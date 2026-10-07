@@ -105,6 +105,11 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// Landed as a row (`logos:node:offline:`) only on a CHANGE between two
     /// readings, so a node that was never up says nothing.
     case nodeDown
+    /// AN APP STOPPED LETTING US IN (prd §1162) — a refused key, a lapsed
+    /// session. Nothing arrives from that app until it is reconnected, and
+    /// the silence otherwise reads as "nothing happened". Composed from
+    /// `BridgeHealth`, never from a row (`ReconnectNotify`), once per break.
+    case connectionBroken
     // — arrival
     case moneyIn
     case payoutPaid
@@ -126,7 +131,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose, .priceAlert,
              .appRejected, .runningLow, .safeSignatureNeeded,
-             .walletIncident, .chainReset, .nodeDown:
+             .walletIncident, .chainReset, .nodeDown, .connectionBroken:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest:
             return .arrival
@@ -183,6 +188,10 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // no clock — above `runningLow` (a stop has already happened, where
         // running low is about to) and below a price rise (money left).
         case .nodeDown:         return 30
+        // Something to do, no money at risk and no clock — `nodeDown`'s
+        // shape, one above it because it is an app you use stopping, not a
+        // machine you run; below a price rise, where money already left.
+        case .connectionBroken: return 35
         case .priceRose:        return 40    // recurring money, already charged
         case .priceAlert:       return 45    // a level you asked to hear about
         // The lowest alarm on purpose — "do this soon" rather than "something
@@ -265,6 +274,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // words (see `NotifyKind.chainReset`).
         case .chainReset:       return String(localized: "A devnet was reset")
         case .nodeDown:         return String(localized: "Your node stopped")
+        case .connectionBroken: return String(localized: "Needs reconnecting")
         case .moneyIn:          return String(localized: "Money arrived")
         case .payoutPaid:       return String(localized: "Paid out")
         case .likesReceived:    return String(localized: "Liked your post")
@@ -295,6 +305,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .runningLow:          return String(localized: "running low")
         case .chainReset:          return String(localized: "devnet reset")
         case .nodeDown:            return String(localized: "node stopped")
+        case .connectionBroken:    return String(localized: "needs reconnecting")
         case .moneyIn:             return String(localized: "money arrived")
         case .payoutPaid:          return String(localized: "paid out")
         case .likesReceived:       return String(localized: "new likes")
@@ -344,6 +355,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .runningLow:          (one, many) = (String(localized: "running low"), String(localized: "running low"))
         case .chainReset:          (one, many) = (String(localized: "reset"), String(localized: "resets"))
         case .nodeDown:            (one, many) = (String(localized: "node stopped"), String(localized: "nodes stopped"))
+        case .connectionBroken:    (one, many) = (String(localized: "app to reconnect"), String(localized: "apps to reconnect"))
         case .moneyIn:             (one, many) = (String(localized: "transfer in"), String(localized: "transfers in"))
         case .payoutPaid:          (one, many) = (String(localized: "payout"), String(localized: "payouts"))
         case .likesReceived:       (one, many) = (String(localized: "liked post"), String(localized: "liked posts"))

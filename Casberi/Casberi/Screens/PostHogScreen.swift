@@ -172,6 +172,10 @@ struct PostHogScreen: View {
             // inputs one act needs; SAVE belongs to the last field.
             DSSlabField(placeholder: TokenBridge.posthog.placeholder,
                         text: $keyField, actionLabel: "Save", secure: true,
+                        // Armed by its own text, but STATED (prd §1162): a
+                        // stated `isArmed` keeps the check after Paste, so an
+                        // EU or self-hosted host above can still be typed first.
+                        isArmed: !keyField.isEmpty,
                         action: saveKey)
             BridgeSyncStatusRows(syncing: resolving,
                                  syncingLine: String(localized: "Checking the key…"),

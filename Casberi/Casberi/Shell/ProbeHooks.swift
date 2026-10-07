@@ -422,20 +422,24 @@ enum ProbeHooks {
         // it never reads or logs a secret's value. The before/after pair is
         // the check that the migration actually re-writes old items, which is
         // invisible otherwise since a wrongly-stored key works perfectly.
+        // Since prd §1162 a pasted key SYNCS, so the pass is "every item
+        // where its rule puts it" (`misplaced == 0`), and both migrations run.
         Hook(key: "keychainProbe") { _, _ in
             let before = TokenVault.policyCensus()
-            NSLog("keychainProbe| before: total=%d deviceOnly=%d syncable=%d",
-                  before.total, before.deviceOnly, before.synchronizable)
+            NSLog("keychainProbe| before: total=%d deviceOnly=%d syncable=%d misplaced=%d",
+                  before.total, before.deviceOnly, before.synchronizable, before.misplaced)
             let moved = TokenVault.migrateToDeviceOnly(force: true)
             NSLog("keychainProbe| migrate: hardened=%d alreadyRight=%d failed=%d",
                   moved.hardened, moved.alreadyRight, moved.failed)
+            let synced = TokenVault.migrateToSynced(force: true)
+            NSLog("keychainProbe| sync: moved=%d failed=%d", synced.moved, synced.failed)
             let after = TokenVault.policyCensus()
-            NSLog("keychainProbe| after: total=%d deviceOnly=%d syncable=%d",
-                  after.total, after.deviceOnly, after.synchronizable)
+            NSLog("keychainProbe| after: total=%d deviceOnly=%d syncable=%d misplaced=%d sharedGroup=%d",
+                  after.total, after.deviceOnly, after.synchronizable, after.misplaced, after.sharedGroup)
             NSLog("keychainProbe: %@",
-                  after.total == after.deviceOnly && after.synchronizable == 0
-                  ? "every item device-only and non-syncing"
-                  : "STILL LOOSE — see the counts above")
+                  after.misplaced == 0
+                  ? "every item where its rule puts it (pasted keys synced, the rest device-only)"
+                  : "STILL MISPLACED — see the counts above")
         },
         // `-syncProbe YES` — WHAT ICLOUD SYNC IS ACTUALLY DOING (prd §607).
         //

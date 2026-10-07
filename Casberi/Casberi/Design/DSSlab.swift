@@ -285,7 +285,20 @@ struct DSSlabField: View {
                     if let paste, !hasText {
                         pasteButton(paste)
                     } else if secure, !hasText {
-                        pasteButton { text = $0 }
+                        pasteButton { pasted in
+                            text = pasted
+                            // PASTE IS THE COMMIT (prd §1162). A key is never
+                            // edited after it is pasted, so the check that
+                            // followed every paste was a second tap that only
+                            // said "yes, that one" — and the person had just
+                            // come back from the provider's page to do exactly
+                            // this. Only where the field's own text decides
+                            // readiness (`isArmed == nil`): a form that arms on
+                            // OTHER fields too (Mail's address, an exchange's
+                            // key-and-secret pair) keeps its check, because a
+                            // paste there may be the first of two.
+                            if !actionLabel.isEmpty, isArmed == nil { action() }
+                        }
                     }
                     if clearable, hasText { clearButton }
                     // THE COMMIT SITS IN THE WELL, BESIDE PASTE (prd §1032,

@@ -521,6 +521,13 @@ ok(lr.id != dr1.id, "a Logos reset and a Frames reset are two ids")
 ok(NotifyKind.nodeDown.cls == .alarm && NotifyKind.nodeDown.severity > NotifyKind.runningLow.severity
    && NotifyKind.nodeDown.severity < NotifyKind.priceRose.severity && !NotifyKind.nodeDown.isTimeSensitive,
    "a stopped node: an alarm above running low, below money, never breaking a Focus")
+// An app that stopped letting us in (prd §1162): an alarm that waits for the
+// digest, above a stopped node, below money already gone.
+ok(NotifyKind.connectionBroken.cls == .alarm && !NotifyKind.connectionBroken.standsAlone
+   && NotifyKind.connectionBroken.severity > NotifyKind.nodeDown.severity
+   && NotifyKind.connectionBroken.severity < NotifyKind.priceRose.severity
+   && !NotifyKind.connectionBroken.isTimeSensitive,
+   "a broken connection: a digest alarm above a stopped node, below money, never breaking a Focus")
 
 // Each seat's door must PARSE. The name carries a space and an accent, so an
 // unencoded link is one `URL(string:)` hands back as nil — a tap that opens

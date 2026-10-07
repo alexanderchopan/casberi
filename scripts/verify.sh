@@ -1491,6 +1491,10 @@ print -P "%F{green}✓ harness-exists audit%f"
 # and no warning — and the wrong wallet/Safe label rides along with it.
 harness "Keccak-256 self-test" "keccak256 self-test" "scripts/keccak256-selftest.sh" "the Keccak-256 self-test failed — run scripts/keccak256-selftest.sh"
 
+# Key shape (prd §1162): whose key a paste is, by its issuer's prefix, and what
+# a failed paste says by what the provider answered (`KeyShape`, `ConnectFailure`).
+harness "Key-shape self-test" "key-shape self-test" "scripts/key-shape-selftest.sh" "the key-shape self-test failed — run scripts/key-shape-selftest.sh"
+
 # Address safety (`Model/AddressSafety.swift`). Both functions are pure and
 # both fail SILENTLY: a checksum check that answers `unavailable` for
 # everything simply never warns, and a lookalike test with a mis-shaped

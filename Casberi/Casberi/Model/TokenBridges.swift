@@ -119,6 +119,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var setupURL: URL? {
         switch self {
         case .readwise:  URL(string: "https://readwise.io/access_token")
+        // NOT pre-filled, deliberately (prd §1162). GitHub documents a
+        // pre-filled form only for FINE-GRAINED tokens, and those are refused
+        // by `/notifications` (403) — which the Notifications feed reads by
+        // default, and which `BridgeHealth` holds as a sticky refusal, so a
+        // working token would read "Needs reconnecting" on Home and in the
+        // digest. The door stays on the page where either kind is made.
         case .github:    URL(string: "https://github.com/settings/tokens")
         case .todoist:   URL(string: "https://app.todoist.com/app/settings/integrations/developer")
         case .raindrop:  URL(string: "https://app.raindrop.io/settings/integrations")
@@ -194,7 +200,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // the two live on different pages — this is the one where the
         // read-only checkbox is.
         case .pagerduty: URL(string: "https://pagerduty.com/api_keys")
-        case .gitlab:    URL(string: "https://gitlab.com/-/user_settings/personal_access_tokens")
+        // Pre-filled (prd §1162): GitLab documents `name`, `description` and
+        // `scopes` on this page, and `read_api` alone covers every read here.
+        case .gitlab:    URL(string: "https://gitlab.com/-/user_settings/personal_access_tokens?name=Casberi&description=Read-only%20access%20for%20Casberi&scopes=read_api")
         // The Integrations tab, which is where the key, the key ID and the
         // issuer ID all live on one page — the three things this screen asks
         // for, in the order it asks for them.
@@ -662,6 +670,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// credential the very next line depends on. An explicit Remove still
     /// takes both.
     func onRemove(reconnecting: Bool = false) {
+        // Whose account it was goes with the key, on BOTH callers: a fresh
+        // paste may be a different account, and its own name is asked for
+        // once it connects (prd §1162).
+        AccountIdentity.set(nil, for: bridgeID)
         switch self {
         case .bitrefill: BitrefillBalance.clear()
         // Cleared on BOTH callers, Cloudflare's reasoning, and the PROFILE

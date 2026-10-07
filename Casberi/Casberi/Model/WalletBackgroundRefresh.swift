@@ -102,7 +102,10 @@ enum WalletBackgroundRefresh {
         // instead of arriving as a second buzz beside a dispute — and so
         // `notify-selftest.sh`'s "only one file submits" guard stays true.
         let devnet = DevnetNotify.plans()
-        await Notifications.submit(plans + devnet, photos: photos)
+        // An app that stopped letting us in belongs to no row either (prd
+        // §1162) — the same merge, the same one submit.
+        let broken = ReconnectNotify.plans(seats: BridgeStore().bridges.map { (id: $0.id, name: $0.name) })
+        await Notifications.submit(plans + devnet + broken, photos: photos)
         // The daily whisper used to be re-scheduled here on every sweep; cut
         // in prd §706 (`DayBrief.whisper` still composes the feed's day line).
         // This is the one place every install passes through on foreground AND

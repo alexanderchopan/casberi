@@ -284,6 +284,8 @@ extension FeedScreen {
         // You's tiles under the box, the slot every room's tiles stand in
         // (prd §1136 item 1).
         if source == "All" { youTilesSection(.feed) }
+        // What stopped working, named, before anything that arrived (prd §1162).
+        if source == "All" { reconnectSection }
         // "Nothing yet today" only when today truly holds nothing: a box
         // holding today's one thing IS today.
         if source == "All", groups.isEmpty,

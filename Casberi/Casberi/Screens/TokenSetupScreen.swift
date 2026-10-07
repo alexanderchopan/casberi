@@ -20,6 +20,9 @@ struct TokenSetupScreen: View {
     /// running pass loops once more instead of dropping the request.
     @State private var syncPending = false
     @State private var result: BridgeProof?
+    /// The key a paste replaced, until the new one proves itself (prd §1162).
+    @State private var replacedToken: String?
+    @State private var replacedIdentity: String?
 
     /// GitHub only — watching a repo directly, privately (2026-07-16): unlike
     /// a star or subscribe, it never touches the GitHub account. The verb is
@@ -666,16 +669,43 @@ struct TokenSetupScreen: View {
         return parts.joined(separator: " · ")
     }
 
+    /// The names this seat's health is recorded under. `NetworkReach` names
+    /// some bridges by seat id ("cloudflare", "stripe") and others by catalog
+    /// name ("Linear"), and `BridgeHealth` keys on whichever it says — so a
+    /// read under one spelling found nothing for the other and called a
+    /// refused Cloudflare token "Couldn't reach" (prd §1162).
+    private var healthKeys: [String] { [bridge.rawValue, bridge.bridgeID] }
+
     private func connect() {
         let token = tokenField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { return }
+        // ANOTHER SERVICE'S KEY, said before anything is sent or stored (prd
+        // §1162): the person has several dashboards open and copied from the
+        // wrong one. Only a prefix the issuer publishes counts — an unstamped
+        // key always goes to the provider, which decides (`KeyShape`).
+        if let issuer = KeyShape.belongsElsewhere(token, pastedInto: bridge.rawValue) {
+            tokenField = ""
+            DSHaptic.failure()
+            result = .failed(KeyShape.sentence(issuer: issuer, service: bridge.rawValue))
+            return
+        }
         // Pasting over an existing token is a reconnect: drop the prior key's
         // cached readings (balance, vault reach) BEFORE storing, or a paste
         // whose first sync fails leaves the new key wearing the old key's
         // numbers as if they were its own. `reconnecting` spares the one piece
         // of state the paste itself depends on — Trello's API key, which the
         // token being pasted was minted against.
+        // Whose account the replaced key read, put back with it on failure.
+        replacedIdentity = AccountIdentity.name(for: bridge.bridgeID)
         bridge.onRemove(reconnecting: true)
+        // A new key starts a new health record, so a failure below reads THIS
+        // key's answer, never the last key's (`ConnectFailure`).
+        healthKeys.forEach(BridgeHealth.forget)
+        // The key being replaced, held until the new one proves itself (prd
+        // §1162): a replace that fails puts it back rather than leaving the
+        // account with no key. Since keys sync, a delete here would have
+        // disconnected every device — on one mistaken tap of Paste.
+        replacedToken = TokenVault.get(bridge.tokenKey)
         TokenVault.set(token, for: bridge.tokenKey)
         tokenField = ""
         sheet = nil
@@ -714,14 +744,43 @@ struct TokenSetupScreen: View {
         var connecting = justConnected
         repeat {
             syncPending = false
+            // Whose account this key reads (prd §1162) — on a fresh paste, or
+            // when nothing is known yet. BEFORE the read, never after: the
+            // who-am-I request is recorded in `BridgeHealth` like any other,
+            // and a refusal from its endpoint alone (a Cloudflare token minted
+            // without account reads) would otherwise stand as "Needs
+            // reconnecting" over a working connection. The read below answers
+            // last, so its 2xx is the verdict that stands.
+            if connecting || AccountIdentity.name(for: bridge.bridgeID) == nil,
+               let token = TokenVault.get(bridge.tokenKey),
+               let name = await TokenWhoAmI.name(bridge, token: token) {
+                AccountIdentity.set(name, for: bridge.bridgeID)
+            }
             let added = await TokenIngest.refresh(bridge, context: modelContext)
             guard let added else {
                 if connecting {
+                    // A name learned for a key that is being discarded names
+                    // nothing (it is asked again for the key put back).
+                    AccountIdentity.set(nil, for: bridge.bridgeID)
                     // A fresh paste that fails doesn't stay: keeping it would show
                     // "Update"/"Remove token" for a connection that never worked and
                     // retry a dead token on every foreground.
-                    TokenVault.delete(bridge.tokenKey)
-                    result = .says(String(localized: "That token didn't work — check it (and your connection) and paste again."))
+                    if let previous = replacedToken {
+                        TokenVault.set(previous, for: bridge.tokenKey)
+                        AccountIdentity.set(replacedIdentity, for: bridge.bridgeID)
+                    } else {
+                        TokenVault.delete(bridge.tokenKey)
+                    }
+                    replacedToken = nil
+                    // What the provider actually said, and so what to do
+                    // about it (prd §1162) — four remedies, not one sentence.
+                    let status = healthKeys.lazy.compactMap { BridgeHealth.record(for: $0)?.lastStatus }.first
+                    // A discarded key leaves no record behind: its refusal is
+                    // not a connection that broke (prd §1162).
+                    healthKeys.forEach(BridgeHealth.forget)
+                    // `.failed`, not `.says`: the old sentence drew in the
+                    // success green, a failure wearing the colour of a win.
+                    result = .failed(ConnectFailure.from(status: status).sentence(bridge.rawValue))
                     // "Paste again" must point at a visible field — if the
                     // manual path is folded (a device-flow connect that failed
                     // on its first sync), unfold it so the error and the field
@@ -731,10 +790,11 @@ struct TokenSetupScreen: View {
                     // A background re-sync of an already-connected bridge failed. The
                     // user didn't just paste anything, so don't accuse the empty field
                     // — say what actually happened: the saved token or the network.
-                    result = .says(String(localized: "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing."))
+                    result = .failed(String(localized: "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing."))
                 }
                 return
             }
+            replacedToken = nil
             connecting = false
             result = added > 0 ? .says(String(localized: "\(added) \(bridge.noun) in")) : emptyReadNote().map(BridgeProof.says) ?? .upToDate
             let proof = added > 0

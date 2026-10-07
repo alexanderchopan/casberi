@@ -56,6 +56,19 @@ KNOWN_EXEMPT: dict[str, str] = {
     "NoteLock.swift": "the locked-note key syncs through iCloud Keychain by ruling (prd §982)",
 }
 
+# Files that write BOTH kinds by a stated rule (prd §1162, user 2026-10-07:
+# "yes let them"): a pasted API key syncs through iCloud Keychain, everything
+# else stays device-only. Not an exemption — the file is still audited, and
+# must still name a ThisDeviceOnly policy (what stays) and
+# kSecAttrSynchronizable. The one extra demand is kSecAttrAccessGroup: a
+# synced item written into a platform's DEFAULT group syncs and is unreadable
+# on the other platform (the Mac's default group is not the iPhone's), so a
+# sync that does not name the shared group is the bug this would hide.
+SYNC_RULED: dict[str, str] = {
+    "TokenVault.swift": "pasted keys sync, sessions and refresh tokens stay (prd §1162)",
+}
+ACCESS_GROUP = re.compile(r"\bkSecAttrAccessGroup\b")
+
 
 def strip_comments(text):
     """Comments discuss policy constants in prose; only code counts."""
@@ -79,7 +92,13 @@ def audit(paths):
                 rel = str(path)          # self-test fixtures live outside the repo
             if path.name in KNOWN_EXEMPT:
                 continue
-            if loose := LOOSE.search(code):
+            ruled = path.name in SYNC_RULED
+            if ruled and LOOSE.search(code) and not ACCESS_GROUP.search(code):
+                findings.append(
+                    f"{rel}: syncs an item without naming kSecAttrAccessGroup — "
+                    f"it lands in this platform's default group and the other "
+                    f"device cannot read it")
+            if not ruled and (loose := LOOSE.search(code)):
                 findings.append(
                     f"{rel}: writes {loose.group(0)} — not device-only, so the "
                     f"secret rides an encrypted backup onto another device")
@@ -122,6 +141,30 @@ def self_test():
             False, "prose about the old constant"),
         "NoKeychain.swift": ('let x = 1\n', False, "a file that stores nothing"),
     }
+    # The ruled file, by its real name, in its own directory each time.
+    ruled = {
+        "group": (
+            'let local = [kSecAttrAccessible as String: '
+            'kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,\n'
+            ' kSecAttrSynchronizable as String: false]\n'
+            'let synced = [kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,\n'
+            ' kSecAttrSynchronizable as String: true, kSecAttrAccessGroup as String: g]\n'
+            'SecItemAdd(q as CFDictionary, nil)\n',
+            False, "the ruled vault syncing into the shared group"),
+        "nogroup": (
+            'let local = [kSecAttrAccessible as String: '
+            'kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,\n'
+            ' kSecAttrSynchronizable as String: false]\n'
+            'let synced = [kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,\n'
+            ' kSecAttrSynchronizable as String: true]\n'
+            'SecItemAdd(q as CFDictionary, nil)\n',
+            True, "the ruled vault syncing into a default group"),
+        "nolocal": (
+            'let synced = [kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,\n'
+            ' kSecAttrSynchronizable as String: true, kSecAttrAccessGroup as String: g]\n'
+            'SecItemAdd(q as CFDictionary, nil)\n',
+            True, "the ruled vault with no device-only policy left"),
+    }
     ok = True
     with tempfile.TemporaryDirectory() as tmp:
         base = pathlib.Path(tmp)
@@ -131,6 +174,16 @@ def self_test():
             single = base / f"only-{name.lower()}"
             single.mkdir()
             (single / name).write_text(cases[name][0])
+            flagged = bool(audit([single]))
+            mark = "ok  " if flagged == should_flag else "FAIL"
+            if flagged != should_flag:
+                ok = False
+            verb = "flags" if should_flag else "passes"
+            print(f"  {mark} {verb} {why}")
+        for tag, (body, should_flag, why) in ruled.items():
+            single = base / f"ruled-{tag}"
+            single.mkdir()
+            (single / "TokenVault.swift").write_text(body)
             flagged = bool(audit([single]))
             mark = "ok  " if flagged == should_flag else "FAIL"
             if flagged != should_flag:
@@ -152,5 +205,7 @@ if problems:
     print("\nEvery SecItemAdd must set a kSecAttrAccessible…ThisDeviceOnly "
           "policy and name kSecAttrSynchronizable. See TokenVault.swift.")
     sys.exit(1)
-print("✓ keychain audit: every keychain write is device-only and non-syncing"
-      + (f" ({len(KNOWN_EXEMPT)} reasoned exemption)" if KNOWN_EXEMPT else ""))
+print("✓ keychain audit: every keychain write is device-only and non-syncing, "
+      "or syncs by a stated rule into the shared group"
+      + (f" ({len(KNOWN_EXEMPT)} reasoned exemption, {len(SYNC_RULED)} ruled)"
+         if KNOWN_EXEMPT or SYNC_RULED else ""))

@@ -167,6 +167,9 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// Whether the page is still on screen when the landing's beat ends —
     /// a person who left in that beat is not pulled back.
     @State private var onScreen = false
+    /// Whose account this is (prd §1162), read in `onAppear` and on change —
+    /// never in the body.
+    @State private var identity: String?
 
     private var seat: BridgeApp? { store.bridges.first { $0.id == seatID } }
 
@@ -269,7 +272,15 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // query clears, which is the bound gone by the back door. Guarded on
         // the value so a keystroke over an unopened window writes nothing.
         .onChange(of: query) { _, _ in if windowSteps != 0 { windowSteps = 0 } }
+        .onReceive(NotificationCenter.default.publisher(for: AccountIdentity.changed)) { posted in
+            guard posted.object as? String == seatID else { return }
+            identity = AccountIdentity.name(for: seatID)
+        }
+        // Re-read when the seat changes too: a dedicated screen writes its
+        // own record (Stripe's account name) as it registers.
+        .onChange(of: seat?.statusLine) { _, _ in identity = AccountIdentity.name(for: seatID) }
         .onAppear {
+            identity = AccountIdentity.name(for: seatID)
             note = AccountNotes.note(for: seatID) ?? ""
             onScreen = true
             if seat == nil { landingArmed = true }
@@ -329,6 +340,15 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
+            // WHOSE ACCOUNT (prd §1162): "acme" under GitHub, as Settings draws
+            // an Apple Account's email under its name. Only once connected —
+            // a name left from a disconnected key would describe nothing here.
+            if state.connected, let identity {
+                Text(verbatim: identity)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
             // Words alone: the tone carries the state, and a dot beside
             // them was a second mark saying the same thing (user, 2026-09-24).
             Text(AccountPageShape.stateLine(state, lands: lands))
@@ -430,7 +450,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         if keyed, state.connected {
             AccountFactRow(glyph: "key",
                            title: String(localized: "Your key"),
-                           fact: AccountPageShape.keyFact(device: DS.device, expires: keyExpires),
+                           fact: AccountPageShape.keyFact(device: DS.device, expires: keyExpires,
+                                                          synced: BridgeStore.syncsKey(seatID: seatID)),
                            opens: true,
                            action: { sheet = .key })
         }

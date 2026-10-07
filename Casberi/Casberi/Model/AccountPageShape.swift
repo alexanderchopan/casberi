@@ -120,11 +120,14 @@ enum AccountPageShape {
 
     /// Where the key lives and the verb that changes it — NEVER a character
     /// of the key. The expiry replaces the place when a provider reports one,
-    /// because the date is then the fact that matters.
-    static func keyFact(device: String, expires: Date?) -> String {
+    /// because the date is then the fact that matters. A pasted key that
+    /// syncs (prd §1162) lives in iCloud Keychain, not on one device, and
+    /// naming the device there would be a fact the app no longer holds.
+    static func keyFact(device: String, expires: Date?, synced: Bool = false) -> String {
         if let expires {
             return String(localized: "Expires \(day(expires)) · Replace")
         }
+        if synced { return String(localized: "iCloud Keychain · Replace") }
         return String(localized: "Keychain, \(device) · Replace")
     }
 

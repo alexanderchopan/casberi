@@ -115,6 +115,10 @@ struct SentryScreen: View {
                         actionLabel: "", keyboard: .URL, action: { })
             DSSlabField(placeholder: TokenBridge.sentry.placeholder,
                         text: $tokenField, actionLabel: "Save", secure: true,
+                        // Armed by its own text, but STATED (prd §1162): a
+                        // stated `isArmed` keeps the check after Paste, so a
+                        // self-hosted host above can still be typed first.
+                        isArmed: !tokenField.isEmpty,
                         action: saveToken)
             BridgeSyncStatusRows(syncing: resolving,
                                  syncingLine: String(localized: "Checking the token…"),

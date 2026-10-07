@@ -136,6 +136,12 @@ enum BridgeRefresh {
         // `BridgeHealth.reconcile` for why it reads the previous pass rather
         // than this one. Pure local bookkeeping over ~60 seats, no request.
         BridgeHealth.reconcile(store: store)
+        // Pasted keys travel through iCloud Keychain (prd §1162): carry any
+        // key an earlier build kept device-only across once, then give every
+        // key that arrived from the other device its seat — before the loops
+        // below, so a key that just arrived is read on this same pass.
+        TokenVault.migrateToSynced()
+        store.reconcileKeyedSeats()
         // Returns this slot's DELAY IN MILLISECONDS, not its index — so every
         // `stagger(s)` below carries its pass's pace with it.
         var nextSlot = 0

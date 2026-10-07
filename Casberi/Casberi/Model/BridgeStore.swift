@@ -349,6 +349,53 @@ final class BridgeStore {
         for id in Self.retiredWalletSeats { remove(id) }
     }
 
+    /// The keyed seats' truth on a device the key reached from iCloud (prd
+    /// §1162). Seats live in `UserDefaults`, which does not travel, so a key
+    /// pasted on the iPhone arrives on the Mac with no seat: the bridge reads
+    /// (its sweep gates on the key) while Apps says "Connect". This writes the
+    /// seat the key implies, and drops one whose synced key was removed on
+    /// the other device — a disconnect is a fact about the account.
+    ///
+    /// **It drops only on a DEFINITE absence**: before the first unlock after
+    /// a reboot the vault cannot answer, and a background sweep then would
+    /// disconnect everything. One attributes-only read for every seat
+    /// (`TokenVault.storedAccounts`), never a Keychain round trip per seat.
+    func reconcileKeyedSeats() {
+        TokenVault.noteArrivals()
+        guard let stored = TokenVault.storedAccounts() else { return }
+        let proof = String(localized: "Key from your other device")
+        for seat in Self.keyedSeats {
+            if stored.contains(seat.vaultKey) {
+                if !bridges.contains(where: { $0.id == seat.id || $0.name == seat.name }) {
+                    _ = registerConnected(id: seat.id, name: seat.name, proof: proof)
+                }
+            } else if TokenVault.syncs(seat.vaultKey) {
+                remove(seat.id)
+            }
+        }
+    }
+
+    /// Whether this seat's key travels through iCloud Keychain (prd §1162) —
+    /// a static table read, never the Keychain, so a body may ask it.
+    static func syncsKey(seatID: String) -> Bool {
+        keyedSeats.contains { $0.id == seatID }
+    }
+
+    /// Every seat a synced key stands for: the token bridges, the pasted agent
+    /// keys, the exchanges — each with the id and name its own setup screen
+    /// registers, so a reconciled seat and a pasted one are the same seat.
+    private static let keyedSeats: [(id: String, name: String, vaultKey: String)] = {
+        var seats = TokenBridge.allCases
+            .filter { TokenVault.syncs($0.tokenKey) }
+            .map { (id: $0.bridgeID, name: $0.rawValue, vaultKey: $0.tokenKey) }
+        let agents: [(AgentProvider, String, String)] = [
+            (.openrouter, "openrouter", "OpenRouter"), (.grok, "grok", "Grok"),
+            (.venice, "venice", "Venice"), (.nearai, "nearai", "NEAR AI"), (.meta, "muse", "Muse")]
+        seats += agents.map { (id: $1, name: $2, vaultKey: $0.vaultKey) }
+        seats += ExchangeBridge.Venue.allCases.map { (id: $0.rawValue, name: $0.display, vaultKey: $0.vaultKey) }
+        return seats
+    }()
+
     /// Seats that USED to ride the watched wallets and no longer exist
     /// (prd §515). A registered seat is persisted, and `reconcileWalletSeats`
     /// only ever considers ids still in `walletSeats` — so on an install that
