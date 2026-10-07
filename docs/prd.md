@@ -65004,3 +65004,7 @@ Home's sections are categories since §1152, and Day is one of them, its name a 
 **Guards.** `tile-glyph-audit.py` holds `ScopeTileGlyph.cards`/`.wallets` to their cases; the accessibility audit's catch of the Track tray's pick row (§1164, a 60pt row with no stated floor) is fixed with `DS.Hit.min`.
 
 **Seen** on an iPhone 17 Pro simulator of its own, light: Settings on a fresh install (eight zeros, Start here, All apps from Agents); empty Today with the note and Today leading the tiles; Cards, Wallets, People and Mail lists empty; the demo's Exit landing on Settings with Watch a wallet gone (a wallet watched). **Not seen:** the Mac, dark, a first run through the intro, Calendar's two-way choice tapped. The demo leaves one watched wallet and three people behind on this simulator; not looked into.
+
+### §1166a — Settings' bar is Search alone (user, 2026-10-07: "agree we don't need it now", of the bar's Add; amends §1138 item 2, §1136 item 5)
+
+Add opened the catalogue on Apps, a second copy of the All apps list now drawn under Start here, and on every other kind ran the act that kind's first row already runs (§1166 item 6). Two doors to one place, so it is deleted from the bar and from the model (`SettingsScope.new`, §723's rule); the bar is Search, as the catalogue's has been since §1138. **Seen** on a fresh simulator: the bar holding Search alone beside the seat.

@@ -250,8 +250,7 @@ extension YouTile: DSTileScope {
     }
 }
 
-/// Settings' own filters (prd §1136 item 5). Subs wears Subscriptions' arrows,
-/// its own name; Add is the bare plus every New wears.
+/// Settings' own filters (prd §1136 item 5); the bar is Search alone (§1166).
 extension SettingsScope: DSTileScope {
     var glyph: String {
         switch self {
@@ -263,7 +262,6 @@ extension SettingsScope: DSTileScope {
         case .people:        return ScopeTileGlyph.people
         case .subscriptions: return ScopeTileGlyph.subscriptions
         case .wallets:       return ScopeTileGlyph.wallets
-        case .new:           return ScopeTileGlyph.new
         case .search:        return ScopeTileGlyph.search
         }
     }

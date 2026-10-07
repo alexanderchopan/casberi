@@ -123,7 +123,7 @@ struct SettingsHome: View {
                                 kindList(SubscriptionsReading.shared.items.filter { hit($0.name) },
                                          empty: "Track a subscription and it lands here.") { subscriptionRow($0) }
                             }
-                        case .new, .search:  EmptyView()
+                        case .search:        EmptyView()
                         }
                     }
                 }
@@ -219,10 +219,6 @@ struct SettingsHome: View {
     // MARK: - Acts
 
     private func pick(_ picked: SettingsScope) {
-        if picked == .new {
-            add(scope)
-            return
-        }
         if picked == .search {
             withAnimation(DS.Motion.standard) { searchOpen = true }
             searchFocused = true
@@ -240,12 +236,12 @@ struct SettingsHome: View {
         query.isEmpty || name.localizedCaseInsensitiveContains(query)
     }
 
-    /// What + Add adds: the kind you're on (prd §1136 item 5), each through
-    /// the door that already adds it. On Search, an app.
+    /// Each kind's own act, behind its first row (prd §1166): the bar's Add
+    /// that also ran it is deleted, a second door to the same place.
     private func add(_ kind: SettingsScope) {
         DSHaptic.selection()
         switch kind {
-        case .apps, .new, .search:
+        case .apps, .search:
             route.present(.apps)
         case .calendars:
             calendarChoice = true
@@ -305,7 +301,7 @@ struct SettingsHome: View {
             case .people: people
             case .subscriptions: SubscriptionsReading.shared.items.count
             case .wallets: WalletStore.shared.addresses.count
-            case .new, .search: 0
+            case .search: 0
             }
             return (kind, n, kind.label)
         }
@@ -772,12 +768,12 @@ struct SettingsHome: View {
     }
 }
 
-/// Settings' six kinds, picked by pressing their counts in the box, and the
-/// bar's two verbs (prd §1138, amending §1136h's scrolling bar of kinds).
+/// Settings' eight kinds (prd §1166), picked by pressing their counts in the
+/// box, and the bar's one verb (prd §1138, amending §1136h's scrolling bar).
 /// No All: the box is the overview of all of it (user: "the sources screen
-/// IS that list"). Add adds the kind you're on; Search searches it.
+/// IS that list"). Search searches the kind you're on.
 enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case apps, calendars, cards, feeds, newsletters, people, subscriptions, wallets, new, search
+    case apps, calendars, cards, feeds, newsletters, people, subscriptions, wallets, search
 
     var id: String { rawValue }
 
@@ -785,9 +781,11 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     static let kinds: [SettingsScope] = [.apps, .calendars, .cards, .feeds, .newsletters,
                                          .people, .subscriptions, .wallets]
 
-    static let verbs: Set<SettingsScope> = [.new, .search]
-    /// What the floating bar holds: the verbs alone.
-    static let bar: [SettingsScope] = [.new, .search]
+    static let verbs: Set<SettingsScope> = [.search]
+    /// What the floating bar holds: Search alone since prd §1166 (user: "agree
+    /// we don't need it now"): every kind's list leads with its own act, and
+    /// Apps lists every app, so Add was a second door to each.
+    static let bar: [SettingsScope] = [.search]
 
     var label: String {
         switch self {
@@ -801,7 +799,6 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .people:        return String(localized: "People")
         case .subscriptions: return String(localized: "Subscriptions")
         case .wallets:       return String(localized: "Wallets")
-        case .new:           return String(localized: "Add")
         case .search:        return String(localized: "Search")
         }
     }
@@ -816,7 +813,6 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .newsletters:   return String(localized: "The lists that write to your mail")
         case .people:        return String(localized: "The people behind your accounts")
         case .subscriptions: return String(localized: "What you pay for")
-        case .new:           return String(localized: "Add one of the kind you're on")
         case .search:        return String(localized: "Find one of the kind you're on")
         }
     }

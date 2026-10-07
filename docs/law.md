@@ -1520,7 +1520,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,… (amended by §1163)
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
 - §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,…
-- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app
+- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app [+1 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 
