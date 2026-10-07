@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1300 of 1364 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1301 of 1365 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1512,7 +1512,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1155 — Logos gets Chat: your conversations from Basecamp, read through Observer and never kept; Rewards folds into Node (amended by §1155a)
 - §1155a — Several Observers, each tile through its own; the pairing tray rises from the shell
 - §1156 — Every title's first word is pink, and You's screens name the place alone
-- §1157 — Home's rows lead with the app's icon, as notifications do, and Settings' app rows are one line
+- §1157 — Home's rows lead with the app's icon, as notifications do, and Settings' app rows are one line (amended by §1170)
 - §1158 — Spotify reads where the web player reads: the albums and playlists you played, and what your friends are playing, off…
 - §1159 — An app's icon in the rooms tray long-presses to Settings, its account page
 - §1160 — Day's Subscriptions fills from the mail already here, and a list that went quiet stands under Stopped
@@ -1524,6 +1524,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1167 — Markets is automatic: always a room, never an app to connect, and its box is two across
 - §1168 — Today wears the inbox tray (amended by §1169)
 - §1169 — Empty Today is a preview of itself, and every room's All is a stack
+- §1170 — Settings' rows are Today's size
 
 ## Dead rulings → what replaced them (generated)
 

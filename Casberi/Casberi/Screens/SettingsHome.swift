@@ -116,7 +116,7 @@ struct SettingsHome: View {
                             // The verb leads, as on the Wallet's list (prd
                             // §1117), so an empty list is never a dead end
                             // (§1164): the tray opens on Popular.
-                            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                            VStack(alignment: .leading, spacing: DS.Space.s2) {
                                 if query.isEmpty {
                                     DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) { add(.subscriptions) }
                                 }
@@ -333,7 +333,10 @@ struct SettingsHome: View {
                   subtitle: Text("Name, photo, data")) {
             withAnimation(DS.Motion.standard) { casberiOpen = true }
         } leading: {
-            CasberiMark(size: DS.Face.row)
+            CasberiMark(size: DS.Mark.notice * 0.7)
+                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
+                .background(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.notice), style: .continuous)
+                    .fill(DS.fillFaint))
         }
     }
 
@@ -345,7 +348,7 @@ struct SettingsHome: View {
             Image(systemName: "chevron.left")
                 .dsGlyph(.body, weight: .semibold)
                 .foregroundStyle(DS.brandInk)
-                .frame(width: DS.Face.row, height: DS.Face.row)
+                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
         }
         SettingsRows()
     }
@@ -387,7 +390,7 @@ struct SettingsHome: View {
             if query.isEmpty {
                 if hasName { casberiRow }
                 if !startHere.isEmpty {
-                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
                         Text("Start here").dsText(.heading20).foregroundStyle(DS.brandInk)
                         ForEach(startHere) { step in startRow(step) }
                     }
@@ -411,7 +414,7 @@ struct SettingsHome: View {
                         Text("All apps").dsText(.heading20).foregroundStyle(DS.brandInk)
                     }
                     ForEach(categories, id: \.self) { category in
-                        VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        VStack(alignment: .leading, spacing: DS.Space.s2) {
                             Text(category).dsText(.heading17).foregroundStyle(DS.textSecondary)
                             ForEach((byCategory[category] ?? []).sorted {
                                 $0.name.localizedStandardCompare($1.name) == .orderedAscending
@@ -457,15 +460,22 @@ struct SettingsHome: View {
             // what the app reaches (user: "that should be the casberi icon").
             DSPushRow(title: Text("Add name, photo, preferences")) {
                 withAnimation(DS.Motion.standard) { casberiOpen = true }
-            } leading: { CasberiMark(size: DS.Face.row) }
+            } leading: {
+                // On a tile like every icon beside it (user: "the app tiles
+                // and rows are too small"), Today's 38pt (prd §1170).
+                CasberiMark(size: DS.Mark.notice * 0.7)
+                    .frame(width: DS.Mark.notice, height: DS.Mark.notice)
+                    .background(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.notice), style: .continuous)
+                        .fill(DS.fillFaint))
+            }
         case .calendar:
             DSPushRow(title: Text("Add a calendar"), subtitle: Text("Your phone’s, or any by link")) {
                 add(.calendars)
-            } leading: { BridgeIcon(name: "Calendar", size: DS.Face.row) }
+            } leading: { BridgeIcon(name: "Calendar", size: DS.Mark.notice) }
         case .wallet:
             DSPushRow(title: Text("Watch a wallet"), subtitle: Text("Any address or name, no keys")) {
                 add(.wallets)
-            } leading: { BridgeIcon(name: "Wallet", size: DS.Face.row) }
+            } leading: { BridgeIcon(name: "Wallet", size: DS.Mark.notice) }
         case .subscription:
             DSPushRow(title: Text(SubscriptionWords.track), subtitle: Text("Netflix, iCloud+, free ones too")) {
                 add(.subscriptions)
@@ -477,8 +487,8 @@ struct SettingsHome: View {
         Image(systemName: glyph)
             .dsGlyph(.body, weight: .regular)
             .foregroundStyle(DS.tint)
-            .frame(width: DS.Face.row, height: DS.Face.row)
-            .background(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Face.row), style: .continuous)
+            .frame(width: DS.Mark.notice, height: DS.Mark.notice)
+            .background(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.notice), style: .continuous)
                 .fill(DS.fillFaint))
     }
 
@@ -497,14 +507,14 @@ struct SettingsHome: View {
             DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.tint) {
                 route.openSetup(forOffer: name)
             } leading: {
-                BridgeIcon(name: name, size: DS.Face.row)
+                BridgeIcon(name: name, size: DS.Mark.notice)
             }
         }
     }
 
     /// Where an empty kind fills from: its apps, each one tap.
     private func comesFrom(_ names: [String]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("Comes from").dsText(.heading17).foregroundStyle(DS.textSecondary)
             ForEach(names.filter { n in BridgeCatalog.offers.contains { $0.name == n } }, id: \.self) { offerRow($0) }
         }
@@ -534,7 +544,7 @@ struct SettingsHome: View {
     /// The cards Casberi can read, by name, each saying the app that reads
     /// it; one you have wears its app's state.
     private var cardsList: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("Cards Casberi can read").dsText(.heading17).foregroundStyle(DS.textSecondary)
             ForEach(Self.cardApps.filter { c in BridgeCatalog.offers.contains { $0.name == c.app } }, id: \.app) { card in
                 let app = bridges.bridges.first { $0.name == card.app && $0.status != .paused }
@@ -544,7 +554,7 @@ struct SettingsHome: View {
                                     : app?.status == .attention ? DS.attentionInk : DS.textTertiary) {
                     route.openSetup(forOffer: card.app)
                 } leading: {
-                    BridgeIcon(name: card.app, size: DS.Face.row)
+                    BridgeIcon(name: card.app, size: DS.Mark.notice)
                 }
             }
         }
@@ -580,18 +590,18 @@ struct SettingsHome: View {
         return VStack(alignment: .leading, spacing: DS.Space.s4) {
             verbRow("eye", String(localized: "Watch a wallet")) { add(.wallets) }
             if !watched.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ForEach(watched) { addr in
                         DSPushRow(title: Text(verbatim: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label),
                                   subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address))) {
                             route.openSetup(forOffer: CategoryFold.walletRoom)
                         } leading: {
-                            WalletFace(address: addr.address, size: DS.Face.row, circular: true)
+                            WalletFace(address: addr.address, size: DS.Mark.notice, circular: true)
                         }
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text("Wallet apps").dsText(.heading17).foregroundStyle(DS.textSecondary)
                 ForEach(walletApps.filter { hit($0) }, id: \.self) { offerRow($0) }
             }
@@ -607,7 +617,7 @@ struct SettingsHome: View {
                   factTone: app.status == .attention ? DS.attentionInk : DS.textTertiary) {
             route.openSetup(forOffer: app.name)
         } leading: {
-            BridgeIcon(name: app.name, size: DS.Face.row)
+            BridgeIcon(name: app.name, size: DS.Mark.notice)
         }
     }
 
@@ -648,7 +658,7 @@ struct SettingsHome: View {
                                 route.openSetup(forOffer: "Calendar")
                             } leading: {
                                 Circle().fill(cal.color).frame(width: 14, height: 14)
-                                    .frame(width: DS.Face.row, height: DS.Face.row)
+                                    .frame(width: DS.Mark.notice, height: DS.Mark.notice)
                             }
                         }
                         ForEach(subscribed) { calendarRow($0) }
@@ -669,7 +679,7 @@ struct SettingsHome: View {
 
     private func kindSection<Rows: View>(_ title: LocalizedStringKey,
                                          @ViewBuilder rows: () -> Rows) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(title).dsText(.heading17).foregroundStyle(DS.brandInk)
             rows()
         }
@@ -692,19 +702,19 @@ struct SettingsHome: View {
         DSPushRow(title: Text(verbatim: item.name),
                   subtitle: item.next.map { Text("Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") }) {
             sheet = .subscription(item.id)
-        } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
+        } leading: { BridgeIcon(name: item.name, size: DS.Mark.notice) }
     }
 
     private func feedRow(_ item: Following.Item) -> some View {
         DSPushRow(title: Text(verbatim: item.name), subtitle: Text(verbatim: item.seat)) {
             sheet = .following(item.id, room(of: item))
-        } leading: { BridgeIcon(name: item.seat, size: DS.Face.row) }
+        } leading: { BridgeIcon(name: item.seat, size: DS.Mark.notice) }
     }
 
     private func newsletterRow(_ item: MailSubscriptions.Item) -> some View {
         DSPushRow(title: Text(verbatim: item.name), subtitle: item.address.map { Text(verbatim: $0) }) {
             sheet = .mailList(item.id)
-        } leading: { BridgeIcon(name: item.name, size: DS.Face.row) }
+        } leading: { BridgeIcon(name: item.name, size: DS.Mark.notice) }
     }
 
     /// EVERY CALENDAR CASBERI READS (prd §1150, user: "it should show every
@@ -721,14 +731,14 @@ struct SettingsHome: View {
                 empty("Nothing matches.")
             }
         } else {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(phone) { cal in
                     DSPushRow(title: Text(verbatim: cal.title), subtitle: Text(verbatim: cal.account)) {
                         route.openSetup(forOffer: "Calendar")
                     } leading: {
                         Circle().fill(cal.color)
                             .frame(width: 14, height: 14)
-                            .frame(width: DS.Face.row, height: DS.Face.row)
+                            .frame(width: DS.Mark.notice, height: DS.Mark.notice)
                     }
                 }
                 ForEach(subscribed) { calendarRow($0) }
@@ -744,13 +754,13 @@ struct SettingsHome: View {
             Image(systemName: ScopeTileGlyph.calendars)
                 .dsGlyph(.body, weight: .regular)
                 .foregroundStyle(DS.textSecondary)
-                .frame(width: DS.Face.row, height: DS.Face.row)
+                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
         }
     }
 
     private func rows<Item: Identifiable, Row: View>(_ items: [Item],
                                                      @ViewBuilder row: @escaping (Item) -> Row) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(items) { row($0) }
         }
     }

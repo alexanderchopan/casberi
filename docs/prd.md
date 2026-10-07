@@ -65031,3 +65031,7 @@ You's Today tile and the tray's Today door wear `tray.full` (`tray.full.fill` wh
 2. **Every room's All tile is `square.stack`** (`ScopeTileGlyph.all`: Media, Reading, Social, Day, Agents, Notes and the rest), one icon for one meaning; the dock's inbox tray is Today's alone (`ScopeTileGlyph.feed`, which reads `CategoryFold`'s All). `tile-glyph-audit.py`'s rule F holds `feed` to the dock's table, as it held `all`; the §1168 alias is gone.
 
 **Seen** on a fresh simulator: empty Today's preview (Day, Social, Work, Wallet, Reading…) under the note; Notes with its All as a stack beside You's Today tray. **Not seen:** the Mac, dark, the preview leaving at a real first connect.
+
+## §1170 — Settings' rows are Today's size (user, 2026-10-07: "do you think the app tiles and rows are too small?", then, against the App Store's ~60pt list icons and iOS Settings' 29pt, "i want to do the same as we have on Today"; amends §1157's one-line 30pt Settings rows)
+
+Every row in Settings leads with a `DS.Mark.notice` (38pt) icon, Today's (§1157), and its lists stand `s2` apart, so an app is known by its icon in the list a first run browses. The Casberi step and Casberi's own row wear the mark on a `fillFaint` app tile like every icon beside them. **Seen** on a fresh simulator: Start here's four on one icon edge, All apps' Agents with Bankr, ChatGPT and Claude legible. **Not seen:** the Mac, dark.
