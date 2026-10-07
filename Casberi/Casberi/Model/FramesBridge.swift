@@ -240,10 +240,10 @@ enum FramesBridge {
 
         let proof: String = {
             if addresses.isEmpty { return String(localized: "An account on this phone") }
+            // One line under the catalogue row's name at `subhead12`: "Your
+            // account and 3 addresses followed" truncated there.
             if hasKey {
-                return addresses.count == 1
-                    ? String(localized: "Your account and 1 address followed")
-                    : String(localized: "Your account and \(addresses.count) addresses followed")
+                return String(localized: "Your account and \(addresses.count) followed")
             }
             return addresses.count == 1
                 ? String(localized: "1 address followed")
