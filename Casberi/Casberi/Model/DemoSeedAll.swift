@@ -3414,6 +3414,9 @@ enum DemoSeedAll {
             ("Notion", 12.00, 10), ("Notion", 10.00, 40), ("Notion", 10.00, 70),
             ("Linear", 10.00, 16), ("Linear", 10.00, 46), ("Linear", 10.00, 76),
             ("iCloud+", 2.99, 3), ("iCloud+", 2.99, 33), ("iCloud+", 2.99, 63),
+            // Two charges a month apart (prd §1161): not yet a subscription,
+            // so Track a subscription offers it, as it offers Apple above.
+            ("Spotify", 11.99, 12), ("Spotify", 11.99, 42),
         ]
         return spends.enumerated().map { i, s in
             row(.transaction, "\(s.0) · $\(String(format: "%.2f", s.1))",

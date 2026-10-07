@@ -135,6 +135,32 @@ check(Subscriptions.total(items8) { a, c in c == "USD" ? a : nil }.uncounted == 
 check(abs(Subscriptions.total(items8) { a, c in c == "USD" ? a : (c == "EUR" ? a * 1.1 : nil) }.monthly
           - (20 + 10.99 * 1.1)) < 0.001, "with a rate it converts")
 
+// SUGGESTIONS (prd §1161): two charges, one price, a month or a year apart,
+// the latest not overdue, not tracked already.
+func spends(_ m: String, _ c: [(Double, Double)], currency: String = "USD") -> [Spend] {
+    c.map { Spend(merchant: m, amount: $0.0, currency: currency, date: ago($0.1)) }
+}
+func suggest(_ s: [Spend], tracked: Set<String> = []) -> [Subscriptions.Suggestion] {
+    Subscriptions.suggestions(spends: [(paysWith: "Apple Card", spends: s)], tracked: tracked, now: now)
+}
+let sp = suggest(spends("Spotify", [(11.99, 42), (11.99, 12)]))
+check(sp.map(\.name) == ["Spotify"] && sp.first?.amount == 11.99 && sp.first?.yearly == false
+      && sp.first?.paysWith == "Apple Card", "two charges a month apart at one price are offered")
+check(suggest(spends("Spotify", [(11.99, 42), (11.99, 12)]), tracked: ["spotify"]).isEmpty,
+      "a tracked name is not offered again")
+check(suggest(spends("Whole Foods", [(84.2, 31), (61.05, 1)])).isEmpty,
+      "two charges at different prices are a shop, not a plan")
+check(suggest(spends("Blue Bottle", [(6.5, 9), (6.5, 2)])).isEmpty,
+      "a week apart is a habit, not a plan")
+check(suggest(spends("Netflix", [(15.49, 110), (15.49, 80)])).isEmpty,
+      "a pair whose next charge is long overdue has stopped")
+check(suggest(spends("Claude", [(20, 66), (20, 36), (20, 6)])).isEmpty,
+      "three charges are the tile's, never a suggestion")
+let yr = suggest(spends("1Password", [(36, 380), (36, 15)]))
+check(yr.first?.yearly == true, "two charges a year apart are offered as yearly")
+check(suggest(spends("Spotify", [(11.99, 42), (11.99, 12)]) + [Spend(merchant: "Spotify", amount: 11.99,
+      currency: "USD", date: ago(5), isSettled: false)]).count == 1, "a pending charge does not count")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   detection, merge, cadence, renewals, order, total")
 SWIFT

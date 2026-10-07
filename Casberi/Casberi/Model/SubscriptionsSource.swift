@@ -19,6 +19,9 @@ final class SubscriptionsReading {
     private(set) var items: [Subscriptions.Item] = []
     /// What the counted ones cost a month, in dollars.
     private(set) var total = Subscriptions.Total(monthly: 0, counted: 0, uncounted: [])
+    /// Charges that look like a plan and are not tracked yet (prd §1161),
+    /// offered by Track a subscription.
+    private(set) var suggestions: [Subscriptions.Suggestion] = []
     /// True once a read has finished, so the tile can tell "none" from "not yet".
     private(set) var read = false
     /// The rates the last read converted at (`WalletCash`), for a scoped total.
@@ -41,7 +44,9 @@ final class SubscriptionsReading {
         let codes = Set(composed.map(\.currency)).subtracting(["USD"])
         let rates = codes.isEmpty ? [:] : await WalletCash.cachedRates(for: codes)
         let sum = Subscriptions.total(composed) { WalletCash.usd($0, $1, rates: rates) }
+        let offered = SubscriptionsSource.suggestions(from: things, tracked: Set(composed.map(\.id)), now: now)
         if composed != items { items = composed }
+        if offered != suggestions { suggestions = offered }
         if sum != total { total = sum }
         if rates != self.rates { self.rates = rates }
         read = true
@@ -79,8 +84,33 @@ enum SubscriptionsSource {
     /// through `AppleWalletRoom.recurringSeries` per payer.
     @MainActor
     static func found(from things: [Thing], now: Date) -> [Subscriptions.Found] {
+        var out: [Subscriptions.Found] = []
+        for (payer, entry) in spendsByPayer(things, now: now).sorted(by: { $0.key < $1.key }) {
+            let series = AppleWalletRoom.recurringSeries(entry.spends, now: now)
+            let rises = AppleWalletRoom.creeps(series, now: now)
+            for s in series {
+                let rise = rises.first { Subscriptions.key($0.merchant) == Subscriptions.key(s.merchant)
+                                         && $0.currency == s.currency }
+                out.append(.init(series: s, paysWith: payer, source: entry.source, was: rise?.was))
+            }
+        }
+        return out
+    }
+
+    /// What Track a subscription offers (prd §1161): the same charges, read
+    /// for two at one price (`Subscriptions.suggestions`).
+    @MainActor
+    static func suggestions(from things: [Thing], tracked: Set<String>, now: Date) -> [Subscriptions.Suggestion] {
+        let spends = spendsByPayer(things, now: now).sorted { $0.key < $1.key }
+            .map { (paysWith: $0.key, spends: $0.value.spends) }
+        return Subscriptions.suggestions(spends: spends, tracked: tracked, now: now)
+    }
+
+    /// payer → (source, spends), inside the lookback.
+    @MainActor
+    private static func spendsByPayer(_ things: [Thing], now: Date)
+        -> [String: (source: String, spends: [AppleWalletRoom.Spend])] {
         let floor = now.addingTimeInterval(-Double(lookbackDays) * 86_400)
-        // payer → (source, spends)
         var byPayer: [String: (source: String, spends: [AppleWalletRoom.Spend])] = [:]
         for thing in things where thing.kind == .transaction && thing.capturedAt >= floor {
             guard let payer = payer(of: thing),
@@ -94,17 +124,7 @@ enum SubscriptionsSource {
                 isRefund: thing.tags.contains("Refund"))
             byPayer[payer, default: (thing.source, [])].spends.append(spend)
         }
-        var out: [Subscriptions.Found] = []
-        for (payer, entry) in byPayer.sorted(by: { $0.key < $1.key }) {
-            let series = AppleWalletRoom.recurringSeries(entry.spends, now: now)
-            let rises = AppleWalletRoom.creeps(series, now: now)
-            for s in series {
-                let rise = rises.first { Subscriptions.key($0.merchant) == Subscriptions.key(s.merchant)
-                                         && $0.currency == s.currency }
-                out.append(.init(series: s, paysWith: payer, source: entry.source, was: rise?.was))
-            }
-        }
-        return out
+        return byPayer
     }
 
     /// What paid a charge, as the person knows it: Apple Wallet's account

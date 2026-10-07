@@ -14,6 +14,8 @@ struct DSTraySearchField<Idle: View>: View {
     var focus: FocusState<Bool>.Binding
     var searching: Bool = false
     var keyboard: UIKeyboardType = .default
+    /// A field that takes a NAME capitalizes its words; a search does not.
+    var capitalization: TextInputAutocapitalization = .never
     var submitLabel: SubmitLabel = .search
     var onSubmit: () -> Void = {}
     @ViewBuilder var idle: () -> Idle
@@ -25,7 +27,7 @@ struct DSTraySearchField<Idle: View>: View {
                 .foregroundStyle(DS.textSecondary)
             TextField(placeholder, text: $text)
                 .dsText(.body17)
-                .textInputAutocapitalization(.never)
+                .textInputAutocapitalization(capitalization)
                 .autocorrectionDisabled()
                 .keyboardType(keyboard)
                 .submitLabel(submitLabel)

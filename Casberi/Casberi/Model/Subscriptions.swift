@@ -262,6 +262,66 @@ enum Subscriptions {
         return date
     }
 
+    // MARK: - Suggestions (prd §1161)
+
+    /// A charge that looks like a plan but has not earned a cadence yet: TWO
+    /// settled charges at one merchant on one card, a month or a year apart,
+    /// at one price, the latest not overdue. `believes` wants three, so the
+    /// tile never lists these; Track a subscription OFFERS them, and a tap
+    /// tracks one by hand (`SubscriptionStore`), which the card's third charge
+    /// later merges with by name.
+    struct Suggestion: Equatable, Identifiable {
+        /// The merge key (`key(_:)`).
+        var id: String
+        var name: String
+        var amount: Double
+        var currency: String
+        var cadenceDays: Int
+        /// The two charges, oldest first.
+        var dates: [Date]
+        var paysWith: String
+        var next: Date
+        var yearly: Bool { cadenceDays >= Subscriptions.yearlyFromDays }
+    }
+
+    /// Every suggestion, most expensive first, none already `tracked` (by
+    /// key). `spends` is each card's or account's charges, as the person
+    /// names it.
+    static func suggestions(spends: [(paysWith: String, spends: [AppleWalletRoom.Spend])],
+                            tracked: Set<String>, now: Date) -> [Suggestion] {
+        var byKey: [String: Suggestion] = [:]
+        for (payer, all) in spends {
+            var groups: [String: [AppleWalletRoom.Spend]] = [:]
+            for s in all where s.isSettled && !s.isRefund && s.amount >= AppleWalletRoom.minAmount {
+                groups[AppleWalletRoom.spendKey(s), default: []].append(s)
+            }
+            for (_, raw) in groups where raw.count == 2 {
+                let charges = raw.sorted { $0.date < $1.date }
+                let merchant = AppleWalletRoom.preferredSpelling(charges.map(\.merchant))
+                let k = key(merchant)
+                guard !k.isEmpty, !tracked.contains(k) else { continue }
+                let gap = Int((charges[1].date.timeIntervalSince(charges[0].date) / 86_400).rounded())
+                guard monthlyDays.contains(gap)
+                        || (yearlyFromDays...AppleWalletRoom.maxCadenceDays).contains(gap) else { continue }
+                let (a, b) = (charges[0].amount, charges[1].amount)
+                guard abs(a - b) <= max(a, b) * steadyTolerance else { continue }
+                let series = AppleWalletRoom.Series(merchant: merchant, currency: charges[0].currency,
+                                                    charges: charges, cadenceDays: gap)
+                guard !hasStopped(series, now: now) else { continue }
+                let suggestion = Suggestion(id: k, name: merchant, amount: b, currency: series.currency,
+                                            cadenceDays: gap, dates: charges.map(\.date),
+                                            paysWith: payer, next: series.nextExpected)
+                // Two cards each charged twice: the one charged last.
+                if let standing = byKey[k], standing.dates[1] >= suggestion.dates[1] { continue }
+                byKey[k] = suggestion
+            }
+        }
+        return byKey.values.sorted {
+            $0.amount != $1.amount ? $0.amount > $1.amount
+                : $0.name.localizedStandardCompare($1.name) == .orderedAscending
+        }
+    }
+
     // MARK: - The total
 
     struct Total: Equatable {
