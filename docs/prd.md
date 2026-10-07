@@ -65073,3 +65073,7 @@ Every row in Settings leads with a `DS.Mark.notice` (38pt) icon, Today's (§1157
 4. **Alerts' footnote is deleted** (`AlertsSection`): how alerts are checked is not something the controls need explained.
 
 `-subscriptionTrack "<Name>:<price>"` tracks one by hand, for driving Edit headlessly. **Seen** on a private simulator over the demo: the box's figures in one column; Notion's sheet with Edit, its form filled, Save closing back to the sheet. **Not seen:** the Track tray's typed row (a simulator with no keyboard), a rename.
+
+## §1173 — The demo has three calendars (user, 2026-10-07: "in the demo it shows 0 calendars connected. that's gotta be wrong need to fix that")
+
+Settings counts the phone's calendars through EventKit (§1150), and the demo's person has none to read, so its box said 0 beside seven Calendar events. The demo's events are filed under three calendars (Work, Home, Family, the tag `ScheduleIngest` writes), and under demo `PhoneCalendar.readable(_:)` reads them off those events (`PhoneCalendar.demo`), on an iCloud account, each opening Calendar's page as a phone calendar does. **Seen** on a freshly poured demo: Calendars 3, listing Family, Home, Work. A demo poured before this keeps its single Work calendar until it is poured again.

@@ -745,7 +745,7 @@ struct RoomsTray: View {
                                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         d.fetchLimit = 2_000
         noteCorpus = ((try? context.fetch(d)) ?? []).filter { $0.isLive && Pinboard.inRoom($0) }
-        phoneCalendars = PhoneCalendar.readable()
+        phoneCalendars = PhoneCalendar.readable(context)
         // People are found from the index's snapshot, which only Settings
         // and the book built; build it here so a person is found first time.
         _ = ContactIndexSources.rebuild(context: context)

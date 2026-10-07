@@ -4805,18 +4805,21 @@ enum DemoSeedAll {
         // range, its duration and its `.map` fact (prd §365). Standup carries
         // no place on purpose — a stub with only a clock is the common case and
         // must look right too.
-        let events: [(String, Double, Int, Int, String?)] = [
-            ("Standup", -0.3, 9, 15, nil),
-            ("Design review", -1, 14, 60, "Studio, 2nd floor"),
-            ("Dinner with Sam", -1, 19, 120, "Ilica 42, Zagreb"),
-            ("Joiner site visit", -3, 11, 90, "Site — Hoyt Street"),
-            ("Book club", -4, 19, 120, nil),
-            ("Mira's birthday", -6, 0, 0, nil),
-            ("Flight to Lisbon", -9, 8, 195, "Terminal 2"),
+        // The last field is the event's calendar, the tag `ScheduleIngest`
+        // writes, so the demo's Settings counts three calendars, as a person's
+        // phone holds (`PhoneCalendar.demo`), not one.
+        let events: [(String, Double, Int, Int, String?, String)] = [
+            ("Standup", -0.3, 9, 15, nil, "Work"),
+            ("Design review", -1, 14, 60, "Studio, 2nd floor", "Work"),
+            ("Dinner with Sam", -1, 19, 120, "Ilica 42, Zagreb", "Home"),
+            ("Joiner site visit", -3, 11, 90, "Site — Hoyt Street", "Work"),
+            ("Book club", -4, 19, 120, nil, "Home"),
+            ("Mira's birthday", -6, 0, 0, nil, "Family"),
+            ("Flight to Lisbon", -9, 8, 195, "Terminal 2", "Home"),
         ]
         out += events.enumerated().map { i, e in
             row(.event, e.0, source: "Calendar", ref: "demo:cal:\(i)", days: e.1, hour: e.2,
-                content: "\(e.2):00 · calendar", tags: ["Work"]) { t in
+                content: "\(e.2):00 · calendar", tags: [e.5]) { t in
                 // Minutes of 0 means all-day — the stub must show the words,
                 // never the midnight start EventKit reports for one. Seeded so
                 // the demo covers that branch, which is otherwise invisible

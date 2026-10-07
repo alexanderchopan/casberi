@@ -242,7 +242,7 @@ struct SettingsHome: View {
     }
 
     private func read() async {
-        phoneCalendars = PhoneCalendar.readable()
+        phoneCalendars = PhoneCalendar.readable(context)
         await SubscriptionsReading.shared.refresh(context)
         MailSubscriptionsReading.shared.refresh(context)
         for room in Following.Room.allCases { FollowingReading.shared.refresh(room, context: context) }
@@ -831,9 +831,11 @@ struct PhoneCalendar: Identifiable {
     let account: String
     let color: Color
 
-    /// Empty without full Calendar access: nothing is read then.
+    /// Empty without full Calendar access: nothing is read then. The demo
+    /// reads its own events' calendars instead (`demo(_:)`).
     @MainActor
-    static func readable() -> [PhoneCalendar] {
+    static func readable(_ context: ModelContext) -> [PhoneCalendar] {
+        if DemoMode.isActive { return demo(context) }
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return [] }
         return EKEventStore().calendars(for: .event)
             .map { cal in
@@ -846,6 +848,25 @@ struct PhoneCalendar: Identifiable {
                     ? $0.title.localizedStandardCompare($1.title) == .orderedAscending
                     : $0.account.localizedStandardCompare($1.account) == .orderedAscending
             }
+    }
+}
+
+extension PhoneCalendar {
+    /// The demo's calendars: the calendar each of its Calendar events was
+    /// filed under (the tag `ScheduleIngest` writes), on one iCloud account,
+    /// because the demo's person has no EventKit store to read (user: "in the
+    /// demo it shows 0 calendars connected. that's gotta be wrong").
+    @MainActor
+    static func demo(_ context: ModelContext) -> [PhoneCalendar] {
+        let source = "Calendar"
+        let d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
+        let titles = ((try? context.fetch(d)) ?? []).filter { $0.isLive && ($0.sourceRef ?? "").hasPrefix("demo:cal:") }
+            // The kind's tag ("Event") comes first; the calendar is added last.
+            .compactMap(\.tags.last)
+        let colors: [Color] = [.blue, .orange, .green, .purple, .red]
+        return Array(Set(titles)).sorted().enumerated().map { i, title in
+            PhoneCalendar(id: "demo:" + title, title: title, account: "iCloud", color: colors[i % colors.count])
+        }
     }
 }
 
