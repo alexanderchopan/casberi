@@ -356,7 +356,7 @@ enum AppleWalletBridge {
             id: seatID, name: sourceName,
             proof: landed == 0 ? String(localized: "Up to date")
                                : String(localized: "\(landed) in"),
-            can: [String(localized: "Read what your cards and accounts spend")])
+            can: [String(localized: "Read what Apple Card, Apple Cash and Savings spend, and in the UK the bank accounts you added to Wallet")])
         return landed
         #else
         return nil
