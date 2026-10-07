@@ -18,6 +18,10 @@ struct DSCountTile: View {
     var glyph: String? = nil
     let isOn: Bool
     var wants: Bool = false
+    /// The figure and its word on one line (Settings' eight kinds, two
+    /// across, prd §1166), so every word stands whole, as Reminders' and
+    /// Passwords' grids draw theirs.
+    var inline: Bool = false
     let action: () -> Void
 
     private var shape: RoundedRectangle {
@@ -30,6 +34,25 @@ struct DSCountTile: View {
             DSHaptic.selection()
             action()
         } label: {
+            if inline {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text((count ?? 0).formatted())
+                        .dsText(.heading24)
+                        .monospacedDigit()
+                        .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textPrimary)
+                    Text(label)
+                        .dsText(.body17)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(isOn ? Color.white : wants ? DS.attentionInk : DS.textPrimary)
+                }
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background { shape.fill(isOn ? DS.tint : Color.clear) }
+                .animation(DS.Motion.standard, value: isOn)
+                .contentShape(shape)
+            } else {
             VStack(alignment: glyph == nil ? .leading : .center, spacing: 2) {
                 if let glyph {
                     Image(systemName: glyph)
@@ -55,6 +78,7 @@ struct DSCountTile: View {
             .background { shape.fill(isOn ? DS.tint : Color.clear) }
             .animation(DS.Motion.standard, value: isOn)
             .contentShape(shape)
+            }
         }
         .buttonStyle(PressSpring())
         .accessibilityElement(children: .combine)

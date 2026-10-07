@@ -88,7 +88,9 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     var label: String {
         switch self {
-        case .feed:     return String(localized: "Home")
+        // TODAY, NOT HOME (prd §1166, user: "YES! 'Today' is great!"): the
+        // place holds today and nothing older (§1136i), so it says so.
+        case .feed:     return String(localized: "Today")
         case .markets:  return String(localized: "Markets")
         case .notes:    return String(localized: "Notes")
         case .settings: return String(localized: "Settings")

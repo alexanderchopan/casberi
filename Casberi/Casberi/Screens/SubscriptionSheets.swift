@@ -319,6 +319,7 @@ struct SubscriptionAddTray: View {
                     .foregroundStyle(tracked ? DS.textTertiary : DS.tint)
                     .dsSymbolSwap(tracked)
             }
+            .frame(minHeight: DS.Hit.min)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

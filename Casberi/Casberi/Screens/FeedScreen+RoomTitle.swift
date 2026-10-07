@@ -38,7 +38,7 @@ extension FeedScreen {
     var youPlaceName: String {
         if Pinboard.isPinnedRoom(source) { return String(localized: "Notes") }
         if HomeScope.isMarkets(source) { return String(localized: "Markets") }
-        return String(localized: "Home")
+        return String(localized: "Today")
     }
 
     /// What the title names after the category's dot, or nil while the room

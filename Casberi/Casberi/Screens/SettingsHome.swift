@@ -45,6 +45,8 @@ struct SettingsHome: View {
     @State private var sheet: SettingsSheet?
     @Environment(\.openURL) private var openURL
     @State private var unsubscribing: CalendarSubscriptionStore.Entry?
+    /// Add a calendar's two ways (prd §1166): the phone's, or one by link.
+    @State private var calendarChoice = false
 
 
     var body: some View {
@@ -86,16 +88,30 @@ struct SettingsHome: View {
                     } else {
                         switch scope {
                         case .apps:
-                            casberiRow
                             appsList
                         case .calendars:
-                            calendarsList
+                            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                                verbRow("calendar.badge.plus", String(localized: "Add a calendar")) { add(.calendars) }
+                                calendarsList
+                                if calendarsEmpty { comesFrom(Self.calendarApps) }
+                            }
+                        case .cards:
+                            cardsList
                         case .feeds:
-                            kindList(feeds.filter { hit($0.name) }, empty: "Follow a feed and it lands here.") { feedRow($0) }
+                            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                                verbRow("plus", String(localized: "Follow a feed")) { add(.feeds) }
+                                kindList(feeds.filter { hit($0.name) }, empty: "Follow a feed and it lands here.") { feedRow($0) }
+                                if feeds.isEmpty { comesFrom(Self.feedApps) }
+                            }
                         case .newsletters:
-                            kindList(MailSubscriptionsReading.shared.items.filter { hit($0.name) },
-                                     empty: "Lists that write to your mail land here.") { newsletterRow($0) }
-                        case .people:        peopleList
+                            newslettersList
+                        case .people:
+                            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                                verbRow("person.badge.plus", String(localized: "Add a person")) { add(.people) }
+                                if people == 0 { comesFrom(Self.peopleApps) } else { peopleList }
+                            }
+                        case .wallets:
+                            walletsList
                         case .subscriptions:
                             // The verb leads, as on the Wallet's list (prd
                             // §1117), so an empty list is never a dead end
@@ -172,6 +188,10 @@ struct SettingsHome: View {
         .sheet(isPresented: $calendarAdd) {
             CalendarSubscribeSheet()
         }
+        .confirmationDialog(Text("Add a calendar"), isPresented: $calendarChoice, titleVisibility: .visible) {
+            Button("Your phone’s calendars") { route.openSetup(forOffer: "Calendar") }
+            Button("Subscribe by link") { calendarAdd = true }
+        }
         .sheet(item: $sheet) { route in
             sheetContent(route)
                 // A Catalyst sheet does not inherit the presenter's
@@ -228,11 +248,14 @@ struct SettingsHome: View {
         case .apps, .new, .search:
             route.present(.apps)
         case .calendars:
-            calendarAdd = true
+            calendarChoice = true
+        // A card arrives through its app, so Add opens the catalogue.
+        case .cards:
+            route.present(.apps)
         // Each kind's own add tray, over Settings (prd §1143).
         case .feeds:         sheet = .followAdd
         case .newsletters:   sheet = .mailAdd
-        case .people:        sheet = .walletFollow
+        case .people, .wallets: sheet = .walletFollow
         case .subscriptions: sheet = .subscriptionAdd
         }
     }
@@ -265,28 +288,35 @@ struct SettingsHome: View {
         Following.Room.allCases.flatMap { FollowingReading.shared.items(for: $0) }
     }
 
-    /// Six counts, no headline, and THEY ARE THE FILTER (prd §1138, amending
-    /// §1136 item 4 and §1136h; user, 2026-10-06: "ok lets do it"): what
-    /// you're connected to over what sends you things, A–Z. Pressing one
-    /// lists that kind below; the box never moves. The bar keeps the verbs.
+    /// Eight counts, two across, A–Z, and THEY ARE THE FILTER (prd §1138;
+    /// eight since prd §1166, user: "i wonder if 'wallets' should be one of
+    /// the items in the card too … we could also have one for cards"): each
+    /// figure and its whole word on one line, as Reminders' grid draws them,
+    /// so nothing is shortened. Pressing one lists that kind below; the box
+    /// never moves. The bar keeps the verbs.
     private var countsBox: some View {
-        let counts: [(SettingsScope, Int, String)] = [
-            (.apps, connectedApps.count, String(localized: "Apps")),
-            (.calendars, phoneCalendars.count + CalendarSubscriptionStore.shared.calendars.count,
-             String(localized: "Calendars")),
-            (.feeds, feeds.count, String(localized: "Feeds")),
-            (.newsletters, MailSubscriptionsReading.shared.items.count, String(localized: "Mailing lists")),
-            (.people, people, String(localized: "People")),
-            (.subscriptions, SubscriptionsReading.shared.items.count, String(localized: "Subscriptions")),
-        ]
+        let counts: [(SettingsScope, Int, String)] = SettingsScope.kinds.map { kind in
+            let n: Int = switch kind {
+            case .apps: connectedApps.count
+            case .calendars: phoneCalendars.count + CalendarSubscriptionStore.shared.calendars.count
+            case .cards: connectedCards.count
+            case .feeds: feeds.count
+            case .newsletters: MailSubscriptionsReading.shared.items.count
+            case .people: people
+            case .subscriptions: SubscriptionsReading.shared.items.count
+            case .wallets: WalletStore.shared.addresses.count
+            case .new, .search: 0
+            }
+            return (kind, n, kind.label)
+        }
         // A broken connection says so in its kind's WORD (the tiles' rule,
         // never a dot), so it shows from every other kind too.
         let troubled: Set<SettingsScope> = connectedApps.contains { $0.status == .attention } ? [.apps] : []
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .leading), count: 3),
-                         alignment: .leading, spacing: DS.Space.s2) {
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .leading), count: 2),
+                         alignment: .leading, spacing: DS.Space.s1) {
             ForEach(counts, id: \.0) { kind, n, label in
                 DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
-                            wants: troubled.contains(kind)) {
+                            wants: troubled.contains(kind), inline: true) {
                     if casberiOpen { casberiOpen = false }
                     pick(kind)
                 }
@@ -304,7 +334,7 @@ struct SettingsHome: View {
     /// below opens that connection's settings, and this is Casberi's.
     private var casberiRow: some View {
         DSPushRow(title: Text(verbatim: "Casberi"),
-                  subtitle: Text("iCloud, notifications, privacy")) {
+                  subtitle: Text("Name, photo, data")) {
             withAnimation(DS.Motion.standard) { casberiOpen = true }
         } leading: {
             CasberiMark(size: DS.Face.row)
@@ -349,32 +379,225 @@ struct SettingsHome: View {
 
     // MARK: - Apps
 
-    /// Your apps under category headers (prd §1136 item 5), A–Z, Other
-    /// last; each opens its own account page — its settings. **Only yours
-    /// (prd §1145, user: "yes remove those links"):** what you could add is
-    /// Add's alone, so the "N more in <Category>" links are deleted.
+    /// APPS, THE FIRST LANDING (prd §1166, user: "it shouldn't just be
+    /// start here, it should be all the apps"): Start here's steps while any
+    /// is left, Casberi's own row once your name is in, then EVERY app under
+    /// its category (categories A–Z, Other last; apps A–Z), yours wearing
+    /// their state and the rest Add. Supersedes §1145's "only yours": this is
+    /// where a first run sets up, so what you could add stands here too.
     @ViewBuilder
     private var appsList: some View {
-        let apps = connectedApps.filter { hit($0.name) }
-        if apps.isEmpty {
-            DSEmptyState(headline: DSProse.text(query.isEmpty ? "No apps yet" : "No apps"),
-                         words: query.isEmpty ? Text("Add an app and it lands here.")
-                                              : Text("Nothing you've added matches."),
-                         scale: .list(rows: 3))
-        } else {
-            let other = String(localized: "Other")
-            let byCategory = Dictionary(grouping: apps) { BridgeCatalog.category(forSource: $0.name) ?? other }
-            let categories = byCategory.keys.sorted {
-                if ($0 == other) != ($1 == other) { return $1 == other }
-                return $0.localizedStandardCompare($1) == .orderedAscending
-            }
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                ForEach(categories, id: \.self) { category in
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if query.isEmpty {
+                if hasName { casberiRow }
+                if !startHere.isEmpty {
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
-                        Text(category).dsText(.heading17).foregroundStyle(DS.brandInk)
-                        ForEach(byCategory[category] ?? []) { appRow($0) }
+                        Text("Start here").dsText(.heading20).foregroundStyle(DS.brandInk)
+                        ForEach(startHere) { step in startRow(step) }
                     }
                 }
+            }
+            let offers = BridgeCatalog.offers.filter {
+                BridgeCatalog.category(of: $0) != HomeScope.markets && hit($0.name)
+            }
+            if offers.isEmpty {
+                DSEmptyState(headline: DSProse.text("No apps"), words: Text("Nothing matches."),
+                             scale: .list(rows: 3))
+            } else {
+                let other = String(localized: "Other")
+                let byCategory = Dictionary(grouping: offers) { BridgeCatalog.category(of: $0) }
+                let categories = byCategory.keys.sorted {
+                    if ($0 == other) != ($1 == other) { return $1 == other }
+                    return $0.localizedStandardCompare($1) == .orderedAscending
+                }
+                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                    if query.isEmpty {
+                        Text("All apps").dsText(.heading20).foregroundStyle(DS.brandInk)
+                    }
+                    ForEach(categories, id: \.self) { category in
+                        VStack(alignment: .leading, spacing: DS.Space.s1) {
+                            Text(category).dsText(.heading17).foregroundStyle(DS.textSecondary)
+                            ForEach((byCategory[category] ?? []).sorted {
+                                $0.name.localizedStandardCompare($1.name) == .orderedAscending
+                            }, id: \.name) { offerRow($0.name) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Start here (prd §1166)
+
+    /// The four first steps. Each stands until its own act is done, never
+    /// dismissed and never on a timer (user: "i like the idea of leaving it
+    /// there until a user adds it"), and doing one never takes another.
+    enum StartStep: String, Identifiable { case name, calendar, wallet, subscription; var id: String { rawValue } }
+
+    private var hasName: Bool { !(ProfileStore.shared.name ?? "").isEmpty }
+
+    private var calendarsEmpty: Bool {
+        phoneCalendars.isEmpty && CalendarSubscriptionStore.shared.calendars.isEmpty
+    }
+
+    private var startHere: [StartStep] {
+        var steps: [StartStep] = []
+        if !hasName { steps.append(.name) }
+        if calendarsEmpty && !bridges.bridges.contains(where: { $0.name == "Calendar" && $0.status != .paused }) {
+            steps.append(.calendar)
+        }
+        if WalletStore.shared.addresses.isEmpty { steps.append(.wallet) }
+        if SubscriptionStore.shared.all.isEmpty && SubscriptionsReading.shared.items.isEmpty {
+            steps.append(.subscription)
+        }
+        return steps
+    }
+
+    @ViewBuilder
+    private func startRow(_ step: StartStep) -> some View {
+        switch step {
+        case .name:
+            // Casberi's own page, under its mark: your name, your photo and
+            // what the app reaches (user: "that should be the casberi icon").
+            DSPushRow(title: Text("Add name, photo, preferences")) {
+                withAnimation(DS.Motion.standard) { casberiOpen = true }
+            } leading: { CasberiMark(size: DS.Face.row) }
+        case .calendar:
+            DSPushRow(title: Text("Add a calendar"), subtitle: Text("Your phone’s, or any by link")) {
+                add(.calendars)
+            } leading: { BridgeIcon(name: "Calendar", size: DS.Face.row) }
+        case .wallet:
+            DSPushRow(title: Text("Watch a wallet"), subtitle: Text("Any address or name, no keys")) {
+                add(.wallets)
+            } leading: { BridgeIcon(name: "Wallet", size: DS.Face.row) }
+        case .subscription:
+            DSPushRow(title: Text(SubscriptionWords.track), subtitle: Text("Netflix, iCloud+, free ones too")) {
+                add(.subscriptions)
+            } leading: { glyphLead(SubscriptionWords.planGlyph) }
+        }
+    }
+
+    private func glyphLead(_ glyph: String) -> some View {
+        Image(systemName: glyph)
+            .dsGlyph(.body, weight: .regular)
+            .foregroundStyle(DS.tint)
+            .frame(width: DS.Face.row, height: DS.Face.row)
+            .background(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Face.row), style: .continuous)
+                .fill(DS.fillFaint))
+    }
+
+    /// A kind's own act, first in its list, as Subscriptions' Track leads.
+    private func verbRow(_ glyph: String, _ title: String, action: @escaping () -> Void) -> some View {
+        DSDoorRow(icon: glyph, title: Text(title)) { action() }
+    }
+
+    /// One catalogue app by name: yours wears its state and opens its page,
+    /// one you could add says Add and opens the page its Connect stands on.
+    @ViewBuilder
+    private func offerRow(_ name: String) -> some View {
+        if let app = bridges.bridges.first(where: { $0.name == name && $0.status != .paused }) {
+            appRow(app)
+        } else {
+            DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.tint) {
+                route.openSetup(forOffer: name)
+            } leading: {
+                BridgeIcon(name: name, size: DS.Face.row)
+            }
+        }
+    }
+
+    /// Where an empty kind fills from: its apps, each one tap.
+    private func comesFrom(_ names: [String]) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text("Comes from").dsText(.heading17).foregroundStyle(DS.textSecondary)
+            ForEach(names.filter { n in BridgeCatalog.offers.contains { $0.name == n } }, id: \.self) { offerRow($0) }
+        }
+    }
+
+    static let calendarApps = ["Calendar", "Cal.com", "Calendly"]
+    static let feedApps = ["RSS", "Substack", "YouTube", "Podcasts"]
+    static let mailApps = ["Gmail", "iCloud Mail"]
+    static let peopleApps = ["Contacts", "Bluesky", "Instagram", "Telegram", "Threads", "TikTok", "X"]
+    /// The card apps, each with the cards it reads (user: "Cards could show
+    /// those cards tho").
+    static let cardApps: [(app: String, cards: String)] = [
+        ("Apple Wallet", "Apple Card, Apple Cash"),
+        ("Gnosis Pay", "Gnosis Pay card"),
+        ("MetaMask Card", "MetaMask Card"),
+        ("ether.fi", "ether.fi Cash"),
+    ]
+
+    private var connectedCards: [String] {
+        Self.cardApps.map(\.app).filter { name in
+            bridges.bridges.contains { $0.name == name && $0.status != .paused }
+        }
+    }
+
+    // MARK: - Cards, mail lists, wallets (prd §1166)
+
+    /// The cards Casberi can read, by name, each saying the app that reads
+    /// it; one you have wears its app's state.
+    private var cardsList: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text("Cards Casberi can read").dsText(.heading17).foregroundStyle(DS.textSecondary)
+            ForEach(Self.cardApps.filter { c in BridgeCatalog.offers.contains { $0.name == c.app } }, id: \.app) { card in
+                let app = bridges.bridges.first { $0.name == card.app && $0.status != .paused }
+                DSPushRow(title: Text(verbatim: card.cards), subtitle: Text(verbatim: card.app),
+                          fact: Text(app.map { $0.statusLine } ?? String(localized: "Add")),
+                          factTone: app == nil ? DS.tint
+                                    : app?.status == .attention ? DS.attentionInk : DS.textTertiary) {
+                    route.openSetup(forOffer: card.app)
+                } leading: {
+                    BridgeIcon(name: card.app, size: DS.Face.row)
+                }
+            }
+        }
+    }
+
+    /// A list arrives through mail: with none connected, the mail apps;
+    /// with one, Track over the lists.
+    @ViewBuilder
+    private var newslettersList: some View {
+        let mailOn = bridges.bridges.contains { Self.mailApps.contains($0.name) && $0.status != .paused }
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            if mailOn {
+                verbRow("plus", String(localized: "Track a mail list")) { add(.newsletters) }
+                kindList(MailSubscriptionsReading.shared.items.filter { hit($0.name) },
+                         empty: "Lists that write to your mail land here.") { newsletterRow($0) }
+            } else {
+                Text("Connect your mail and the lists that write to you show here.")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                comesFrom(Self.mailApps)
+            }
+        }
+    }
+
+    /// Watch a wallet, the wallets you watch, then every Wallet app, so the
+    /// kind is the wallets' settings too (user: "Wallet is wallet settings
+    /// or shows all the wallet stuff").
+    private var walletsList: some View {
+        let watched = WalletStore.shared.addresses.filter { hit($0.label) || hit($0.address) }
+        let walletApps = BridgeCatalog.offers
+            .filter { BridgeCatalog.category(of: $0) == CategoryFold.walletRoom }
+            .map(\.name)
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        return VStack(alignment: .leading, spacing: DS.Space.s4) {
+            verbRow("eye", String(localized: "Watch a wallet")) { add(.wallets) }
+            if !watched.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    ForEach(watched) { addr in
+                        DSPushRow(title: Text(verbatim: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label),
+                                  subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address))) {
+                            route.openSetup(forOffer: CategoryFold.walletRoom)
+                        } leading: {
+                            WalletFace(address: addr.address, size: DS.Face.row, circular: true)
+                        }
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("Wallet apps").dsText(.heading17).foregroundStyle(DS.textSecondary)
+                ForEach(walletApps.filter { hit($0) }, id: \.self) { offerRow($0) }
             }
         }
     }
@@ -436,7 +659,7 @@ struct SettingsHome: View {
                     }
                 }
                 if !feedHits.isEmpty { kindSection("Feeds") { ForEach(feedHits) { feedRow($0) } } }
-                if !lists.isEmpty { kindSection("Mailing lists") { ForEach(lists) { newsletterRow($0) } } }
+                if !lists.isEmpty { kindSection("Mail lists") { ForEach(lists) { newsletterRow($0) } } }
                 if people {
                     kindSection("People") {
                         AddressesSection(query: query, scope: $peopleScope,
@@ -554,9 +777,13 @@ struct SettingsHome: View {
 /// No All: the box is the overview of all of it (user: "the sources screen
 /// IS that list"). Add adds the kind you're on; Search searches it.
 enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case apps, calendars, feeds, newsletters, people, subscriptions, new, search
+    case apps, calendars, cards, feeds, newsletters, people, subscriptions, wallets, new, search
 
     var id: String { rawValue }
+
+    /// The box's eight kinds, A–Z by their words (prd §1166).
+    static let kinds: [SettingsScope] = [.apps, .calendars, .cards, .feeds, .newsletters,
+                                         .people, .subscriptions, .wallets]
 
     static let verbs: Set<SettingsScope> = [.new, .search]
     /// What the floating bar holds: the verbs alone.
@@ -566,12 +793,14 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .apps:          return String(localized: "Apps")
         case .calendars:     return String(localized: "Calendars")
+        case .cards:         return String(localized: "Cards")
         case .feeds:         return String(localized: "Feeds")
-        // Short on the bar (user: "makes these say Lists and Subs"); the box
-        // names them whole ("Mailing lists", "Subscriptions").
-        case .newsletters:   return String(localized: "Lists")
+        // Whole everywhere since prd §1166 (user: "we going to say 'Subs'
+        // everywhere?"): no shortened word on any surface.
+        case .newsletters:   return String(localized: "Mail lists")
         case .people:        return String(localized: "People")
-        case .subscriptions: return String(localized: "Subs")
+        case .subscriptions: return String(localized: "Subscriptions")
+        case .wallets:       return String(localized: "Wallets")
         case .new:           return String(localized: "Add")
         case .search:        return String(localized: "Search")
         }
@@ -579,7 +808,9 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     var summary: String {
         switch self {
-        case .apps:          return String(localized: "Your apps, by category")
+        case .apps:          return String(localized: "Every app, by category")
+        case .cards:         return String(localized: "The cards your card apps read")
+        case .wallets:       return String(localized: "The wallets you watch, and their apps")
         case .calendars:     return String(localized: "Every calendar Casberi reads")
         case .feeds:         return String(localized: "Sites, channels and repos you follow")
         case .newsletters:   return String(localized: "The lists that write to your mail")

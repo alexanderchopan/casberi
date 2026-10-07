@@ -1157,7 +1157,7 @@ struct FeedScreen: View {
         // tile is how an empty one stops being empty, and the generic state
         // told a first-time writer to open the catalog instead.
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
-            && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome {
+            && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome && source != "All" {
             // An empty Home still names what stopped (prd §1162): an app
             // that broke before anything landed is the likeliest reason the
             // feed is empty at all.
@@ -1239,7 +1239,7 @@ struct FeedScreen: View {
         // exact shape — it is why Frames and Logos each have an arm above
         // rather than a flag.
         } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
-                    || walletKeepsChrome {
+                    || walletKeepsChrome || source == "All" {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
@@ -1318,6 +1318,12 @@ struct FeedScreen: View {
             // and Folders keeps its New folder row under them.
             || Pinboard.isPinnedRoom(source)
             || walletKeepsChrome
+            // TODAY IS NEVER REPLACED (prd §1166, user: "empty home should look
+            // like literally home empty", "we want this to look like how it is
+            // going to look so it should have the card and the buttons"): its
+            // box holds the day, You's tiles stand under it, and the day says
+            // it holds nothing yet.
+            || source == "All"
     }
 
     /// **THE WALLET IS NEVER REPLACED WHILE IT WATCHES AN ADDRESS** (2026-10-03,

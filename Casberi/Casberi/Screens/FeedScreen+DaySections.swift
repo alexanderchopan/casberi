@@ -406,28 +406,27 @@ extension FeedScreen {
             Section { ledeListRow(ledeThing) }
         } else if source == "All" {
             Section {
+                // With nothing connected the box says what fills it and where
+                // to go (prd §1166, user: "we need some explainer in the home
+                // empty card, not just wednesday"); the Settings tile under it
+                // is that door.
                 emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
-                             words: Text(Date.now.formatted(.dateTime.month(.wide).day())))
+                             words: Text(Date.now.formatted(.dateTime.month(.wide).day())),
+                             note: bridges.connectedCount == 0
+                                 ? Text("Your apps’ newest, today. Connect one in Settings.") : nil)
             }
         }
     }
 
-    /// Today with nothing in it yet: the day divider over one quiet line, so
-    /// Coming up below never reads as today.
+    /// Today with nothing in it yet: one quiet line.
     @ViewBuilder
     var nothingYetToday: some View {
+        // No "Today" divider since prd §1166: the screen's title is Today.
         Section {
-            FeedDayDivider(label: String(localized: "Today")) { EmptyView() }
-                .textCase(nil)
-                .padding(.leading, DSRoomChassis.rowInset)
-                .padding(.vertical, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
             Text("Nothing yet today.")
                 .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                           bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)

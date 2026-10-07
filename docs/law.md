@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1297 of 1360 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1297 of 1361 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1194,7 +1194,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §861 — An empty agent room still holds the lead slot
 - §862 — §861 fixed the agent room; the same defect was in nine others, and the box was 30pt too tall
 - §862b — Two fixtures that tested the MACHINE, not the code
-- §863 — The demo's Exit lands on Accounts, Connect leads the switcher, and a first run is shown three rows (amended by §1045)
+- §863 — The demo's Exit lands on Accounts, Connect leads the switcher, and a first run is shown three rows (amended by §1045; part superseded by §1166)
 - §864 — The demo says so where people read: the cover's word falls, the All feed leads with it (amended by §1028; part superseded by §946, §1083)
 - §865 — The keyboard covers the dock; it never lifts it
 - §865a — The §865 fix did nothing, and the measurement says which half a modifier can carry
@@ -1493,14 +1493,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1133 — Two controls: the face says where, the tiles say what (amended by §1136) [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
-- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164)
+- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
-- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145) [+1 sub-entries]
+- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
 - §1142 — The catalogue is what you could add, rises as a sheet, and names its categories without figures
 - §1143 — What Settings opens rises over Settings
 - §1144 — Reading's calendar draws each feed's own face, the rarest that wrote that day, and counts nothing
-- §1145 — Settings › Apps is only yours; Add is the one door to the rest
+- §1145 — Settings › Apps is only yours; Add is the one door to the rest (amended by §1166)
 - §1147 — A renamed app's records take its current name and merge into one
 - §1148 — A catalogue row says something only when its name can't
 - §1149 — A connected app's line reads grey everywhere; a selected count stays blue
@@ -1520,13 +1520,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,… (amended by §1163)
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
 - §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,…
-- §1165 — The empty Home offers Track a subscription under Browse apps
+- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1140→§1142 · §1141→§1154
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1140→§1142 · §1141→§1154 · §1165→§1166
 
 ## Renumbered (generated)
 

@@ -135,7 +135,10 @@ enum DemoLeave {
             DemoMode.exit(context: context, store: store)
             filter.source = "All"
             filter.tag = "All"
-            route.present(.apps)
+            // SETTINGS, WHERE A FIRST RUN SETS UP (prd §1166, user: "i think
+            // user should land on settings"): its Start here and every app
+            // by category, instead of the catalogue raised over an empty feed.
+            route.present(.casberi)
             chrome.demoLeaving = false
         }
     }

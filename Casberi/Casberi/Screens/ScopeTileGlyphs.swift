@@ -80,7 +80,9 @@ enum ScopeTileGlyph {
     static let toYou        = "person"
     /// You's Home (prd §1136): the house the tray's Home door wears — the
     /// feed, not the wallet family's Home (`home`, a line chart).
-    static let feed         = "house"
+    // A sun since prd §1166: the place is Today, and `calendar` is the
+    // Calendars count's.
+    static let feed         = "sun.max"
     /// You's Notes place (prd §1136): the tray's Notes door.
     static let notes        = "note.text"
     /// You's Settings place (prd §1136, §1136k): the system's gear. It was
@@ -94,6 +96,10 @@ enum ScopeTileGlyph {
     static let feeds        = "dot.radiowaves.up.forward"
     /// Settings' Mailing lists (prd §1136h): the lists that write to your mail.
     static let newsletters  = "newspaper"
+    /// Settings' Cards (prd §1166): the cards your card apps read.
+    static let cards        = "creditcard"
+    /// Settings' Wallets (prd §1166): the wallets you watch.
+    static let wallets      = "wallet.bifold"
 }
 
 /// The Work room's tiles (prd §1057).
@@ -251,10 +257,12 @@ extension SettingsScope: DSTileScope {
         switch self {
         case .apps:          return ScopeTileGlyph.apps
         case .calendars:     return ScopeTileGlyph.calendars
+        case .cards:         return ScopeTileGlyph.cards
         case .feeds:         return ScopeTileGlyph.feeds
         case .newsletters:   return ScopeTileGlyph.newsletters
         case .people:        return ScopeTileGlyph.people
         case .subscriptions: return ScopeTileGlyph.subscriptions
+        case .wallets:       return ScopeTileGlyph.wallets
         case .new:           return ScopeTileGlyph.new
         case .search:        return ScopeTileGlyph.search
         }

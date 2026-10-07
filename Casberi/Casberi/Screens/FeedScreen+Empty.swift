@@ -148,19 +148,6 @@ extension FeedScreen {
             // no verb can state. A sentence that RESTATES the door goes; a
             // sentence that DIAGNOSES stays.
             emptyDoor(String(localized: "Browse apps"))
-            // THE SECOND GOAL, QUIETER (prd §1165): a fresh install has no
-            // Wallet, so this is the first place someone who already knows
-            // their subscriptions can list them — no card, no app needed.
-            // A row under the act, never a second act at its rung.
-            if source == "All" {
-                DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
-                    DSHaptic.selection()
-                    feedSheet = .subscriptionAdd
-                }
-                .fixedSize(horizontal: true, vertical: false)
-                .padding(.top, DS.Space.s2)
-                .settleIn(delay: 0.15)
-            }
             // The "or paste a link, share in, snap a screenshot" line is
             // DELETED (user, 2026-08-07). It was added to teach the capture
             // verbs the headline only claimed, but it teaches them to someone
