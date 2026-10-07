@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1283 of 1345 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1284 of 1346 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -668,7 +668,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §386p — The agent panel is deleted (part superseded by §836)
 - §387 — The NFT shelf comes back as a picker, and it costs less than the one that was cut (amended by §483)
 - §388 — The gear stays undrawn: a room does not get a settings door
-- §389 — The feed opens on the newest thing, and on what you missed [+3 sub-entries]
+- §389 — The feed opens on the newest thing, and on what you missed (amended by §1152) [+3 sub-entries]
 - §390 — The bar's verbs swap: tap for sources, hold for the agent
 - §391 — The sources tray is a panel of glass, and the marks float on it
 - §392 — The grouping is drawn by proximity, the packer stops churning, and the glass steps clearer (part superseded by §392a)
@@ -1211,7 +1211,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §875 — Where the rail stands, the dock's seat is only the way back
 - §876 — Accounts and Settings open in the pane (amended by §1132)
 - §878 — The phone's perf readout, read: launch is solved, and three of its instruments were lying
-- §879 — Things get their faces, and "Since you left" tells the truth about itself
+- §879 — Things get their faces, and "Since you left" tells the truth about itself (amended by §1152)
 - §880 — "Since you left" wears the primary ink; the days inside it keep the pink
 - §881 — A digest reads by what needs you, and says each verb once (amended by §883)
 - §882 — An article's sheet opens like its room: the picture in the well, a pink day, the dial under the head
@@ -1454,7 +1454,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1100 — Writing a note: one editor at the cursor, save as you type, headings and quotes, ticked items sink, lines move and in…
 - §1101 — The Aa key: formatting for someone who never types markdown
 - §1102 — One smaller box: every room's lead is 236pt, every room's tiles stand at one y, and a sheet shows its picture whole
-- §1103 — Home groups by app: every app a header, each as its newest thing, and the folds are deleted (amended by §1103a, §1136)
+- §1103 — Home groups by app: every app a header, each as its newest thing, and the folds are deleted (amended by §1103a, §1136, §1152)
 - §1103a — An app's header is a label over its item, and nothing under it draws a lead (amended by §1103b, §1103c)
 - §1103b — Under an app header a picture rides the right as a thumbnail, and the item's words start under the app's name
 - §1103c — Under an app header, the person a thing is by wears a small face before its title
@@ -1507,6 +1507,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1149 — A connected app's line reads grey everywhere; a selected count stays blue
 - §1150 — Calendars counts every calendar Casberi reads
 - §1151 — The default order is the day first: Day, Social, Work, Wallet, Reading, Life, Media, Agents, Testnets
+- §1152 — Home is by category, in your dock order
 
 ## Dead rulings → what replaced them (generated)
 

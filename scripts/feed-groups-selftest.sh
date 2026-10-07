@@ -3,11 +3,11 @@
 # and the provenance tier that outlived the folds (prd §378):
 #
 #   Casberi/Casberi/Model/AppGroups.swift
+#     — Home's rows stand in CATEGORY sections, in the person's dock order
+#       (§1152); an unknown category follows A–Z, a thing with none goes last
 #     — every app gets a header, even an app that brought one thing
 #     — an app stands as its NEWEST thing (`rowCap`), the header the door
 #     — apps are ordered by their newest thing, so a section reads in time
-#     — inside "Since you left" each day groups on its own (§879), and keeps
-#       its name over its first app
 #   Casberi/Casberi/Model/FeedFold.swift
 #     — tier (made / concerns / arrived), which `FeedRow` stores and the feed
 #       recedes by
@@ -80,9 +80,9 @@ func rows(_ spec: String) -> [Row] {
     // "a1 b1 a2" → ids a1, b1, a2 from apps A, B, A — newest first.
     spec.split(separator: " ").map { Row(id: String($0), source: String($0.prefix(1)).uppercased()) }
 }
-func run(_ groups: [(String, [Row])], days: [String: String] = [:], cap: Int = AppGroups.rowCap)
+func run(_ groups: [(String, [Row])], cap: Int = AppGroups.rowCap)
     -> AppGroups.Result<Row> {
-    AppGroups.group(groups, momentDays: days, cap: cap, id: \.id, source: \.source)
+    AppGroups.group(groups, cap: cap, id: \.id, source: \.source)
 }
 func ids(_ r: AppGroups.Result<Row>, _ i: Int = 0) -> [String] { r.groups[i].1.map(\.id) }
 
@@ -104,12 +104,27 @@ check(ids(twoDays, 0) == ["a1", "b1"] && ids(twoDays, 1) == ["b2", "a2"],
       "sections never merge: each day groups on its own")
 check(twoDays.heads.count == 4, "an app seen on two days heads both")
 
-// "Since you left" spanning two days: openers a1 (Today) and b2 (Yesterday).
-let away = run([("Since you left", rows("a1 b1 a2 b2 a3"))],
-               days: ["a1": "Today", "b2": "Yesterday"])
-check(ids(away) == ["a1", "b1", "b2", "a3"], "an away section groups each of its days apart")
-check(away.days == ["a1": "Today", "b2": "Yesterday"],
-      "each day keeps its name over its first app")
+// ---- categories (§1152) ----------------------------------------------------
+// App → category: A and B are Social, C is Day, M a category the order has
+// never heard of, N another, Y has none (a note of yours).
+let cats: [String: String] = ["A": "Social", "B": "Social", "C": "Day", "M": "Markets", "N": "Labs"]
+func sections(_ spec: String, order: [String]) -> [(String, [Row])] {
+    AppGroups.byCategory(rows(spec), order: order, rest: "You") { cats[$0.source] }
+}
+func shape(_ s: [(String, [Row])]) -> [String] { s.map { "\($0.0):\($0.1.map(\.id).joined(separator: ","))" } }
+
+let byCat = sections("a1 y1 c1 b1 a2 c2", order: ["Day", "Social", "Work"])
+check(shape(byCat) == ["Day:c1,c2", "Social:a1,b1,a2", "You:y1"],
+      "sections follow the dock order, rows keep their time order, no category goes last")
+let moved = sections("a1 c1", order: ["Social", "Day"])
+check(shape(moved) == ["Social:a1", "Day:c1"], "a reordered dock reorders Home")
+check(!shape(byCat).contains { $0.hasPrefix("Work") }, "an empty category draws no section")
+let strays = sections("n1 m1 c1", order: ["Day"])
+check(shape(strays) == ["Day:c1", "Labs:n1", "Markets:m1"],
+      "a category the order has never heard of follows it, A-Z")
+let nested = run(sections("a1 c1 b1 a2", order: ["Day", "Social"]))
+check(nested.groups.map { $0.1.map(\.id) } == [["c1"], ["a1", "b1"]],
+      "inside a category, one row per app, its newest")
 
 // ---- tier ------------------------------------------------------------------
 check(FeedFold.tier(Thing(kind: .screenshot, source: "Photos")) == .made, "a screenshot is something you made")
@@ -164,15 +179,18 @@ mutate "the cap is ignored where it is applied" "$GROUPS_SRC" \
        'members.prefix(max(cap, 1))' 'members'
 mutate "an app keeps its OLDEST thing" "$GROUPS_SRC" \
        'members.prefix(max(cap, 1))' 'members.reversed().prefix(max(cap, 1))'
-mutate "the away section's days merge under one header" "$GROUPS_SRC" \
-       'if segments.isEmpty || momentDays[id(row)] != nil { segments.append([]) }' \
-       'if segments.isEmpty { segments.append([]) }'
-mutate "a day's name is lost under the away section" "$GROUPS_SRC" \
-       'if i == 0, let opener { days[id(first)] = opener }' \
-       'if i == 1, let opener { days[id(first)] = opener }'
 mutate "apps are ordered A-Z instead of by their newest thing" "$GROUPS_SRC" \
-       'for (i, app) in order.enumerated() {' \
-       'for (i, app) in order.sorted().reversed().enumerated() {'
+       'for app in order {' \
+       'for app in order.sorted().reversed() {'
+mutate "categories ignore the dock order" "$GROUPS_SRC" \
+       'let known = order.filter { buckets[$0] != nil }' \
+       'let known = buckets.keys.filter { order.contains($0) }.sorted()'
+mutate "a thing with no category is dropped" "$GROUPS_SRC" \
+       'if !loose.isEmpty { out.append((rest, loose)) }' \
+       ''
+mutate "an unknown category is dropped" "$GROUPS_SRC" \
+       'var out = (known + unknown).map' \
+       'var out = known.map'
 mutate "a transaction stops concerning you" "$TIER_SRC" \
        't.kind == .approval || t.kind == .transaction' \
        't.kind == .approval'
@@ -192,8 +210,20 @@ guard() {
 print "drift guards:"
 guard "the feed groups by app through AppGroups" \
       "$FEED" 'AppGroups\.group\('
-guard "it groups AFTER the away split, which cuts by date" \
-      "$FEED" 'groupedByApp\(split\.groups, momentDays: split\.days\)'
+guard "Home stands in category sections, in the dock's order (§1152)" \
+      "$FEED" 'order: CategoryOrder\.current'
+guard "Home's rows go into category sections before the app headers" \
+      "$FEED" 'memo\.groups = source == "All" \? Self\.categorySections\(dayRows\) : dayRows'
+guard "a reordered dock re-derives Home (the order rides the memo key)" \
+      "$FEED" 'CategoryOrder\.current\.hashValue'
+guard "the apps group inside the category sections" \
+      "$FEED" 'groupedByApp\(memo\.groups\)'
+guard "each section is named by its category, a door to its page" \
+      "$FEED" 'categoryHeaderRow\(label\)'
+guard "the category opens its combined page, as the tray's row does" \
+      "$FEED" 'chrome\.sourceRequest = category'
+guard "the app label carries when its thing landed" \
+      "$FEED" 'appHeaderRow\(app, at: row\.date\)'
 guard "the window reads the grouped rows, not the split's" \
       "$FEED" 'windowed\(byApp\.groups\)'
 guard "the header draws before its app's first row" \

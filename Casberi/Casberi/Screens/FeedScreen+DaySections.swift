@@ -21,10 +21,7 @@ extension FeedScreen {
     private func logAllFeedCensus(groups: [(String, [FeedRow])],
                                   hasCover: Bool,
                                   appHeads: Int,
-                                  boundary: String?,
-                                  moment: Bool,
-                                  momentDays: [String: String] = [:],
-                                  momentWhole: Bool = true,
+                                  categories: [String],
                                   imageOnly: Set<UUID>,
                                   wideArt: Set<UUID>,
                                   coarse: Set<String>,
@@ -49,8 +46,9 @@ extension FeedScreen {
             "single=\(single) appHeads=\(appHeads)",
             "imageOnly=\(imageOnly.count) wideArt=\(wideArt.count)",
             "coarse=\(coarse.count)",
-            "newSince=\(boundary == nil ? 0 : 1) moment=\(moment ? 1 : 0)",
-            "momentDays=\(Set(momentDays.values).sorted().joined(separator: "/")) momentWhole=\(momentWhole ? 1 : 0)",
+            // Home's sections in the order they draw (prd §1152), so a
+            // reordered dock can be read back off the log.
+            "categories=\(categories.joined(separator: "/"))",
             "window=\(more ? "open" : "whole")",
             "dayLine=\(dayLine == nil ? 0 : 1)",
             "ambient=\(ambient)",
@@ -95,6 +93,9 @@ extension FeedScreen {
         // changed every second would re-derive the feed on every render.
         if source == "All" {
             key = key &* 31 &+ Int((AppVisit.away?.lowerBound.timeIntervalSince1970 ?? 0) / 60)
+            // Home's sections follow the dock's category order (prd §1152),
+            // which Settings changes without `visible` changing.
+            key = key &* 31 &+ CategoryOrder.current.hashValue
         }
         if memo.key != key {
             memo.key = key
@@ -139,30 +140,33 @@ extension FeedScreen {
             // folded until the next write. That is a delay, never a
             // regression: before this carve-out existed those rows folded
             // unconditionally, so the stale case is exactly the old behaviour.
-            memo.groups = perfAccum("bundle") {
+            let dayRows = perfAccum("bundle") {
                 feedRows(memo.days, excluding: memo.lede)
             }
+            // BY CATEGORY (prd §1152, user: "it looks smarter to be by
+            // category and also helps them understand the app. and their
+            // day"): Home's today stands in category sections, in the dock's
+            // order, each app once under them. Today is the one day Home
+            // holds (§1136 item 7), so nothing is lost by leaving time order.
+            memo.groups = source == "All" ? Self.categorySections(dayRows) : dayRows
             // The post-fold row floor (§723) was Home's alone, and Home is
             // Today since prd §1136i — short by design, one row per app — so
             // it left the box empty most days. It is gone; no room ever had
             // it (a room's cover answers "the newest thing here").
             memo.imageOnly = perfAccum("imageOnlyIDs") { imageOnlyIDs(memo.days) }
-            memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(memo.groups) }
+            // Chosen over the DAY (one landmark a day, §254), before the
+            // rows went into category sections.
+            memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(dayRows) }
             memo.coarse = perfAccum("coarseLabels") { coarseLabels(in: memo.days) }
         }
-        // The away window becomes sectioning (prd §389) — OUTSIDE the memo
-        // above, deliberately: `newSince` freezes when the page lands and so
-        // changes without `visible` changing, which the memo key (the
-        // snapshot's revision) cannot see. It is a partition of arrays already
-        // built, so recomputing it per render costs a walk and no derivation.
-        let allGroups = memo.groups
-        let split = momentSplit(allGroups)
-        // Under app headers (prd §1103), after the split: the split cuts by
-        // date, and grouping takes the rows out of time order.
-        let byApp = Self.groupedByApp(split.groups, momentDays: split.days)
+        // Under app headers (prd §1103), inside each category (§1152). The
+        // away split ("Since you left", §389, §879) and the new-since seam
+        // went with time order: a section named by its category cannot also
+        // be cut by a clock, and Home holds only today.
+        let byApp = Self.groupedByApp(memo.groups)
         let heads = byApp.heads
-        // Windowed (prd §264). `boundary` and `lede` read the FULL set so
-        // neither moves depending on whether the window is open.
+        // Windowed (prd §264). `lede` reads the FULL set so it does not move
+        // depending on whether the window is open.
         let window = windowed(byApp.groups)
         let _ = { memo.windowHasMore = window.more }()
         // Home's box falls back to the newest thing when today chose no
@@ -172,17 +176,6 @@ extension FeedScreen {
         let groups = fallbackCover.map { cover in
             window.shown.map { ($0.0, $0.1.filter { $0.id != cover.id.uuidString }) }.filter { !$0.1.isEmpty }
         } ?? window.shown
-        // Suppressed under a moment split: the section header IS the boundary
-        // there, and two seams for one fact is worse than either alone.
-        let boundary = split.moment ? nil : boundaryID(in: split.groups)
-        // The away section's day openers (prd §879) — see `momentSplit`.
-        let momentDays = byApp.days
-        // Whether the window drew the WHOLE away section (prd §879). A section
-        // cut at the row budget ends in "Show older", and the seam under it
-        // may not say "caught up" over rows it is hiding — §866a's floor,
-        // at the other end.
-        let momentWhole = split.moment
-            && (groups.first?.1.count ?? 0) == (byApp.groups.first?.1.count ?? 0)
         // The cover is already OUT of `memo.groups` (prd §389c), so it is
         // resolved from the day it came from rather than searched for among the
         // rows. `.isLive` before the id read: `memo.days` is held across
@@ -205,18 +198,12 @@ extension FeedScreen {
         // array — cheap enough to stay time-fresh. Nil composes to no line
         // (honesty law: a day with nothing to say says nothing).
         //
-        // BOUNDED TO THE HEADER IT IS PRINTED ON (2026-09-21). The whisper's
-        // own window is the away window, and the header below is "Today"
-        // unless `momentSplit` fired — so when the split DECLINES because the
-        // boundary predates every row (`rest` empty: a divider at the very top
-        // marks nothing), the line kept counting from that boundary while
-        // sitting under a calendar day. Same clock on both sides is not
-        // enough; the span has to be the one the label names. `moment` true
-        // means the header IS "Since you left", so the away window is right
-        // and the default stands.
+        // BOUNDED TO TODAY (2026-09-21): Home holds today alone (§1136
+        // item 7), so the line counts from the day's start, never from the
+        // away window.
         let dayLine = DayBrief.whisper(
             things: visible,
-            since: split.moment ? nil : Calendar.current.startOfDay(for: .now))
+            since: Calendar.current.startOfDay(for: .now))
         #if DEBUG
         // `-allFeedProbe YES` — the All room's own census (2026-08-17), and the
         // only demo-parity check that can see this room AT ALL.
@@ -273,9 +260,9 @@ extension FeedScreen {
             // property of the whole composed feed; whether the window is open
             // is reported separately, as its own fact.
             logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil,
-                             appHeads: heads.count, boundary: boundary,
-                             moment: split.moment, momentDays: momentDays,
-                             momentWhole: momentWhole, imageOnly: imageOnly, wideArt: wideArt,
+                             appHeads: heads.count,
+                             categories: byApp.groups.map(\.0),
+                             imageOnly: imageOnly, wideArt: wideArt,
                              coarse: coarse, more: window.more,
                              dayLine: dayLine,
                              tailDays: tailDayGroups.count, tailDrawn: tailDrawn)
@@ -310,8 +297,7 @@ extension FeedScreen {
                     if case .single(let item) = rows[i].kind,
                        let thing = item.live { return standsAlone(thing) }
                     return false
-                },
-                isBoundary: { rows[$0].id == boundary || momentDays[rows[$0].id] != nil })
+                })
             Section {
                 // UNPINNED (2026-08-29) — the day label is a ROW, not a `header:`.
                 //
@@ -349,24 +335,15 @@ extension FeedScreen {
                 // reads a wallet figure or a count is a datum standing where
                 // a name belongs. The whisper keeps its capsule and the
                 // Since-you-left group keeps its name.
-                FeedDayDivider(label: label,
-                               weight: coarse.contains(label) ? .medium : .semibold,
-                               dated: label != Self.momentLabel) {
-                    EmptyView()
-                }
-                .textCase(nil)
-                .padding(.leading, DSRoomChassis.rowInset)
-                .padding(.vertical, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+                // A CATEGORY, NOT A DAY (prd §1152): Home's sections are named
+                // by what they hold, so the divider takes the primary ink
+                // (`dated: false`, §740), and each is a door to its
+                // category's combined page, as the tray's row is (user: "will
+                // the category be tappable?").
+                categoryHeaderRow(label)
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                    if row.id == boundary { newSinceDivider }
-                    if label == Self.momentLabel, let day = momentDays[row.id] {
-                        momentDayDivider(day)
-                    }
                     if let app = heads[row.id] {
-                        appHeaderRow(app)
+                        appHeaderRow(app, at: row.date)
                             .opacity(isQuiet(row) ? Self.quietRow : 1)
                     }
                     if case .single(let item) = row.kind {
@@ -551,26 +528,6 @@ extension FeedScreen {
         return row.date <= newSince
     }
 
-    /// The end of what's new (prd §389) — the moment section's own floor,
-    /// under a split. Words only, no drawn rule (the no-hairlines law), and
-    /// deliberately not a capsule: `newSinceDivider` is a marker BETWEEN two
-    /// rows and needs a fill to read as a seam, while this one closes a
-    /// section and reads as the quiet line it is (`caughtUpFooter`'s
-    /// treatment, which does the same job for the whole feed).
-    /// A day's name INSIDE the away section (prd §879), when it spans more
-    /// than one. The day divider's own view, one weight cooler — the section's
-    /// name above it is the louder claim — so it is felt as it passes like
-    /// every other seam in time (`FeedDayDivider`, §866).
-    private func momentDayDivider(_ day: String) -> some View {
-        FeedDayDivider(label: day, weight: .medium) { EmptyView() }
-            .padding(.leading, DSRoomChassis.rowInset)
-            .padding(.top, DS.Space.s3)
-            .padding(.bottom, DS.Space.s1)
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-    }
-
     var newSinceDivider: some View {
         // A FACT, so a stamp (prd §746) — it was a quiet capsule. Still not
         // tint-coloured prose, which reads as a tappable link; the air around
@@ -684,14 +641,56 @@ extension FeedScreen {
     /// Notification Center order: app, then the thing, louder. The row under
     /// it draws no lead and starts flush with the mark. The tap lands in the
     /// app's room, as a fold's did (§377).
-    private func appHeaderRow(_ source: String) -> some View {
+    /// A category's name over its section of Home (prd §1152), a door to
+    /// its combined page — the landing the tray's category row makes,
+    /// dropping an app picked there earlier so the page opens on every app.
+    /// You (a note of yours) is no category and has no page, so it is a
+    /// label only.
+    @ViewBuilder
+    private func categoryHeaderRow(_ category: String) -> some View {
+        let divider = FeedDayDivider(label: category, dated: false) { EmptyView() }
+            .textCase(nil)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        Group {
+            if CategoryFold.isCategory(category) {
+                Button { openCategory(category) } label: { divider }
+                    .buttonStyle(RowPress())
+                    .accessibilityAddTraits(.isHeader)
+            } else {
+                divider
+            }
+        }
+        .padding(.leading, DSRoomChassis.rowInset)
+        .padding(.top, DS.Space.s3)
+        .padding(.bottom, DS.Space.s1)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
+    private func openCategory(_ category: String) {
+        DSHaptic.selection()
+        if category == CategoryFold.walletRoom {
+            chrome.walletScope = nil
+        } else {
+            chrome.mergedScope[category] = nil
+        }
+        chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
+        chrome.sourceRequest = category
+    }
+
+    /// The app's name and, on Home, when its thing landed (prd §1152): the
+    /// sections are categories now, so the time rides the label.
+    private func appHeaderRow(_ source: String, at date: Date) -> some View {
         Button {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { filter.source = source }
         } label: {
             HStack(spacing: DS.Space.s2) {
                 BridgeIcon(name: source, size: DS.Mark.badge)
-                Text(BridgeCatalog.seatName(forSource: source))
+                Text(BridgeCatalog.seatName(forSource: source)
+                     + " · " + date.formatted(date: .omitted, time: .shortened))
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)

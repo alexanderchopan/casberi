@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 // Grouping: day, coarse and session groups, `FeedRow`, the app headers
-// (prd §1103), the lede's pick and the moment split, split out of
+// (prd §1103) and Home's category sections (§1152), the lede's pick, split out of
 // FeedScreen.swift (prd §718). Nothing here changed but the file it lives
 // in and, where another file reads a member, its access level.
 extension FeedScreen {
@@ -581,69 +581,27 @@ extension FeedScreen {
         return !SocialRoomSource.standsAlone(thing)
     }
 
-    /// The away window lifted into its own section (prd §389) — "Since you
-    /// left", then the day grain underneath it.
-    ///
-    /// The All feed has carried this boundary since 2026-07-09, as an inline
-    /// capsule (`newSinceDivider`) sitting wherever it happened to fall inside
-    /// a day. That says the same true thing in the weakest available position:
-    /// a caption between two rows, competing with the day header above it.
-    /// Promoting it to sectioning makes the FIRST thing the feed says be what
-    /// you actually came to find out.
-    ///
-    /// Returns the groups unchanged (and `moment: false`) whenever the split
-    /// would be degenerate — no away window, nothing new, or EVERYTHING new —
-    /// which is `boundaryID`'s own rule: a divider at the very top or the very
-    /// bottom marks nothing.
-    ///
-    /// Order carries the partition: groups are newest-first and so are the rows
-    /// inside them, so the fresh side is a prefix and one pass splits it. A
-    /// FOLD spanning the boundary lands whole on the fresh side, since a bundle
-    /// dates itself by its newest member — the same place the inline divider
-    /// has always put it, so nothing moves that wasn't already there.
-    ///
-    /// `days` names the rows that open each DAY inside the away section when
-    /// it spans more than one (prd §879) — row id → that day's own label. The
-    /// section used to be one flat run across however many days you were
-    /// gone, so the same source's two daily folds sat back to back reading as
-    /// one row twice, and nothing said where yesterday ended. Empty when the
-    /// section is a single day, which is most opens: a day name under "Since
-    /// you left" would only restate the obvious.
-    func momentSplit(_ groups: [(String, [FeedRow])])
-        -> (groups: [(String, [FeedRow])], moment: Bool, days: [String: String]) {
-        guard let since = newSince,
-              let first = groups.first?.1.first, first.date > since
-        else { return (groups, false, [:]) }
-        var fresh: [FeedRow] = []
-        var rest: [(String, [FeedRow])] = []
-        var days: [String: String] = [:]
-        for (label, rows) in groups {
-            let new = rows.prefix { $0.date > since }
-            let old = rows.dropFirst(new.count)
-            if let opener = new.first { days[opener.id] = label }
-            fresh.append(contentsOf: new)
-            guard !old.isEmpty else { continue }
-            // A day the boundary cut through keeps its rows under a name that
-            // says so. Only the CUT day is renamed — an untouched Today (the
-            // boundary fell yesterday) is still just Today.
-            let cut = !new.isEmpty && label == String(localized: "Today")
-            rest.append((cut ? String(localized: "Earlier today") : label, Array(old)))
-        }
-        guard !fresh.isEmpty, !rest.isEmpty else { return (groups, false, [:]) }
-        return ([(Self.momentLabel, fresh)] + rest, true, days.count > 1 ? days : [:])
+    /// Home's rows in category sections, in the person's category order
+    /// (prd §1152: the order Settings › Dock order sets and the tray reads,
+    /// user: "if in the dock settings the user changes the order it should
+    /// change the order displayed on home feed"). A thing with no category
+    /// (a note of yours) closes Home under You. `AppGroups` holds the rule.
+    static func categorySections(_ groups: [(String, [FeedRow])]) -> [(String, [FeedRow])] {
+        AppGroups.byCategory(groups.flatMap(\.1),
+                             order: CategoryOrder.current,
+                             rest: youSection,
+                             category: { BridgeCatalog.category(forSource: $0.source) })
     }
 
-    /// The All feed under app headers (prd §1103) — `AppGroups` holds the
-    /// rule; this hands it `FeedRow`'s stored id and source.
-    static func groupedByApp(_ groups: [(String, [FeedRow])], momentDays: [String: String])
-        -> AppGroups.Result<FeedRow> {
-        AppGroups.group(groups, momentDays: momentDays, id: \.id, source: \.source)
-    }
+    /// The section a thing with no category closes Home under.
+    static var youSection: String { String(localized: "You") }
 
-    /// The away section's name. A constant so the header's whisper gate and
-    /// the seam can both ask for it by identity rather than re-localizing a
-    /// literal and hoping the two strings match.
-    static var momentLabel: String { String(localized: "Since you left") }
+    /// Home under app headers (prd §1103), inside each category section
+    /// (§1152) — `AppGroups` holds the rule; this hands it `FeedRow`'s stored
+    /// id and source.
+    static func groupedByApp(_ groups: [(String, [FeedRow])]) -> AppGroups.Result<FeedRow> {
+        AppGroups.group(groups, id: \.id, source: \.source)
+    }
 
     /// One calendar for the per-thing day grouping — `Calendar.current` copies
     /// the user's calendar on every access, and `dayLabel` runs once per thing
