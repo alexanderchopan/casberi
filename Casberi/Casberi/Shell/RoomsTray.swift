@@ -445,9 +445,7 @@ struct RoomsTray: View {
                   RoomAccounts.connected(in: host.room, names: names).contains(where: { $0.name == host.seat.name }),
                   seen.insert(host.seat.name).inserted else { continue }
             let seat = host.seat
-            out.append(FolderItem(id: "recent:" + seat.name, name: seat.name, face: .app(seat.mark), lit: false) {
-                pick(seat.source ?? seat.name)
-            })
+            out.append(appItem(seat, id: "recent:" + seat.name, lit: false))
             if out.count == Self.lineSlots { break }
         }
         return out
@@ -690,6 +688,8 @@ struct RoomsTray: View {
         let name: String
         let face: Face
         let lit: Bool
+        /// An app's account page, offered on a long press (prd §1159).
+        var settings: (() -> Void)? = nil
         let act: () -> Void
     }
 
@@ -713,9 +713,7 @@ struct RoomsTray: View {
             }
             let apps = rowApps(in: category).map { seat in
                 let id = RoomAccounts.scopeID(seat)
-                return FolderItem(id: id, name: seat.name, face: .app(seat.mark), lit: scope == id) {
-                    pick(seat.source ?? seat.name)
-                }
+                return appItem(seat, id: id, lit: scope == id)
             }
             let follow = DSRoomAction(title: String(localized: "Follow a wallet"), symbol: "plus") {
                 chrome.walletFollowPending = true
@@ -742,11 +740,23 @@ struct RoomsTray: View {
         let items = rowApps(in: category).map { seat in
             let id = RoomAccounts.scopeID(seat)
             let lit = standing && (room != nil ? scope == id : filter.source == seat.source)
-            return FolderItem(id: id, name: seat.name, face: .app(seat.mark), lit: lit) {
-                pick(seat.source ?? seat.name)
-            }
+            return appItem(seat, id: id, lit: lit)
         }
         return Folder(items: items, action: nil)
+    }
+
+    /// An app's icon: a tap lands in the room scoped to it, and a long press
+    /// offers Open and Settings, its account page (prd §1159) — the page
+    /// its row in Settings opens, reached from where the app is drawn.
+    private func appItem(_ seat: RoomAccounts.Seat, id: String, lit: Bool) -> FolderItem {
+        let bridgeID = bridges.bridges.first { $0.name == seat.name || $0.id == seat.source }?.id
+            ?? BridgeRouter.id(forOffer: seat.name)
+        let settings: (() -> Void)? = bridgeID.map { bridgeID in
+            { accountPage(BridgeRouter.destination(forID: bridgeID)) }
+        }
+        return FolderItem(id: id, name: seat.name, face: .app(seat.mark), lit: lit, settings: settings) {
+            pick(seat.source ?? seat.name)
+        }
     }
 
     private static func face(_ slot: DSAccountSlot) -> FolderItem.Face {
@@ -833,6 +843,16 @@ struct RoomsTray: View {
             .dsTapTarget()
             .accessibilityLabel(Text(verbatim: item.name))
             .accessibilityAddTraits(item.lit ? .isSelected : [])
+            .contextMenu {
+                if let settings = item.settings {
+                    Button(action: item.act) {
+                        Label("Open", systemImage: "arrow.up.forward.app")
+                    }
+                    Button(action: settings) {
+                        Label("Settings", systemImage: "slider.horizontal.3")
+                    }
+                }
+            }
         }
     }
 
@@ -917,6 +937,14 @@ struct RoomsTray: View {
         DSHaptic.selection()
         close()
         route.present(door)
+    }
+
+    /// Open an app's account page over where you stand (prd §1159), the way
+    /// its connected row in Settings does (§1050f).
+    private func accountPage(_ dest: BridgeRouter.Destination) {
+        DSHaptic.selection()
+        close()
+        route.openAccount(dest)
     }
 
     /// Land in a category's room on All: its name, its disc and its "+N"

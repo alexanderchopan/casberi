@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1290 of 1353 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1291 of 1354 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1392,7 +1392,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050c — Life is one list by day, with no tiles
 - §1050d — Reading's menu lists apps, and the music shelf's orders are dropped
 - §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it (part superseded by §1050f)
-- §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's… (amended by §1050g)
+- §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's… (amended by §1050g, §1159)
 - §1050h — Settings is one list: Casberi first, then every app in its category, connected or not (amended by §1119; part superseded by §1111)
 - §1050i — Settings as one door and one list, built
 - §1050j — The rooms tray is a list of rooms with no counts and no Recent, and every glass category bar follows Dock order (amended by §1050l)
@@ -1514,6 +1514,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1156 — Every title's first word is pink, and You's screens name the place alone
 - §1157 — Home's rows lead with the app's icon, as notifications do, and Settings' app rows are one line
 - §1158 — Spotify reads where the web player reads: the albums and playlists you played, and what your friends are playing, off…
+- §1159 — An app's icon in the rooms tray long-presses to Settings, its account page
 
 ## Dead rulings → what replaced them (generated)
 
