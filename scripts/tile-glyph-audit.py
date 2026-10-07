@@ -61,6 +61,8 @@ ALIASES = {
     # row of its Subscriptions tile, which wears its own name.)
     # Social's Follow (prd §1086) watches a person privately: the same meaning.
     ("SocialScope", "follow"): "watch",
+    # You's Today (prd §1168) IS the "All" source, the dock's inbox tray.
+    ("YouTile", "feed"): "all",
 }
 
 # Symbols the user named as one meaning's own (2026-09-18; the Wallet's
@@ -257,6 +259,14 @@ extension SocialScope: DSTileScope {
         switch self {
         case .all: return ScopeTileGlyph.all
         case .follow: return ScopeTileGlyph.watch
+        }
+    }
+}
+
+extension YouTile: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .feed: return ScopeTileGlyph.all
         }
     }
 }

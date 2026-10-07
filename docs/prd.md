@@ -65020,3 +65020,7 @@ Add opened the catalogue on Apps, a second copy of the All apps list now drawn u
 4. **The box is two across** (`DSCountTile(inline:)` with a glyph where Settings' figure stands): Watchlist, Alerts, then the eight categories A–Z, five rows.
 
 **Seen** on a fresh iPhone 17 Pro simulator, light, nothing watched: Today's Markets tile landing in the room, the 2×5 box, "Nothing watched yet.", and Work's index with live quotes (Amazon, Apple, Atlassian, Cloudflare, GitLab, Microsoft). **Not seen:** the Mac, dark, the tray's door tapped.
+
+## §1168 — Today wears the inbox tray (user, 2026-10-07: of the sun, "i don't think that 'today' icon makes me feel like 'today'", "it looks more like day / night settings or flashlight", then "inbox tray is good i think its fine for today"; amends §1166 item 1)
+
+You's Today tile and the tray's Today door wear `tray.full` (`tray.full.fill` while you stand there) through `ScopeTileGlyph.all`, the dock's "All" glyph, because Today IS the "All" source; `ScopeTileGlyph.feed` is deleted, and `tile-glyph-audit.py` declares the alias `YouTile.feed → all` (its fixture carries the case). Today leads You's four by `DSScopeTiles.alphabetical`'s own `all` rule. A date-in-a-square glyph was offered as the plainer "today" and not taken. **Seen** on a fresh simulator: the tray's You row leading with the filled tray. **Note:** Notes' own All tile wears the same tray on the Notes page.

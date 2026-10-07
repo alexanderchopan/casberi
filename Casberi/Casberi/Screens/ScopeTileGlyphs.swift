@@ -78,11 +78,6 @@ enum ScopeTileGlyph {
     /// Social's To you (prd §1086): what is addressed to you — the system's
     /// one person, never `person.2` (Accounts, a list of people).
     static let toYou        = "person"
-    /// You's Home (prd §1136): the house the tray's Home door wears — the
-    /// feed, not the wallet family's Home (`home`, a line chart).
-    // A sun since prd §1166: the place is Today, and `calendar` is the
-    // Calendars count's.
-    static let feed         = "sun.max"
     /// You's Notes place (prd §1136): the tray's Notes door.
     static let notes        = "note.text"
     /// You's Settings place (prd §1136, §1136k): the system's gear. It was
@@ -242,7 +237,8 @@ extension FramesSection: DSTileScope {
 extension YouTile: DSTileScope {
     var glyph: String {
         switch self {
-        case .feed:     return ScopeTileGlyph.feed
+        // Today is the "All" source (prd §1168): the dock's inbox tray.
+        case .feed:     return ScopeTileGlyph.all
         case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
         case .notes:    return ScopeTileGlyph.notes
         case .settings: return ScopeTileGlyph.settings

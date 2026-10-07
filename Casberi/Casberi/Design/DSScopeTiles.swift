@@ -193,10 +193,9 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// directory's categories, which keep the dock's own order.
     static func alphabetical(_ sections: [Scope], verbs: Set<Scope>) -> [Scope] {
         let isLead: (Scope) -> Bool = {
+            // You's Today wears `all` (prd §1168), so it leads its four too;
+            // as "Home" it led only because H sorts before M.
             $0.glyph == ScopeTileGlyph.all || $0.glyph == ScopeTileGlyph.home
-                // You's Today leads its four (prd §1166): it led as "Home"
-                // only because H sorts before M.
-                || $0.glyph == ScopeTileGlyph.feed
         }
         let leads = sections.filter(isLead)
         let tail = sections.filter { !isLead($0) && verbs.contains($0) }
