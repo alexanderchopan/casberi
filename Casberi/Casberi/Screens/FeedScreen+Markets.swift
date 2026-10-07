@@ -20,17 +20,12 @@ extension FeedScreen {
         // same way you did settings").
         let tiles = TokensScope.box
         return Section {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .leading), count: 2),
-                      alignment: .leading, spacing: 2) {
+            DSCountGrid {
                 ForEach(tiles) { tile in
                     DSCountTile(count: nil, label: tile.label, glyph: tile.glyph,
                                 isOn: tile == chrome.tokensScope, inline: true) { pickTokensScope(tile) }
                 }
             }
-            .padding(.horizontal, DS.Space.s2)
-            .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
-                   maxHeight: DSRoomChassis.leadBox)
-            .dsRoomHeadBlock()
             .listRowBackground(Color.clear)
             .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                  bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))

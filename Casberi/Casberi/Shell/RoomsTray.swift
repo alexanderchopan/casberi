@@ -573,8 +573,6 @@ struct RoomsTray: View {
         return searchControl
             .padding(.horizontal, DS.Space.s4)
             .frame(width: max(DSRoomChassis.inset + width - beside, 1), height: height)
-            .contentShape(Capsule())
-            .onTapGesture { searching = true }
             .dsGlass(cornerRadius: height / 2)
             .padding(.leading, beside)
             .padding(.bottom, bottom)

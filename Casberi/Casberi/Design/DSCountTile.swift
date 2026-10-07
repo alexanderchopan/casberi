@@ -28,6 +28,9 @@ struct DSCountTile: View {
     var widest: Int? = nil
     let action: () -> Void
 
+    /// The lead column's floor, inline: a two-digit figure's width.
+    static let leadFigure = 99
+
     private var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
     }
@@ -39,19 +42,24 @@ struct DSCountTile: View {
             action()
         } label: {
             if inline {
-                HStack(alignment: glyph == nil ? .firstTextBaseline : .center, spacing: DS.Space.s2) {
-                    if let glyph {
-                        // Markets' tiles: a glyph where Settings' figure stands.
-                        Image(systemName: glyph)
-                            .dsGlyph(.body, weight: .regular)
-                            .frame(width: 24)
-                            .foregroundStyle(isOn ? Color.white : DS.textSecondary)
-                    } else {
-                        ZStack(alignment: .trailing) {
-                            // The column: the widest figure, unseen.
-                            if let widest {
-                                Text(widest.formatted()).dsText(.heading24).monospacedDigit().hidden()
-                            }
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    // ONE lead column for figures and glyphs alike (prd
+                    // §1180, user: "THE TEXT IN THESE SHOULD BE IN THE SAME
+                    // PLACE … SAME SIZE same positions etc so its seamless"):
+                    // as wide and as tall as a two-digit figure, so Settings'
+                    // and Markets' words start at one edge on one baseline,
+                    // and their rows are one height.
+                    // The column is the unseen figure; what shows rides it,
+                    // so the baseline is always the figure's.
+                    Text(max(widest ?? 0, Self.leadFigure).formatted())
+                        .dsText(.heading24).monospacedDigit().hidden()
+                        .overlay(alignment: glyph == nil ? .trailing : .center) {
+                        if let glyph {
+                            // Markets' tiles: a glyph where Settings' figure stands.
+                            Image(systemName: glyph)
+                                .dsGlyph(.body, weight: .regular)
+                                .foregroundStyle(isOn ? Color.white : DS.textSecondary)
+                        } else {
                             Text((count ?? 0).formatted())
                                 .dsText(.heading24)
                                 .monospacedDigit()
@@ -103,5 +111,23 @@ struct DSCountTile: View {
         .buttonStyle(PressSpring())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+}
+
+/// THE INLINE BOX (prd §1180): two across, one spacing, one inset, the
+/// lead box's height, rows centred. Settings' kinds and Markets' categories
+/// both stand in it, so moving between the two places nothing jumps.
+struct DSCountGrid<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .leading), count: 2),
+                  alignment: .leading, spacing: DS.Space.s1) {
+            content
+        }
+        .padding(.horizontal, DS.Space.s2)
+        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
+               maxHeight: DSRoomChassis.leadBox, alignment: .leading)
+        .dsRoomHeadBlock()
     }
 }

@@ -65124,3 +65124,13 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 4. **Not yet: the card.** The box on top of each sheet (the room's `leadBox`) is the next step, the easy group one sheet at a time.
 
 **Seen** on a private simulator over the demo: Design review's sheet with Calendar · Share as tiles in the text's column; Degen's with Share. **Not seen:** a five-tile sheet, the Mac.
+
+## §1180 — Settings' box and Markets' box are one box: the words stand at one edge on one baseline (user, 2026-10-07, of the two boxes side by side: "THE TEXT IN THESE SHOULD BE IN THE SAME PLACE", "SAME SIZE same positions etc so its seamless"; amends §1166's and §1167's inline tiles, §1172's figure column)
+
+**Why.** Moving between Settings and Markets, the words jumped. Settings' figures stood in a column as wide as its widest count and its rows were a heading24 line tall; Markets' glyphs stood in a 24pt column on shorter rows, and the grid's row spacing differed (s1 against 2pt). Each word moved left and up.
+
+1. **One lead column** (`DSCountTile`, inline): the width and height of an unseen two-digit figure (`leadFigure`, 99), or the widest count if it is wider. A figure is right-aligned in it and a glyph centred; both ride it as an overlay, so the baseline is always the figure's and every row is one height.
+2. **One grid** (`DSCountGrid`): two across, one spacing, one inset, the lead box's height, rows centred. Settings and Markets both stand in it.
+3. **A count past 99 still widens Settings' column**, so with three-digit counts its words sit a figure's width right of Markets'. Kept, because a clipped count is a wrong count (§83).
+
+**Seen** on the simulator over the demo: the word columns' left edges at x 281/283 and 775/775 (3× pixels, the 2px is the letters' own shapes), the rows' tops at 725/726.
