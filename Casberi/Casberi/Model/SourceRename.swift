@@ -153,7 +153,31 @@ enum SourceRename {
         // with no `seatNames` entry, so its records kept the old name, and
         // two of them drew as two rows in Settings › Apps.
         store.convergeNames(Corpus.canonicalSource)
+        // Health records filed under a seat id move to the catalog name every
+        // reader asks for (prd §1163). The four import riders' records are
+        // dropped, not moved: they were stamped by calls that carry no key
+        // (a public page, an avatar CDN, an expiring export link), so moving
+        // them would say a working sign-in needs reconnecting. A live door's
+        // real refusal under the same id re-stamps on its next read.
+        BridgeHealth.adoptCatalogNames(healthSeatNames)
+        ["instagram", "tiktok", "x", "snapchat"].forEach(BridgeHealth.forget)
     }
+
+    /// Seat id → catalog name for every bridge `NetworkReach` spelled by id
+    /// before prd §1163. Closed: the registry's audit now refuses an id, so
+    /// nothing new is ever filed under one.
+    private static let healthSeatNames: [String: String] = [
+        "appstoreconnect": "App Store Connect", "aws": "AWS",
+        "binance": "Binance", "cardpointers": "CardPointers",
+        "cloudflare": "Cloudflare", "dodopayments": "Dodo Payments",
+        "duolingo": "Duolingo", "ethvalidators": "ETH Validators",
+        "geminiExchange": "Gemini Exchange", "l2beat": "L2BEAT",
+        "lightning": "Lightning", "pagerduty": "PagerDuty", "polar": "Polar",
+        "posthog": "PostHog", "pypi": "PyPI", "sentry": "Sentry",
+        "slack": "Slack", "splits": "Splits", "spotify": "Spotify",
+        "stripe": "Stripe", "vercel": "Vercel", "walletbeat": "Walletbeat",
+        "wise": "Wise",
+    ]
 
     /// Seat id → the name that seat answers to now. Only seats that have been
     /// renamed need an entry; every other bridge record was written under its

@@ -669,13 +669,6 @@ struct TokenSetupScreen: View {
         return parts.joined(separator: " · ")
     }
 
-    /// The names this seat's health is recorded under. `NetworkReach` names
-    /// some bridges by seat id ("cloudflare", "stripe") and others by catalog
-    /// name ("Linear"), and `BridgeHealth` keys on whichever it says — so a
-    /// read under one spelling found nothing for the other and called a
-    /// refused Cloudflare token "Couldn't reach" (prd §1162).
-    private var healthKeys: [String] { [bridge.rawValue, bridge.bridgeID] }
-
     private func connect() {
         let token = tokenField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { return }
@@ -700,7 +693,7 @@ struct TokenSetupScreen: View {
         bridge.onRemove(reconnecting: true)
         // A new key starts a new health record, so a failure below reads THIS
         // key's answer, never the last key's (`ConnectFailure`).
-        healthKeys.forEach(BridgeHealth.forget)
+        BridgeHealth.forget(bridge.rawValue)
         // The key being replaced, held until the new one proves itself (prd
         // §1162): a replace that fails puts it back rather than leaving the
         // account with no key. Since keys sync, a delete here would have
@@ -774,10 +767,10 @@ struct TokenSetupScreen: View {
                     replacedToken = nil
                     // What the provider actually said, and so what to do
                     // about it (prd §1162) — four remedies, not one sentence.
-                    let status = healthKeys.lazy.compactMap { BridgeHealth.record(for: $0)?.lastStatus }.first
+                    let status = BridgeHealth.record(for: bridge.rawValue)?.lastStatus
                     // A discarded key leaves no record behind: its refusal is
                     // not a connection that broke (prd §1162).
-                    healthKeys.forEach(BridgeHealth.forget)
+                    BridgeHealth.forget(bridge.rawValue)
                     // `.failed`, not `.says`: the old sentence drew in the
                     // success green, a failure wearing the colour of a win.
                     result = .failed(ConnectFailure.from(status: status).sentence(bridge.rawValue))

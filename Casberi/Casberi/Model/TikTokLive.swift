@@ -164,7 +164,7 @@ enum TikTokLive {
     /// `getJSONBody`: a dead session is a 200 whose BODY says so, and the
     /// status alone would read it as an empty inbox.
     private static func get(_ url: String, cookies: String) async -> (json: Any?, status: Int) {
-        await IngestSupport.getJSONBody(url, headers: headers(cookies), service: "TikTok")
+        await IngestSupport.getJSONBody(url, headers: headers(cookies), service: "TikTok live")
     }
 
     /// What the page sends and nothing it doesn't — minus the signatures,

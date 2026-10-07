@@ -587,7 +587,7 @@ enum InstagramLive {
     /// session would read alike and neither would ever clear or keep the
     /// cookies on purpose.
     private static func get(_ url: String, auth: InstagramLiveAuth.Session) async -> (json: Any?, status: Int) {
-        await IngestSupport.getJSONBody(url, headers: headers(auth), service: "Instagram")
+        await IngestSupport.getJSONBody(url, headers: headers(auth), service: "Instagram live")
     }
 
     /// Exactly the headers instagram.com's own web app sends with the same

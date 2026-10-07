@@ -23,7 +23,7 @@ FAILURE="Casberi/Casberi/Model/ConnectFailure.swift"
 grep -q 'ConnectFailure.from(status:' "$TOKEN" \
   || { echo "✗ a failed paste no longer says what the provider answered"; exit 1; }
 # The read must be THIS key's: the record is cleared before the key is stored.
-perl -0ne 'exit((/healthKeys\.forEach\(BridgeHealth\.forget\)(?:(?!TokenIngest\.refresh)[\s\S]){0,900}?TokenVault\.set\(token, for: bridge\.tokenKey\)/) ? 0 : 1)' "$TOKEN" \
+perl -0ne 'exit((/BridgeHealth\.forget\(bridge\.rawValue\)(?:(?!TokenIngest\.refresh)[\s\S]){0,900}?TokenVault\.set\(token, for: bridge\.tokenKey\)/) ? 0 : 1)' "$TOKEN" \
   || { echo "✗ the paste no longer clears the health record first — a failure would read the last key's status"; exit 1; }
 # A failed REPLACE puts the old key back: keys sync, so a delete there would
 # disconnect every device on one mistaken Paste.

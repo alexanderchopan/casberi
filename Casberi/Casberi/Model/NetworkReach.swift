@@ -40,6 +40,11 @@ enum NetworkReach {
 
     enum Reach {
         /// Reached only while its owning bridge is connected — the common case.
+        /// `bridge` is the seat's CATALOG NAME (`BridgeCatalog.offers`), never
+        /// its seat id (prd §1163): `BridgeHealth` files a refusal under it and
+        /// every reader — the account page, the seat's status, Home, the
+        /// digest, "reaching now" on this list — keys by the name.
+        /// `bridge-health-selftest.sh` fails on any other spelling.
         case whenConnected(bridge: String)
         /// Reached regardless of any connection (a saved link's own page, a
         /// tapped location) — the small always-on set.
@@ -58,8 +63,26 @@ enum NetworkReach {
         let purpose: String
         /// The hosts this service talks to. Shown small under the purpose.
         let hosts: [String]
+        /// Whether these calls carry the seat's own credential (prd §1163).
+        /// false for the imports' riders — a public page, an avatar CDN, an
+        /// export's expiring link — whose 401/403 says nothing about the
+        /// seat's key, so `BridgeHealth` never files it against the seat.
+        /// That exception was once spelled by keying those entries with the
+        /// seat id, which no reader matched; a flag says it out loud.
+        var credentialed = true
 
         var id: String { service }
+
+        /// The seat these calls belong to, when one does.
+        var bridge: String? {
+            if case .whenConnected(let bridge) = reach { return bridge }
+            return nil
+        }
+
+        /// Whether `host` is one of this service's, on the label boundary.
+        func covers(host: String) -> Bool {
+            hosts.contains { NetworkReach.matches(host: host, declared: $0) }
+        }
     }
 
     /// The registry. Every functional host the app calls lives here under the
@@ -106,14 +129,15 @@ enum NetworkReach {
         // why that entry is hand-written. The other two can be: it is always
         // the post's own page, or its provider's own preview endpoint.
         Endpoint(service: "Instagram captions",
-                 reach: .whenConnected(bridge: "instagram"),
+                 reach: .whenConnected(bridge: "Instagram"),
                  purpose: "Your Instagram export lists the posts you saved by handle and link, without their words or their picture. \(DS.device) opens each saved post's own public page once to read its caption, and downloads its cover picture once to keep a small copy. The requests carry only that post's link.",
                  // BOTH spellings of the post host. Meta's own export writes
                  // its hrefs as `www.instagram.com/p/…`, so the bare form alone
                  // named a host this app does not in fact open — and the two
                  // CDNs are where `og:image` points (2026-08-18, prd §395).
                  hosts: ["instagram.com", "www.instagram.com",
-                         "cdninstagram.com", "fbcdn.net"]),
+                         "cdninstagram.com", "fbcdn.net"],
+                 credentialed: false),
         // The third, same family. A TikTok export names the videos you saved
         // by link and NOTHING else — no caption, no creator, no cover, because
         // the video belongs to whoever made it. Those facts are public on
@@ -129,9 +153,10 @@ enum NetworkReach {
         // from the other would be technically complete and practically
         // misleading.
         Endpoint(service: "TikTok video names",
-                 reach: .whenConnected(bridge: "tiktok"),
+                 reach: .whenConnected(bridge: "TikTok"),
                  purpose: "Your TikTok export lists the videos you saved as bare links, without their words. \(DS.device) asks TikTok's own public preview endpoint what each one is — the caption, who made it, the cover picture — so you can search for it later. The request carries only that video's link, and no account or key is involved.",
-                 hosts: ["www.tiktok.com"]),
+                 hosts: ["www.tiktok.com"],
+                 credentialed: false),
         // The fourth, and the only one that reaches for something of YOURS
         // rather than somebody else's (2026-08-06). An X archive names your
         // avatar as a link to X's own image CDN instead of shipping the
@@ -140,45 +165,48 @@ enum NetworkReach {
         // never for a post you liked, whose author is somebody else and whose
         // face X publishes nowhere.
         Endpoint(service: "Your X avatar",
-                 reach: .whenConnected(bridge: "x"),
+                 reach: .whenConnected(bridge: "X"),
                  purpose: "Your X archive names your profile picture as a link rather than including it. \(DS.device) loads that one picture from X's image server so your own posts show your face instead of the X logo. The request carries only that picture's link.",
-                 hosts: ["pbs.twimg.com"]),
+                 hosts: ["pbs.twimg.com"],
+                 credentialed: false),
         // The live-notifications door (prd §701, 2026-09-11) — a SEPARATE
-        // reach from the archive import above, and the reason `bridge` here
-        // is the catalog name "X" rather than the seat id "x" the avatar
-        // entry uses: a refused read here is meant to surface as "X needs
-        // reconnecting" on the account page (`BridgeHealth`/`AccountPageState`
-        // key on that name), where an avatar CDN miss deliberately does not.
+        // reach from the archive import above, and CREDENTIALED where the
+        // avatar is not: a refused read here surfaces as "X needs
+        // reconnecting" on the account page, where an avatar CDN miss
+        // deliberately does not (prd §1163).
         Endpoint(service: "X notifications",
                  reach: .whenConnected(bridge: "X"),
                  purpose: "Reads your notifications, using your OWN X sign-in inside this app — not X's paid public API. The request carries the session cookies from that sign-in and nothing else.",
                  hosts: ["x.com"]),
-        // The same door for Instagram (prd §726). Keyed by the catalogue name
-        // for §701's reason: a refusal here IS grounds for "Needs
-        // reconnecting" on the account page, where the captions entry above
-        // (keyed by seat id) deliberately is not.
+        // The same door for Instagram (prd §726), credentialed for §701's
+        // reason: a refusal here IS grounds for "Needs reconnecting" on the
+        // account page, where the captions entry above deliberately is not.
+        // The two share `www.instagram.com`, so the live door names this
+        // service at its call and `BridgeHealth` believes the claim the
+        // registry confirms (prd §1163).
         Endpoint(service: "Instagram live",
                  reach: .whenConnected(bridge: "Instagram"),
                  purpose: "Reads your notifications and your saved posts, using your OWN Instagram sign-in inside this app — a personal account has no API. The requests carry the session cookies from that sign-in and nothing else.",
                  hosts: ["www.instagram.com"]),
-        // And for TikTok (prd §731), keyed by the catalogue name for the same
-        // reason; the video-names entry above is keyed by seat id.
+        // And for TikTok (prd §731), for the same reason; the video-names
+        // entry above is not credentialed, and "Link previews" shares the host.
         Endpoint(service: "TikTok live",
                  reach: .whenConnected(bridge: "TikTok"),
                  purpose: "Reads your likes, comments and follows, using your OWN TikTok sign-in inside this app. The requests carry the session cookies from that sign-in and nothing else, and never mark anything read.",
                  hosts: ["www.tiktok.com"]),
-        // And for Threads (prd §1131), keyed by the catalogue name for the same
-        // reason. The page's own scripts are read only when Threads stops
-        // knowing the feed's query id, to find the new one; the CDN hosts are
-        // the faces and post pictures a notice carries.
+        // And for Threads (prd §1131), for the same reason. The page's own
+        // scripts are read only when Threads stops knowing the feed's query
+        // id, to find the new one; the CDN hosts are the faces and post
+        // pictures a notice carries.
         Endpoint(service: "Threads live",
                  reach: .whenConnected(bridge: "Threads"),
                  purpose: "Reads your likes, replies and follows, using your OWN Threads sign-in inside this app. The requests carry the session cookies from that sign-in and nothing else, and never mark anything seen.",
                  hosts: ["www.threads.com", "static.cdninstagram.com", "cdninstagram.com", "fbcdn.net"]),
         Endpoint(service: "Snapchat Memories",
-                 reach: .whenConnected(bridge: "snapchat"),
+                 reach: .whenConnected(bridge: "Snapchat"),
                  purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture.",
-                 hosts: ["the links in your own export"]),
+                 hosts: ["the links in your own export"],
+                 credentialed: false),
         Endpoint(service: "Maps",
                  reach: .always,
                  purpose: "Opening a place opens Apple Maps. The location you tapped is all it carries.",
@@ -327,7 +355,7 @@ enum NetworkReach {
         // their own `data/news/index.ts` enumerates every incident, so the list
         // is one plain file read rather than an API call with a rate limit.
         Endpoint(service: "Walletbeat",
-                 reach: .whenConnected(bridge: "walletbeat"),
+                 reach: .whenConnected(bridge: "Walletbeat"),
                  purpose: "Reads Walletbeat's public review of each wallet app you name, and their published list of wallet security incidents. Carries only the name of the wallet being read; there is no account and no key, so nothing identifies you.",
                  hosts: ["beta.walletbeat.eth.limo", "raw.githubusercontent.com"]),
         // L2BEAT (prd §428). Two hosts and no third: their risk assessment is
@@ -341,7 +369,7 @@ enum NetworkReach {
         // documented API: measured 2026-08-21, `api.l2beat.com` answers 401
         // without a key. Disclosed as what it is.
         Endpoint(service: "L2BEAT",
-                 reach: .whenConnected(bridge: "l2beat"),
+                 reach: .whenConnected(bridge: "L2BEAT"),
                  purpose: "Reads L2BEAT's public risk assessment of every chain they cover, and the incidents they have recorded. Carries nothing about you — not even which chains you follow, since one request returns them all; there is no account and no key.",
                  hosts: ["l2beat.com", "raw.githubusercontent.com"]),
         // CardPointers (prd §420). ONE host, and it covers the sign-in too —
@@ -352,7 +380,7 @@ enum NetworkReach {
         // sign-in and upgrade links open in your browser, never as a request
         // of ours, so it is not declared here.
         Endpoint(service: "CardPointers",
-                 reach: .whenConnected(bridge: "cardpointers"),
+                 reach: .whenConnected(bridge: "CardPointers"),
                  purpose: "Reads the offers on your cards and their expiry dates, using a token you granted by signing in on CardPointers' own page. Carries that token and nothing else; no password ever reaches this app.",
                  hosts: ["mcp.cardpointers.com"]),
         // Radicle (prd §400) — the ONLY entry here whose host the person can
@@ -443,15 +471,15 @@ enum NetworkReach {
         // every venue); these are reached only for the read-only key check
         // and the balance read, and only once that venue is connected.
         Endpoint(service: "Binance",
-                 reach: .whenConnected(bridge: "binance"),
+                 reach: .whenConnected(bridge: "Binance"),
                  purpose: "Reads your Binance balance for the combined total. View-only key, checked before it's stored.",
                  hosts: ["api.binance.com", "api.binance.us"]),
         Endpoint(service: "Gemini Exchange",
-                 reach: .whenConnected(bridge: "geminiExchange"),
+                 reach: .whenConnected(bridge: "Gemini Exchange"),
                  purpose: "Reads your Gemini balance for the combined total. Auditor-role key, checked before it's stored.",
                  hosts: ["api.gemini.com"]),
         Endpoint(service: "ETH Validators",
-                 reach: .whenConnected(bridge: "ethvalidators"),
+                 reach: .whenConnected(bridge: "ETH Validators"),
                  purpose: "Reads the balance and status of the validator indices you follow, off a public beacon-chain API. No account, no key.",
                  hosts: ["ethereum-beacon-api.publicnode.com"]),
         // Reach is WALLET, not a Bitcoin-specific seat — Bitcoin has no
@@ -465,27 +493,27 @@ enum NetworkReach {
         // default cloud host is what's disclosed; a self-hosted host is
         // one the person named themselves in setup, not an undisclosed one.
         Endpoint(service: "PostHog",
-                 reach: .whenConnected(bridge: "posthog"),
+                 reach: .whenConnected(bridge: "PostHog"),
                  purpose: "Reads the metrics, annotations, and event counts you follow on your own PostHog project. Read-only scoped key.",
                  hosts: ["us.posthog.com"]),
         Endpoint(service: "Stripe",
-                 reach: .whenConnected(bridge: "stripe"),
+                 reach: .whenConnected(bridge: "Stripe"),
                  purpose: "Reads the events that mean money moved — disputes, payouts, cancellations, failed payments — and your balance. Restricted read-only key: it cannot refund, charge, or pay out, and your customers' details are never read.",
                  hosts: ["api.stripe.com"]),
         Endpoint(service: "Polar",
-                 reach: .whenConnected(bridge: "polar"),
+                 reach: .whenConnected(bridge: "Polar"),
                  purpose: "Reads refunds, disputes nested on them, subscriptions leaving a healthy state, and your recurring revenue — with a token scoped read-only: it cannot refund, cancel a subscription, or create anything, and your customers' details are never read. polar.sh is the page that mints the token and the page a row links to — opened in your browser, never called by the app.",
                  hosts: ["api.polar.sh", "polar.sh"]),
         Endpoint(service: "Dodo Payments",
-                 reach: .whenConnected(bridge: "dodopayments"),
+                 reach: .whenConnected(bridge: "Dodo Payments"),
                  purpose: "Reads your payments, refunds, disputes, and subscription changes with a key you mint read-only — it cannot charge, refund, or cancel anything, and your customers' card details are never read. app.dodopayments.com is the page that mints the key and the page a row links to — opened in your browser, never called by the app.",
                  hosts: ["live.dodopayments.com", "app.dodopayments.com"]),
         Endpoint(service: "Cloudflare",
-                 reach: .whenConnected(bridge: "cloudflare"),
+                 reach: .whenConnected(bridge: "Cloudflare"),
                  purpose: "Reads when your certificates, domains and API token expire, whether each zone is active, and your DNS records — so a record that changes can be reported — with a read-only token you mint. Never your traffic, your logs, or anything about your visitors. dash.cloudflare.com is the page that mints the token and the page a row links to — opened in your browser, never called by the app.",
                  hosts: ["api.cloudflare.com", "dash.cloudflare.com"]),
         Endpoint(service: "App Store Connect",
-                 reach: .whenConnected(bridge: "appstoreconnect"),
+                 reach: .whenConnected(bridge: "App Store Connect"),
                  purpose: "Reads your apps' review status, your customer reviews and your builds, with a key you generate and a token this iPhone signs itself — nothing about the key ever leaves the Keychain. Never your sales, your proceeds, or your analytics. Apple has no read-only role, so nothing here submits, releases, removes an app from sale, replies, or uploads. appstoreconnect.apple.com is the page that generates the key and the page a row links to — opened in your browser, never called by the app.",
                  hosts: ["api.appstoreconnect.apple.com", "appstoreconnect.apple.com"]),
         // AWS (2026-08-30) — the HOST varies by AWS SERVICE and by the region
@@ -497,7 +525,7 @@ enum NetworkReach {
         // (`service: "AWS"`), the §289 fallback for a host that comes from
         // the person's own typed region.
         Endpoint(service: "AWS",
-                 reach: .whenConnected(bridge: "aws"),
+                 reach: .whenConnected(bridge: "AWS"),
                  purpose: "Reads CloudWatch alarms, CodePipeline deploy results, Cost Explorer, and a count of EC2/S3/RDS/Lambda resources — with a read-only IAM key pair you create and sign requests with yourself. Only ever Describe/List/Get calls: nothing here creates, changes, or deletes anything on your account. The exact host depends on the AWS region you enter (e.g. monitoring.us-east-1.amazonaws.com) — every one is a subdomain of amazonaws.com. console.aws.amazon.com is where the key pair is created — opened in your browser, never called by the app.",
                  hosts: ["amazonaws.com"]),
         // Wise (2026-09-16, prd §778) — one host, fixed. `wise.com` is the
@@ -505,20 +533,20 @@ enum NetworkReach {
         // different host from the API, which is exactly the linear.app /
         // api.linear.app case the audit's denylist is written for.
         Endpoint(service: "Wise",
-                 reach: .whenConnected(bridge: "wise"),
+                 reach: .whenConnected(bridge: "Wise"),
                  purpose: "Reads which profile your token belongs to, your balances, and the transfers you have sent — with a personal API token you mint yourself and can scope read-only. Nothing here can send money, convert a balance, or add a recipient. Your card spending is not read at all: it lives in Wise's balance statement, behind a signed-approval step this app does not implement. wise.com is where the token is created — opened in your browser, never called by the app.",
                  hosts: ["api.transferwise.com"]),
         // Splits (2026-09-18, prd §820) — one host, fixed. `app.splits.org`
         // is the settings page the setup door OPENS, never fetched.
         Endpoint(service: "Splits",
-                 reach: .whenConnected(bridge: "splits"),
+                 reach: .whenConnected(bridge: "Splits"),
                  purpose: "Reads your team's accounts, their balances, your transactions and your contacts — with an API key you create yourself, which must have the Read scope only. Nothing here can propose, sign or send a transaction.",
                  hosts: ["api.splits.org"]),
         // Lightning (2026-10-03, prd §1098) — the relay is whichever one the
         // person's own connection string names, so it can only be prose here;
         // `NostrRelay` records it under this service as it opens the socket.
         Endpoint(service: "Lightning",
-                 reach: .whenConnected(bridge: "lightning"),
+                 reach: .whenConnected(bridge: "Lightning"),
                  purpose: "Reads your Lightning wallet's balance and payments through the Nostr relay your connection names, encrypted to your wallet, with a connection you make yourself that can only read. A connection that can pay is refused. Bitcoin's price comes from the same place the Wallet's does.",
                  hosts: ["the relay your connection names"]),
         // Host is user-configurable (Sentry's EU region answers on
@@ -528,15 +556,15 @@ enum NetworkReach {
         // reads also name their service to `NetworkLedger`, so a non-default
         // host still attributes correctly on the receipts screen (prd §289).
         Endpoint(service: "Sentry",
-                 reach: .whenConnected(bridge: "sentry"),
+                 reach: .whenConnected(bridge: "Sentry"),
                  purpose: "Lists your organizations, then your unresolved issues — the error, the project, and the line of code it came from. Never an event, a stack trace, a request, or anything about the person who hit the error. Read-only: it can't resolve an issue or change a project.",
                  hosts: ["sentry.io"]),
         Endpoint(service: "Vercel",
-                 reach: .whenConnected(bridge: "vercel"),
+                 reach: .whenConnected(bridge: "Vercel"),
                  purpose: "Lists your deployments — the project, whether each shipped or broke, its commit message and branch. One request, and only ever a read: nothing here deploys, promotes, rolls back, cancels, or reads an environment variable.",
                  hosts: ["api.vercel.com"]),
         Endpoint(service: "PagerDuty",
-                 reach: .whenConnected(bridge: "pagerduty"),
+                 reach: .whenConnected(bridge: "PagerDuty"),
                  purpose: "Lists your incidents — what fired, on which service, how urgent, and when it resolved. The key is read-only, so it can't page anyone, acknowledge, or resolve.",
                  hosts: ["api.pagerduty.com"]),
         Endpoint(service: "npm",
@@ -544,11 +572,11 @@ enum NetworkReach {
                  purpose: "Asks the public registry for the current version of each package you follow, and — only when one has actually changed — when it was published. Carries the package name and nothing else: there's no account and no key, so nothing identifies you. Download counts are never fetched.",
                  hosts: ["registry.npmjs.org"]),
         Endpoint(service: "PyPI",
-                 reach: .whenConnected(bridge: "pypi"),
+                 reach: .whenConnected(bridge: "PyPI"),
                  purpose: "Reads the public release feed of each package you follow. Carries the package name and nothing else: there's no account and no key, so nothing identifies you. Download counts are never fetched.",
                  hosts: ["pypi.org"]),
         Endpoint(service: "Slack",
-                 reach: .whenConnected(bridge: "slack"),
+                 reach: .whenConnected(bridge: "Slack"),
                  purpose: "Looks up mentions of you across Slack. Search-only user token — can't post, read files, or browse channels.",
                  hosts: ["slack.com"]),
 
@@ -628,7 +656,7 @@ enum NetworkReach {
         // pasted Spotify link opens on tap.) No developer app, no key, no
         // server — the session lives only on this device.
         Endpoint(service: "Spotify",
-                 reach: .whenConnected(bridge: "spotify"),
+                 reach: .whenConnected(bridge: "Spotify"),
                  purpose: "Reads the albums and playlists you played and what your friends are playing, using the same web-player session you signed in with. The requests carry only that session — no account of ours, no key, no server.",
                  hosts: ["spclient.wg.spotify.com", "api-partner.spotify.com", "clienttoken.spotify.com",
                          "api.spotify.com", "open.spotify.com", "accounts.spotify.com"]),
@@ -638,7 +666,7 @@ enum NetworkReach {
         // practised. One host for all of it. No developer app, no key, no
         // server — the session lives only on this device.
         Endpoint(service: "Duolingo",
-                 reach: .whenConnected(bridge: "duolingo"),
+                 reach: .whenConnected(bridge: "Duolingo"),
                  purpose: "Reads the days you practised and your streak, using the same session you signed in with. The requests carry only that session — no account of ours, no key, no server.",
                  hosts: ["www.duolingo.com"]),
 
@@ -859,27 +887,34 @@ enum NetworkReach {
     /// behind them, so there is no tile for a refusal to appear on and nothing
     /// to reconnect.
     static func bridge(forService service: String) -> String? {
-        guard let endpoint = endpoints.first(where: { $0.service == service })
-        else { return nil }
-        if case .whenConnected(let bridge) = endpoint.reach { return bridge }
-        return nil
+        endpoint(forService: service)?.bridge
     }
 
     static func service(forHost host: String) -> String? {
         let needle = host.lowercased()
         var best: (service: String, length: Int)?
         for endpoint in endpoints {
-            for declared in endpoint.hosts where declared.contains(".") {
-                let candidate = declared.lowercased()
-                guard needle == candidate || needle.hasSuffix("." + candidate) else { continue }
+            for declared in endpoint.hosts where matches(host: needle, declared: declared) {
                 // Longest declared host wins, so a specific subdomain entry
                 // beats a broader one that also matches.
-                if best == nil || candidate.count > best!.length {
-                    best = (endpoint.service, candidate.count)
+                if best == nil || declared.count > best!.length {
+                    best = (endpoint.service, declared.count)
                 }
             }
         }
         return best?.service
+    }
+
+    /// Exact, or a subdomain of the declared host. A prose host ("the site
+    /// you saved") has no dot and matches nothing.
+    static func matches(host: String, declared: String) -> Bool {
+        guard declared.contains(".") else { return false }
+        let needle = host.lowercased(), candidate = declared.lowercased()
+        return needle == candidate || needle.hasSuffix("." + candidate)
+    }
+
+    static func endpoint(forService service: String) -> Endpoint? {
+        endpoints.first { $0.service == service }
     }
 }
 

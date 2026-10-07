@@ -104,19 +104,37 @@ enum BridgeHealth {
     /// Which seat owns this call. `NetworkReach` already maps host → service
     /// and declares which bridge owns each service, so this reads that
     /// registry rather than introducing a second mapping to keep in step.
+    /// The answer is the seat's CATALOG NAME, the key every reader uses
+    /// (prd §1163) — the registry's audit holds it to that.
     private static func owningBridge(host: String?, named: String?) -> String? {
-        if let host, let service = NetworkReach.service(forHost: host),
-           let bridge = NetworkReach.bridge(forService: service) {
-            return bridge
-        }
+        guard let endpoint = owningEndpoint(host: host, named: named),
+              // An import's rider (a public page, an avatar CDN, an export's
+              // expiring link) carries no key of the seat's, so its 401/403
+              // is not a refusal of the seat (prd §1163).
+              endpoint.credentialed
+        else { return nil }
+        return endpoint.bridge
+    }
+
+    private static func owningEndpoint(host: String?, named: String?) -> NetworkReach.Endpoint? {
         // A host built from the person's own input (a followed feed, a
         // self-hosted PostHog) can never be in the registry — those call sites
         // name their service, and it counts only if the registry declares it,
         // the same guard `NetworkLedger` applies for the same reason.
-        if let named, NetworkReach.declares(service: named) {
-            return NetworkReach.bridge(forService: named)
+        let claimed = named.flatMap(NetworkReach.endpoint(forService:))
+        if let host {
+            // A host two services share (`www.instagram.com`: the export's
+            // captions and the live door) resolves to whichever is listed
+            // first. The caller's claim settles it, believed only when the
+            // claimed service itself lists this host (prd §1163).
+            if let claimed, claimed.covers(host: host) { return claimed }
+            if let service = NetworkReach.service(forHost: host),
+               let found = NetworkReach.endpoint(forService: service),
+               found.bridge != nil {
+                return found
+            }
         }
-        return nil
+        return claimed
     }
 
     // MARK: - Reading
@@ -197,6 +215,24 @@ enum BridgeHealth {
         guard let record = book.removeValue(forKey: old) else { return }
         book[new] = record
         save(book)
+    }
+
+    /// Records filed under a seat ID before prd §1163, when `NetworkReach`
+    /// spelled 27 bridges that way, move to the catalog name every reader
+    /// asks for. Run at every launch (`SourceRename.sweepSeats`): a no-op
+    /// once nothing is filed under an old key, and one save when something
+    /// is. Where the name already holds a record, that one stands — it is
+    /// the one the surfaces have been reading — and the stray is dropped.
+    static func adoptCatalogNames(_ names: [String: String]) {
+        lock.lock(); defer { lock.unlock() }
+        var book = loaded()
+        var moved = false
+        for (old, new) in names where old != new {
+            guard let record = book.removeValue(forKey: old) else { continue }
+            if book[new] == nil { book[new] = record }
+            moved = true
+        }
+        if moved { save(book) }
     }
 
     // MARK: - Storage

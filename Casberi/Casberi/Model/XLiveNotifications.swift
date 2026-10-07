@@ -346,7 +346,7 @@ enum XLiveNotifications {
         ]
         return await IngestSupport.getJSONStatus(
             url.absoluteString, auth: "Bearer \(guestBearerToken)",
-            headers: headers, service: "X")
+            headers: headers, service: "X notifications")
     }
 
     /// Best-effort variables/features, url-encoded onto the query string

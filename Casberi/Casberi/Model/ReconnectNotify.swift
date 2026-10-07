@@ -15,17 +15,15 @@ import Foundation
 /// began, so the ledger's "fires once, ever" holds while it stays broken, and
 /// a break that heals and recurs is new news.
 enum ReconnectNotify {
-    /// `seats` is every app you have added, as (id, name). A refusal stamped
-    /// for an app you never connected — a mistyped key on its connect page,
+    /// `seats` is the name of every app you have added. A refusal stamped for
+    /// an app you never connected — a mistyped key on its connect page,
     /// refused and discarded — is not a connection that broke, so it is never
-    /// said. `BridgeHealth` keys on whatever `NetworkReach` names the bridge,
-    /// which is the seat id for some ("cloudflare") and the name for others
-    /// ("Linear"), so both are matched and the name is what is said.
-    static func plans(seats: [(id: String, name: String)]) -> [NotifyPlan] {
-        var display: [String: String] = [:]
-        for seat in seats { display[seat.id] = seat.name; display[seat.name] = seat.name }
-        let refused = BridgeHealth.allNeedingReconnect().compactMap { key -> (name: String, since: Date)? in
-            guard let name = display[key], let since = BridgeHealth.needsReconnect(key) else { return nil }
+    /// said. `BridgeHealth` files under the catalog name, as the seats are
+    /// named (prd §1163).
+    static func plans(seats: [String]) -> [NotifyPlan] {
+        let added = Set(seats)
+        let refused = BridgeHealth.allNeedingReconnect().compactMap { name -> (name: String, since: Date)? in
+            guard added.contains(name), let since = BridgeHealth.needsReconnect(name) else { return nil }
             return (name: name, since: since)
         }
         return plans(refused: refused)

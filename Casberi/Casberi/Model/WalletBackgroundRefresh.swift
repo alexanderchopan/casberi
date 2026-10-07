@@ -104,7 +104,7 @@ enum WalletBackgroundRefresh {
         let devnet = DevnetNotify.plans()
         // An app that stopped letting us in belongs to no row either (prd
         // §1162) — the same merge, the same one submit.
-        let broken = ReconnectNotify.plans(seats: BridgeStore().bridges.map { (id: $0.id, name: $0.name) })
+        let broken = ReconnectNotify.plans(seats: BridgeStore().bridges.map(\.name))
         await Notifications.submit(plans + devnet + broken, photos: photos)
         // The daily whisper used to be re-scheduled here on every sweep; cut
         // in prd §706 (`DayBrief.whisper` still composes the feed's day line).

@@ -535,7 +535,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 
 - **RULE: every app added to the catalog also lands on the website in the same session** — a hero marquee tile, a `#catalog` shelf cell and an `.ai-<name>` background — then bump the `?v=` cache-busters, zip `website/`, deploy through cPanel, and `rm` then `cp` the zip to `~/Downloads/website-deploy.zip` → docs/website.md
 - **RULE: `BridgeCatalog.offers` is the single source of truth for the app catalog, the website catalog and both marquees**, enforced by `scripts/catalog-sync.sh`; a marquee name must equal its offer name exactly → docs/website.md
-- **RULE: a new bridge is not done until its API hosts are in `Model/NetworkReach.swift`** (prd §205). `network-reach-audit.sh` is a ship gate. A host built at runtime names a declared family; a host the person types names its service through `NetworkLedger.record(host:as:)` → docs/verify.md
+- **RULE: a new bridge is not done until its API hosts are in `Model/NetworkReach.swift`** (prd §205). `network-reach-audit.sh` is a ship gate. A host built at runtime names a declared family; a host the person types names its service through `NetworkLedger.record(host:as:)`. Its `.whenConnected(bridge:)` is the CATALOG NAME, never the seat id, and a keyless rider says `credentialed: false` (prd §1163, `bridge-health-selftest.sh`) → docs/verify.md
 - **RULE: website icons are inlined as base64 data URIs — never hot-link a remote image** → docs/website.md
 
 ## Working mode

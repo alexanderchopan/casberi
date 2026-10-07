@@ -90,6 +90,65 @@ done
 TMP=$(mktemp -d /tmp/bridge-health-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 
+# ONE SPELLING FOR A SEAT (prd §1163). `BridgeHealth` files a refusal under
+# whatever `NetworkReach` names the owning bridge, and every reader — the
+# account page, `reconcile`, Home, the digest, "reaching now" — asks by the
+# CATALOG NAME. 27 entries were spelled by seat id ("stripe", "cloudflare"),
+# so a refused key for any of them was filed where nothing ever looked. Every
+# `bridge:` must be a string literal naming a `BridgeCatalog.offers` entry; a
+# constant would hide its spelling from this check, so it fails too.
+CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
+cat > "$TMP/names.py" <<'PY'
+import re, sys
+reach, catalog = (open(p).read() for p in sys.argv[1:3])
+offers = set(re.findall(r'Offer\(name: "([^"]+)"', catalog))
+if len(offers) < 50:
+    sys.exit(f"✗ read only {len(offers)} offers from BridgeCatalog — the guard cannot see the catalog")
+uses = re.findall(r'whenConnected\(bridge:\s*([^)]*)\)', reach)
+literal = [u for u in uses if u.strip() != "String"]   # skip the case declaration
+bad = [u for u in literal if not re.fullmatch(r'"[^"]+"', u.strip())
+       or u.strip().strip('"') not in offers]
+if len(literal) < 50:
+    sys.exit(f"✗ read only {len(literal)} bridge: values from NetworkReach — the guard cannot see the registry")
+if bad:
+    sys.exit("✗ NetworkReach names a bridge that is no catalog offer, so its refusals are filed where no reader looks (prd §1163): " + ", ".join(sorted(set(bad))))
+PY
+python3 "$TMP/names.py" "$REACH" "$CATALOG" || exit 1
+# The guard's own proof: a seat id and a non-literal must both be refused.
+python3 - "$REACH" "$TMP" <<'PY2' || exit 1
+import sys
+src, tmp = sys.argv[1:3]
+text = open(src).read()
+anchor = 'whenConnected(bridge: "Stripe")'
+if anchor not in text:
+    sys.exit("✗ STALE MUTATION: the Stripe anchor is gone — nothing was tested")
+for name, to in (("reach-id", 'whenConnected(bridge: "stripe")'),
+                 ("reach-const", "whenConnected(bridge: StripeAuth.seat)")):
+    open(f"{tmp}/{name}.swift", "w").write(text.replace(anchor, to, 1))
+PY2
+for mutant in reach-id reach-const; do
+  python3 "$TMP/names.py" "$TMP/$mutant.swift" "$CATALOG" >/dev/null 2>&1 \
+    && { echo "✗ SURVIVED: the catalog-name guard passed $mutant"; exit 1; }
+done
+
+# A KEYLESS CALL IS NOT THE SEAT'S REFUSAL (prd §1163). The imports' riders —
+# a public page, an avatar CDN, an expiring export link — are marked
+# `credentialed: false`, and attribution must honour it, or a 403 from a CDN
+# says a working sign-in needs reconnecting.
+grep -q 'endpoint.credentialed' "$HEALTH" \
+  || { echo "✗ BridgeHealth no longer checks credentialed — a CDN's 403 flags the seat (prd §1163)"; exit 1; }
+python3 - "$REACH" <<'PY2' || exit 1
+import sys
+text = open(sys.argv[1]).read()
+for rider in ("Instagram captions", "TikTok video names", "Your X avatar", "Snapchat Memories"):
+    start = text.find(f'Endpoint(service: "{rider}"')
+    if start < 0:
+        sys.exit(f'✗ "{rider}" left NetworkReach — re-rule which reaches are keyless (prd §1163)')
+    end = text.find("Endpoint(", start + 1)
+    if "credentialed: false" not in text[start:end]:
+        sys.exit(f'✗ "{rider}" lost credentialed: false — its keyless 403s now flag the seat (prd §1163)')
+PY2
+
 # --- extract the shipped logic ----------------------------------------------
 python3 - "$HEALTH" "$TMP/extracted.swift" <<'PY'
 import sys, re
@@ -236,4 +295,4 @@ mutate "success range narrowed" "case 200...299:" "case 200...200:" || mut_fail=
 mutate "lastOK frozen" "next.lastOK = now" "next.lastOK = next.lastOK ?? now" || mut_fail=1
 
 [[ $mut_fail -eq 0 ]] || { echo "✗ bridge-health self-test: a mutation survived"; exit 1; }
-echo "✓ bridge-health self-test: 6 mutations caught, drift guards green"
+echo "✓ bridge-health self-test: 6 mutations caught, catalog-name guard proven, drift guards green"
